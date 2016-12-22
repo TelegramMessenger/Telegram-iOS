@@ -16,3 +16,37 @@ public extension Message {
         }
     }
 }
+
+public extension Message {
+    var visibleButtonKeyboardMarkup: ReplyMarkupMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ReplyMarkupMessageAttribute {
+                if !attribute.flags.contains(.inline) && !attribute.rows.isEmpty {
+                    if attribute.flags.contains(.personal) {
+                        if !self.flags.contains(.Personal) {
+                            return nil
+                        }
+                    }
+                    return attribute
+                }
+            }
+        }
+        return nil
+    }
+    
+    var requestsSetupReply: Bool {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ReplyMarkupMessageAttribute {
+                if !attribute.flags.contains(.inline) {
+                    if attribute.flags.contains(.personal) {
+                        if !self.flags.contains(.Personal) {
+                            return false
+                        }
+                    }
+                    return attribute.flags.contains(.setupReply)
+                }
+            }
+        }
+        return false
+    }
+}

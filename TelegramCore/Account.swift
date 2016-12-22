@@ -172,6 +172,7 @@ public func generateAccountId() -> AccountId {
 
 public class UnauthorizedAccount {
     public let id: AccountId
+    public let basePath: String
     public let postbox: Postbox
     public let network: Network
     
@@ -179,8 +180,9 @@ public class UnauthorizedAccount {
         return Int32(self.network.mtProto.datacenterId)
     }
     
-    init(id: AccountId, postbox: Postbox, network: Network) {
+    init(id: AccountId, basePath: String, postbox: Postbox, network: Network) {
         self.id = id
+        self.basePath = basePath
         self.postbox = postbox
         self.network = network
     }
@@ -198,9 +200,9 @@ public class UnauthorizedAccount {
                 postbox.removeKeychainEntryForKey(key)
             })
             
-            return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain)
+            return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath))
                 |> map { network in
-                    return UnauthorizedAccount(id: self.id, postbox: self.postbox, network: network)
+                    return UnauthorizedAccount(id: self.id, basePath: self.basePath, postbox: self.postbox, network: network)
                 }
         }
     }
@@ -249,8 +251,12 @@ private var declaredEncodables: Void = {
     return
 }()
 
+func accountNetworkUsageInfoPath(basePath: String) -> String {
+    return basePath + "/network-usage"
+}
+
 public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
-    return Signal<(Postbox, AccountState?), NoError> { subscriber in
+    return Signal<(String, Postbox, AccountState?), NoError> { subscriber in
         let _ = declaredEncodables
         
         let path = "\(appGroupPath)/account\(id.stringValue)"
@@ -259,12 +265,12 @@ public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Eithe
         
         let postbox = Postbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
         return (postbox.state() |> take(1) |> map { accountState in
-            return (postbox, accountState as? AccountState)
-        }).start(next: { pair in
-            subscriber.putNext(pair)
+            return (path, postbox, accountState as? AccountState)
+        }).start(next: { args in
+            subscriber.putNext(args)
             subscriber.putCompletion()
         })
-    } |> mapToSignal { (postbox, accountState) -> Signal<Either<UnauthorizedAccount, Account>, NoError> in
+    } |> mapToSignal { (basePath, postbox, accountState) -> Signal<Either<UnauthorizedAccount, Account>, NoError> in
         let keychain = Keychain(get: { key in
             return postbox.keychainEntryForKey(key)
         }, set: { (key, data) in
@@ -276,23 +282,23 @@ public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Eithe
         if let accountState = accountState {
             switch accountState {
                 case let unauthorizedState as UnauthorizedAccountState:
-                    return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain)
+                    return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath))
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            .left(value: UnauthorizedAccount(id: id, postbox: postbox, network: network))
+                            .left(value: UnauthorizedAccount(id: id, basePath: basePath, postbox: postbox, network: network))
                         }
                 case let authorizedState as AuthorizedAccountState:
-                    return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain)
+                    return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath))
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            return .right(value: Account(id: id, postbox: postbox, network: network, peerId: authorizedState.peerId))
+                            return .right(value: Account(id: id, basePath: basePath, postbox: postbox, network: network, peerId: authorizedState.peerId))
                         }
                 case _:
                     assertionFailure("Unexpected accountState \(accountState)")
             }
         }
         
-        return initializedNetwork(datacenterId: 2, keychain: keychain)
+        return initializedNetwork(datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath))
             |> map { network -> Either<UnauthorizedAccount, Account> in
-                return .left(value: UnauthorizedAccount(id: id, postbox: postbox, network: network))
+                return .left(value: UnauthorizedAccount(id: id, basePath: basePath, postbox: postbox, network: network))
         }
     }
 }
@@ -349,6 +355,7 @@ public enum AccountServiceTaskMasterMode {
 
 public class Account {
     public let id: AccountId
+    public let basePath: String
     public let postbox: Postbox
     public let network: Network
     public let peerId: PeerId
@@ -377,8 +384,9 @@ public class Account {
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
     
-    public init(id: AccountId, postbox: Postbox, network: Network, peerId: PeerId) {
+    public init(id: AccountId, basePath: String, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
+        self.basePath = basePath
         self.postbox = postbox
         self.network = network
         self.peerId = peerId
@@ -492,8 +500,6 @@ public class Account {
                 }
             }
         self.updatedPresenceDisposable.set(updatedPresence.start())
-        
-        
     }
     
     deinit {
@@ -502,6 +508,20 @@ public class Account {
         self.notificationTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.updatedPresenceDisposable.dispose()
+    }
+    
+    public func currentNetworkStats() -> Signal<MTNetworkUsageManagerStats, NoError> {
+        return Signal { subscriber in
+            let manager = MTNetworkUsageManager(info: MTNetworkUsageCalculationInfo(filePath: accountNetworkUsageInfoPath(basePath: self.basePath)))!
+            manager.currentStats().start(next: { next in
+                if let stats = next as? MTNetworkUsageManagerStats {
+                    subscriber.putNext(stats)
+                }
+                subscriber.putCompletion()
+            }, error: nil, completed: nil)
+            
+            return EmptyDisposable
+        }
     }
 }
 
