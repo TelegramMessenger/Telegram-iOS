@@ -205,6 +205,10 @@ public struct MessageFlags: OptionSet {
             rawValue |= MessageFlags.Personal.rawValue
         }
         
+        if flags.contains(StoreMessageFlags.TopIndexable) {
+            rawValue |= MessageFlags.TopIndexable.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -212,6 +216,7 @@ public struct MessageFlags: OptionSet {
     public static let Failed = MessageFlags(rawValue: 2)
     public static let Incoming = MessageFlags(rawValue: 4)
     public static let Personal = MessageFlags(rawValue: 8)
+    public static let TopIndexable = MessageFlags(rawValue: 16)
 }
 
 public struct StoreMessageForwardInfo {
@@ -320,6 +325,7 @@ public struct StoreMessageFlags: OptionSet {
     public static let Failed = StoreMessageFlags(rawValue: 2)
     public static let Incoming = StoreMessageFlags(rawValue: 4)
     public static let Personal = StoreMessageFlags(rawValue: 8)
+    public static let TopIndexable = StoreMessageFlags(rawValue: 16)
 }
 
 public enum StoreMessageId {

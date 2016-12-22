@@ -137,6 +137,20 @@ final class MutableMessageHistoryViewReplayContext {
     }
 }
 
+enum MessageHistoryTopTaggedMessage {
+    case message(Message)
+    case intermediate(IntermediateMessage)
+    
+    var id: MessageId {
+        switch self {
+            case let .message(message):
+                return message.id
+            case let .intermediate(message):
+                return message.id
+        }
+    }
+}
+
 final class MutableMessageHistoryView {
     private(set) var id: MessageHistoryViewId
     let tagMask: MessageTags?
@@ -148,7 +162,9 @@ final class MutableMessageHistoryView {
     fileprivate var entries: [MutableMessageHistoryEntry]
     fileprivate let fillCount: Int
     
-    init(id: MessageHistoryViewId, anchorIndex: MessageHistoryAnchorIndex, combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int) {
+    fileprivate var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?]
+    
+    init(id: MessageHistoryViewId, anchorIndex: MessageHistoryAnchorIndex, combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?]) {
         self.id = id
         self.anchorIndex = anchorIndex
         self.combinedReadState = combinedReadState
@@ -158,6 +174,7 @@ final class MutableMessageHistoryView {
         self.later = later
         self.tagMask = tagMask
         self.fillCount = count
+        self.topTaggedMessages = topTaggedMessages
     }
     
     func incrementVersion() {
@@ -246,9 +263,6 @@ final class MutableMessageHistoryView {
         self.earlier = earlier
         self.later = later
         
-        /*let (entries, earlier, later) = self.fetchAroundHistoryEntries(index, count: count, tagMask: tagMask)
-        
-        let mutableView = MutableMessageHistoryView(id: MessageHistoryViewId(peerId: peerId, id: self.takeNextViewId()), anchorIndex: anchorIndex, combinedReadState: fixedCombinedReadState ?? self.readStateTable.getCombinedState(peerId), earlier: earlier, entries: entries, later: later, tagMask: tagMask, count: count)*/
         return true
     }
     
@@ -375,6 +389,31 @@ final class MutableMessageHistoryView {
                         }
                     }
                     break
+                default:
+                    break
+            }
+        }
+        
+        for operation in operations {
+            switch operation {
+                case let .InsertMessage(message):
+                    if message.flags.contains(.TopIndexable) {
+                        if let currentTopMessage = self.topTaggedMessages[message.id.namespace] {
+                            if currentTopMessage == nil || currentTopMessage!.id < message.id {
+                                self.topTaggedMessages[message.id.namespace] = MessageHistoryTopTaggedMessage.intermediate(message)
+                                hasChanges = true
+                            }
+                        }
+                    }
+                case let .Remove(indices):
+                    if !self.topTaggedMessages.isEmpty {
+                        for index in indices {
+                            if let maybeCurrentTopMessage = self.topTaggedMessages[index.id.namespace], let currentTopMessage = maybeCurrentTopMessage, index.id == currentTopMessage.id {
+                                let item: MessageHistoryTopTaggedMessage? = nil
+                                self.topTaggedMessages[index.id.namespace] = item
+                            }
+                        }
+                    }
                 default:
                     break
             }
@@ -548,9 +587,16 @@ final class MutableMessageHistoryView {
             self.later = .MessageEntry(renderIntermediateMessage(intermediateMessage), location)
         }
         
-        for i in  0 ..< self.entries.count {
+        for i in 0 ..< self.entries.count {
             if case let .IntermediateMessageEntry(intermediateMessage, location) = self.entries[i] {
                 self.entries[i] = .MessageEntry(renderIntermediateMessage(intermediateMessage), location)
+            }
+        }
+        
+        for namespace in self.topTaggedMessages.keys {
+            if let entry = self.topTaggedMessages[namespace]!, case let .intermediate(message) = entry {
+                let item: MessageHistoryTopTaggedMessage? = .message(renderIntermediateMessage(message))
+                self.topTaggedMessages[namespace] = item
             }
         }
     }
@@ -616,6 +662,7 @@ public final class MessageHistoryView {
     public let entries: [MessageHistoryEntry]
     public let maxReadIndex: MessageIndex?
     public let combinedReadState: CombinedPeerReadState?
+    public let topTaggedMessages: [Message]
     
     init(_ mutableView: MutableMessageHistoryView) {
         self.id = mutableView.id
@@ -652,6 +699,19 @@ public final class MessageHistoryView {
             }
         }
         self.entries = entries
+        
+        var topTaggedMessages: [Message] = []
+        for (namespace, message) in mutableView.topTaggedMessages {
+            if let message = message {
+                switch message {
+                    case let .message(message):
+                        topTaggedMessages.append(message)
+                    default:
+                        assertionFailure("unexpected intermediate tagged message entry in MessageHistoryView.init()")
+                }
+            }
+        }
+        self.topTaggedMessages = topTaggedMessages
         
         self.earlierId = mutableView.earlier?.index
         self.laterId = mutableView.later?.index

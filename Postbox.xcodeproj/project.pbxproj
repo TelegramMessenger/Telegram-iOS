@@ -147,7 +147,7 @@
 		D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7A11B28B7DC00A402D9 /* Media.swift */; };
 		D0F3CC721DDE1CDC008148FA /* ItemCacheTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC711DDE1CDC008148FA /* ItemCacheTable.swift */; };
 		D0F3CC741DDE1EB9008148FA /* ItemCacheMetaTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC731DDE1EB9008148FA /* ItemCacheMetaTable.swift */; };
-		D0F7AB321DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB311DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift */; };
+		D0F7AB321DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB311DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift */; };
 		D0F7B1C01E045C62007EB8A5 /* StringIndexTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827C01E0079CB00071108 /* StringIndexTokens.swift */; };
 		D0F7B1C31E045C6A007EB8A5 /* Table.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCF71C73561C0097A291 /* Table.swift */; };
 		D0F7B1C41E045C6A007EB8A5 /* GlobalMessageIdsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8721C5A1EE500037222 /* GlobalMessageIdsTable.swift */; };
@@ -176,7 +176,7 @@
 		D0F7B1DB1E045C6A007EB8A5 /* ItemCollectionInfoTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0D51DB4FCFC00C6B04F /* ItemCollectionInfoTable.swift */; };
 		D0F7B1DC1E045C6A007EB8A5 /* ItemCollectionItemTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0D71DB4FD1300C6B04F /* ItemCollectionItemTable.swift */; };
 		D0F7B1DD1E045C6A007EB8A5 /* PeerChatInterfaceStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07CFF821DCA909100761F81 /* PeerChatInterfaceStateTable.swift */; };
-		D0F7B1DE1E045C6A007EB8A5 /* PeerChatTopTaggedMessageIds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB311DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift */; };
+		D0F7B1DE1E045C6A007EB8A5 /* PeerChatTopIndexableMessageIds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB311DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift */; };
 		D0F7B1DF1E045C6A007EB8A5 /* ItemCacheMetaTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC731DDE1EB9008148FA /* ItemCacheMetaTable.swift */; };
 		D0F7B1E01E045C6A007EB8A5 /* ItemCacheTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC711DDE1CDC008148FA /* ItemCacheTable.swift */; };
 		D0F7B1E11E045C6A007EB8A5 /* PeerNameTokenIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827C21E008F7300071108 /* PeerNameTokenIndexTable.swift */; };
@@ -299,7 +299,7 @@
 		D0E3A7A11B28B7DC00A402D9 /* Media.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Media.swift; sourceTree = "<group>"; };
 		D0F3CC711DDE1CDC008148FA /* ItemCacheTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCacheTable.swift; sourceTree = "<group>"; };
 		D0F3CC731DDE1EB9008148FA /* ItemCacheMetaTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCacheMetaTable.swift; sourceTree = "<group>"; };
-		D0F7AB311DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatTopTaggedMessageIds.swift; sourceTree = "<group>"; };
+		D0F7AB311DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatTopIndexableMessageIds.swift; sourceTree = "<group>"; };
 		D0F9E85A1C565EBB00037222 /* MessageMediaTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageMediaTable.swift; sourceTree = "<group>"; };
 		D0F9E8601C57766A00037222 /* MessageHistoryTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTableTests.swift; sourceTree = "<group>"; };
 		D0F9E8621C579F0200037222 /* MediaCleanupTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaCleanupTable.swift; sourceTree = "<group>"; };
@@ -429,7 +429,7 @@
 				D021E0D51DB4FCFC00C6B04F /* ItemCollectionInfoTable.swift */,
 				D021E0D71DB4FD1300C6B04F /* ItemCollectionItemTable.swift */,
 				D07CFF821DCA909100761F81 /* PeerChatInterfaceStateTable.swift */,
-				D0F7AB311DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift */,
+				D0F7AB311DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift */,
 				D0F3CC731DDE1EB9008148FA /* ItemCacheMetaTable.swift */,
 				D0F3CC711DDE1CDC008148FA /* ItemCacheTable.swift */,
 				D07827C21E008F7300071108 /* PeerNameTokenIndexTable.swift */,
@@ -791,7 +791,7 @@
 				D073CE7C1DCBF3B4007511FD /* CachedPeerData.swift in Sources */,
 				D0F7B1DA1E045C6A007EB8A5 /* RatingTable.swift in Sources */,
 				D073CE9F1DCBF3C1007511FD /* InitialMessageHistoryData.swift in Sources */,
-				D0F7B1DE1E045C6A007EB8A5 /* PeerChatTopTaggedMessageIds.swift in Sources */,
+				D0F7B1DE1E045C6A007EB8A5 /* PeerChatTopIndexableMessageIds.swift in Sources */,
 				D0B4184A1D7DFE20004562A4 /* UnsentMessageHistoryView.swift in Sources */,
 				D0B418231D7DFE0C004562A4 /* SimpleDictionary.swift in Sources */,
 				D0B4185C1D7DFE2F004562A4 /* MurMurHash32.m in Sources */,
@@ -898,7 +898,7 @@
 				D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */,
 				D044CA2C1C617E2D002160FF /* MessageHistoryMetadataTable.swift in Sources */,
 				D03120FC1DA55427006A2A60 /* PeerNotificationSettings.swift in Sources */,
-				D0F7AB321DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift in Sources */,
+				D0F7AB321DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift in Sources */,
 				D03BCCF81C73561C0097A291 /* Table.swift in Sources */,
 				D021E0DC1DB5237C00C6B04F /* ItemCollectionsView.swift in Sources */,
 				D0C735281C864DF300BB3149 /* PeerChatStateTable.swift in Sources */,
