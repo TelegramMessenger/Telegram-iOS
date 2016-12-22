@@ -165,6 +165,7 @@ public struct ReplyMarkupMessageFlags: OptionSet {
     public static let personal = ReplyMarkupMessageFlags(rawValue: 1 << 1)
     public static let setupReply = ReplyMarkupMessageFlags(rawValue: 1 << 2)
     public static let inline = ReplyMarkupMessageFlags(rawValue: 1 << 3)
+    public static let fit = ReplyMarkupMessageFlags(rawValue: 1 << 4)
 }
 
 public class ReplyMarkupMessageAttribute: MessageAttribute, Equatable {
@@ -231,6 +232,9 @@ extension ReplyMarkupMessageAttribute {
         switch apiMarkup {
             case let .replyKeyboardMarkup(markupFlags, apiRows):
                 rows = apiRows.map { ReplyMarkupRow(apiRow: $0) }
+                if (markupFlags & (1 << 0)) != 0 {
+                    flags.insert(.fit)
+                }
                 if (markupFlags & (1 << 1)) != 0 {
                     flags.insert(.once)
                 }
@@ -247,6 +251,7 @@ extension ReplyMarkupMessageAttribute {
                 if (forceReplyFlags & (1 << 2)) != 0 {
                     flags.insert(.personal)
                 }
+                flags.insert(.setupReply)
             case let .replyKeyboardHide(hideFlags):
                 if (hideFlags & (1 << 2)) != 0 {
                     flags.insert(.personal)

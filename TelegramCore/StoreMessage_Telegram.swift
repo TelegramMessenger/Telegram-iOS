@@ -353,16 +353,21 @@ extension StoreMessage {
                     attributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
                 }
                 
+                var storeFlags = StoreMessageFlags()
+                
                 if let replyMarkup = replyMarkup {
-                    attributes.append(ReplyMarkupMessageAttribute(apiMarkup: replyMarkup))
+                    let parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
+                    attributes.append(parsedReplyMarkup)
+                    if !parsedReplyMarkup.flags.contains(.inline) {
+                        storeFlags.insert(.TopIndexable)
+                    }
                 }
                 
-                var storeFlags = StoreMessageFlags()
                 if (flags & (1 << 1)) == 0 {
-                    let _ = storeFlags.insert(.Incoming)
+                    storeFlags.insert(.Incoming)
                 }
                 if (flags & (1 << 4)) != 0 {
-                    let _ = storeFlags.insert(.Personal)
+                    storeFlags.insert(.Personal)
                 }
                 
                 self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(medias), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)

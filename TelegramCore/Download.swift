@@ -19,7 +19,7 @@ class Download {
         self.datacenterId = datacenterId
         self.context = context
 
-        self.mtProto = MTProto(context: self.context, datacenterId: datacenterId)
+        self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: nil)
         if datacenterId != masterDatacenterId {
             self.mtProto.authTokenMasterDatacenterId = masterDatacenterId
             self.mtProto.requiredAuthToken = Int(datacenterId) as NSNumber

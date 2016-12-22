@@ -94,7 +94,7 @@ private var registeredLoggingFunctions: Void = {
     registerLoggingFunctions()
 }()
 
-func initializedNetwork(datacenterId: Int, keychain: Keychain) -> Signal<Network, NoError> {
+func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoPath: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -126,7 +126,7 @@ func initializedNetwork(datacenterId: Int, keychain: Keychain) -> Signal<Network
             }
             
             context.keychain = keychain
-            let mtProto = MTProto(context: context, datacenterId: datacenterId)!
+            let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: networkUsageInfoPath == nil ? nil : MTNetworkUsageCalculationInfo(filePath: networkUsageInfoPath))!
             
             let connectionStatus = Promise<ConnectionStatus>(.WaitingForNetwork)
             
