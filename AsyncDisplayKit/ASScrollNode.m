@@ -8,8 +8,6 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#ifndef MINIMAL_ASDK
-
 #import "ASScrollNode.h"
 #import "_ASDisplayLayer.h"
 
@@ -36,5 +34,3 @@
 }
 
 @end
-
-#endif
