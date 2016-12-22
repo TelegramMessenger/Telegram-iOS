@@ -87,9 +87,9 @@
     return NSOrderedSame;
 }
 
-- (MTTransport *)createTransportWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId delegate:(id<MTTransportDelegate>)delegate
+- (MTTransport *)createTransportWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId delegate:(id<MTTransportDelegate>)delegate usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
-    return [(MTTransport *)[_transportClass alloc] initWithDelegate:delegate context:context datacenterId:datacenterId address:_address];
+    return [(MTTransport *)[_transportClass alloc] initWithDelegate:delegate context:context datacenterId:datacenterId address:_address usageCalculationInfo:usageCalculationInfo];
 }
 
 - (NSString *)description

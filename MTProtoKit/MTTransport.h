@@ -15,6 +15,7 @@
 @class MTOutgoingMessage;
 @class MTIncomingMessage;
 @class MTMessageTransaction;
+@class MTNetworkUsageCalculationInfo;
 
 #if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTMessageService.h>
@@ -51,7 +52,7 @@
 @property (nonatomic) bool simultaneousTransactionsEnabled;
 @property (nonatomic) bool reportTransportConnectionContextUpdateStates;
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address;
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 
 - (bool)needsParityCorrection;
 

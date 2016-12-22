@@ -44,7 +44,7 @@
             [self complete];
         else
         {
-            _authMtProto = [[MTProto alloc] initWithContext:context datacenterId:_datacenterId];
+            _authMtProto = [[MTProto alloc] initWithContext:context datacenterId:_datacenterId usageCalculationInfo:nil];
             _authMtProto.useUnauthorizedMode = true;
             
             MTDatacenterAuthMessageService *authService = [[MTDatacenterAuthMessageService alloc] initWithContext:context];

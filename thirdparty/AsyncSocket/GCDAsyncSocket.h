@@ -93,6 +93,8 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
 #pragma mark -
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+@class MTNetworkUsageCalculationInfo;
+
 @interface GCDAsyncSocket : NSObject
 {
 	uint32_t flags;
@@ -147,6 +149,7 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
 }
 
 @property (nonatomic) bool useTcpNodelay;
+@property (nonatomic, strong) MTNetworkUsageCalculationInfo *usageCalculationInfo;
 
 /**
  * GCDAsyncSocket uses the standard delegate paradigm,

@@ -69,6 +69,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     MTTcpTransportContext *_transportContext;
     __weak MTContext *_context;
     NSInteger _datacenterId;
+    MTNetworkUsageCalculationInfo *_usageCalculationInfo;
 }
 
 @end
@@ -86,7 +87,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     return queue;
 }
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -94,11 +95,12 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     NSAssert(address != nil, @"address should not be nil");
 #endif
     
-    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address];
+    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address usageCalculationInfo:usageCalculationInfo];
     if (self != nil)
     {
         _context = context;
         _datacenterId = datacenterId;
+        _usageCalculationInfo = usageCalculationInfo;
         
         MTTcpTransportContext *transportContext = [[MTTcpTransportContext alloc] init];
         _transportContext = transportContext;
@@ -188,7 +190,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [self startSleepWatchdogTimer];
             
             MTContext *context = _context;
-            transportContext.connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:_datacenterId address:transportContext.address interface:nil];
+            transportContext.connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:_datacenterId address:transportContext.address interface:nil usageCalculationInfo:_usageCalculationInfo];
             transportContext.connection.delegate = self;
             [transportContext.connection start];
         }

@@ -30,6 +30,9 @@
 #import <sys/uio.h>
 #import <unistd.h>
 
+#import "MTNetworkUsageCalculationInfo.h"
+#import "MTNetworkUsageManager.h"
+
 #if ! __has_feature(objc_arc)
 #warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
 // For more information see: https://github.com/robbiehanson/CocoaAsyncSocket/wiki/ARC
@@ -181,7 +184,10 @@ enum GCDAsyncSocketConfig
   static NSThread *cfstreamThread;  // Used for CFStreams
 #endif
 
-@interface GCDAsyncSocket ()
+@interface GCDAsyncSocket () {
+    MTNetworkUsageManager *_usageManager;
+    MTNetworkUsageManagerInterface _interface;
+}
 
 // Accepting
 - (BOOL)doAccept:(int)socketFD;
@@ -2411,11 +2417,50 @@ enum GCDAsyncSocketConfig
 		int result = connect(socketFD, (const struct sockaddr *)[address bytes], (socklen_t)[address length]);
 		if (result == 0)
 		{
-            if (MTLogEnabled()) {
-                MTLog(@"Connection time: %f ms", (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0f);
+            bool isWifi = false;
+            
+            struct sockaddr_in addr;
+            struct ifaddrs* ifaddr;
+            struct ifaddrs* ifa;
+            socklen_t addr_len;
+            
+            addr_len = sizeof(addr);
+            getsockname(socketFD, (struct sockaddr*)&addr, &addr_len);
+            getifaddrs(&ifaddr);
+            
+            // look which interface contains the wanted IP.
+            // When found, ifa->ifa_name contains the name of the interface (eth0, eth1, ppp0...)
+            for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+            {
+                if (ifa->ifa_addr)
+                {
+                    if (AF_INET == ifa->ifa_addr->sa_family)
+                    {
+                        struct sockaddr_in* inaddr = (struct sockaddr_in*)ifa->ifa_addr;
+                        
+                        if (inaddr->sin_addr.s_addr == addr.sin_addr.s_addr)
+                        {
+                            if (ifa->ifa_name)
+                            {
+                                if ([[NSString stringWithCString:ifa->ifa_name encoding:NSUTF8StringEncoding] hasPrefix:@"en"]) {
+                                    isWifi = true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
+            freeifaddrs(ifaddr);
+            
+            if (MTLogEnabled()) {
+                MTLog(@"Connection time: %f ms, interface: %@", (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0f, isWifi ? @"Wifi" : @"WAN");
+            }
+            
 			dispatch_async(socketQueue, ^{ @autoreleasepool {
-				
+                if (_usageCalculationInfo != nil) {
+                    _usageManager = [[MTNetworkUsageManager alloc] initWithInfo:_usageCalculationInfo];
+                    _interface = isWifi ? MTNetworkUsageManagerInterfaceOther : MTNetworkUsageManagerInterfaceWWAN;
+                }
 				[self didConnect:aConnectIndex];
 			}});
 		}
@@ -4638,6 +4683,7 @@ enum GCDAsyncSocketConfig
 			else
 			{
 				bytesRead = result;
+                [_usageManager addIncomingBytes:(NSUInteger)bytesRead interface:_interface];
 				
 				if (bytesRead < bytesToRead)
 				{
@@ -5593,6 +5639,7 @@ enum GCDAsyncSocketConfig
             else
             {
                 bytesWritten = result;
+                [_usageManager addOutgoingBytes:(NSUInteger)bytesWritten interface:_interface];
             }
         }
 	}

@@ -20,6 +20,15 @@
 
 @implementation MTQueue
 
+- (instancetype)init {
+    self = [super init];
+    if (self != nil)
+    {
+        _queue = dispatch_queue_create(nil, 0);
+    }
+    return self;
+}
+
 - (instancetype)initWithName:(const char *)name
 {
     self = [super init];
@@ -82,7 +91,7 @@
 
 - (bool)isCurrentQueue
 {
-    if (_queue == nil)
+    if (_queue == nil || _name == nil)
         return false;
     
     if (_isMainQueue)
