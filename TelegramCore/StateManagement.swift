@@ -974,7 +974,19 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
-            default:
+        case let .updateUserTyping(type):
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: type.userId)
+            if let entry = TypingEntry.entry(from: type.action, timestamp: timestamp + 6) {
+                account.typing?.update(for: WrappedTypingEntry(peerId:peerId, entry:entry))
+            }
+        case let .updateChatUserTyping(type):
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+            let peerId = PeerId(namespace: type.chatId > 1000000000 ? Namespaces.Peer.CloudChannel : Namespaces.Peer.CloudGroup, id: type.chatId)
+            if let entry = TypingEntry.entry(from: type.action, timestamp: timestamp + 6) {
+                account.typing?.update(for: WrappedTypingEntry(peerId:peerId, entry:entry))
+            }
+        default:
                 break
         }
     }

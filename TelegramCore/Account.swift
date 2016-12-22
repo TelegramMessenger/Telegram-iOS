@@ -377,6 +377,8 @@ public class Account {
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
     
+    public var typing:TMProcessable!
+    
     public init(id: AccountId, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
         self.postbox = postbox
