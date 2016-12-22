@@ -18,7 +18,7 @@ final class CommandChatInputPanelItem: ListViewItem {
         self.commandSelected = commandSelected
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = CommandChatInputPanelItemNode()
             
@@ -30,7 +30,7 @@ final class CommandChatInputPanelItem: ListViewItem {
             node.insets = layout.insets
             
             completion(node, {
-                apply(.None)
+                return (nil, { apply(.None) })
             })
         }
         if Thread.isMainThread {

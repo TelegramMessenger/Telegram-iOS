@@ -198,7 +198,7 @@ public class PeerMediaCollectionController: ViewController {
         }, deleteSelectedMessages: {
         }, forwardSelectedMessages: {
         }, updateTextInputState: { _ in
-        }, updateInputMode: { _ in
+        }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
         }, editMessage: { _, _ in
         }, beginMessageSearch: {
         }, openPeerInfo: {

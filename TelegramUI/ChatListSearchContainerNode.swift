@@ -139,16 +139,17 @@ private struct ChatListSearchContainerTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let displayingResults: Bool
 }
 
-private func preparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], account: Account, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Message) -> Void) -> ChatListSearchContainerTransition {
+private func preparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, account: Account, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Message) -> Void) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, openPeer: openPeer, openMessage: openMessage), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, openPeer: openPeer, openMessage: openMessage), directionHint: nil) }
     
-    return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates)
+    return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults)
 }
 
 final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
@@ -229,7 +230,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     let previousEntries = previousSearchItems.swap(entries)
                     
                     let firstTime = previousEntries == nil
-                    let transition = preparedTransition(from: previousEntries ?? [], to: entries ?? [], account: account, openPeer: { peer in
+                    let transition = preparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, openPeer: { peer in
                         openPeer(peer)
                         self?.listNode.clearHighlightAnimated(true)
                     }, openMessage: { message in
@@ -239,13 +240,6 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         self?.listNode.clearHighlightAnimated(true)
                     })
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
-                    if let _ = entries {
-                        strongSelf.listNode.isHidden = false
-                        strongSelf.recentPeersNode.isHidden = true
-                    } else {
-                        strongSelf.listNode.isHidden = true
-                        strongSelf.recentPeersNode.isHidden = false
-                    }
                 }
             }))
     }
@@ -257,12 +251,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     override func searchTextUpdated(text: String) {
         if text.isEmpty {
             self.searchQuery.set(.single(nil))
-            self.recentPeersNode.isHidden = false
-            self.listNode.isHidden = true
         } else {
             self.searchQuery.set(.single(text))
-            self.recentPeersNode.isHidden = true
-            self.listNode.isHidden = false
         }
     }
     
@@ -281,13 +271,19 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
+            options.insert(.PreferSynchronousResourceLoading)
             if firstTime {
             } else {
                 //options.insert(.AnimateAlpha)
             }
             
+            let displayingResults = transition.displayingResults
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
-                if let strongSelf = self, firstTime {
+                if let strongSelf = self {
+                    if displayingResults != !strongSelf.listNode.isHidden {
+                        strongSelf.listNode.isHidden = !displayingResults
+                        strongSelf.recentPeersNode.isHidden = displayingResults
+                    }
                 }
             })
         }

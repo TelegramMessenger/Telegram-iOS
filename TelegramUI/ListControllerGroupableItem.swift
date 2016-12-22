@@ -11,13 +11,15 @@ protocol ListControllerGroupableItem: ListControllerItem {
 }
 
 extension ListControllerGroupableItem {
-    func nodeConfiguredForWidth(async: @escaping (@escaping() -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping(ListViewItemNode, @escaping() -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping() -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping(ListViewItemNode, @escaping() -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         self.setupNode(async: async, completion: { node in
             let asyncLayout = node.asyncLayout()
             let (layout, apply) = asyncLayout(self, width, previousItem is ListControllerGroupableItem, nextItem is ListControllerGroupableItem)
             node.contentSize = layout.contentSize
             node.insets = layout.insets
-            completion(node, apply)
+            completion(node, {
+                return (nil, apply)
+            })
         })
     }
     

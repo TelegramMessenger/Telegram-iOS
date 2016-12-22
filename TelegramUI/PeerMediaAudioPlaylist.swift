@@ -99,7 +99,7 @@ func peerMessageAudioPlaylistAndItemIds(_ message: Message) -> (AudioPlaylistId,
 func peerMessageHistoryAudioPlaylist(account: Account, messageId: MessageId) -> AudioPlaylist {
     return AudioPlaylist(id: PeerMessageHistoryAudioPlaylistId(peerId: messageId.peerId), navigate: { item, navigation in
         if let item = item as? PeerMessageHistoryAudioPlaylistItem {
-            return account.postbox.aroundMessageHistoryViewForPeerId(item.entry.index.id.peerId, index: item.entry.index, count: 10, anchorIndex: item.entry.index, fixedCombinedReadState: nil, tagMask: .Music)
+            return account.postbox.aroundMessageHistoryViewForPeerId(item.entry.index.id.peerId, index: item.entry.index, count: 10, anchorIndex: item.entry.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: .Music)
                 |> take(1)
                 |> map { (view, _, _) -> AudioPlaylistItem? in
                     var index = 0

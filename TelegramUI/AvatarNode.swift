@@ -4,6 +4,7 @@ import Postbox
 import UIKit
 import Display
 import TelegramCore
+import SwiftSignalKit
 
 private class AvatarNodeParameters: NSObject {
     let account: Account
@@ -65,9 +66,21 @@ public final class AvatarNode: ASDisplayNode {
     
     private var state: AvatarNodeState = .Empty
     
+    private let imageReady = Promise<Bool>(false)
+    public var ready: Signal<Void, NoError> {
+        let imageReady = self.imageReady
+        return Signal { subscriber in
+            return imageReady.get().start(next: { next in
+                if next {
+                    subscriber.putCompletion()
+                }
+            })
+        }
+    }
+    
     public init(font: UIFont) {
         self.font = font
-        self.imageNode = ImageNode()
+        self.imageNode = ImageNode(enableHasImage: true)
         
         super.init()
         
@@ -102,8 +115,10 @@ public final class AvatarNode: ASDisplayNode {
             self.contents = nil
             
             if let signal = peerAvatarImage(account: account, peer: peer) {
+                self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
             } else {
+                self.imageReady.set(.single(true))
                 self.displaySuspended = false
             }
             if self.parameters == nil || self.parameters != parameters {
@@ -169,6 +184,34 @@ public final class AvatarNode: ASDisplayNode {
             context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
             CTLineDraw(line, context)
             context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+        }
+    }
+    
+    static func asyncLayout(_ node: AvatarNode?) -> (_ account: Account, _ peer: Peer, _ font: UIFont) -> () -> AvatarNode? {
+        let currentState = node?.state
+        let createNode = node == nil
+        return { [weak node] account, peer, font in
+            let state: AvatarNodeState = .PeerAvatar(peer.id, peer.displayLetters, peer.smallProfileImage)
+            if currentState != state {
+                
+            }
+            var createdNode: AvatarNode?
+            if createNode {
+                createdNode = AvatarNode(font: font)
+            }
+            return {
+                let updatedNode: AvatarNode?
+                if let createdNode = createdNode {
+                    updatedNode = createdNode
+                } else {
+                    updatedNode = node
+                }
+                if let updatedNode = updatedNode {
+                    return updatedNode
+                } else {
+                    return nil
+                }
+            }
         }
     }
 }

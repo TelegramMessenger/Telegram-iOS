@@ -153,7 +153,7 @@ class GalleryController: ViewController {
             |> filter({ $0 != nil })
             |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, Void> in
                 if let tags = tagsForMessage(message!) {
-                    let view = account.postbox.aroundMessageHistoryViewForPeerId(messageId.peerId, index: MessageIndex(message!), count: 50, anchorIndex: MessageIndex(message!), fixedCombinedReadState: nil, tagMask: tags)
+                    let view = account.postbox.aroundMessageHistoryViewForPeerId(messageId.peerId, index: MessageIndex(message!), count: 50, anchorIndex: MessageIndex(message!), fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tags)
                         
                     return view
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, Void> in

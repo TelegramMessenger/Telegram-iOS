@@ -21,7 +21,7 @@ class ContactsVCardItem: ListViewItem {
         self.action = action
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ContactsVCardItemNode()
             let makeLayout = node.asyncLayout()
@@ -30,7 +30,7 @@ class ContactsVCardItem: ListViewItem {
             node.insets = nodeLayout.insets
             
             completion(node, {
-                nodeApply()
+                return (nil, { nodeApply() })
             })
         }
     }

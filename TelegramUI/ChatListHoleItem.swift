@@ -13,13 +13,15 @@ class ChatListHoleItem: ListViewItem {
     init() {
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatListHoleItemNode()
             node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
             node.insets = ChatListItemNode.insets(first: false, last: false, firstWithHeader: false)
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
-            completion(node, {})
+            completion(node, {
+                return (nil, {})
+            })
         }
     }
     

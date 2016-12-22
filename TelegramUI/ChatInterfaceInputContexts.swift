@@ -159,14 +159,19 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         }
     }
     switch chatPresentationInterfaceState.inputMode {
-        case .media:
+        case .media, .inputButtons:
             return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
         case .none, .text:
             if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
                 return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
             } else {
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.isEmpty {
-                    return ChatTextInputPanelState(accessoryItems: [.stickers], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
+                    var accessoryItems: [ChatTextInputAccessoryItem] = []
+                    accessoryItems.append(.stickers)
+                    if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup {
+                        accessoryItems.append(.inputButtons)
+                    }
+                    return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
                 } else {
                     return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
                 }

@@ -24,6 +24,9 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
             case .UnreadEntry:
                 assertionFailure()
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
+            case .ChatInfoEntry:
+                assertionFailure()
+                return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
         }
     }
 }
@@ -36,6 +39,9 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
             case .HoleEntry:
                 return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
             case .UnreadEntry:
+                assertionFailure()
+                return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
+            case .ChatInfoEntry:
                 assertionFailure()
                 return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
         }
@@ -172,7 +178,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: false))
                     let previous = previousView.swap(processedView)
                     
-                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
+                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
             }
         }
         

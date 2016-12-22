@@ -31,5 +31,9 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
         }
     }
     
+    if view.earlierId == nil {
+        entries.insert(.ChatInfoEntry, at: 0)
+    }
+    
     return entries
 }

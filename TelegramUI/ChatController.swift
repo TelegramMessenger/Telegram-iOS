@@ -53,6 +53,8 @@ public class ChatController: TelegramController {
     private var audioRecorder = Promise<ManagedAudioRecorder?>()
     private var audioRecorderDisposable: Disposable?
     
+    private var buttonKeyboardMessageDisposable: Disposable?
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
         self.peerId = peerId
@@ -296,13 +298,25 @@ public class ChatController: TelegramController {
             }
         }, sendMessage: { [weak self] text in
             if let strongSelf = self {
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: text, attributes: [], media: nil, replyToMessageId: nil)]).start()
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                        })
+                    }
+                })
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: text, attributes: [], media: nil, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId)]).start()
             }
         }, sendSticker: { [weak self] file in
             if let strongSelf = self {
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: file, replyToMessageId: nil)]).start()
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                        })
+                    }
+                })
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: file, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId)]).start()
             }
         }, requestMessageActionCallback: { [weak self] messageId, data in
             if let strongSelf = self {
@@ -385,6 +399,13 @@ public class ChatController: TelegramController {
                 if !command.contains("@") && (strongSelf.peerId.namespace == Namespaces.Peer.CloudChannel || strongSelf.peerId.namespace == Namespaces.Peer.CloudGroup) {
                     postAsReply = true
                 }
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")) }
+                        })
+                    }
+                })
                 enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: command, attributes: [], media: nil, replyToMessageId: postAsReply ? messageId : nil)]).start()
             }
         }, openInstantPage: { [weak self] messageId in
@@ -571,6 +592,7 @@ public class ChatController: TelegramController {
         self.botCallbackAlertMessageDisposable?.dispose()
         self.contextQueryState?.1.dispose()
         self.audioRecorderDisposable?.dispose()
+        self.buttonKeyboardMessageDisposable?.dispose()
     }
     
     var chatDisplayNode: ChatControllerNode {
@@ -584,13 +606,29 @@ public class ChatController: TelegramController {
         
         let initialData = self.chatDisplayNode.historyNode.initialData
             |> take(1)
-            |> beforeNext { [weak self] initialData in
-                if let strongSelf = self, let initialData = initialData {
-                    if let interfaceState = initialData.chatInterfaceState as? ChatInterfaceState {
-                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ _ in return interfaceState }) })
+            |> beforeNext { [weak self] combinedInitialData in
+                if let strongSelf = self, let combinedInitialData = combinedInitialData {
+                    if let interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
+                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ _ in return interfaceState }).updatedKeyboardButtonsMessage(combinedInitialData.buttonKeyboardMessage) })
                     }
                 }
             }
+        
+        self.buttonKeyboardMessageDisposable = self.chatDisplayNode.historyNode.buttonKeyboardMessage.start(next: { [weak self] message in
+            if let strongSelf = self {
+                var buttonKeyboardMessageUpdated = false
+                if let currentButtonKeyboardMessage = strongSelf.presentationInterfaceState.keyboardButtonsMessage, let message = message {
+                    if currentButtonKeyboardMessage.id != message.id || currentButtonKeyboardMessage.stableVersion != message.stableVersion {
+                        buttonKeyboardMessageUpdated = true
+                    }
+                } else if (strongSelf.presentationInterfaceState.keyboardButtonsMessage != nil) != (message != nil) {
+                    buttonKeyboardMessageUpdated = true
+                }
+                if buttonKeyboardMessageUpdated {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { $0.updatedKeyboardButtonsMessage(message) })
+                }
+            }
+        })
         
         self.ready.set(combineLatest(self.chatDisplayNode.historyNode.historyReady.get(), self._peerReady.get(), initialData) |> map { historyReady, peerReady, _ in
             return historyReady && peerReady
@@ -658,7 +696,7 @@ public class ChatController: TelegramController {
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -851,9 +889,12 @@ public class ChatController: TelegramController {
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedEffectiveInputState(f($0.effectiveInputState)) } })
             }
-        }, updateInputMode: { [weak self] f in
+        }, updateInputModeAndDismissedButtonKeyboardMessageId: { [weak self] f in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInputMode(f) })
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                    let (updatedInputMode, updatedClosedButtonKeyboardMessageId) = f($0)
+                    return $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({ $0.withUpdatedMessageActionsState({ $0.withUpdatedClosedButtonKeyboardMessageId(updatedClosedButtonKeyboardMessageId) }) })
+                })
             }
         }, editMessage: { [weak self] messageId, text in
             if let strongSelf = self {
@@ -974,7 +1015,38 @@ public class ChatController: TelegramController {
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
-        let temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
+        var temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
+        
+        if self.presentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup != temporaryChatPresentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup {
+            if let keyboardButtonsMessage = temporaryChatPresentationInterfaceState.keyboardButtonsMessage, let _ = keyboardButtonsMessage.visibleButtonKeyboardMarkup {
+                if self.presentationInterfaceState.interfaceState.editMessage == nil && self.presentationInterfaceState.interfaceState.composeInputState.inputText.isEmpty && keyboardButtonsMessage.id != temporaryChatPresentationInterfaceState.interfaceState.messageActionsState.closedButtonKeyboardMessageId {
+                    temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputMode({ _ in
+                        return .inputButtons
+                    })
+                }
+                
+                if self.peerId.namespace == Namespaces.Peer.CloudChannel || self.peerId.namespace == Namespaces.Peer.CloudGroup {
+                    if temporaryChatPresentationInterfaceState.interfaceState.replyMessageId == nil && temporaryChatPresentationInterfaceState.interfaceState.messageActionsState.processedSetupReplyMessageId != keyboardButtonsMessage.id  {
+                        temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInterfaceState({ $0.withUpdatedReplyMessageId(keyboardButtonsMessage.id).withUpdatedMessageActionsState({ $0.withUpdatedProcessedSetupReplyMessageId(keyboardButtonsMessage.id) }) })
+                    }
+                }
+            } else {
+                temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputMode({ mode in
+                    if case .inputButtons = mode {
+                        return .text
+                    } else {
+                        return mode
+                    }
+                })
+            }
+        }
+        
+        if let keyboardButtonsMessage = temporaryChatPresentationInterfaceState.keyboardButtonsMessage, keyboardButtonsMessage.requestsSetupReply {
+            if temporaryChatPresentationInterfaceState.interfaceState.replyMessageId == nil && temporaryChatPresentationInterfaceState.interfaceState.messageActionsState.processedSetupReplyMessageId != keyboardButtonsMessage.id  {
+                temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInterfaceState({ $0.withUpdatedReplyMessageId(keyboardButtonsMessage.id).withUpdatedMessageActionsState({ $0.withUpdatedProcessedSetupReplyMessageId(keyboardButtonsMessage.id) }) })
+            }
+        }
+        
         let inputTextPanelState = inputTextPanelStateForChatPresentationInterfaceState(temporaryChatPresentationInterfaceState, account: self.account)
         var updatedChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputTextPanelState({ _ in return inputTextPanelState })
         

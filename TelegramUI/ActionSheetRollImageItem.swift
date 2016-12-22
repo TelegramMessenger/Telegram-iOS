@@ -2,6 +2,7 @@ import Foundation
 import Display
 import AsyncDisplayKit
 import Photos
+import SwiftSignalKit
 
 private let testBackground = generateStretchableFilledCircleImage(radius: 8.0, color: UIColor.lightGray)
 
@@ -18,18 +19,19 @@ final class ActionSheetRollImageItem: ListViewItem {
         self.asset = asset
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ActionSheetRollImageItemNode()
             node.contentSize = CGSize(width: 84.0, height: 84.0)
             node.insets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
             node.updateAsset(asset: self.asset)
             completion(node, {
+                return (nil, {})
             })
         }
     }
     
-    func updateNode(async: (() -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: (ListViewItemNodeLayout, () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
         })
     }

@@ -20,9 +20,14 @@ enum ChatHistoryViewUpdateType {
     case Generic(type: ViewUpdateType)
 }
 
+public struct ChatHistoryCombinedInitialData {
+    let initialData: InitialMessageHistoryData?
+    let buttonKeyboardMessage: Message?
+}
+
 enum ChatHistoryViewUpdate {
     case Loading(initialData: InitialMessageHistoryData?)
-    case HistoryView(view: MessageHistoryView, type: ChatHistoryViewUpdateType, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?)
+    case HistoryView(view: MessageHistoryView, type: ChatHistoryViewUpdateType, scrollPosition: ChatHistoryViewScrollPosition?, initialData: ChatHistoryCombinedInitialData)
 }
 
 struct ChatHistoryView {
@@ -60,6 +65,7 @@ struct ChatHistoryViewTransition {
     let scrollToItem: ListViewScrollToItem?
     let stationaryItemRange: (Int, Int)?
     let initialData: InitialMessageHistoryData?
+    let keyboardButtonsMessage: Message?
 }
 
 struct ChatHistoryListViewTransition {
@@ -71,6 +77,7 @@ struct ChatHistoryListViewTransition {
     let scrollToItem: ListViewScrollToItem?
     let stationaryItemRange: (Int, Int)?
     let initialData: InitialMessageHistoryData?
+    let keyboardButtonsMessage: Message?
 }
 
 private func maxIncomingMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> MessageIndex? {
@@ -105,6 +112,8 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case .UnreadEntry:
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
+            case .ChatInfoEntry:
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
         }
     }
 }
@@ -132,12 +141,14 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case .UnreadEntry:
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
+            case .ChatInfoEntry:
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
         }
     }
 }
 
 private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, transition: ChatHistoryViewTransition) -> ChatHistoryListViewTransition {
-    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData)
+    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage)
 }
 
 private final class ChatHistoryTransactionOpaqueState {
@@ -169,10 +180,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public let historyReady = Promise<Bool>()
     private var didSetHistoryReady = false
     
-    private let _initialData = Promise<InitialMessageHistoryData?>()
+    private let _initialData = Promise<ChatHistoryCombinedInitialData?>()
     private var didSetInitialData = false
-    public var initialData: Signal<InitialMessageHistoryData?, NoError> {
+    public var initialData: Signal<ChatHistoryCombinedInitialData?, NoError> {
         return self._initialData.get()
+    }
+    
+    private var _buttonKeyboardMessage = Promise<Message?>(nil)
+    private var currentButtonKeyboardMessage: Message?
+    public var buttonKeyboardMessage: Signal<Message?, NoError> {
+        return self._buttonKeyboardMessage.get()
     }
     
     private let maxVisibleIncomingMessageIndex = ValuePromise<MessageIndex>(ignoreRepeated: true)
@@ -226,15 +243,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let previousView = Atomic<ChatHistoryView?>(value: nil)
         
         let historyViewTransition = historyViewUpdate |> mapToQueue { [weak self] update -> Signal<ChatHistoryListViewTransition, NoError> in
-            let initialData: InitialMessageHistoryData?
+            let initialData: ChatHistoryCombinedInitialData?
             switch update {
             case let .Loading(data):
-                initialData = data
+                let combinedInitialData = ChatHistoryCombinedInitialData(initialData: data, buttonKeyboardMessage: nil)
+                initialData = combinedInitialData
                 Queue.mainQueue().async { [weak self] in
                     if let strongSelf = self {
                         if !strongSelf.didSetInitialData {
                             strongSelf.didSetInitialData = true
-                            strongSelf._initialData.set(.single(data))
+                            strongSelf._initialData.set(.single(combinedInitialData))
                         }
                         if !strongSelf.didSetHistoryReady {
                             strongSelf.didSetHistoryReady = true
@@ -267,7 +285,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: mode == .bubbles))
                 let previous = previousView.swap(processedView)
                 
-                return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: initialData) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
+                return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
             }
         }
         
@@ -379,7 +397,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 } else {
                     if !strongSelf.didSetInitialData {
                         strongSelf.didSetInitialData = true
-                        strongSelf._initialData.set(.single(transition.initialData))
+                        strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage)))
                     }
                     if !strongSelf.didSetHistoryReady {
                         strongSelf.didSetHistoryReady = true
@@ -413,11 +431,24 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                     if !strongSelf.didSetInitialData {
                         strongSelf.didSetInitialData = true
-                        strongSelf._initialData.set(.single(transition.initialData))
+                        strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage)))
                     }
                     if !strongSelf.didSetHistoryReady {
                         strongSelf.didSetHistoryReady = true
                         strongSelf.historyReady.set(.single(true))
+                    }
+                    
+                    var buttonKeyboardMessageUpdated = false
+                    if let currentButtonKeyboardMessage = strongSelf.currentButtonKeyboardMessage, let buttonKeyboardMessage = transition.keyboardButtonsMessage {
+                        if currentButtonKeyboardMessage.id != buttonKeyboardMessage.id || currentButtonKeyboardMessage.stableVersion != buttonKeyboardMessage.stableVersion {
+                            buttonKeyboardMessageUpdated = true
+                        }
+                    } else if (strongSelf.currentButtonKeyboardMessage != nil) != (transition.keyboardButtonsMessage != nil) {
+                        buttonKeyboardMessageUpdated = true
+                    }
+                    if buttonKeyboardMessageUpdated {
+                        strongSelf.currentButtonKeyboardMessage = transition.keyboardButtonsMessage
+                        strongSelf._buttonKeyboardMessage.set(.single(transition.keyboardButtonsMessage))
                     }
                     
                     completion()

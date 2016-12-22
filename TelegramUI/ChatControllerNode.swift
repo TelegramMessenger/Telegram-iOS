@@ -157,7 +157,6 @@ class ChatControllerNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets) -> Void) {
-        //print("update \(self.scheduledLayoutTransitionRequest)")
         self.scheduledLayoutTransitionRequest = nil
         var previousInputHeight: CGFloat = 0.0
         if let (previousLayout, _) = self.containerLayoutAndNavigationBarHeight {
@@ -552,9 +551,27 @@ class ChatControllerNode: ASDisplayNode {
             } else {
                 if !self.ignoreUpdateHeight {
                     if interactive {
-                        self.scheduleLayoutTransitionRequest(layoutTransition)
+                        if let scheduledLayoutTransitionRequest = self.scheduledLayoutTransitionRequest {
+                            switch scheduledLayoutTransitionRequest.1 {
+                                case .immediate:
+                                    self.scheduleLayoutTransitionRequest(layoutTransition)
+                                default:
+                                    break
+                            }
+                        } else {
+                            self.scheduleLayoutTransitionRequest(layoutTransition)
+                        }
                     } else {
-                        self.requestLayout(layoutTransition)
+                        if let scheduledLayoutTransitionRequest = self.scheduledLayoutTransitionRequest {
+                            switch scheduledLayoutTransitionRequest.1 {
+                                case .immediate:
+                                    self.requestLayout(layoutTransition)
+                                case .animated:
+                                    self.scheduleLayoutTransitionRequest(scheduledLayoutTransitionRequest.1)
+                            }
+                        } else {
+                            self.requestLayout(layoutTransition)
+                        }
                     }
                 }
             }
@@ -578,7 +595,9 @@ class ChatControllerNode: ASDisplayNode {
             case .none:
                 break
             default:
-                self.interfaceInteraction?.updateInputMode({ _ in .none })
+                self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                    return (.none, state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                })
         }
     }
     

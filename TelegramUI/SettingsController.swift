@@ -31,7 +31,13 @@ public class SettingsController: ListController {
             ListControllerSpacerItem(height: 35.0),
             ListControllerDisclosureActionItem(title: "Notifications and Sounds", action: deselectAction),
             ListControllerDisclosureActionItem(title: "Privacy and Security", action: deselectAction),
-            ListControllerDisclosureActionItem(title: "Chat Settings", action: deselectAction),
+            ListControllerDisclosureActionItem(title: "Data and Storage", action: { [weak self] in
+                deselectAction()
+                
+                if let strongSelf = self {
+                    strongSelf.navigationController?.pushViewController(DataAndStorageSettingsController(account: strongSelf.account), animated: true)
+                }
+            }),
             //SettingsWallpaperListItem(),
             ListControllerSpacerItem(height: 35.0),
             ListControllerDisclosureActionItem(title: "Phone Number", action: deselectAction),

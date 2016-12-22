@@ -11,12 +11,14 @@ class ChatListEmptyItem: ListViewItem {
     init() {
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatListEmptyItemNode()
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
             node.updateItemPosition(first: previousItem == nil, last: nextItem == nil)
-            completion(node, {})
+            completion(node, {
+                return (nil, {})
+            })
         }
     }
     

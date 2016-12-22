@@ -18,7 +18,7 @@ class PeerInfoDisclosureItem: ListViewItem, PeerInfoItem {
         self.action = action
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = PeerInfoDisclosureItemNode()
             let (layout, apply) = node.asyncLayout()(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
@@ -27,7 +27,7 @@ class PeerInfoDisclosureItem: ListViewItem, PeerInfoItem {
             node.insets = layout.insets
             
             completion(node, {
-                apply()
+                return (nil, { apply() })
             })
         }
     }

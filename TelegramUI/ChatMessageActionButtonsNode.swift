@@ -87,7 +87,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     node.button = button
                     
                     node.backgroundNode.image = backgroundImage
-                    node.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
+                    node.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
                     
                     let titleNode = titleApply()
                     if node.titleNode !== titleNode {
@@ -137,7 +137,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
             var buttonIndex = 0
             for row in replyMarkup.rows {
                 var minimumRowWidth: CGFloat = 0.0
-                let maximumButtonWidth: CGFloat = floor((constrainedWidth - CGFloat(max(0, row.buttons.count - 1)) * buttonSpacing) / CGFloat(row.buttons.count))
+                let maximumButtonWidth: CGFloat = max(1.0, floor((constrainedWidth - CGFloat(max(0, row.buttons.count - 1)) * buttonSpacing) / CGFloat(row.buttons.count)))
                 var finalizeRowButtonLayouts: [((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))] = []
                 var rowButtonIndex = 0
                 for button in row.buttons {
@@ -170,7 +170,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                     rowButtonIndex += 1
                 }
                 
-                let actualButtonWidth: CGFloat = floor((constrainedWidth - CGFloat(max(0, row.buttons.count - 1)) * buttonSpacing) / CGFloat(row.buttons.count))
+                let actualButtonWidth: CGFloat = max(1.0, floor((constrainedWidth - CGFloat(max(0, row.buttons.count - 1)) * buttonSpacing) / CGFloat(row.buttons.count)))
                 var horizontalButtonOffset: CGFloat = 0.0
                 for finalizeButtonLayout in finalizeRowButtonLayouts {
                     let (buttonSize, buttonApply) = finalizeButtonLayout(actualButtonWidth)

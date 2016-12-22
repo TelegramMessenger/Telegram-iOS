@@ -116,7 +116,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.accessoryItem = accessoryItem
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         var viewClassName: AnyClass = ChatMessageBubbleItemNode.self
         
         for media in message.media {
@@ -127,7 +127,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         
-        let configure = { () -> Void in
+        let configure = {
             let node = (viewClassName as! ChatMessageItemView.Type).init()
             node.controllerInteraction = self.controllerInteraction
             node.setupItem(self)
@@ -142,7 +142,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             node.insets = layout.insets
             
             completion(node, {
-                apply(.None)
+                return (nil, { apply(.None) })
             })
         }
         if Thread.isMainThread {

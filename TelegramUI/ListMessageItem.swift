@@ -20,7 +20,7 @@ final class ListMessageItem: ListViewItem {
         self.message = message
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         var viewClassName: AnyClass = ListMessageFileItemNode.self
         
         for media in message.media {
@@ -45,7 +45,7 @@ final class ListMessageItem: ListViewItem {
             node.insets = layout.insets
             
             completion(node, {
-                apply(.None)
+                return (nil, { apply(.None) })
             })
         }
         if Thread.isMainThread {

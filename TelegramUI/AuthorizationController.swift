@@ -60,7 +60,7 @@ public class AuthorizationController: NavigationController {
                             modifier.setState(state)
                             return state
                         } |> map { state -> Account in
-                            return Account(id: account.id, postbox: account.postbox, network: account.network, peerId: user.id)
+                            return Account(id: account.id, basePath: account.basePath, postbox: account.postbox, network: account.network, peerId: user.id)
                         }
                     }
             } else {

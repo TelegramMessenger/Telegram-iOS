@@ -66,7 +66,7 @@ class ContactsPeerItem: ListViewItem {
         }
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ContactsPeerItemNode()
             let makeLayout = node.asyncLayout()
@@ -75,9 +75,7 @@ class ContactsPeerItem: ListViewItem {
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
-            completion(node, {
-                nodeApply()
-            })
+            completion(node, nodeApply)
         }
     }
     
@@ -90,7 +88,7 @@ class ContactsPeerItem: ListViewItem {
                     let (nodeLayout, apply) = layout(self, width, first, last, firstWithHeader)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
-                            apply()
+                            apply().1()
                         })
                     }
                 }
@@ -224,7 +222,7 @@ class ContactsPeerItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ContactsPeerItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ContactsPeerItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, () -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         
@@ -289,28 +287,35 @@ class ContactsPeerItemNode: ListViewItemNode {
             
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, width, first, last, firstWithHeader)
                     if let peer = item.peer {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer)
                     }
                     
-                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 14.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
-                    
-                    let _ = titleApply()
-                    strongSelf.titleNode.frame = titleFrame
-                    
-                    let _ = statusApply()
-                    strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 25.0), size: statusLayout.size)
-                    
-                    let topHighlightInset: CGFloat = first ? 0.0 : separatorHeight
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 65.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - 65.0), height: separatorHeight))
-                    strongSelf.separatorNode.isHidden = last
-                    
-                    if let userPresence = userPresence {
-                        strongSelf.peerPresenceManager?.reset(presence: userPresence)
-                    }
+                    return (strongSelf.avatarNode.ready, { [weak strongSelf] in
+                        if let strongSelf = strongSelf {
+                            strongSelf.layoutParams = (item, width, first, last, firstWithHeader)
+                            
+                            strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 14.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
+                            
+                            let _ = titleApply()
+                            strongSelf.titleNode.frame = titleFrame
+                            
+                            let _ = statusApply()
+                            strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 25.0), size: statusLayout.size)
+                            
+                            let topHighlightInset: CGFloat = first ? 0.0 : separatorHeight
+                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
+                            strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
+                            strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 65.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - 65.0), height: separatorHeight))
+                            strongSelf.separatorNode.isHidden = last
+                            
+                            if let userPresence = userPresence {
+                                strongSelf.peerPresenceManager?.reset(presence: userPresence)
+                            }
+                        }
+                    })
+                } else {
+                    return (nil, {})
                 }
             })
         }

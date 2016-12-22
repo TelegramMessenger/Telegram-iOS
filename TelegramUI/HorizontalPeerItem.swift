@@ -3,6 +3,7 @@ import Display
 import Postbox
 import AsyncDisplayKit
 import TelegramCore
+import SwiftSignalKit
 
 final class HorizontalPeerItem: ListViewItem {
     let account: Account
@@ -15,7 +16,7 @@ final class HorizontalPeerItem: ListViewItem {
         self.action = action
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = HorizontalPeerItemNode()
             node.contentSize = CGSize(width: 92.0, height: 80.0)
@@ -23,6 +24,7 @@ final class HorizontalPeerItem: ListViewItem {
             node.update(account: self.account, peer: self.peer)
             node.action = self.action
             completion(node, {
+                return (nil, {})
             })
         }
     }

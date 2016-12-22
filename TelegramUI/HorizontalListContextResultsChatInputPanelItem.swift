@@ -18,7 +18,7 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
         self.resultSelected = resultSelected
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = HorizontalListContextResultsChatInputPanelItemNode()
             
@@ -30,7 +30,7 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
             node.insets = layout.insets
             
             completion(node, {
-                apply(.None)
+                return (nil, { apply(.None) })
             })
         }
         if Thread.isMainThread {

@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 
 private func backgroundImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context -> Void in
@@ -23,13 +24,19 @@ class ChatHoleItem: ListViewItem {
         self.header = ChatMessageDateHeader(timestamp: index.timestamp)
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
-        
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatHoleItemNode()
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
-            completion(node, {})
+            completion(node, {
+                return (nil, {})
+            })
         }
+    }
+    
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
+        })
     }
 }
 

@@ -26,7 +26,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
         self.index = index
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatMediaInputStickerPackItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
@@ -34,11 +34,12 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
             node.inputNodeInteraction = self.inputNodeInteraction
             node.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId)
             completion(node, {
+                return (nil, {})
             })
         }
     }
     
-    func updateNode(async: (() -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: (ListViewItemNodeLayout, () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
         })
     }

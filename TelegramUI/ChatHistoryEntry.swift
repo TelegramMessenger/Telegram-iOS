@@ -5,6 +5,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     case HoleEntry(MessageHistoryHole)
     case MessageEntry(Message, Bool)
     case UnreadEntry(MessageIndex)
+    case ChatInfoEntry
     
     var stableId: UInt64 {
         switch self {
@@ -14,6 +15,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 return UInt64(message.stableId) | ((UInt64(2) << 40))
             case .UnreadEntry:
                 return UInt64(3) << 40
+            case .ChatInfoEntry:
+                return UInt64(4) << 40
         }
     }
     
@@ -25,6 +28,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 return MessageIndex(message)
             case let .UnreadEntry(index):
                 return index
+            case .ChatInfoEntry:
+                return MessageIndex.absoluteLowerBound()
         }
     }
 }
@@ -33,10 +38,10 @@ func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
     switch lhs {
         case let .HoleEntry(lhsHole):
             switch rhs {
-            case let .HoleEntry(rhsHole) where lhsHole == rhsHole:
-                return true
-            default:
-                return false
+                case let .HoleEntry(rhsHole) where lhsHole == rhsHole:
+                    return true
+                default:
+                    return false
             }
         case let .MessageEntry(lhsMessage, lhsRead):
             switch rhs {
@@ -70,12 +75,18 @@ func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
             }
         case let .UnreadEntry(lhsIndex):
             switch rhs {
-            case let .UnreadEntry(rhsIndex) where lhsIndex == rhsIndex:
+                case let .UnreadEntry(rhsIndex) where lhsIndex == rhsIndex:
+                    return true
+                default:
+                    return false
+            }
+        case .ChatInfoEntry:
+            if case .ChatInfoEntry = rhs {
                 return true
-            default:
+            } else {
                 return false
             }
-        }
+    }
 }
 
 func <(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {

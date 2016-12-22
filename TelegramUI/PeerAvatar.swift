@@ -19,7 +19,7 @@ private let roundCorners = { () -> UIImage in
     return image
 }()
 
-func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) -> Signal<UIImage, NoError>? {
+func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) -> Signal<UIImage?, NoError>? {
     if let smallProfileImage = peer.smallProfileImage {
         let resourceData = account.postbox.mediaBox.resourceData(smallProfileImage.resource)
         let imageData = resourceData
@@ -33,6 +33,8 @@ func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = C
                             if data.complete {
                                 subscriber.putNext(try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)))
                                 subscriber.putCompletion()
+                            } else {
+                                subscriber.putNext(nil)
                             }
                         }, error: { error in
                             subscriber.putError(error)
@@ -49,7 +51,7 @@ func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = C
             }
         return imageData
             |> deliverOn(account.graphicsThreadPool)
-            |> map { data -> UIImage in
+            |> map { data -> UIImage? in
                 if let data = data, let image = generateImage(displayDimensions, contextGenerator: { size, context -> Void in
                     if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                         context.setBlendMode(.copy)
@@ -60,10 +62,7 @@ func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = C
                 }) {
                     return image
                 } else {
-                    UIGraphicsBeginImageContextWithOptions(displayDimensions, false, 0.0)
-                    let image = UIGraphicsGetImageFromCurrentImageContext()!
-                    UIGraphicsEndImageContext()
-                    return image
+                    return nil
                 }
             }
     } else {

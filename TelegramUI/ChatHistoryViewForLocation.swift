@@ -17,7 +17,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
             }
             return signal |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 if preloaded {
-                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, initialData: initialData)
+                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first))
                 } else {
                     var scrollPosition: ChatHistoryViewScrollPosition?
                     
@@ -58,7 +58,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                     }
                     
                     preloaded = true
-                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, initialData: initialData)
+                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first))
                 }
             }
         case let .InitialSearch(messageId, count):
@@ -66,7 +66,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
             var fadeIn = false
             return account.viewTracker.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, tagMask: tagMask) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 if preloaded {
-                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, initialData: initialData)
+                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first))
                 } else {
                     let anchorIndex = view.anchorIndex
                     
@@ -90,7 +90,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                     
                     preloaded = true
                     //case Index(index: MessageIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
-                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: .Index(index: anchorIndex, position: .Center(.Bottom), directionHint: .Down, animated: false), initialData: initialData)
+                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: .Index(index: anchorIndex, position: .Center(.Bottom), directionHint: .Down, animated: false), initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first))
                 }
             }
         case let .Navigation(index, anchorIndex):
@@ -103,7 +103,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                 } else {
                     genericType = updateType
                 }
-                return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: nil, initialData: initialData)
+                return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first))
             }
         case let .Scroll(index, anchorIndex, sourceIndex, scrollPosition, animated):
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
@@ -118,7 +118,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                 } else {
                     genericType = updateType
                 }
-                return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: scrollPosition, initialData: initialData)
+                return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: scrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first))
             }
         }
 }

@@ -77,21 +77,41 @@ public func ==(lhs: ImageCorners, rhs: ImageCorners) -> Bool {
 
 public class ImageNode: ASDisplayNode {
     private var disposable = MetaDisposable()
+    private let hasImage: ValuePromise<Bool>?
     
-    override init() {
+    var ready: Signal<Bool, NoError> {
+        if let hasImage = self.hasImage {
+            return hasImage.get()
+        } else {
+            return .single(true)
+        }
+    }
+    
+    init(enableHasImage: Bool = false) {
+        if enableHasImage {
+            self.hasImage = ValuePromise(false, ignoreRepeated: true)
+        } else {
+            self.hasImage = nil
+        }
         super.init()
     }
     
-    public func setSignal(_ signal: Signal<UIImage, NoError>) {
+    public func setSignal(_ signal: Signal<UIImage?, NoError>) {
         var first = true
+        var reportedHasImage = false
         self.disposable.set((signal |> deliverOnMainQueue).start(next: {[weak self] next in
             dispatcher.dispatch {
                 if let strongSelf = self {
-                    strongSelf.contents = next.cgImage
-                    if first {
+                    strongSelf.contents = next?.cgImage
+                    if first && next != nil {
                         first = false
                         if strongSelf.isNodeLoaded {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                        }
+                    }
+                    if !reportedHasImage {
+                        if let hasImage = strongSelf.hasImage {
+                            hasImage.set(true)
                         }
                     }
                 }

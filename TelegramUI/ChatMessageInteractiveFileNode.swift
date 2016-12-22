@@ -262,7 +262,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     let b = log(maxVoiceWidth / minVoiceWidth) / (maxVoiceLength - 0.0)
                     let a = minVoiceWidth / exp(CGFloat(0.0))
                     
-                    let y = a * exp(b * CGFloat(audioDuration))
+                    let y = a * exp(b * min(maxVoiceLength, CGFloat(audioDuration)))
                     
                     minLayoutWidth = floor(y)
                 } else {

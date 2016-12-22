@@ -358,7 +358,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return textFieldHeight + self.textFieldInsets.top + self.textFieldInsets.bottom + self.textInputViewInternalInsets.top + self.textInputViewInternalInsets.bottom
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {        
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
@@ -749,17 +749,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
-        self.interfaceInteraction?.updateInputMode({ _ in .text })
-    }
-    
-    @objc func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
-        /*self.interfaceInteraction?.updateInputMode({ mode in
-            if case .text = mode {
-                return .none
-            } else {
-                return mode
-            }
-        })*/
+        self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+            return (.text, state.keyboardButtonsMessage?.id)
+        })
     }
     
     @objc func sendButtonPressed() {
@@ -828,12 +820,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         for (item, currentButton) in self.accessoryItemButtons {
             if currentButton === button {
                 switch item {
-                    case .inputButtons:
-                        break
                     case .stickers:
-                        self.interfaceInteraction?.updateInputMode({ _ in .media })
+                        self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                            return (.media, state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                        })
                     case .keyboard:
-                        self.interfaceInteraction?.updateInputMode({ _ in .text })
+                        self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                            return (.text, state.keyboardButtonsMessage?.id)
+                        })
+                    case .inputButtons:
+                        self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                            return (.inputButtons, nil)
+                        })
                 }
                 break
             }

@@ -1,5 +1,6 @@
 import Foundation
 import Display
+import SwiftSignalKit
 
 class ListControllerSpacerItem: ListControllerItem {
     private let height: CGFloat
@@ -12,13 +13,20 @@ class ListControllerSpacerItem: ListControllerItem {
         return false
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
+    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ListControllerSpacerItemNode()
             node.height = self.height
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
-            completion(node, {})
+            completion(node, {
+                return (nil, {})
+            })
         }
+    }
+    
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
+        })
     }
 }
 
