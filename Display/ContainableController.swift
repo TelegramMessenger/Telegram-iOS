@@ -32,38 +32,46 @@ public enum ContainedViewLayoutTransition {
 
 public extension ContainedViewLayoutTransition {
     func updateFrame(node: ASDisplayNode, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
-        switch self {
-            case .immediate:
-                node.frame = frame
-                if let completion = completion {
-                    completion(true)
-                }
-            case let .animated(duration, curve):
-                let previousFrame = node.frame
-                node.frame = frame
-                node.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+        if node.frame.equalTo(frame) {
+            completion?(true)
+        } else {
+            switch self {
+                case .immediate:
+                    node.frame = frame
                     if let completion = completion {
-                        completion(result)
+                        completion(true)
                     }
-                })
+                case let .animated(duration, curve):
+                    let previousFrame = node.frame
+                    node.frame = frame
+                    node.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
+            }
         }
     }
     
     func updatePosition(node: ASDisplayNode, position: CGPoint, completion: ((Bool) -> Void)? = nil) {
-        switch self {
-            case .immediate:
-                node.position = position
-                if let completion = completion {
-                    completion(true)
-                }
-            case let .animated(duration, curve):
-                let previousPosition = node.position
-                node.position = position
-                node.layer.animatePosition(from: previousPosition, to: position, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+        if node.position.equalTo(position) {
+            completion?(true)
+        } else {
+            switch self {
+                case .immediate:
+                    node.position = position
                     if let completion = completion {
-                        completion(result)
+                        completion(true)
                     }
-                })
+                case let .animated(duration, curve):
+                    let previousPosition = node.position
+                    node.position = position
+                    node.layer.animatePosition(from: previousPosition, to: position, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
+            }
         }
     }
     
@@ -83,17 +91,21 @@ public extension ContainedViewLayoutTransition {
     }
     
     func animatePosition(node: ASDisplayNode, to position: CGPoint, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
-        switch self {
-        case .immediate:
-            if let completion = completion {
-                completion(true)
+        if node.position.equalTo(position) {
+            completion?(true)
+        } else {
+            switch self {
+                case .immediate:
+                    if let completion = completion {
+                        completion(true)
+                    }
+                case let .animated(duration, curve):
+                    node.layer.animatePosition(from: node.position, to: position, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
             }
-        case let .animated(duration, curve):
-            node.layer.animatePosition(from: node.position, to: position, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
-                if let completion = completion {
-                    completion(result)
-                }
-            })
         }
     }
     
@@ -115,20 +127,24 @@ public extension ContainedViewLayoutTransition {
     }
     
     func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
-        switch self {
-            case .immediate:
-                layer.frame = frame
-                if let completion = completion {
-                    completion(true)
-                }
-            case let .animated(duration, curve):
-                let previousFrame = layer.frame
-                layer.frame = frame
-                layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+        if layer.frame.equalTo(frame) {
+            completion?(true)
+        } else {
+            switch self {
+                case .immediate:
+                    layer.frame = frame
                     if let completion = completion {
-                        completion(result)
+                        completion(true)
                     }
-                })
+                case let .animated(duration, curve):
+                    let previousFrame = layer.frame
+                    layer.frame = frame
+                    layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
+            }
         }
     }
     

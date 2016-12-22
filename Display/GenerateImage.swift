@@ -87,7 +87,16 @@ public func generateStretchableFilledCircleImage(radius: CGFloat, color: UIColor
 
 public func generateStretchableFilledCircleImage(diameter: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
     let intRadius = Int(diameter / 2.0)
-    let cap = intRadius == 1 ? 2 : intRadius
+    let intDiameter = Int(diameter)
+    let cap: Int
+    if intDiameter == 3 {
+        cap = 1
+    } else if intRadius == 1 {
+        cap = 2
+    } else {
+        cap = intRadius
+    }
+    
     return generateFilledCircleImage(diameter: diameter, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: cap, topCapHeight: cap)
 }
 

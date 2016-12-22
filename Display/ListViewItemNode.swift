@@ -1,5 +1,6 @@
 import Foundation
 import AsyncDisplayKit
+import SwiftSignalKit
 
 var testSpringFrictionLimits: (CGFloat, CGFloat) = (3.0, 60.0)
 var testSpringFriction: CGFloat = 31.8211269378662
@@ -133,6 +134,10 @@ open class ListViewItemNode: ASDisplayNode {
         return ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
     }
     
+    public var displayResourcesReady: Signal<Void, NoError> {
+        return .complete()
+    }
+    
     public init(layerBacked: Bool, dynamicBounce: Bool = true, rotated: Bool = false) {
         if true {
             if dynamicBounce {
@@ -162,6 +167,12 @@ open class ListViewItemNode: ASDisplayNode {
         super.init()
         self.isLayerBacked = layerBacked
     }
+    
+    /*deinit {
+        if Thread.isMainThread {
+            print("deallocating on main thread")
+        }
+    }*/
     
     var apparentHeight: CGFloat = 0.0
     private var _bounds: CGRect = CGRect()

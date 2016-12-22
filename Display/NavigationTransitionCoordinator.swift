@@ -56,7 +56,7 @@ class NavigationTransitionCoordinator {
         self.dimView.backgroundColor = UIColor.black
         self.shadowView = UIImageView(image: shadowImage)
         
-        if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar {
+        if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar, !topNavigationBar.isHidden, !bottomNavigationBar.isHidden {
             var topFrame = topNavigationBar.view.convert(topNavigationBar.bounds, to: container)
             var bottomFrame = bottomNavigationBar.view.convert(bottomNavigationBar.bounds, to: container)
             topFrame.origin.x = 0.0
@@ -111,7 +111,7 @@ class NavigationTransitionCoordinator {
     }
     
     func updateNavigationBarTransition() {
-        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar {
+        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar, self.inlineNavigationBarTransition {
             let position: CGFloat
             switch self.transition {
                 case .Push:
@@ -126,7 +126,7 @@ class NavigationTransitionCoordinator {
     }
     
     func maybeCreateNavigationBarTransition() {
-        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar {
+        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar, self.inlineNavigationBarTransition {
             let position: CGFloat
             switch self.transition {
                 case .Push:
@@ -141,7 +141,7 @@ class NavigationTransitionCoordinator {
     }
     
     func endNavigationBarTransition() {
-        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar {
+        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar, self.inlineNavigationBarTransition {
             topNavigationBar.transitionState = nil
             bottomNavigationBar.transitionState = nil
         }

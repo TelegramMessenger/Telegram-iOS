@@ -1,4 +1,5 @@
 import Foundation
+import SwiftSignalKit
 
 public enum ListViewCenterScrollPositionOverflow {
     case Top
@@ -121,6 +122,7 @@ public struct ListViewDeleteAndInsertOptions: OptionSet {
     public static let Synchronous = ListViewDeleteAndInsertOptions(rawValue: 8)
     public static let RequestItemInsertionAnimations = ListViewDeleteAndInsertOptions(rawValue: 16)
     public static let AnimateTopItemPosition = ListViewDeleteAndInsertOptions(rawValue: 32)
+    public static let PreferSynchronousResourceLoading = ListViewDeleteAndInsertOptions(rawValue: 64)
 }
 
 public struct ListViewUpdateSizeAndInsets {
@@ -222,7 +224,7 @@ struct TransactionState {
 struct PendingNode {
     let index: Int
     let node: ListViewItemNode
-    let apply: () -> ()
+    let apply: () -> (Signal<Void, NoError>?, () -> Void)
     let frame: CGRect
     let apparentHeight: CGFloat
 }
@@ -701,7 +703,7 @@ struct ListViewState {
         return height
     }
     
-    mutating func insertNode(_ itemIndex: Int, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: @escaping () -> (), offsetDirection: ListViewInsertionOffsetDirection, animated: Bool, operations: inout [ListViewStateOperation], itemCount: Int) {
+    mutating func insertNode(_ itemIndex: Int, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: @escaping () -> (Signal<Void, NoError>?, () -> Void), offsetDirection: ListViewInsertionOffsetDirection, animated: Bool, operations: inout [ListViewStateOperation], itemCount: Int) {
         let (insertionOrigin, insertionIndex) = self.nodeInsertionPointAndIndex(itemIndex)
         
         let nodeOrigin: CGPoint
@@ -806,7 +808,7 @@ struct ListViewState {
         }
     }
     
-    mutating func updateNodeAtItemIndex(_ itemIndex: Int, layout: ListViewItemNodeLayout, direction: ListViewItemOperationDirectionHint?, animation: ListViewItemUpdateAnimation, apply: @escaping () -> Void, operations: inout [ListViewStateOperation]) {
+    mutating func updateNodeAtItemIndex(_ itemIndex: Int, layout: ListViewItemNodeLayout, direction: ListViewItemOperationDirectionHint?, animation: ListViewItemUpdateAnimation, apply: @escaping () -> (Signal<Void, NoError>?, () -> Void), operations: inout [ListViewStateOperation]) {
         var i = -1
         for node in self.nodes {
             i += 1
@@ -862,9 +864,9 @@ struct ListViewState {
 }
 
 enum ListViewStateOperation {
-    case InsertNode(index: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> ())
+    case InsertNode(index: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, () -> Void))
     case InsertDisappearingPlaceholder(index: Int, referenceNode: ListViewItemNode, offsetDirection: ListViewInsertionOffsetDirection)
     case Remove(index: Int, offsetDirection: ListViewInsertionOffsetDirection)
     case Remap([Int: Int])
-    case UpdateLayout(index: Int, layout: ListViewItemNodeLayout, apply: () -> ())
+    case UpdateLayout(index: Int, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, () -> Void))
 }

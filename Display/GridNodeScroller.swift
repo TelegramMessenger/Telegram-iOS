@@ -1,6 +1,15 @@
 import UIKit
 
+private class GridNodeScrollerLayer: CALayer {
+    override func setNeedsDisplay() {
+    }
+}
+
 private class GridNodeScrollerView: UIScrollView {
+    override class var layerClass: AnyClass {
+        return GridNodeScrollerLayer.self
+    }
+    
     override func touchesShouldCancel(in view: UIView) -> Bool {
         return true
     }

@@ -13,6 +13,18 @@ public struct Font {
             return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, size, nil)
         }
     }
+    
+    public static func bold(_ size: CGFloat) -> UIFont {
+        if #available(iOS 8.2, *) {
+            return UIFont.systemFont(ofSize: size, weight: UIFontWeightBold)
+        } else {
+            return CTFontCreateWithName("HelveticaNeue-Bold" as CFString, size, nil)
+        }
+    }
+    
+    public static func italic(_ size: CGFloat) -> UIFont {
+        return UIFont.italicSystemFont(ofSize: size)
+    }
 }
 
 public extension NSAttributedString {
