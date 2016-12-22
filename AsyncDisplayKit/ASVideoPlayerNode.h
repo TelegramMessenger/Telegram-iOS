@@ -21,13 +21,14 @@
 @class AVAsset;
 @protocol ASVideoPlayerNodeDelegate;
 
-typedef enum {
+typedef NS_ENUM(NSInteger, ASVideoPlayerNodeControlType) {
   ASVideoPlayerNodeControlTypePlaybackButton,
   ASVideoPlayerNodeControlTypeElapsedText,
   ASVideoPlayerNodeControlTypeDurationText,
   ASVideoPlayerNodeControlTypeScrubber,
+  ASVideoPlayerNodeControlTypeFullScreenButton,
   ASVideoPlayerNodeControlTypeFlexGrowSpacer,
-} ASVideoPlayerNodeControlType;
+};
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -52,6 +53,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign, readonly) ASVideoNodePlayerState playerState;
 @property (nonatomic, assign, readwrite) BOOL shouldAggressivelyRecoverFromStall;
 @property (nullable, nonatomic, strong, readwrite) NSURL *placeholderImageURL;
+@property (nonatomic, strong, readonly) ASVideoNode *videoNode;
 
 //! Defaults to 100
 @property (nonatomic, assign) int32_t periodicTimeObserverTimescale;
@@ -127,6 +129,10 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Playback button delegate methods
 - (UIColor *)videoPlayerNodePlaybackButtonTint:(ASVideoPlayerNode *)videoPlayer;
 
+#pragma mark - Fullscreen button delegate methods
+
+- (UIImage *)videoPlayerNodeFullScreenButtonImage:(ASVideoPlayerNode *)videoPlayer;
+
 
 #pragma mark ASVideoNodeDelegate proxy methods
 /**
@@ -134,6 +140,13 @@ NS_ASSUME_NONNULL_BEGIN
  * @param videoPlayerNode The ASVideoPlayerNode that was tapped.
  */
 - (void)didTapVideoPlayerNode:(ASVideoPlayerNode *)videoPlayer;
+
+/**
+ * @abstract Delegate method invoked when fullcreen button is taped.
+ * @param buttonNode The fullscreen button node that was tapped.
+ */
+- (void)didTapFullScreenButtonNode:(ASButtonNode *)buttonNode;
+
 /**
  * @abstract Delegate method invoked when ASVideoNode playback time is updated.
  * @param videoPlayerNode The video player node

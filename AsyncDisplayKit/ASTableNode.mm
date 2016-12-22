@@ -15,8 +15,8 @@
 #import "ASTableNode.h"
 #import "ASTableViewInternal.h"
 #import "ASEnvironmentInternal.h"
-#import "ASDisplayNodeInternal.h"
 #import "ASDisplayNode+Subclasses.h"
+#import "ASDisplayNode+FrameworkPrivate.h"
 #import "ASInternalHelpers.h"
 #import "ASCellNode+Internal.h"
 #import "AsyncDisplayKit+Debug.h"
@@ -199,7 +199,7 @@
     // and asserting here isn't an option – it is a common pattern for users to clear
     // the delegate/dataSource in dealloc, which may be running on a background thread.
     // It is important that we avoid retaining self in this block, so that this method is dealloc-safe.
-    ASTableView *view = (ASTableView *)_view;
+    ASTableView *view = self.view;
     ASPerformBlockOnMainThread(^{
       view.asyncDelegate = delegate;
     });
@@ -226,7 +226,7 @@
     // and asserting here isn't an option – it is a common pattern for users to clear
     // the delegate/dataSource in dealloc, which may be running on a background thread.
     // It is important that we avoid retaining self in this block, so that this method is dealloc-safe.
-    ASTableView *view = (ASTableView *)_view;
+    ASTableView *view = self.view;
     ASPerformBlockOnMainThread(^{
       view.asyncDataSource = dataSource;
     });

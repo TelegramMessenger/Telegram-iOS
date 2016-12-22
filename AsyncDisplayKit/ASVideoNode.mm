@@ -12,9 +12,7 @@
 
 #if TARGET_OS_IOS
 #import <AVFoundation/AVFoundation.h>
-#import "ASDisplayNodeInternal.h"
-#import "ASDisplayNode+Subclasses.h"
-#import "ASDisplayNode+FrameworkPrivate.h"
+#import "ASDisplayNode+FrameworkSubclasses.h"
 #import "ASVideoNode.h"
 #import "ASEqualityHelpers.h"
 #import "ASInternalHelpers.h"
@@ -122,6 +120,7 @@ static NSString * const kRate = @"rate";
 
 - (AVPlayerItem *)constructPlayerItem
 {
+  ASDisplayNodeAssertMainThread();
   ASDN::MutexLocker l(__instanceLock__);
 
   AVPlayerItem *playerItem = nil;
@@ -139,6 +138,8 @@ static NSString * const kRate = @"rate";
 
 - (void)prepareToPlayAsset:(AVAsset *)asset withKeys:(NSArray<NSString *> *)requestedKeys
 {
+  ASDisplayNodeAssertMainThread();
+  
   for (NSString *key in requestedKeys) {
     NSError *error = nil;
     AVKeyValueStatus keyStatus = [asset statusOfValueForKey:key error:&error];
@@ -472,10 +473,10 @@ static NSString * const kRate = @"rate";
 
 - (void)setAssetURL:(NSURL *)assetURL
 {
-  ASDN::MutexLocker l(__instanceLock__);
-
+  ASDisplayNodeAssertMainThread();
+  
   if (ASObjectIsEqual(assetURL, self.assetURL) == NO) {
-    [self locked_setAndFetchAsset:[AVURLAsset assetWithURL:assetURL] url:assetURL];
+    [self setAndFetchAsset:[AVURLAsset assetWithURL:assetURL] url:assetURL];
   }
 }
 
@@ -494,10 +495,10 @@ static NSString * const kRate = @"rate";
 
 - (void)setAsset:(AVAsset *)asset
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDisplayNodeAssertMainThread();
   
-  if (ASAssetIsEqual(asset, _asset) == NO) {
-    [self locked_setAndFetchAsset:asset url:nil];
+  if (ASAssetIsEqual(asset, self.asset) == NO) {
+    [self setAndFetchAsset:asset url:nil];
   }
 }
 
@@ -507,12 +508,19 @@ static NSString * const kRate = @"rate";
   return _asset;
 }
 
-- (void)locked_setAndFetchAsset:(AVAsset *)asset url:(NSURL *)assetURL
+- (void)setAndFetchAsset:(AVAsset *)asset url:(NSURL *)assetURL
 {
+  ASDisplayNodeAssertMainThread();
+  
   [self didExitPreloadState];
-  self.videoPlaceholderImage = nil;
-  _asset = asset;
-  _assetURL = assetURL;
+  
+  {
+    ASDN::MutexLocker l(__instanceLock__);
+    self.videoPlaceholderImage = nil;
+    _asset = asset;
+    _assetURL = assetURL;
+  }
+  
   [self setNeedsPreload];
 }
 
@@ -615,21 +623,25 @@ static NSString * const kRate = @"rate";
 
 - (void)play
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  __instanceLock__.lock();
 
   if (![self isStateChangeValid:ASVideoNodePlayerStatePlaying]) {
+    __instanceLock__.unlock();
     return;
   }
 
   if (_player == nil) {
-    [self setNeedsPreload];
+    __instanceLock__.unlock();
+      [self setNeedsPreload];
+    __instanceLock__.lock();
   }
 
   if (_playerNode == nil) {
     _playerNode = [self constructPlayerNode];
 
-    [self addSubnode:_playerNode];
-
+    __instanceLock__.unlock();
+      [self addSubnode:_playerNode];
+    __instanceLock__.lock();
       
     [self setNeedsLayout];
   }
@@ -637,6 +649,7 @@ static NSString * const kRate = @"rate";
   
   [_player play];
   _shouldBePlaying = YES;
+  __instanceLock__.unlock();
 }
 
 - (BOOL)ready
