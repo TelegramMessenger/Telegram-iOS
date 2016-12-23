@@ -27,6 +27,9 @@ typedef struct {
 - (void)addIncomingBytes:(NSUInteger)incomingBytes interface:(MTNetworkUsageManagerInterface)interface;
 - (void)addOutgoingBytes:(NSUInteger)outgoingBytes interface:(MTNetworkUsageManagerInterface)interface;
 
+- (void)resetIncomingBytes:(MTNetworkUsageManagerInterface)interface;
+- (void)resetOutgoingBytes:(MTNetworkUsageManagerInterface)interface;
+
 - (MTSignal *)currentStats;
 
 @end

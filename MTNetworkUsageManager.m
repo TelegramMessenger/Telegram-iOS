@@ -1,11 +1,24 @@
 #import "MTNetworkUsageManager.h"
 
-#import "MTNetworkUsageCalculationInfo.h"
-#import "MTTimer.h"
-#import "MTQueue.h"
-#import "MTSignal.h"
 #include <sys/mman.h>
 #import <libkern/OSAtomic.h>
+
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTNetworkUsageCalculationInfo.h>
+#   import <MTProtoKitDynamic/MTSignal.h>
+#   import <MTProtoKitDynamic/MTTimer.h>
+#   import <MTProtoKitDynamic/MTQueue.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTNetworkUsageCalculationInfo.h>
+#   import <MTProtoKitMac/MTSignal.h>
+#   import <MTProtoKitMac/MTTimer.h>
+#   import <MTProtoKitMac/MTQueue.h>
+#else
+#   import <MTProtoKit/MTNetworkUsageCalculationInfo.h>
+#   import <MTProtoKit/MTSignal.h>
+#   import <MTProtoKit/MTTimer.h>
+#   import <MTProtoKit/MTQueue.h>
+#endif
 
 @implementation MTNetworkUsageManagerStats
 
@@ -91,6 +104,24 @@ static int interfaceOffset(MTNetworkUsageManagerInterface interface) {
         if (_map) {
             int64_t *ptr = (int64_t *)(_map + 1 * 16 + interfaceOffset(interface));
             OSAtomicAdd64((int64_t)outgoingBytes, ptr);
+        }
+    }];
+}
+
+- (void)resetIncomingBytes:(MTNetworkUsageManagerInterface)interface {
+    [_queue dispatchOnQueue:^{
+        if (_map) {
+            int64_t *ptr = (int64_t *)(_map + 0 * 16 + interfaceOffset(interface));
+            *ptr = 0;
+        }
+    }];
+}
+
+- (void)resetOutgoingBytes:(MTNetworkUsageManagerInterface)interface {
+    [_queue dispatchOnQueue:^{
+        if (_map) {
+            int64_t *ptr = (int64_t *)(_map + 1 * 16 + interfaceOffset(interface));
+            *ptr = 0;
         }
     }];
 }
