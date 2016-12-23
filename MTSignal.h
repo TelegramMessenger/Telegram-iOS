@@ -34,8 +34,29 @@
 
 - (MTSignal *)take:(NSUInteger)count;
 
+- (MTSignal *)switchToLatest;
+
+- (MTSignal *)map:(id (^)(id))f;
+- (MTSignal *)filter:(bool (^)(id))f;
 - (MTSignal *)mapToSignal:(MTSignal *(^)(id))f;
 
 - (MTSignal *)onDispose:(void (^)())f;
+
+- (MTSignal *)deliverOn:(MTQueue *)queue;
+- (MTSignal *)startOn:(MTQueue *)queue;
+
+- (MTSignal *)take:(NSUInteger)count;
+- (MTSignal *)takeLast;
+
+- (MTSignal *)reduceLeft:(id)value with:(id (^)(id, id))f;
+
+@end
+
+@interface MTPipe : NSObject
+
+@property (nonatomic, copy, readonly) MTSignal *(^signalProducer)();
+@property (nonatomic, copy, readonly) void (^sink)(id);
+
+- (instancetype)initWithReplay:(bool)replay;
 
 @end

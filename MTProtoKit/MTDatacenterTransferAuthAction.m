@@ -90,7 +90,7 @@
         return;
     }
     
-    _sourceDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:sourceDatacenterId];
+    _sourceDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:sourceDatacenterId usageCalculationInfo:nil];
     
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [_sourceDatacenterMtProto addMessageService:requestService];
@@ -126,7 +126,7 @@
     _sourceDatacenterMtProto = nil;
     
     MTContext *context = _context;
-    _destinationDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:_destinationDatacenterId];
+    _destinationDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:_destinationDatacenterId usageCalculationInfo:nil];
     
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [_destinationDatacenterMtProto addMessageService:requestService];

@@ -100,7 +100,7 @@ typedef struct {
         MTPayloadData payloadData;
         NSData *data = [self payloadData:&payloadData];
         
-        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId address:address interface:nil];
+        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId address:address interface:nil usageCalculationInfo:nil];
         __weak MTTcpConnection *weakConnection = connection;
         connection.connectionOpened = ^
         {

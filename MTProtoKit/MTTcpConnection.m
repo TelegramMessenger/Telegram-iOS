@@ -71,6 +71,8 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     
     MTAesCtr *_outgoingAesCtr;
     MTAesCtr *_incomingAesCtr;
+    
+    MTNetworkUsageCalculationInfo *_usageCalculationInfo;
 }
 
 @property (nonatomic) int64_t packetHeadDecodeToken;
@@ -91,7 +93,7 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     return queue;
 }
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(address != nil, @"address should not be nil");
@@ -111,6 +113,7 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
         _address = address;
         
         _interface = interface;
+        _usageCalculationInfo = usageCalculationInfo;
         
         if (context.apiEnvironment.datacenterAddressOverrides[@(datacenterId)] != nil) {
             _firstPacketControlByte = [context.apiEnvironment tcpPayloadPrefix];
@@ -149,6 +152,7 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
         if (_socket == nil)
         {
             _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
+            _socket.usageCalculationInfo = _usageCalculationInfo;
             
             if (MTLogEnabled()) {
                 MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);

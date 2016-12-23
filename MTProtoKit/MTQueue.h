@@ -14,6 +14,7 @@
 
 + (MTQueue *)mainQueue;
 + (MTQueue *)concurrentDefaultQueue;
++ (MTQueue *)concurrentLowQueue;
 
 - (dispatch_queue_t)nativeQueue;
 

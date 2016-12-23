@@ -63,9 +63,9 @@
     return queue;
 }
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
-    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address];
+    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address usageCalculationInfo:usageCalculationInfo];
     if (self != nil)
     {
         _address = address;

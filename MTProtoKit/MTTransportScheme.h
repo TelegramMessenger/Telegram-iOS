@@ -12,6 +12,7 @@
 @class MTTransport;
 @class MTDatacenterAddress;
 @protocol MTTransportDelegate;
+@class MTNetworkUsageCalculationInfo;
 
 @interface MTTransportScheme : NSObject <NSCoding>
 
@@ -25,6 +26,6 @@
 - (BOOL)isOptimal;
 - (NSComparisonResult)compareToScheme:(MTTransportScheme *)other;
 
-- (MTTransport *)createTransportWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId delegate:(id<MTTransportDelegate>)delegate;
+- (MTTransport *)createTransportWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId delegate:(id<MTTransportDelegate>)delegate usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 
 @end

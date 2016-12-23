@@ -85,6 +85,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     int _mtState;
     
     bool _willRequestTransactionOnNextQueuePass;
+    
+    MTNetworkUsageCalculationInfo *_usageCalculationInfo;
 }
 
 @end
@@ -102,7 +104,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return queue;
 }
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -115,6 +117,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     {
         _context = context;
         _datacenterId = datacenterId;
+        _usageCalculationInfo = usageCalculationInfo;
         
         [_context addChangeListener:self];
         
@@ -291,7 +294,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             MTTransport *transport = nil;
             
-            transport = [_transportScheme createTransportWithContext:_context datacenterId:_datacenterId delegate:self];
+            transport = [_transportScheme createTransportWithContext:_context datacenterId:_datacenterId delegate:self usageCalculationInfo:_usageCalculationInfo];
             
             [self setTransport:transport];
         }
