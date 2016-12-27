@@ -23,7 +23,7 @@ private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox)
     }
 }
 
-func applyUpdateMessage(postbox: Postbox, stateManager: StateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
+func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
     let messageId = result.rawMessageIds.first
     let apiMessage = result.messages.first
     

@@ -101,7 +101,7 @@ public struct MessageTextEntity: Coding, Equatable {
     public let range: Range<Int>
     public let type: MessageTextEntityType
     
-    init(range: Range<Int>, type: MessageTextEntityType) {
+    public init(range: Range<Int>, type: MessageTextEntityType) {
         self.range = range
         self.type = type
     }
@@ -191,7 +191,7 @@ public class TextEntitiesMessageAttribute: MessageAttribute, Equatable {
         return result
     }
     
-    init(entities: [MessageTextEntity]) {
+    public init(entities: [MessageTextEntity]) {
         self.entities = entities
     }
     

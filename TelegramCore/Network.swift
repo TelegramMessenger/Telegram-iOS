@@ -133,14 +133,22 @@ func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoP
             let requestService = MTRequestMessageService(context: context)!
             let connectionStatusDelegate = MTProtoConnectionStatusDelegate()
             connectionStatusDelegate.action = { [weak connectionStatus] flags in
-                if !flags.contains(.NetworkAvailable) {
-                    connectionStatus?.set(single(ConnectionStatus.WaitingForNetwork, NoError.self))
-                } else if !flags.contains(.Connected) {
-                    connectionStatus?.set(single(ConnectionStatus.Connecting, NoError.self))
-                } else if !flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
-                    connectionStatus?.set(single(ConnectionStatus.Updating, NoError.self))
+                if flags.contains(.Connected) {
+                    if !flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
+                        connectionStatus?.set(single(ConnectionStatus.Updating, NoError.self))
+                    } else {
+                        connectionStatus?.set(single(ConnectionStatus.Online, NoError.self))
+                    }
                 } else {
-                    connectionStatus?.set(single(ConnectionStatus.Online, NoError.self))
+                    if !flags.contains(.NetworkAvailable) {
+                        connectionStatus?.set(single(ConnectionStatus.WaitingForNetwork, NoError.self))
+                    } else if !flags.contains(.Connected) {
+                        connectionStatus?.set(single(ConnectionStatus.Connecting, NoError.self))
+                    } else if !flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
+                        connectionStatus?.set(single(ConnectionStatus.Updating, NoError.self))
+                    } else {
+                        connectionStatus?.set(single(ConnectionStatus.Online, NoError.self))
+                    }
                 }
             }
             mtProto.delegate = connectionStatusDelegate

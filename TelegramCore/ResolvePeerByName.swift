@@ -46,12 +46,18 @@ final class CachedResolvedByNamePeer: Coding {
 
 private let resolvedByNamePeersCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 150, highWaterItemCount: 200)
 
-public enum ResolvePeerByNameCachedPolicy {
-    case remoteIfEarlierThan(timestamp: Int32)
-    case remote
+public enum ResolvePeerByNameOptionCached {
+    case none
+    case cached
+    case cachedIfLaterThan(timestamp: Int32)
 }
 
-public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 60 * 60) -> Signal<PeerId?, NoError> {
+public enum ResolvePeerByNameOptionRemote {
+    case updateIfEarlierThan(timestamp: Int32)
+    case update
+}
+
+public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
     var normalizedName = name
     if normalizedName.hasPrefix("@") {
        normalizedName = normalizedName.substring(from: name.index(after: name.startIndex))

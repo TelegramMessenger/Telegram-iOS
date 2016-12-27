@@ -149,7 +149,7 @@ private func localReadStateMarker(network: Network, postbox: Postbox, peerId: Pe
     }
 }
 
-private func validatePeerReadState(network: Network, postbox: Postbox, stateManager: StateManager, peerId: PeerId) -> Signal<Void, NoError> {
+private func validatePeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Void, NoError> {
     let readStateWithInitialState = localReadStateMarker(network: network, postbox: postbox, peerId: peerId)
         |> mapToSignal { marker -> Signal<(PeerReadState, PeerReadStateMarker, PeerReadStateMarker), VerifyReadStateError> in
             return dialogReadState(network: network, postbox: postbox, peerId: peerId)
@@ -157,7 +157,7 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
     }
     
     let maybeAppliedReadState = readStateWithInitialState |> mapToSignal { (readState, initialMarker, finalMarker) -> Signal<Void, VerifyReadStateError> in
-        return stateManager.injectedStateModification(postbox.modify { modifier -> VerifyReadStateError? in
+        return stateManager.addCustomOperation(postbox.modify { modifier -> VerifyReadStateError? in
                 if initialMarker == finalMarker {
                     modifier.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: readState]])
                     return nil
@@ -186,7 +186,7 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
         |> retry(0.1, maxDelay: 5.0, onQueue: Queue.concurrentDefaultQueue())
 }
 
-private func pushPeerReadState(network: Network, postbox: Postbox, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, VerifyReadStateError> {
+private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, VerifyReadStateError> {
     return inputPeer(postbox: postbox, peerId: peerId)
         |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in
             switch inputPeer {
@@ -199,14 +199,19 @@ private func pushPeerReadState(network: Network, postbox: Postbox, peerId: PeerI
                 default:
                     return network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: readState.maxIncomingReadId))
                         |> retryRequest
-                        |> mapToSignalPromotingError { _ -> Signal<PeerReadState, VerifyReadStateError> in
+                        |> mapToSignalPromotingError { result -> Signal<PeerReadState, VerifyReadStateError>
+                            in
+                            switch result {
+                                case let .affectedMessages(pts, ptsCount):
+                                    stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                            }
                             return .single(readState)
                         }
             }
         }
 }
 
-private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: StateManager, peerId: PeerId) -> Signal<Void, NoError> {
+private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Void, NoError> {
     let currentReadState = postbox.modify { modifier -> PeerReadState? in
         if let readStates = modifier.getPeerReadStates(peerId) {
             for (namespace, readState) in readStates {
@@ -221,7 +226,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
     let pushedState = currentReadState
         |> mapToSignalPromotingError { readState -> Signal<PeerReadState, VerifyReadStateError> in
             if let readState = readState {
-                return pushPeerReadState(network: network, postbox: postbox, peerId: peerId, readState: readState)
+                return pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, readState: readState)
             } else {
                 return .complete()
             }
@@ -229,7 +234,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
     
     let verifiedState = pushedState
         |> mapToSignal { readState -> Signal<Void, VerifyReadStateError> in
-            return stateManager.injectedStateModification(postbox.modify { modifier -> VerifyReadStateError? in
+            return stateManager.addCustomOperation(postbox.modify { modifier -> VerifyReadStateError? in
                 if let readStates = modifier.getPeerReadStates(peerId) {
                     for (namespace, currentReadState) in readStates where namespace == Namespaces.Message.Cloud {
                         if currentReadState == readState {
@@ -264,7 +269,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
         |> retry(0.1, maxDelay: 5.0, onQueue: Queue.concurrentDefaultQueue())
 }
 
-func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: StateManager, peerId: PeerId, push: Bool, validate: Bool) -> Signal<Void, NoError> {
+func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, push: Bool, validate: Bool) -> Signal<Void, NoError> {
     var signal: Signal<Void, NoError> = .complete()
     if push {
         signal = signal |> then(pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId))

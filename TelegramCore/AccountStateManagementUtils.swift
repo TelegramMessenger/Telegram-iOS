@@ -15,232 +15,6 @@ private enum Event<T, E> {
     case Completion
 }
 
-private final class InitialState {
-    let state: AuthorizedAccountState.State
-    let peerIds: Set<PeerId>
-    let messageIds: Set<MessageId>
-    let channelStates: [PeerId: ChannelState]
-    let peerNotificationSettings: [PeerId: PeerNotificationSettings]
-    let peerIdsWithNewMessages: Set<PeerId>
-    let locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]
-    
-    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) {
-        self.state = state
-        self.peerIds = peerIds
-        self.messageIds = messageIds
-        self.channelStates = channelStates
-        self.peerIdsWithNewMessages = peerIdsWithNewMessages
-        self.peerNotificationSettings = peerNotificationSettings
-        self.locallyGeneratedMessageTimestamps = locallyGeneratedMessageTimestamps
-    }
-}
-
-private enum MutationOperation {
-    case AddMessages([StoreMessage], AddMessagesLocation)
-    case DeleteMessagesWithGlobalIds([Int32])
-    case DeleteMessages([MessageId])
-    case EditMessage(MessageId, StoreMessage)
-    case UpdateMedia(MediaId, Media?)
-    case ReadInbox(MessageId)
-    case ReadOutbox(MessageId)
-    case ResetReadState(PeerId, MessageId.Namespace, MessageId.Id, MessageId.Id, MessageId.Id, Int32)
-    case UpdateState(AuthorizedAccountState.State)
-    case UpdateChannelState(PeerId, ChannelState)
-    case UpdatePeerNotificationSettings(PeerId, PeerNotificationSettings)
-    case AddHole(MessageId)
-    case MergeApiChats([Api.Chat])
-    case UpdatePeer(PeerId, (Peer) -> Peer)
-    case MergeApiUsers([Api.User])
-    case MergePeerPresences([PeerId: PeerPresence])
-}
-
-private struct MutableState {
-    let initialState: InitialState
-    let branchOperationIndex: Int
-    
-    fileprivate var operations: [MutationOperation] = []
-    
-    fileprivate var state: AuthorizedAccountState.State
-    fileprivate var peers: [PeerId: Peer]
-    fileprivate var channelStates: [PeerId: ChannelState]
-    fileprivate var peerNotificationSettings: [PeerId: PeerNotificationSettings]
-    fileprivate var storedMessages: Set<MessageId>
-    
-    fileprivate var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]
-    
-    fileprivate var insertedPeers: [PeerId: Peer] = [:]
-    
-    fileprivate var preCachedResources: [(MediaResource, Data)] = []
-    
-    init(initialState: InitialState, initialPeers: [PeerId: Peer], initialStoredMessages: Set<MessageId>, storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]) {
-        self.initialState = initialState
-        self.state = initialState.state
-        self.peers = initialPeers
-        self.storedMessages = initialStoredMessages
-        self.channelStates = initialState.channelStates
-        self.peerNotificationSettings = initialState.peerNotificationSettings
-        self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
-        self.branchOperationIndex = 0
-    }
-    
-    init(initialState: InitialState, operations: [MutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], branchOperationIndex: Int) {
-        self.initialState = initialState
-        self.operations = operations
-        self.state = state
-        self.peers = peers
-        self.channelStates = channelStates
-        self.storedMessages = storedMessages
-        self.peerNotificationSettings = peerNotificationSettings
-        self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
-        self.branchOperationIndex = branchOperationIndex
-    }
-    
-    func branch() -> MutableState {
-        return MutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, channelStates: self.channelStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, branchOperationIndex: self.operations.count)
-    }
-    
-    mutating func merge(_ other: MutableState) {
-        for i in other.branchOperationIndex ..< other.operations.count {
-            self.addOperation(other.operations[i])
-        }
-        for (_, peer) in other.insertedPeers {
-            self.peers[peer.id] = peer
-        }
-        self.preCachedResources.append(contentsOf: other.preCachedResources)
-    }
-    
-    mutating func addPreCachedResource(_ resource: MediaResource, data: Data) {
-        self.preCachedResources.append((resource, data))
-    }
-    
-    mutating func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
-        self.addOperation(.AddMessages(messages, location))
-    }
-    
-    mutating func deleteMessagesWithGlobalIds(_ globalIds: [Int32]) {
-        self.addOperation(.DeleteMessagesWithGlobalIds(globalIds))
-    }
-    
-    mutating func deleteMessages(_ messageIds: [MessageId]) {
-        self.addOperation(.DeleteMessages(messageIds))
-    }
-    
-    mutating func editMessage(_ id: MessageId, message: StoreMessage) {
-        self.addOperation(.EditMessage(id, message))
-    }
-    
-    mutating func updateMedia(_ id: MediaId, media: Media?) {
-        self.addOperation(.UpdateMedia(id, media))
-    }
-    
-    mutating func readInbox(_ messageId: MessageId) {
-        self.addOperation(.ReadInbox(messageId))
-    }
-    
-    mutating func readOutbox(_ messageId: MessageId) {
-        self.addOperation(.ReadOutbox(messageId))
-    }
-    
-    mutating func resetReadState(_ peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32) {
-        self.addOperation(.ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count))
-    }
-    
-    mutating func updateState(_ state: AuthorizedAccountState.State) {
-        self.addOperation(.UpdateState(state))
-    }
-    
-    mutating func updateChannelState(_ peerId: PeerId, state: ChannelState) {
-        self.addOperation(.UpdateChannelState(peerId, state))
-    }
-    
-    mutating func updatePeerNotificationSettings(_ peerId: PeerId, notificationSettings: PeerNotificationSettings) {
-        self.addOperation(.UpdatePeerNotificationSettings(peerId, notificationSettings))
-    }
-    
-    mutating func addHole(_ messageId: MessageId) {
-        self.addOperation(.AddHole(messageId))
-    }
-    
-    mutating func mergeChats(_ chats: [Api.Chat]) {
-        self.addOperation(.MergeApiChats(chats))
-    }
-    
-    mutating func updatePeer(_ id: PeerId, _ f: @escaping (Peer) -> Peer) {
-        self.addOperation(.UpdatePeer(id, f))
-    }
-    
-    mutating func mergeUsers(_ users: [Api.User]) {
-        self.addOperation(.MergeApiUsers(users))
-        
-        var presences: [PeerId: PeerPresence] = [:]
-        for user in users {
-            switch user {
-                case let .user(_, id, _, _, _, _, _, _, status, _, _, _):
-                    if let status = status {
-                        presences[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] = TelegramUserPresence(apiStatus: status)
-                    }
-                    break
-                case .userEmpty:
-                    break
-            }
-        }
-        if !presences.isEmpty {
-            self.addOperation(.MergePeerPresences(presences))
-        }
-    }
-    
-    mutating func mergePeerPresences(_ presences: [PeerId: PeerPresence]) {
-        self.addOperation(.MergePeerPresences(presences))
-    }
-    
-    mutating func addOperation(_ operation: MutationOperation) {
-        switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadInbox, .ReadOutbox, .ResetReadState, .MergePeerPresences:
-                break
-            case let .AddMessages(messages, _):
-                for message in messages {
-                    if case let .Id(id) = message.id {
-                        self.storedMessages.insert(id)
-                    }
-                }
-            case let .UpdateState(state):
-                self.state = state
-            case let .UpdateChannelState(peerId, channelState):
-                self.channelStates[peerId] = channelState
-            case let .UpdatePeerNotificationSettings(peerId, notificationSettings):
-                self.peerNotificationSettings[peerId] = notificationSettings
-            case let .MergeApiChats(chats):
-                for chat in chats {
-                    if let groupOrChannel = mergeGroupOrChannel(lhs: peers[chat.peerId], rhs: chat) {
-                        peers[groupOrChannel.id] = groupOrChannel
-                        insertedPeers[groupOrChannel.id] = groupOrChannel
-                    }
-                }
-            case let .MergeApiUsers(users):
-                for apiUser in users {
-                    if let user = TelegramUser.merge(peers[apiUser.peerId] as? TelegramUser, rhs: apiUser) {
-                        peers[user.id] = user
-                        insertedPeers[user.id] = user
-                    }
-                }
-            case let .UpdatePeer(id, f):
-                if let peer = self.peers[id] {
-                    let updatedPeer = f(peer)
-                    peers[id] = updatedPeer
-                    insertedPeers[id] = updatedPeer
-                }
-        }
-        
-        self.operations.append(operation)
-    }
-}
-
-private struct FinalState {
-    let state: MutableState
-    let shouldPoll: Bool
-    let incomplete: Bool
-}
-
 private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
     var peerIds = Set<PeerId>()
     
@@ -278,6 +52,13 @@ private func peersWithNewMessagesFromUpdateGroups(_ groups: [UpdateGroup]) -> Se
         for update in group.updates {
             if let messageId = update.messageId {
                 peerIds.insert(messageId.peerId)
+            }
+            switch update {
+                case let .updateChannelTooLong(_, channelId, _):
+                    let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                    peerIds.insert(peerId)
+                default:
+                    break
             }
         }
     }
@@ -403,6 +184,13 @@ private func peersWithNewMessagesFromDifference(_ difference: Api.updates.Differ
                 if let messageId = update.messageId {
                     peerIds.insert(messageId.peerId)
                 }
+                switch update {
+                    case let .updateChannelTooLong(_, channelId, _):
+                        let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        peerIds.insert(peerId)
+                    default:
+                        break
+                }
             }
         case .differenceEmpty:
             break
@@ -416,6 +204,13 @@ private func peersWithNewMessagesFromDifference(_ difference: Api.updates.Differ
             for update in otherUpdates {
                 if let messageId = update.messageId {
                     peerIds.insert(messageId.peerId)
+                }
+                switch update {
+                    case let .updateChannelTooLong(_, channelId, _):
+                        let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        peerIds.insert(peerId)
+                    default:
+                        break
                 }
             }
         case .differenceTooLong:
@@ -461,7 +256,7 @@ private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.u
     return messageTimestamps
 }
 
-private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> MutableState {
+private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
     var peers: [PeerId: Peer] = [:]
     var channelStates: [PeerId: ChannelState] = [:]
     
@@ -494,17 +289,27 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
     }
     
     var peerNotificationSettings: [PeerId: PeerNotificationSettings] = [:]
+    var readInboxMaxIds: [PeerId: MessageId] = [:]
+    
     for peerId in peerIdsWithNewMessages {
         if let notificationSettings = modifier.getPeerNotificationSettings(peerId) {
             peerNotificationSettings[peerId] = notificationSettings
         }
+        if let readStates = modifier.getPeerReadStates(peerId) {
+            for (namespace, state) in readStates {
+                if namespace == Namespaces.Message.Cloud {
+                    readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: state.maxIncomingReadId)
+                    break
+                }
+            }
+        }
     }
     
-    return MutableState(initialState: InitialState(state: (modifier.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, channelStates: channelStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps), initialPeers: peers, initialStoredMessages: storedMessages, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
+    return AccountMutableState(initialState: AccountInitialState(state: (modifier.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, channelStates: channelStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps), initialPeers: peers, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
 }
 
-private func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGroup]) -> Signal<MutableState, NoError> {
-    return account.postbox.modify { modifier -> MutableState in
+func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGroup]) -> Signal<AccountMutableState, NoError> {
+    return account.postbox.modify { modifier -> AccountMutableState in
         let peerIds = peerIdsFromUpdateGroups(groups)
         let associatedMessageIds = associatedMessageIdsFromUpdateGroups(groups)
         let peerIdsWithNewMessages = peersWithNewMessagesFromUpdateGroups(groups)
@@ -513,8 +318,8 @@ private func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGro
     }
 }
 
-private func initialStateWithDifference(_ account: Account, difference: Api.updates.Difference) -> Signal<MutableState, NoError> {
-    return account.postbox.modify { modifier -> MutableState in
+func initialStateWithDifference(_ account: Account, difference: Api.updates.Difference) -> Signal<AccountMutableState, NoError> {
+    return account.postbox.modify { modifier -> AccountMutableState in
         let peerIds = peerIdsFromDifference(difference)
         let associatedMessageIds = associatedMessageIdsFromDifference(difference)
         let peerIdsWithNewMessages = peersWithNewMessagesFromDifference(difference)
@@ -522,7 +327,7 @@ private func initialStateWithDifference(_ account: Account, difference: Api.upda
     }
 }
 
-private func finalStateWithUpdateGroups(_ account: Account, state: MutableState, groups: [UpdateGroup]) -> Signal<FinalState, NoError> {
+func finalStateWithUpdateGroups(_ account: Account, state: AccountMutableState, groups: [UpdateGroup]) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var hadReset = false
@@ -640,7 +445,7 @@ private func finalStateWithUpdateGroups(_ account: Account, state: MutableState,
     return finalStateWithUpdates(account: account, state: updatedState, updates: collectedUpdates, shouldPoll: hadReset, missingUpdates: !ptsUpdatesAfterHole.isEmpty || !qtsUpdatesAfterHole.isEmpty || !seqGroupsAfterHole.isEmpty)
 }
 
-private func finalStateWithDifference(account: Account, state: MutableState, difference: Api.updates.Difference) -> Signal<FinalState, NoError> {
+func finalStateWithDifference(account: Account, state: AccountMutableState, difference: Api.updates.Difference) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var messages: [Api.Message] = []
@@ -764,7 +569,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
     return result
 }
 
-private func finalStateWithUpdates(account: Account, state: MutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool) -> Signal<FinalState, NoError> {
+private func finalStateWithUpdates(account: Account, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var channelsToPoll = Set<PeerId>()
@@ -979,7 +784,7 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
         }
     }
     
-    var pollChannelSignals: [Signal<MutableState, NoError>] = []
+    var pollChannelSignals: [Signal<AccountMutableState, NoError>] = []
     for peerId in channelsToPoll {
         if let peer = updatedState.peers[peerId] {
             pollChannelSignals.append(pollChannel(account, peer: peer, state: updatedState.branch()))
@@ -988,16 +793,16 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
         }
     }
     
-    return combineLatest(pollChannelSignals) |> mapToSignal { states -> Signal<FinalState, NoError> in
+    return combineLatest(pollChannelSignals) |> mapToSignal { states -> Signal<AccountFinalState, NoError> in
         var finalState = updatedState
         for state in states {
             finalState.merge(state)
         }
         return resolveAssociatedMessages(account: account, state: finalState)
-            |> mapToSignal { resultingState -> Signal<FinalState, NoError> in
+            |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerNotificationSettings(account: account, state: resultingState)
-                    |> map { resultingState -> FinalState in
-                        return FinalState(state: resultingState, shouldPoll: shouldPoll || missingUpdates, incomplete: missingUpdates)
+                    |> map { resultingState -> AccountFinalState in
+                        return AccountFinalState(state: resultingState, shouldPoll: shouldPoll, incomplete: missingUpdates)
                     }
             }
     }
@@ -1018,7 +823,7 @@ private func messagesIdsGroupedByPeerId(_ ids: Set<MessageId>) -> [PeerId: [Mess
     return dict
 }
 
-private func resolveAssociatedMessages(account: Account, state: MutableState) -> Signal<MutableState, NoError> {
+private func resolveAssociatedMessages(account: Account, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     let missingMessageIds = state.initialState.messageIds.subtracting(state.storedMessages)
     if missingMessageIds.isEmpty {
         return .single(state)
@@ -1084,7 +889,7 @@ private func resolveAssociatedMessages(account: Account, state: MutableState) ->
     }
 }
 
-private func resolveMissingPeerNotificationSettings(account: Account, state: MutableState) -> Signal<MutableState, NoError> {
+private func resolveMissingPeerNotificationSettings(account: Account, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     var missingPeers: [PeerId: Api.InputPeer] = [:]
     
     for peerId in state.initialState.peerIdsWithNewMessages {
@@ -1113,7 +918,7 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Mut
             signals.append(fetchSettings)
         }
         return combineLatest(signals)
-            |> map { peersAndSettings -> MutableState in
+            |> map { peersAndSettings -> AccountMutableState in
                 var updatedState = state
                 for pair in peersAndSettings {
                     if let (peerId, settings) = pair {
@@ -1127,11 +932,11 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Mut
     return .single(state)
 }
 
-private func pollChannel(_ account: Account, peer: Peer, state: MutableState) -> Signal<MutableState, NoError> {
+private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     if let inputChannel = apiInputChannel(peer) {
         return account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: state.channelStates[peer.id]?.pts ?? 1, limit: 20))
             |> retryRequest
-            |> map { difference -> MutableState in
+            |> map { difference -> AccountMutableState in
                 var updatedState = state
                 switch difference {
                     case let .channelDifference(_, pts, _, newMessages, otherUpdates, chats, users):
@@ -1215,7 +1020,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: MutableState) ->
     }
 }
 
-private func verifyTransaction(_ modifier: Modifier, finalState: MutableState) -> Bool {
+private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableState) -> Bool {
     var hadUpdateState = false
     var channelsWithUpdatedStates = Set<PeerId>()
     
@@ -1300,8 +1105,8 @@ private final class OptimizeAddMessagesState {
     }
 }
 
-private func optimizedOperations(_ operations: [MutationOperation]) -> [MutationOperation] {
-    var result: [MutationOperation] = []
+private func optimizedOperations(_ operations: [AccountStateMutationOperation]) -> [AccountStateMutationOperation] {
+    var result: [AccountStateMutationOperation] = []
     
     var updatedState: AuthorizedAccountState.State?
     var updatedChannelStates: [PeerId: ChannelState] = [:]
@@ -1345,7 +1150,7 @@ private func optimizedOperations(_ operations: [MutationOperation]) -> [Mutation
     return result
 }
 
-private func replayFinalState(_ modifier: Modifier, finalState: MutableState) -> Bool {
+func replayFinalState(_ modifier: Modifier, finalState: AccountMutableState) -> Bool {
     let verified = verifyTransaction(modifier, finalState: finalState)
     if !verified { 
         return false
@@ -1476,27 +1281,13 @@ private func pollDifference(_ account: Account) -> Signal<Void, NoError> {
     return signal
 }
 
-#if os(macOS)
+
+
+/*#if os(macOS)
     private typealias SignalKitTimer = SwiftSignalKitMac.Timer
 #else
     private typealias SignalKitTimer = SwiftSignalKit.Timer
 #endif
-
-private enum StateManagerState {
-    case none
-    case pollingDifference
-}
-
-private final class StateManagerInternal {
-    private let queue = Queue()
-    private let account: Account
-    
-    init(account: Account) {
-        self.account = account
-    }
-    
-    
-}
 
 public final class StateManager {
     private let stateQueue = Queue()
@@ -1674,4 +1465,4 @@ public final class StateManager {
             }
         }
     }
-}
+}*/

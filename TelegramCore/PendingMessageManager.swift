@@ -47,7 +47,7 @@ private final class PendingMessageRequestDependencyTag: NetworkRequestDependency
 public final class PendingMessageManager {
     private let network: Network
     private let postbox: Postbox
-    private let stateManager: StateManager
+    private let stateManager: AccountStateManager
     
     private let queue = Queue()
     
@@ -57,7 +57,7 @@ public final class PendingMessageManager {
     
     private var peerSummaryContexts: [PeerId: PeerPendingMessagesSummaryContext] = [:]
     
-    init(network: Network, postbox: Postbox, stateManager: StateManager) {
+    init(network: Network, postbox: Postbox, stateManager: AccountStateManager) {
         self.network = network
         self.postbox = postbox
         self.stateManager = stateManager
@@ -219,7 +219,7 @@ public final class PendingMessageManager {
         }))
     }
     
-    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: StateManager, message: Message, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
+    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, message: Message, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
         return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
             if let peer = modifier.getPeer(message.id.peerId), let inputPeer = apiInputPeer(peer) {
                 var uniqueId: Int64 = 0
@@ -301,7 +301,7 @@ public final class PendingMessageManager {
         } |> switchToLatest
     }
     
-    private func applySentMessage(postbox: Postbox, stateManager: StateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
+    private func applySentMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
         let messageId = result.rawMessageIds.first
         let apiMessage = result.messages.first
         

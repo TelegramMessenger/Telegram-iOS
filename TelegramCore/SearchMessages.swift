@@ -31,9 +31,22 @@ private func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]
     return Message(stableId: 0, stableVersion: 0, id: id, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, forwardInfo: nil, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
 }
 
-public func searchMessages(account: Account, query: String) -> Signal<[Message], NoError> {
-    let searchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
-        |> retryRequest
+public func searchMessages(account: Account, peerId: PeerId?, query: String) -> Signal<[Message], NoError> {
+    let searchResult: Signal<Api.messages.Messages, NoError>
+    if let peerId = peerId {
+        searchResult = account.postbox.loadedPeerWithId(peerId)
+            |> mapToSignal { peer -> Signal<Api.messages.Messages, NoError> in
+                if let inputPeer = apiInputPeer(peer) {
+                    return account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: query, filter: .inputMessagesFilterEmpty, minDate: 0, maxDate: Int32.max - 1, offset: 0, maxId: Int32.max - 1, limit: 64))
+                        |> retryRequest
+                } else {
+                    return .never()
+                }
+            }
+    } else {
+        searchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
+            |> retryRequest
+    }
     
     let processedSearchResult = searchResult
         |> mapToSignal { result -> Signal<[Message], NoError> in

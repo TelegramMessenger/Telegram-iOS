@@ -353,6 +353,13 @@ public enum AccountServiceTaskMasterMode {
     case never
 }
 
+public enum AccountNetworkState {
+    case waitingForNetwork
+    case connecting
+    case updating
+    case online
+}
+
 public class Account {
     public let id: AccountId
     public let basePath: String
@@ -360,7 +367,7 @@ public class Account {
     public let network: Network
     public let peerId: PeerId
     
-    public private(set) var stateManager: StateManager!
+    public private(set) var stateManager: AccountStateManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
@@ -384,6 +391,11 @@ public class Account {
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
     
+    private let networkStateValue = Promise<AccountNetworkState>(.connecting)
+    public var networkState: Signal<AccountNetworkState, NoError> {
+        return self.networkStateValue.get()
+    }
+    
     public init(id: AccountId, basePath: String, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
         self.basePath = basePath
@@ -391,9 +403,28 @@ public class Account {
         self.network = network
         self.peerId = peerId
         
-        self.stateManager = StateManager(account: self)
+        self.stateManager = AccountStateManager(account: self)
         self.viewTracker = AccountViewTracker(account: self)
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)
+        
+        let networkStateSignal = combineLatest(self.stateManager.isUpdating, network.connectionStatus)
+            |> map { isUpdating, connectionStatus -> AccountNetworkState in
+                switch connectionStatus {
+                    case .WaitingForNetwork:
+                        return .waitingForNetwork
+                    case .Connecting:
+                        return .connecting
+                    case .Updating:
+                        return .updating
+                    case .Online:
+                        if isUpdating {
+                            return .updating
+                        } else {
+                            return .online
+                        }
+                }
+            }
+        self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)
         
         let appliedNotificationToken = self.notificationToken.get()
             |> distinctUntilChanged

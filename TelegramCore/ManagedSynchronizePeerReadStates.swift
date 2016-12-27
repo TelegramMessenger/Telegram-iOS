@@ -39,7 +39,7 @@ private final class ManagedSynchronizePeerReadStatesState {
     }
 }
 
-func managedSynchronizePeerReadStates(network: Network, postbox: Postbox, stateManager: StateManager) -> Signal<Void, NoError> {
+func managedSynchronizePeerReadStates(network: Network, postbox: Postbox, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return Signal { _ in
         let state = Atomic(value: ManagedSynchronizePeerReadStatesState())
         

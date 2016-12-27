@@ -39,7 +39,7 @@ private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox)
     }
 }
 
-func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateManager, message: Message) -> Signal<Void, NoError> {
+func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: AccountStateManager, message: Message) -> Signal<Void, NoError> {
     return postbox.loadedPeerWithId(message.id.peerId)
         |> take(1)
         |> mapToSignal { peer -> Signal<Void, NoError> in

@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-func managedServiceViews(network: Network, postbox: Postbox, stateManager: StateManager, pendingMessageManager: PendingMessageManager) -> Signal<Void, NoError> {
+func managedServiceViews(network: Network, postbox: Postbox, stateManager: AccountStateManager, pendingMessageManager: PendingMessageManager) -> Signal<Void, NoError> {
     return Signal { _ in
         let disposable = DisposableSet()
         disposable.add(managedMessageHistoryHoles(network: network, postbox: postbox).start())
