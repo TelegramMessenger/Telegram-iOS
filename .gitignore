@@ -1,0 +1,4 @@
+*.dSYM
+*.dSYM.zip
+*.ipa
+*/xcuserdata/*
