@@ -240,7 +240,7 @@ final class ViewTracker {
         for (peerId, bag) in self.messageHistoryViews {
             var updateHoles = false
             let operations = transaction.currentOperationsByPeerId[peerId]
-            if operations != nil || !transaction.updatedMedia.isEmpty {
+            if operations != nil || !transaction.updatedMedia.isEmpty || !transaction.currentUpdatedCachedPeerData.isEmpty {
                 updateHoles = true
                 for (mutableView, pipe) in bag.copyItems() {
                     let context = MutableMessageHistoryViewReplayContext()
@@ -253,7 +253,7 @@ final class ViewTracker {
                         updateType = .Generic
                     }
                     
-                    if mutableView.replay(operations ?? [], holeFillDirections: transaction.peerIdsWithFilledHoles[peerId] ?? [:], updatedMedia: transaction.updatedMedia, context: context, renderIntermediateMessage: self.renderMessage) {
+                    if mutableView.replay(operations ?? [], holeFillDirections: transaction.peerIdsWithFilledHoles[peerId] ?? [:], updatedMedia: transaction.updatedMedia, updatedCachedPeerData: transaction.currentUpdatedCachedPeerData, context: context, renderIntermediateMessage: self.renderMessage) {
                         mutableView.complete(context: context, fetchEarlier: { index, count in
                             return self.fetchEarlierHistoryEntries(peerId, index, count, mutableView.tagMask)
                         }, fetchLater: { index, count in
