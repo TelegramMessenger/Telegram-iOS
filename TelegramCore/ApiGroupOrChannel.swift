@@ -19,7 +19,7 @@ private func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [Tel
     return telegramPhoto
 }
 
-func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
+public func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
     switch chat {
         case let .chat(flags, id, title, photo, participantsCount, date, version, migratedTo):
             let left = (flags & (1 | 2)) != 0

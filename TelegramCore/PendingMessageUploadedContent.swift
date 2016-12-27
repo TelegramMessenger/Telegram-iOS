@@ -50,6 +50,9 @@ func uploadedMessageContent(network: Network, postbox: Postbox, message: Message
             } else {
                 return uploadedMediaFileContent(network: network, postbox: postbox, file: file, message: message)
             }
+        } else if let contact = media as? TelegramMediaContact {
+            let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName)
+            return .single(.content(message, .media(input)))
         } else {
             return .single(.content(message, .text(message.text)))
         }

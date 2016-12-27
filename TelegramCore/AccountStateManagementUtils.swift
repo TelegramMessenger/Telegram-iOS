@@ -779,7 +779,11 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
-            default:
+        case let .updateUserTyping(type):
+            break
+        case let .updateChatUserTyping(type):
+            break
+        default:
                 break
         }
     }
@@ -1333,7 +1337,7 @@ public final class StateManager {
         self.actions.putNext(pollDifference(self.account))
     }
     
-    func addUpdates(_ updates: Api.Updates) {
+    public func addUpdates(_ updates: Api.Updates) {
         self.updateService?.addUpdates(updates)
     }
     
