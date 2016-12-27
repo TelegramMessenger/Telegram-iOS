@@ -1,5 +1,13 @@
 import Foundation
 
+public enum AdditionalMessageHistoryViewData {
+    case cachedPeerData(PeerId)
+}
+
+public enum AdditionalMessageHistoryViewDataEntry {
+    case cachedPeerData(PeerId, CachedPeerData?)
+}
+
 public struct MessageHistoryViewId: Equatable {
     let peerId: PeerId
     let id: Int
@@ -163,8 +171,9 @@ final class MutableMessageHistoryView {
     fileprivate let fillCount: Int
     
     fileprivate var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?]
+    fileprivate var additionalDatas: [AdditionalMessageHistoryViewDataEntry]
     
-    init(id: MessageHistoryViewId, anchorIndex: MessageHistoryAnchorIndex, combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?]) {
+    init(id: MessageHistoryViewId, anchorIndex: MessageHistoryAnchorIndex, combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry]) {
         self.id = id
         self.anchorIndex = anchorIndex
         self.combinedReadState = combinedReadState
@@ -175,6 +184,7 @@ final class MutableMessageHistoryView {
         self.tagMask = tagMask
         self.fillCount = count
         self.topTaggedMessages = topTaggedMessages
+        self.additionalDatas = additionalDatas
     }
     
     func incrementVersion() {
@@ -266,7 +276,7 @@ final class MutableMessageHistoryView {
         return true
     }
     
-    func replay(_ operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], updatedMedia: [MediaId: Media?], context: MutableMessageHistoryViewReplayContext, renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
+    func replay(_ operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], updatedMedia: [MediaId: Media?], updatedCachedPeerData: [PeerId: CachedPeerData], context: MutableMessageHistoryViewReplayContext, renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
         let tagMask = self.tagMask
         let unwrappedTagMask: UInt32 = tagMask?.rawValue ?? 0
         
@@ -416,6 +426,16 @@ final class MutableMessageHistoryView {
                     }
                 default:
                     break
+            }
+        }
+        
+        for i in 0 ..< self.additionalDatas.count {
+            switch self.additionalDatas[i] {
+                case let .cachedPeerData(peerId, data):
+                    if let updatedData = updatedCachedPeerData[peerId] {
+                        self.additionalDatas[i] = .cachedPeerData(peerId, updatedData)
+                        hasChanges = true
+                    }
             }
         }
         
@@ -663,6 +683,7 @@ public final class MessageHistoryView {
     public let maxReadIndex: MessageIndex?
     public let combinedReadState: CombinedPeerReadState?
     public let topTaggedMessages: [Message]
+    public let additionalData: [AdditionalMessageHistoryViewDataEntry]
     
     init(_ mutableView: MutableMessageHistoryView) {
         self.id = mutableView.id
@@ -712,6 +733,7 @@ public final class MessageHistoryView {
             }
         }
         self.topTaggedMessages = topTaggedMessages
+        self.additionalData = mutableView.additionalDatas
         
         self.earlierId = mutableView.earlier?.index
         self.laterId = mutableView.later?.index
