@@ -384,6 +384,7 @@ public class Account {
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
     
+    
     public init(id: AccountId, basePath: String, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
         self.basePath = basePath
