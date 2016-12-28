@@ -143,6 +143,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
+    [[MTProto managerQueue] dispatchOnQueue:^{
+        _usageCalculationInfo = usageCalculationInfo;
+        [_transport setUsageCalculationInfo:usageCalculationInfo];
+    }];
+}
+
 - (void)pause
 {
     [[MTProto managerQueue] dispatchOnQueue:^

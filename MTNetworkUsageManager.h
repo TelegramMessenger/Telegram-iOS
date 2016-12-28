@@ -13,13 +13,6 @@ typedef struct {
     NSUInteger outgoingBytes;
 } MTNetworkUsageManagerInterfaceStats;
 
-@interface MTNetworkUsageManagerStats : NSObject
-
-@property (nonatomic, readonly) MTNetworkUsageManagerInterfaceStats wwan;
-@property (nonatomic, readonly) MTNetworkUsageManagerInterfaceStats other;
-
-@end
-
 @interface MTNetworkUsageManager : NSObject
 
 - (instancetype)initWithInfo:(MTNetworkUsageCalculationInfo *)info;
@@ -27,9 +20,7 @@ typedef struct {
 - (void)addIncomingBytes:(NSUInteger)incomingBytes interface:(MTNetworkUsageManagerInterface)interface;
 - (void)addOutgoingBytes:(NSUInteger)outgoingBytes interface:(MTNetworkUsageManagerInterface)interface;
 
-- (void)resetIncomingBytes:(MTNetworkUsageManagerInterface)interface;
-- (void)resetOutgoingBytes:(MTNetworkUsageManagerInterface)interface;
-
-- (MTSignal *)currentStats;
+- (void)resetKeys:(NSArray<NSNumber *> *)keys completion:(void (^)())completion;
+- (MTSignal *)currentStatsForKeys:(NSArray<NSNumber *> *)keys;
 
 @end

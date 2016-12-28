@@ -137,6 +137,13 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
+        _usageCalculationInfo = usageCalculationInfo;
+        [_transportContext.connection setUsageCalculationInfo:usageCalculationInfo];
+    }];
+}
+
 - (bool)needsParityCorrection
 {
     return true;

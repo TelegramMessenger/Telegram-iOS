@@ -41,6 +41,9 @@
     return self;
 }
 
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)__unused usageCalculationInfo {
+}
+
 - (bool)needsParityCorrection
 {
     return false;

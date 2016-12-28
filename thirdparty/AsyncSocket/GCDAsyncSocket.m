@@ -2304,6 +2304,20 @@ enum GCDAsyncSocketConfig
 	[self closeWithError:error];
 }
 
+
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
+    dispatch_async(socketQueue, ^{
+        if (_usageCalculationInfo != usageCalculationInfo) {
+            _usageCalculationInfo = usageCalculationInfo;
+            if (usageCalculationInfo != nil) {
+                _usageManager = [[MTNetworkUsageManager alloc] initWithInfo:usageCalculationInfo];
+            } else {
+                _usageManager = nil;
+            }
+        }
+    });
+}
+
 - (BOOL)connectWithAddress4:(NSData *)address4 address6:(NSData *)address6 error:(NSError **)errPtr
 {
 	LogTrace();

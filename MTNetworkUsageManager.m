@@ -20,19 +20,6 @@
 #   import <MTProtoKit/MTQueue.h>
 #endif
 
-@implementation MTNetworkUsageManagerStats
-
-- (instancetype)initWithWWAN:(MTNetworkUsageManagerInterfaceStats)wwan other:(MTNetworkUsageManagerInterfaceStats)other {
-    self = [super init];
-    if (self != nil) {
-        _wwan = wwan;
-        _other = other;
-    }
-    return self;
-}
-
-@end
-
 @interface MTNetworkUsageManager () {
     MTQueue *_queue;
     MTNetworkUsageCalculationInfo *_info;
@@ -81,19 +68,27 @@
     }];
 }
 
-static int interfaceOffset(MTNetworkUsageManagerInterface interface) {
+static int offsetForInterface(MTNetworkUsageCalculationInfo *info, MTNetworkUsageManagerInterface interface, bool incoming) {
     switch (interface) {
         case MTNetworkUsageManagerInterfaceWWAN:
-            return 0;
+            if (incoming) {
+                return info.incomingWWANKey * 8;
+            } else {
+                return info.outgoingWWANKey * 8;
+            }
         case MTNetworkUsageManagerInterfaceOther:
-            return 8;
+            if (incoming) {
+                return info.incomingOtherKey * 8;
+            } else {
+                return info.outgoingOtherKey * 8;
+            }
     }
 }
 
 - (void)addIncomingBytes:(NSUInteger)incomingBytes interface:(MTNetworkUsageManagerInterface)interface {
     [_queue dispatchOnQueue:^{
         if (_map) {
-            int64_t *ptr = (int64_t *)(_map + 0 * 16 + interfaceOffset(interface));
+            int64_t *ptr = (int64_t *)(_map + offsetForInterface(_info, interface, true));
             OSAtomicAdd64((int64_t)incomingBytes, ptr);
         }
     }];
@@ -102,40 +97,37 @@ static int interfaceOffset(MTNetworkUsageManagerInterface interface) {
 - (void)addOutgoingBytes:(NSUInteger)outgoingBytes interface:(MTNetworkUsageManagerInterface)interface {
     [_queue dispatchOnQueue:^{
         if (_map) {
-            int64_t *ptr = (int64_t *)(_map + 1 * 16 + interfaceOffset(interface));
+            int64_t *ptr = (int64_t *)(_map + offsetForInterface(_info, interface, false));
             OSAtomicAdd64((int64_t)outgoingBytes, ptr);
         }
     }];
 }
 
-- (void)resetIncomingBytes:(MTNetworkUsageManagerInterface)interface {
+- (void)resetKeys:(NSArray<NSNumber *> *)keys completion:(void (^)())completion {
     [_queue dispatchOnQueue:^{
         if (_map) {
-            int64_t *ptr = (int64_t *)(_map + 0 * 16 + interfaceOffset(interface));
-            *ptr = 0;
+            for (NSNumber *key in keys) {
+                int64_t *ptr = (int64_t *)(_map + [key intValue] * 8);
+                *ptr = 0;
+            }
+            if (completion) {
+                completion();
+            }
         }
     }];
 }
 
-- (void)resetOutgoingBytes:(MTNetworkUsageManagerInterface)interface {
-    [_queue dispatchOnQueue:^{
-        if (_map) {
-            int64_t *ptr = (int64_t *)(_map + 1 * 16 + interfaceOffset(interface));
-            *ptr = 0;
-        }
-    }];
-}
-
-- (MTSignal *)currentStats {
+- (MTSignal *)currentStatsForKeys:(NSArray<NSNumber *> *)keys {
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         [_queue dispatchOnQueue:^{
             if (_map) {
-                int64_t *incomingWan = (int64_t *)(_map + 0 * 16 + interfaceOffset(MTNetworkUsageManagerInterfaceWWAN));
-                int64_t *outgoingWan = (int64_t *)(_map + 1 * 16 + interfaceOffset(MTNetworkUsageManagerInterfaceWWAN));
-                int64_t *incomingOther = (int64_t *)(_map + 0 * 16 + interfaceOffset(MTNetworkUsageManagerInterfaceOther));
-                int64_t *outgoingOther = (int64_t *)(_map + 1 * 16 + interfaceOffset(MTNetworkUsageManagerInterfaceOther));
+                NSMutableDictionary *result = [[NSMutableDictionary alloc] init];
+                for (NSNumber *key in keys) {
+                    int64_t *ptr = (int64_t *)(_map + [key intValue] * 8);
+                    result[key] = @(*ptr);
+                }
                 
-                [subscriber putNext:[[MTNetworkUsageManagerStats alloc] initWithWWAN:(MTNetworkUsageManagerInterfaceStats){.incomingBytes = (NSUInteger)*incomingWan, .outgoingBytes = (NSUInteger)*outgoingWan} other:(MTNetworkUsageManagerInterfaceStats){.incomingBytes = (NSUInteger)*incomingOther, .outgoingBytes = (NSUInteger)*outgoingOther}]];
+                [subscriber putNext:result];
             } else {
                 [subscriber putNext:nil];
             }

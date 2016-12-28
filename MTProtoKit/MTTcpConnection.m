@@ -138,6 +138,13 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     }];
 }
 
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
+    [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
+        _usageCalculationInfo = usageCalculationInfo;
+        _socket.usageCalculationInfo = usageCalculationInfo;
+    }];
+}
+
 - (void)setDelegate:(id<MTTcpConnectionDelegate>)delegate
 {
     _delegate = delegate;
