@@ -101,13 +101,13 @@ class MessageHistoryIndexTableTests: XCTestCase {
     
     func addMessage(_ id: Int32, _ timestamp: Int32) {
         var operations: [MessageHistoryIndexOperation] = []
-        self.indexTable!.addMessages([InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
+        self.indexTable!.addMessages([InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
     }
     
     func addMessagesUpperBlock(_ messages: [(Int32, Int32)]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.addMessages(messages.map { (id, timestamp) in
-            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
+            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }, location: .UpperHistoryBlock, operations: &operations)
     }
     
@@ -115,7 +115,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         var operations: [MessageHistoryIndexOperation] = []
         
         self.indexTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({
-            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
+            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, globallyUniqueId: nil, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }), operations: &operations)
     }
     

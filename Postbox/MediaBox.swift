@@ -244,6 +244,23 @@ public final class MediaBox {
         }
     }
     
+    public func completedResourcePath(_ resource: MediaResource, pathExtension: String? = nil) -> String? {
+        let paths = self.storePathsForId(resource.id)
+        if let completeSize = fileSize(paths.complete) {
+            if let pathExtension = pathExtension {
+                let symlinkPath = paths.complete + ".\(pathExtension)"
+                if fileSize(symlinkPath) == nil {
+                    let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                }
+                return symlinkPath
+            } else {
+                return paths.complete
+            }
+        } else {
+            return nil
+        }
+    }
+    
     public func resourceData(_ resource: MediaResource, pathExtension: String? = nil, complete: Bool = true) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

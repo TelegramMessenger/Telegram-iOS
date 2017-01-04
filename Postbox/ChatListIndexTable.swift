@@ -6,14 +6,20 @@ final class ChatListIndexTable: Table {
     }
     
     private let peerNameIndexTable: PeerNameIndexTable
+    private let metadataTable: MessageHistoryMetadataTable
+    private let readStateTable: MessageHistoryReadStateTable
+    private let notificationSettingsTable: PeerNotificationSettingsTable
     
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedIndices: [PeerId: MessageIndex?] = [:]
     private var updatedPreviousCachedIndices: [PeerId: MessageIndex?] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, peerNameIndexTable: PeerNameIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, peerNameIndexTable: PeerNameIndexTable, metadataTable: MessageHistoryMetadataTable, readStateTable: MessageHistoryReadStateTable, notificationSettingsTable: PeerNotificationSettingsTable) {
         self.peerNameIndexTable = peerNameIndexTable
+        self.metadataTable = metadataTable
+        self.readStateTable = readStateTable
+        self.notificationSettingsTable = notificationSettingsTable
         
         super.init(valueBox: valueBox, table: table)
     }
@@ -58,16 +64,16 @@ final class ChatListIndexTable: Table {
         assert(self.updatedPreviousCachedIndices.isEmpty)
     }
     
-    override func beforeCommit() {
-        if !self.updatedPreviousCachedIndices.isEmpty {
-            var addedPeerIds = Set<PeerId>()
-            var removedPeerIds = Set<PeerId>()
+    func commitWithTransactionUnreadCountDeltas(_ deltas: [PeerId: Int32], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedTotalUnreadCount: inout Int32?) {
+        if !self.updatedPreviousCachedIndices.isEmpty || !deltas.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.added.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.removed.isEmpty {
+            var addedChatListPeerIds = Set<PeerId>()
+            var removedChatListPeerIds = Set<PeerId>()
             
             for (peerId, previousIndex) in self.updatedPreviousCachedIndices {
                 let index = self.cachedIndices[peerId]!
                 if let index = index {
                     if previousIndex == nil {
-                        addedPeerIds.insert(peerId)
+                        addedChatListPeerIds.insert(peerId)
                     }
                     
                     let writeBuffer = WriteBuffer()
@@ -80,7 +86,7 @@ final class ChatListIndexTable: Table {
                     self.valueBox.set(self.table, key: self.key(index.id.peerId), value: writeBuffer.readBufferNoCopy())
                 } else {
                     if previousIndex != nil {
-                        removedPeerIds.insert(peerId)
+                        removedChatListPeerIds.insert(peerId)
                     }
                     
                     self.valueBox.remove(self.table, key: self.key(peerId))
@@ -88,13 +94,88 @@ final class ChatListIndexTable: Table {
             }
             self.updatedPreviousCachedIndices.removeAll()
             
-            for peerId in addedPeerIds {
+            let addedUnreadCountPeerIds = addedChatListPeerIds.union(transactionParticipationInTotalUnreadCountUpdates.added)
+            let removedUnreadCountPeerIds = removedChatListPeerIds.union(transactionParticipationInTotalUnreadCountUpdates.removed)
+            
+            var totalUnreadCount = self.metadataTable.getChatListTotalUnreadCount()
+            for (peerId, delta) in deltas {
+                if !addedUnreadCountPeerIds.contains(peerId) && !removedUnreadCountPeerIds.contains(peerId) {
+                    if let _ = self.get(peerId), let notificationSettings = self.notificationSettingsTable.get(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
+                        totalUnreadCount += delta
+                    }
+                }
+            }
+            
+            for peerId in addedChatListPeerIds {
                 self.peerNameIndexTable.setPeerCategoryState(peerId: peerId, category: [.chats], includes: true)
             }
             
-            for peerId in removedPeerIds {
+            for peerId in addedUnreadCountPeerIds {
+                let addedToList = addedChatListPeerIds.contains(peerId)
+                let startedParticipationInUnreadCount = transactionParticipationInTotalUnreadCountUpdates.added.contains(peerId)
+                
+                if addedToList && startedParticipationInUnreadCount {
+                    if let combinedState = self.readStateTable.getCombinedState(peerId) {
+                        totalUnreadCount += combinedState.count
+                    }
+                } else if addedToList {
+                    if let notificationSettings = self.notificationSettingsTable.get(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
+                        if let combinedState = self.readStateTable.getCombinedState(peerId) {
+                            totalUnreadCount += combinedState.count
+                        }
+                    }
+                } else if startedParticipationInUnreadCount {
+                    if let _ = self.get(peerId) {
+                        if let combinedState = self.readStateTable.getCombinedState(peerId) {
+                            totalUnreadCount += combinedState.count
+                        }
+                    }
+                } else {
+                    assertionFailure()
+                }
+            }
+            
+            for peerId in removedChatListPeerIds {
                 self.peerNameIndexTable.setPeerCategoryState(peerId: peerId, category: [.chats], includes: false)
             }
+            
+            for peerId in removedUnreadCountPeerIds {
+                var currentPeerUnreadCount: Int32 = 0
+                if let combinedState = self.readStateTable.getCombinedState(peerId) {
+                    currentPeerUnreadCount = combinedState.count
+                }
+                
+                if let delta = deltas[peerId] {
+                    currentPeerUnreadCount -= delta
+                }
+                
+                var removedFromList = removedChatListPeerIds.contains(peerId)
+                var removedFromParticipationInUnreadCount = transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId)
+                if removedFromList && removedFromParticipationInUnreadCount {
+                    totalUnreadCount -= currentPeerUnreadCount
+                } else if removedFromList {
+                    if let notificationSettings = self.notificationSettingsTable.get(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
+                        totalUnreadCount -= currentPeerUnreadCount
+                    }
+                } else if removedFromParticipationInUnreadCount {
+                    if let _ = self.get(peerId) {
+                        totalUnreadCount -= currentPeerUnreadCount
+                    }
+                } else {
+                    assertionFailure()
+                }
+            }
+            
+            //assert(totalUnreadCount >= 0)
+            
+            if self.metadataTable.getChatListTotalUnreadCount() != totalUnreadCount {
+                self.metadataTable.setChatListTotalUnreadCount(totalUnreadCount)
+                updatedTotalUnreadCount = totalUnreadCount
+            }
         }
+    }
+    
+    override func beforeCommit() {
+        assert(self.updatedPreviousCachedIndices.isEmpty)
     }
 }

@@ -117,14 +117,14 @@ class ReadStateTableTests: XCTestCase {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
     private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
     private func addHole(_ id: Int32) {
