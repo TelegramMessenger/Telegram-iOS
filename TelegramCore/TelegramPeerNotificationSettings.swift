@@ -99,6 +99,15 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
     public let muteState: PeerMuteState
     public let messageSound: PeerMessageSound
     
+    public var isRemovedFromTotalUnreadCount: Bool {
+        switch self.muteState {
+            case .unmuted:
+                return false
+            case .muted:
+                return true
+        }
+    }
+    
     public init(muteState: PeerMuteState, messageSound: PeerMessageSound) {
         self.muteState = muteState
         self.messageSound = messageSound

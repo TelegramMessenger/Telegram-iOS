@@ -94,7 +94,7 @@ private var registeredLoggingFunctions: Void = {
     registerLoggingFunctions()
 }()
 
-func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoPath: String?) -> Signal<Network, NoError> {
+func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoPath: String?, testingEnvironment: Bool) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -108,18 +108,22 @@ func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoP
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
             
-            let seedAddressList = [
-                1: "149.154.175.50",
-                2: "149.154.167.50",
-                3: "149.154.175.100",
-                4: "149.154.167.91",
-                5: "149.154.171.5"
-            ]
+            let seedAddressList: [Int: String]
             
-            /*let seedAddressList = [
-                1: "149.154.175.10",
-                2: "149.154.167.40"
-            ]*/
+            if testingEnvironment {
+                seedAddressList = [
+                    1: "149.154.175.10",
+                    2: "149.154.167.40"
+                ]
+            } else {
+                seedAddressList = [
+                    1: "149.154.175.50",
+                    2: "149.154.167.50",
+                    3: "149.154.175.100",
+                    4: "149.154.167.91",
+                    5: "149.154.171.5"
+                ]
+            }
             
             for (id, ip) in seedAddressList {
                 context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false)]))
@@ -189,7 +193,7 @@ public class Network {
             |> distinctUntilChanged
         self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
             if let strongSelf = self {
-                if true || value {
+                if value {
                     trace("Network", what: "Resume network connection")
                     strongSelf.mtProto.resume()
                 } else {

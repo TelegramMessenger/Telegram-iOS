@@ -137,7 +137,7 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: Account
                                     applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
                                 }
                                 
-                                return StoreMessage(id: updatedId, timestamp: currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+                                return StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
                             })
                         } |> afterDisposed {
                             stateManager.addUpdates(result)
@@ -152,7 +152,7 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: Account
                                 if let forwardInfo = currentMessage.forwardInfo {
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
                                 }
-                                return StoreMessage(id: message.id, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
+                                return StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
                             })
                         }
                         

@@ -155,8 +155,13 @@ public func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.St
         lhs.seq == rhs.seq
 }
 
-public func currentAccountId(appGroupPath: String) -> AccountId {
-    let filePath = "\(appGroupPath)/currentAccountId"
+public func currentAccountId(appGroupPath: String, testingEnvironment: Bool) -> AccountId {
+    let filePath: String
+    if testingEnvironment {
+        filePath = "\(appGroupPath)/currentAccountId_test"
+    } else {
+        filePath = "\(appGroupPath)/currentAccountId"
+    }
     if let id = try? String(contentsOfFile: filePath) {
         return AccountId(stringValue: id)
     } else {
@@ -173,6 +178,7 @@ public func generateAccountId() -> AccountId {
 public class UnauthorizedAccount {
     public let id: AccountId
     public let basePath: String
+    public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
     
@@ -180,11 +186,13 @@ public class UnauthorizedAccount {
         return Int32(self.network.mtProto.datacenterId)
     }
     
-    init(id: AccountId, basePath: String, postbox: Postbox, network: Network) {
+    init(id: AccountId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network) {
         self.id = id
         self.basePath = basePath
+        self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
+        network.shouldKeepConnection.set(.single(true))
     }
     
     public func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {
@@ -200,9 +208,9 @@ public class UnauthorizedAccount {
                 postbox.removeKeychainEntryForKey(key)
             })
             
-            return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath))
+            return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
                 |> map { network in
-                    return UnauthorizedAccount(id: self.id, basePath: self.basePath, postbox: self.postbox, network: network)
+                    return UnauthorizedAccount(id: self.id, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                 }
         }
     }
@@ -255,7 +263,7 @@ func accountNetworkUsageInfoPath(basePath: String) -> String {
     return basePath + "/network-usage"
 }
 
-public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
+public func accountWithId(_ id: AccountId, appGroupPath: String, testingEnvironment: Bool) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
     return Signal<(String, Postbox, AccountState?), NoError> { subscriber in
         let _ = declaredEncodables
         
@@ -282,23 +290,23 @@ public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Eithe
         if let accountState = accountState {
             switch accountState {
                 case let unauthorizedState as UnauthorizedAccountState:
-                    return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath))
+                    return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            .left(value: UnauthorizedAccount(id: id, basePath: basePath, postbox: postbox, network: network))
+                            .left(value: UnauthorizedAccount(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
                         }
                 case let authorizedState as AuthorizedAccountState:
-                    return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath))
+                    return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            return .right(value: Account(id: id, basePath: basePath, postbox: postbox, network: network, peerId: authorizedState.peerId))
+                            return .right(value: Account(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId))
                         }
                 case _:
                     assertionFailure("Unexpected accountState \(accountState)")
             }
         }
         
-        return initializedNetwork(datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath))
+        return initializedNetwork(datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
             |> map { network -> Either<UnauthorizedAccount, Account> in
-                return .left(value: UnauthorizedAccount(id: id, basePath: basePath, postbox: postbox, network: network))
+                return .left(value: UnauthorizedAccount(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
         }
     }
 }
@@ -363,6 +371,7 @@ public enum AccountNetworkState {
 public class Account {
     public let id: AccountId
     public let basePath: String
+    public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
     public let peerId: PeerId
@@ -386,7 +395,9 @@ public class Account {
     var player: AnyObject?
     
     public let notificationToken = Promise<Data>()
+    public let voipToken = Promise<Data>()
     private let notificationTokenDisposable = MetaDisposable()
+    private let voipTokenDisposable = MetaDisposable()
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
@@ -396,9 +407,10 @@ public class Account {
         return self.networkStateValue.get()
     }
     
-    public init(id: AccountId, basePath: String, postbox: Postbox, network: Network, peerId: PeerId) {
+    public init(id: AccountId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
         self.basePath = basePath
+        self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
         self.peerId = peerId
@@ -453,13 +465,48 @@ public class Account {
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhome Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox, langCode: langCode))
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhone Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox, langCode: langCode))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
                     }
             }
         self.notificationTokenDisposable.set(appliedNotificationToken.start())
+        
+        let appliedVoipToken = self.voipToken.get()
+            |> distinctUntilChanged
+            |> mapToSignal { token -> Signal<Void, NoError> in
+                var tokenString = ""
+                token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                    for i in 0 ..< token.count {
+                        let byte = bytes.advanced(by: i).pointee
+                        tokenString = tokenString.appendingFormat("%02x", Int32(byte))
+                    }
+                }
+                
+                let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
+                
+                let langCode = NSLocale.preferredLanguages.first ?? "en"
+                
+                #if os(macOS)
+                    let pInfo = ProcessInfo.processInfo
+                    let systemVersion = pInfo.operatingSystemVersionString
+                #else
+                    let systemVersion = UIDevice.current.systemVersion
+                #endif
+                
+                var appSandbox: Api.Bool = .boolFalse
+                #if DEBUG
+                    appSandbox = .boolTrue
+                #endif
+                
+                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, deviceModel: "iPhone Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox, langCode: langCode))
+                    |> retryRequest
+                    |> mapToSignal { _ -> Signal<Void, NoError> in
+                        return .complete()
+                    }
+            }
+        self.voipTokenDisposable.set(appliedVoipToken.start())
         
         let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()
             |> distinctUntilChanged
@@ -537,6 +584,7 @@ public class Account {
         self.managedContactsDisposable.dispose()
         self.managedStickerPacksDisposable.dispose()
         self.notificationTokenDisposable.dispose()
+        self.voipTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.updatedPresenceDisposable.dispose()
     }

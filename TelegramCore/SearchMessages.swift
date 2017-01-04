@@ -28,7 +28,7 @@ private func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]
         messagePeers[peer.id] = peer
     }
     
-    return Message(stableId: 0, stableVersion: 0, id: id, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, forwardInfo: nil, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+    return Message(stableId: 0, stableVersion: 0, id: id, globallyUniqueId: nil, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, forwardInfo: nil, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
 }
 
 public func searchMessages(account: Account, peerId: PeerId?, query: String) -> Signal<[Message], NoError> {

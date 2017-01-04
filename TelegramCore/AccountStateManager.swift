@@ -13,7 +13,9 @@ private enum AccountStateManagerOperation {
     case pollDifference(AccountFinalStateEvents)
     case collectUpdateGroups([UpdateGroup], Double)
     case processUpdateGroups([UpdateGroup])
-    case custom(Signal<Void, NoError>)
+    case custom(Int32, Signal<Void, NoError>)
+    case pollCompletion(Int32, [(Int32, () -> Void)])
+    case processEvents(Int32, AccountFinalStateEvents)
 }
 
 #if os(macOS)
@@ -38,6 +40,12 @@ public final class AccountStateManager {
     private var operations: [AccountStateManagerOperation] = []
     private let operationDisposable = MetaDisposable()
     private var operationTimer: SignalKitTimer?
+    
+    private var nextId: Int32 = 0
+    private func getNextId() -> Int32 {
+        self.nextId += 1
+        return self.nextId
+    }
     
     private let isUpdatingValue = ValuePromise<Bool>(false)
     private var currentIsUpdatingValue = false {
@@ -92,7 +100,7 @@ public final class AccountStateManager {
         self.queue.async {
             if let last = self.operations.last {
                 switch last {
-                    case .pollDifference, .processUpdateGroups, .custom:
+                    case .pollDifference, .processUpdateGroups, .custom, .pollCompletion, .processEvents:
                         self.operations.append(.collectUpdateGroups(groups, 0.0))
                     case let .collectUpdateGroups(currentGroups, timestamp):
                         if timestamp.isEqual(to: 0.0) {
@@ -135,7 +143,7 @@ public final class AccountStateManager {
                 })
             }
             
-            self.addOperation(.custom(signal))
+            self.addOperation(.custom(self.getNextId(), signal))
             
             return disposable
         } |> runOn(self.queue)
@@ -157,6 +165,7 @@ public final class AccountStateManager {
         }
         switch operation {
             case let .pollDifference(currentEvents):
+                self.operationTimer?.invalidate()
                 self.currentIsUpdatingValue = true
                 let account = self.account
                 let queue = self.queue
@@ -230,13 +239,13 @@ public final class AccountStateManager {
                                         strongSelf.operations.insert(.pollDifference(events), at: 0)
                                     default:
                                         if !events.isEmpty {
-                                            strongSelf.addEvents(events)
+                                            strongSelf.insertProcessEvents(events)
                                         }
                                         strongSelf.currentIsUpdatingValue = false
                                 }
                             } else {
                                 if !events.isEmpty {
-                                    strongSelf.addEvents(events)
+                                    strongSelf.insertProcessEvents(events)
                                 }
                                 strongSelf.operations.removeAll()
                                 strongSelf.operations.append(.pollDifference(AccountFinalStateEvents()))
@@ -254,7 +263,7 @@ public final class AccountStateManager {
                 self.operationTimer?.invalidate()
                 let operationTimer = SignalKitTimer(timeout: timeout, repeat: false, completion: { [weak self] in
                     if let strongSelf = self {
-                        if case let .collectUpdateGroups(groups, _) = strongSelf.operations[0] {
+                        if let firstOperation = strongSelf.operations.first, case let .collectUpdateGroups(groups, _) = firstOperation {
                             if timeout.isEqual(to: 0.0) {
                                 strongSelf.operations[0] = .processUpdateGroups(groups)
                             } else {
@@ -271,6 +280,7 @@ public final class AccountStateManager {
                 self.operationTimer = operationTimer
                 operationTimer.start()
             case let .processUpdateGroups(groups):
+                self.operationTimer?.invalidate()
                 let account = self.account
                 let queue = self.queue
                 let signal = initialStateWithUpdateGroups(account, groups: groups)
@@ -296,7 +306,7 @@ public final class AccountStateManager {
                             if result && !finalState.shouldPoll {
                                 let events = AccountFinalStateEvents(state: finalState.state)
                                 if !events.isEmpty {
-                                    strongSelf.addEvents(events)
+                                    strongSelf.insertProcessEvents(events)
                                 }
                                 if finalState.incomplete {
                                     strongSelf.operations.insert(.collectUpdateGroups(groups, 2.0), at: 0)
@@ -314,17 +324,122 @@ public final class AccountStateManager {
                     assertionFailure()
                     trace("AccountStateManager", what: "processUpdateGroups signal completed with error")
                 })
-            case let .custom(signal):
+            case let .custom(operationId, signal):
+                self.operationTimer?.invalidate()
                 let completed: () -> Void = { [weak self] in
                     if let strongSelf = self {
-                        if case .custom = strongSelf.operations.removeFirst() {
+                        if let topOperation = strongSelf.operations.first, case .custom(operationId, _) = topOperation {
+                            strongSelf.operations.removeFirst()
                             strongSelf.startFirstOperation()
                         } else {
                             assertionFailure()
                         }
                     }
                 }
-                signal.start(error: { _ in
+                (signal |> deliverOn(self.queue)).start(error: { _ in
+                    completed()
+                }, completed: {
+                    completed()
+                })
+            case let .processEvents(operationId, events):
+                self.operationTimer?.invalidate()
+                let completed: () -> Void = { [weak self] in
+                    if let strongSelf = self {
+                        if let topOperation = strongSelf.operations.first, case .processEvents(operationId, _) = topOperation {
+                            strongSelf.operations.removeFirst()
+                            strongSelf.startFirstOperation()
+                        } else {
+                            assertionFailure()
+                        }
+                    }
+                }
+                
+                let signal = self.account.postbox.modify { modifier -> [Message] in
+                    let timestamp = Int32(self.account.network.context.globalTime())
+                    var messages: [Message] = []
+                    for id in events.addedIncomingMessageIds {
+                        var notify = true
+                        
+                        if let notificationSettings = modifier.getPeerNotificationSettings(id.peerId) as? TelegramPeerNotificationSettings {
+                            switch notificationSettings.muteState {
+                            case let .muted(until):
+                                if until >= timestamp {
+                                    notify = false
+                                }
+                            case .unmuted:
+                                break
+                            }
+                        } else {
+                            trace("AccountStateManager", what: "notification settings for \(id.peerId) are undefined")
+                        }
+                        
+                        var foundReadState = false
+                        if let readStates = modifier.getPeerReadStates(id.peerId) {
+                            for (namespace, readState) in readStates {
+                                if namespace == id.namespace {
+                                    if id.id <= readState.maxIncomingReadId {
+                                        notify = false
+                                    }
+                                    foundReadState = true
+                                    break
+                                }
+                            }
+                        }
+                        
+                        if !foundReadState {
+                            trace("AccountStateManager", what: "read state for \(id.peerId) is undefined")
+                        }
+                        
+                        if notify {
+                            if let message = modifier.getMessage(id) {
+                                messages.append(message)
+                            } else {
+                                trace("AccountStateManager", what: "notification message doesn't exist")
+                            }
+                        }
+                    }
+                    return messages
+                }
+                
+                (signal |> deliverOn(self.queue)).start(next: { [weak self] messages in
+                    if let strongSelf = self {
+                        for message in messages {
+                            print("notify: \(message.peers[message.id.peerId]?.displayTitle): \(message.text)")
+                        }
+                        
+                        strongSelf.notificationMessagesPipe.putNext(messages)
+                    }
+                }, error: { _ in
+                    completed()
+                }, completed: {
+                    completed()
+                })
+            case let .pollCompletion(pollId, _):
+                self.operationTimer?.invalidate()
+                let signal = self.account.network.request(Api.functions.help.test())
+                    |> deliverOn(self.queue)
+                let completed: () -> Void = { [weak self] in
+                    if let strongSelf = self {
+                        if let topOperation = strongSelf.operations.first, case let .pollCompletion(topPollId, subscribers) = topOperation {
+                            assert(topPollId == pollId)
+                            
+                            strongSelf.operations.removeFirst()
+                            if strongSelf.operations.isEmpty {
+                                for (_, f) in subscribers {
+                                    f()
+                                }
+                            } else {
+                                for (id, f) in subscribers {
+                                    strongSelf.addPollCompletion(f, id: id)
+                                }
+                            }
+                            strongSelf.startFirstOperation()
+                        } else {
+                            assertionFailure()
+                        }
+                    }
+                }
+                (signal |> deliverOn(self.queue)).start(error: { _ in
                     completed()
                 }, completed: {
                     completed()
@@ -332,62 +447,82 @@ public final class AccountStateManager {
         }
     }
     
-    private func addEvents(_ events: AccountFinalStateEvents) {
+    private func insertProcessEvents(_ events: AccountFinalStateEvents) {
         if !events.addedIncomingMessageIds.isEmpty {
-            (self.account.postbox.modify { modifier -> [Message] in
-                let timestamp = Int32(self.account.network.context.globalTime())
-                var messages: [Message] = []
-                for id in events.addedIncomingMessageIds {
-                    var notify = true
-                    
-                    if let notificationSettings = modifier.getPeerNotificationSettings(id.peerId) as? TelegramPeerNotificationSettings {
-                        switch notificationSettings.muteState {
-                            case let .muted(until):
-                                if until >= timestamp {
-                                    notify = false
-                                }
-                            case .unmuted:
-                                break
-                        }
-                    } else {
-                        trace("AccountStateManager", what: "notification settings for \(id.peerId) are undefined")
+            var index = 0
+            if !self.operations.isEmpty {
+                while case .processEvents = self.operations[index] {
+                    index += 1
+                }
+            }
+            self.operations.insert(.processEvents(self.getNextId(), events), at: 0)
+        }
+    }
+    
+    private func addPollCompletion(_ f: @escaping () -> Void, id: Int32?) -> Int32 {
+        assert(self.queue.isCurrent())
+        
+        let updatedId: Int32
+        if let id = id {
+            updatedId = id
+        } else {
+            updatedId = self.getNextId()
+        }
+        
+        if !self.operations.isEmpty {
+            for i in 1 ..< self.operations.count {
+                if case let .pollCompletion(pollId, subscribers) = self.operations[i] {
+                    var subscribers = subscribers
+                    subscribers.append((updatedId, f))
+                    self.operations[i] = .pollCompletion(pollId, subscribers)
+                    return updatedId
+                }
+            }
+        }
+        
+        let beginFirst = self.operations.isEmpty
+        self.operations.append(.pollCompletion(self.getNextId(), [(updatedId, f)]))
+        if beginFirst {
+            self.startFirstOperation()
+        }
+        
+        return updatedId
+    }
+    
+    private func removePollCompletion(_ id: Int32) {
+        for i in 0 ..< self.operations.count {
+            if case let .pollCompletion(pollId, subscribers) = self.operations[i] {
+                for j in 0 ..< subscribers.count {
+                    if subscribers[j].0 == id {
+                        var subscribers = subscribers
+                        subscribers.remove(at: j)
+                        self.operations[i] = .pollCompletion(pollId, subscribers)
+                        break
                     }
+                }
+            }
+        }
+    }
+    
+    public func wakeup() -> Signal<Void, NoError> {
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+            if let strongSelf = self {
+                strongSelf.queue.async {
+                    let id = strongSelf.addPollCompletion({
+                        subscriber.putCompletion()
+                    }, id: nil)
                     
-                    var foundReadState = false
-                    if let readStates = modifier.getPeerReadStates(id.peerId) {
-                        for (namespace, readState) in readStates {
-                            if namespace == id.namespace {
-                                if id.id <= readState.maxIncomingReadId {
-                                    notify = false
-                                }
-                                foundReadState = true
-                                break
+                    disposable.set(ActionDisposable {
+                        if let strongSelf = self {
+                            strongSelf.queue.async {
+                                strongSelf.removePollCompletion(id)
                             }
                         }
-                    }
-                    
-                    if !foundReadState {
-                        trace("AccountStateManager", what: "read state for \(id.peerId) is undefined")
-                    }
-                    
-                    if notify {
-                        if let message = modifier.getMessage(id) {
-                            messages.append(message)
-                        } else {
-                            trace("AccountStateManager", what: "notification message doesn't exist")
-                        }
-                    }
+                    })
                 }
-                return messages
-            }).start(next: { [weak self] messages in
-                if let strongSelf = self {
-                    for message in messages {
-                        print("notify: \(message.peers[message.id.peerId]?.displayTitle): \(message.text)")
-                    }
-                    
-                    strongSelf.notificationMessagesPipe.putNext(messages)
-                }
-            })
+            }
+            return disposable
         }
     }
 }

@@ -370,7 +370,7 @@ extension StoreMessage {
                     storeFlags.insert(.Personal)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(medias), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(medias), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
@@ -415,7 +415,7 @@ extension StoreMessage {
                     media.append(action)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date, flags: storeFlags, tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }

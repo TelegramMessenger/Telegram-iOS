@@ -723,7 +723,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                             medias.append(mediaValue)
                         }
                         
-                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, timestamp: date, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
+                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, timestamp: date, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
                 }

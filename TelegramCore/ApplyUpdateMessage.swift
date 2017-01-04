@@ -97,7 +97,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
             }
             
-            return StoreMessage(id: updatedId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tagsForStoreMessage(media), forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+            return StoreMessage(id: updatedId, globallyUniqueId: nil, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tagsForStoreMessage(media), forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
         })
         if let updatedTimestamp = updatedTimestamp {
             modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)

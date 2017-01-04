@@ -79,7 +79,7 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
                             mediaList.append(media)
                         }
                     
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(mediaList), forwardInfo: nil, authorId: account.peerId, text: text, attributes: attributes, media: mediaList))
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(mediaList), forwardInfo: nil, authorId: account.peerId, text: text, attributes: attributes, media: mediaList))
                     case let .forward(source):
                         if let sourceMessage = modifier.getMessage(source), let author = sourceMessage.author {
                             attributes.append(ForwardSourceInfoAttribute(messageId: sourceMessage.id))
@@ -90,7 +90,7 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
                             } else {
                                 forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: nil, sourceMessageId: nil, date: sourceMessage.timestamp)
                             }
-                            storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(sourceMessage.media), forwardInfo: forwardInfo, authorId: account.peerId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                            storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(sourceMessage.media), forwardInfo: forwardInfo, authorId: account.peerId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                         }
                 }
             }
