@@ -85,14 +85,14 @@ open class TabBarController: ViewController {
             self.addChildViewController(currentController)
             currentController.didMove(toParentViewController: self)
             
-            self.navigationItem.title = currentController.navigationItem.title
-            self.navigationItem.leftBarButtonItem = currentController.navigationItem.leftBarButtonItem
-            self.navigationItem.rightBarButtonItem = currentController.navigationItem.rightBarButtonItem
+            currentController.navigationItem.setTarget(self.navigationItem)
             displayNavigationBar = currentController.displayNavigationBar
+            //currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
         } else {
             self.navigationItem.title = nil
             self.navigationItem.leftBarButtonItem = nil
             self.navigationItem.rightBarButtonItem = nil
+            self.navigationItem.titleView = nil
             displayNavigationBar = false
         }
         if self.displayNavigationBar != displayNavigationBar {

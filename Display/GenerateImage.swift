@@ -263,8 +263,8 @@ public class DrawingContext {
             switch mode {
                 case .Alpha:
                     while dstY < maxDstY {
-                        let srcLine = other.bytes.advanced(by: srcY * other.bytesPerRow).assumingMemoryBound(to: UInt32.self)
-                        let dstLine = self.bytes.advanced(by: dstY * self.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+                        let srcLine = other.bytes.advanced(by: max(0, srcY) * other.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+                        let dstLine = self.bytes.advanced(by: max(0, dstY) * self.bytesPerRow).assumingMemoryBound(to: UInt32.self)
                         
                         var dx = dstX
                         var sx = srcX

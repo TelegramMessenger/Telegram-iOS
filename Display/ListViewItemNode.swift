@@ -79,6 +79,8 @@ open class ListViewItemNode: ASDisplayNode {
     
     final let wantsScrollDynamics: Bool
     
+    public final var wantsTrailingItemSpaceUpdates: Bool = false
+    
     public final var scrollPositioningInsets: UIEdgeInsets = UIEdgeInsets()
     
     public final var insets: UIEdgeInsets = UIEdgeInsets() {
@@ -440,5 +442,9 @@ open class ListViewItemNode: ASDisplayNode {
     
     open func header() -> ListViewItemHeader? {
         return nil
+    }
+    
+    open func updateTrailingItemSpace(_ height: CGFloat, transition: ContainedViewLayoutTransition) {
+        
     }
 }

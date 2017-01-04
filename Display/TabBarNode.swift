@@ -42,6 +42,47 @@ private func tabBarItemImage(_ image: UIImage?, title: String, tintColor: UIColo
     return image
 }
 
+private let badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: UIColor(0xff3b30), backgroundColor: nil)
+private let badgeFont = Font.regular(13.0)
+
+private final class TabBarNodeContainer {
+    let item: UITabBarItem
+    let updateBadgeListenerIndex: Int
+    
+    let imageNode: ASImageNode
+    let badgeBackgroundNode: ASImageNode
+    let badgeTextNode: ASTextNode
+    
+    var badgeValue: String?
+    var appliedBadgeValue: String?
+    
+    init(item: UITabBarItem, imageNode: ASImageNode, updateBadge: @escaping (String) -> Void) {
+        self.item = item
+        
+        self.imageNode = imageNode
+        
+        self.badgeBackgroundNode = ASImageNode()
+        self.badgeBackgroundNode.isLayerBacked = true
+        self.badgeBackgroundNode.displayWithoutProcessing = true
+        self.badgeBackgroundNode.displaysAsynchronously = false
+        self.badgeBackgroundNode.image = badgeImage
+        
+        self.badgeTextNode = ASTextNode()
+        self.badgeTextNode.maximumNumberOfLines = 1
+        self.badgeTextNode.isLayerBacked = true
+        self.badgeTextNode.displaysAsynchronously = false
+        
+        self.badgeValue = item.badgeValue ?? ""
+        self.updateBadgeListenerIndex = UITabBarItem_addSetBadgeListener(item, { value in
+            updateBadge(value ?? "")
+        })
+    }
+    
+    deinit {
+        item.removeSetBadgeListener(self.updateBadgeListenerIndex)
+    }
+}
+
 class TabBarNode: ASDisplayNode {
     var tabBarItems: [UITabBarItem] = [] {
         didSet {
@@ -66,7 +107,7 @@ class TabBarNode: ASDisplayNode {
     private let itemSelected: (Int) -> Void
     
     let separatorNode: ASDisplayNode
-    private var tabBarNodes: [ASImageNode] = []
+    private var tabBarNodeContainers: [TabBarNodeContainer] = []
     
     init(itemSelected: @escaping (Int) -> Void) {
         self.itemSelected = itemSelected
@@ -85,11 +126,13 @@ class TabBarNode: ASDisplayNode {
     }
     
     private func reloadTabBarItems() {
-        for node in self.tabBarNodes {
-            node.removeFromSupernode()
+        for node in self.tabBarNodeContainers {
+            node.imageNode.removeFromSupernode()
+            node.badgeBackgroundNode.removeFromSupernode()
+            node.badgeTextNode.removeFromSupernode()
         }
         
-        var tabBarNodes: [ASImageNode] = []
+        var tabBarNodeContainers: [TabBarNodeContainer] = []
         for i in 0 ..< self.tabBarItems.count {
             let item = self.tabBarItems[i]
             let node = ASImageNode()
@@ -101,18 +144,26 @@ class TabBarNode: ASDisplayNode {
             } else {
                 node.image = tabBarItemImage(item.image, title: item.title ?? "", tintColor: UIColor(0x929292))
             }
-            tabBarNodes.append(node)
+            let container = TabBarNodeContainer(item: item, imageNode: node, updateBadge: { [weak self] value in
+                self?.updateNodeBadge(i, value: value)
+            })
+            tabBarNodeContainers.append(container)
             self.addSubnode(node)
         }
         
-        self.tabBarNodes = tabBarNodes
+        for container in tabBarNodeContainers {
+            self.addSubnode(container.badgeBackgroundNode)
+            self.addSubnode(container.badgeTextNode)
+        }
+        
+        self.tabBarNodeContainers = tabBarNodeContainers
         
         self.setNeedsLayout()
     }
     
     private func updateNodeImage(_ index: Int) {
-        if index < self.tabBarNodes.count && index < self.tabBarItems.count {
-            let node = self.tabBarNodes[index]
+        if index < self.tabBarNodeContainers.count && index < self.tabBarItems.count {
+            let node = self.tabBarNodeContainers[index].imageNode
             let item = self.tabBarItems[index]
             
             if let selectedIndex = self.selectedIndex , selectedIndex == index {
@@ -123,6 +174,13 @@ class TabBarNode: ASDisplayNode {
         }
     }
     
+    private func updateNodeBadge(_ index: Int, value: String) {
+        self.tabBarNodeContainers[index].badgeValue = value
+        if self.tabBarNodeContainers[index].badgeValue != self.tabBarNodeContainers[index].appliedBadgeValue {
+            self.layout()
+        }
+    }
+    
     override func layout() {
         super.layout()
         
@@ -130,18 +188,39 @@ class TabBarNode: ASDisplayNode {
         
         self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight), size: CGSize(width: size.width, height: separatorHeight))
         
-        if self.tabBarNodes.count != 0 {
-            let distanceBetweenNodes = size.width / CGFloat(self.tabBarNodes.count)
+        if self.tabBarNodeContainers.count != 0 {
+            let distanceBetweenNodes = size.width / CGFloat(self.tabBarNodeContainers.count)
             
-            let internalWidth = distanceBetweenNodes * CGFloat(self.tabBarNodes.count - 1)
+            let internalWidth = distanceBetweenNodes * CGFloat(self.tabBarNodeContainers.count - 1)
             let leftNodeOriginX = (size.width - internalWidth) / 2.0
             
-            for i in 0 ..< self.tabBarNodes.count {
-                let node = self.tabBarNodes[i]
+            for i in 0 ..< self.tabBarNodeContainers.count {
+                let container = self.tabBarNodeContainers[i]
+                let node = container.imageNode
                 node.measure(CGSize(width: internalWidth, height: size.height))
                 
                 let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - node.calculatedSize.width / 2.0)
                 node.frame = CGRect(origin: CGPoint(x: originX, y: 4.0), size: node.calculatedSize)
+                
+                if container.badgeValue != container.appliedBadgeValue {
+                    container.appliedBadgeValue = container.badgeValue
+                    if let badgeValue = container.badgeValue, !badgeValue.isEmpty {
+                        container.badgeTextNode.attributedText = NSAttributedString(string: badgeValue, font: badgeFont, textColor: .white)
+                        container.badgeBackgroundNode.isHidden = false
+                        container.badgeTextNode.isHidden = false
+                    } else {
+                        container.badgeBackgroundNode.isHidden = true
+                        container.badgeTextNode.isHidden = true
+                    }
+                }
+                
+                if !container.badgeBackgroundNode.isHidden {
+                    let badgeSize = container.badgeTextNode.measure(CGSize(width: 200.0, height: 100.0))
+                    let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
+                    let backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.calculatedSize.width / 2.0) - 5.0, y: 2.0), size: backgroundSize)
+                    container.badgeBackgroundNode.frame = backgroundFrame
+                    container.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: 3.0), size: badgeSize)
+                }
             }
         }
     }
@@ -153,8 +232,8 @@ class TabBarNode: ASDisplayNode {
             let location = touch.location(in: self.view)
             var closestNode: (Int, CGFloat)?
             
-            for i in 0 ..< self.tabBarNodes.count {
-                let node = self.tabBarNodes[i]
+            for i in 0 ..< self.tabBarNodeContainers.count {
+                let node = self.tabBarNodeContainers[i].imageNode
                 let distance = abs(location.x - node.position.x)
                 if let previousClosestNode = closestNode {
                     if previousClosestNode.1 > distance {

@@ -71,7 +71,7 @@ open class NavigationBar: ASDisplayNode {
     private var itemLeftButtonListenerKey: Int?
     private var itemRightButtonListenerKey: Int?
     private var _item: UINavigationItem?
-    var item: UINavigationItem? {
+    public var item: UINavigationItem? {
         get {
             return self._item
         } set(value) {

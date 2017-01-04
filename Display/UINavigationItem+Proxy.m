@@ -2,11 +2,15 @@
 
 #import "NSBag.h"
 #import "RuntimeUtils.h"
+#import "NSWeakReference.h"
 
+static const void *sourceItemKey = &sourceItemKey;
+static const void *targetItemKey = &targetItemKey;
 static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
 static const void *setTitleViewListenerBagKey = &setTitleViewListenerBagKey;
 static const void *setLeftBarButtonItemListenerBagKey = &setLeftBarButtonItemListenerBagKey;
 static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemListenerBagKey;
+static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 
 @implementation UINavigationItem (Proxy)
 
@@ -28,18 +32,28 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
 {
     [self _ac91f40f_setTitle:title];
     
-    [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] enumerateItems:^(UINavigationItemSetTitleListener listener) {
-        listener(title);
-    }];
+    UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
+    if (targetItem != nil) {
+        [targetItem setTitle:title];
+    } else {
+        [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] enumerateItems:^(UINavigationItemSetTitleListener listener) {
+            listener(title);
+        }];
+    }
 }
 
 - (void)_ac91f40f_setTitleView:(UIView *)titleView
 {
     [self _ac91f40f_setTitleView:titleView];
     
-    [(NSBag *)[self associatedObjectForKey:setTitleViewListenerBagKey] enumerateItems:^(UINavigationItemSetTitleViewListener listener) {
-        listener(titleView);
-    }];
+    UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
+    if (targetItem != nil) {
+        [targetItem setTitleView:titleView];
+    } else {
+        [(NSBag *)[self associatedObjectForKey:setTitleViewListenerBagKey] enumerateItems:^(UINavigationItemSetTitleViewListener listener) {
+            listener(titleView);
+        }];
+    }
 }
 
 - (void)_ac91f40f_setLeftBarButtonItem:(UIBarButtonItem *)leftBarButtonItem {
@@ -50,9 +64,14 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
 {
     [self _ac91f40f_setLeftBarButtonItem:leftBarButtonItem animated:animated];
     
-    [(NSBag *)[self associatedObjectForKey:setLeftBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
-        listener(leftBarButtonItem, animated);
-    }];
+    UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
+    if (targetItem != nil) {
+        [targetItem setLeftBarButtonItem:leftBarButtonItem animated:animated];
+    } else {
+        [(NSBag *)[self associatedObjectForKey:setLeftBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
+            listener(leftBarButtonItem, animated);
+        }];
+    }
 }
 
 - (void)_ac91f40f_setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem {
@@ -63,9 +82,38 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
 {
     [self _ac91f40f_setRightBarButtonItem:rightBarButtonItem animated:animated];
     
-    [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
-        listener(rightBarButtonItem, animated);
-    }];
+    UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
+    if (targetItem != nil) {
+        [targetItem setRightBarButtonItem:rightBarButtonItem animated:animated];
+    } else {
+        [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
+            listener(rightBarButtonItem, animated);
+        }];
+    }
+}
+
+- (void)setTargetItem:(UINavigationItem *)targetItem {
+    NSWeakReference *previousSourceItem = [targetItem associatedObjectForKey:sourceItemKey];
+    [(UINavigationItem *)previousSourceItem.value setAssociatedObject:nil forKey:targetItemKey associationPolicy:NSObjectAssociationPolicyRetain];
+    
+    [self setAssociatedObject:targetItem forKey:targetItemKey associationPolicy:NSObjectAssociationPolicyRetain];
+    [targetItem setAssociatedObject:[[NSWeakReference alloc] initWithValue:self] forKey:sourceItemKey associationPolicy:NSObjectAssociationPolicyRetain];
+    
+    if ((targetItem.title != nil) != (self.title != nil) || ![targetItem.title isEqualToString:self.title]) {
+        targetItem.title = self.title;
+    }
+    if (targetItem.titleView != self.titleView) {
+        [targetItem setTitleView:self.titleView];
+    }
+    if (targetItem.leftBarButtonItem != self.leftBarButtonItem) {
+        [targetItem setLeftBarButtonItem:self.leftBarButtonItem];
+    }
+    if (targetItem.rightBarButtonItem != self.rightBarButtonItem) {
+        [targetItem setRightBarButtonItem:self.rightBarButtonItem];
+    }
+    if (targetItem.backBarButtonItem != self.backBarButtonItem) {
+        [targetItem setBackBarButtonItem:self.backBarButtonItem];
+    }
 }
 
 - (NSInteger)addSetTitleListener:(UINavigationItemSetTitleListener)listener
@@ -130,6 +178,41 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
 - (void)removeSetRightBarButtonItemListener:(NSInteger)key
 {
     [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] removeItem:key];
+}
+
+@end
+
+@implementation UITabBarItem (Proxy)
+
++ (void)load
+{
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
+    {
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UITabBarItem class] currentSelector:@selector(setBadgeValue:) newSelector:@selector(_ac91f40f_setBadgeValue:)];
+    });
+}
+
+NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBadgeListener listener) {
+    NSBag *bag = [item associatedObjectForKey:setBadgeListenerBagKey];
+    if (bag == nil)
+    {
+        bag = [[NSBag alloc] init];
+        [item setAssociatedObject:bag forKey:setBadgeListenerBagKey];
+    }
+    return [bag addItem:[listener copy]];
+}
+
+- (void)removeSetBadgeListener:(NSInteger)key {
+    [(NSBag *)[self associatedObjectForKey:setBadgeListenerBagKey] removeItem:key];
+}
+
+- (void)_ac91f40f_setBadgeValue:(NSString *)value {
+    [self _ac91f40f_setBadgeValue:value];
+    
+    [(NSBag *)[self associatedObjectForKey:setBadgeListenerBagKey] enumerateItems:^(UITabBarItemSetBadgeListener listener) {
+        listener(value);
+    }];
 }
 
 @end

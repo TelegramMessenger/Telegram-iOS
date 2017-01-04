@@ -53,6 +53,28 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateBounds(node: ASDisplayNode, bounds: CGRect, completion: ((Bool) -> Void)? = nil) {
+        if node.bounds.equalTo(bounds) {
+            completion?(true)
+        } else {
+            switch self {
+                case .immediate:
+                    node.bounds = bounds
+                    if let completion = completion {
+                        completion(true)
+                    }
+                case let .animated(duration, curve):
+                    let previousBounds = node.bounds
+                    node.bounds = bounds
+                    node.layer.animateBounds(from: previousBounds, to: bounds, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
+                }
+        }
+    }
+    
     func updatePosition(node: ASDisplayNode, position: CGPoint, completion: ((Bool) -> Void)? = nil) {
         if node.position.equalTo(position) {
             completion?(true)
