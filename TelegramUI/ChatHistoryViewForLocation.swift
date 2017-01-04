@@ -4,7 +4,7 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
-func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Account, peerId: PeerId, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags?) -> Signal<ChatHistoryViewUpdate, NoError> {
+func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Account, peerId: PeerId, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<ChatHistoryViewUpdate, NoError> {
     switch location {
         case let .Initial(count):
             var preloaded = false
@@ -13,7 +13,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
             if let tagMask = tagMask {
                 signal = account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: MessageIndex.upperBound(peerId: peerId), count: count, anchorIndex: MessageIndex.upperBound(peerId: peerId), fixedCombinedReadState: nil, tagMask: tagMask)
             } else {
-                signal = account.viewTracker.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, tagMask: tagMask)
+                signal = account.viewTracker.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, tagMask: tagMask, additionalData: additionalData)
             }
             return signal |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 if preloaded {
@@ -64,7 +64,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
         case let .InitialSearch(messageId, count):
             var preloaded = false
             var fadeIn = false
-            return account.viewTracker.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, tagMask: tagMask) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            return account.viewTracker.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, tagMask: tagMask, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 if preloaded {
                     return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first))
                 } else {
@@ -95,7 +95,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
             }
         case let .Navigation(index, anchorIndex):
             var first = true
-            return account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 140, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            return account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 140, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 let genericType: ViewUpdateType
                 if first {
                     first = false
@@ -109,7 +109,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             let chatScrollPosition = ChatHistoryViewScrollPosition.Index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 140, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            return account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 140, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 let genericType: ViewUpdateType
                 let scrollPosition: ChatHistoryViewScrollPosition? = first ? chatScrollPosition : nil
                 if first {

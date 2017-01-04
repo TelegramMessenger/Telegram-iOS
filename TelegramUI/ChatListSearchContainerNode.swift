@@ -5,7 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private enum ChatListSearchEntryStableId: Hashable {
+enum ChatListSearchEntryStableId: Hashable {
     case localPeerId(PeerId)
     case globalPeerId(PeerId)
     case messageId(MessageId)
@@ -46,7 +46,7 @@ private enum ChatListSearchEntryStableId: Hashable {
 }
 
 
-private enum ChatListSearchEntry: Comparable, Identifiable {
+enum ChatListSearchEntry: Comparable, Identifiable {
     case localPeer(Peer, Int)
     case globalPeer(Peer, Int)
     case message(Message)
@@ -117,7 +117,7 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Message) -> Void) -> ListViewItem {
+    func item(account: Account, enableHeaders: Bool, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Message) -> Void) -> ListViewItem {
         switch self {
             case let .localPeer(peer, _):
                 return ContactsPeerItem(account: account, peer: peer, status: .none, index: nil, header: ChatListSearchItemHeader(type: .localPeers), action: { _ in
@@ -128,26 +128,26 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                     openPeer(peer)
                 })
             case let .message(message):
-                return ChatListItem(account: account, message: message, combinedReadState: nil, notificationSettings: nil, embeddedState: nil, header: ChatListSearchItemHeader(type: .messages), action: { _ in
+                return ChatListItem(account: account, message: message, combinedReadState: nil, notificationSettings: nil, embeddedState: nil, header: enableHeaders ? ChatListSearchItemHeader(type: .messages) : nil, action: { _ in
                     openMessage(message)
                 })
         }
     }
 }
 
-private struct ChatListSearchContainerTransition {
+struct ChatListSearchContainerTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let displayingResults: Bool
 }
 
-private func preparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, account: Account, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Message) -> Void) -> ChatListSearchContainerTransition {
+func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, account: Account, enableHeaders: Bool, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Message) -> Void) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, openPeer: openPeer, openMessage: openMessage), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, openPeer: openPeer, openMessage: openMessage), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, enableHeaders: enableHeaders, openPeer: openPeer, openMessage: openMessage), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, enableHeaders: enableHeaders, openPeer: openPeer, openMessage: openMessage), directionHint: nil) }
     
     return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults)
 }
@@ -206,7 +206,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             return entries
                         })
                     
-                    let foundRemoteMessages: Signal<[ChatListSearchEntry], NoError> = .single([]) |> then(searchMessages(account: account, query: query)
+                    let foundRemoteMessages: Signal<[ChatListSearchEntry], NoError> = .single([]) |> then(searchMessages(account: account, peerId: nil, query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                         |> map { messages -> [ChatListSearchEntry] in
                             return messages.map({ .message($0) })
@@ -230,7 +230,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     let previousEntries = previousSearchItems.swap(entries)
                     
                     let firstTime = previousEntries == nil
-                    let transition = preparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, openPeer: { peer in
+                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, enableHeaders: true, openPeer: { peer in
                         openPeer(peer)
                         self?.listNode.clearHighlightAnimated(true)
                     }, openMessage: { message in

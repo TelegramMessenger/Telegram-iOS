@@ -67,7 +67,7 @@ class ChatUnreadItemNode: ListViewItemNode {
         
         self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
         
-        self.scrollPositioningInsets = UIEdgeInsets(top: 5.0, left: 0.0, bottom: 5.0, right: 0.0)
+        self.scrollPositioningInsets = UIEdgeInsets(top: 6.0, left: 0.0, bottom: 5.0, right: 0.0)
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
@@ -104,7 +104,7 @@ class ChatUnreadItemNode: ListViewItemNode {
             
             let backgroundSize = CGSize(width: width, height: 25.0)
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 25.0), insets: UIEdgeInsets(top: 5.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 5.0, right: 0.0)), { [weak self] in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 25.0), insets: UIEdgeInsets(top: 6.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 5.0, right: 0.0)), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
                     let _ = apply()

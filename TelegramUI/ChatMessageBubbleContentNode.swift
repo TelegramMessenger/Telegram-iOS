@@ -35,6 +35,7 @@ enum ChatMessageBubbleContentTapAction {
     case textMention(String)
     case peerMention(PeerId)
     case botCommand(String)
+    case hashtag(String?, String)
     case instantPage
 }
 

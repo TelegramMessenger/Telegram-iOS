@@ -152,8 +152,8 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         
         let firstTime = self.currentEntries == nil
         let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, actionSelected: { [weak self] in
-            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction, let switchPeer = results.switchPeer {
+                interfaceInteraction.botSwitchChatWithPayload(results.botId, switchPeer.startParam)
             }
         }, resultSelected: { [weak self] result in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {

@@ -137,7 +137,12 @@ class ChatControllerNode: ASDisplayNode {
                         
                         var messages: [EnqueueMessage] = []
                         if !text.isEmpty {
-                            messages.append(.message(text: text, attributes: [], media: nil, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId))
+                            var attributes: [MessageAttribute] = []
+                            let entities = generateTextEntities(text)
+                            if !entities.isEmpty {
+                                attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                            }
+                            messages.append(.message(text: text, attributes: attributes, media: nil, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId))
                         }
                         if let forwardMessageIds = strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                             for id in forwardMessageIds {

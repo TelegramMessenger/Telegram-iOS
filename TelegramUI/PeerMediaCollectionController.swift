@@ -186,7 +186,8 @@ public class PeerMediaCollectionController: ViewController {
             }, shareCurrentLocation: {
             }, shareAccountContact: {
             }, sendBotCommand: { _, _ in
-            }, openInstantPage: {_ in
+            }, openInstantPage: { _ in
+            }, openHashtag: {_ in
             }, updateInputState: { _ in
             })
         
@@ -204,7 +205,9 @@ public class PeerMediaCollectionController: ViewController {
         }, openPeerInfo: {
         }, togglePeerNotifications: {
         }, sendContextResult: { _ in
-        }, sendBotCommand: {_ in
+        }, sendBotCommand: { _ in
+        }, sendBotStart: { _ in
+        }, botSwitchChatWithPayload: { _ in
         }, beginAudioRecording: {
         }, finishAudioRecording: { _ in 
         }, statuses: nil)
@@ -244,7 +247,7 @@ public class PeerMediaCollectionController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = PeerMediaCollectionControllerNode(account: self.account, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!)
         
-        self.ready.set(combineLatest(self.mediaCollectionDisplayNode.historyNode.historyReady.get(), self._peerReady.get()) |> map { $0 && $1 })
+        self.ready.set(combineLatest(self.mediaCollectionDisplayNode.historyNode.historyState.get(), self._peerReady.get()) |> map { $1 })
         
         self.mediaCollectionDisplayNode.requestLayout = { [weak self] transition in
             self?.requestLayout(transition: transition)

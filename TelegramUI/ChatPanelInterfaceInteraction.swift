@@ -5,9 +5,11 @@ import TelegramCore
 
 final class ChatPanelInterfaceInteractionStatuses {
     let editingMessage: Signal<Bool, NoError>
+    let startingBot: Signal<Bool, NoError>
     
-    init(editingMessage: Signal<Bool, NoError>) {
+    init(editingMessage: Signal<Bool, NoError>, startingBot: Signal<Bool, NoError>) {
         self.editingMessage = editingMessage
+        self.startingBot = startingBot
     }
 }
 
@@ -25,11 +27,13 @@ final class ChatPanelInterfaceInteraction {
     let togglePeerNotifications: () -> Void
     let sendContextResult: (ChatContextResultCollection, ChatContextResult) -> Void
     let sendBotCommand: (Peer, String) -> Void
+    let sendBotStart: (String?) -> Void
+    let botSwitchChatWithPayload: (PeerId, String) -> Void
     let beginAudioRecording: () -> Void
     let finishAudioRecording: (Bool) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
-    init(setupReplyMessage: @escaping (MessageId) -> Void, setupEditMessage: @escaping (MessageId) -> Void, beginMessageSelection: @escaping (MessageId) -> Void, deleteSelectedMessages: @escaping () -> Void, forwardSelectedMessages: @escaping () -> Void, updateTextInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void, editMessage: @escaping (MessageId, String) -> Void, beginMessageSearch: @escaping () -> Void, openPeerInfo: @escaping () -> Void, togglePeerNotifications: @escaping () -> Void, sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult) -> Void, sendBotCommand: @escaping (Peer, String) -> Void, beginAudioRecording: @escaping () -> Void, finishAudioRecording: @escaping (Bool) -> Void, statuses: ChatPanelInterfaceInteractionStatuses?) {
+    init(setupReplyMessage: @escaping (MessageId) -> Void, setupEditMessage: @escaping (MessageId) -> Void, beginMessageSelection: @escaping (MessageId) -> Void, deleteSelectedMessages: @escaping () -> Void, forwardSelectedMessages: @escaping () -> Void, updateTextInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void, editMessage: @escaping (MessageId, String) -> Void, beginMessageSearch: @escaping () -> Void, openPeerInfo: @escaping () -> Void, togglePeerNotifications: @escaping () -> Void, sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult) -> Void, sendBotCommand: @escaping (Peer, String) -> Void, sendBotStart: @escaping (String?) -> Void, botSwitchChatWithPayload: @escaping (PeerId, String) -> Void, beginAudioRecording: @escaping () -> Void, finishAudioRecording: @escaping (Bool) -> Void, statuses: ChatPanelInterfaceInteractionStatuses?) {
         self.setupReplyMessage = setupReplyMessage
         self.setupEditMessage = setupEditMessage
         self.beginMessageSelection = beginMessageSelection
@@ -43,6 +47,8 @@ final class ChatPanelInterfaceInteraction {
         self.togglePeerNotifications = togglePeerNotifications
         self.sendContextResult = sendContextResult
         self.sendBotCommand = sendBotCommand
+        self.sendBotStart = sendBotStart
+        self.botSwitchChatWithPayload = botSwitchChatWithPayload
         self.beginAudioRecording = beginAudioRecording
         self.finishAudioRecording = finishAudioRecording
         self.statuses = statuses

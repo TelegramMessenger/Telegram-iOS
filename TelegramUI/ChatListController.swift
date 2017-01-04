@@ -4,7 +4,7 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
-public class ChatListController: ViewController {
+public class ChatListController: TelegramController {
     private let account: Account
     
     let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
@@ -13,12 +13,21 @@ public class ChatListController: ViewController {
         return super.displayNode as! ChatListControllerNode
     }
     
-    public init(account: Account) {
+    private let titleView: NetworkStatusTitleView
+    private var titleDisposable: Disposable?
+    private var badgeDisposable: Disposable?
+    
+    public override init(account: Account) {
         self.account = account
         
-        super.init()
+        self.titleView = NetworkStatusTitleView()
         
-        self.title = "Chats"
+        super.init(account: account)
+        
+        self.navigationBar.item = nil
+        
+        self.titleView.title = NetworkStatusTitle(text: "Chats", activity: false)
+        self.navigationItem.titleView = self.titleView
         self.tabBarItem.title = "Chats"
         self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
         self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconChatsSelected")
@@ -31,6 +40,39 @@ public class ChatListController: ViewController {
                 strongSelf.chatListDisplayNode.chatListNode.scrollToLatest()
             }
         }
+        
+        self.titleDisposable = (account.networkState |> deliverOnMainQueue).start(next: { [weak self] state in
+            if let strongSelf = self {
+                switch state {
+                    case .waitingForNetwork:
+                        strongSelf.titleView.title = NetworkStatusTitle(text: "Waiting For Network...", activity: true)
+                    case .connecting:
+                        strongSelf.titleView.title = NetworkStatusTitle(text: "Connecting...", activity: true)
+                    case .updating:
+                        strongSelf.titleView.title = NetworkStatusTitle(text: "Updating...", activity: true)
+                    case .online:
+                        strongSelf.titleView.title = NetworkStatusTitle(text: "Chats", activity: false)
+                }
+            }
+        })
+        
+        self.badgeDisposable = (account.postbox.unreadMessageCountsView(items: [.total]) |> deliverOnMainQueue).start(next: { [weak self] view in
+            if let strongSelf = self {
+                var count: Int32 = 0
+                if let total = view.count(for: .total) {
+                    count = total
+                }
+                if count == 0 {
+                    strongSelf.tabBarItem.badgeValue = ""
+                } else {
+                    if count > 1000 && false {
+                        strongSelf.tabBarItem.badgeValue = "\(count / 1000)K"
+                    } else {
+                        strongSelf.tabBarItem.badgeValue = "\(count)"
+                    }
+                }
+            }
+        })
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -39,6 +81,8 @@ public class ChatListController: ViewController {
     
     deinit {
         self.openMessageFromSearchDisposable.dispose()
+        self.titleDisposable?.dispose()
+        self.badgeDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -63,14 +107,7 @@ public class ChatListController: ViewController {
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
             if let strongSelf = self {
-                let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
-                    if modifier.getPeer(peer.id) == nil {
-                        modifier.updatePeers([peer], update: { previousPeer, updatedPeer in
-                            return updatedPeer
-                        })
-                    }
-                }
-                strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
+                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: messageId.peerId, messageId: messageId))
                     }

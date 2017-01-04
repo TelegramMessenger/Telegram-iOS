@@ -105,8 +105,8 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     private var enqueuedHistoryViewTransition: (ChatHistoryGridViewTransition, () -> Void)?
     var layoutActionOnViewTransition: ((ChatHistoryGridViewTransition) -> (ChatHistoryGridViewTransition, ListViewUpdateSizeAndInsets?))?
     
-    public let historyReady = Promise<Bool>()
-    private var didSetHistoryReady = false
+    public let historyState = ValuePromise<ChatHistoryNodeHistoryState>()
+    private var currentHistoryState: ChatHistoryNodeHistoryState?
     
     public var preloadPages: Bool = true {
         didSet {
@@ -138,7 +138,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         let historyViewUpdate = self.chatHistoryLocation
             |> distinctUntilChanged
             |> mapToSignal { location in
-                return chatHistoryViewForLocation(location, account: account, peerId: peerId, fixedCombinedReadState: nil, tagMask: tagMask)
+                return chatHistoryViewForLocation(location, account: account, peerId: peerId, fixedCombinedReadState: nil, tagMask: tagMask, additionalData: [])
         }
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)
@@ -148,9 +148,10 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                 case .Loading:
                     Queue.mainQueue().async { [weak self] in
                         if let strongSelf = self {
-                            if !strongSelf.didSetHistoryReady {
-                                strongSelf.didSetHistoryReady = true
-                                strongSelf.historyReady.set(.single(true))
+                            let historyState: ChatHistoryNodeHistoryState = .loading
+                            if strongSelf.currentHistoryState != historyState {
+                                strongSelf.currentHistoryState = historyState
+                                strongSelf.historyState.set(historyState)
                             }
                         }
                     }
@@ -175,7 +176,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                             }
                     }
                     
-                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: false))
+                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: false, includeChatInfoEntry: false))
                     let previous = previousView.swap(processedView)
                     
                     return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
@@ -268,9 +269,10 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                 if strongSelf.isNodeLoaded {
                     strongSelf.dequeueHistoryViewTransition()
                 } else {
-                    if !strongSelf.didSetHistoryReady {
-                        strongSelf.didSetHistoryReady = true
-                        strongSelf.historyReady.set(.single(true))
+                    let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
+                    if strongSelf.currentHistoryState != historyState {
+                        strongSelf.currentHistoryState = historyState
+                        strongSelf.historyState.set(historyState)
                     }
                 }
             } else {
@@ -293,9 +295,10 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                         strongSelf.account.postbox.updateMessageHistoryViewVisibleRange(transition.historyView.originalView.id, earliestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.upperBound].index, latestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.lowerBound].index)
                     }
                     
-                    if !strongSelf.didSetHistoryReady {
-                        strongSelf.didSetHistoryReady = true
-                        strongSelf.historyReady.set(.single(true))
+                    let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
+                    if strongSelf.currentHistoryState != historyState {
+                        strongSelf.currentHistoryState = historyState
+                        strongSelf.historyState.set(historyState)
                     }
                     
                     completion()

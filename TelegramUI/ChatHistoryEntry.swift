@@ -5,7 +5,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     case HoleEntry(MessageHistoryHole)
     case MessageEntry(Message, Bool)
     case UnreadEntry(MessageIndex)
-    case ChatInfoEntry
+    case ChatInfoEntry(String)
     
     var stableId: UInt64 {
         switch self {
@@ -80,8 +80,8 @@ func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
                 default:
                     return false
             }
-        case .ChatInfoEntry:
-            if case .ChatInfoEntry = rhs {
+        case let .ChatInfoEntry(text):
+            if case .ChatInfoEntry(text) = rhs {
                 return true
             } else {
                 return false

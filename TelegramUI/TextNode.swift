@@ -90,11 +90,22 @@ final class TextNodeLayout: NSObject {
     }
 }
 
+final class TelegramHashtag {
+    let peerName: String?
+    let hashtag: String
+    
+    init(peerName: String?, hashtag: String) {
+        self.peerName = peerName
+        self.hashtag = hashtag
+    }
+}
+
 final class TextNode: ASDisplayNode {
     static let UrlAttribute = "UrlAttributeT"
     static let TelegramPeerMentionAttribute = "TelegramPeerMention"
     static let TelegramPeerTextMentionAttribute = "TelegramPeerTextMention"
     static let TelegramBotCommandAttribute = "TelegramBotCommand"
+    static let TelegramHashtagAttribute = "TelegramHashtag"
     
     private(set) var cachedLayout: TextNodeLayout?
     

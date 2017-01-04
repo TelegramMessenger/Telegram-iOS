@@ -14,6 +14,20 @@ enum MessageBubbleImageNeighbors {
     case both
 }
 
+func messageSingleBubbleLikeImage(incoming: Bool) -> UIImage {
+    let diameter: CGFloat = 36.0
+    return generateImage(CGSize(width: 36.0, height: diameter), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        let lineWidth: CGFloat = 0.5
+        
+        context.setFillColor((incoming ? incomingStrokeColor : outgoingStrokeColor).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        context.setFillColor((incoming ? incomingFillColor : outgoingFillColor).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: lineWidth, y: lineWidth), size: CGSize(width: size.width - lineWidth * 2.0, height: size.height - lineWidth * 2.0)))
+    })!.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
+}
+
 func messageBubbleImage(incoming: Bool, neighbors: MessageBubbleImageNeighbors) -> UIImage {
     let diameter: CGFloat = 36.0
     let corner: CGFloat = 7.0

@@ -48,19 +48,39 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
             }
             
-            if let currentPanel = currentPanel as? ChatTextInputPanelNode {
-                currentPanel.interfaceInteraction = interfaceInteraction
-                return currentPanel
-            } else {
-                if let textInputPanelNode = textInputPanelNode {
-                    textInputPanelNode.interfaceInteraction = interfaceInteraction
-                    textInputPanelNode.account = account
-                    return textInputPanelNode
+            var displayBotStartPanel = false
+            if let botStartPayload = chatPresentationInterfaceState.botStartPayload {
+                displayBotStartPanel = true
+            } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
+                if let user = chatPresentationInterfaceState.peer as? TelegramUser, user.botInfo != nil {
+                    displayBotStartPanel = true
+                }
+            }
+            
+            if displayBotStartPanel {
+                if let currentPanel = currentPanel as? ChatBotStartInputPanelNode {
+                    return currentPanel
                 } else {
-                    let panel = ChatTextInputPanelNode()
-                    panel.interfaceInteraction = interfaceInteraction
+                    let panel = ChatBotStartInputPanelNode()
                     panel.account = account
+                    panel.interfaceInteraction = interfaceInteraction
                     return panel
+                }
+            } else {
+                if let currentPanel = currentPanel as? ChatTextInputPanelNode {
+                    currentPanel.interfaceInteraction = interfaceInteraction
+                    return currentPanel
+                } else {
+                    if let textInputPanelNode = textInputPanelNode {
+                        textInputPanelNode.interfaceInteraction = interfaceInteraction
+                        textInputPanelNode.account = account
+                        return textInputPanelNode
+                    } else {
+                        let panel = ChatTextInputPanelNode()
+                        panel.interfaceInteraction = interfaceInteraction
+                        panel.account = account
+                        return panel
+                    }
                 }
             }
         } else {

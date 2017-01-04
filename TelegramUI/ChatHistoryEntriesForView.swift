@@ -1,7 +1,8 @@
 import Foundation
 import Postbox
+import TelegramCore
 
-func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool, includeChatInfoEntry: Bool) -> [ChatHistoryEntry] {
     var entries: [ChatHistoryEntry] = []
     
     for entry in view.entries {
@@ -31,8 +32,17 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
         }
     }
     
-    if view.earlierId == nil {
-        entries.insert(.ChatInfoEntry, at: 0)
+    if includeChatInfoEntry && view.earlierId == nil {
+        var cachedPeerData: CachedPeerData?
+        for entry in view.additionalData {
+            if case let .cachedPeerData(_, data) = entry {
+                cachedPeerData = data
+                break
+            }
+        }
+        if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
+            entries.insert(.ChatInfoEntry(botInfo.description), at: 0)
+        }
     }
     
     return entries

@@ -193,7 +193,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                     
                     (node as! ChatHistoryNode).updateLayout(transition: .immediate, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: containerLayout.0.size, insets: UIEdgeInsets(top: insets.top, left: insets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left), duration: 0.0, curve: .Default))
                     
-                    self.candidateHistoryNodeReadyDisposable.set(((node as! ChatHistoryNode).historyReady.get()
+                    self.candidateHistoryNodeReadyDisposable.set(((node as! ChatHistoryNode).historyState.get()
                         |> deliverOnMainQueue).start(next: { [weak self, weak node] _ in
                             if let strongSelf = self, let strongNode = node, strongNode == strongSelf.candidateHistoryNode?.0 {
                                 strongSelf.candidateHistoryNode = nil

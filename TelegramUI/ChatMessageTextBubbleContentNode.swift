@@ -100,53 +100,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 if let entities = entities {
-                    var nsString: NSString?
-                    let string = NSMutableAttributedString(string: message.text, attributes: [NSFontAttributeName: messageFont, NSForegroundColorAttributeName: UIColor.black])
-                    for entity in entities.entities {
-                        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                        switch entity.type {
-                            case .Url:
-                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
-                                if nsString == nil {
-                                    nsString = message.text as NSString
-                                }
-                                string.addAttribute(TextNode.UrlAttribute, value: nsString!.substring(with: range), range: range)
-                            case .Email:
-                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
-                                if nsString == nil {
-                                    nsString = message.text as NSString
-                                }
-                                string.addAttribute(TextNode.UrlAttribute, value: "mailto:\(nsString!.substring(with: range))", range: range)
-                            case let .TextUrl(url):
-                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
-                                if nsString == nil {
-                                    nsString = message.text as NSString
-                                }
-                                string.addAttribute(TextNode.UrlAttribute, value: url, range: range)
-                            case .Bold:
-                                string.addAttribute(NSFontAttributeName, value: messageBoldFont, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
-                            case .Mention:
-                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
-                                if nsString == nil {
-                                    nsString = message.text as NSString
-                                }
-                                string.addAttribute(TextNode.TelegramPeerTextMentionAttribute, value: nsString!.substring(with: range), range: range)
-                            case let .TextMention(peerId):
-                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
-                                string.addAttribute(TextNode.TelegramPeerMentionAttribute, value: peerId.toInt64() as NSNumber, range: range)
-                            case .BotCommand:
-                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
-                                if nsString == nil {
-                                    nsString = message.text as NSString
-                                }
-                                string.addAttribute(TextNode.TelegramBotCommandAttribute, value: nsString!.substring(with: range), range: range)
-                            case .Code, .Pre:
-                                string.addAttribute(NSFontAttributeName, value: messageFixedFont, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
-                            default:
-                                break
-                        }
-                    }
-                    attributedText = string
+                    attributedText = stringWithAppliedEntities(message.text, entities: entities.entities, baseFont: messageFont, boldFont: messageBoldFont, fixedFont: messageFixedFont)
                 } else {
                     attributedText = NSAttributedString(string: message.text, font: messageFont, textColor: UIColor.black)
                 }
@@ -270,6 +224,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             return .textMention(peerName)
         } else if let botCommand = attributes[TextNode.TelegramBotCommandAttribute] as? String {
             return .botCommand(botCommand)
+        } else if let hashtag = attributes[TextNode.TelegramHashtagAttribute] as? TelegramHashtag {
+            return .hashtag(hashtag.peerName, hashtag.hashtag)
         } else {
             return .none
         }
