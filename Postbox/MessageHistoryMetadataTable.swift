@@ -5,6 +5,8 @@ private enum MetadataPrefix: Int8 {
     case PeerHistoryInitialized = 1
     case PeerNextMessageIdByNamespace = 2
     case NextStableMessageId = 3
+    case ChatListTotalUnreadCount = 4
+    case NextPeerOperationLogIndex = 5
 }
 
 final class MessageHistoryMetadataTable: Table {
@@ -24,6 +26,12 @@ final class MessageHistoryMetadataTable: Table {
     
     private var nextMessageStableId: UInt32?
     private var nextMessageStableIdUpdated = false
+    
+    private var chatListTotalUnreadCount: Int32?
+    private var chatListTotalUnreadCountUpdated = false
+    
+    private var nextPeerOperationLogIndex: UInt32?
+    private var nextPeerOperationLogIndexUpdated = false
     
     private func peerHistoryInitializedKey(_ id: PeerId) -> ValueBoxKey {
         self.sharedPeerHistoryInitializedKey.setInt64(0, value: id.toInt64())
@@ -142,6 +150,51 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
+    func getNextPeerOperationLogIndex() -> UInt32 {
+        if let nextId = self.nextPeerOperationLogIndex {
+            self.nextPeerOperationLogIndex = nextId + 1
+            self.nextPeerOperationLogIndexUpdated = true
+            return nextId
+        } else {
+            if let value = self.valueBox.get(self.table, key: self.key(.NextPeerOperationLogIndex)) {
+                var nextId: UInt32 = 0
+                value.read(&nextId, offset: 0, length: 4)
+                self.nextPeerOperationLogIndex = nextId + 1
+                self.nextPeerOperationLogIndexUpdated = true
+                return nextId
+            } else {
+                let nextId: UInt32 = 1
+                self.nextPeerOperationLogIndex = nextId + 1
+                self.nextPeerOperationLogIndexUpdated = true
+                return nextId
+            }
+        }
+    }
+    
+    func getChatListTotalUnreadCount() -> Int32 {
+        if let cached = self.chatListTotalUnreadCount {
+            return cached
+        } else {
+            if let value = self.valueBox.get(self.table, key: self.key(.ChatListTotalUnreadCount)) {
+                var count: Int32 = 0
+                value.read(&count, offset: 0, length: 4)
+                self.chatListTotalUnreadCount = count
+                return count
+            } else {
+                self.chatListTotalUnreadCount = 0
+                return 0
+            }
+        }
+    }
+    
+    func setChatListTotalUnreadCount(_ value: Int32) {
+        let current = self.getChatListTotalUnreadCount()
+        if current != value {
+            self.chatListTotalUnreadCount = value
+            self.chatListTotalUnreadCountUpdated = true
+        }
+    }
+    
     override func clearMemoryCache() {
         self.initializedChatList = nil
         self.initializedHistoryPeerIds.removeAll()
@@ -149,6 +202,8 @@ final class MessageHistoryMetadataTable: Table {
         self.updatedPeerNextMessageIdByNamespace.removeAll()
         self.nextMessageStableId = nil
         self.nextMessageStableIdUpdated = false
+        self.chatListTotalUnreadCount = nil
+        self.chatListTotalUnreadCountUpdated = false
     }
     
     override func beforeCommit() {
@@ -173,6 +228,22 @@ final class MessageHistoryMetadataTable: Table {
                 self.valueBox.set(self.table, key: self.key(.NextStableMessageId), value: MemoryBuffer(memory: &nextId, capacity: 4, length: 4, freeWhenDone: false))
                 self.nextMessageStableIdUpdated = false
             }
+        }
+        
+        if self.nextPeerOperationLogIndexUpdated {
+            if let nextPeerOperationLogIndex = self.nextPeerOperationLogIndex {
+                var nextId: UInt32 = nextPeerOperationLogIndex
+                self.valueBox.set(self.table, key: self.key(.NextPeerOperationLogIndex), value: MemoryBuffer(memory: &nextId, capacity: 4, length: 4, freeWhenDone: false))
+                self.nextPeerOperationLogIndexUpdated = false
+            }
+        }
+        
+        if self.chatListTotalUnreadCountUpdated {
+            if let value = self.chatListTotalUnreadCount {
+                var count: Int32 = value
+                self.valueBox.set(self.table, key: self.key(.ChatListTotalUnreadCount), value: MemoryBuffer(memory: &count, capacity: 4, length: 4, freeWhenDone: false))
+            }
+            self.chatListTotalUnreadCountUpdated = false
         }
     }
 }

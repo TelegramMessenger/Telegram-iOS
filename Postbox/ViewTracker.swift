@@ -24,6 +24,8 @@ final class ViewTracker {
     private let getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?
     private let getCachedPeerData: (PeerId) -> CachedPeerData?
     private let getPeerPresence: (PeerId) -> PeerPresence?
+    private let getTotalUnreadCount: () -> Int32
+    private let getPeerReadState: (PeerId) -> CombinedPeerReadState?
     
     private var chatListViews = Bag<(MutableChatListView, ValuePipe<(ChatListView, ViewUpdateType)>)>()
     private var messageHistoryViews: [PeerId: Bag<(MutableMessageHistoryView, ValuePipe<(MessageHistoryView, ViewUpdateType)>)>] = [:]
@@ -44,7 +46,9 @@ final class ViewTracker {
     
     private var peerViews = Bag<(MutablePeerView, ValuePipe<PeerView>)>()
     
-    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
+    private var unreadMessageCountsViews = Bag<(MutableUnreadMessageCountsView, ValuePipe<UnreadMessageCountsView>)>()
+    
+    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadCount: @escaping () -> Int32, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
         self.fetchEarlierHistoryEntries = fetchEarlierHistoryEntries
         self.fetchLaterHistoryEntries = fetchLaterHistoryEntries
@@ -56,6 +60,8 @@ final class ViewTracker {
         self.getPeerNotificationSettings = getPeerNotificationSettings
         self.getCachedPeerData = getCachedPeerData
         self.getPeerPresence = getPeerPresence
+        self.getTotalUnreadCount = getTotalUnreadCount
+        self.getPeerReadState = getPeerReadState
         
         self.unsentMessageView = UnsentMessageHistoryView(ids: unsentMessageIds)
         self.synchronizeReadStatesView = MutableSynchronizePeerReadStatesView(operations: synchronizePeerReadStateOperations)
@@ -162,6 +168,17 @@ final class ViewTracker {
     }
     
     func removePeerView(_ index: Bag<(MutablePeerView, ValuePipe<Peer?>)>.Index) {
+        self.peerViews.remove(index)
+    }
+    
+    func addUnreadMessageCountsView(_ view: MutableUnreadMessageCountsView) -> (Bag<(MutableUnreadMessageCountsView, ValuePipe<UnreadMessageCountsView>)>.Index, Signal<UnreadMessageCountsView, NoError>) {
+        let record = (view, ValuePipe<UnreadMessageCountsView>())
+        let index = self.unreadMessageCountsViews.add(record)
+        
+        return (index, record.1.signal())
+    }
+    
+    func removeUnreadMessageCountsView(_ index: Bag<(MutableUnreadMessageCountsView, ValuePipe<UnreadMessageCountsView>)>.Index) {
         self.peerViews.remove(index)
     }
     
@@ -314,6 +331,12 @@ final class ViewTracker {
         
         if self.synchronizeReadStatesView.replay(transaction.updatedSynchronizePeerReadStateOperations) {
             self.synchronizeReadStateViewUpdated()
+        }
+        
+        for (view, pipe) in self.unreadMessageCountsViews.copyItems() {
+            if view.replay(peerIdsWithUpdatedUnreadCounts: transaction.peerIdsWithUpdatedUnreadCounts, getTotalUnreadCount: self.getTotalUnreadCount, getPeerReadState: self.getPeerReadState) {
+                pipe.putNext(UnreadMessageCountsView(view))
+            }
         }
         
         if let replaceContactPeerIds = transaction.replaceContactPeerIds {

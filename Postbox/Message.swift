@@ -279,7 +279,9 @@ public extension MessageAttribute {
 public final class Message {
     public let stableId: UInt32
     public let stableVersion: UInt32
+    
     public let id: MessageId
+    public let globallyUniqueId: Int64?
     public let timestamp: Int32
     public let flags: MessageFlags
     public let tags: MessageTags
@@ -292,10 +294,11 @@ public final class Message {
     public let associatedMessages: SimpleDictionary<MessageId, Message>
     public let associatedMessageIds: [MessageId]
     
-    public init(stableId: UInt32, stableVersion: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>, associatedMessageIds: [MessageId]) {
+    public init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>, associatedMessageIds: [MessageId]) {
         self.stableId = stableId
         self.stableVersion = stableVersion
         self.id = id
+        self.globallyUniqueId = globallyUniqueId
         self.timestamp = timestamp
         self.flags = flags
         self.tags = tags
@@ -345,6 +348,7 @@ public enum StoreMessageId {
 public final class StoreMessage {
     public let id: StoreMessageId
     public let timestamp: Int32
+    public let globallyUniqueId: Int64?
     public let flags: StoreMessageFlags
     public let tags: MessageTags
     public let forwardInfo: StoreMessageForwardInfo?
@@ -353,8 +357,9 @@ public final class StoreMessage {
     public let attributes: [MessageAttribute]
     public let media: [Media]
     
-    public init(id: MessageId, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+    public init(id: MessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
         self.id = .Id(id)
+        self.globallyUniqueId = globallyUniqueId
         self.timestamp = timestamp
         self.flags = flags
         self.tags = tags
@@ -365,9 +370,10 @@ public final class StoreMessage {
         self.media = media
     }
     
-    public init(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+    public init(peerId: PeerId, namespace: MessageId.Namespace, globallyUniqueId: Int64?, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
         self.id = .Partial(peerId, namespace)
         self.timestamp = timestamp
+        self.globallyUniqueId = globallyUniqueId
         self.flags = flags
         self.tags = tags
         self.forwardInfo = forwardInfo
@@ -381,6 +387,7 @@ public final class StoreMessage {
 final class InternalStoreMessage {
     let id: MessageId
     let timestamp: Int32
+    let globallyUniqueId: Int64?
     let flags: StoreMessageFlags
     let tags: MessageTags
     let forwardInfo: StoreMessageForwardInfo?
@@ -389,9 +396,10 @@ final class InternalStoreMessage {
     let attributes: [MessageAttribute]
     let media: [Media]
     
-    init(id: MessageId, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+    init(id: MessageId, timestamp: Int32, globallyUniqueId: Int64?, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
         self.id = id
         self.timestamp = timestamp
+        self.globallyUniqueId = globallyUniqueId
         self.flags = flags
         self.tags = tags
         self.forwardInfo = forwardInfo

@@ -31,7 +31,7 @@ private final class PeerNameIndexCategoriesEntry {
         let tokenCount = buffer.memory.load(fromByteOffset: 4, as: Int32.self)
         var offset = 8
         var tokens: [ValueBoxKey] = []
-        for i in 0 ..< tokenCount {
+        for _ in 0 ..< tokenCount {
             let length = buffer.memory.load(fromByteOffset: offset, as: Int32.self)
             offset += 4
             tokens.append(ValueBoxKey(MemoryBuffer(memory: buffer.memory.advanced(by: offset), capacity: Int(length), length: Int(length), freeWhenDone: false)))

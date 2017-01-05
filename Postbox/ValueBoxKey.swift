@@ -12,7 +12,7 @@ private final class ValueBoxKeyImpl {
     }
 }
 
-public struct ValueBoxKey: Hashable, CustomStringConvertible {
+public struct ValueBoxKey: Hashable, CustomStringConvertible, Comparable {
     public let memory: UnsafeMutableRawPointer
     public let length: Int
     private let impl: ValueBoxKeyImpl
@@ -157,10 +157,14 @@ public struct ValueBoxKey: Hashable, CustomStringConvertible {
         }
         return hash
     }
-}
-
-public func ==(lhs: ValueBoxKey, rhs: ValueBoxKey) -> Bool {
-    return lhs.length == rhs.length && memcmp(lhs.memory, rhs.memory, lhs.length) == 0
+    
+    public static func ==(lhs: ValueBoxKey, rhs: ValueBoxKey) -> Bool {
+        return lhs.length == rhs.length && memcmp(lhs.memory, rhs.memory, lhs.length) == 0
+    }
+    
+    public static func <(lhs: ValueBoxKey, rhs: ValueBoxKey) -> Bool {
+        return mdb_cmp_memn(lhs.memory, lhs.length, rhs.memory, rhs.length) < 0
+    }
 }
 
 private func mdb_cmp_memn(_ a_memory: UnsafeMutableRawPointer, _ a_length: Int, _ b_memory: UnsafeMutableRawPointer, _ b_length: Int) -> Int
@@ -178,8 +182,4 @@ private func mdb_cmp_memn(_ a_memory: UnsafeMutableRawPointer, _ a_length: Int, 
     
     diff = Int(memcmp(a_memory, b_memory, len))
     return diff != 0 ? diff : len_diff < 0 ? -1 : len_diff
-}
-
-public func <(lhs: ValueBoxKey, rhs: ValueBoxKey) -> Bool {
-    return mdb_cmp_memn(lhs.memory, lhs.length, rhs.memory, rhs.length) < 0
 }

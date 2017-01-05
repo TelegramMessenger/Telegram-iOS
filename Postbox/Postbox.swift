@@ -224,6 +224,7 @@ public final class Postbox {
     private var currentUpdatedCachedPeerData: [PeerId: CachedPeerData] = [:]
     private var currentUpdatedPeerPresences: [PeerId: PeerPresence] = [:]
     private var currentUpdatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?] = [:]
+    private var currentUpdatedTotalUnreadCount: Int32?
     
     private var currentReplaceChatListHoles: [(MessageIndex, ChatListHole?)] = []
     private var currentReplacedContactPeerIds: Set<PeerId>?
@@ -287,12 +288,12 @@ public final class Postbox {
         
         self.pipeNotifier = PipeNotifier(basePath: basePath, notify: { [weak self] in
             if let strongSelf = self {
-                strongSelf.queue.async {
+                /*strongSelf.queue.async {
                     if strongSelf.valueBox != nil {
                         let _ = strongSelf.modify({ _ -> Void in
                         }).start()
                     }
-                }
+                }*/
             }
         })
         
@@ -351,7 +352,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 1
+            let currentUserVersion: Int32 = 5
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -382,7 +383,7 @@ public final class Postbox {
             self.itemCacheTable = ItemCacheTable(valueBox: self.valueBox, table: ItemCacheTable.tableSpec(25))
             self.peerNameTokenIndexTable = PeerNameTokenIndexTable(valueBox: self.valueBox, table: PeerNameTokenIndexTable.tableSpec(26))
             self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox, table: PeerNameIndexTable.tableSpec(27), peerTable: self.peerTable, peerNameTokenIndexTable: self.peerNameTokenIndexTable)
-            self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable)
+            self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable, metadataTable: self.messageHistoryMetadataTable, readStateTable: self.readStateTable, notificationSettingsTable: self.peerNotificationSettingsTable)
             self.chatListTable = ChatListTable(valueBox: self.valueBox, table: ChatListTable.tableSpec(9), indexTable: self.chatListIndexTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
             self.peerChatTopTaggedMessageIdsTable = PeerChatTopTaggedMessageIdsTable(valueBox: self.valueBox, table: PeerChatTopTaggedMessageIdsTable.tableSpec(28))
             
@@ -424,7 +425,11 @@ public final class Postbox {
                 return self.cachedPeerDataTable.get(peerId)
             }, getPeerPresence: { peerId in
                 return self.peerPresenceTable.get(peerId)
-            },unsentMessageIds: self.messageHistoryUnsentTable!.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable!.get())
+            }, getTotalUnreadCount: {
+                return self.messageHistoryMetadataTable.getChatListTotalUnreadCount()
+            }, getPeerReadState: { peerId in
+                return self.readStateTable.getCombinedState(peerId)
+            }, unsentMessageIds: self.messageHistoryUnsentTable!.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable!.get())
             
             print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         })
@@ -791,7 +796,11 @@ public final class Postbox {
         
         self.peerChatTopTaggedMessageIdsTable.replay(historyOperationsByPeerId: self.currentOperationsByPeerId)
         
-        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
+        let transactionUnreadCountDeltas = self.readStateTable.transactionUnreadCountDeltas()
+        let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates()
+        self.chatListIndexTable.commitWithTransactionUnreadCountDeltas(transactionUnreadCountDeltas, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, updatedTotalUnreadCount: &self.currentUpdatedTotalUnreadCount)
+        
+        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
@@ -963,7 +972,7 @@ public final class Postbox {
                 subscriber.putCompletion()
                 
                 if updatedTransactionState != nil || updatedMasterClientId != nil {
-                    self.pipeNotifier.notify()
+                    //self.pipeNotifier.notify()
                 }
                 
                 if let updatedMasterClientId = updatedMasterClientId {
@@ -1272,6 +1281,35 @@ public final class Postbox {
                 return .single(peer)
             } else {
                 return .never()
+            }
+        } |> switchToLatest
+    }
+    
+    public func unreadMessageCountsView(items: [UnreadMessageCountsItem]) -> Signal<UnreadMessageCountsView, NoError> {
+        return self.modify { modifier -> Signal<UnreadMessageCountsView, NoError> in
+            let entries: [UnreadMessageCountsItemEntry] = items.map { item in
+                switch item {
+                    case .total:
+                        return .total(self.messageHistoryMetadataTable.getChatListTotalUnreadCount())
+                    case let .peer(peerId):
+                        var count: Int32 = 0
+                        if let combinedState = self.readStateTable.getCombinedState(peerId) {
+                            count = combinedState.count
+                        }
+                        return .peer(peerId, count)
+                }
+            }
+            let view = MutableUnreadMessageCountsView(entries: entries)
+            let (index, signal) = self.viewTracker.addUnreadMessageCountsView(view)
+            
+            return (.single(UnreadMessageCountsView(view))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeUnreadMessageCountsView(index)
+                        }
+                    }
             }
         } |> switchToLatest
     }
