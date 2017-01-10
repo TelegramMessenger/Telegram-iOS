@@ -284,39 +284,18 @@
 
 - (void)testFeedbackComposeViewController {
   UIImage *sampleImage1 = [UIImage new];
-  UIImage *sampleImage2 = [UIImage new];
   NSData *sampleData1 = [NSData data];
-  NSData *sampleData2 = [NSData data];
   
   self.sut.feedbackComposeHideImageAttachmentButton = YES;
   XCTAssertTrue(self.sut.feedbackComposeHideImageAttachmentButton);
 
   id<BITFeedbackManagerDelegate> mockDelegate = mockProtocol(@protocol(BITFeedbackManagerDelegate));
-  [given([mockDelegate preparedItemsForFeedbackManager:self.sut]) willReturn:@[sampleImage2, sampleData2]];
+  [given([mockDelegate preparedItemsForFeedbackManager:self.sut]) willReturn:@[sampleImage1, sampleData1]];
   self.sut.delegate = mockDelegate;
-  
-  
-  // Test when feedbackComposerPreparedItems is also set
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated"
-  self.sut.feedbackComposerPreparedItems = @[sampleImage1, sampleData1];
-#pragma clang diagnostic pop
   
   BITFeedbackComposeViewController *composeViewController = [self.sut feedbackComposeViewController];
   NSArray *attachments = [composeViewController performSelector:@selector(attachments)];
-  XCTAssertEqual(attachments.count, 4);
-
-  
-  // Test when feedbackComposerPreparedItems is nil
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated"
-  self.sut.feedbackComposerPreparedItems = nil;
-#pragma clang diagnostic pop
-  
-  composeViewController = [self.sut feedbackComposeViewController];
-  attachments = [composeViewController performSelector:@selector(attachments)];
   XCTAssertEqual(attachments.count, 2);
-  
   
   XCTAssertTrue(composeViewController.hideImageAttachmentButton);
   XCTAssertEqual(composeViewController.delegate, mockDelegate);

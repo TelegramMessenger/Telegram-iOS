@@ -228,19 +228,6 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 @property (nonatomic, readwrite) BITFeedbackObservationMode feedbackObservationMode;
 
 /**
- Prefill feedback compose message user interface with the items given.
- 
- All NSString-Content in the array will be concatenated and result in the message,
- while all UIImage and NSData-instances will be turned into attachments.
- 
- @deprecated This property is deprecated in favor of `BITFeedbackManagerDelegate preparedItemsForFeedbackManager:`.
- 
- @see `[BITFeedbackComposeViewController prepareWithItems:]`
- */
-@property (nonatomic, copy, nullable) NSArray *feedbackComposerPreparedItems DEPRECATED_MSG_ATTRIBUTE("Use -preparedItemsForFeedbackManager: delegate method instead.");
-
-
-/**
  Don't show the option to add images from the photo library
  
  This is helpful if your application is landscape only, since the system UI for

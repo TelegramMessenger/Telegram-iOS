@@ -230,10 +230,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (BITFeedbackComposeViewController *)feedbackComposeViewController {
   BITFeedbackComposeViewController *composeViewController = [[BITFeedbackComposeViewController alloc] init];
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated"
-  NSArray *preparedItems = self.feedbackComposerPreparedItems ?: [NSArray array];
-#pragma clang diagnostic pop
+  NSArray *preparedItems = [NSArray array];
   if ([self.delegate respondsToSelector:@selector(preparedItemsForFeedbackManager:)]) {
     preparedItems = [preparedItems arrayByAddingObjectsFromArray:[self.delegate preparedItemsForFeedbackManager:self]];
   }
