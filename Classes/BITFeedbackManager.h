@@ -219,7 +219,9 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
     This will grab the latest image from the camera roll. Requires iOS 7 or later! It also requires to add a NSPhotoLibraryUsageDescription to your app's Info.plist.
  - `BITFeedbackObservationModeThreeFingerTap`: Triggers when the user taps on the screen with three fingers. Takes a screenshot and attaches it to the composer. It also requires to add a NSPhotoLibraryUsageDescription to your app's Info.plist.
  
- Default is `BITFeedbackObservationNone`
+ Default is `BITFeedbackObservationNone`.
+ If BITFeedbackManger was disabled, setting a new value will be ignored.
+ @see `[BITHockeyManager disableFeedbackManager]`
  
  @see showFeedbackComposeViewWithGeneratedScreenshot
  */
