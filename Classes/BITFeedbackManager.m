@@ -192,7 +192,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (NSString *)uuidString {
   CFUUIDRef theToken = CFUUIDCreate(NULL);
-  NSString * stringUUID = (__bridge_transfer NSString *) CFUUIDCreateString(NULL, theToken);
+  NSString *stringUUID = (__bridge_transfer NSString *) CFUUIDCreateString(NULL, theToken);
   CFRelease(theToken);
 
   return stringUUID;
@@ -318,7 +318,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (BOOL)updateUserIDUsingKeychainAndDelegate {
   BOOL availableViaDelegate = NO;
 
-  NSString * userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID];
+  NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID];
 
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
     userID = [[BITHockeyManager sharedHockeyManager].delegate
@@ -337,7 +337,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (BOOL)updateUserNameUsingKeychainAndDelegate {
   BOOL availableViaDelegate = NO;
 
-  NSString * userName = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName];
+  NSString *userName = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName];
 
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
     userName = [[BITHockeyManager sharedHockeyManager].delegate
@@ -357,7 +357,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (BOOL)updateUserEmailUsingKeychainAndDelegate {
   BOOL availableViaDelegate = NO;
 
-  NSString * userEmail = [self stringValueFromKeychainForKey:kBITHockeyMetaUserEmail];
+  NSString *userEmail = [self stringValueFromKeychainForKey:kBITHockeyMetaUserEmail];
 
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
     userEmail = [[BITHockeyManager sharedHockeyManager].delegate
@@ -453,7 +453,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   self.token = [self stringValueFromKeychainForKey:kBITFeedbackToken];
 
   if ([unarchiver containsValueForKey:kBITFeedbackAppID]) {
-    NSString * appID = [unarchiver decodeObjectForKey:kBITFeedbackAppID];
+    NSString *appID = [unarchiver decodeObjectForKey:kBITFeedbackAppID];
 
     // the stored thread is from another application identifier, so clear the token
     // which will cause the new posts to create a new thread on the server for the
@@ -732,9 +732,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     return;
   }
 
-  NSDictionary * feedback = [jsonDictionary objectForKey:@"feedback"];
-  NSString * token = [jsonDictionary objectForKey:@"token"];
-  NSDictionary * feedbackObject = [jsonDictionary objectForKey:@"feedback"];
+  NSDictionary *feedback = [jsonDictionary objectForKey:@"feedback"];
+  NSString *token = [jsonDictionary objectForKey:@"token"];
+  NSDictionary *feedbackObject = [jsonDictionary objectForKey:@"feedback"];
   if (feedback && token && feedbackObject) {
     if ([self shouldForceNewThread]) {
       self.token = nil;
@@ -898,19 +898,19 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 
 - (void)sendNetworkRequestWithHTTPMethod:(NSString *)httpMethod withMessage:(BITFeedbackMessage *)message completionHandler:(void (^)(NSError *error))completionHandler {
-  NSString * boundary = @"----FOO";
+  NSString *boundary = @"----FOO";
 
   _networkRequestInProgress = YES;
   // inform the UI to update its data in case the list is already showing
   [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingStarted object:nil];
 
-  NSString * tokenParameter = @"";
+  NSString *tokenParameter = @"";
   if ([self token]) {
     tokenParameter = [NSString stringWithFormat:@"/%@", [self token]];
   }
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@/feedback%@", [self encodedAppIdentifier], tokenParameter];
 
-  NSString * lastMessageID = @"";
+  NSString *lastMessageID = @"";
   if (!self.lastMessageID) {
     [self updateLastMessageID];
   }
@@ -926,7 +926,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   ];
 
   // build request & send
-  NSString * url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
+  NSString *url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
   BITHockeyLogDebug(@"INFO: sending api request to %@", url);
 
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
@@ -935,7 +935,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
 
   if (message) {
-    NSString * contentType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary];
+    NSString *contentType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary];
     [request setValue:contentType forHTTPHeaderField:@"Content-type"];
 
     NSMutableData *postBody = [NSMutableData data];
@@ -948,7 +948,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     [postBody appendData:[BITHockeyAppClient dataWithPostValue:[message text] forKey:@"text" boundary:boundary]];
     [postBody appendData:[BITHockeyAppClient dataWithPostValue:[message token] forKey:@"message_token" boundary:boundary]];
 
-    NSString * installString = bit_appAnonID(NO);
+    NSString *installString = bit_appAnonID(NO);
     if (installString) {
       [postBody appendData:[BITHockeyAppClient dataWithPostValue:installString forKey:@"install_string" boundary:boundary]];
     }
@@ -967,9 +967,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     NSInteger photoIndex = 0;
 
     for (BITFeedbackMessageAttachment *attachment in message.attachments) {
-      NSString * key = [NSString stringWithFormat:@"attachment%ld", (long) photoIndex];
+      NSString *key = [NSString stringWithFormat:@"attachment%ld", (long) photoIndex];
 
-      NSString * filename = attachment.originalFilename;
+      NSString *filename = attachment.originalFilename;
 
       if (!filename) {
         filename = [NSString stringWithFormat:@"Attachment %ld", (long) photoIndex];
@@ -1049,13 +1049,13 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       [self saveMessages];
       [self performSelector:@selector(fetchMessageUpdates) withObject:nil afterDelay:0.2];
     } else if ([responseData length]) {
-      NSString * responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding:NSUTF8StringEncoding];
+      NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding:NSUTF8StringEncoding];
       BITHockeyLogDebug(@"INFO: Received API response: %@", responseString);
 
       if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
         NSError *error = NULL;
 
-        NSDictionary * feedDict = (NSDictionary *) [NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
+        NSDictionary *feedDict = (NSDictionary *) [NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
 
         // server returned empty response?
         if (error) {
@@ -1066,7 +1066,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
                                             userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned empty response.", NSLocalizedDescriptionKey, nil]]];
         } else {
           BITHockeyLogDebug(@"INFO: Received API response: %@", responseString);
-          NSString * status = [feedDict objectForKey:@"status"];
+          NSString *status = [feedDict objectForKey:@"status"];
           if ([status compare:@"success"] != NSOrderedSame) {
             [self reportError:[NSError errorWithDomain:kBITFeedbackErrorDomain
                                                   code:BITFeedbackAPIServerReturnedInvalidStatus
@@ -1126,7 +1126,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     if (self.userEmail)
       [messageToSend setEmail:self.userEmail];
 
-    NSString * httpMethod = @"POST";
+    NSString *httpMethod = @"POST";
     if ([self token]) {
       httpMethod = @"PUT";
     }
@@ -1198,7 +1198,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
     if (feedbackObservationMode == BITFeedbackObservationModeOnScreenshot) {
       [self setObservationModeOnScreenshotEnabled:YES];
-      if(self.observationModeThreeFingerTapEnabled) {
+      if (self.observationModeThreeFingerTapEnabled) {
         [self setObservationModeThreeFingerTapEnabled:NO];
       }
     }
@@ -1236,7 +1236,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (void)setObservationModeThreeFingerTapEnabled:(BOOL)observationModeThreeFingerTapEnabled {
   _observationModeThreeFingerTapEnabled = observationModeThreeFingerTapEnabled;
 
-  if(observationModeThreeFingerTapEnabled) {
+  if (observationModeThreeFingerTapEnabled) {
     if (!self.tapRecognizer) {
       self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(screenshotTripleTap:)];
       self.tapRecognizer.numberOfTouchesRequired = 3;
@@ -1250,8 +1250,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     }
 
     BITHockeyLogVerbose(@"Enabled BITFeedbackObservationModeThreeFingerTap.");
-  }
-  else {
+  } else {
     [[[UIApplication sharedApplication] keyWindow] removeGestureRecognizer:self.tapRecognizer];
     self.tapRecognizer = nil;
     BITHockeyLogVerbose(@"Disabled BITFeedbackObservationModeThreeFingerTap.");
