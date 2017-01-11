@@ -292,6 +292,44 @@
   XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
   XCTAssertNotNil(self.sut.tapRecognizer);
   XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationNone];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationNone);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeAll];
+  XCTAssertTrue(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeAll);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeThreeFingerTap];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeAll];
+  XCTAssertTrue(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeAll);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeOnScreenshot];
+  XCTAssertTrue(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeOnScreenshot);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeThreeFingerTap];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap);
+
+
 }
 
 #pragma mark - FeedbackManagerDelegate Tests

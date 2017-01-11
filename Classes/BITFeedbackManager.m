@@ -1209,6 +1209,11 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
         [self setObservationModeOnScreenshotEnabled:NO];
       }
     }
+
+    if (feedbackObservationMode == BITFeedbackObservationModeAll) {
+      [self setObservationModeOnScreenshotEnabled:YES];
+      [self setObservationModeThreeFingerTapEnabled:YES];
+    }
   }
 }
 

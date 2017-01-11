@@ -76,7 +76,11 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
   /**
    *  Triggers when the user taps with three fingers on the screen. Captures a screenshot and attaches it to the composer.
    */
-  BITFeedbackObservationModeThreeFingerTap = 2
+  BITFeedbackObservationModeThreeFingerTap = 2,
+  /**
+   * Allows both BITFeedbackObservationModeOnScreenshot and BITFeedbackObservationModeThreeFingerTap at the same time.
+   */
+   BITFeedbackObservationModeAll = 3
 };
 
 
