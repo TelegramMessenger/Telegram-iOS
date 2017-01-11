@@ -58,6 +58,20 @@
 
 #pragma mark - Setup Tests
 
+- (void)testSetup {
+  XCTAssertNotNil(self.sut);
+  XCTAssertTrue([self.sut feedbackObservationMode] == BITFeedbackObservationNone);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertFalse([self.sut isFeedbackManagerDisabled]);
+  XCTAssertFalse([self.sut observationModeOnScreenshotEnabled]);
+  XCTAssertFalse([self.sut observationModeThreeFingerTapEnabled]);
+  XCTAssertNil([self.sut userEmail]);
+  XCTAssertNil([self.sut userID]);
+  XCTAssertNil([self.sut userName]);
+  XCTAssertNil([self.sut lastMessageID]);
+  XCTAssertNil([self.sut lastCheck]);
+  XCTAssertFalse([self.sut didAskUserData]);
+}
 
 #pragma mark - User Metadata
 

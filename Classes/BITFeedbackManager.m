@@ -1224,7 +1224,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     }
   } else {
     if (observationModeOnScreenshotEnabled) {
-      BITHockeyLogWarning(@"WARNING: BITFeedbackObservationModeOnScreenshot requires iOS 7 or later.");
+      BITHockeyLogWarning(@"BITFeedbackObservationModeOnScreenshot requires iOS 7 or later.");
     }
   }
 
