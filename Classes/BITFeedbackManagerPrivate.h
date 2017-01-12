@@ -34,6 +34,8 @@ extern NSString *const kBITFeedbackUpdateAttachmentThumbnail;
 
 #import "BITFeedbackMessage.h"
 
+@class UITapGestureRecognizer;
+
 @interface BITFeedbackManager () <UIAlertViewDelegate> {
 }
 
@@ -61,6 +63,11 @@ extern NSString *const kBITFeedbackUpdateAttachmentThumbnail;
 
 // used by BITHockeyManager if disable status is changed
 @property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
+// TapRecognizer used in case feedback observation mode is BITFeedbackObservationModeThreeFingerTap is set.
+@property(nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
+@property(nonatomic) BOOL observationModeOnScreenshotEnabled;
+@property(nonatomic) BOOL observationModeThreeFingerTapEnabled;
+
 
 @property (nonatomic, strong) BITFeedbackListViewController *currentFeedbackListViewController;
 @property (nonatomic, strong) BITFeedbackComposeViewController *currentFeedbackComposeViewController;
@@ -73,6 +80,7 @@ extern NSString *const kBITFeedbackUpdateAttachmentThumbnail;
 @property (nonatomic, copy) NSString *userID;
 @property (nonatomic, copy) NSString *userName;
 @property (nonatomic, copy) NSString *userEmail;
+
 
 
 // Fetch user meta data

@@ -884,6 +884,7 @@
 				8034E6B61BA3567B00D83A30 /* BITDataTests.m */,
 				8034E6B71BA3567B00D83A30 /* BITDeviceTests.m */,
 				8034E6B81BA3567B00D83A30 /* BITDomainTests.m */,
+				1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */,
 				8034E6B91BA3567B00D83A30 /* BITInternalTests.m */,
 				8034E6BA1BA3567B00D83A30 /* BITPersistenceTests.m */,
 				8034E6BC1BA3567B00D83A30 /* BITSenderTests.m */,
@@ -895,7 +896,6 @@
 				8034E6C31BA3567B00D83A30 /* BITUserTests.m */,
 				8034E6B31BA3567B00D83A30 /* BITAuthenticatorTests.m */,
 				8034E6BE1BA3567B00D83A30 /* BITStoreUpdateManagerTests.m */,
-				1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */,
 				E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */,
 				1E70A23517F31B82001BB32D /* BITHockeyHelperTests.m */,
 				E4507E4217F0658F00171A0D /* BITKeychainUtilsTests.m */,
@@ -1612,7 +1612,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastTestingUpgradeCheck = 0600;
-				LastUpgradeCheck = 0810;
+				LastUpgradeCheck = 0820;
 				TargetAttributes = {
 					1EB6173E1B0A30480035A986 = {
 						CreatedOnToolsVersion = 6.3.1;
