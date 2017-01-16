@@ -6,11 +6,15 @@
 	<dict>
 		<key>Postbox.xcscheme</key>
 		<dict>
+			<key>isShown</key>
+			<false/>
 			<key>orderHint</key>
 			<integer>5</integer>
 		</dict>
 		<key>PostboxMac.xcscheme</key>
 		<dict>
+			<key>isShown</key>
+			<false/>
 			<key>orderHint</key>
 			<integer>6</integer>
 		</dict>

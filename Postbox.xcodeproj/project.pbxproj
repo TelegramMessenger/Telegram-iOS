@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C2AC9C131E1E5D200085C7DE /* UnreadMessageCountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A18D661E16874D004C6734 /* UnreadMessageCountsView.swift */; };
 		D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */; };
 		D0079F5A1D592E8B00A27A2C /* ContactTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F591D592E8B00A27A2C /* ContactTable.swift */; };
 		D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F621D5A242500A27A2C /* ContactPeerIdsView.swift */; };
@@ -753,6 +754,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C2AC9C131E1E5D200085C7DE /* UnreadMessageCountsView.swift in Sources */,
 				D0B418481D7DFE20004562A4 /* MessageHistoryView.swift in Sources */,
 				D0F7B1DF1E045C6A007EB8A5 /* ItemCacheMetaTable.swift in Sources */,
 				D0F7B1C41E045C6A007EB8A5 /* GlobalMessageIdsTable.swift in Sources */,
