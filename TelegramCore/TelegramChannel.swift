@@ -190,6 +190,8 @@ public final class TelegramChannel: Peer {
         return .title(title: self.title, addressName: self.username)
     }
     
+    public let associatedPeerIds: [PeerId]? = nil
+    
     public init(id: PeerId, accessHash: Int64?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, role: TelegramChannelRole, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?) {
         self.id = id
         self.accessHash = accessHash

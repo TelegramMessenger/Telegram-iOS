@@ -12,6 +12,7 @@ enum PendingMessageUploadedContent {
     case media(Api.InputMedia)
     case forward(ForwardSourceInfoAttribute)
     case chatContextResult(OutgoingChatContextResultMessageAttribute)
+    case secretMedia(Api.InputEncryptedFile, Int32, SecretFileEncryptionKey)
 }
 
 enum PendingMessageUploadedContentResult {
@@ -37,6 +38,7 @@ func uploadedMessageContent(network: Network, postbox: Postbox, message: Message
         if let forwardSourceInfo = forwardSourceInfo {
             return .single(.content(message, .forward(forwardSourceInfo)))
         } else {
+            assertionFailure()
             return .never()
         }
     } else if let outgoingChatContextResultAttribute = outgoingChatContextResultAttribute {
@@ -63,13 +65,15 @@ func uploadedMessageContent(network: Network, postbox: Postbox, message: Message
 
 private func uploadedMediaImageContent(network: Network, postbox: Postbox, image: TelegramMediaImage, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
-        return multipartUpload(network: network, postbox: postbox, resource: largestRepresentation.resource)
+        return multipartUpload(network: network, postbox: postbox, resource: largestRepresentation.resource, encrypt: message.id.peerId.namespace == Namespaces.Peer.SecretChat)
             |> map { next -> PendingMessageUploadedContentResult in
                 switch next {
                     case let .progress(progress):
                         return .progress(progress)
                     case let .inputFile(file):
                         return .content(message, .media(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: file, caption: message.text, stickers: nil)))
+                    case let .inputSecretFile(file, size, key):
+                        return .content(message, .secretMedia(file, size, key))
                 }
             }
     } else {
@@ -116,13 +120,15 @@ private func inputDocumentAttributesFromFile(_ file: TelegramMediaFile) -> [Api.
 }
 
 private func uploadedMediaFileContent(network: Network, postbox: Postbox, file: TelegramMediaFile, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
-    return multipartUpload(network: network, postbox: postbox, resource: file.resource)
+    return multipartUpload(network: network, postbox: postbox, resource: file.resource, encrypt: message.id.peerId.namespace == Namespaces.Peer.SecretChat)
         |> map { next -> PendingMessageUploadedContentResult in
             switch next {
                 case let .progress(progress):
                     return .progress(progress)
                 case let .inputFile(inputFile):
                     return .content(message, .media(Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: message.text, stickers: nil)))
+                case let .inputSecretFile(file, size, key):
+                    return .content(message, .secretMedia(file, size, key))
             }
         }
 }

@@ -12,7 +12,6 @@
 		D001F3EA1E128A1C007A8C60 /* TelegramPeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */; };
 		D001F3EB1E128A1C007A8C60 /* EnqueueMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D001D62255C00955575 /* EnqueueMessage.swift */; };
 		D001F3EC1E128A1C007A8C60 /* Holes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D011D62255C00955575 /* Holes.swift */; };
-		D001F3ED1E128A1C007A8C60 /* SendUnsentMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D021D62255C00955575 /* SendUnsentMessage.swift */; };
 		D001F3EE1E128A1C007A8C60 /* AccountStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495D1E118F790057C89A /* AccountStateManager.swift */; };
 		D001F3EF1E128A1C007A8C60 /* AccountIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495F1E118FC30057C89A /* AccountIntermediateState.swift */; };
 		D001F3F01E128A1C007A8C60 /* AccountStateManagementUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D031D62255C00955575 /* AccountStateManagementUtils.swift */; };
@@ -28,6 +27,8 @@
 		D017495E1E118F790057C89A /* AccountStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495D1E118F790057C89A /* AccountStateManager.swift */; };
 		D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495F1E118FC30057C89A /* AccountIntermediateState.swift */; };
 		D0177B7B1DF8A16C00A5083A /* SecretChatState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0177B7A1DF8A16C00A5083A /* SecretChatState.swift */; };
+		D019B1CC1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D019B1CB1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift */; };
+		D019B1CD1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D019B1CB1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift */; };
 		D01AC91D1DD5DA5E00E8160F /* RequestMessageActionCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */; };
 		D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */; };
 		D01AC9231DD5E9A200E8160F /* ApplyUpdateMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */; };
@@ -59,7 +60,6 @@
 		D03B0D081D62255C00955575 /* ChannelState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0CFF1D62255C00955575 /* ChannelState.swift */; };
 		D03B0D091D62255C00955575 /* EnqueueMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D001D62255C00955575 /* EnqueueMessage.swift */; };
 		D03B0D0A1D62255C00955575 /* Holes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D011D62255C00955575 /* Holes.swift */; };
-		D03B0D0B1D62255C00955575 /* SendUnsentMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D021D62255C00955575 /* SendUnsentMessage.swift */; };
 		D03B0D0C1D62255C00955575 /* AccountStateManagementUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D031D62255C00955575 /* AccountStateManagementUtils.swift */; };
 		D03B0D0D1D62255C00955575 /* SynchronizePeerReadState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D041D62255C00955575 /* SynchronizePeerReadState.swift */; };
 		D03B0D0E1D62255C00955575 /* UpdateGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0D051D62255C00955575 /* UpdateGroup.swift */; };
@@ -99,6 +99,18 @@
 		D03C53741DAD5CA9004C17B3 /* CachedChannelData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843841DA6EDC4005F29E1 /* CachedChannelData.swift */; };
 		D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844521DAC0773005F29E1 /* TelegramUserPresence.swift */; };
 		D03C53771DAFF20F004C17B3 /* MultipartUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03C53761DAFF20F004C17B3 /* MultipartUpload.swift */; };
+		D0448C8E1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448C8D1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift */; };
+		D0448C8F1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448C8D1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift */; };
+		D0448C911E251F96005A61A7 /* SecretChatEncryption.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448C901E251F96005A61A7 /* SecretChatEncryption.swift */; };
+		D0448C921E251F96005A61A7 /* SecretChatEncryption.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448C901E251F96005A61A7 /* SecretChatEncryption.swift */; };
+		D0448C991E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448C981E268F9A005A61A7 /* SecretApiLayer46.swift */; };
+		D0448C9A1E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448C981E268F9A005A61A7 /* SecretApiLayer46.swift */; };
+		D0448C9F1E27F5EB005A61A7 /* Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448C9E1E27F5EB005A61A7 /* Random.swift */; };
+		D0448CA01E27F5EB005A61A7 /* Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448C9E1E27F5EB005A61A7 /* Random.swift */; };
+		D0448CA21E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */; };
+		D0448CA31E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */; };
+		D0448CA51E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */; };
+		D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */; };
 		D067066C1D512ADB00DED3E3 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706671D512ADB00DED3E3 /* Postbox.framework */; };
 		D067066D1D512ADB00DED3E3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706681D512ADB00DED3E3 /* SwiftSignalKit.framework */; };
 		D073CE5D1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE5C1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift */; };
@@ -249,6 +261,28 @@
 		D0F7B1EA1E045C87007EB8A5 /* ChangePeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843961DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift */; };
 		D0F7B1EB1E045C87007EB8A5 /* ResolvePeerByName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */; };
 		D0F7B1EC1E045C87007EB8A5 /* SearchPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827BA1E00451F00071108 /* SearchPeers.swift */; };
+		D0FA8B981E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8B971E1E955C001E855B /* SecretChatOutgoingOperation.swift */; };
+		D0FA8B991E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8B971E1E955C001E855B /* SecretChatOutgoingOperation.swift */; };
+		D0FA8B9E1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8B9D1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift */; };
+		D0FA8B9F1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8B9D1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift */; };
+		D0FA8BA11E1F99E1001E855B /* SecretChatFileReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BA01E1F99E1001E855B /* SecretChatFileReference.swift */; };
+		D0FA8BA21E1F99E1001E855B /* SecretChatFileReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BA01E1F99E1001E855B /* SecretChatFileReference.swift */; };
+		D0FA8BA41E1FA341001E855B /* SecretChatKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BA31E1FA341001E855B /* SecretChatKeychain.swift */; };
+		D0FA8BA51E1FA341001E855B /* SecretChatKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BA31E1FA341001E855B /* SecretChatKeychain.swift */; };
+		D0FA8BA71E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BA61E1FA6DF001E855B /* TelegramSecretChat.swift */; };
+		D0FA8BA81E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BA61E1FA6DF001E855B /* TelegramSecretChat.swift */; };
+		D0FA8BAA1E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BA91E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift */; };
+		D0FA8BAB1E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BA91E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift */; };
+		D0FA8BAD1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BAC1E1FD6E2001E855B /* MemoryBufferExtensions.swift */; };
+		D0FA8BAE1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BAC1E1FD6E2001E855B /* MemoryBufferExtensions.swift */; };
+		D0FA8BB01E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BAF1E1FEC7E001E855B /* SecretChatEncryptionConfig.swift */; };
+		D0FA8BB11E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BAF1E1FEC7E001E855B /* SecretChatEncryptionConfig.swift */; };
+		D0FA8BB31E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BB21E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift */; };
+		D0FA8BB41E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BB21E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift */; };
+		D0FA8BB61E223C16001E855B /* SecretApiLayer8.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BB51E223C16001E855B /* SecretApiLayer8.swift */; };
+		D0FA8BB71E223C16001E855B /* SecretApiLayer8.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BB51E223C16001E855B /* SecretApiLayer8.swift */; };
+		D0FA8BB91E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BB81E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift */; };
+		D0FA8BBA1E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8BB81E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -267,6 +301,7 @@
 		D017495D1E118F790057C89A /* AccountStateManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountStateManager.swift; sourceTree = "<group>"; };
 		D017495F1E118FC30057C89A /* AccountIntermediateState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountIntermediateState.swift; sourceTree = "<group>"; };
 		D0177B7A1DF8A16C00A5083A /* SecretChatState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatState.swift; sourceTree = "<group>"; };
+		D019B1CB1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatRekeySession.swift; sourceTree = "<group>"; };
 		D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestMessageActionCallback.swift; sourceTree = "<group>"; };
 		D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestEditMessage.swift; sourceTree = "<group>"; };
 		D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplyUpdateMessage.swift; sourceTree = "<group>"; };
@@ -298,7 +333,6 @@
 		D03B0CFF1D62255C00955575 /* ChannelState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelState.swift; sourceTree = "<group>"; };
 		D03B0D001D62255C00955575 /* EnqueueMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EnqueueMessage.swift; sourceTree = "<group>"; };
 		D03B0D011D62255C00955575 /* Holes.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Holes.swift; sourceTree = "<group>"; };
-		D03B0D021D62255C00955575 /* SendUnsentMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SendUnsentMessage.swift; sourceTree = "<group>"; };
 		D03B0D031D62255C00955575 /* AccountStateManagementUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountStateManagementUtils.swift; sourceTree = "<group>"; };
 		D03B0D041D62255C00955575 /* SynchronizePeerReadState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizePeerReadState.swift; sourceTree = "<group>"; };
 		D03B0D051D62255C00955575 /* UpdateGroup.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdateGroup.swift; sourceTree = "<group>"; };
@@ -333,6 +367,12 @@
 		D03B0E691D63283000955575 /* libwebp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwebp.a; path = "third-party/libwebp/lib/libwebp.a"; sourceTree = "<group>"; };
 		D03B0E6B1D63283C00955575 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
 		D03C53761DAFF20F004C17B3 /* MultipartUpload.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipartUpload.swift; sourceTree = "<group>"; };
+		D0448C8D1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProcessSecretChatIncomingDecryptedOperations.swift; sourceTree = "<group>"; };
+		D0448C901E251F96005A61A7 /* SecretChatEncryption.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatEncryption.swift; sourceTree = "<group>"; };
+		D0448C981E268F9A005A61A7 /* SecretApiLayer46.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretApiLayer46.swift; sourceTree = "<group>"; };
+		D0448C9E1E27F5EB005A61A7 /* Random.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Random.swift; sourceTree = "<group>"; };
+		D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchSecretFileResource.swift; sourceTree = "<group>"; };
+		D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceApiUtils.swift; sourceTree = "<group>"; };
 		D06706641D512ADB00DED3E3 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AsyncDisplayKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/AsyncDisplayKit.framework"; sourceTree = "<group>"; };
 		D06706651D512ADB00DED3E3 /* Display.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Display.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/Display.framework"; sourceTree = "<group>"; };
 		D06706671D512ADB00DED3E3 /* Postbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Postbox.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/Postbox.framework"; sourceTree = "<group>"; };
@@ -414,6 +454,17 @@
 		D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolvePeerByName.swift; sourceTree = "<group>"; };
 		D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditedMessageAttribute.swift; sourceTree = "<group>"; };
 		D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReplyMarkupMessageAttribute.swift; sourceTree = "<group>"; };
+		D0FA8B971E1E955C001E855B /* SecretChatOutgoingOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatOutgoingOperation.swift; sourceTree = "<group>"; };
+		D0FA8B9D1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatIncomingEncryptedOperation.swift; sourceTree = "<group>"; };
+		D0FA8BA01E1F99E1001E855B /* SecretChatFileReference.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatFileReference.swift; sourceTree = "<group>"; };
+		D0FA8BA31E1FA341001E855B /* SecretChatKeychain.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatKeychain.swift; sourceTree = "<group>"; };
+		D0FA8BA61E1FA6DF001E855B /* TelegramSecretChat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramSecretChat.swift; sourceTree = "<group>"; };
+		D0FA8BA91E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSecretChatOutgoingOperations.swift; sourceTree = "<group>"; };
+		D0FA8BAC1E1FD6E2001E855B /* MemoryBufferExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MemoryBufferExtensions.swift; sourceTree = "<group>"; };
+		D0FA8BAF1E1FEC7E001E855B /* SecretChatEncryptionConfig.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatEncryptionConfig.swift; sourceTree = "<group>"; };
+		D0FA8BB21E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProcessSecretChatIncomingEncryptedOperations.swift; sourceTree = "<group>"; };
+		D0FA8BB51E223C16001E855B /* SecretApiLayer8.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretApiLayer8.swift; sourceTree = "<group>"; };
+		D0FA8BB81E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatIncomingDecryptedOperation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -517,6 +568,8 @@
 				D03B0CBE1D62234A00955575 /* Log.swift */,
 				D03B0CC01D62235000955575 /* StringFormat.swift */,
 				D03B0CCD1D62239600955575 /* PhoneNumbers.swift */,
+				D0FA8BAC1E1FD6E2001E855B /* MemoryBufferExtensions.swift */,
+				D0448C9E1E27F5EB005A61A7 /* Random.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -527,6 +580,7 @@
 				D03B0CD21D62244300955575 /* Namespaces.swift */,
 				D03B0CD01D62242C00955575 /* Peers */,
 				D03B0CD11D62242F00955575 /* Messages */,
+				D0FA8B961E1E952D001E855B /* Secret Chats */,
 				D021E0DD1DB539E800C6B04F /* Item Collections */,
 			);
 			name = Objects;
@@ -541,6 +595,7 @@
 				D03B0CD41D62245300955575 /* TelegramUser.swift */,
 				D03B0CD51D62245300955575 /* TelegramGroup.swift */,
 				D09A2FE51D7CD4940018FB72 /* TelegramChannel.swift */,
+				D0FA8BA61E1FA6DF001E855B /* TelegramSecretChat.swift */,
 				D0B417C01D7DCEEF004562A4 /* ApiGroupOrChannel.swift */,
 				D003702A1DA42586004308D3 /* PhoneNumber.swift */,
 				D0B8438B1DA7CF50005F29E1 /* BotInfo.swift */,
@@ -599,11 +654,9 @@
 			isa = PBXGroup;
 			children = (
 				D03B0CFF1D62255C00955575 /* ChannelState.swift */,
-				D0177B7A1DF8A16C00A5083A /* SecretChatState.swift */,
 				D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */,
 				D03B0D001D62255C00955575 /* EnqueueMessage.swift */,
 				D03B0D011D62255C00955575 /* Holes.swift */,
-				D03B0D021D62255C00955575 /* SendUnsentMessage.swift */,
 				D017495D1E118F790057C89A /* AccountStateManager.swift */,
 				D017495F1E118FC30057C89A /* AccountIntermediateState.swift */,
 				D03B0D031D62255C00955575 /* AccountStateManagementUtils.swift */,
@@ -632,6 +685,8 @@
 				D03B0D431D6319F900955575 /* CloudFileMediaResource.swift */,
 				D03B0D391D6319E200955575 /* Fetch.swift */,
 				D0E35A0D1DE4953E00BC6096 /* FetchHttpResource.swift */,
+				D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */,
+				D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -639,6 +694,8 @@
 		D03B0D531D631A4400955575 /* Network */ = {
 			isa = PBXGroup;
 			children = (
+				D0FA8BB51E223C16001E855B /* SecretApiLayer8.swift */,
+				D0448C981E268F9A005A61A7 /* SecretApiLayer46.swift */,
 				D03B0D541D631A6900955575 /* Api.swift */,
 				D03B0D551D631A6900955575 /* Buffer.swift */,
 				D03B0D561D631A6900955575 /* Download.swift */,
@@ -797,6 +854,25 @@
 				D07827BA1E00451F00071108 /* SearchPeers.swift */,
 			);
 			name = Peers;
+			sourceTree = "<group>";
+		};
+		D0FA8B961E1E952D001E855B /* Secret Chats */ = {
+			isa = PBXGroup;
+			children = (
+				D0FA8BA31E1FA341001E855B /* SecretChatKeychain.swift */,
+				D0177B7A1DF8A16C00A5083A /* SecretChatState.swift */,
+				D0FA8BAF1E1FEC7E001E855B /* SecretChatEncryptionConfig.swift */,
+				D0448C901E251F96005A61A7 /* SecretChatEncryption.swift */,
+				D0FA8B9D1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift */,
+				D0FA8BB81E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift */,
+				D0FA8B971E1E955C001E855B /* SecretChatOutgoingOperation.swift */,
+				D0FA8BA01E1F99E1001E855B /* SecretChatFileReference.swift */,
+				D0FA8BB21E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift */,
+				D0448C8D1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift */,
+				D0FA8BA91E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift */,
+				D019B1CB1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift */,
+			);
+			name = "Secret Chats";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -968,6 +1044,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0FA8BB01E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */,
 				D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */,
 				D03B0D091D62255C00955575 /* EnqueueMessage.swift in Sources */,
 				D07827C91E02F59C00071108 /* InstantPage.swift in Sources */,
@@ -981,12 +1058,14 @@
 				D03B0D0E1D62255C00955575 /* UpdateGroup.swift in Sources */,
 				D01AC9231DD5E9A200E8160F /* ApplyUpdateMessage.swift in Sources */,
 				D03B0CF71D62250800955575 /* TelegramMediaImage.swift in Sources */,
+				D0FA8BB31E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
 				D073CE601DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
 				D03B0D6B1D631A9D00955575 /* Phonebook.swift in Sources */,
 				D03B0D3D1D6319E200955575 /* Fetch.swift in Sources */,
 				D0DF0C931D81AD09008AEB01 /* MessageUtils.swift in Sources */,
 				D03B0D681D631A8B00955575 /* RecentPeers.swift in Sources */,
 				D0DF0CA81D82BF32008AEB01 /* PeerParticipants.swift in Sources */,
+				D0FA8BA71E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */,
 				D03B0D5F1D631A6900955575 /* Serialization.swift in Sources */,
 				D03B0D441D6319F900955575 /* CloudFileMediaResource.swift in Sources */,
 				D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */,
@@ -998,12 +1077,15 @@
 				D0AB0B921D65E9FA002C78E7 /* ManagedServiceViews.swift in Sources */,
 				D099EA1C1DE72867001AF5A8 /* PeerCommands.swift in Sources */,
 				D03B0CCE1D62239600955575 /* PhoneNumbers.swift in Sources */,
+				D0FA8B981E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */,
 				D0DF0C911D81A857008AEB01 /* ImageRepresentationsUtils.swift in Sources */,
 				D03B0D5A1D631A6900955575 /* Api.swift in Sources */,
+				D0448C9F1E27F5EB005A61A7 /* Random.swift in Sources */,
 				D0B843B21DA7FF30005F29E1 /* NBAsYouTypeFormatter.m in Sources */,
 				D03B0CDB1D62245F00955575 /* ApiUtils.swift in Sources */,
 				D0B843C91DA7FF30005F29E1 /* NBPhoneNumberDesc.m in Sources */,
 				D03B0CE61D6224A700955575 /* ReplyMessageAttribute.swift in Sources */,
+				D0448CA51E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
 				D03C53771DAFF20F004C17B3 /* MultipartUpload.swift in Sources */,
 				D0B843811DA6EDAE005F29E1 /* CachedUserData.swift in Sources */,
 				D03B0D0A1D62255C00955575 /* Holes.swift in Sources */,
@@ -1015,22 +1097,31 @@
 				D03B0CFB1D62250800955575 /* TelegramMediaWebpage.swift in Sources */,
 				D09A2FEB1D7CDC320018FB72 /* PeerAccessRestrictionInfo.swift in Sources */,
 				D0E35A101DE49E1C00BC6096 /* OutgoingMessageWithChatContextResult.swift in Sources */,
+				D0448C991E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */,
 				D003702B1DA42586004308D3 /* PhoneNumber.swift in Sources */,
 				D03B0CF91D62250800955575 /* TelegramMediaMap.swift in Sources */,
 				D03B0D671D631A8B00955575 /* AccountViewTracker.swift in Sources */,
 				D0B843BB1DA7FF30005F29E1 /* NBMetadataCoreTestMapper.m in Sources */,
 				D03B0D101D62255C00955575 /* UpdatesApiUtils.swift in Sources */,
 				D0F7AB2C1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */,
+				D0FA8BAA1E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift in Sources */,
+				D0FA8BAD1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */,
 				D03B0CBF1D62234A00955575 /* Log.swift in Sources */,
 				D0B843B51DA7FF30005F29E1 /* NBMetadataCore.m in Sources */,
 				D03B0CD61D62245300955575 /* TelegramUser.swift in Sources */,
+				D019B1CC1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift in Sources */,
 				D03B0CD91D62245B00955575 /* PeerUtils.swift in Sources */,
 				D03B0CE41D62249F00955575 /* TextEntitiesMessageAttribute.swift in Sources */,
 				D03B0CD31D62244300955575 /* Namespaces.swift in Sources */,
+				D0FA8BB91E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */,
 				D0DF0C8A1D819C7E008AEB01 /* JoinChannel.swift in Sources */,
 				D0F7AB2F1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
 				D0B843971DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift in Sources */,
+				D0448CA21E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,
 				D09BB6B41DB02C2B00A905C0 /* PendingMessageManager.swift in Sources */,
+				D0448C8E1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */,
+				D0448C911E251F96005A61A7 /* SecretChatEncryption.swift in Sources */,
+				D0FA8BA11E1F99E1001E855B /* SecretChatFileReference.swift in Sources */,
 				D07827BB1E00451F00071108 /* SearchPeers.swift in Sources */,
 				D0DC354E1DE368F7000195EB /* RequestChatContextResults.swift in Sources */,
 				D0B843851DA6EDC4005F29E1 /* CachedChannelData.swift in Sources */,
@@ -1044,12 +1135,14 @@
 				D03B0CE81D6224AD00955575 /* ViewCountMessageAttribute.swift in Sources */,
 				D03B0D0C1D62255C00955575 /* AccountStateManagementUtils.swift in Sources */,
 				D073CE5D1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
+				D0FA8B9E1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift in Sources */,
 				D03B0D721D631ABA00955575 /* SearchMessages.swift in Sources */,
 				D0DC35501DE36900000195EB /* ChatContextResult.swift in Sources */,
 				D0177B7B1DF8A16C00A5083A /* SecretChatState.swift in Sources */,
 				D03B0D5C1D631A6900955575 /* Download.swift in Sources */,
 				D01749591E1092BC0057C89A /* RequestStartBot.swift in Sources */,
 				D017495E1E118F790057C89A /* AccountStateManager.swift in Sources */,
+				D0FA8BB61E223C16001E855B /* SecretApiLayer8.swift in Sources */,
 				D0B843C71DA7FF30005F29E1 /* NBPhoneNumberDefines.m in Sources */,
 				D03B0D5D1D631A6900955575 /* MultipartFetch.swift in Sources */,
 				D0AB0B961D662F0B002C78E7 /* ManagedChatListHoles.swift in Sources */,
@@ -1066,13 +1159,13 @@
 				D03B0CC11D62235000955575 /* StringFormat.swift in Sources */,
 				D0B843C31DA7FF30005F29E1 /* NBPhoneMetaDataGenerator.m in Sources */,
 				D0B843C11DA7FF30005F29E1 /* NBPhoneMetaData.m in Sources */,
+				D0FA8BA41E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */,
 				D03B0D651D631A8B00955575 /* Account.swift in Sources */,
 				D0AB0B941D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift in Sources */,
 				D03B0CF41D62250800955575 /* TelegramMediaAction.swift in Sources */,
 				D0B417C11D7DCEEF004562A4 /* ApiGroupOrChannel.swift in Sources */,
 				D0B843BF1DA7FF30005F29E1 /* NBNumberFormat.m in Sources */,
-				D03B0D0B1D62255C00955575 /* SendUnsentMessage.swift in Sources */,
 				D0B843C51DA7FF30005F29E1 /* NBPhoneNumber.m in Sources */,
 				D03B0D0D1D62255C00955575 /* SynchronizePeerReadState.swift in Sources */,
 				D03B0D081D62255C00955575 /* ChannelState.swift in Sources */,
@@ -1105,21 +1198,26 @@
 				D0F7B1EB1E045C87007EB8A5 /* ResolvePeerByName.swift in Sources */,
 				D001F3EE1E128A1C007A8C60 /* AccountStateManager.swift in Sources */,
 				D0B844351DAB91E0005F29E1 /* NBPhoneNumberDesc.m in Sources */,
+				D0448CA31E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,
 				D0B8442F1DAB91E0005F29E1 /* NBMetadataHelper.m in Sources */,
 				D0B8444C1DAB91FD005F29E1 /* UpdateCachedPeerData.swift in Sources */,
 				D0B418A81D7E0597004562A4 /* Api.swift in Sources */,
+				D0FA8B9F1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift in Sources */,
 				D03C536C1DAD5CA9004C17B3 /* TelegramChannel.swift in Sources */,
 				D0B418951D7E0580004562A4 /* TelegramMediaContact.swift in Sources */,
 				D0F3CC7A1DDE2859008148FA /* RequestMessageActionCallback.swift in Sources */,
 				D073CEA11DCBF3D3007511FD /* StickerPack.swift in Sources */,
+				D0448C921E251F96005A61A7 /* SecretChatEncryption.swift in Sources */,
 				D0E35A141DE4C69C00BC6096 /* FetchHttpResource.swift in Sources */,
 				D0B8440D1DAB91CD005F29E1 /* ImageRepresentationsUtils.swift in Sources */,
 				D03C536A1DAD5CA9004C17B3 /* TelegramUser.swift in Sources */,
 				D001F3EA1E128A1C007A8C60 /* TelegramPeerNotificationSettings.swift in Sources */,
+				D0FA8BA81E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */,
 				D001F3EB1E128A1C007A8C60 /* EnqueueMessage.swift in Sources */,
 				D0B844481DAB91FD005F29E1 /* ManagedMessageHistoryHoles.swift in Sources */,
 				D0F3CC7B1DDE2859008148FA /* RequestEditMessage.swift in Sources */,
 				D0B844441DAB91FD005F29E1 /* AccountSettings.swift in Sources */,
+				D0FA8B991E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */,
 				D001F3F01E128A1C007A8C60 /* AccountStateManagementUtils.swift in Sources */,
 				D0F3CC791DDE2859008148FA /* SearchMessages.swift in Sources */,
 				D0B8442B1DAB91E0005F29E1 /* NBMetadataCore.m in Sources */,
@@ -1132,6 +1230,7 @@
 				D0B4189B1D7E0580004562A4 /* TelegramMediaWebpage.swift in Sources */,
 				D0B844341DAB91E0005F29E1 /* NBPhoneNumberDefines.m in Sources */,
 				D0B8442A1DAB91E0005F29E1 /* NBAsYouTypeFormatter.m in Sources */,
+				D0448C8F1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */,
 				D073CE6E1DCBCF17007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
 				D001F3E81E128A1C007A8C60 /* ChannelState.swift in Sources */,
 				D0B844451DAB91FD005F29E1 /* AccountViewTracker.swift in Sources */,
@@ -1142,6 +1241,7 @@
 				D0B418A91D7E0597004562A4 /* Buffer.swift in Sources */,
 				D0B8442E1DAB91E0005F29E1 /* NBMetadataCoreTestMapper.m in Sources */,
 				D03C53731DAD5CA9004C17B3 /* CachedGroupData.swift in Sources */,
+				D019B1CD1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift in Sources */,
 				D0F7AB2D1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */,
 				D0B844121DAB91CD005F29E1 /* Log.swift in Sources */,
 				D03C53721DAD5CA9004C17B3 /* CachedUserData.swift in Sources */,
@@ -1153,6 +1253,7 @@
 				D0DC35521DE36908000195EB /* ChatContextResult.swift in Sources */,
 				D0F7AB301DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
 				D073CE6D1DCBCF17007511FD /* InlineBotMessageAttribute.swift in Sources */,
+				D0448C9A1E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */,
 				D0B8440F1DAB91CD005F29E1 /* Either.swift in Sources */,
 				D0DC35511DE36908000195EB /* RequestChatContextResults.swift in Sources */,
 				D0F7B1EC1E045C87007EB8A5 /* SearchPeers.swift in Sources */,
@@ -1163,6 +1264,7 @@
 				D073CEA41DCBF3EA007511FD /* MultipartUpload.swift in Sources */,
 				D03C53701DAD5CA9004C17B3 /* ExportedInvitation.swift in Sources */,
 				D0F7B1E31E045C7B007EB8A5 /* RichText.swift in Sources */,
+				D0FA8BB11E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */,
 				D0B418AA1D7E0597004562A4 /* Download.swift in Sources */,
 				D001F3F41E128A1C007A8C60 /* UpdatesApiUtils.swift in Sources */,
 				D0B4188E1D7E0578004562A4 /* StoreMessage_Telegram.swift in Sources */,
@@ -1172,11 +1274,12 @@
 				D0B844471DAB91FD005F29E1 /* ManagedServiceViews.swift in Sources */,
 				D03C53691DAD5CA9004C17B3 /* PeerAccessRestrictionInfo.swift in Sources */,
 				D0B8440E1DAB91CD005F29E1 /* MessageUtils.swift in Sources */,
+				D0FA8BAB1E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift in Sources */,
 				D0B418BA1D7E05BB004562A4 /* NetworkLogging.m in Sources */,
 				D03C536B1DAD5CA9004C17B3 /* TelegramGroup.swift in Sources */,
 				D0B418941D7E0580004562A4 /* TelegramMediaAction.swift in Sources */,
 				D0B8442C1DAB91E0005F29E1 /* NBMetadataCoreMapper.m in Sources */,
-				D001F3ED1E128A1C007A8C60 /* SendUnsentMessage.swift in Sources */,
+				D0FA8BB71E223C16001E855B /* SecretApiLayer8.swift in Sources */,
 				D073CE6A1DCBCF17007511FD /* ViewCountMessageAttribute.swift in Sources */,
 				D0B418AB1D7E0597004562A4 /* MultipartFetch.swift in Sources */,
 				D0B418B71D7E05A6004562A4 /* Phonebook.swift in Sources */,
@@ -1185,19 +1288,26 @@
 				D0F7B1E41E045C7B007EB8A5 /* InstantPage.swift in Sources */,
 				D0B418AD1D7E0597004562A4 /* Serialization.swift in Sources */,
 				D03C536F1DAD5CA9004C17B3 /* BotInfo.swift in Sources */,
+				D0FA8BBA1E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */,
+				D0FA8BAE1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */,
+				D0FA8BB41E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
 				D0B844101DAB91CD005F29E1 /* MergeLists.swift in Sources */,
+				D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
 				D001F3F11E128A1C007A8C60 /* SynchronizePeerReadState.swift in Sources */,
 				D0F7B1E81E045C87007EB8A5 /* PeerParticipants.swift in Sources */,
 				D0B844331DAB91E0005F29E1 /* NBPhoneNumber.m in Sources */,
 				D001F3F51E128A1C007A8C60 /* PendingMessageManager.swift in Sources */,
 				D001F3F61E128A1C007A8C60 /* PendingMessageUploadedContent.swift in Sources */,
+				D0FA8BA51E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D0F7B1E71E045C87007EB8A5 /* JoinChannel.swift in Sources */,
+				D0FA8BA21E1F99E1001E855B /* SecretChatFileReference.swift in Sources */,
 				D0B844301DAB91E0005F29E1 /* NBNumberFormat.m in Sources */,
 				D001F3F71E128A1C007A8C60 /* ApplyUpdateMessage.swift in Sources */,
 				D0B418971D7E0580004562A4 /* TelegramMediaImage.swift in Sources */,
 				D0B844361DAB91E0005F29E1 /* NBPhoneNumberUtil.m in Sources */,
 				D073CE6F1DCBCF17007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
 				D0B844431DAB91FD005F29E1 /* Account.swift in Sources */,
+				D0448CA01E27F5EB005A61A7 /* Random.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

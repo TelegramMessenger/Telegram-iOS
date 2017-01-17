@@ -17,6 +17,12 @@ public extension Message {
     }
 }
 
+public extension MessageFlags {
+    public var isSending: Bool {
+        return (self.contains(.Unsent) || self.contains(.Sending)) && !self.contains(.Failed)
+    }
+}
+
 public extension Message {
     var visibleButtonKeyboardMarkup: ReplyMarkupMessageAttribute? {
         for attribute in self.attributes {

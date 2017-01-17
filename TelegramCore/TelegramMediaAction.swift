@@ -17,6 +17,8 @@ public enum TelegramMediaActionType: Coding, Equatable {
     case channelMigratedFromGroup(title: String, groupId: PeerId)
     case groupMigratedToChannel(channelId: PeerId)
     case historyCleared
+    case historyScreenshot
+    case messageAutoremoveTimeoutUpdated(Int32)
     
     public init(decoder: Decoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue")
@@ -41,6 +43,10 @@ public enum TelegramMediaActionType: Coding, Equatable {
                 self = .groupMigratedToChannel(channelId: PeerId(decoder.decodeInt64ForKey("channelId")))
             case 10:
                 self = .historyCleared
+            case 11:
+                self = .historyScreenshot
+            case 12:
+                self = .messageAutoremoveTimeoutUpdated(decoder.decodeInt32ForKey("t"))
             default:
                 self = .unknown
         }
@@ -85,6 +91,11 @@ public enum TelegramMediaActionType: Coding, Equatable {
                 encoder.encodeInt64(channelId.toInt64(), forKey: "channelId")
             case .historyCleared:
                 encoder.encodeInt32(10, forKey: "_rawValue")
+            case .historyScreenshot:
+                encoder.encodeInt32(11, forKey: "_rawValue")
+            case let .messageAutoremoveTimeoutUpdated(timeout):
+                encoder.encodeInt32(12, forKey: "_rawValue")
+                encoder.encodeInt32(timeout, forKey: "t")
         }
     }
     
@@ -173,6 +184,18 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
         case .historyCleared:
             if case .historyCleared = rhs {
                 return true
+            }
+        case .historyScreenshot:
+            if case .historyScreenshot = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .messageAutoremoveTimeoutUpdated(timeout):
+            if case .messageAutoremoveTimeoutUpdated(timeout) = rhs {
+                return true
+            } else {
+                return false
             }
     }
     return false

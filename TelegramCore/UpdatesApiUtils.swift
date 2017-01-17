@@ -358,3 +358,31 @@ extension Api.Updates {
         }
     }
 }
+
+extension Api.EncryptedChat {
+    var peerId: PeerId {
+        switch self {
+            case let .encryptedChat(id, _, _, _, _, _, _):
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
+            case let .encryptedChatDiscarded(id):
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
+            case let .encryptedChatEmpty(id):
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
+            case let .encryptedChatRequested(id, _, _, _, _, _):
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
+            case let .encryptedChatWaiting(id, _, _, _, _):
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
+        }
+    }
+}
+
+extension Api.EncryptedMessage {
+    var peerId: PeerId {
+        switch self {
+            case let .encryptedMessage(_, chatId, _, _, _):
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId)
+            case let .encryptedMessageService(_, chatId, _, _):
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId)
+        }
+    }
+}

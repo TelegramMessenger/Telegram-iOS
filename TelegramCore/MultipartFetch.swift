@@ -2,9 +2,11 @@ import Foundation
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import MtProtoKitMac
 #else
     import Postbox
     import SwiftSignalKit
+    import MtProtoKitDynamic
 #endif
 
 #if os(macOS)
@@ -12,6 +14,45 @@ import Foundation
 #else
     private typealias SignalKitTimer = SwiftSignalKit.Timer
 #endif
+
+private final class MultipartDownloadState {
+    let aesKey: Data
+    var aesIv: Data
+    let decryptedSize: Int32?
+    
+    var currentSize: Int32 = 0
+    
+    init(encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?) {
+        if let encryptionKey = encryptionKey {
+            self.aesKey = encryptionKey.aesKey
+            self.aesIv = encryptionKey.aesIv
+        } else {
+            self.aesKey = Data()
+            self.aesIv = Data()
+        }
+        self.decryptedSize = decryptedSize
+    }
+    
+    func transform(data: Data) -> Data {
+        if self.aesKey.count != 0 {
+            var decryptedData = data
+            assert(decryptedSize != nil)
+            assert(decryptedData.count % 16 == 0)
+            decryptedData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                self.aesIv.withUnsafeMutableBytes { (iv: UnsafeMutablePointer<UInt8>) -> Void in
+                    MTAesDecryptBytesInplaceAndModifyIv(bytes, decryptedData.count, self.aesKey, iv)
+                }
+            }
+            if currentSize + decryptedData.count > self.decryptedSize! {
+                decryptedData.count = self.decryptedSize! - currentSize
+            }
+            currentSize += decryptedData.count
+            return decryptedData
+        } else {
+            return data
+        }
+    }
+}
 
 private final class MultipartFetchManager {
     let parallelParts: Int
@@ -33,7 +74,9 @@ private final class MultipartFetchManager {
     var receivedSize = 0
     var lastStatReport: (timestamp: Double, receivedSize: Int)?
     
-    init(size: Int?, range: Range<Int>, fetchPart: @escaping (Int, Int) -> Signal<Data, NoError>, partReady: @escaping (Data) -> Void, completed: @escaping () -> Void) {
+    var state: MultipartDownloadState
+    
+    init(size: Int?, range: Range<Int>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?, fetchPart: @escaping (Int, Int) -> Signal<Data, NoError>, partReady: @escaping (Data) -> Void, completed: @escaping () -> Void) {
         self.completeSize = size
         if let size = size {
             self.range = range.lowerBound ..< min(range.upperBound, size)
@@ -42,6 +85,7 @@ private final class MultipartFetchManager {
             self.range = range
             self.parallelParts = 1
         }
+        self.state = MultipartDownloadState(encryptionKey: encryptionKey, decryptedSize: decryptedSize)
         self.committedOffset = range.lowerBound
         self.fetchPart = fetchPart
         self.partReady = partReady
@@ -83,7 +127,7 @@ private final class MultipartFetchManager {
                 let data = self.fetchedParts[offset]!
                 self.committedOffset += data.count
                 let _ = self.fetchedParts.removeValue(forKey: offset)
-                self.partReady(data)
+                self.partReady(self.state.transform(data: data))
             }
         }
         
@@ -139,12 +183,12 @@ private final class MultipartFetchManager {
     }
 }
 
-func multipartFetch(account: Account, resource: TelegramCloudMediaResource, size: Int?, range: Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError> {
+func multipartFetch(account: Account, resource: TelegramCloudMediaResource, size: Int?, range: Range<Int>, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
     return account.network.download(datacenterId: resource.datacenterId)
         |> mapToSignal { download -> Signal<MediaResourceDataFetchResult, NoError> in
             return Signal { subscriber in
                 let inputLocation = resource.apiInputLocation
-                let manager = MultipartFetchManager(size: size, range: range, fetchPart: { offset, size in
+                let manager = MultipartFetchManager(size: size, range: range, encryptionKey: encryptionKey, decryptedSize: decryptedSize, fetchPart: { offset, size in
                     return download.part(location: inputLocation, offset: offset, length: size)
                 }, partReady: { data in
                     subscriber.putNext(MediaResourceDataFetchResult(data: data, complete: false))

@@ -9,6 +9,8 @@ public struct Namespaces {
     public struct Message {
         public static let Cloud: Int32 = 0
         public static let Local: Int32 = 1
+        public static let SecretIncoming: Int32 = 2
+        public static let SecretOutgoing: Int32 = 3
     }
     
     public struct Media {
@@ -21,12 +23,15 @@ public struct Namespaces {
         public static let CloudWebpage: Int32 = 6
         public static let LocalImage: Int32 = 7
         public static let LocalFile: Int32 = 8
+        public static let CloudSecretImage: Int32 = 9
+        public static let CloudSecretFile: Int32 = 10
     }
     
     public struct Peer {
         public static let CloudUser: Int32 = 0
         public static let CloudGroup: Int32 = 1
         public static let CloudChannel: Int32 = 2
+        public static let SecretChat: Int32 = 3
         public static let Empty: Int32 = Int32.max
     }
     
@@ -51,3 +56,10 @@ public extension MessageTags {
 }
 
 let allMessageTags: MessageTags = [.PhotoOrVideo, .File, .Music, .WebPage, .Voice]
+let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
+
+struct OperationLogTags {
+    static let SecretOutgoing = PeerOperationLogTag(value: 0)
+    static let SecretIncomingEncrypted = PeerOperationLogTag(value: 1)
+    static let SecretIncomingDecrypted = PeerOperationLogTag(value: 2)
+}
