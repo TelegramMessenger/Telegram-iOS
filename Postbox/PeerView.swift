@@ -15,6 +15,11 @@ final class MutablePeerView {
         self.peerIsContact = peerIsContact
         var peerIds = Set<PeerId>()
         peerIds.insert(peerId)
+        if let peer = getPeer(peerId), let associatedPeerIds = peer.associatedPeerIds {
+            for peerId in associatedPeerIds {
+                peerIds.insert(peerId)
+            }
+        }
         if let cachedData = cachedData {
             peerIds.formUnion(cachedData.peerIds)
         }
@@ -24,6 +29,16 @@ final class MutablePeerView {
             }
             if let presence = getPeerPresence(id) {
                 self.peerPresences[id] = presence
+            }
+        }
+        if let peer = self.peers[peerId], let associatedPeerIds = peer.associatedPeerIds {
+            for id in associatedPeerIds {
+                if let peer = getPeer(id) {
+                    self.peers[id] = peer
+                }
+                if let presence = getPeerPresence(id) {
+                    self.peerPresences[id] = presence
+                }
             }
         }
     }
@@ -37,6 +52,11 @@ final class MutablePeerView {
             
             var peerIds = Set<PeerId>()
             peerIds.insert(self.peerId)
+            if let peer = getPeer(self.peerId), let associatedPeerIds = peer.associatedPeerIds {
+                for peerId in associatedPeerIds {
+                    peerIds.insert(peerId)
+                }
+            }
             peerIds.formUnion(cachedData.peerIds)
             
             for id in peerIds {
@@ -77,6 +97,11 @@ final class MutablePeerView {
         } else {
             var peerIds = Set<PeerId>()
             peerIds.insert(self.peerId)
+            if let peer = getPeer(self.peerId), let associatedPeerIds = peer.associatedPeerIds {
+                for peerId in associatedPeerIds {
+                    peerIds.insert(peerId)
+                }
+            }
             if let cachedData = self.cachedData {
                 peerIds.formUnion(cachedData.peerIds)
             }

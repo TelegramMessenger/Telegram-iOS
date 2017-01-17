@@ -151,8 +151,12 @@ final class MessageHistoryIndexTable: Table {
     
     func ensureInitialized(_ peerId: PeerId, operations: inout [MessageHistoryIndexOperation]) {
         if !self.metadataTable.isInitialized(peerId) {
-            for namespace in self.seedConfiguration.initializeMessageNamespacesWithHoles {
-                self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32.max), timestamp: Int32.max), min: 1, tags: MessageTags.All.rawValue), operations: &operations)
+            var processedMessageNamespaces = Set<MessageId.Namespace>()
+            for (peerNamespace, messageNamespace) in self.seedConfiguration.initializeMessageNamespacesWithHoles {
+                if peerId.namespace == peerNamespace, !processedMessageNamespaces.contains(messageNamespace) {
+                    processedMessageNamespaces.insert(messageNamespace)
+                    self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: messageNamespace, id: Int32.max), timestamp: Int32.max), min: 1, tags: MessageTags.All.rawValue), operations: &operations)
+                }
             }
             
             self.metadataTable.setInitialized(peerId)

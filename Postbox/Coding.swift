@@ -38,9 +38,9 @@ public func persistentHash32(_ string: String) -> Int32 {
 private let emptyMemory = malloc(1)!
 
 public class MemoryBuffer: Equatable, CustomStringConvertible {
-    var memory: UnsafeMutableRawPointer
+    public internal(set) var memory: UnsafeMutableRawPointer
     var capacity: Int
-    var length: Int
+    public internal(set) var length: Int
     var freeWhenDone: Bool
 
     public init(copyOf buffer: MemoryBuffer) {

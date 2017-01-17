@@ -58,6 +58,11 @@ public struct ValueBoxKey: Hashable, CustomStringConvertible, Comparable {
         memcpy(self.memory + offset, &varValue, 1)
     }
     
+    public func setUInt8(_ offset: Int, value: UInt8) {
+        var varValue = value
+        memcpy(self.memory + offset, &varValue, 1)
+    }
+    
     public func getInt32(_ offset: Int) -> Int32 {
         var value: Int32 = 0
         memcpy(&value, self.memory + offset, 4)
@@ -78,6 +83,12 @@ public struct ValueBoxKey: Hashable, CustomStringConvertible, Comparable {
     
     public func getInt8(_ offset: Int) -> Int8 {
         var value: Int8 = 0
+        memcpy(&value, self.memory + offset, 1)
+        return value
+    }
+    
+    public func getUInt8(_ offset: Int) -> UInt8 {
+        var value: UInt8 = 0
         memcpy(&value, self.memory + offset, 1)
         return value
     }

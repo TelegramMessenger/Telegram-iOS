@@ -173,7 +173,7 @@ final class PeerNameIndexTable: Table {
                                 if let peer = self.peerTable.get(peerId) {
                                     updatedTokens = peer.indexName.indexTokens
                                 } else {
-                                    assertionFailure()
+                                    //assertionFailure()
                                     updatedTokens = []
                                 }
                             }

@@ -209,6 +209,10 @@ public struct MessageFlags: OptionSet {
             rawValue |= MessageFlags.TopIndexable.rawValue
         }
         
+        if flags.contains(StoreMessageFlags.Sending) {
+            rawValue |= MessageFlags.Sending.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -217,6 +221,7 @@ public struct MessageFlags: OptionSet {
     public static let Incoming = MessageFlags(rawValue: 4)
     public static let Personal = MessageFlags(rawValue: 8)
     public static let TopIndexable = MessageFlags(rawValue: 16)
+    public static let Sending = MessageFlags(rawValue: 32)
 }
 
 public struct StoreMessageForwardInfo {
@@ -324,11 +329,42 @@ public struct StoreMessageFlags: OptionSet {
         self.rawValue = 0
     }
     
+    public init(_ flags: MessageFlags) {
+        var rawValue: UInt32 = 0
+        
+        if flags.contains(.Unsent) {
+            rawValue |= StoreMessageFlags.Unsent.rawValue
+        }
+        
+        if flags.contains(.Failed) {
+            rawValue |= StoreMessageFlags.Failed.rawValue
+        }
+        
+        if flags.contains(.Incoming) {
+            rawValue |= StoreMessageFlags.Incoming.rawValue
+        }
+        
+        if flags.contains(.Personal) {
+            rawValue |= StoreMessageFlags.Personal.rawValue
+        }
+        
+        if flags.contains(.TopIndexable) {
+            rawValue |= StoreMessageFlags.TopIndexable.rawValue
+        }
+        
+        if flags.contains(.Sending) {
+            rawValue |= StoreMessageFlags.Sending.rawValue
+        }
+        
+        self.rawValue = rawValue
+    }
+    
     public static let Unsent = StoreMessageFlags(rawValue: 1)
     public static let Failed = StoreMessageFlags(rawValue: 2)
     public static let Incoming = StoreMessageFlags(rawValue: 4)
     public static let Personal = StoreMessageFlags(rawValue: 8)
     public static let TopIndexable = StoreMessageFlags(rawValue: 16)
+    public static let Sending = StoreMessageFlags(rawValue: 32)
 }
 
 public enum StoreMessageId {

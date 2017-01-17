@@ -173,6 +173,46 @@ public final class Modifier {
     public func retrieveItemCacheEntry(id: ItemCacheEntryId) -> Coding? {
         return self.postbox?.retrieveItemCacheEntry(id: id)
     }
+    
+    public func operationLogGetNextEntryLocalIndex(peerId: PeerId, tag: PeerOperationLogTag) -> Int32 {
+        if let postbox = self.postbox {
+            return postbox.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: tag)
+        } else {
+            return 0
+        }
+    }
+    
+    public func operationLogAddEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: StorePeerOperationLogEntryTagLocalIndex, tagMergedIndex: StorePeerOperationLogEntryTagMergedIndex, contents: Coding) {
+        self.postbox?.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, tagMergedIndex: tagMergedIndex, contents: contents)
+    }
+    
+    public func operationLogRemoveEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32) -> Bool {
+        if let postbox = self.postbox {
+            return postbox.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex)
+        } else {
+            return false
+        }
+    }
+    
+    public func operationLogRemoveAllEntries(peerId: PeerId, tag: PeerOperationLogTag) {
+        self.postbox?.operationLogRemoveAllEntries(peerId: peerId, tag: tag)
+    }
+    
+    public func operationLogRemoveEntries(peerId: PeerId, tag: PeerOperationLogTag, withTagLocalIndicesEqualToOrLowerThan maxTagLocalIndex: Int32) {
+        self.postbox?.operationLogRemoveEntries(peerId: peerId, tag: tag, withTagLocalIndicesEqualToOrLowerThan: maxTagLocalIndex)
+    }
+    
+    public func operationLogUpdateEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: (PeerOperationLogEntry?) -> PeerOperationLogEntryUpdate) {
+        self.postbox?.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, f)
+    }
+    
+    public func operationLogEnumerateEntries(peerId: PeerId, tag: PeerOperationLogTag, _ f: (PeerOperationLogEntry) -> Bool) {
+        self.postbox?.operationLogEnumerateEntries(peerId: peerId, tag: tag, f)
+    }
+    
+    /*public func operationLogTransformOperationContent(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: (PeerMergedOperationLogEntry?) -> PeerMergedOperationLogEntryTransform) {
+        self.postbox?.operationLogTransformOperationContent(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, f)
+    }*/
 }
 
 fileprivate class PipeNotifier: NSObject {
@@ -225,6 +265,7 @@ public final class Postbox {
     private var currentUpdatedPeerPresences: [PeerId: PeerPresence] = [:]
     private var currentUpdatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?] = [:]
     private var currentUpdatedTotalUnreadCount: Int32?
+    private var currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation] = []
     
     private var currentReplaceChatListHoles: [(MessageIndex, ChatListHole?)] = []
     private var currentReplacedContactPeerIds: Set<PeerId>?
@@ -270,6 +311,9 @@ public final class Postbox {
     var peerNameTokenIndexTable: PeerNameTokenIndexTable!
     var peerNameIndexTable: PeerNameIndexTable!
     var peerChatTopTaggedMessageIdsTable: PeerChatTopTaggedMessageIdsTable!
+    var peerOperationLogMetadataTable: PeerOperationLogMetadataTable!
+    var peerMergedOperationLogIndexTable: PeerMergedOperationLogIndexTable!
+    var peerOperationLogTable: PeerOperationLogTable!
     
     //temporary
     var peerRatingTable: RatingTable<PeerId>!
@@ -386,6 +430,9 @@ public final class Postbox {
             self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable, metadataTable: self.messageHistoryMetadataTable, readStateTable: self.readStateTable, notificationSettingsTable: self.peerNotificationSettingsTable)
             self.chatListTable = ChatListTable(valueBox: self.valueBox, table: ChatListTable.tableSpec(9), indexTable: self.chatListIndexTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
             self.peerChatTopTaggedMessageIdsTable = PeerChatTopTaggedMessageIdsTable(valueBox: self.valueBox, table: PeerChatTopTaggedMessageIdsTable.tableSpec(28))
+            self.peerOperationLogMetadataTable = PeerOperationLogMetadataTable(valueBox: self.valueBox, table: PeerOperationLogMetadataTable.tableSpec(29))
+            self.peerMergedOperationLogIndexTable = PeerMergedOperationLogIndexTable(valueBox: self.valueBox, table: PeerMergedOperationLogIndexTable.tableSpec(30), metadataTable: self.peerOperationLogMetadataTable!)
+            self.peerOperationLogTable = PeerOperationLogTable(valueBox: self.valueBox, table: PeerOperationLogTable.tableSpec(31), metadataTable: self.peerOperationLogMetadataTable, mergedIndexTable: self.peerMergedOperationLogIndexTable)
             
             self.tables.append(self.keychainTable)
             self.tables.append(self.peerTable)
@@ -414,6 +461,9 @@ public final class Postbox {
             self.tables.append(self.peerNameIndexTable)
             self.tables.append(self.peerNameTokenIndexTable)
             self.tables.append(self.peerChatTopTaggedMessageIdsTable)
+            self.tables.append(self.peerOperationLogMetadataTable)
+            self.tables.append(self.peerMergedOperationLogIndexTable)
+            self.tables.append(self.peerOperationLogTable)
             
             self.transactionStateVersion = self.metadataTable.transactionStateVersion()
             
@@ -429,6 +479,10 @@ public final class Postbox {
                 return self.messageHistoryMetadataTable.getChatListTotalUnreadCount()
             }, getPeerReadState: { peerId in
                 return self.readStateTable.getCombinedState(peerId)
+            }, operationLogGetOperations: { tag, fromIndex, limit in
+                return self.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: fromIndex, limit: limit)
+            }, operationLogGetTailIndex: { tag in
+                return self.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
             }, unsentMessageIds: self.messageHistoryUnsentTable!.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable!.get())
             
             print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
@@ -800,7 +854,7 @@ public final class Postbox {
         let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates()
         self.chatListIndexTable.commitWithTransactionUnreadCountDeltas(transactionUnreadCountDeltas, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, updatedTotalUnreadCount: &self.currentUpdatedTotalUnreadCount)
         
-        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
+        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
@@ -828,6 +882,8 @@ public final class Postbox {
         self.currentUpdatedCachedPeerData.removeAll()
         self.currentUpdatedPeerPresences.removeAll()
         self.currentUpdatedPeerChatListEmbeddedStates.removeAll()
+        self.currentUpdatedTotalUnreadCount = nil
+        self.currentPeerMergedOperationLogOperations.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
@@ -1396,6 +1452,55 @@ public final class Postbox {
             })
             return ItemCollectionsView(mutableView)
         }
+    }
+    
+    public func mergedOperationLogView(tag: PeerOperationLogTag, limit: Int) -> Signal<PeerMergedOperationLogView, NoError> {
+        return self.modify { modifier -> Signal<PeerMergedOperationLogView, NoError> in
+            let view = MutablePeerMergedOperationLogView(tag: tag, limit: limit, getOperations: { tag, fromIndex, limit in
+                return self.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: fromIndex, limit: limit)
+            }, getTailIndex: { tag in
+                return self.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
+            })
+            let (index, signal) = self.viewTracker.addPeerMergedOperationLogView(view)
+            
+            return (.single(PeerMergedOperationLogView(view))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removePeerMergedOperationLogView(index)
+                        }
+                    }
+            }
+        } |> switchToLatest
+    }
+    
+    fileprivate func operationLogGetNextEntryLocalIndex(peerId: PeerId, tag: PeerOperationLogTag) -> Int32 {
+        return self.peerOperationLogTable.getNextEntryLocalIndex(peerId: peerId, tag: tag)
+    }
+    
+    fileprivate func operationLogAddEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: StorePeerOperationLogEntryTagLocalIndex, tagMergedIndex: StorePeerOperationLogEntryTagMergedIndex, contents: Coding) {
+        self.peerOperationLogTable.addEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, tagMergedIndex: tagMergedIndex, contents: contents, operations: &self.currentPeerMergedOperationLogOperations)
+    }
+    
+    fileprivate func operationLogRemoveEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32) -> Bool {
+        return self.peerOperationLogTable.removeEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, operations: &self.currentPeerMergedOperationLogOperations)
+    }
+    
+    fileprivate func operationLogRemoveAllEntries(peerId: PeerId, tag: PeerOperationLogTag) {
+        self.peerOperationLogTable.removeAllEntries(peerId: peerId, tag: tag, operations: &self.currentPeerMergedOperationLogOperations)
+    }
+    
+    fileprivate func operationLogRemoveEntries(peerId: PeerId, tag: PeerOperationLogTag, withTagLocalIndicesEqualToOrLowerThan maxTagLocalIndex: Int32) {
+        self.peerOperationLogTable.removeEntries(peerId: peerId, tag: tag, withTagLocalIndicesEqualToOrLowerThan: maxTagLocalIndex, operations: &self.currentPeerMergedOperationLogOperations)
+    }
+    
+    fileprivate func operationLogUpdateEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: (PeerOperationLogEntry?) -> PeerOperationLogEntryUpdate) {
+        self.peerOperationLogTable.updateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, f: f, operations: &self.currentPeerMergedOperationLogOperations)
+    }
+    
+    fileprivate func operationLogEnumerateEntries(peerId: PeerId, tag: PeerOperationLogTag, _ f: (PeerOperationLogEntry) -> Bool) {
+        self.peerOperationLogTable.enumerateEntries(peerId: peerId, tag: tag, f)
     }
     
     public func isMasterClient() -> Signal<Bool, NoError> {
