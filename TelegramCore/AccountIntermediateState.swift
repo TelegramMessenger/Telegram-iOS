@@ -46,6 +46,8 @@ enum AccountStateMutationOperation {
     case UpdatePeer(PeerId, (Peer) -> Peer)
     case MergeApiUsers([Api.User])
     case MergePeerPresences([PeerId: PeerPresence])
+    case UpdateSecretChat(chat: Api.EncryptedChat, timestamp: Int32)
+    case AddSecretMessages([Api.EncryptedMessage])
 }
 
 struct AccountMutableState {
@@ -190,9 +192,17 @@ struct AccountMutableState {
         self.addOperation(.MergePeerPresences(presences))
     }
     
+    mutating func updateSecretChat(chat: Api.EncryptedChat, timestamp: Int32) {
+        self.addOperation(.UpdateSecretChat(chat: chat, timestamp: timestamp))
+    }
+    
+    mutating func addSecretMessages(_ messages: [Api.EncryptedMessage]) {
+        self.addOperation(.AddSecretMessages(messages))
+    }
+    
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {
@@ -231,7 +241,6 @@ struct AccountMutableState {
                 if current == nil || current! < messageId {
                     self.readInboxMaxIds[messageId.peerId] = messageId
                 }
-            //namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32
             case let .ResetReadState(peerId, namespace, maxIncomingReadId, _, _, _):
                 let current = self.readInboxMaxIds[peerId]
                 if namespace == Namespaces.Message.Cloud {

@@ -166,16 +166,30 @@ public class Buffer: CustomStringConvertible {
     var data: UnsafeMutableRawPointer?
     var _size: UInt = 0
     private var capacity: UInt = 0
+    private let freeWhenDone: Bool
     
     public var size: Int {
         return Int(self._size)
     }
     
     deinit {
-        free(self.data)
+        if self.freeWhenDone {
+            free(self.data)
+        }
+    }
+    
+    public init(memory: UnsafeMutableRawPointer?, size: Int, capacity: Int, freeWhenDone: Bool) {
+        self.data = memory
+        self._size = UInt(size)
+        self.capacity = UInt(capacity)
+        self.freeWhenDone = freeWhenDone
     }
     
     public init() {
+        self.data = nil
+        self._size = 0
+        self.capacity = 0
+        self.freeWhenDone = true
     }
     
     convenience public init(data: Data?) {
@@ -187,6 +201,8 @@ public class Buffer: CustomStringConvertible {
             }
         }
     }
+    
+    
     
     public func makeData() -> Data {
         return self.withUnsafeMutablePointer { pointer, size -> Data in
@@ -269,10 +285,14 @@ public class Buffer: CustomStringConvertible {
 
 public class BufferReader {
     private let buffer: Buffer
-    private var offset: UInt = 0
+    public private(set) var offset: UInt = 0
     
     public init(_ buffer: Buffer) {
         self.buffer = buffer
+    }
+    
+    public func reset() {
+        self.offset = 0
     }
     
     public func skip(_ count: Int) {
@@ -325,6 +345,13 @@ public class BufferReader {
             buffer.appendBytes((self.buffer.data?.advanced(by: Int(self.offset)))!, length: UInt(count))
             self.offset += UInt(count)
             return buffer
+        }
+        return nil
+    }
+    
+    public func withReadBufferNoCopy<T>(_ count: Int, _ f: (Buffer) -> T) -> T? {
+        if count >= 0 && self.offset + UInt(count) <= self.buffer._size {
+            return f(Buffer(memory: self.buffer.data!.advanced(by: Int(self.offset)), size: count, capacity: count, freeWhenDone: false))
         }
         return nil
     }

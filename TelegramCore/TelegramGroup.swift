@@ -56,6 +56,8 @@ public final class TelegramGroup: Peer {
         return .title(title: self.title, addressName: nil)
     }
     
+    public let associatedPeerIds: [PeerId]? = nil
+    
     public init(id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, migrationReference: TelegramGroupToChannelMigrationReference?, version: Int) {
         self.id = id
         self.title = title

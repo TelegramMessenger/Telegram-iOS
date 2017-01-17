@@ -388,7 +388,7 @@ func finalStateWithUpdateGroups(_ account: Account, state: AccountMutableState, 
             
             collectedUpdates.append(update.update)
             
-            updatedState.updateState(AuthorizedAccountState.State(pts: updatedState.state.pts, qts: update.qtsRange.1, date: updatedState.state.date, seq: updatedState.state.seq))
+            updatedState.updateState(AuthorizedAccountState.State(pts: updatedState.state.pts, qts: update.qtsRange.0, date: updatedState.state.date, seq: updatedState.state.seq))
         } else {
             if qtsUpdatesAfterHole.count == 0 {
                 trace("State", what: "update qts hole: \(update.qtsRange.0) != \(updatedState.state.qts) + \(update.qtsRange.1)")
@@ -449,13 +449,15 @@ func finalStateWithDifference(account: Account, state: AccountMutableState, diff
     var updatedState = state
     
     var messages: [Api.Message] = []
+    var encryptedMessages: [Api.EncryptedMessage] = []
     var updates: [Api.Update] = []
     var chats: [Api.Chat] = []
     var users: [Api.User] = []
     
     switch difference {
-        case let .difference(newMessages, _, otherUpdates, apiChats, apiUsers, apiState):
+        case let .difference(newMessages, newEncryptedMessages, otherUpdates, apiChats, apiUsers, apiState):
             messages = newMessages
+            encryptedMessages = newEncryptedMessages
             updates = otherUpdates
             chats = apiChats
             users = apiUsers
@@ -465,8 +467,9 @@ func finalStateWithDifference(account: Account, state: AccountMutableState, diff
             }
         case let .differenceEmpty(date, seq):
             updatedState.updateState(AuthorizedAccountState.State(pts: updatedState.state.pts, qts: updatedState.state.qts, date: date, seq: seq))
-        case let .differenceSlice(newMessages, _, otherUpdates, apiChats, apiUsers, apiState):
+        case let .differenceSlice(newMessages, newEncryptedMessages, otherUpdates, apiChats, apiUsers, apiState):
             messages = newMessages
+            encryptedMessages = newEncryptedMessages
             updates = otherUpdates
             chats = apiChats
             users = apiUsers
@@ -491,6 +494,10 @@ func finalStateWithDifference(account: Account, state: AccountMutableState, diff
         if let message = StoreMessage(apiMessage: message) {
             updatedState.addMessages([message], location: .UpperHistoryBlock)
         }
+    }
+    
+    if !encryptedMessages.isEmpty {
+        updatedState.addSecretMessages(encryptedMessages)
     }
     
     return finalStateWithUpdates(account: account, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false)
@@ -779,12 +786,16 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
-        case let .updateUserTyping(type):
-            break
-        case let .updateChatUserTyping(type):
-            break
-        default:
+            case let .updateEncryption(chat, date):
+                updatedState.updateSecretChat(chat: chat, timestamp: date)
+            case let .updateNewEncryptedMessage(message, _):
+                updatedState.addSecretMessages([message])
+            case let .updateUserTyping(type):
                 break
+            case let .updateChatUserTyping(type):
+                break
+            default:
+                    break
         }
     }
     
@@ -1118,7 +1129,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1159,6 +1170,8 @@ func replayFinalState(_ modifier: Modifier, finalState: AccountMutableState) -> 
     if !verified { 
         return false
     }
+    
+    var peerIdsWithAddedSecretMessages = Set<PeerId>()
     
     for operation in optimizedOperations(finalState.operations) {
         switch operation {
@@ -1217,8 +1230,67 @@ func replayFinalState(_ modifier: Modifier, finalState: AccountMutableState) -> 
                 }
             case let .MergePeerPresences(presences):
                 modifier.updatePeerPresences(presences)
+            case let .UpdateSecretChat(chat, timestamp):
+                let currentPeer = modifier.getPeer(chat.peerId) as? TelegramSecretChat
+                let currentState = modifier.getPeerChatState(chat.peerId) as? SecretChatState
+                assert((currentPeer == nil) == (currentState == nil))
+                switch chat {
+                    case let .encryptedChat(_, accessHash, date, adminId, participantId, gAOrB, keyFingerprint):
+                        break
+                    case .encryptedChatDiscarded(_):
+                        if let currentPeer = currentPeer, let currentState = currentState {
+                            let state = currentState.withUpdatedEmbeddedState(.terminated)
+                            let peer = currentPeer.withUpdatedEmbeddedState(state.embeddedState.peerState)
+                            modifier.updatePeers([peer], update: { _, updated in return updated })
+                            modifier.setPeerChatState(peer.id, state: state)
+                            modifier.operationLogRemoveAllEntries(peerId: peer.id, tag: OperationLogTags.SecretOutgoing)
+                        } else {
+                            trace("State", what: "got encryptedChatDiscarded, but peer doesn't exist")
+                        }
+                    case .encryptedChatEmpty(_):
+                        break
+                    case let .encryptedChatRequested(_, accessHash, date, adminId, participantId, gA):
+                        if currentPeer == nil {
+                            let state = SecretChatState(role: .participant, embeddedState: .handshake, keychain: SecretChatKeychain(keys: []))
+                            let peer = TelegramSecretChat(id: chat.peerId, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
+                            modifier.updatePeers([peer], update: { _, updated in return updated })
+                            let bBytes = malloc(256)!
+                            let randomStatus = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))
+                            let b = MemoryBuffer(memory: bBytes, capacity: 256, length: 256, freeWhenDone: true)
+                            if randomStatus == 0 {
+                                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peer.id, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
+                                modifier.setPeerChatState(peer.id, state: state)
+                            } else {
+                                assertionFailure()
+                            }
+                        } else {
+                            trace("State", what: "got encryptedChatRequested, but peer already exists")
+                        }
+                    case let .encryptedChatWaiting(_, accessHash, date, adminId, participantId):
+                        break
+                }
+            case let .AddSecretMessages(messages):
+                for message in messages {
+                    let peerId = message.peerId
+                    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretIncomingEncrypted, tagLocalIndex: .automatic, tagMergedIndex: .none, contents: SecretChatIncomingEncryptedOperation(message: message))
+                    peerIdsWithAddedSecretMessages.insert(peerId)
+                }
         }
     }
+    
+    for peerId in peerIdsWithAddedSecretMessages {
+        while true {
+            let keychain = (modifier.getPeerChatState(peerId) as? SecretChatState)?.keychain
+            if processSecretChatIncomingEncryptedOperations(modifier: modifier, peerId: peerId) {
+                processSecretChatIncomingDecryptedOperations(modifier: modifier, peerId: peerId)
+            }
+            let updatedKeychain = (modifier.getPeerChatState(peerId) as? SecretChatState)?.keychain
+            if updatedKeychain == keychain {
+                break
+            }
+        }
+    }
+    
     
     return true
 }
@@ -1284,189 +1356,3 @@ private func pollDifference(_ account: Account) -> Signal<Void, NoError> {
     }
     return signal
 }
-
-
-
-/*#if os(macOS)
-    private typealias SignalKitTimer = SwiftSignalKitMac.Timer
-#else
-    private typealias SignalKitTimer = SwiftSignalKit.Timer
-#endif
-
-public final class StateManager {
-    private let stateQueue = Queue()
-    
-    private let account: Account
-    private var updateService: UpdateMessageService?
-    
-    private let disposable = MetaDisposable()
-    private let updatesDisposable = MetaDisposable()
-    private let actions = ValuePipe<Signal<Void, NoError>>()
-    private var timer: SignalKitTimer?
-    
-    private var collectingUpdateGroups = false
-    private var collectedUpdateGroups: [UpdateGroup] = []
-    
-    init(account: Account) {
-        self.account = account
-    }
-    
-    deinit {
-        disposable.dispose()
-        self.account.network.mtProto.remove(self.updateService)
-        timer?.invalidate()
-    }
-    
-    public func reset() {
-        if self.updateService == nil {
-            self.updateService = UpdateMessageService(peerId: self.account.peerId)
-            updatesDisposable.set(self.updateService!.pipe.signal().start(next: { [weak self] groups in
-                if let strongSelf = self {
-                    strongSelf.addUpdateGroups(groups)
-                }
-            }))
-            self.account.network.mtProto.add(self.updateService)
-        }
-        self.collectingUpdateGroups = false
-        self.collectedUpdateGroups = []
-        self.disposable.set((self.actions.signal() |> queue).start(error: { _ in
-            trace("queue error")
-        }, completed: {
-            trace("queue completed")
-        }))
-        self.actions.putNext(pollDifference(self.account))
-    }
-    
-    public func addUpdates(_ updates: Api.Updates) {
-        self.updateService?.addUpdates(updates)
-    }
-    
-    func injectedStateModification<T, E>(_ f: Signal<T, E>) -> Signal<T, E> {
-        let pipe = ValuePipe<Event<T, E>>()
-        let signal = Signal<Void, NoError> { subscriber in
-            return f.start(next: { next in
-                pipe.putNext(.Next(next))
-            }, error: { error in
-                pipe.putNext(.Error(error))
-                subscriber.putCompletion()
-            }, completed: { 
-                pipe.putNext(.Completion)
-                subscriber.putCompletion()
-            })
-        }
-        
-        return Signal<T, E> { subscriber in
-            let disposable = pipe.signal().start(next: { event in
-                switch event {
-                    case let .Next(next):
-                        subscriber.putNext(next)
-                    case let .Error(error):
-                        subscriber.putError(error)
-                    case .Completion:
-                        subscriber.putCompletion()
-                }
-            })
-            
-            self.actions.putNext(signal)
-            
-            return disposable
-        } |> runOn(self.stateQueue)
-    }
-    
-    private func addUpdateGroups(_ groups: [UpdateGroup]) {
-        self.stateQueue.async {
-            self.collectedUpdateGroups.append(contentsOf: groups)
-            self.scheduleUpdateGroups()
-        }
-    }
-    
-    private func beginTimeout() {
-        if self.timer == nil {
-            self.timer = Timer(timeout: 4.0, repeat: false, completion: { [weak self] in
-                if let strongSelf = self {
-                    trace("State", what: "timeout while waiting for updates")
-                    strongSelf.reset()
-                }
-            }, queue: self.stateQueue)
-            self.timer?.start()
-        }
-    }
-    
-    private func clearTimeout() {
-        if let timer = self.timer {
-            timer.invalidate()
-            self.timer = nil
-        }
-    }
-    
-    private func scheduleUpdateGroups() {
-        self.stateQueue.async {
-            if !self.collectingUpdateGroups {
-                self.collectingUpdateGroups = true
-                self.stateQueue.queue.async {
-                    self.collectingUpdateGroups = false
-                    
-                    if self.collectedUpdateGroups.count != 0 {
-                        let signal = deferred { [weak self] () -> Signal<Void, NoError> in
-                            if let strongSelf = self {
-                                let groups = strongSelf.collectedUpdateGroups
-                                strongSelf.collectedUpdateGroups = []
-                                
-                                if groups.count != 0 {
-                                    let account = strongSelf.account
-                                    let stateQueue = strongSelf.stateQueue
-                                    return initialStateWithUpdateGroups(account, groups: groups)
-                                        |> mapToSignal { state in
-                                            return finalStateWithUpdateGroups(account, state: state, groups: groups)
-                                                |> mapToSignal { finalState in
-                                                    if !finalState.state.preCachedResources.isEmpty {
-                                                        for (resource, data) in finalState.state.preCachedResources {
-                                                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                                                        }
-                                                    }
-                                                    
-                                                    return account.postbox.modify { modifier -> Bool in
-                                                        return replayFinalState(modifier, finalState: finalState.state)
-                                                    } |> deliverOn(stateQueue) |> mapToSignal { [weak strongSelf] result in
-                                                        if let strongSelf = strongSelf {
-                                                            if result && !finalState.shouldPoll {
-                                                                if finalState.incomplete {
-                                                                    strongSelf.beginTimeout()
-                                                                    
-                                                                    if !strongSelf.collectedUpdateGroups.isEmpty {
-                                                                        var combinedGroups = groups
-                                                                        combinedGroups.append(contentsOf: strongSelf.collectedUpdateGroups)
-                                                                        strongSelf.collectedUpdateGroups = combinedGroups
-                                                                        
-                                                                        strongSelf.scheduleUpdateGroups()
-                                                                    } else {
-                                                                        strongSelf.collectedUpdateGroups = groups
-                                                                    }
-                                                                } else {
-                                                                    strongSelf.clearTimeout()
-                                                                }
-                                                                return complete(Void.self, NoError.self)
-                                                            } else {
-                                                                strongSelf.clearTimeout()
-                                                                return pollDifference(strongSelf.account)
-                                                            }
-                                                        }
-                                                        return complete(Void.self, NoError.self)
-                                                    }
-                                                }
-                                        }
-                                } else {
-                                    return complete(Void.self, NoError.self)
-                                }
-                            } else {
-                                return complete(Void.self, NoError.self)
-                            }
-                        } |> runOn(self.stateQueue)
-                    
-                        self.actions.putNext(signal)
-                    }
-                }
-            }
-        }
-    }
-}*/

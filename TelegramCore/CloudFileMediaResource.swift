@@ -388,6 +388,110 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
     }
 }
 
+public struct SecretFileMediaResourceId: MediaResourceId {
+    public let fileId: Int64
+    public let datacenterId: Int32
+    
+    public var uniqueId: String {
+        return "secret-file-\(self.fileId)-\(self.datacenterId)"
+    }
+    
+    public init(fileId: Int64, datacenterId: Int32) {
+        self.fileId = fileId
+        self.datacenterId = datacenterId
+    }
+    
+    public var hashValue: Int {
+        return self.fileId.hashValue
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? SecretFileMediaResourceId {
+            return self.fileId == to.fileId && self.datacenterId == to.datacenterId
+        } else {
+            return false
+        }
+    }
+}
+
+public struct SecretFileMediaResource: TelegramCloudMediaResource {
+    public let fileId: Int64
+    public let accessHash: Int64
+    public let size: Int?
+    public let decryptedSize: Int32
+    public let datacenterId: Int
+    public let key: SecretFileEncryptionKey
+    
+    var apiInputLocation: Api.InputFileLocation {
+        return .inputEncryptedFileLocation(id: self.fileId, accessHash: self.accessHash)
+    }
+    
+    public init(fileId: Int64, accessHash: Int64, size: Int?, decryptedSize: Int32, datacenterId: Int, key: SecretFileEncryptionKey) {
+        self.fileId = fileId
+        self.accessHash = accessHash
+        self.size = size
+        self.decryptedSize = decryptedSize
+        self.datacenterId = datacenterId
+        self.key = key
+    }
+    
+    public init(decoder: Decoder) {
+        self.fileId = decoder.decodeInt64ForKey("i")
+        self.accessHash = decoder.decodeInt64ForKey("a")
+        if let size = decoder.decodeInt32ForKey("s") as Int32? {
+            self.size = Int(size)
+        } else {
+            self.size = nil
+        }
+        self.decryptedSize = decoder.decodeInt32ForKey("ds")
+        self.datacenterId = Int(decoder.decodeInt32ForKey("d"))
+        self.key = decoder.decodeObjectForKey("k", decoder: { SecretFileEncryptionKey(decoder: $0) }) as! SecretFileEncryptionKey
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeInt64(self.fileId, forKey: "i")
+        encoder.encodeInt64(self.accessHash, forKey: "a")
+        if let size = self.size {
+            encoder.encodeInt32(Int32(size), forKey: "s")
+        } else {
+            encoder.encodeNil(forKey: "s")
+        }
+        encoder.encodeInt32(self.decryptedSize, forKey: "ds")
+        encoder.encodeInt32(Int32(self.datacenterId), forKey: "d")
+        encoder.encodeObject(self.key, forKey: "k")
+    }
+    
+    public var id: MediaResourceId {
+        return SecretFileMediaResourceId(fileId: self.fileId, datacenterId: Int32(self.datacenterId))
+    }
+    
+    public func isEqual(to: TelegramMediaResource) -> Bool {
+        if let to = to as? SecretFileMediaResource {
+            if self.fileId != to.fileId {
+                return false
+            }
+            if self.accessHash != to.accessHash {
+                return false
+            }
+            if self.size != to.size {
+                return false
+            }
+            if self.decryptedSize != to.decryptedSize {
+                return false
+            }
+            if self.datacenterId != to.datacenterId {
+                return false
+            }
+            if self.key != to.key {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 public struct EmptyMediaResourceId: MediaResourceId {
     public var uniqueId: String {
         return "empty"

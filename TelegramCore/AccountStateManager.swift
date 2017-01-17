@@ -37,7 +37,16 @@ public final class AccountStateManager {
     private var updateService: UpdateMessageService?
     private let updateServiceDisposable = MetaDisposable()
     
-    private var operations: [AccountStateManagerOperation] = []
+    private var operations_: [AccountStateManagerOperation] = []
+    private var operations: [AccountStateManagerOperation] {
+        get {
+            assert(self.queue.isCurrent())
+            return self.operations_
+        } set(value) {
+            assert(self.queue.isCurrent())
+            self.operations_ = value
+        }
+    }
     private let operationDisposable = MetaDisposable()
     private var operationTimer: SignalKitTimer?
     
@@ -224,6 +233,7 @@ public final class AccountStateManager {
                             return appliedState
                         }
                     }
+                    |> deliverOn(self.queue)
                 signal.start(next: { [weak self] difference, finalState in
                     if let strongSelf = self {
                         if case let .pollDifference = strongSelf.operations.removeFirst() {

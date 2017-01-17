@@ -256,6 +256,12 @@ private var declaredEncodables: Void = {
     declareEncodable(OutgoingChatContextResultMessageAttribute.self, f: { OutgoingChatContextResultMessageAttribute(decoder: $0) })
     declareEncodable(HttpReferenceMediaResource.self, f: { HttpReferenceMediaResource(decoder: $0) })
     declareEncodable(EmptyMediaResource.self, f: { EmptyMediaResource(decoder: $0) })
+    declareEncodable(TelegramSecretChat.self, f: { TelegramSecretChat(decoder: $0) })
+    declareEncodable(SecretChatState.self, f: { SecretChatState(decoder: $0) })
+    declareEncodable(SecretChatIncomingEncryptedOperation.self, f: { SecretChatIncomingEncryptedOperation(decoder: $0) })
+    declareEncodable(SecretChatIncomingDecryptedOperation.self, f: { SecretChatIncomingDecryptedOperation(decoder: $0) })
+    declareEncodable(SecretChatOutgoingOperation.self, f: { SecretChatOutgoingOperation(decoder: $0) })
+    declareEncodable(SecretFileMediaResource.self, f: { SecretFileMediaResource(decoder: $0) })
     return
 }()
 
@@ -269,7 +275,12 @@ public func accountWithId(_ id: AccountId, appGroupPath: String, testingEnvironm
         
         let path = "\(appGroupPath)/account\(id.stringValue)"
         
-        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: [Namespaces.Message.Cloud], existingMessageTags: allMessageTags)
+        var initializeMessageNamespacesWithHoles: [(PeerId.Namespace, MessageId.Namespace)] = []
+        for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {
+            initializeMessageNamespacesWithHoles.append((peerNamespace, Namespaces.Message.Cloud))
+        }
+        
+        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: allMessageTags)
         
         let postbox = Postbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
         return (postbox.state() |> take(1) |> map { accountState in
@@ -384,6 +395,7 @@ public class Account {
     private let becomeMasterDisposable = MetaDisposable()
     private let updatedPresenceDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
+    private let managedSecretChatOutgoingOperationsDisposable = MetaDisposable()
     
     public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
     //let imageCache: ImageCache = ImageCache(maxResidentSize: 5 * 1024 * 1024)
@@ -542,6 +554,8 @@ public class Account {
             }
         self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
         
+        self.managedSecretChatOutgoingOperationsDisposable.set(managedSecretChatOutgoingOperations(postbox: self.postbox, network: self.network).start())
+        
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged
             |> mapToSignal { [weak self] online -> Signal<Void, NoError> in
@@ -587,6 +601,7 @@ public class Account {
         self.voipTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.updatedPresenceDisposable.dispose()
+        self.managedSecretChatOutgoingOperationsDisposable.dispose()
     }
     
     public func currentNetworkStats() -> Signal<MTNetworkUsageManagerStats, NoError> {

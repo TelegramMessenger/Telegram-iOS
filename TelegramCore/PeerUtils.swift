@@ -139,3 +139,27 @@ public func peerDisplayTitles(_ peers: [Peer]) -> String {
     }
 }
 
+public func messageMainPeer(_ message: Message) -> Peer? {
+    if let peer = message.peers[message.id.peerId] {
+        if let peer = peer as? TelegramSecretChat {
+            return message.peers[peer.regularPeerId]
+        } else {
+            return peer
+        }
+    } else {
+        return nil
+    }
+}
+
+public func peerViewMainPeer(_ view: PeerView) -> Peer? {
+    if let peer = view.peers[view.peerId] {
+        if let peer = peer as? TelegramSecretChat {
+            return view.peers[peer.regularPeerId]
+        } else {
+            return peer
+        }
+    } else {
+        return nil
+    }
+}
+

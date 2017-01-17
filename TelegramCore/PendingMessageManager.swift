@@ -166,6 +166,10 @@ public final class PendingMessageManager {
                         continue
                     }
                     
+                    if message.flags.contains(.Sending) {
+                        continue
+                    }
+                    
                     let uploadedContent = uploadedMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, message: message)
                     
                     let sendMessage = uploadedContent
@@ -221,7 +225,57 @@ public final class PendingMessageManager {
     
     private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, message: Message, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
         return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
-            if let peer = modifier.getPeer(message.id.peerId), let inputPeer = apiInputPeer(peer) {
+            if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                var secretFile: SecretChatOutgoingFile?
+                switch content {
+                    case let .secretMedia(file, size, key):
+                        if let fileReference = SecretChatOutgoingFileReference(file) {
+                            secretFile = SecretChatOutgoingFile(reference: fileReference, size: size, key: key)
+                        }
+                    default:
+                        break
+                }
+                
+                var layer: SecretChatLayer?
+                var state = modifier.getPeerChatState(message.id.peerId) as? SecretChatState
+                if let state = state {
+                    switch state.embeddedState {
+                        case .terminated, .handshake:
+                            break
+                        case .basicLayer:
+                            layer = .layer8
+                        case let .sequenceBasedLayer(sequenceState):
+                            layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                    }
+                }
+                
+                if let state = state, let layer = layer {
+                    let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .sendMessage(layer: layer, id: message.id, file: secretFile), state: state)
+                    if updatedState != state {
+                        modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                    }
+                    modifier.updateMessage(message.id, update: { currentMessage in
+                        var flags = StoreMessageFlags(message.flags)
+                        if !flags.contains(.Failed) {
+                            flags.insert(.Sending)
+                        }
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = currentMessage.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                        }
+                        return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
+                    })
+                } else {
+                    modifier.updateMessage(message.id, update: { currentMessage in
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = currentMessage.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                        }
+                        return StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
+                    })
+                }
+                return .complete()
+            } else if let peer = modifier.getPeer(message.id.peerId), let inputPeer = apiInputPeer(peer) {
                 var uniqueId: Int64 = 0
                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
                 var outgoingChatContextResultAttribute: OutgoingChatContextResultMessageAttribute?
@@ -272,6 +326,9 @@ public final class PendingMessageManager {
                             |> mapError { _ -> NoError in
                                 return NoError()
                             }
+                    case .secretMedia:
+                        assertionFailure()
+                        sendMessageRequest = .fail(NoError())
                 }
                 
                 return sendMessageRequest
