@@ -41,6 +41,12 @@
   BOOL _preserveCurrentRangeMode;
   BOOL _didRegisterForNodeDisplayNotifications;
   CFTimeInterval _pendingDisplayNodesTimestamp;
+
+  // If the user is not currently scrolling, we will keep our ranges
+  // configured to match their previous scroll direction. Defaults
+  // to [.right, .down] so that when the user first opens a screen
+  // the ranges point down into the content.
+  ASScrollDirection _previousScrollDirection;
   
 #if AS_RANGECONTROLLER_LOG_UPDATE_FREQ
   NSUInteger _updateCountThisFrame;
@@ -65,6 +71,7 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
   _rangeIsValid = YES;
   _currentRangeMode = ASLayoutRangeModeInvalid;
   _preserveCurrentRangeMode = NO;
+  _previousScrollDirection = ASScrollDirectionDown | ASScrollDirectionRight;
   
   [[[self class] allRangeControllersWeakSet] addObject:self];
   
@@ -216,7 +223,13 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
   }
   ASProfilingSignpostStart(1, self);
 
+  // Get the scroll direction. Default to using the previous one, if they're not scrolling.
   ASScrollDirection scrollDirection = [_dataSource scrollDirectionForRangeController:self];
+  if (scrollDirection == ASScrollDirectionNone) {
+    scrollDirection = _previousScrollDirection;
+  }
+  _previousScrollDirection = scrollDirection;
+
   if (_layoutControllerImplementsSetViewportSize) {
     [_layoutController setViewportSize:[_dataSource viewportSizeForRangeController:self]];
   }
@@ -476,6 +489,11 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
 {
   ASDisplayNodeAssertMainThread();
   [_delegate didBeginUpdatesInRangeController:self];
+}
+
+- (void)dataControllerWillDeleteAllData:(ASDataController *)dataController
+{
+  [self _setVisibleNodes:nil];
 }
 
 - (void)dataController:(ASDataController *)dataController endUpdatesAnimated:(BOOL)animated completion:(void (^)(BOOL))completion

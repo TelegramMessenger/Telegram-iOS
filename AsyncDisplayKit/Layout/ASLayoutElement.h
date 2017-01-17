@@ -8,7 +8,7 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#import <AsyncDisplayKit/ASDimension.h>
+#import <AsyncDisplayKit/ASDimensionInternal.h>
 #import <AsyncDisplayKit/ASStackLayoutDefines.h>
 #import <AsyncDisplayKit/ASStackLayoutElement.h>
 #import <AsyncDisplayKit/ASAbsoluteLayoutElement.h>
@@ -315,7 +315,7 @@ extern NSString * const ASLayoutElementStyleLayoutPositionProperty;
 
 @protocol ASLayoutElementStylability
 
-- (instancetype)styledWithBlock:(__attribute__((noescape)) void (^)(__kindof ASLayoutElementStyle *style))styleBlock;
+- (instancetype)styledWithBlock:(AS_NOESCAPE void (^)(__kindof ASLayoutElementStyle *style))styleBlock;
 
 @end
 

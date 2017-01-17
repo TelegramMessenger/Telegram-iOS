@@ -454,6 +454,7 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
         // -beginUpdates
         [_mainSerialQueue performBlockOnMainThread:^{
           [_delegate dataControllerBeginUpdates:self];
+          [_delegate dataControllerWillDeleteAllData:self];
         }];
         
         // deleteSections:
@@ -673,40 +674,7 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
 
 - (void)moveSection:(NSInteger)section toSection:(NSInteger)newSection withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
-  ASDisplayNodeAssertMainThread();
-  LOG(@"Edit Command - moveSection");
-
-  if (!_initialReloadDataHasBeenCalled) {
-    return;
-  }
-
-  NSMutableArray *rowContexts = _nodeContexts[ASDataControllerRowNodeKind];
-  NSArray *contexts = rowContexts[section];
-  [rowContexts removeObjectAtIndex:section];
-  [rowContexts insertObject:contexts atIndex:section];
-
-  dispatch_group_wait(_editingTransactionGroup, DISPATCH_TIME_FOREVER);
-  dispatch_group_async(_editingTransactionGroup, _editingTransactionQueue, ^{
-    [self willMoveSection:section toSection:newSection];
-
-    // remove elements
-    
-    LOG(@"Edit Transaction - moveSection");
-    NSMutableArray *editingRows = _editingNodes[ASDataControllerRowNodeKind];
-    NSArray *indexPaths = ASIndexPathsForMultidimensionalArrayAtIndexSet(editingRows, [NSIndexSet indexSetWithIndex:section]);
-    NSArray *nodes = ASFindElementsInMultidimensionalArrayAtIndexPaths(editingRows, indexPaths);
-    [self _deleteNodesAtIndexPaths:indexPaths withAnimationOptions:animationOptions];
-
-    // update the section of indexpaths
-    NSMutableArray *updatedIndexPaths = [[NSMutableArray alloc] initWithCapacity:indexPaths.count];
-    for (NSIndexPath *indexPath in indexPaths) {
-      NSIndexPath *updatedIndexPath = [NSIndexPath indexPathForItem:indexPath.item inSection:newSection];
-      [updatedIndexPaths addObject:updatedIndexPath];
-    }
-
-    // Don't re-calculate size for moving
-    [self _insertNodes:nodes atIndexPaths:updatedIndexPaths withAnimationOptions:animationOptions];
-  });
+  ASDisplayNodeAssert(NO, @"ASDataController does not support %@. Call this on ASChangeSetDataController and the move will be processed along with the current batch of updates.", NSStringFromSelector(_cmd));
 }
 
 
@@ -879,29 +847,7 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
 
 - (void)moveRowAtIndexPath:(NSIndexPath *)indexPath toIndexPath:(NSIndexPath *)newIndexPath withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
-  ASDisplayNodeAssertMainThread();
-  if (!_initialReloadDataHasBeenCalled) {
-    return;
-  }
-
-  NSMutableArray *contexts = _nodeContexts[ASDataControllerRowNodeKind];
-  ASIndexedNodeContext *context = contexts[indexPath.section][indexPath.item];
-  [contexts[indexPath.section] removeObjectAtIndex:indexPath.item];
-  [contexts[newIndexPath.section] insertObject:context atIndex:newIndexPath.item];
-
-  LOG(@"Edit Command - moveRow: %@ > %@", indexPath, newIndexPath);
-  dispatch_group_wait(_editingTransactionGroup, DISPATCH_TIME_FOREVER);
-  
-  dispatch_group_async(_editingTransactionGroup, _editingTransactionQueue, ^{
-    LOG(@"Edit Transaction - moveRow: %@ > %@", indexPath, newIndexPath);
-    NSArray *indexPaths = @[indexPath];
-    NSArray *nodes = ASFindElementsInMultidimensionalArrayAtIndexPaths(_editingNodes[ASDataControllerRowNodeKind], indexPaths);
-    [self _deleteNodesAtIndexPaths:indexPaths withAnimationOptions:animationOptions];
-
-    // Don't re-calculate size for moving
-    NSArray *newIndexPaths = @[newIndexPath];
-    [self _insertNodes:nodes atIndexPaths:newIndexPaths withAnimationOptions:animationOptions];
-  });
+  ASDisplayNodeAssert(NO, @"ASDataController does not support %@. Call this on ASChangeSetDataController and the move will be processed along with the current batch of updates.", NSStringFromSelector(_cmd));
 }
 
 #pragma mark - Data Querying (Subclass API)
@@ -953,6 +899,9 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
 - (ASCellNode *)nodeAtIndexPath:(NSIndexPath *)indexPath
 {
   ASDisplayNodeAssertMainThread();
+  if (indexPath == nil) {
+    return nil;
+  }
   
   NSArray *contexts = _nodeContexts[ASDataControllerRowNodeKind];
   NSInteger section = indexPath.section;
@@ -972,6 +921,9 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
 - (ASCellNode *)nodeAtCompletedIndexPath:(NSIndexPath *)indexPath
 {
   ASDisplayNodeAssertMainThread();
+  if (indexPath == nil) {
+    return nil;
+  }
 
   NSArray *completedNodes = [self completedNodes];
   NSInteger section = indexPath.section;

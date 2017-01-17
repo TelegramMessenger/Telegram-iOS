@@ -183,5 +183,15 @@
 
 #define ASOVERLOADABLE __attribute__((overloadable))
 
+
+#if __has_attribute(noescape)
+#define AS_NOESCAPE __attribute__((noescape))
+#else
+#define AS_NOESCAPE
+#endif
+
 /// Ensure that class is of certain kind
-#define ASDynamicCast(x, c) ((c *) ([x isKindOfClass:[c class]] ? x : nil))
+#define ASDynamicCast(x, c) ({ \
+  id __val = x;\
+  ((c *) ([__val isKindOfClass:[c class]] ? __val : nil));\
+})

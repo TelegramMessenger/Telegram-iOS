@@ -94,16 +94,6 @@
   };
 }
 
-- (void)collectionView:(ASCollectionView *)collectionView willDisplayNode:(ASCellNode *)node forItemAtIndexPath:(NSIndexPath *)indexPath
-{
-  ASDisplayNodeAssertNotNil(node.layoutAttributes, @"Expected layout attributes for node in %@ to be non-nil.", NSStringFromSelector(_cmd));
-}
-
-- (void)collectionView:(ASCollectionView *)collectionView didEndDisplayingNode:(ASCellNode *)node forItemAtIndexPath:(NSIndexPath *)indexPath
-{
-  ASDisplayNodeAssertNotNil(node.layoutAttributes, @"Expected layout attributes for node in %@ to be non-nil.", NSStringFromSelector(_cmd));
-}
-
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView {
   return _itemCounts.size();
 }
@@ -890,7 +880,6 @@
   ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];
   window.rootViewController = testController;
 
-  // Start with 1 item so that our content does not fill bounds.
   testController.asyncDelegate->_itemCounts = {};
   [window makeKeyAndVisible];
   [window layoutIfNeeded];
@@ -1000,6 +989,67 @@
   XCTAssertGreaterThan(batchFetchCount, 2);
   XCTAssertGreaterThanOrEqual(contentHeight, requiredContentHeight, @"Loaded too little content.");
   XCTAssertLessThanOrEqual(contentHeight, requiredContentHeight + 2 * itemHeight, @"Loaded too much content.");
+}
+
+- (void)testInitialRangeBounds
+{
+  UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];
+  ASCollectionNode *cn = testController.collectionNode;
+  [cn setTuningParameters:{ .leadingBufferScreenfuls = 2, .trailingBufferScreenfuls = 0 } forRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypePreload];
+  window.rootViewController = testController;
+
+  [window makeKeyAndVisible];
+  [window layoutIfNeeded];
+
+  [cn waitUntilAllUpdatesAreCommitted];
+
+  CGRect preloadBounds = ({
+    CGRect r = CGRectNull;
+    for (NSInteger s = 0; s < cn.numberOfSections; s++) {
+      NSInteger c = [cn numberOfItemsInSection:s];
+      for (NSInteger i = 0; i < c; i++) {
+        NSIndexPath *ip = [NSIndexPath indexPathForItem:i inSection:s];
+        ASCellNode *node = [cn nodeForItemAtIndexPath:ip];
+        if (node.inPreloadState) {
+          CGRect frame = [cn.view layoutAttributesForItemAtIndexPath:ip].frame;
+          r = CGRectUnion(r, frame);
+        }
+      }
+    }
+    r;
+  });
+  CGFloat expectedHeight = cn.bounds.size.height * 3;
+  XCTAssertEqualWithAccuracy(CGRectGetHeight(preloadBounds), expectedHeight, 100);
+  XCTAssertEqual([[cn valueForKeyPath:@"rangeController.currentRangeMode"] integerValue], ASLayoutRangeModeMinimum, @"Expected range mode to be minimum before scrolling begins.");
+}
+
+/**
+ * This tests an issue where, since subnode insertions aren't applied until the UIKit layout pass,
+ * which we trigger during the display phase, subnodes like network image nodes are not preloading
+ * until this layout pass happens which is too late.
+ */
+- (void)DISABLED_testThatAutomaticallyManagedSubnodesGetPreloadCallBeforeDisplay
+{
+  UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];
+  window.rootViewController = testController;
+  ASCollectionNode *cn = testController.collectionNode;
+
+  __block NSInteger itemCount = 100;
+  testController.asyncDelegate->_itemCounts = {itemCount};
+  [window makeKeyAndVisible];
+  [window layoutIfNeeded];
+
+  [cn waitUntilAllUpdatesAreCommitted];
+  for (NSInteger i = 0; i < itemCount; i++) {
+    ASTextCellNodeWithSetSelectedCounter *node = [cn nodeForItemAtIndexPath:[NSIndexPath indexPathForItem:i inSection:0]];
+    XCTAssert(node.automaticallyManagesSubnodes, @"Expected test cell node to use automatic subnode management. Can modify the test with a different class if needed.");
+    ASDisplayNode *subnode = node.textNode;
+    XCTAssertEqualObjects(NSStringFromASInterfaceState(subnode.interfaceState), NSStringFromASInterfaceState(node.interfaceState), @"Subtree interface state should match cell node interface state for ASM nodes.");
+    XCTAssert(node.inDisplayState || !node.nodeLoaded, @"Only nodes in the display range should be loaded.");
+  }
+
 }
 
 @end
