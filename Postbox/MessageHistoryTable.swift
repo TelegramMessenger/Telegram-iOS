@@ -782,7 +782,7 @@ final class MessageHistoryTable: Table {
                 }
             }
             
-            if previousMediaIds != updatedMediaIds || index.id != message.id {
+            if previousMediaIds != updatedMediaIds || index != MessageIndex(message) {
                 for (_, media) in previousEmbeddedMediaWithIds {
                     self.messageMediaTable.removeEmbeddedMedia(media)
                 }
@@ -1278,13 +1278,21 @@ final class MessageHistoryTable: Table {
         }
         
         var author: Peer?
+        var peers = SimpleDictionary<PeerId, Peer>()
         if let authorId = message.authorId {
             author = peerTable.get(authorId)
         }
         
-        var peers = SimpleDictionary<PeerId, Peer>()
         if let chatPeer = peerTable.get(message.id.peerId) {
             peers[chatPeer.id] = chatPeer
+            
+            if let associatedPeerIds = chatPeer.associatedPeerIds {
+                for peerId in associatedPeerIds {
+                    if let peer = peerTable.get(peerId) {
+                        peers[peer.id] = peer
+                    }
+                }
+            }
         }
         
         for media in parsedMedia {

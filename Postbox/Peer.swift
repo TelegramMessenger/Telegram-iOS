@@ -14,11 +14,13 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
     
     public init(_ n: Int64) {
         self.namespace = Int32((n >> 32) & 0x7fffffff)
-        self.id = Int32(n & 0x7fffffff)
+        self.id = unsafeBitCast(UInt32(n & 0xffffffff), to: Int32.self)
     }
     
     public func toInt64() -> Int64 {
-        return (Int64(self.namespace) << 32) | Int64(self.id)
+        
+        
+        return (Int64(self.namespace) << 32) | unsafeBitCast(UInt64(unsafeBitCast(self.id, to: UInt32.self)), to: Int64.self)
     }
     
     public static func encodeArrayToBuffer(_ array: [PeerId], buffer: WriteBuffer) {
@@ -95,6 +97,7 @@ public func <(lhs: PeerId, rhs: PeerId) -> Bool {
 public protocol Peer: class, Coding {
     var id: PeerId { get }
     var indexName: PeerIndexNameRepresentation { get }
+    var associatedPeerIds: [PeerId]? { get }
     
     func isEqual(_ other: Peer) -> Bool
 }
