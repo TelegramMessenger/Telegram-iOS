@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C2A315BC1E2E730400D89000 /* PeerOperationLogTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD23261E194D1C00A7089A /* PeerOperationLogTable.swift */; };
+		C2A315BD1E2E732000D89000 /* PeerOperationLogMetadataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD23281E196B6400A7089A /* PeerOperationLogMetadataTable.swift */; };
+		C2A315BE1E2E733900D89000 /* PeerMergedOperationLogIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */; };
+		C2A315BF1E2E733900D89000 /* PeerMergedOperationLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */; };
 		C2AC9C131E1E5D200085C7DE /* UnreadMessageCountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A18D661E16874D004C6734 /* UnreadMessageCountsView.swift */; };
 		D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */; };
 		D0079F5A1D592E8B00A27A2C /* ContactTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F591D592E8B00A27A2C /* ContactTable.swift */; };
@@ -760,6 +764,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C2A315BE1E2E733900D89000 /* PeerMergedOperationLogIndexTable.swift in Sources */,
+				C2A315BF1E2E733900D89000 /* PeerMergedOperationLogView.swift in Sources */,
+				C2A315BD1E2E732000D89000 /* PeerOperationLogMetadataTable.swift in Sources */,
+				C2A315BC1E2E730400D89000 /* PeerOperationLogTable.swift in Sources */,
 				C2AC9C131E1E5D200085C7DE /* UnreadMessageCountsView.swift in Sources */,
 				D0B418481D7DFE20004562A4 /* MessageHistoryView.swift in Sources */,
 				D0F7B1DF1E045C6A007EB8A5 /* ItemCacheMetaTable.swift in Sources */,
