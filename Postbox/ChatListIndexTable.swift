@@ -12,8 +12,8 @@ final class ChatListIndexTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 8)
     
-    private var cachedIndices: [PeerId: MessageIndex?] = [:]
-    private var updatedPreviousCachedIndices: [PeerId: MessageIndex?] = [:]
+    private var cachedIndices: [PeerId: ChatListIndex?] = [:]
+    private var updatedPreviousCachedIndices: [PeerId: ChatListIndex?] = [:]
     
     init(valueBox: ValueBox, table: ValueBoxTable, peerNameIndexTable: PeerNameIndexTable, metadataTable: MessageHistoryMetadataTable, readStateTable: MessageHistoryReadStateTable, notificationSettingsTable: PeerNotificationSettingsTable) {
         self.peerNameIndexTable = peerNameIndexTable
@@ -29,9 +29,9 @@ final class ChatListIndexTable: Table {
         return self.sharedKey
     }
     
-    func set(_ index: MessageIndex) {
-        self.updatedPreviousCachedIndices[index.id.peerId] = self.get(index.id.peerId)
-        self.cachedIndices[index.id.peerId] = index
+    func set(_ index: ChatListIndex) {
+        self.updatedPreviousCachedIndices[index.messageIndex.id.peerId] = self.get(index.messageIndex.id.peerId)
+        self.cachedIndices[index.messageIndex.id.peerId] = index
     }
     
     func remove(_ peerId: PeerId) {
@@ -39,18 +39,20 @@ final class ChatListIndexTable: Table {
         self.cachedIndices[peerId] = nil
     }
     
-    func get(_ peerId: PeerId) -> MessageIndex? {
+    func get(_ peerId: PeerId) -> ChatListIndex? {
         if let cached = self.cachedIndices[peerId] {
             return cached
         } else {
             if let value = self.valueBox.get(self.table, key: self.key(peerId)) {
+                var pinningIndexValue: UInt16 = 0
                 var idNamespace: Int32 = 0
                 var idId: Int32 = 0
                 var idTimestamp: Int32 = 0
+                value.read(&pinningIndexValue, offset: 0, length: 2)
                 value.read(&idNamespace, offset: 0, length: 4)
                 value.read(&idId, offset: 0, length: 4)
                 value.read(&idTimestamp, offset: 0, length: 4)
-                let index = MessageIndex(id: MessageId(peerId: peerId, namespace: idNamespace, id: idId), timestamp: idTimestamp)
+                let index = ChatListIndex(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: idNamespace, id: idId), timestamp: idTimestamp))
                 self.cachedIndices[peerId] = index
                 return index
             } else {
@@ -64,7 +66,7 @@ final class ChatListIndexTable: Table {
         assert(self.updatedPreviousCachedIndices.isEmpty)
     }
     
-    func commitWithTransactionUnreadCountDeltas(_ deltas: [PeerId: Int32], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedTotalUnreadCount: inout Int32?) {
+    func commitWithTransactionUnreadCountDeltas(_ deltas: [PeerId: Int32], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), getPeer: (PeerId) -> Peer?, updatedTotalUnreadCount: inout Int32?) {
         if !self.updatedPreviousCachedIndices.isEmpty || !deltas.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.added.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.removed.isEmpty {
             var addedChatListPeerIds = Set<PeerId>()
             var removedChatListPeerIds = Set<PeerId>()
@@ -77,13 +79,15 @@ final class ChatListIndexTable: Table {
                     }
                     
                     let writeBuffer = WriteBuffer()
-                    var idNamespace: Int32 = index.id.namespace
-                    var idId: Int32 = index.id.id
-                    var idTimestamp: Int32 = index.timestamp
+                    var pinningIndexValue: UInt16 = keyValueForChatListPinningIndex(index.pinningIndex)
+                    var idNamespace: Int32 = index.messageIndex.id.namespace
+                    var idId: Int32 = index.messageIndex.id.id
+                    var idTimestamp: Int32 = index.messageIndex.timestamp
+                    writeBuffer.write(&pinningIndexValue, offset: 0, length: 2)
                     writeBuffer.write(&idNamespace, offset: 0, length: 4)
                     writeBuffer.write(&idId, offset: 0, length: 4)
                     writeBuffer.write(&idTimestamp, offset: 0, length: 4)
-                    self.valueBox.set(self.table, key: self.key(index.id.peerId), value: writeBuffer.readBufferNoCopy())
+                    self.valueBox.set(self.table, key: self.key(index.messageIndex.id.peerId), value: writeBuffer.readBufferNoCopy())
                 } else {
                     if previousIndex != nil {
                         removedChatListPeerIds.insert(peerId)
@@ -100,7 +104,15 @@ final class ChatListIndexTable: Table {
             var totalUnreadCount = self.metadataTable.getChatListTotalUnreadCount()
             for (peerId, delta) in deltas {
                 if !addedUnreadCountPeerIds.contains(peerId) && !removedUnreadCountPeerIds.contains(peerId) {
-                    if let _ = self.get(peerId), let notificationSettings = self.notificationSettingsTable.get(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
+                    var notificationSettings: PeerNotificationSettings?
+                    if let peer = getPeer(peerId) {
+                        if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
+                            notificationSettings = self.notificationSettingsTable.get(notificationSettingsPeerId)
+                        } else {
+                            notificationSettings = self.notificationSettingsTable.get(peerId)
+                        }
+                    }
+                    if let _ = self.get(peerId), let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                         totalUnreadCount += delta
                     }
                 }
@@ -119,7 +131,15 @@ final class ChatListIndexTable: Table {
                         totalUnreadCount += combinedState.count
                     }
                 } else if addedToList {
-                    if let notificationSettings = self.notificationSettingsTable.get(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
+                    var notificationSettings: PeerNotificationSettings?
+                    if let peer = getPeer(peerId) {
+                        if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
+                            notificationSettings = self.notificationSettingsTable.get(notificationSettingsPeerId)
+                        } else {
+                            notificationSettings = self.notificationSettingsTable.get(peerId)
+                        }
+                    }
+                    if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                         if let combinedState = self.readStateTable.getCombinedState(peerId) {
                             totalUnreadCount += combinedState.count
                         }
@@ -154,7 +174,15 @@ final class ChatListIndexTable: Table {
                 if removedFromList && removedFromParticipationInUnreadCount {
                     totalUnreadCount -= currentPeerUnreadCount
                 } else if removedFromList {
-                    if let notificationSettings = self.notificationSettingsTable.get(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
+                    var notificationSettings: PeerNotificationSettings?
+                    if let peer = getPeer(peerId) {
+                        if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
+                            notificationSettings = self.notificationSettingsTable.get(notificationSettingsPeerId)
+                        } else {
+                            notificationSettings = self.notificationSettingsTable.get(peerId)
+                        }
+                    }
+                    if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                         totalUnreadCount -= currentPeerUnreadCount
                     }
                 } else if removedFromParticipationInUnreadCount {

@@ -220,7 +220,7 @@ final class PeerNameIndexTable: Table {
             return ([], [])
         } else {
             var contacts: [PeerId] = []
-            var chatIndices: [PeerId: MessageIndex] = [:]
+            var chatIndices: [PeerId: ChatListIndex] = [:]
             var peerIds = self.peerNameTokenIndexTable.matchingPeerIds(tokens: tokens.regular)
             if let transliterated = tokens.transliterated, tokens.regular != transliterated {
                 let transliteratedPeerIds = self.peerNameTokenIndexTable.matchingPeerIds(tokens: transliterated)

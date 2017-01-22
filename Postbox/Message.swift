@@ -121,7 +121,7 @@ public struct MessageIndex: Equatable, Comparable, Hashable {
     }
     
     public func successor() -> MessageIndex {
-        return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id + 1), timestamp: self.timestamp)
+        return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id == Int32.max ? self.id.id : (self.id.id + 1)), timestamp: self.timestamp)
     }
     
     public var hashValue: Int {
@@ -143,6 +143,10 @@ public struct MessageIndex: Equatable, Comparable, Hashable {
     public static func upperBound(peerId: PeerId) -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: peerId, namespace: Int32.max, id: Int32.max), timestamp: Int32.max)
     }
+    
+    public static func upperBound(peerId: PeerId, timestamp: Int32, namespace: MessageId.Namespace) -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32.max), timestamp: timestamp)
+    }
 }
 
 public func ==(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
@@ -159,6 +163,51 @@ public func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
     }
     
     return lhs.id.id < rhs.id.id
+}
+
+public struct ChatListIndex: Comparable, Hashable {
+    public let pinningIndex: UInt16?
+    public let messageIndex: MessageIndex
+    
+    public init(pinningIndex: UInt16?, messageIndex: MessageIndex) {
+        self.pinningIndex = pinningIndex
+        self.messageIndex = messageIndex
+    }
+    
+    public static func ==(lhs: ChatListIndex, rhs: ChatListIndex) -> Bool {
+        return lhs.pinningIndex == rhs.pinningIndex && lhs.messageIndex == rhs.messageIndex
+    }
+    
+    public static func <(lhs: ChatListIndex, rhs: ChatListIndex) -> Bool {
+        if let lhsPinningIndex = lhs.pinningIndex, let rhsPinningIndex = rhs.pinningIndex {
+            if lhsPinningIndex < rhsPinningIndex {
+                return true
+            } else if lhsPinningIndex > rhsPinningIndex {
+                return false
+            }
+        }
+        return lhs.messageIndex < rhs.messageIndex
+    }
+    
+    public var hashValue: Int {
+        return self.messageIndex.hashValue
+    }
+    
+    public static var absoluteUpperBound: ChatListIndex {
+        return ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex.absoluteUpperBound())
+    }
+    
+    public static var absoluteLowerBound: ChatListIndex {
+        return ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex.absoluteLowerBound())
+    }
+    
+    public var predecessor: ChatListIndex {
+        return ChatListIndex(pinningIndex: self.pinningIndex, messageIndex: self.messageIndex.predecessor())
+    }
+    
+    public var successor: ChatListIndex {
+        return ChatListIndex(pinningIndex: self.pinningIndex, messageIndex: self.messageIndex.successor())
+    }
 }
 
 public struct MessageTags: OptionSet {

@@ -77,6 +77,7 @@ class ReadStateTableTests: XCTestCase {
     var tagsTable: MessageHistoryTagsTable?
     var readStateTable: MessageHistoryReadStateTable?
     var synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable?
+    var globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable?
     
     override func setUp() {
         super.setUp()
@@ -96,7 +97,8 @@ class ReadStateTableTests: XCTestCase {
         self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, table: MessageMediaTable.tableSpec(2))
         self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, table: MessageHistoryReadStateTable.tableSpec(10))
         self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox!, table: MessageHistorySynchronizeReadStateTable.tableSpec(11))
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
+        self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox!, table: MessageGloballyUniqueIdTable.tableSpec(12))
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
     }
     
     override func tearDown() {
@@ -154,8 +156,13 @@ class ReadStateTableTests: XCTestCase {
     
     private func expectReadState(_ maxReadId: Int32, _ maxKnownId: Int32, _ count: Int32) {
         if let state = self.readStateTable!.getCombinedState(peerId)?.states.first?.1 {
-            if state.maxIncomingReadId != maxReadId || state.maxKnownId != maxKnownId || state.count != count {
-                XCTFail("Expected\nmaxIncomingReadId: \(maxReadId), maxKnownId: \(maxKnownId), count: \(count)\nActual\nmaxIncomingReadId: \(state.maxIncomingReadId), maxKnownId: \(state.maxKnownId), count: \(state.count)")
+            switch state {
+                case let .idBased(maxIncomingReadId, maxOutgoingReadId, stateMaxKnownId, stateCount):
+                    if maxIncomingReadId != maxReadId || stateMaxKnownId != maxKnownId || stateCount != count {
+                        XCTFail("Expected\nmaxIncomingReadId: \(maxReadId), maxKnownId: \(maxKnownId), count: \(count)\nActual\nmaxIncomingReadId: \(maxIncomingReadId), maxKnownId: \(stateMaxKnownId), count: \(stateCount)")
+                    }
+                case .indexBased:
+                    XCTFail()
             }
         } else {
             XCTFail("Expected\nmaxReadId: \(maxReadId), maxKnownId: \(maxKnownId), count: \(count)\nActual\nnil")
@@ -165,7 +172,7 @@ class ReadStateTableTests: XCTestCase {
     func testResetState() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         expectReadState(100, 120, 130)
     }
@@ -173,7 +180,7 @@ class ReadStateTableTests: XCTestCase {
     func testAddIncomingBeforeKnown() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(99, 99, "", [], [.Incoming])
         
@@ -183,7 +190,7 @@ class ReadStateTableTests: XCTestCase {
     func testAddIncomingAfterKnown() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(130, 130, "", [], [.Incoming])
         
@@ -193,7 +200,7 @@ class ReadStateTableTests: XCTestCase {
     func testApplyReadThenAddIncoming() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.expectApplyRead(200, false)
         
@@ -205,7 +212,7 @@ class ReadStateTableTests: XCTestCase {
     func testApplyAddIncomingThenRead() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(130, 130, "", [], [.Incoming])
         
@@ -219,7 +226,7 @@ class ReadStateTableTests: XCTestCase {
     func testIgnoreOldRead() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.expectApplyRead(90, false)
         
@@ -229,7 +236,7 @@ class ReadStateTableTests: XCTestCase {
     func testInvalidateReadHole() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(200, 200)
         self.addHole(1)

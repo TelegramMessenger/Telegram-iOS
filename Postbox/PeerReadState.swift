@@ -1,24 +1,69 @@
 
-public struct PeerReadState: Equatable, CustomStringConvertible {
-    public let maxIncomingReadId: MessageId.Id
-    public let maxOutgoingReadId: MessageId.Id
-    public let maxKnownId: MessageId.Id
-    public let count: Int32
+public enum PeerReadState: Equatable, CustomStringConvertible {
+    case idBased(maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32)
+    case indexBased(maxIncomingReadIndex: MessageIndex, maxOutgoingReadIndex: MessageIndex, count: Int32)
     
-    public init(maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32) {
-        self.maxIncomingReadId = maxIncomingReadId
-        self.maxOutgoingReadId = maxOutgoingReadId
-        self.maxKnownId = maxKnownId
-        self.count = count
+    public var count: Int32 {
+        switch self {
+            case let .idBased(_, _, _, count):
+                return count
+            case let .indexBased(_, _, count):
+                return count
+        }
+    }
+    
+    func withAddedCount(_ value: Int32) -> PeerReadState {
+        switch self {
+            case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
+                return .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count + value)
+            case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count):
+                return .indexBased(maxIncomingReadIndex: maxIncomingReadIndex, maxOutgoingReadIndex: maxOutgoingReadIndex, count: count + value)
+        }
     }
     
     public var description: String {
-        return "(PeerReadState maxIncomingReadId: \(maxIncomingReadId), maxOutgoingReadId: \(maxOutgoingReadId) maxKnownId: \(maxKnownId), count: \(count)"
+        switch self {
+            case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
+                return "(PeerReadState maxIncomingReadId: \(maxIncomingReadId), maxOutgoingReadId: \(maxOutgoingReadId) maxKnownId: \(maxKnownId), count: \(count)"
+            case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count):
+                return "(PeerReadState maxIncomingReadIndex: \(maxIncomingReadIndex), maxOutgoingReadIndex: \(maxOutgoingReadIndex), count: \(count)"
+        }
     }
-}
-
-public func ==(lhs: PeerReadState, rhs: PeerReadState) -> Bool {
-    return lhs.maxIncomingReadId == rhs.maxIncomingReadId && lhs.maxOutgoingReadId == rhs.maxOutgoingReadId && lhs.maxKnownId == rhs.maxKnownId && lhs.count == rhs.count
+    
+    public static func ==(lhs: PeerReadState, rhs: PeerReadState) -> Bool {
+        switch lhs {
+            case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
+                if case .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count):
+                if case .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    func isIncomingMessageIndexRead(_ index: MessageIndex) -> Bool {
+        switch self {
+            case let .idBased(maxIncomingReadId, _, _, _):
+                return maxIncomingReadId >= index.id.id
+            case let .indexBased(maxIncomingReadIndex, _, _):
+                return maxIncomingReadIndex >= index
+        }
+    }
+    
+    func isOutgoingMessageIndexRead(_ index: MessageIndex) -> Bool {
+        switch self {
+            case let .idBased(_, maxOutgoingReadId, _, _):
+                return maxOutgoingReadId >= index.id.id
+            case let .indexBased(_, maxOutgoingReadIndex, _):
+                return maxOutgoingReadIndex >= index
+        }
+    }
 }
 
 public struct CombinedPeerReadState: Equatable {
@@ -53,19 +98,19 @@ public struct CombinedPeerReadState: Equatable {
         return true
     }
     
-    public func isOutgoingMessageIdRead(_ id: MessageId) -> Bool {
+    public func isOutgoingMessageIndexRead(_ index: MessageIndex) -> Bool {
         for (namespace, readState) in self.states {
-            if namespace == id.namespace {
-                return readState.maxOutgoingReadId >= id.id
+            if namespace == index.id.namespace {
+                return readState.isOutgoingMessageIndexRead(index)
             }
         }
         return false
     }
     
-    public func isIncomingMessageIdRead(_ id: MessageId) -> Bool {
+    public func isIncomingMessageIndexRead(_ index: MessageIndex) -> Bool {
         for (namespace, readState) in self.states {
-            if namespace == id.namespace {
-                return readState.maxIncomingReadId >= id.id
+            if namespace == index.id.namespace {
+                return readState.isIncomingMessageIndexRead(index)
             }
         }
         return false

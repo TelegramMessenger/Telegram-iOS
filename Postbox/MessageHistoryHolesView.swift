@@ -2,7 +2,7 @@ import Foundation
 
 public struct MessageHistoryHolesViewEntry: Hashable {
     public let hole: MessageHistoryHole
-    public let direction: HoleFillDirection
+    public let direction: MessageHistoryViewRelativeHoleDirection
     public let tags: MessageTags?
     
     public var hashValue: Int {

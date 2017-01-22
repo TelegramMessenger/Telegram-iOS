@@ -16,8 +16,8 @@ final class ViewTracker {
     private let queue: Queue
     private let fetchEarlierHistoryEntries: (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry]
     private let fetchLaterHistoryEntries: (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry]
-    private let fetchEarlierChatEntries: (MessageIndex?, Int) -> [MutableChatListEntry]
-    private let fetchLaterChatEntries: (MessageIndex?, Int) -> [MutableChatListEntry]
+    private let fetchEarlierChatEntries: (ChatListIndex?, Int) -> [MutableChatListEntry]
+    private let fetchLaterChatEntries: (ChatListIndex?, Int) -> [MutableChatListEntry]
     private let fetchAnchorIndex: (MessageId) -> MessageHistoryAnchorIndex?
     private let renderMessage: (IntermediateMessage) -> Message
     private let getPeer: (PeerId) -> Peer?
@@ -51,7 +51,10 @@ final class ViewTracker {
     private var unreadMessageCountsViews = Bag<(MutableUnreadMessageCountsView, ValuePipe<UnreadMessageCountsView>)>()
     private var peerMergedOperationLogViews = Bag<(MutablePeerMergedOperationLogView, ValuePipe<PeerMergedOperationLogView>)>()
     
-    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadCount: @escaping () -> Int32, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
+    private let getTimestampBasedMessageAttributesHead: (UInt16) -> TimestampBasedMessageAttributesEntry?
+    private var timestampBasedMessageAttributesViews = Bag<(MutableTimestampBasedMessageAttributesView, ValuePipe<TimestampBasedMessageAttributesView>)>()
+    
+    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (ChatListIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (ChatListIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadCount: @escaping () -> Int32, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
         self.fetchEarlierHistoryEntries = fetchEarlierHistoryEntries
         self.fetchLaterHistoryEntries = fetchLaterHistoryEntries
@@ -67,6 +70,7 @@ final class ViewTracker {
         self.getPeerReadState = getPeerReadState
         self.operationLogGetOperations = operationLogGetOperations
         self.operationLogGetTailIndex = operationLogGetTailIndex
+        self.getTimestampBasedMessageAttributesHead = getTimestampBasedMessageAttributesHead
         
         self.unsentMessageView = UnsentMessageHistoryView(ids: unsentMessageIds)
         self.synchronizeReadStatesView = MutableSynchronizePeerReadStatesView(operations: synchronizePeerReadStateOperations)
@@ -198,7 +202,18 @@ final class ViewTracker {
         self.peerMergedOperationLogViews.remove(index)
     }
     
-    func refreshViewsDueToExternalTransaction(fetchAroundChatEntries: (_ index: MessageIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?), fetchAroundHistoryEntries: (_ index: MessageIndex, _ count: Int, _ tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?), fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
+    func addTimestampBasedMessageAttributesView(_ view: MutableTimestampBasedMessageAttributesView) -> (Bag<(MutableTimestampBasedMessageAttributesView, ValuePipe<TimestampBasedMessageAttributesView>)>.Index, Signal<TimestampBasedMessageAttributesView, NoError>) {
+        let record = (view, ValuePipe<TimestampBasedMessageAttributesView>())
+        let index = self.timestampBasedMessageAttributesViews.add(record)
+        
+        return (index, record.1.signal())
+    }
+    
+    func removeTimestampBasedMessageAttributesView(_ index: Bag<(MutableTimestampBasedMessageAttributesView, ValuePipe<TimestampBasedMessageAttributesView>)>.Index) {
+        self.timestampBasedMessageAttributesViews.remove(index)
+    }
+    
+    func refreshViewsDueToExternalTransaction(fetchAroundChatEntries: (_ index: ChatListIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?), fetchAroundHistoryEntries: (_ index: MessageIndex, _ count: Int, _ tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?), fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
         var updateTrackedHolesPeerIds: [PeerId] = []
         
         for (peerId, bag) in self.messageHistoryViews {
@@ -378,6 +393,12 @@ final class ViewTracker {
         for (mutableView, pipe) in self.peerMergedOperationLogViews.copyItems() {
             if mutableView.replay(operations: transaction.currentPeerMergedOperationLogOperations, getOperations: self.operationLogGetOperations, getTailIndex: self.operationLogGetTailIndex) {
                 pipe.putNext(PeerMergedOperationLogView(mutableView))
+            }
+        }
+        
+        for (mutableView, pipe) in self.timestampBasedMessageAttributesViews.copyItems() {
+            if mutableView.replay(operations: transaction.currentTimestampBasedMessageAttributesOperations, getHead: self.getTimestampBasedMessageAttributesHead) {
+                pipe.putNext(TimestampBasedMessageAttributesView(mutableView))
             }
         }
     }

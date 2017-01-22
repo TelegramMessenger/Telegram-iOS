@@ -41,15 +41,17 @@ final class MessageHistoryTable: Table {
     let messageHistoryIndexTable: MessageHistoryIndexTable
     let messageMediaTable: MessageMediaTable
     let historyMetadataTable: MessageHistoryMetadataTable
+    let globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable
     let unsentTable: MessageHistoryUnsentTable
     let tagsTable: MessageHistoryTagsTable
     let readStateTable: MessageHistoryReadStateTable
     let synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable) {
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageMediaTable = messageMediaTable
         self.historyMetadataTable = historyMetadataTable
+        self.globallyUniqueMessageIdsTable = globallyUniqueMessageIdsTable
         self.unsentTable = unsentTable
         self.tagsTable = tagsTable
         self.readStateTable = readStateTable
@@ -108,6 +110,30 @@ final class MessageHistoryTable: Table {
         return dict
     }
     
+    private func processIndexOperationsCommitAccumulatedRemoveIndices(remove: Bool, peerId: PeerId, accumulatedRemoveIndices: inout [MessageIndex], updatedCombinedState: inout CombinedPeerReadState?, invalidateReadState: inout Bool, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], outputOperations: inout [MessageHistoryOperation]) {
+        if !accumulatedRemoveIndices.isEmpty {
+            outputOperations.append(.Remove(accumulatedRemoveIndices))
+            
+            let (combinedState, invalidate) = self.readStateTable.deleteMessages(peerId, indices: accumulatedRemoveIndices, incomingStatsInIndices: { peerId, namespace, indices in
+                return self.incomingMessageStatsInIndices(peerId, namespace: namespace, indices: indices)
+            })
+            if let combinedState = combinedState {
+                updatedCombinedState = combinedState
+            }
+            if invalidate {
+                invalidateReadState = true
+            }
+            
+            if remove {
+                for index in accumulatedRemoveIndices {
+                    self.justRemove(index, unsentMessageOperations: &unsentMessageOperations)
+                }
+            }
+            
+            accumulatedRemoveIndices.removeAll()
+        }
+    }
+    
     private func processIndexOperations(_ peerId: PeerId, operations: [MessageHistoryIndexOperation], processedOperationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         let sharedKey = self.key(MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 0))
         let sharedBuffer = WriteBuffer()
@@ -115,14 +141,31 @@ final class MessageHistoryTable: Table {
         
         var outputOperations: [MessageHistoryOperation] = []
         var accumulatedRemoveIndices: [MessageIndex] = []
-        var addedIncomingMessageIds = Set<MessageId>()
+        var accumulatedAddedIncomingMessageIndices = Set<MessageIndex>()
+        
+        var updatedCombinedState: CombinedPeerReadState?
+        var invalidateReadState = false
+        
+        let commitAccumulatedAddedIndices: () -> Void = {
+            if !accumulatedAddedIncomingMessageIndices.isEmpty {
+                let (combinedState, invalidate) = self.readStateTable.addIncomingMessages(peerId, indices: accumulatedAddedIncomingMessageIndices)
+                if let combinedState = combinedState {
+                    updatedCombinedState = combinedState
+                }
+                if invalidate {
+                    invalidateReadState = true
+                }
+                
+                accumulatedAddedIncomingMessageIndices.removeAll()
+            }
+        }
+        
         for operation in operations {
             switch operation {
                 case let .InsertHole(hole):
-                    if accumulatedRemoveIndices.count != 0 {
-                        outputOperations.append(.Remove(accumulatedRemoveIndices))
-                        accumulatedRemoveIndices.removeAll()
-                    }
+                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+                    commitAccumulatedAddedIndices()
+                    
                     self.justInsertHole(hole)
                     outputOperations.append(.InsertHole(hole))
                     
@@ -139,10 +182,8 @@ final class MessageHistoryTable: Table {
                         }
                     }
                 case let .InsertMessage(storeMessage):
-                    if accumulatedRemoveIndices.count != 0 {
-                        outputOperations.append(.Remove(accumulatedRemoveIndices))
-                        accumulatedRemoveIndices.removeAll()
-                    }
+                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+                    
                     let message = self.justInsertMessage(storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder)
                     outputOperations.append(.InsertMessage(message))
                     if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
@@ -163,42 +204,42 @@ final class MessageHistoryTable: Table {
                         }
                     }
                     if message.flags.contains(.Incoming) {
-                        addedIncomingMessageIds.insert(message.id)
+                        accumulatedAddedIncomingMessageIndices.insert(MessageIndex(message))
                     }
                 case let .Remove(index):
-                    addedIncomingMessageIds.remove(index.id)
-                    self.justRemove(index, unsentMessageOperations: &unsentMessageOperations)
+                    commitAccumulatedAddedIndices()
+                    
                     accumulatedRemoveIndices.append(index)
                 case let .Update(index, storeMessage):
-                    accumulatedRemoveIndices.append(index)
-                    if accumulatedRemoveIndices.count != 0 {
-                        outputOperations.append(.Remove(accumulatedRemoveIndices))
-                        accumulatedRemoveIndices.removeAll()
-                    }
+                    commitAccumulatedAddedIndices()
+                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+                    
                     if let message = self.justUpdate(index, message: storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder, unsentMessageOperations: &unsentMessageOperations) {
+                        outputOperations.append(.Remove(accumulatedRemoveIndices))
                         outputOperations.append(.InsertMessage(message))
+                        
+                        if message.flags.contains(.Incoming) {
+                            accumulatedAddedIncomingMessageIndices.insert(MessageIndex(message))
+                        }
                     }
                 case let .UpdateTimestamp(index, timestamp):
-                    if accumulatedRemoveIndices.count != 0 {
-                        outputOperations.append(.Remove(accumulatedRemoveIndices))
-                        accumulatedRemoveIndices.removeAll()
-                    }
+                    commitAccumulatedAddedIndices()
+                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+                    
                     self.justUpdateTimestamp(index, timestamp: timestamp)
                     outputOperations.append(.UpdateTimestamp(index, timestamp))
             }
         }
-        if accumulatedRemoveIndices.count != 0 {
-            outputOperations.append(.Remove(accumulatedRemoveIndices))
+        
+        commitAccumulatedAddedIndices()
+        processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+        
+        if let updatedCombinedState = updatedCombinedState {
+            outputOperations.append(.UpdateReadState(updatedCombinedState))
         }
         
-        if !addedIncomingMessageIds.isEmpty {
-            let (combinedState, invalidate) = self.readStateTable.addIncomingMessages(peerId, ids: addedIncomingMessageIds)
-            if let combinedState = combinedState {
-                outputOperations.append(.UpdateReadState(combinedState))
-            }
-            if invalidate {
-                self.synchronizeReadStateTable.set(peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
-            }
+        if invalidateReadState {
+            self.synchronizeReadStateTable.set(peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
         }
         
         if processedOperationsByPeerId[peerId] == nil {
@@ -245,29 +286,10 @@ final class MessageHistoryTable: Table {
         for (peerId, messageIds) in self.messageIdsByPeerId(messageIds) {
             var operations: [MessageHistoryIndexOperation] = []
             
-            let (combinedState, invalidate) = self.readStateTable.deleteMessages(peerId, ids: messageIds, incomingStatsInIds: { peerId, namespace, ids in
-                return self.messageHistoryIndexTable.incomingMessageCountInIds(peerId, namespace: namespace, ids: ids)
-            })
-            
             for id in messageIds {
                 self.messageHistoryIndexTable.removeMessage(id, operations: &operations)
             }
             self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
-            
-            if let combinedState = combinedState {
-                var outputOperations: [MessageHistoryOperation] = []
-                outputOperations.append(.UpdateReadState(combinedState))
-                
-                if operationsByPeerId[peerId] == nil {
-                    operationsByPeerId[peerId] = outputOperations
-                } else {
-                    operationsByPeerId[peerId]!.append(contentsOf: outputOperations)
-                }
-            }
-            
-            if invalidate {
-                self.synchronizeReadStateTable.set(peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
-            }
         }
     }
     
@@ -275,6 +297,12 @@ final class MessageHistoryTable: Table {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.fillHole(id, fillType: fillType, tagMask: tagMask, messages: self.internalStoreMessages(messages), operations: &operations)
         self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+    }
+    
+    func fillMultipleHoles(mainHoleId: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+        var operations: [MessageHistoryIndexOperation] = []
+        self.messageHistoryIndexTable.fillMultipleHoles(mainHoleId: mainHoleId, fillType: fillType, tagMask: tagMask, messages: self.internalStoreMessages(messages), operations: &operations)
+        self.processIndexOperations(mainHoleId.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
     func updateMessage(_ id: MessageId, message: StoreMessage, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
@@ -367,30 +395,54 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func applyInteractiveMaxReadId(_ messageId: MessageId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func applyOutgoingReadMaxIndex(_ messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
+        let (combinedState, invalidated, messageIds) = self.readStateTable.applyOutgoingMaxReadIndex(messageIndex, outgoingIndexStatsInRange: { fromIndex, toIndex in
+            return self.outgoingMessageCountInRange(messageIndex.id.peerId, namespace: messageIndex.id.namespace, fromIndex: fromIndex, toIndex: toIndex)
+        })
+        
+        if let combinedState = combinedState {
+            if operationsByPeerId[messageIndex.id.peerId] == nil {
+                operationsByPeerId[messageIndex.id.peerId] = [.UpdateReadState(combinedState)]
+            } else {
+                operationsByPeerId[messageIndex.id.peerId]!.append(.UpdateReadState(combinedState))
+            }
+        }
+        
+        if invalidated {
+            self.synchronizeReadStateTable.set(messageIndex.id.peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
+        }
+        
+        return messageIds
+    }
+    
+    func applyInteractiveMaxReadIndex(_ messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
         var topMessageId: MessageId.Id?
-        if let topEntry = self.messageHistoryIndexTable.top(messageId.peerId, namespace: messageId.namespace), case let .Message(index) = topEntry {
+        if let topEntry = self.messageHistoryIndexTable.top(messageIndex.id.peerId, namespace: messageIndex.id.namespace), case let .Message(index) = topEntry {
             topMessageId = index.id.id
         }
         
-        let (combinedState, result) = self.readStateTable.applyInteractiveMaxReadId(messageId, incomingStatsInRange: { fromId, toId in
-            return self.messageHistoryIndexTable.incomingMessageCountInRange(messageId.peerId, namespace: messageId.namespace, minId: fromId, maxId: toId)
+        let (combinedState, result, messageIds) = self.readStateTable.applyInteractiveMaxReadIndex(messageIndex, incomingStatsInRange: { fromId, toId in
+            return self.messageHistoryIndexTable.incomingMessageCountInRange(messageIndex.id.peerId, namespace: messageIndex.id.namespace, minId: fromId, maxId: toId)
+        }, incomingIndexStatsInRange: { fromIndex, toIndex in
+            return self.incomingMessageCountInRange(messageIndex.id.peerId, namespace: messageIndex.id.namespace, fromIndex: fromIndex, toIndex: toIndex)
         }, topMessageId: topMessageId)
         
         if let combinedState = combinedState {
-            if operationsByPeerId[messageId.peerId] == nil {
-                operationsByPeerId[messageId.peerId] = [.UpdateReadState(combinedState)]
+            if operationsByPeerId[messageIndex.id.peerId] == nil {
+                operationsByPeerId[messageIndex.id.peerId] = [.UpdateReadState(combinedState)]
             } else {
-                operationsByPeerId[messageId.peerId]!.append(.UpdateReadState(combinedState))
+                operationsByPeerId[messageIndex.id.peerId]!.append(.UpdateReadState(combinedState))
             }
         }
         
         switch result {
             case let .Push(thenSync):
-                self.synchronizeReadStateTable.set(messageId.peerId, operation: .Push(thenSync: thenSync), operations: &updatedPeerReadStateOperations)
+                self.synchronizeReadStateTable.set(messageIndex.id.peerId, operation: .Push(state: self.readStateTable.getCombinedState(messageIndex.id.peerId), thenSync: thenSync), operations: &updatedPeerReadStateOperations)
             case .None:
                 break
         }
+        
+        return messageIds
     }
     
     func topMessage(_ peerId: PeerId) -> IntermediateMessage? {
@@ -462,6 +514,7 @@ final class MessageHistoryTable: Table {
         if let globallyUniqueId = message.globallyUniqueId {
             var globallyUniqueIdValue = globallyUniqueId
             sharedBuffer.write(&globallyUniqueIdValue, offset: 0, length: 8)
+            self.globallyUniqueMessageIdsTable.set(peerId: message.id.peerId, globallyUniqueId: globallyUniqueId, id: message.id)
         }
         
         var flags = MessageFlags(message.flags)
@@ -613,6 +666,10 @@ final class MessageHistoryTable: Table {
                     
                     if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
                         self.unsentTable.remove(index.id, operations: &unsentMessageOperations)
+                    }
+                    
+                    if let globallyUniqueId = message.globallyUniqueId {
+                        self.globallyUniqueMessageIdsTable.remove(peerId: message.id.peerId, globallyUniqueId: globallyUniqueId)
                     }
                     
                     let tags = message.tags.rawValue
@@ -797,6 +854,17 @@ final class MessageHistoryTable: Table {
             }
             if !message.tags.isEmpty {
                 self.tagsTable.add(message.tags, index: MessageIndex(message))
+            }
+            
+            if message.globallyUniqueId != previousMessage.globallyUniqueId {
+                if let globallyUniqueId = previousMessage.globallyUniqueId {
+                    self.globallyUniqueMessageIdsTable.remove(peerId: message.id.peerId, globallyUniqueId: globallyUniqueId)
+                }
+                if let globallyUniqueId = message.globallyUniqueId {
+                    self.globallyUniqueMessageIdsTable.set(peerId: message.id.peerId, globallyUniqueId: globallyUniqueId, id: message.id)
+                }
+            } else if let globallyUniqueId = message.globallyUniqueId, previousMessage.id != message.id {
+                self.globallyUniqueMessageIdsTable.set(peerId: message.id.peerId, globallyUniqueId: globallyUniqueId, id: message.id)
             }
             
             switch (previousMessage.flags.contains(.Unsent) && !previousMessage.flags.contains(.Failed), message.flags.contains(.Unsent) && !message.flags.contains(.Failed)) {
@@ -1507,7 +1575,12 @@ final class MessageHistoryTable: Table {
     
     func maxReadIndex(_ peerId: PeerId) -> MessageHistoryAnchorIndex? {
         if let combinedState = self.readStateTable.getCombinedState(peerId), let state = combinedState.states.first , state.1.count != 0 {
-            return self.anchorIndex(MessageId(peerId: peerId, namespace: state.0, id: state.1.maxIncomingReadId))
+            switch state.1 {
+                case let .idBased(maxIncomingReadId, _, _, _):
+                    return self.anchorIndex(MessageId(peerId: peerId, namespace: state.0, id: maxIncomingReadId))
+                case let .indexBased(maxIncomingReadIndex, _, _):
+                    return MessageHistoryAnchorIndex(index: maxIncomingReadIndex, exact: true)
+            }
         }
         return nil
     }
@@ -1541,6 +1614,60 @@ final class MessageHistoryTable: Table {
             return true
         }, limit: 0)
         return result
+    }
+    
+    func incomingMessageStatsInIndices(_ peerId: PeerId, namespace: MessageId.Namespace, indices: [MessageIndex]) -> (Int, Bool) {
+        var count: Int = 0
+        var holes = false
+        for index in indices {
+            let key = self.key(index)
+            if let value = self.valueBox.get(self.table, key: key) {
+                let entry = self.readIntermediateEntry(key, value: value)
+                if case let .Message(message) = entry {
+                    if message.id.namespace == namespace && message.flags.contains(.Incoming) {
+                        count += 1
+                    }
+                } else {
+                    holes = true
+                }
+            }
+        }
+        return (count, holes)
+    }
+    
+    func incomingMessageCountInRange(_ peerId: PeerId, namespace: MessageId.Namespace, fromIndex: MessageIndex, toIndex: MessageIndex) -> (Int, Bool, [MessageId]) {
+        var count: Int = 0
+        var messageIds: [MessageId] = []
+        var holes = false
+        self.valueBox.range(self.table, start: self.key(fromIndex).predecessor, end: self.key(toIndex).successor, values: { key, value in
+            let entry = self.readIntermediateEntry(key, value: value)
+            if case let .Message(message) = entry {
+                if message.id.namespace == namespace && message.flags.contains(.Incoming) {
+                    count += 1
+                    messageIds.append(message.id)
+                }
+            } else {
+                holes = true
+            }
+            return true
+        }, limit: 0)
+        
+        return (count, holes, messageIds)
+    }
+    
+    func outgoingMessageCountInRange(_ peerId: PeerId, namespace: MessageId.Namespace, fromIndex: MessageIndex, toIndex: MessageIndex) -> [MessageId] {
+        var messageIds: [MessageId] = []
+        self.valueBox.range(self.table, start: self.key(fromIndex).predecessor, end: self.key(toIndex).successor, values: { key, value in
+            let entry = self.readIntermediateEntry(key, value: value)
+            if case let .Message(message) = entry {
+                if message.id.namespace == namespace && !message.flags.contains(.Incoming) {
+                    messageIds.append(message.id)
+                }
+            }
+            return true
+        }, limit: 0)
+        
+        return messageIds
     }
 
     func debugList(_ peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {

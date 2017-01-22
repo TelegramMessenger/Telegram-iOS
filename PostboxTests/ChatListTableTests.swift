@@ -81,6 +81,7 @@ class ChatListTableTests: XCTestCase {
     var peerNameTokenIndexTable: PeerNameTokenIndexTable?
     var peerNameIndexTable: PeerNameIndexTable?
     var notificationSettingsTable: PeerNotificationSettingsTable?
+    var globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable?
     
     override class func setUp() {
         super.setUp()
@@ -104,7 +105,8 @@ class ChatListTableTests: XCTestCase {
         self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, table: MessageMediaTable.tableSpec(2))
         self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, table: MessageHistoryReadStateTable.tableSpec(11))
         self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox!, table: MessageHistorySynchronizeReadStateTable.tableSpec(12))
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
+        self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox!, table: MessageGloballyUniqueIdTable.tableSpec(24))
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
         self.peerTable = PeerTable(valueBox: self.valueBox!, table: PeerTable.tableSpec(20))
         self.peerNameTokenIndexTable = PeerNameTokenIndexTable(valueBox: self.valueBox!, table: PeerNameTokenIndexTable.tableSpec(21))
         self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox!, table: PeerNameIndexTable.tableSpec(22), peerTable: self.peerTable!, peerNameTokenIndexTable: self.peerNameTokenIndexTable!)
@@ -194,7 +196,7 @@ class ChatListTableTests: XCTestCase {
                 case let .Hole(hole):
                     return .Hole(hole.index.id.peerId.id, hole.index.id.id, hole.index.timestamp)
                 case let .Nothing(index):
-                    return .Nothing(index.id.peerId.id, index.id.id, index.timestamp)
+                    return .Nothing(index.messageIndex.id.peerId.id, index.messageIndex.id.id, index.messageIndex.timestamp)
             }
         })
         if entries != actualEntries {

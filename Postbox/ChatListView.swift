@@ -1,16 +1,16 @@
 import Foundation
 
 public enum ChatListEntry: Comparable {
-    case MessageEntry(MessageIndex, Message, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?)
+    case MessageEntry(ChatListIndex, Message, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?)
     case HoleEntry(ChatListHole)
-    case Nothing(MessageIndex)
+    case Nothing(ChatListIndex)
     
-    public var index: MessageIndex {
+    public var index: ChatListIndex {
         switch self {
             case let .MessageEntry(index, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
-                return hole.index
+                return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
             case let .Nothing(index):
                 return index
         }
@@ -69,19 +69,19 @@ public func <(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
 }
 
 enum MutableChatListEntry: Equatable {
-    case IntermediateMessageEntry(MessageIndex, IntermediateMessage, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?)
-    case MessageEntry(MessageIndex, Message, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?)
+    case IntermediateMessageEntry(ChatListIndex, IntermediateMessage, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?)
+    case MessageEntry(ChatListIndex, Message, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?)
     case HoleEntry(ChatListHole)
-    case Nothing(MessageIndex)
+    case Nothing(ChatListIndex)
     
-    var index: MessageIndex {
+    var index: ChatListIndex {
         switch self {
             case let .IntermediateMessageEntry(index, _, _, _, _):
                 return index
             case let .MessageEntry(index, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
-                return hole.index
+                return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
             case let .Nothing(index):
                 return index
         }
@@ -148,8 +148,8 @@ final class MutableChatListView {
         self.count = count
     }
     
-    func refreshDueToExternalTransaction(fetchAroundChatEntries: (_ index: MessageIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?)) -> Bool {
-        var index = MessageIndex.absoluteUpperBound()
+    func refreshDueToExternalTransaction(fetchAroundChatEntries: (_ index: ChatListIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?)) -> Bool {
+        var index = ChatListIndex.absoluteUpperBound
         if !self.entries.isEmpty {
             index = self.entries[self.entries.count / 2].index
         }
@@ -274,7 +274,7 @@ final class MutableChatListView {
         }
     }
     
-    func remove(_ indices: Set<MessageIndex>, holes: Bool, context: MutableChatListViewReplayContext) -> Bool {
+    func remove(_ indices: Set<ChatListIndex>, holes: Bool, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         if let earlier = self.earlier , indices.contains(earlier.index) {
             var match = false
@@ -328,11 +328,11 @@ final class MutableChatListView {
         return hasChanges
     }
     
-    func complete(context: MutableChatListViewReplayContext, fetchEarlier: (MessageIndex?, Int) -> [MutableChatListEntry], fetchLater: (MessageIndex?, Int) -> [MutableChatListEntry]) {
+    func complete(context: MutableChatListViewReplayContext, fetchEarlier: (ChatListIndex?, Int) -> [MutableChatListEntry], fetchLater: (ChatListIndex?, Int) -> [MutableChatListEntry]) {
         if context.removedEntries {
             var addedEntries: [MutableChatListEntry] = []
             
-            var latestAnchor: MessageIndex?
+            var latestAnchor: ChatListIndex?
             if let last = self.entries.last {
                 latestAnchor = last.index
             }
@@ -344,17 +344,17 @@ final class MutableChatListView {
             }
             
             if let later = self.later {
-                addedEntries += fetchLater(later.index.predecessor(), self.count)
+                addedEntries += fetchLater(later.index.predecessor, self.count)
             }
             if let earlier = self.earlier {
-                addedEntries += fetchEarlier(earlier.index.successor(), self.count)
+                addedEntries += fetchEarlier(earlier.index.successor, self.count)
             }
             
             addedEntries += self.entries
             addedEntries.sort(by: { $0.index < $1.index })
             var i = addedEntries.count - 1
             while i >= 1 {
-                if addedEntries[i].index.id == addedEntries[i - 1].index.id {
+                if addedEntries[i].index.messageIndex.id == addedEntries[i - 1].index.messageIndex.id {
                     addedEntries.remove(at: i)
                 }
                 i -= 1
@@ -390,7 +390,7 @@ final class MutableChatListView {
             }
         } else {
             if context.invalidEarlier {
-                var earlyId: MessageIndex?
+                var earlyId: ChatListIndex?
                 let i = 0
                 if i < self.entries.count {
                     earlyId = self.entries[i].index
@@ -401,7 +401,7 @@ final class MutableChatListView {
             }
             
             if context.invalidLater {
-                var laterId: MessageIndex?
+                var laterId: ChatListIndex?
                 let i = self.entries.count - 1
                 if i >= 0 {
                     laterId = self.entries[i].index
@@ -465,8 +465,8 @@ final class MutableChatListView {
 
 public final class ChatListView {
     public let entries: [ChatListEntry]
-    public let earlierIndex: MessageIndex?
-    public let laterIndex: MessageIndex?
+    public let earlierIndex: ChatListIndex?
+    public let laterIndex: ChatListIndex?
     
     init(_ mutableView: MutableChatListView) {
         var entries: [ChatListEntry] = []

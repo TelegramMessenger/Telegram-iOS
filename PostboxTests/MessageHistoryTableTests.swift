@@ -122,6 +122,10 @@ private class TestExternalMedia: Media {
 }
 
 private class TestPeer: Peer {
+    public let notificationSettingsPeerId: PeerId? = nil
+
+    let associatedPeerIds: [PeerId]? = nil
+
     var indexName: PeerIndexNameRepresentation {
         return .title(title: "Test", addressName: nil)
     }
@@ -209,6 +213,7 @@ class MessageHistoryTableTests: XCTestCase {
     var tagsTable: MessageHistoryTagsTable?
     var readStateTable: MessageHistoryReadStateTable?
     var synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable?
+    var globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable?
     
     override class func setUp() {
         super.setUp()
@@ -236,7 +241,8 @@ class MessageHistoryTableTests: XCTestCase {
         self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, table: MessageMediaTable.tableSpec(2))
         self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, table: MessageHistoryReadStateTable.tableSpec(10))
         self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox!, table: MessageHistorySynchronizeReadStateTable.tableSpec(11))
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
+        self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox!, table: MessageGloballyUniqueIdTable.tableSpec(12))
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
         self.peerTable = PeerTable(valueBox: self.valueBox!, table: PeerTable.tableSpec(6))
         self.peerTable!.set(peer)
     }
@@ -288,6 +294,13 @@ class MessageHistoryTableTests: XCTestCase {
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+    }
+    
+    private func fillMultipleHoles(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil, _ tags: MessageTags = []) {
+        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
+        var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
+        var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: tags, forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
     private func expectEntries(_ entries: [Entry], tagMask: MessageTags? = nil) {
@@ -960,5 +973,58 @@ class MessageHistoryTableTests: XCTestCase {
         expectEntries([.Message(100, 100, "m100", [], [])], tagMask: [.First])
         expectEntries([.Hole(101, 199, 200), .Message(200, 200, "m200", [], [])], tagMask: [.Second])
         expectEntries([.Message(100, 100, "m100", [], []), .Hole(101, 199, 200), .Message(200, 200, "m200", [], [])])
+    }
+    
+    func testTagsFillMultipleHolesSingleHole() {
+        addHole(1)
+        addMessage(100, 100, "m100", [], [], [.First])
+        addMessage(200, 200, "m200", [], [], [.First])
+        addMessage(300, 300, "m300", [], [], [.First])
+        addMessage(400, 400, "m400", [], [], [.First])
+        
+        expectEntries([
+            .Hole(1, 99, 100),
+            .Message(100, 100, "m100", [], []),
+            .Hole(101, 199, 200),
+            .Message(200, 200, "m200", [], []),
+            .Hole(201, 299, 300),
+            .Message(300, 300, "m300", [], []),
+            .Hole(301, 399, 400),
+            .Message(400, 400, "m400", [], []),
+            .Hole(401, Int32.max, Int32.max)
+        ], tagMask: [.First])
+        
+        expectEntries([
+            .Hole(1, 99, 100),
+            .Hole(101, 199, 200),
+            .Hole(201, 299, 300),
+            .Hole(301, 399, 400),
+            .Hole(401, Int32.max, Int32.max)
+        ], tagMask: [.Second])
+        
+        fillMultipleHoles(500, HoleFill(complete: false, direction: .UpperToLower), [(500, 500, "m500", []), (350, 350, "m350", [])], [.Second], [.Second])
+        
+        expectEntries([
+            .Hole(1, 99, 100),
+            .Hole(101, 199, 200),
+            .Hole(201, 299, 300),
+            .Hole(301, 349, 350),
+            .Message(350, 350, "m350", [], []),
+            .Message(500, 500, "m500", [], [])
+        ], tagMask: [.Second])
+        
+        expectEntries([
+            .Hole(1, 99, 100),
+            .Message(100, 100, "m100", [], []),
+            .Hole(101, 199, 200),
+            .Message(200, 200, "m200", [], []),
+            .Hole(201, 299, 300),
+            .Message(300, 300, "m300", [], []),
+            .Hole(301, 349, 350),
+            .Hole(351, 399, 400),
+            .Message(400, 400, "m400", [], []),
+            .Hole(401, 499, 500),
+            .Hole(501, Int32.max, Int32.max)
+        ], tagMask: [.First])
     }
 }

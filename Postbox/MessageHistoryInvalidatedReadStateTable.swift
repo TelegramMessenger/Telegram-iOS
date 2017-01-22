@@ -1,15 +1,15 @@
 import Foundation
 
 public enum PeerReadStateSynchronizationOperation: Equatable {
-    case Push(thenSync: Bool)
+    case Push(state: CombinedPeerReadState?, thenSync: Bool)
     case Validate
 }
 
 public func ==(lhs: PeerReadStateSynchronizationOperation, rhs: PeerReadStateSynchronizationOperation) -> Bool {
     switch lhs {
-        case let .Push(lhsThenSync):
+        case let .Push(lhsState, lhsThenSync):
             switch rhs {
-                case let .Push(rhsThenSync) where lhsThenSync == rhsThenSync:
+                case let .Push(rhsState, rhsThenSync) where lhsState == rhsState && lhsThenSync == rhsThenSync:
                     return true
                 default:
                     return false
@@ -55,11 +55,12 @@ final class MessageHistorySynchronizeReadStateTable: Table {
         operations[peerId] = operation
     }
     
-    func get() -> [PeerId: PeerReadStateSynchronizationOperation] {
+    func get(getCombinedPeerReadState: (PeerId) -> CombinedPeerReadState?) -> [PeerId: PeerReadStateSynchronizationOperation] {
         self.beforeCommit()
         
         var operations: [PeerId: PeerReadStateSynchronizationOperation] = [:]
         self.valueBox.range(self.table, start: self.lowerBound(), end: self.upperBound(), values: { key, value in
+            let peerId = PeerId(key.getInt64(0))
             var operationValue: Int8 = 0
             value.read(&operationValue, offset: 0, length: 1)
             
@@ -67,12 +68,12 @@ final class MessageHistorySynchronizeReadStateTable: Table {
             if operationValue == 0 {
                 var syncValue: Int8 = 0
                 value.read(&syncValue, offset: 0, length: 1)
-                operation = .Push(thenSync: syncValue != 0)
+                operation = .Push(state: getCombinedPeerReadState(peerId), thenSync: syncValue != 0)
             } else {
                 operation = .Validate
             }
             
-            operations[PeerId(key.getInt64(0))] = operation
+            operations[peerId] = operation
             return true
         }, limit: 0)
         return operations
@@ -86,7 +87,7 @@ final class MessageHistorySynchronizeReadStateTable: Table {
             if let operation = operation {
                 buffer.reset()
                 switch operation {
-                    case let .Push(thenSync):
+                    case let .Push(_, thenSync):
                         var operationValue: Int8 = 0
                         buffer.write(&operationValue, offset: 0, length: 1)
                         var syncValue: Int8 = thenSync ? 1 : 0

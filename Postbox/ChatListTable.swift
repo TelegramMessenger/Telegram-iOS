@@ -1,24 +1,24 @@
 import Foundation
 
 enum ChatListOperation {
-    case InsertMessage(MessageIndex, IntermediateMessage, CombinedPeerReadState?, PeerChatListEmbeddedInterfaceState?)
+    case InsertMessage(ChatListIndex, IntermediateMessage, CombinedPeerReadState?, PeerChatListEmbeddedInterfaceState?)
     case InsertHole(ChatListHole)
-    case InsertNothing(MessageIndex)
-    case RemoveMessage([MessageIndex])
-    case RemoveHoles([MessageIndex])
+    case InsertNothing(ChatListIndex)
+    case RemoveMessage([ChatListIndex])
+    case RemoveHoles([ChatListIndex])
 }
 
 enum ChatListIntermediateEntry {
-    case Message(MessageIndex, IntermediateMessage, PeerChatListEmbeddedInterfaceState?)
+    case Message(ChatListIndex, IntermediateMessage, PeerChatListEmbeddedInterfaceState?)
     case Hole(ChatListHole)
-    case Nothing(MessageIndex)
+    case Nothing(ChatListIndex)
     
-    var index: MessageIndex {
+    var index: ChatListIndex {
         switch self {
             case let .Message(index, _, _):
                 return index
             case let .Hole(hole):
-                return hole.index
+                return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
             case let .Nothing(index):
                 return index
         }
@@ -28,6 +28,22 @@ enum ChatListIntermediateEntry {
 private enum ChatListEntryType: Int8 {
     case Message = 1
     case Hole = 2
+}
+
+func chatListPinningIndexFromKeyValue(_ value: UInt16) -> UInt16? {
+    if value == 0 {
+        return nil
+    } else {
+        return UInt16.max - 1 - value
+    }
+}
+
+func keyValueForChatListPinningIndex(_ index: UInt16?) -> UInt16 {
+    if let index = index {
+        return UInt16.max - 1 - index
+    } else {
+        return 0
+    }
 }
 
 final class ChatListTable: Table {
@@ -48,25 +64,28 @@ final class ChatListTable: Table {
         super.init(valueBox: valueBox, table: table)
     }
     
-    private func key(_ index: MessageIndex, type: ChatListEntryType) -> ValueBoxKey {
-        let key = ValueBoxKey(length: 4 + 4 + 4 + 8 + 1)
-        key.setInt32(0, value: index.timestamp)
-        key.setInt32(4, value: index.id.namespace)
-        key.setInt32(4 + 4, value: index.id.id)
-        key.setInt64(4 + 4 + 4, value: index.id.peerId.toInt64())
-        key.setInt8(4 + 4 + 4 + 8, value: type.rawValue)
+    private func key(_ index: ChatListIndex, type: ChatListEntryType) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 2 + 4 + 4 + 4 + 8 + 1)
+        key.setUInt16(0, value: keyValueForChatListPinningIndex(index.pinningIndex))
+        key.setInt32(2, value: index.messageIndex.timestamp)
+        key.setInt32(2 + 4, value: index.messageIndex.id.namespace)
+        key.setInt32(2 + 4 + 4, value: index.messageIndex.id.id)
+        key.setInt64(2 + 4 + 4 + 4, value: index.messageIndex.id.peerId.toInt64())
+        key.setInt8(2 + 4 + 4 + 4 + 8, value: type.rawValue)
         return key
     }
     
     private func lowerBound() -> ValueBoxKey {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: 0)
+        let key = ValueBoxKey(length: 2 + 4)
+        key.setUInt16(0, value: 0)
+        key.setInt32(2, value: 0)
         return key
     }
     
     private func upperBound() -> ValueBoxKey {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: Int32.max)
+        let key = ValueBoxKey(length: 2 + 4)
+        key.setUInt16(0, value: UInt16.max)
+        key.setInt32(2, value: Int32.max)
         return key
     }
     
@@ -89,9 +108,9 @@ final class ChatListTable: Table {
             changedPeerIds.insert(peerId)
         }
         for peerId in changedPeerIds {
-            let currentIndex: MessageIndex? = self.indexTable.get(peerId)
+            let currentIndex: ChatListIndex? = self.indexTable.get(peerId)
             
-            let updatedIndex: MessageIndex?
+            let updatedIndex: ChatListIndex?
             let topMessage = messageHistoryTable.topMessage(peerId)
             let embeddedChatState = peerChatInterfaceStateTable.get(peerId)?.chatListEmbeddedState
             
@@ -100,16 +119,16 @@ final class ChatListTable: Table {
                 if let embeddedChatState = embeddedChatState {
                     updatedTimestamp = max(updatedTimestamp, embeddedChatState.timestamp)
                 }
-                var updatedIndex = MessageIndex(id: topMessage.id, timestamp: updatedTimestamp)
+                let updatedIndex: ChatListIndex = ChatListIndex(pinningIndex: currentIndex?.pinningIndex, messageIndex: MessageIndex(id: topMessage.id, timestamp: updatedTimestamp))
                 
                 if let currentIndex = currentIndex, currentIndex != updatedIndex {
-                    self.justRemoveMessage(currentIndex)
+                    self.justRemoveIndex(currentIndex)
                 }
                 if let currentIndex = currentIndex {
                     operations.append(.RemoveMessage([currentIndex]))
                 }
                 self.indexTable.set(updatedIndex)
-                self.justInsertMessage(updatedIndex)
+                self.justInsertIndex(updatedIndex)
                 operations.append(.InsertMessage(updatedIndex, topMessage, messageHistoryTable.readStateTable.getCombinedState(peerId), embeddedChatState))
             } else {
                 if let currentIndex = currentIndex {
@@ -123,7 +142,7 @@ final class ChatListTable: Table {
     func addHole(_ hole: ChatListHole, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         
-        if self.valueBox.get(self.table, key: self.key(hole.index, type: .Hole)) == nil {
+        if self.valueBox.get(self.table, key: self.key(ChatListIndex(pinningIndex: nil, messageIndex: hole.index), type: .Hole)) == nil {
             self.justInsertHole(hole)
             operations.append(.InsertHole(hole))
         }
@@ -132,38 +151,38 @@ final class ChatListTable: Table {
     func replaceHole(_ index: MessageIndex, hole: ChatListHole?, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         
-        if self.valueBox.get(self.table, key: self.key(index, type: .Hole)) != nil {
+        if self.valueBox.get(self.table, key: self.key(ChatListIndex(pinningIndex: nil, messageIndex: index), type: .Hole)) != nil {
             if let hole = hole {
                 if hole.index != index {
                     self.justRemoveHole(index)
                     self.justInsertHole(hole)
-                    operations.append(.RemoveHoles([index]))
+                    operations.append(.RemoveHoles([ChatListIndex(pinningIndex: nil, messageIndex: index)]))
                     operations.append(.InsertHole(hole))
                 }
             } else{
                 self.justRemoveHole(index)
-                operations.append(.RemoveHoles([index]))
+                operations.append(.RemoveHoles([ChatListIndex(pinningIndex: nil, messageIndex: index)]))
             }
         }
     }
     
-    private func justInsertMessage(_ index: MessageIndex) {
+    private func justInsertIndex(_ index: ChatListIndex) {
         self.valueBox.set(self.table, key: self.key(index, type: .Message), value: self.emptyMemoryBuffer)
     }
     
-    private func justRemoveMessage(_ index: MessageIndex) {
+    private func justRemoveIndex(_ index: ChatListIndex) {
         self.valueBox.remove(self.table, key: self.key(index, type: .Message))
     }
     
     private func justInsertHole(_ hole: ChatListHole) {
-        self.valueBox.set(self.table, key: self.key(hole.index, type: .Hole), value: self.emptyMemoryBuffer)
+        self.valueBox.set(self.table, key: self.key(ChatListIndex(pinningIndex: nil, messageIndex: hole.index), type: .Hole), value: self.emptyMemoryBuffer)
     }
     
     private func justRemoveHole(_ index: MessageIndex) {
-        self.valueBox.remove(self.table, key: self.key(index, type: .Hole))
+        self.valueBox.remove(self.table, key: self.key(ChatListIndex(pinningIndex: nil, messageIndex: index), type: .Hole))
     }
     
-    func entriesAround(_ index: MessageIndex, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> (entries: [ChatListIntermediateEntry], lower: ChatListIntermediateEntry?, upper: ChatListIntermediateEntry?) {
+    func entriesAround(_ index: ChatListIndex, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> (entries: [ChatListIntermediateEntry], lower: ChatListIntermediateEntry?, upper: ChatListIntermediateEntry?) {
         self.ensureInitialized()
         
         var lowerEntries: [ChatListIntermediateEntry] = []
@@ -172,16 +191,17 @@ final class ChatListTable: Table {
         var upper: ChatListIntermediateEntry?
         
         self.valueBox.range(self.table, start: self.key(index, type: .Message), end: self.lowerBound(), keys: { key in
-            let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
-            let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
+            let pinningIndexValue: UInt16 = key.getUInt16(0)
+            let index = ChatListIndex(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), messageIndex: MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(2 + 4 + 4 + 4)), namespace: key.getInt32(2 + 4), id: key.getInt32(2 + 4 + 4)), timestamp: key.getInt32(2)))
+            let type: Int8 = key.getInt8(2 + 4 + 4 + 4 + 8)
             if type == ChatListEntryType.Message.rawValue {
-                if let message = messageHistoryTable.getMessage(index) {
-                    lowerEntries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.id.peerId)?.chatListEmbeddedState))
+                if let message = messageHistoryTable.getMessage(index.messageIndex) {
+                    lowerEntries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState))
                 } else {
                     lowerEntries.append(.Nothing(index))
                 }
             } else {
-                lowerEntries.append(.Hole(ChatListHole(index: index)))
+                lowerEntries.append(.Hole(ChatListHole(index: index.messageIndex)))
             }
             return true
         }, limit: count / 2 + 1)
@@ -191,16 +211,17 @@ final class ChatListTable: Table {
         }
         
         self.valueBox.range(self.table, start: self.key(index, type: .Message).predecessor, end: self.upperBound(), keys: { key in
-            let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
-            let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
+            let pinningIndexValue: UInt16 = key.getUInt16(0)
+            let index = ChatListIndex(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), messageIndex: MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(2 + 4 + 4 + 4)), namespace: key.getInt32(2 + 4), id: key.getInt32(2 + 4 + 4)), timestamp: key.getInt32(2)))
+            let type: Int8 = key.getInt8(2 + 4 + 4 + 4 + 8)
             if type == ChatListEntryType.Message.rawValue {
-                if let message = messageHistoryTable.getMessage(index) {
-                    upperEntries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.id.peerId)?.chatListEmbeddedState))
+                if let message = messageHistoryTable.getMessage(index.messageIndex) {
+                    upperEntries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState))
                 } else {
                     upperEntries.append(.Nothing(index))
                 }
             } else {
-                upperEntries.append(.Hole(ChatListHole(index: index)))
+                upperEntries.append(.Hole(ChatListHole(index: index.messageIndex)))
             }
             return true
         }, limit: count - lowerEntries.count + 1)
@@ -219,16 +240,17 @@ final class ChatListTable: Table {
                     startEntryType = .Hole
             }
             self.valueBox.range(self.table, start: self.key(lowerEntries.last!.index, type: startEntryType), end: self.lowerBound(), keys: { key in
-                let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
-                let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
+                let pinningIndexValue: UInt16 = key.getUInt16(0)
+                let index = ChatListIndex(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), messageIndex: MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(2 + 4 + 4 + 4)), namespace: key.getInt32(2 + 4), id: key.getInt32(2 + 4 + 4)), timestamp: key.getInt32(2)))
+                let type: Int8 = key.getInt8(2 + 4 + 4 + 4 + 8)
                 if type == ChatListEntryType.Message.rawValue {
-                    if let message = messageHistoryTable.getMessage(index) {
-                        additionalLowerEntries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.id.peerId)?.chatListEmbeddedState))
+                    if let message = messageHistoryTable.getMessage(index.messageIndex) {
+                        additionalLowerEntries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState))
                     } else {
                         additionalLowerEntries.append(.Nothing(index))
                     }
                 } else {
-                    additionalLowerEntries.append(.Hole(ChatListHole(index: index)))
+                    additionalLowerEntries.append(.Hole(ChatListHole(index: index.messageIndex)))
                 }
                 return true
             }, limit: count - lowerEntries.count - upperEntries.count + 1)
@@ -258,7 +280,7 @@ final class ChatListTable: Table {
         return peerIds
     }
     
-    func earlierEntries(_ index: MessageIndex?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
+    func earlierEntries(_ index: ChatListIndex?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
         self.ensureInitialized()
         
         var entries: [ChatListIntermediateEntry] = []
@@ -270,23 +292,24 @@ final class ChatListTable: Table {
         }
         
         self.valueBox.range(self.table, start: key, end: self.lowerBound(), keys: { key in
-            let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
-            let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
+            let pinningIndexValue: UInt16 = key.getUInt16(0)
+            let index = ChatListIndex(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), messageIndex: MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(2 + 4 + 4 + 4)), namespace: key.getInt32(2 + 4), id: key.getInt32(2 + 4 + 4)), timestamp: key.getInt32(2)))
+            let type: Int8 = key.getInt8(2 + 4 + 4 + 4 + 8)
             if type == ChatListEntryType.Message.rawValue {
-                if let message = messageHistoryTable.getMessage(index) {
-                    entries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.id.peerId)?.chatListEmbeddedState))
+                if let message = messageHistoryTable.getMessage(index.messageIndex) {
+                    entries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState))
                 } else {
                     entries.append(.Nothing(index))
                 }
             } else {
-                entries.append(.Hole(ChatListHole(index: index)))
+                entries.append(.Hole(ChatListHole(index: index.messageIndex)))
             }
             return true
         }, limit: count)
         return entries
     }
     
-    func laterEntries(_ index: MessageIndex?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
+    func laterEntries(_ index: ChatListIndex?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
         self.ensureInitialized()
         
         var entries: [ChatListIntermediateEntry] = []
@@ -298,16 +321,17 @@ final class ChatListTable: Table {
         }
         
         self.valueBox.range(self.table, start: key, end: self.upperBound(), keys: { key in
-            let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
-            let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
+            let pinningIndexValue: UInt16 = key.getUInt16(0)
+            let index = ChatListIndex(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), messageIndex: MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(2 + 4 + 4 + 4)), namespace: key.getInt32(2 + 4), id: key.getInt32(2 + 4 + 4)), timestamp: key.getInt32(2)))
+            let type: Int8 = key.getInt8(2 + 4 + 4 + 4 + 8)
             if type == ChatListEntryType.Message.rawValue {
-                if let message = messageHistoryTable.getMessage(index) {
-                    entries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.id.peerId)?.chatListEmbeddedState))
+                if let message = messageHistoryTable.getMessage(index.messageIndex) {
+                    entries.append(.Message(index, message, peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState))
                 } else {
                     entries.append(.Nothing(index))
                 }
             } else {
-                entries.append(.Hole(ChatListHole(index: index)))
+                entries.append(.Hole(ChatListHole(index: index.messageIndex)))
             }
             return true
         }, limit: count)
@@ -315,6 +339,6 @@ final class ChatListTable: Table {
     }
     
     func debugList(_ messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [ChatListIntermediateEntry] {
-        return self.laterEntries(MessageIndex.absoluteLowerBound(), messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, count: 1000)
+        return self.laterEntries(ChatListIndex.absoluteLowerBound, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, count: 1000)
     }
 }

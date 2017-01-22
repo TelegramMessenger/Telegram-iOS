@@ -119,6 +119,13 @@ class MessageHistoryIndexTableTests: XCTestCase {
         }), operations: &operations)
     }
     
+    func fillMultipleHoles(_ mainId: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32)], _ tagMask: MessageTags? = nil) {
+        var operations: [MessageHistoryIndexOperation] = []
+        self.indexTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: mainId), fillType: fillType, tagMask: tagMask, messages: messages.map({
+            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, globallyUniqueId: nil, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
+        }), operations: &operations)
+    }
+    
     func removeMessage(_ id: Int32) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.removeMessage(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
@@ -511,14 +518,113 @@ class MessageHistoryIndexTableTests: XCTestCase {
     func testFillHoleAtIndex() {
         addHole(1)
         expect([.Hole(1, Int32.max, Int32.max)])
-        fillHole(1, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 10, timestamp: 10))), [(5, 5), (10, 10)])
+        fillHole(1, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 10, timestamp: 10), lowerComplete: false, upperComplete: false)), [(5, 5), (10, 10)])
         expect([.Hole(1, 4, 5), .Message(5, 5), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
     }
     
     func testFillHoleAtIndexComplete() {
         addHole(1)
         expect([.Hole(1, Int32.max, Int32.max)])
-        fillHole(1, HoleFill(complete: true, direction: .AroundIndex(MessageIndex(id: 10, timestamp: 10))), [(5, 5), (10, 10)])
+        fillHole(1, HoleFill(complete: true, direction: .AroundIndex(MessageIndex(id: 10, timestamp: 10), lowerComplete: false, upperComplete: false)), [(5, 5), (10, 10)])
         expect([.Message(5, 5), .Message(10, 10)])
+    }
+    
+    func testFillMultipleHolesSingleHole() {
+        addHole(1)
+        expect([.Hole(1, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(1, HoleFill(complete: false, direction: .UpperToLower), [(5, 5), (10, 10)])
+        expect([.Hole(1, 4, 5), .Message(5, 5), .Message(10, 10)])
+    }
+    
+    func testFillMultipleHolesTwoHolesUpperToLowerNotComplete() {
+        addHole(1)
+        addMessage(10, 10)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .UpperToLower), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
+    }
+    
+    func testFillMultipleHolesTwoHolesUpperToLowerNotCompleteSkipOverOne() {
+        addHole(1)
+        addMessage(10, 10)
+        addMessage(13, 13)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, 12, 13), .Message(13, 13), .Hole(14, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(20, HoleFill(complete: false, direction: .UpperToLower), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(13, 13), .Message(15, 15), .Message(20, 20)])
+    }
+    
+    func testFillMultipleHolesTwoHolesUpperToLowerComplete() {
+        addHole(1)
+        addMessage(10, 10)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(12, HoleFill(complete: true, direction: .UpperToLower), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
+    }
+    
+    func testFillMultipleHolesTwoHolesLowerToUpperNotComplete() {
+        addHole(1)
+        addMessage(10, 10)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .LowerToUpper), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
+    }
+    
+    func testFillMultipleHolesTwoHolesLowerToUpperComplete() {
+        addHole(1)
+        addMessage(10, 10)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(12, HoleFill(complete: true, direction: .LowerToUpper), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
+    }
+    
+    func testFillMultipleHolesTwoHolesAroundIndexNotComplete() {
+        addHole(1)
+        addMessage(10, 10)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 15, timestamp: 15), lowerComplete: false, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
+    }
+    
+    func testFillMultipleHolesTwoHolesAroundIndexUpperComplete() {
+        addHole(1)
+        addMessage(10, 10)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 15, timestamp: 15), lowerComplete: false, upperComplete: true)), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
+    }
+    
+    func testFillMultipleHolesTwoHolesAroundIndexLowerComplete() {
+        addHole(1)
+        addMessage(10, 10)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 15, timestamp: 15), lowerComplete: true, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
+    }
+    
+    func testFillMultipleHolesTwoHolesAroundIndexAutoComplete() {
+        addHole(1)
+        addMessage(10, 10)
+        expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 15, timestamp: 15), lowerComplete: false, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
+        
+        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
     }
 }

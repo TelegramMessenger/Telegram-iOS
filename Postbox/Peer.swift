@@ -98,6 +98,7 @@ public protocol Peer: class, Coding {
     var id: PeerId { get }
     var indexName: PeerIndexNameRepresentation { get }
     var associatedPeerIds: [PeerId]? { get }
+    var notificationSettingsPeerId: PeerId? { get }
     
     func isEqual(_ other: Peer) -> Bool
 }
