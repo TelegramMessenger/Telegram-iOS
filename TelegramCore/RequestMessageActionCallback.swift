@@ -15,7 +15,7 @@ public enum MessageActionCallbackResult {
     case url(String)
 }
 
-public func requestMessageActionCallback(account: Account, messageId: MessageId, data: MemoryBuffer?) -> Signal<MessageActionCallbackResult, NoError> {
+public func requestMessageActionCallback(account: Account, messageId: MessageId, isGame:Bool, data: MemoryBuffer?) -> Signal<MessageActionCallbackResult, NoError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
         |> take(1)
         |> mapToSignal { peer in
@@ -25,6 +25,9 @@ public func requestMessageActionCallback(account: Account, messageId: MessageId,
                 if let data = data {
                     flags |= Int32(1 << 0)
                     dataBuffer = Buffer(data: data.makeData())
+                }
+                if isGame {
+                    flags |= Int32(1 << 1)
                 }
                 return account.network.request(Api.functions.messages.getBotCallbackAnswer(flags: flags, peer: inputPeer, msgId: messageId.id, data: dataBuffer))
                     |> retryRequest
