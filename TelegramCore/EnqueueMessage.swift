@@ -67,6 +67,12 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
                 arc4random_buf(&randomId, 8)
                 attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId))
                 
+                if let peer = peer as? TelegramSecretChat {
+                    if let messageAutoremoveTimeout = peer.messageAutoremoveTimeout {
+                        attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
+                    }
+                }
+                
                 switch message {
                     case let .message(text, requestedAttributes, media, replyToMessageId):
                         attributes.append(contentsOf: filterMessageAttributesForOutgoingMessage(requestedAttributes))

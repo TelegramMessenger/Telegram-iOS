@@ -298,7 +298,12 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
         if let readStates = modifier.getPeerReadStates(peerId) {
             for (namespace, state) in readStates {
                 if namespace == Namespaces.Message.Cloud {
-                    readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: state.maxIncomingReadId)
+                    switch state {
+                        case let .idBased(maxIncomingReadId, _, _, _):
+                            readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: maxIncomingReadId)
+                        case .indexBased:
+                            break
+                    }
                     break
                 }
             }
@@ -534,6 +539,23 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                 } else {
                     result.append(update)
                 }
+            case let .updateEditChannelMessage(message, _, _):
+                if let peerId = message.peerId {
+                    if updatesByChannel[peerId] == nil {
+                        updatesByChannel[peerId] = [update]
+                    } else {
+                        updatesByChannel[peerId]!.append(update)
+                    }
+                } else {
+                    result.append(update)
+                }
+            case let .updateChannelWebPage(channelId, _, _, _):
+                let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                if updatesByChannel[peerId] == nil {
+                    updatesByChannel[peerId] = [update]
+                } else {
+                    updatesByChannel[peerId]!.append(update)
+                }
             default:
                 result.append(update)
         }
@@ -549,6 +571,10 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                     lhsPts = pts
                 case let .updateNewChannelMessage(_, pts, _):
                     lhsPts = pts
+                case let .updateChannelWebPage(_, _, pts, _):
+                    lhsPts = pts
+                case let .updateEditChannelMessage(_, pts, _):
+                    lhsPts = pts
                 default:
                     break
             }
@@ -557,6 +583,10 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                 case let .updateDeleteChannelMessages(_, _, pts, _):
                     rhsPts = pts
                 case let .updateNewChannelMessage(_, pts, _):
+                    rhsPts = pts
+                case let .updateChannelWebPage(_, _, pts, _):
+                    rhsPts = pts
+                case let .updateEditChannelMessage(_, pts, _):
                     rhsPts = pts
                 default:
                     break
@@ -610,36 +640,62 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         channelsToPoll.insert(peerId)
                     }
                 }
-        case let .updateEditChannelMessage(apiMessage, pts, ptsCount):
-            if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id {
-                let peerId = messageId.peerId
-                if let previousState = updatedState.channelStates[peerId] {
-                    if previousState.pts >= pts {
-                        //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
-                    } else if previousState.pts + ptsCount == pts {
-                        if let preCachedResources = apiMessage.preCachedResources {
-                            for (resource, data) in preCachedResources {
-                                updatedState.addPreCachedResource(resource, data: data)
+            case let .updateEditChannelMessage(apiMessage, pts, ptsCount):
+                if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id {
+                    let peerId = messageId.peerId
+                    if let previousState = updatedState.channelStates[peerId] {
+                        if previousState.pts >= pts {
+                            //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
+                        } else if previousState.pts + ptsCount == pts {
+                            if let preCachedResources = apiMessage.preCachedResources {
+                                for (resource, data) in preCachedResources {
+                                    updatedState.addPreCachedResource(resource, data: data)
+                                }
+                            }
+                            updatedState.editMessage(messageId, message: message)
+                            updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
+                        } else {
+                            if !channelsToPoll.contains(peerId) {
+                                trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) edit message pts hole")
+                                channelsToPoll.insert(peerId)
+                                //updatedMissingUpdates = true
                             }
                         }
-                        updatedState.editMessage(messageId, message: message)
+                    } else {
+                        if !channelsToPoll.contains(peerId) {
+                            //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
+                            channelsToPoll.insert(peerId)
+                        }
+                    }
+                } else {
+                    trace("State", what: "Invalid updateEditChannelMessage")
+                }
+            case let .updateChannelWebPage(channelId, apiWebpage, pts, ptsCount):
+                let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                if let previousState = updatedState.channelStates[peerId] {
+                    if previousState.pts >= pts {
+                    } else if previousState.pts + ptsCount == pts {
+                        switch apiWebpage {
+                            case let .webPageEmpty(id):
+                                updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
+                            default:
+                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage) {
+                                    updatedState.updateMedia(webpage.webpageId, media: webpage)
+                                }
+                        }
+                        
                         updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
                     } else {
                         if !channelsToPoll.contains(peerId) {
-                            trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) delete pts hole")
+                            trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateWebPage pts hole")
                             channelsToPoll.insert(peerId)
-                            //updatedMissingUpdates = true
                         }
                     }
                 } else {
                     if !channelsToPoll.contains(peerId) {
-                        //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
                         channelsToPoll.insert(peerId)
                     }
                 }
-            } else {
-                trace("State", what: "Invalid updateEditChannelMessage")
-            }
             case let .updateDeleteMessages(messages, _, _):
                 updatedState.deleteMessagesWithGlobalIds(messages)
             case let .updateEditMessage(apiMessage, _, _):
@@ -790,10 +846,14 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.updateSecretChat(chat: chat, timestamp: date)
             case let .updateNewEncryptedMessage(message, _):
                 updatedState.addSecretMessages([message])
-            case let .updateUserTyping(type):
-                break
-            case let .updateChatUserTyping(type):
-                break
+            case let .updateEncryptedMessagesRead(chatId, maxDate, date):
+                updatedState.readSecretOutbox(peerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), timestamp: maxDate, actionTimestamp: date)
+            case let .updateUserTyping(userId, type):
+                updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
+            case let .updateChatUserTyping(chatId, userId, type):
+                updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
+            case let .updateEncryptedChatTyping(chatId):
+                updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), peerId: nil, activity: .typingText)
             default:
                     break
         }
@@ -1129,7 +1189,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1165,18 +1225,34 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     return result
 }
 
-func replayFinalState(_ modifier: Modifier, finalState: AccountMutableState) -> Bool {
-    let verified = verifyTransaction(modifier, finalState: finalState)
+func replayFinalState(_ modifier: Modifier, finalState: AccountFinalState) -> AccountReplayedFinalState? {
+    let verified = verifyTransaction(modifier, finalState: finalState.state)
     if !verified { 
-        return false
+        return nil
     }
     
     var peerIdsWithAddedSecretMessages = Set<PeerId>()
     
-    for operation in optimizedOperations(finalState.operations) {
+    var updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:]
+    var updatedSecretChatTypingActivities = Set<PeerId>()
+    
+    for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
                 modifier.addMessages(messages, location: location)
+                if case .UpperHistoryBlock = location {
+                    for message in messages {
+                        let chatPeerId = message.id.peerId
+                        if let authorId = message.authorId {
+                            let activityValue: PeerInputActivity? = nil
+                            if updatedTypingActivities[chatPeerId] == nil {
+                                updatedTypingActivities[chatPeerId] = [authorId: activityValue]
+                            } else {
+                                updatedTypingActivities[chatPeerId]![authorId] = activityValue
+                            }
+                        }
+                    }
+                }
             case let .DeleteMessagesWithGlobalIds(ids):
                 modifier.deleteMessagesWithGlobalIds(ids)
             case let .DeleteMessages(ids):
@@ -1190,14 +1266,14 @@ func replayFinalState(_ modifier: Modifier, finalState: AccountMutableState) -> 
             case let .ReadOutbox(messageId):
                 modifier.applyOutgoingReadMaxId(messageId)
             case let .ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
-                modifier.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count)]])
+                modifier.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count)]])
             case let .UpdateState(state):
                 let currentState = modifier.getState() as! AuthorizedAccountState
                 modifier.setState(currentState.changedState(state))
                 //trace("State", what: "setting state \(state)")
             case let .UpdateChannelState(peerId, channelState):
                 modifier.setPeerChatState(peerId, state: channelState)
-                //trace("State", what: "setting channel \(peerId) \(finalState.peers[peerId]?.displayTitle ?? "nil") state \(channelState)")
+                //trace("State", what: "setting channel \(peerId) \(finalState.state.peers[peerId]?.displayTitle ?? "nil") state \(channelState)")
             case let .UpdatePeerNotificationSettings(peerId, notificationSettings):
                 modifier.updatePeerNotificationSettings([peerId: notificationSettings])
             case let .AddHole(messageId):
@@ -1251,9 +1327,14 @@ func replayFinalState(_ modifier: Modifier, finalState: AccountMutableState) -> 
                         break
                     case let .encryptedChatRequested(_, accessHash, date, adminId, participantId, gA):
                         if currentPeer == nil {
-                            let state = SecretChatState(role: .participant, embeddedState: .handshake, keychain: SecretChatKeychain(keys: []))
+                            let state = SecretChatState(role: .participant, embeddedState: .handshake, keychain: SecretChatKeychain(keys: []), messageAutoremoveTimeout: nil)
                             let peer = TelegramSecretChat(id: chat.peerId, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
                             modifier.updatePeers([peer], update: { _, updated in return updated })
+                            modifier.resetIncomingReadStates([peer.id: [
+                                Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0),
+                                Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0)
+                                ]
+                            ])
                             let bBytes = malloc(256)!
                             let randomStatus = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))
                             let b = MemoryBuffer(memory: bBytes, capacity: 256, length: 256, freeWhenDone: true)
@@ -1275,14 +1356,53 @@ func replayFinalState(_ modifier: Modifier, finalState: AccountMutableState) -> 
                     modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretIncomingEncrypted, tagLocalIndex: .automatic, tagMergedIndex: .none, contents: SecretChatIncomingEncryptedOperation(message: message))
                     peerIdsWithAddedSecretMessages.insert(peerId)
                 }
+            case let .ReadSecretOutbox(peerId, maxTimestamp, actionTimestamp):
+                applyOutgoingReadMaxIndex(modifier: modifier, index: MessageIndex.upperBound(peerId: peerId, timestamp: maxTimestamp, namespace: Namespaces.Message.Local), beginAt: actionTimestamp)
+            case let .AddPeerInputActivity(chatPeerId, peerId, activity):
+                if let peerId = peerId {
+                    if updatedTypingActivities[chatPeerId] == nil {
+                        updatedTypingActivities[chatPeerId] = [peerId: activity]
+                    } else {
+                        updatedTypingActivities[chatPeerId]![peerId] = activity
+                    }
+                } else if chatPeerId.namespace == Namespaces.Peer.SecretChat {
+                    updatedSecretChatTypingActivities.insert(chatPeerId)
+                }
         }
     }
+    
+    for chatPeerId in updatedSecretChatTypingActivities {
+        if let peer = modifier.getPeer(chatPeerId) as? TelegramSecretChat {
+            let authorId = peer.regularPeerId
+            let activityValue: PeerInputActivity? = .typingText
+            if updatedTypingActivities[chatPeerId] == nil {
+                updatedTypingActivities[chatPeerId] = [authorId: activityValue]
+            } else {
+                updatedTypingActivities[chatPeerId]![authorId] = activityValue
+            }
+        }
+    }
+    
+    var addedSecretMessageIds: [MessageId] = []
+    var addedSecretMessageAuthorIds: [PeerId: PeerId] = [:]
     
     for peerId in peerIdsWithAddedSecretMessages {
         while true {
             let keychain = (modifier.getPeerChatState(peerId) as? SecretChatState)?.keychain
             if processSecretChatIncomingEncryptedOperations(modifier: modifier, peerId: peerId) {
-                processSecretChatIncomingDecryptedOperations(modifier: modifier, peerId: peerId)
+                let processResult = processSecretChatIncomingDecryptedOperations(modifier: modifier, peerId: peerId)
+                if !processResult.addedMessages.isEmpty {
+                    for message in processResult.addedMessages {
+                        if case let .Id(id) = message.id {
+                            addedSecretMessageIds.append(id)
+                            if let authorId = message.authorId {
+                                if addedSecretMessageAuthorIds[peerId] == nil {
+                                    addedSecretMessageAuthorIds[peerId] = authorId
+                                }
+                            }
+                        }
+                    }
+                }
             }
             let updatedKeychain = (modifier.getPeerChatState(peerId) as? SecretChatState)?.keychain
             if updatedKeychain == keychain {
@@ -1291,68 +1411,14 @@ func replayFinalState(_ modifier: Modifier, finalState: AccountMutableState) -> 
         }
     }
     
-    
-    return true
-}
-
-private func pollDifference(_ account: Account) -> Signal<Void, NoError> {
-    let signal = account.postbox.state()
-        |> filter { state in
-            if let _ = state as? AuthorizedAccountState {
-                return true
-            } else {
-                return false
-            }
+    for (chatPeerId, authorId) in addedSecretMessageAuthorIds {
+        let activityValue: PeerInputActivity? = nil
+        if updatedTypingActivities[chatPeerId] == nil {
+            updatedTypingActivities[chatPeerId] = [authorId: activityValue]
+        } else {
+            updatedTypingActivities[chatPeerId]![authorId] = activityValue
         }
-        |> take(1)
-        |> mapToSignal { state -> Signal<Void, NoError> in
-            if let authorizedState = (state as! AuthorizedAccountState).state {
-                let request = account.network.request(Api.functions.updates.getDifference(flags: 0, pts: authorizedState.pts, ptsTotalLimit: nil, date: authorizedState.date, qts: authorizedState.qts))
-                    |> retryRequest
-                return request |> mapToSignal { difference -> Signal<Void, NoError> in
-                    return initialStateWithDifference(account, difference: difference)
-                        |> mapToSignal { state -> Signal<Void, NoError> in
-                            if state.initialState.state != authorizedState {
-                                trace("State", what: "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
-                                return pollDifference(account)
-                            } else {
-                                return finalStateWithDifference(account: account, state: state, difference: difference)
-                                    |> mapToSignal { finalState -> Signal<Void, NoError> in
-                                        if !finalState.state.preCachedResources.isEmpty {
-                                            for (resource, data) in finalState.state.preCachedResources {
-                                                account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                                            }
-                                        }
-                                        return account.postbox.modify { modifier -> Signal<Void, NoError> in
-                                            if replayFinalState(modifier, finalState: finalState.state) {
-                                                if case .differenceSlice = difference {
-                                                    return pollDifference(account)
-                                                } else {
-                                                    return complete(Void.self, NoError.self)
-                                                }
-                                            } else {
-                                                return pollDifference(account)
-                                            }
-                                        } |> switchToLatest
-                                    }
-                            }
-                        }
-                }
-            } else {
-                let appliedState = account.network.request(Api.functions.updates.getState())
-                    |> retryRequest
-                    |> mapToSignal { state in
-                        return account.postbox.modify { modifier in
-                            if let currentState = modifier.getState() as? AuthorizedAccountState {
-                                switch state {
-                                    case let .state(pts, qts, date, seq, _):
-                                        modifier.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq)))
-                                }
-                            }
-                        }
-                    }
-                return appliedState
-            }
     }
-    return signal
+    
+    return AccountReplayedFinalState(state: finalState, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities)
 }

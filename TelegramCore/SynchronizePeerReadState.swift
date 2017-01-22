@@ -28,6 +28,17 @@ private func inputPeer(postbox: Postbox, peerId: PeerId) -> Signal<Api.InputPeer
         } |> take(1)
 }
 
+private func inputSecretChat(postbox: Postbox, peerId: PeerId) -> Signal<Api.InputEncryptedChat, VerifyReadStateError> {
+    return postbox.loadedPeerWithId(peerId)
+        |> mapToSignalPromotingError { peer -> Signal<Api.InputEncryptedChat, VerifyReadStateError> in
+            if let inputPeer = apiInputSecretChat(peer) {
+                return .single(inputPeer)
+            } else {
+                return .fail(.Abort)
+            }
+        } |> take(1)
+}
+
 private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<(Int32, Int32), VerifyReadStateError> {
     return inputPeer(postbox: postbox, peerId: peerId)
         |> mapToSignal { inputPeer -> Signal<(Int32, Int32), VerifyReadStateError> in
@@ -92,7 +103,7 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                                             marker = .Global(pts)
                                         }
                                         
-                                        return .single((PeerReadState(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount), marker))
+                                        return .single((.idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount), marker))
                                     } else {
                                         return .fail(.Abort)
                                 }
@@ -187,35 +198,62 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, VerifyReadStateError> {
-    return inputPeer(postbox: postbox, peerId: peerId)
-        |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in
-            switch inputPeer {
-                case let .inputPeerChannel(channelId, accessHash):
-                    return network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), maxId: readState.maxIncomingReadId))
+    if peerId.namespace == Namespaces.Peer.SecretChat {
+        return inputSecretChat(postbox: postbox, peerId: peerId)
+            |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in
+                switch readState {
+                    case .idBased:
+                        return .single(readState)
+                    case let .indexBased(maxIncomingReadIndex, _, _):
+                        return network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp))
                         |> retryRequest
-                        |> mapToSignalPromotingError { _ -> Signal<PeerReadState, VerifyReadStateError> in
-                            return .single(readState)
+                            |> mapToSignalPromotingError { _ -> Signal<PeerReadState, VerifyReadStateError> in
+                                return .single(readState)
                         }
-                default:
-                    return network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: readState.maxIncomingReadId))
-                        |> retryRequest
-                        |> mapToSignalPromotingError { result -> Signal<PeerReadState, VerifyReadStateError>
-                            in
-                            switch result {
-                                case let .affectedMessages(pts, ptsCount):
-                                    stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
-                            }
-                            return .single(readState)
-                        }
+                }
             }
-        }
+    } else {
+        return inputPeer(postbox: postbox, peerId: peerId)
+            |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in
+                switch inputPeer {
+                    case let .inputPeerChannel(channelId, accessHash):
+                        switch readState {
+                            case let .idBased(maxIncomingReadId, _, _, _):
+                                return network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), maxId: maxIncomingReadId))
+                                    |> retryRequest
+                                    |> mapToSignalPromotingError { _ -> Signal<PeerReadState, VerifyReadStateError> in
+                                        return .single(readState)
+                                    }
+                            case .indexBased:
+                                return .single(readState)
+                        }
+                    
+                    default:
+                        switch readState {
+                            case let .idBased(maxIncomingReadId, _, _, _):
+                                return network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId))
+                                    |> retryRequest
+                                    |> mapToSignalPromotingError { result -> Signal<PeerReadState, VerifyReadStateError>
+                                        in
+                                        switch result {
+                                            case let .affectedMessages(pts, ptsCount):
+                                                stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                                        }
+                                        return .single(readState)
+                                    }
+                            case .indexBased:
+                                return .single(readState)
+                        }
+                }
+            }
+    }
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Void, NoError> {
     let currentReadState = postbox.modify { modifier -> PeerReadState? in
         if let readStates = modifier.getPeerReadStates(peerId) {
             for (namespace, readState) in readStates {
-                if namespace == Namespaces.Message.Cloud {
+                if namespace == Namespaces.Message.Cloud || namespace == Namespaces.Message.SecretIncoming {
                     return readState
                 }
             }

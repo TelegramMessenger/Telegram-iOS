@@ -48,6 +48,8 @@ enum AccountStateMutationOperation {
     case MergePeerPresences([PeerId: PeerPresence])
     case UpdateSecretChat(chat: Api.EncryptedChat, timestamp: Int32)
     case AddSecretMessages([Api.EncryptedMessage])
+    case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
+    case AddPeerInputActivity(chatPeerId: PeerId, peerId: PeerId?, activity: PeerInputActivity?)
 }
 
 struct AccountMutableState {
@@ -200,9 +202,17 @@ struct AccountMutableState {
         self.addOperation(.AddSecretMessages(messages))
     }
     
+    mutating func readSecretOutbox(peerId: PeerId, timestamp: Int32, actionTimestamp: Int32) {
+        self.addOperation(.ReadSecretOutbox(peerId: peerId, maxTimestamp: timestamp, actionTimestamp: actionTimestamp))
+    }
+    
+    mutating func addPeerInputActivity(chatPeerId: PeerId, peerId: PeerId?, activity: PeerInputActivity?) {
+        self.addOperation(.AddPeerInputActivity(chatPeerId: chatPeerId, peerId: peerId, activity: activity))
+    }
+    
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {
@@ -260,24 +270,33 @@ struct AccountFinalState {
     let incomplete: Bool
 }
 
+struct AccountReplayedFinalState {
+    let state: AccountFinalState
+    let addedSecretMessageIds: [MessageId]
+    let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
+}
+
 struct AccountFinalStateEvents {
     let addedIncomingMessageIds: [MessageId]
+    let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty
+        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty
     }
     
     init() {
         self.addedIncomingMessageIds = []
+        self.updatedTypingActivities = [:]
     }
     
-    init(addedIncomingMessageIds: [MessageId]) {
+    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
+        self.updatedTypingActivities = updatedTypingActivities
     }
     
-    init(state: AccountMutableState) {
+    init(state: AccountReplayedFinalState) {
         var addedIncomingMessageIds: [MessageId] = []
-        for operation in state.operations {
+        for operation in state.state.state.operations {
             switch operation {
                 case let .AddMessages(messages, location):
                     if case .UpperHistoryBlock = location {
@@ -291,11 +310,13 @@ struct AccountFinalStateEvents {
                     break
             }
         }
+        addedIncomingMessageIds.append(contentsOf: state.addedSecretMessageIds)
         self.addedIncomingMessageIds = addedIncomingMessageIds
+        self.updatedTypingActivities = state.updatedTypingActivities
     }
     
     
     func union(with other: AccountFinalStateEvents) -> AccountFinalStateEvents {
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds)
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities)
     }
 }

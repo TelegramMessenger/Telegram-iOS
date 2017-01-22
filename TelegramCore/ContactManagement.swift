@@ -42,6 +42,10 @@ private func updatedRemoteContactPeers(network: Network, hash: String) -> Signal
 }
 
 func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+    if true {
+        return .never()
+    }
+    
     let initialContactPeerIdsHash = postbox.contactPeerIdsView()
         |> take(1)
         |> map { peerIds -> String in

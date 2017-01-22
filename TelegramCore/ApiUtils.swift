@@ -37,3 +37,11 @@ func apiInputUser(_ peer: Peer) -> Api.InputUser? {
         return nil
     }
 }
+
+func apiInputSecretChat(_ peer: Peer) -> Api.InputEncryptedChat? {
+    if let chat = peer as? TelegramSecretChat {
+        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: chat.accessHash)
+    } else {
+        return nil
+    }
+}

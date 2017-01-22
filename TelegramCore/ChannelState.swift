@@ -55,6 +55,10 @@ func channelUpdatesByPeerId(updates: [ChannelUpdate]) -> [PeerId: [ChannelUpdate
                 peerId = message.peerId
             case let .updateDeleteChannelMessages(channelId, _, _, _):
                 peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+            case let .updateEditChannelMessage(message, _, _):
+                peerId = message.peerId
+            case let .updateChannelWebPage(channelId, _, _, _):
+                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
             default:
                 break
         }

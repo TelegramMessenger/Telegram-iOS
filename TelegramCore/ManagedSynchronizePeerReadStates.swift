@@ -57,7 +57,7 @@ func managedSynchronizePeerReadStates(network: Network, postbox: Postbox, stateM
                 switch operation {
                     case .Validate:
                         synchronizeOperation = synchronizePeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, push: false, validate: true)
-                    case let .Push(thenSync):
+                    case let .Push(_, thenSync):
                         synchronizeOperation = synchronizePeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, push: true, validate: thenSync)
                 }
                 disposable.set(synchronizeOperation.start())

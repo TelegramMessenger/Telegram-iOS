@@ -344,8 +344,53 @@ private enum SecretMessageAction {
     }
 }
 
+private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -> [SecretApi46.DocumentAttribute] {
+    var result: [SecretApi46.DocumentAttribute] = []
+    for attribute in attributes {
+        switch attribute {
+            case let .FileName(fileName):
+                result.append(.documentAttributeFilename(fileName: fileName))
+            case .Animated:
+                result.append(.documentAttributeAnimated)
+            case let .Sticker(displayText):
+                result.append(.documentAttributeSticker(alt: displayText, stickerset: SecretApi46.InputStickerSet.inputStickerSetEmpty))
+            case let .ImageSize(size):
+                result.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
+            case let .Video(duration, size):
+                result.append(.documentAttributeVideo(duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
+            case let .Audio(isVoice, duration, title, performer, waveform):
+                var flags: Int32 = 0
+                if isVoice {
+                    flags |= (1 << 10)
+                }
+                if let _ = title {
+                    flags |= Int32(1 << 0)
+                }
+                if let _ = performer {
+                    flags |= Int32(1 << 1)
+                }
+                var waveformBuffer: Buffer?
+                if let waveform = waveform {
+                    flags |= Int32(1 << 2)
+                    waveformBuffer = Buffer(data: waveform.makeData())
+                }
+                result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
+            case .HasLinkedStickers:
+                break
+        }
+    }
+    return result
+}
+
 private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, layer: SecretChatLayer) -> BoxedDecryptedMessage {
     var media: Media? = message.media.first
+    var messageAutoremoveTimeout: Int32 = 0
+    for attribute in message.attributes {
+        if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+            messageAutoremoveTimeout = attribute.timeout
+        }
+    }
+    
     if let media = media {
         if let image = media as? TelegramMediaImage, let uploadedFile = uploadedFile, let largestRepresentation = largestImageRepresentation(image.representations) {
             switch layer {
@@ -362,36 +407,46 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
                     
                     return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: 0, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
             }
-        } else if let file = media as? TelegramMediaFile, let uploadedFile = uploadedFile {
+        } else if let file = media as? TelegramMediaFile {
             switch layer {
                 case .layer8:
-                    let randomBytesData = malloc(15)!
-                    arc4random_buf(randomBytesData, 15)
-                    let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
+                    if let uploadedFile = uploadedFile {
+                        let randomBytesData = malloc(15)!
+                        arc4random_buf(randomBytesData, 15)
+                        let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
+                        
+                        let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: Buffer(), thumbW: 0, thumbH: 0, fileName: file.fileName ?? "file", mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                     
-                    let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: Buffer(), thumbW: 0, thumbH: 0, fileName: file.fileName ?? "file", mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
-                
                         return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: decryptedMedia))
+                    }
                 case .layer46:
-                    let decryptedMedia: SecretApi46.DecryptedMessageMedia
+                    var decryptedMedia: SecretApi46.DecryptedMessageMedia?
                     
-                    var voiceDuration: Int32?
-                    for attribute in file.attributes {
-                        if case let .Audio(isVoice, duration, _, _, _) = attribute {
-                            if isVoice {
-                                voiceDuration = Int32(duration)
+                    if let uploadedFile = uploadedFile {
+                        var voiceDuration: Int32?
+                        for attribute in file.attributes {
+                            if case let .Audio(isVoice, duration, _, _, _) = attribute {
+                                if isVoice {
+                                    voiceDuration = Int32(duration)
+                                }
+                                break
                             }
-                            break
+                        }
+                        
+                        if let voiceDuration = voiceDuration {
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
+                        } else {
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: Buffer(), thumbW: 0, thumbH: 0, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes), caption: "")
+                        }
+                    } else {
+                        if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: SecretApi46.PhotoSize.photoSizeEmpty(type: "s"), dcId: Int32(resource.datacenterId), attributes: decryptedAttributes46(file.attributes))
                         }
                     }
                     
-                    if let voiceDuration = voiceDuration {
-                        decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
-                    } else {
-                        decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: Buffer(), thumbW: 0, thumbH: 0, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: [], caption: "")
+                    if let decryptedMedia = decryptedMedia {
+                        return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: 0, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
                     }
-                
-                    return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: 0, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
             }
         }
     }
@@ -404,7 +459,7 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
             
             return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: .decryptedMessageMediaEmpty))
         case .layer46:
-            return .layer46(.decryptedMessage(flags: 0, randomId: globallyUniqueId, ttl: 0, message: message.text, media: .decryptedMessageMediaEmpty, entities: nil, viaBotName: nil, replyToRandomId: nil))
+            return .layer46(.decryptedMessage(flags: 0, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: .decryptedMessageMediaEmpty, entities: nil, viaBotName: nil, replyToRandomId: nil))
     }
 }
 

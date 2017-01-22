@@ -49,13 +49,19 @@ private func parsedServiceAction(_ operation: SecretChatIncomingDecryptedOperati
     return nil
 }
 
-func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: PeerId) {
-    if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
+struct SecretChatOperationProcessResult {
+    let addedMessages: [StoreMessage]
+}
+
+func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: PeerId) -> SecretChatOperationProcessResult {
+    if let state = modifier.getPeerChatState(peerId) as? SecretChatState, let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
         var removeTagLocalIndices: [Int32] = []
         var addedDecryptedOperations = false
         var updatedState = state
         var couldNotResendRequestedMessages = false
         var maxAcknowledgedCanonicalOperationIndex: Int32?
+        var updatedPeer = peer
+        var addedMessages: [StoreMessage] = []
         
         modifier.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SecretIncomingDecrypted, { entry in
             if let operation = entry.contents as? SecretChatIncomingDecryptedOperation, let serviceAction = parsedServiceAction(operation), case let .resendOperations(fromSeq, toSeq) = serviceAction {
@@ -112,14 +118,16 @@ func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: Pe
                         switch parsedLayer {
                             case .layer8:
                                 if let parsedObject = SecretApi8.parse(Buffer(bufferNoCopy: operation.contents)), let apiMessage = parsedObject as? SecretApi8.DecryptedMessage {
-                                    message = StoreMessage(peerId: peerId, tagLocalIndex: entry.tagLocalIndex, timestamp: operation.timestamp, apiMessage: apiMessage, file: operation.file)
+                                    message = StoreMessage(peerId: peerId, authorId: updatedPeer.regularPeerId, tagLocalIndex: entry.tagLocalIndex, timestamp: operation.timestamp, apiMessage: apiMessage, file: operation.file)
                                     serviceAction = SecretChatServiceAction(apiMessage)
                                 } else {
                                     throw MessageParsingError.contentParsingError
                                 }
                             case .layer46:
                                 if let parsedObject = SecretApi46.parse(Buffer(bufferNoCopy: operation.contents)), let apiMessage = parsedObject as? SecretApi46.DecryptedMessage {
-                                    message = StoreMessage(peerId: peerId, tagLocalIndex: entry.tagLocalIndex, timestamp: operation.timestamp, apiMessage: apiMessage, file: operation.file)
+                                    message = StoreMessage(peerId: peerId, authorId: updatedPeer.regularPeerId, tagLocalIndex: entry.tagLocalIndex, timestamp: operation.timestamp, apiMessage: apiMessage, file: operation.file, messageIdForGloballyUniqueMessageId: { id in
+                                        return modifier.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id)
+                                    })
                                     serviceAction = SecretChatServiceAction(apiMessage)
                                 } else {
                                     throw MessageParsingError.contentParsingError
@@ -179,13 +187,22 @@ func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: Pe
                                             break
                                     }
                                 case let .setMessageAutoremoveTimeout(timeout):
-                                    if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
-                                        modifier.updatePeers([peer.withUpdatedMessageAutoremoveTimeout(timeout == 0 ? nil : timeout)], update: { _, updated in
-                                            return updated
-                                        })
-                                    }
+                                    updatedPeer = updatedPeer.withUpdatedMessageAutoremoveTimeout(timeout == 0 ? nil : timeout)
+                                    updatedState = updatedState.withUpdatedMessageAutoremoveTimeout(timeout == 0 ? nil : timeout)
                                 case let .rekeyAction(action):
                                     updatedState = secretChatAdvanceRekeySessionIfNeeded(modifier: modifier, peerId: peerId, state: updatedState, action: action)
+                                case let .deleteMessages(globallyUniqueIds):
+                                    var messageIds: [MessageId] = []
+                                    for id in globallyUniqueIds {
+                                        if let messageId = modifier.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id) {
+                                            messageIds.append(messageId)
+                                        }
+                                    }
+                                    if !messageIds.isEmpty {
+                                        modifier.deleteMessages(messageIds)
+                                    }
+                                case .clearHistory:
+                                    break
                                 default:
                                     break
                             }
@@ -201,6 +218,7 @@ func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: Pe
                         
                         if let message = message {
                             modifier.addMessages([message], location: .Random)
+                            addedMessages.append(message)
                         }
                         if let serviceAction = serviceAction {
                             switch serviceAction {
@@ -259,8 +277,15 @@ func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: Pe
         if updatedState != state {
             modifier.setPeerChatState(peerId, state: updatedState)
         }
+        if !peer.isEqual(updatedPeer) {
+            modifier.updatePeers([updatedPeer], update: { _, updated in
+                return updated
+            })
+        }
+        return SecretChatOperationProcessResult(addedMessages: addedMessages)
     } else {
         assertionFailure()
+        return SecretChatOperationProcessResult(addedMessages: [])
     }
 }
 
@@ -325,10 +350,10 @@ extension SecretChatServiceAction {
 }
 
 extension StoreMessage {
-    convenience init?(peerId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi8.DecryptedMessage, file: SecretChatFileReference?) {
+    convenience init?(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi8.DecryptedMessage, file: SecretChatFileReference?) {
         switch apiMessage {
             case let .decryptedMessage(randomId, _, message, media):
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: peerId, text: message, attributes: [], media: [])
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: message, attributes: [], media: [])
             case let .decryptedMessageService(randomId, _, action):
                 switch action {
                     case let .decryptedMessageActionDeleteMessages(randomIds):
@@ -340,9 +365,9 @@ extension StoreMessage {
                     case let .decryptedMessageActionReadMessages(randomIds):
                         return nil
                     case .decryptedMessageActionScreenshotMessages:
-                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [TelegramMediaAction(action: .historyScreenshot)])
+                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .historyScreenshot)])
                     case let .decryptedMessageActionSetMessageTTL(ttlSeconds):
-                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(ttlSeconds))])
+                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(ttlSeconds))])
                 }
         }
     }
@@ -377,11 +402,17 @@ extension TelegramMediaFileAttribute {
 }
 
 extension StoreMessage {
-    convenience init?(peerId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi46.DecryptedMessage, file: SecretChatFileReference?) {
+    convenience init?(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi46.DecryptedMessage, file: SecretChatFileReference?, messageIdForGloballyUniqueMessageId: (Int64) -> MessageId?) {
         switch apiMessage {
             case let .decryptedMessage(flags, randomId, ttl, message, media, entities, viaBotName, replyToRandomId):
                 var text = message
                 var parsedMedia: [Media] = []
+                var attributes: [MessageAttribute] = []
+                
+                if ttl > 0 {
+                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttl, countdownBeginTime: nil))
+                }
+                
                 if let media = media {
                     switch media {
                         case let .decryptedMessageMediaPhoto(_, thumbW, thumbH, w, h, size, key, iv, caption):
@@ -424,8 +455,10 @@ extension StoreMessage {
                             break
                     }
                 }
-                
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: tagsForStoreMessage(parsedMedia), forwardInfo: nil, authorId: peerId, text: text, attributes: [], media: parsedMedia)
+                if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
+                    attributes.append(ReplyMessageAttribute(messageId: replyMessageId))
+                }
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: tagsForStoreMessage(parsedMedia), forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia)
             case let .decryptedMessageService(randomId, action):
                 switch action {
                     case let .decryptedMessageActionDeleteMessages(randomIds):
@@ -437,9 +470,9 @@ extension StoreMessage {
                     case let .decryptedMessageActionReadMessages(randomIds):
                         return nil
                     case let .decryptedMessageActionScreenshotMessages(randomIds):
-                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [TelegramMediaAction(action: .historyScreenshot)])
+                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .historyScreenshot)])
                     case let .decryptedMessageActionSetMessageTTL(ttlSeconds):
-                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(ttlSeconds))])
+                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(ttlSeconds))])
                     case let .decryptedMessageActionResend(startSeqNo, endSeqNo):
                         return nil
                     case let .decryptedMessageActionRequestKey(exchangeId, gA):

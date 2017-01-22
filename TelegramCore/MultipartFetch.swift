@@ -158,7 +158,10 @@ private final class MultipartFetchManager {
                             }
                             strongSelf.receivedSize += data.count
                             if let completeSize = strongSelf.completeSize {
-                                assert(data.count == partSize)
+                                if data.count != partSize {
+                                    assertionFailure()
+                                    return
+                                }
                             } else if data.count < partSize {
                                 strongSelf.completeSize = partOffset + data.count
                             }

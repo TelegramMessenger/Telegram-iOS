@@ -364,23 +364,31 @@ final class SecretChatState: PeerChatState, Equatable {
     let role: SecretChatRole
     let embeddedState: SecretChatEmbeddedState
     let keychain: SecretChatKeychain
+    let messageAutoremoveTimeout: Int32?
     
-    init(role: SecretChatRole, embeddedState: SecretChatEmbeddedState, keychain: SecretChatKeychain) {
+    init(role: SecretChatRole, embeddedState: SecretChatEmbeddedState, keychain: SecretChatKeychain, messageAutoremoveTimeout: Int32?) {
         self.role = role
         self.embeddedState = embeddedState
         self.keychain = keychain
+        self.messageAutoremoveTimeout = messageAutoremoveTimeout
     }
     
     init(decoder: Decoder) {
         self.role = SecretChatRole(rawValue: decoder.decodeInt32ForKey("r"))!
         self.embeddedState = decoder.decodeObjectForKey("s", decoder: { return SecretChatEmbeddedState(decoder: $0) }) as! SecretChatEmbeddedState
         self.keychain = decoder.decodeObjectForKey("k", decoder: { return SecretChatKeychain(decoder: $0) }) as! SecretChatKeychain
+        self.messageAutoremoveTimeout = decoder.decodeInt32ForKey("a")
     }
     
     func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.role.rawValue, forKey: "r")
         encoder.encodeObject(self.embeddedState, forKey: "s")
         encoder.encodeObject(self.keychain, forKey: "k")
+        if let messageAutoremoveTimeout = self.messageAutoremoveTimeout {
+            encoder.encodeInt32(messageAutoremoveTimeout, forKey: "a")
+        } else {
+            encoder.encodeNil(forKey: "a")
+        }
     }
     
     func equals(_ other: PeerChatState) -> Bool {
@@ -391,14 +399,18 @@ final class SecretChatState: PeerChatState, Equatable {
     }
     
     static func ==(lhs: SecretChatState, rhs: SecretChatState) -> Bool {
-        return lhs.role == rhs.role && lhs.embeddedState == rhs.embeddedState && lhs.keychain == rhs.keychain
+        return lhs.role == rhs.role && lhs.embeddedState == rhs.embeddedState && lhs.keychain == rhs.keychain && lhs.messageAutoremoveTimeout == rhs.messageAutoremoveTimeout
     }
     
     func withUpdatedEmbeddedState(_ embeddedState: SecretChatEmbeddedState) -> SecretChatState {
-        return SecretChatState(role: self.role, embeddedState: embeddedState, keychain: self.keychain)
+        return SecretChatState(role: self.role, embeddedState: embeddedState, keychain: self.keychain, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
     }
     
     func withUpdatedKeychain(_ keychain: SecretChatKeychain) -> SecretChatState {
-        return SecretChatState(role: self.role, embeddedState: self.embeddedState, keychain: keychain)
+        return SecretChatState(role: self.role, embeddedState: self.embeddedState, keychain: keychain, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
+    }
+    
+    func withUpdatedMessageAutoremoveTimeout(_ messageAutoremoveTimeout: Int32?) -> SecretChatState {
+        return SecretChatState(role: self.role, embeddedState: self.embeddedState, keychain: self.keychain, messageAutoremoveTimeout: messageAutoremoveTimeout)
     }
 }

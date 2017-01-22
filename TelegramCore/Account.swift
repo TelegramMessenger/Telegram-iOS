@@ -262,6 +262,8 @@ private var declaredEncodables: Void = {
     declareEncodable(SecretChatIncomingDecryptedOperation.self, f: { SecretChatIncomingDecryptedOperation(decoder: $0) })
     declareEncodable(SecretChatOutgoingOperation.self, f: { SecretChatOutgoingOperation(decoder: $0) })
     declareEncodable(SecretFileMediaResource.self, f: { SecretFileMediaResource(decoder: $0) })
+    declareEncodable(CloudChatRemoveMessagesOperation.self, f: { CloudChatRemoveMessagesOperation(decoder: $0) })
+    declareEncodable(AutoremoveTimeoutMessageAttribute.self, f: { AutoremoveTimeoutMessageAttribute(decoder: $0) })
     return
 }()
 
@@ -390,12 +392,13 @@ public class Account {
     public private(set) var stateManager: AccountStateManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
+    private var peerInputActivityManager: PeerInputActivityManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
     fileprivate let managedStickerPacksDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
     private let updatedPresenceDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
-    private let managedSecretChatOutgoingOperationsDisposable = MetaDisposable()
+    private let managedOperationsDisposable = DisposableSet()
     
     public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
     //let imageCache: ImageCache = ImageCache(maxResidentSize: 5 * 1024 * 1024)
@@ -427,7 +430,8 @@ public class Account {
         self.network = network
         self.peerId = peerId
         
-        self.stateManager = AccountStateManager(account: self)
+        self.peerInputActivityManager = PeerInputActivityManager()
+        self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager)
         self.viewTracker = AccountViewTracker(account: self)
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)
         
@@ -554,7 +558,9 @@ public class Account {
             }
         self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
         
-        self.managedSecretChatOutgoingOperationsDisposable.set(managedSecretChatOutgoingOperations(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSecretChatOutgoingOperations(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged
@@ -601,7 +607,7 @@ public class Account {
         self.voipTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.updatedPresenceDisposable.dispose()
-        self.managedSecretChatOutgoingOperationsDisposable.dispose()
+        self.managedOperationsDisposable.dispose()
     }
     
     public func currentNetworkStats() -> Signal<MTNetworkUsageManagerStats, NoError> {
@@ -616,6 +622,10 @@ public class Account {
             
             return EmptyDisposable
         }
+    }
+    
+    public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
+        return self.peerInputActivityManager.activities(peerId: peerId)
     }
 }
 

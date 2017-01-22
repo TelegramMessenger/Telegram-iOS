@@ -25,7 +25,7 @@ private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilt
     }
 }
 
-func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHistoryHole, direction: HoleFillDirection, tagMask: MessageTags?) -> Signal<Void, NoError> {
+func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHistoryHole, direction: MessageHistoryViewRelativeHoleDirection, tagMask: MessageTags?) -> Signal<Void, NoError> {
     return postbox.loadedPeerWithId(hole.maxIndex.id.peerId)
         |> take(1)
         //|> delay(4.0, queue: Queue.concurrentDefaultQueue())
@@ -43,7 +43,8 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                         case .AroundIndex:
                             assertionFailure(".AroundIndex not supported")
                     }
-                    request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: hole.maxIndex.id.id + 1, limit: Int32(limit)))
+                    //request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: hole.maxIndex.id.id + 1, limit: Int32(limit)))
+                    request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: Int32.max, limit: Int32(limit)))
                 } else {
                     let offsetId: Int32
                     let addOffset: Int32
@@ -60,7 +61,8 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                             addOffset = Int32(-limit / 2)
                     }
                     
-                    request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1), minId: hole.min - 1))
+                    //request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1), minId: hole.min - 1))
+                    request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: Int32.max, minId: 1))
                 }
                 
                 return request
@@ -88,13 +90,21 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                             
                             for message in messages {
                                 if let storeMessage = StoreMessage(apiMessage: message) {
-                                    if case let .Id(storeId) = storeMessage.id, storeId.id >= hole.min && storeId.id <= hole.maxIndex.id.id {
-                                        storeMessages.append(storeMessage)
-                                    }
+                                    storeMessages.append(storeMessage)
                                 }
                             }
                             
-                            modifier.fillHole(hole, fillType: HoleFill(complete: messages.count == 0, direction: direction), tagMask: tagMask, messages: storeMessages)
+                            let fillDirection: HoleFillDirection
+                            switch direction {
+                                case .UpperToLower:
+                                    fillDirection = .UpperToLower
+                                case .LowerToUpper:
+                                    fillDirection = .LowerToUpper
+                                case let .AroundIndex(index):
+                                    fillDirection = .AroundIndex(index, lowerComplete: false, upperComplete: false)
+                            }
+                            
+                            modifier.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
                             
                             var peers: [Peer] = []
                             var peerPresences: [PeerId: PeerPresence] = [:]
@@ -187,7 +197,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             if readStates[peerId] == nil {
                                 readStates[peerId] = [:]
                             }
-                            readStates[peerId]![Namespaces.Message.Cloud] = PeerReadState(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                            readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                             
                             if let apiChannelPts = apiChannelPts {
                                 chatStates[peerId] = ChannelState(pts: apiChannelPts)
@@ -241,7 +251,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             if readStates[peerId] == nil {
                                 readStates[peerId] = [:]
                             }
-                            readStates[peerId]![Namespaces.Message.Cloud] = PeerReadState(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                            readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                             
                             notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                             

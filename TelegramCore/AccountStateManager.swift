@@ -33,6 +33,7 @@ private enum CustomOperationEvent<T, E> {
 public final class AccountStateManager {
     private let queue = Queue()
     private let account: Account
+    private let peerInputActivityManager: PeerInputActivityManager
     
     private var updateService: UpdateMessageService?
     private let updateServiceDisposable = MetaDisposable()
@@ -73,8 +74,9 @@ public final class AccountStateManager {
         return self.notificationMessagesPipe.signal()
     }
     
-    init(account: Account) {
+    init(account: Account, peerInputActivityManager: PeerInputActivityManager) {
         self.account = account
+        self.peerInputActivityManager = peerInputActivityManager
     }
     
     deinit {
@@ -94,8 +96,8 @@ public final class AccountStateManager {
                 self.account.network.mtProto.add(self.updateService)
             }
             self.operationDisposable.set(nil)
-            self.operations.removeAll()
-            self.addOperation(.pollDifference(AccountFinalStateEvents()))
+            self.replaceOperations(with: .pollDifference(AccountFinalStateEvents()))
+            self.startFirstOperation()
         }
     }
     
@@ -158,6 +160,24 @@ public final class AccountStateManager {
         } |> runOn(self.queue)
     }
     
+    private func replaceOperations(with operation: AccountStateManagerOperation) {
+        var collectedPollCompletionSubscribers: [(Int32, () -> Void)] = []
+        
+        if !self.operations.isEmpty {
+            for operation in self.operations {
+                if case let .pollCompletion(pollId, subscribers) = operation {
+                    collectedPollCompletionSubscribers.append(contentsOf: subscribers)
+                }
+            }
+        }
+        
+        self.operations.removeAll()
+        self.operations.append(operation)
+        for (id, f) in collectedPollCompletionSubscribers {
+            self.addPollCompletion(f, id: id)
+        }
+    }
+    
     private func addOperation(_ operation: AccountStateManagerOperation) {
         self.queue.async {
             let begin = self.operations.isEmpty
@@ -187,27 +207,27 @@ public final class AccountStateManager {
                         }
                     }
                     |> take(1)
-                    |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountFinalState?), NoError> in
+                    |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                         if let authorizedState = (state as! AuthorizedAccountState).state {
                             let request = account.network.request(Api.functions.updates.getDifference(flags: 0, pts: authorizedState.pts, ptsTotalLimit: nil, date: authorizedState.date, qts: authorizedState.qts))
                                 |> retryRequest
-                            return request |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountFinalState?), NoError> in
+                            return request |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                 return initialStateWithDifference(account, difference: difference)
-                                    |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountFinalState?), NoError> in
+                                    |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                         if state.initialState.state != authorizedState {
                                             trace("State", what: "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
                                             return .single((nil, nil))
                                         } else {
                                             return finalStateWithDifference(account: account, state: state, difference: difference)
-                                                |> mapToSignal { finalState -> Signal<(Api.updates.Difference?, AccountFinalState?), NoError> in
+                                                |> mapToSignal { finalState -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                                     if !finalState.state.preCachedResources.isEmpty {
                                                         for (resource, data) in finalState.state.preCachedResources {
                                                             account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                                                         }
                                                     }
-                                                    return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountFinalState?) in
-                                                        if replayFinalState(modifier, finalState: finalState.state) {
-                                                            return (difference, finalState)
+                                                    return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
+                                                        if let replayedState = replayFinalState(modifier, finalState: finalState) {
+                                                            return (difference, replayedState)
                                                         } else {
                                                             return (nil, nil)
                                                         }
@@ -220,7 +240,7 @@ public final class AccountStateManager {
                             let appliedState = account.network.request(Api.functions.updates.getState())
                                 |> retryRequest
                                 |> mapToSignal { state in
-                                    return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountFinalState?) in
+                                    return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
                                         if let currentState = modifier.getState() as? AuthorizedAccountState {
                                             switch state {
                                                 case let .state(pts, qts, date, seq, _):
@@ -239,7 +259,7 @@ public final class AccountStateManager {
                         if case let .pollDifference = strongSelf.operations.removeFirst() {
                             let events: AccountFinalStateEvents
                             if let finalState = finalState {
-                                events = currentEvents.union(with: AccountFinalStateEvents(state: finalState.state))
+                                events = currentEvents.union(with: AccountFinalStateEvents(state: finalState))
                             } else {
                                 events = currentEvents
                             }
@@ -257,8 +277,7 @@ public final class AccountStateManager {
                                 if !events.isEmpty {
                                     strongSelf.insertProcessEvents(events)
                                 }
-                                strongSelf.operations.removeAll()
-                                strongSelf.operations.append(.pollDifference(AccountFinalStateEvents()))
+                                strongSelf.replaceOperations(with: .pollDifference(AccountFinalStateEvents()))
                             }
                             strongSelf.startFirstOperation()
                         } else {
@@ -278,8 +297,7 @@ public final class AccountStateManager {
                                 strongSelf.operations[0] = .processUpdateGroups(groups)
                             } else {
                                 trace("AccountStateManager", what: "timeout while waiting for updates")
-                                strongSelf.operations.removeAll()
-                                strongSelf.operations.append(.pollDifference(AccountFinalStateEvents()))
+                                strongSelf.replaceOperations(with: .pollDifference(AccountFinalStateEvents()))
                             }
                             strongSelf.startFirstOperation()
                         } else {
@@ -294,7 +312,7 @@ public final class AccountStateManager {
                 let account = self.account
                 let queue = self.queue
                 let signal = initialStateWithUpdateGroups(account, groups: groups)
-                    |> mapToSignal { [weak self] state -> Signal<(Bool, AccountFinalState), NoError> in
+                    |> mapToSignal { [weak self] state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
                         return finalStateWithUpdateGroups(account, state: state, groups: groups)
                             |> mapToSignal { finalState in
                                 if !finalState.state.preCachedResources.isEmpty {
@@ -303,18 +321,18 @@ public final class AccountStateManager {
                                     }
                                 }
                                 
-                                return account.postbox.modify { modifier -> Bool in
-                                    return replayFinalState(modifier, finalState: finalState.state)
+                                return account.postbox.modify { modifier -> AccountReplayedFinalState? in
+                                    return replayFinalState(modifier, finalState: finalState)
                                 }
                                 |> map({ ($0, finalState) })
                                 |> deliverOn(queue)
                             }
                     }
-                signal.start(next: { [weak self] result, finalState in
+                signal.start(next: { [weak self] replayedState, finalState in
                     if let strongSelf = self {
                         if case let .processUpdateGroups(groups) = strongSelf.operations.removeFirst() {
-                            if result && !finalState.shouldPoll {
-                                let events = AccountFinalStateEvents(state: finalState.state)
+                            if let replayedState = replayedState, !finalState.shouldPoll {
+                                let events = AccountFinalStateEvents(state: replayedState)
                                 if !events.isEmpty {
                                     strongSelf.insertProcessEvents(events)
                                 }
@@ -322,8 +340,7 @@ public final class AccountStateManager {
                                     strongSelf.operations.insert(.collectUpdateGroups(groups, 2.0), at: 0)
                                 }
                             } else {
-                                strongSelf.operations.removeAll()
-                                strongSelf.operations.append(.pollDifference(AccountFinalStateEvents()))
+                                strongSelf.replaceOperations(with: .pollDifference(AccountFinalStateEvents()))
                             }
                             strongSelf.startFirstOperation()
                         } else {
@@ -356,6 +373,19 @@ public final class AccountStateManager {
                 let completed: () -> Void = { [weak self] in
                     if let strongSelf = self {
                         if let topOperation = strongSelf.operations.first, case .processEvents(operationId, _) = topOperation {
+                            if !events.updatedTypingActivities.isEmpty {
+                                strongSelf.peerInputActivityManager.transaction { manager in
+                                    for (chatPeerId, peerActivities) in events.updatedTypingActivities {
+                                        for (peerId, activity) in peerActivities {
+                                            if let activity = activity {
+                                                manager.addActivity(chatPeerId: chatPeerId, peerId: peerId, activity: activity)
+                                            } else {
+                                                manager.removeAllActivities(chatPeerId: chatPeerId, peerId: peerId)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             strongSelf.operations.removeFirst()
                             strongSelf.startFirstOperation()
                         } else {
@@ -383,26 +413,24 @@ public final class AccountStateManager {
                             trace("AccountStateManager", what: "notification settings for \(id.peerId) are undefined")
                         }
                         
-                        var foundReadState = false
-                        if let readStates = modifier.getPeerReadStates(id.peerId) {
-                            for (namespace, readState) in readStates {
-                                if namespace == id.namespace {
-                                    if id.id <= readState.maxIncomingReadId {
-                                        notify = false
-                                    }
-                                    foundReadState = true
-                                    break
-                                }
-                            }
-                        }
-                        
-                        if !foundReadState {
-                            trace("AccountStateManager", what: "read state for \(id.peerId) is undefined")
-                        }
-                        
                         if notify {
                             if let message = modifier.getMessage(id) {
-                                messages.append(message)
+                                var foundReadState = false
+                                var isUnread = true
+                                if let readState = modifier.getCombinedPeerReadState(id.peerId) {
+                                    if readState.isIncomingMessageIndexRead(MessageIndex(message)) {
+                                        isUnread = false
+                                    }
+                                    foundReadState = true
+                                }
+                                
+                                if !foundReadState {
+                                    trace("AccountStateManager", what: "read state for \(id.peerId) is undefined")
+                                }
+                                
+                                if isUnread {
+                                    messages.append(message)
+                                }
                             } else {
                                 trace("AccountStateManager", what: "notification message doesn't exist")
                             }
@@ -414,7 +442,7 @@ public final class AccountStateManager {
                 (signal |> deliverOn(self.queue)).start(next: { [weak self] messages in
                     if let strongSelf = self {
                         for message in messages {
-                            print("notify: \(message.peers[message.id.peerId]?.displayTitle): \(message.text)")
+                            print("notify: \(messageMainPeer(message)?.displayTitle): \(message.id)")
                         }
                         
                         strongSelf.notificationMessagesPipe.putNext(messages)
@@ -424,41 +452,49 @@ public final class AccountStateManager {
                 }, completed: {
                     completed()
                 })
-            case let .pollCompletion(pollId, _):
-                self.operationTimer?.invalidate()
-                let signal = self.account.network.request(Api.functions.help.test())
-                    |> deliverOn(self.queue)
-                let completed: () -> Void = { [weak self] in
-                    if let strongSelf = self {
-                        if let topOperation = strongSelf.operations.first, case let .pollCompletion(topPollId, subscribers) = topOperation {
-                            assert(topPollId == pollId)
-                            
-                            strongSelf.operations.removeFirst()
-                            if strongSelf.operations.isEmpty {
-                                for (_, f) in subscribers {
-                                    f()
+            case let .pollCompletion(pollId, preSubscribers):
+                if self.operations.count > 1 {
+                    self.operations.removeFirst()
+                    for (id, f) in preSubscribers {
+                        self.addPollCompletion(f, id: id)
+                    }
+                    self.startFirstOperation()
+                } else {
+                    self.operationTimer?.invalidate()
+                    let signal = self.account.network.request(Api.functions.help.test())
+                        |> deliverOn(self.queue)
+                    let completed: () -> Void = { [weak self] in
+                        if let strongSelf = self {
+                            if let topOperation = strongSelf.operations.first, case let .pollCompletion(topPollId, subscribers) = topOperation {
+                                assert(topPollId == pollId)
+                                
+                                strongSelf.operations.removeFirst()
+                                if strongSelf.operations.isEmpty {
+                                    for (_, f) in subscribers {
+                                        f()
+                                    }
+                                } else {
+                                    for (id, f) in subscribers {
+                                        strongSelf.addPollCompletion(f, id: id)
+                                    }
                                 }
+                                strongSelf.startFirstOperation()
                             } else {
-                                for (id, f) in subscribers {
-                                    strongSelf.addPollCompletion(f, id: id)
-                                }
+                                assertionFailure()
                             }
-                            strongSelf.startFirstOperation()
-                        } else {
-                            assertionFailure()
                         }
                     }
+                    (signal |> deliverOn(self.queue)).start(error: { _ in
+                        completed()
+                    }, completed: {
+                        completed()
+                    })
                 }
-                (signal |> deliverOn(self.queue)).start(error: { _ in
-                    completed()
-                }, completed: {
-                    completed()
-                })
         }
     }
     
     private func insertProcessEvents(_ events: AccountFinalStateEvents) {
-        if !events.addedIncomingMessageIds.isEmpty {
+        if !events.isEmpty {
             var index = 0
             if !self.operations.isEmpty {
                 while case .processEvents = self.operations[index] {

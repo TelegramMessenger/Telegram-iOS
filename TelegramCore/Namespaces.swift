@@ -10,7 +10,6 @@ public struct Namespaces {
         public static let Cloud: Int32 = 0
         public static let Local: Int32 = 1
         public static let SecretIncoming: Int32 = 2
-        public static let SecretOutgoing: Int32 = 3
     }
     
     public struct Media {
@@ -62,4 +61,7 @@ struct OperationLogTags {
     static let SecretOutgoing = PeerOperationLogTag(value: 0)
     static let SecretIncomingEncrypted = PeerOperationLogTag(value: 1)
     static let SecretIncomingDecrypted = PeerOperationLogTag(value: 2)
+    static let CloudChatRemoveMessages = PeerOperationLogTag(value: 3)
+    static let SynchronizePinnedCloudChats = PeerOperationLogTag(value: 4)
+    static let AutoremoveMessages = PeerOperationLogTag(value: 5)
 }

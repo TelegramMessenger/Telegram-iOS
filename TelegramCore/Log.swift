@@ -1,7 +1,7 @@
 import Foundation
 import TelegramCorePrivateModule
 
-private let queue = DispatchQueue(label: "org.telegram.Telegram.trace", qos: .background)
+private let queue = DispatchQueue(label: "org.telegram.Telegram.trace", qos: .utility)
 
 public func trace(_ what: @autoclosure() -> String) {
     let string = what()
@@ -14,10 +14,10 @@ public func trace(_ what: @autoclosure() -> String) {
     gettimeofday(&curTime, nil)
     let milliseconds = curTime.tv_usec / 1000
     
-    queue.async {
+    //queue.async {
         let result = String(format: "%d-%d-%d %02d:%02d:%03d %@", arguments: [Int(timeinfo.tm_year) + 1900, Int(timeinfo.tm_mon + 1), Int(timeinfo.tm_yday), Int(timeinfo.tm_hour), Int(timeinfo.tm_min), Int(milliseconds), string])
         print(result)
-    }
+    //}
 }
 
 public func trace(_ domain: String, what: @autoclosure() -> String) {

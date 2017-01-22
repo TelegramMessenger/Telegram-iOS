@@ -78,6 +78,7 @@ public final class TelegramUser: Peer {
     }
     
     public let associatedPeerIds: [PeerId]? = nil
+    public let notificationSettingsPeerId: PeerId? = nil
     
     public init(id: PeerId, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?) {
         self.id = id
