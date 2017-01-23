@@ -419,7 +419,7 @@ public final class Postbox {
             //self.debugRestoreState("afterLogin")
             
             //self.debugSaveState(name: "previous")
-            self.debugRestoreState(name: "previous")
+            //self.debugRestoreState(name: "previous")
             
             //#endif
             

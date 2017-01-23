@@ -330,7 +330,7 @@ public extension MessageAttribute {
     }
 }
 
-public final class Message {
+public final class Message: CustomStringConvertible {
     public let stableId: UInt32
     public let stableVersion: UInt32
     
@@ -364,6 +364,10 @@ public final class Message {
         self.peers = peers
         self.associatedMessages = associatedMessages
         self.associatedMessageIds = associatedMessageIds
+    }
+    
+    public var description: String {
+        return "Message(stableId: \(self.stableId), id: \(self.id), text: \(self.text))"
     }
 }
 

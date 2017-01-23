@@ -215,7 +215,7 @@ final class MessageHistoryTable: Table {
                     processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
                     
                     if let message = self.justUpdate(index, message: storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder, unsentMessageOperations: &unsentMessageOperations) {
-                        outputOperations.append(.Remove(accumulatedRemoveIndices))
+                        outputOperations.append(.Remove([index]))
                         outputOperations.append(.InsertMessage(message))
                         
                         if message.flags.contains(.Incoming) {
