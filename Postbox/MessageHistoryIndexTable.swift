@@ -415,14 +415,35 @@ final class MessageHistoryIndexTable: Table {
                     switch fillType.direction {
                         case .LowerToUpper:
                             currentLowerBound = min(currentLowerBound, upperHole.min)
+                            if fillType.complete {
+                                currentUpperBound = Int32.max
+                            }
                         case .UpperToLower:
                             currentUpperBound = max(currentUpperBound, upperHole.maxIndex.id.id)
+                            if fillType.complete {
+                                currentLowerBound = 1
+                            }
                         case .AroundIndex:
                             break
                     }
                     
                     filledLowerBound = currentLowerBound
                     filledUpperBound = currentUpperBound
+                } else {
+                    switch fillType.direction {
+                        case .LowerToUpper:
+                            filledLowerBound = upperHole.min
+                            if fillType.complete {
+                                filledUpperBound = Int32.max
+                            }
+                        case .UpperToLower:
+                            filledUpperBound = upperHole.maxIndex.id.id
+                            if fillType.complete {
+                                filledLowerBound = 1
+                            }
+                        case .AroundIndex:
+                            break
+                    }
                 }
             }
         }
@@ -438,10 +459,7 @@ final class MessageHistoryIndexTable: Table {
         
         var remainingMessages: [InternalStoreMessage] = []
         
-        if !sortedByIdMessages.isEmpty {
-            let lowestMessageId = filledLowerBound!
-            let highestMessageId = filledUpperBound!
-            
+        if let lowestMessageId = filledLowerBound, let highestMessageId = filledUpperBound {
             self.valueBox.range(self.table, start: self.key(MessageId(peerId: mainHoleId.peerId, namespace: mainHoleId.namespace, id: lowestMessageId)), end: self.key(MessageId(peerId: mainHoleId.peerId, namespace: mainHoleId.namespace, id: highestMessageId)), values: { key, value in
                 let item = readHistoryIndexEntry(peerId, namespace: mainHoleId.namespace, key: key, value: value)
                 if case let .Hole(itemHole) = item {

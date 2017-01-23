@@ -565,7 +565,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         
         fillMultipleHoles(12, HoleFill(complete: true, direction: .UpperToLower), [(8, 8), (15, 15), (20, 20)])
         
-        expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
+        expect([.Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
     }
     
     func testFillMultipleHolesTwoHolesLowerToUpperNotComplete() {

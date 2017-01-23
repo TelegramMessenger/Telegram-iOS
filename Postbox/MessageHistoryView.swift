@@ -565,7 +565,35 @@ final class MutableMessageHistoryView {
     func complete(context: MutableMessageHistoryViewReplayContext, fetchEarlier: (MessageIndex?, Int) -> [MutableMessageHistoryEntry], fetchLater: (MessageIndex?, Int) -> [MutableMessageHistoryEntry]) {
         if context.removedEntries && self.entries.count < self.fillCount {
             if self.entries.count == 0 {
-                let anchorIndex = (self.later ?? self.earlier)?.index
+                var anchorIndex: MessageIndex?
+                
+                if context.invalidLater {
+                    var laterId: MessageIndex?
+                    let i = self.entries.count - 1
+                    if i >= 0 {
+                        laterId = self.entries[i].index
+                    }
+                    
+                    let laterEntries = fetchLater(laterId, 1)
+                    anchorIndex = laterEntries.first?.index
+                } else {
+                    anchorIndex = self.later?.index
+                }
+                
+                if anchorIndex == nil {
+                    if context.invalidEarlier {
+                        var earlyId: MessageIndex?
+                        let i = 0
+                        if i < self.entries.count {
+                            earlyId = self.entries[i].index
+                        }
+                        
+                        let earlierEntries = fetchEarlier(earlyId, 1)
+                        anchorIndex = earlierEntries.first?.index
+                    } else {
+                        anchorIndex = self.earlier?.index
+                    }
+                }
                 
                 let fetchedEntries = fetchEarlier(anchorIndex, self.fillCount + 2)
                 if fetchedEntries.count >= self.fillCount + 2 {
@@ -574,6 +602,18 @@ final class MutableMessageHistoryView {
                         self.entries.append(fetchedEntries[i])
                     }
                     self.later = fetchedEntries.first
+                } else if fetchedEntries.count >= self.fillCount + 1 {
+                    self.earlier = fetchedEntries.last
+                    for i in (1 ..< fetchedEntries.count).reversed() {
+                        self.entries.append(fetchedEntries[i])
+                    }
+                    self.later = nil
+                } else {
+                    for i in (0 ..< fetchedEntries.count).reversed() {
+                        self.entries.append(fetchedEntries[i])
+                    }
+                    self.earlier = nil
+                    self.later = nil
                 }
             } else {
                 let fetchedEntries = fetchEarlier(self.entries[0].index, self.fillCount - self.entries.count)
