@@ -54,6 +54,8 @@ final class ViewTracker {
     private let getTimestampBasedMessageAttributesHead: (UInt16) -> TimestampBasedMessageAttributesEntry?
     private var timestampBasedMessageAttributesViews = Bag<(MutableTimestampBasedMessageAttributesView, ValuePipe<TimestampBasedMessageAttributesView>)>()
     
+    private var messageViews = Bag<(MutableMessageView, ValuePipe<MessageView>)>()
+    
     init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (ChatListIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (ChatListIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadCount: @escaping () -> Int32, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
         self.fetchEarlierHistoryEntries = fetchEarlierHistoryEntries
@@ -213,6 +215,17 @@ final class ViewTracker {
         self.timestampBasedMessageAttributesViews.remove(index)
     }
     
+    func addMessageView(_ view: MutableMessageView) -> (Bag<(MutableMessageView, ValuePipe<MessageView>)>.Index, Signal<MessageView, NoError>) {
+        let record = (view, ValuePipe<MessageView>())
+        let index = self.messageViews.add(record)
+        
+        return (index, record.1.signal())
+    }
+    
+    func removeMessageView(_ index: Bag<(MutableMessageView, ValuePipe<MessageView>)>.Index) {
+        self.messageViews.remove(index)
+    }
+    
     func refreshViewsDueToExternalTransaction(fetchAroundChatEntries: (_ index: ChatListIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?), fetchAroundHistoryEntries: (_ index: MessageIndex, _ count: Int, _ tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?), fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
         var updateTrackedHolesPeerIds: [PeerId] = []
         
@@ -329,6 +342,15 @@ final class ViewTracker {
             
             if updateHoles {
                 updateTrackedHolesPeerIds.append(peerId)
+            }
+        }
+        
+        for (mutableView, pipe) in self.messageViews.copyItems() {
+            let operations = transaction.currentOperationsByPeerId[mutableView.messageId.peerId]
+            if operations != nil || !transaction.updatedMedia.isEmpty || !transaction.currentUpdatedCachedPeerData.isEmpty {
+                if mutableView.replay(operations ?? [], updatedMedia: transaction.updatedMedia, renderIntermediateMessage: self.renderMessage) {
+                    pipe.putNext(MessageView(mutableView))
+                }
             }
         }
         

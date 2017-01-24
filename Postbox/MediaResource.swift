@@ -25,11 +25,16 @@ public struct WrappedMediaResourceId: Hashable {
 public protocol MediaResource {
     var id: MediaResourceId { get }
     var size: Int? { get }
+    var streamable: Bool { get }
 }
 
 public extension MediaResource {
     var size: Int? {
         return nil
+    }
+    
+    var streamable: Bool {
+        return false
     }
 }
 

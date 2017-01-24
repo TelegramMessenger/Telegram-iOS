@@ -419,7 +419,7 @@ public final class Postbox {
             //self.debugRestoreState("afterLogin")
             
             //self.debugSaveState(name: "previous")
-            self.debugRestoreState(name: "previous")
+            //self.debugRestoreState(name: "previous")
             
             //#endif
             
@@ -428,7 +428,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 9
+            let currentUserVersion: Int32 = 10
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -1621,6 +1621,23 @@ public final class Postbox {
     
     fileprivate func removeTimestampBasedMessageAttribute(tag: UInt16, messageId: MessageId) {
         self.timestampBasedMessageAttributesTable.remove(tag: tag, id: messageId, operations: &self.currentTimestampBasedMessageAttributesOperations)
+    }
+    
+    public func messageView(_ messageId: MessageId) -> Signal<MessageView, NoError> {
+        return self.modify { modifier -> Signal<MessageView, NoError> in
+            let view = MutableMessageView(messageId: messageId, message: modifier.getMessage(messageId))
+            let (index, signal) = self.viewTracker.addMessageView(view)
+            
+            return (.single(MessageView(view))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeMessageView(index)
+                        }
+                    }
+                }
+        } |> switchToLatest
     }
     
     public func isMasterClient() -> Signal<Bool, NoError> {

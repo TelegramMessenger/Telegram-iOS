@@ -2,7 +2,7 @@ import Foundation
 
 final class ContactTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .binary)
     }
     
     private var originalPeerIds: Set<PeerId>?
@@ -32,7 +32,7 @@ final class ContactTable: Table {
             self.valueBox.range(self.table, start: self.lowerBound(), end: self.upperBound(), keys: { key in
                 peerIds.insert(PeerId(key.getInt64(0)))
                 return true
-                }, limit: 0)
+            }, limit: 0)
             self.peerIds = peerIds
             self.originalPeerIds = peerIds
             return peerIds.contains(peerId)

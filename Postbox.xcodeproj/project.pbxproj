@@ -17,6 +17,10 @@
 		D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F621D5A242500A27A2C /* ContactPeerIdsView.swift */; };
 		D0079F651D5A457A00A27A2C /* ContactPeersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F641D5A457A00A27A2C /* ContactPeersView.swift */; };
 		D0079F6B1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F6A1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift */; };
+		D00C7CD41E365C4E0080C3D5 /* PeerChatListPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CD31E365C4E0080C3D5 /* PeerChatListPolicy.swift */; };
+		D00C7CD51E365C4E0080C3D5 /* PeerChatListPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CD31E365C4E0080C3D5 /* PeerChatListPolicy.swift */; };
+		D00C7CE31E37861C0080C3D5 /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CE21E37861C0080C3D5 /* MessageView.swift */; };
+		D00C7CE41E37861C0080C3D5 /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CE21E37861C0080C3D5 /* MessageView.swift */; };
 		D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00EED1D1C81F28D00341DFF /* MessageHistoryTagsTable.swift */; };
 		D010B61A1E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */; };
 		D019B1CF1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */; };
@@ -226,6 +230,8 @@
 		D0079F621D5A242500A27A2C /* ContactPeerIdsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactPeerIdsView.swift; sourceTree = "<group>"; };
 		D0079F641D5A457A00A27A2C /* ContactPeersView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactPeersView.swift; sourceTree = "<group>"; };
 		D0079F6A1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerNameIndexRepresentation.swift; sourceTree = "<group>"; };
+		D00C7CD31E365C4E0080C3D5 /* PeerChatListPolicy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatListPolicy.swift; sourceTree = "<group>"; };
+		D00C7CE21E37861C0080C3D5 /* MessageView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
 		D00EED1D1C81F28D00341DFF /* MessageHistoryTagsTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTagsTable.swift; sourceTree = "<group>"; };
 		D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMergedOperationLogIndexTable.swift; sourceTree = "<group>"; };
 		D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageGloballyUniqueIdTable.swift; sourceTree = "<group>"; };
@@ -484,6 +490,7 @@
 				D03120FB1DA55427006A2A60 /* PeerNotificationSettings.swift */,
 				D021E0D31DB4FAE100C6B04F /* ItemCollection.swift */,
 				D07CFF801DCA765D00761F81 /* PeerChatInterfaceState.swift */,
+				D00C7CD31E365C4E0080C3D5 /* PeerChatListPolicy.swift */,
 			);
 			name = Objects;
 			sourceTree = "<group>";
@@ -530,6 +537,7 @@
 				D0A18D661E16874D004C6734 /* UnreadMessageCountsView.swift */,
 				D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */,
 				D0AAD1B41E32673C00D5B9DE /* TimestampBasedMessageAttributesView.swift */,
+				D00C7CE21E37861C0080C3D5 /* MessageView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -802,6 +810,7 @@
 				D0F7B1CE1E045C6A007EB8A5 /* MediaCleanupTable.swift in Sources */,
 				D0B418271D7DFE0C004562A4 /* IpcPipe.swift in Sources */,
 				D0B4184D1D7DFE20004562A4 /* ContactPeersView.swift in Sources */,
+				D00C7CE41E37861C0080C3D5 /* MessageView.swift in Sources */,
 				D0F7B1CC1E045C6A007EB8A5 /* ChatListIndexTable.swift in Sources */,
 				D0B4185E1D7DFE54004562A4 /* IpcNotifier.mm in Sources */,
 				D0F7B1D31E045C6A007EB8A5 /* CachedPeerDataTable.swift in Sources */,
@@ -841,6 +850,7 @@
 				D073CE7D1DCBF3B4007511FD /* PeerPresence.swift in Sources */,
 				D0B4184C1D7DFE20004562A4 /* ContactPeerIdsView.swift in Sources */,
 				D073CE751DCBF3B4007511FD /* Message.swift in Sources */,
+				D00C7CD51E365C4E0080C3D5 /* PeerChatListPolicy.swift in Sources */,
 				D0F7B1CB1E045C6A007EB8A5 /* ChatListTable.swift in Sources */,
 				D0F7B1C01E045C62007EB8A5 /* StringIndexTokens.swift in Sources */,
 				D0F7B1CA1E045C6A007EB8A5 /* MessageHistoryUnsentTable.swift in Sources */,
@@ -888,6 +898,7 @@
 				D08C713A1C501F0700779C0F /* MessageHistoryHole.swift in Sources */,
 				D044CA2A1C617D39002160FF /* SeedConfiguration.swift in Sources */,
 				D07CFF811DCA765D00761F81 /* PeerChatInterfaceState.swift in Sources */,
+				D00C7CE31E37861C0080C3D5 /* MessageView.swift in Sources */,
 				D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */,
 				D021E0D81DB4FD1300C6B04F /* ItemCollectionItemTable.swift in Sources */,
 				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
@@ -929,6 +940,7 @@
 				D07CFF851DCA99C400761F81 /* InitialMessageHistoryData.swift in Sources */,
 				D05F09A61C9E9F9300BB6F96 /* MediaResourceStatus.swift in Sources */,
 				D033A6F71C73D512006A2EAB /* MessageHistoryUnsentTable.swift in Sources */,
+				D00C7CD41E365C4E0080C3D5 /* PeerChatListPolicy.swift in Sources */,
 				D0A18D671E16874D004C6734 /* UnreadMessageCountsView.swift in Sources */,
 				D0D511021D64D73D00A97B8A /* IpcNotifier.mm in Sources */,
 				D0B844511DAC04FE005F29E1 /* PeerPresence.swift in Sources */,
