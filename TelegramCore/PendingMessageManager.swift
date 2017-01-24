@@ -250,21 +250,46 @@ public final class PendingMessageManager {
                 }
                 
                 if let state = state, let layer = layer {
-                    let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .sendMessage(layer: layer, id: message.id, file: secretFile), state: state)
-                    if updatedState != state {
-                        modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                    var sentAsAction = false
+                    for media in message.media {
+                        if let media = media as? TelegramMediaAction {
+                            if case let .messageAutoremoveTimeoutUpdated(value) = media.action {
+                                sentAsAction = true
+                                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value), state: state)
+                                if updatedState != state {
+                                    modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                                }
+                                modifier.updateMessage(message.id, update: { currentMessage in
+                                    var flags = StoreMessageFlags(message.flags)
+                                    flags.remove(.Sending)
+                                    var storeForwardInfo: StoreMessageForwardInfo?
+                                    if let forwardInfo = currentMessage.forwardInfo {
+                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                                    }
+                                    return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
+                                })
+                            }
+                            break
+                        }
                     }
-                    modifier.updateMessage(message.id, update: { currentMessage in
-                        var flags = StoreMessageFlags(message.flags)
-                        if !flags.contains(.Failed) {
-                            flags.insert(.Sending)
+                    
+                    if !sentAsAction {
+                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .sendMessage(layer: layer, id: message.id, file: secretFile), state: state)
+                        if updatedState != state {
+                            modifier.setPeerChatState(message.id.peerId, state: updatedState)
                         }
-                        var storeForwardInfo: StoreMessageForwardInfo?
-                        if let forwardInfo = currentMessage.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
-                        }
-                        return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
-                    })
+                        modifier.updateMessage(message.id, update: { currentMessage in
+                            var flags = StoreMessageFlags(message.flags)
+                            if !flags.contains(.Failed) {
+                                flags.insert(.Sending)
+                            }
+                            var storeForwardInfo: StoreMessageForwardInfo?
+                            if let forwardInfo = currentMessage.forwardInfo {
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                            }
+                            return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
+                        })
+                    }
                 } else {
                     modifier.updateMessage(message.id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?

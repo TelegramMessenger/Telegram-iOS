@@ -122,6 +122,16 @@ private final class PeerCachedDataContext {
     }
 }
 
+private final class CachedChannelParticipantsContext {
+    var subscribers = Bag<Int32>()
+    var timestamp: Double?
+    let disposable = MetaDisposable()
+    
+    deinit {
+        self.disposable.dispose()
+    }
+}
+
 public final class AccountViewTracker {
     weak var account: Account?
     private let queue = Queue()
@@ -132,13 +142,10 @@ public final class AccountViewTracker {
     private var webpageDisposables: [MessageId: Disposable] = [:]
     
     private var cachedDataContexts: [PeerId: PeerCachedDataContext] = [:]
+    private var cachedChannelParticipantsContexts: [PeerId: CachedChannelParticipantsContext] = [:]
     
     init(account: Account) {
         self.account = account
-    }
-    
-    deinit {
-        
     }
     
     private func updatePendingWebpages(viewId: Int32, messageIds: Set<MessageId>) {
@@ -309,6 +316,53 @@ public final class AccountViewTracker {
     public func peerView(_ peerId: PeerId) -> Signal<PeerView, NoError> {
         if let account = self.account {
             return wrappedPeerViewSignal(peerId: peerId, signal: account.postbox.peerView(id: peerId))
+        } else {
+            return .never()
+        }
+    }
+    
+    public func updatedCachedChannelParticipants(_ peerId: PeerId, forceImmediateUpdate: Bool = false) -> Signal<Void, NoError> {
+        if let account = self.account {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+                queue.async {
+                    if let strongSelf = self {
+                        let context: CachedChannelParticipantsContext
+                        if let currentContext = strongSelf.cachedChannelParticipantsContexts[peerId] {
+                            context = currentContext
+                        } else {
+                            context = CachedChannelParticipantsContext()
+                            strongSelf.cachedChannelParticipantsContexts[peerId] = context
+                        }
+                        
+                        let viewId = OSAtomicIncrement32(&strongSelf.nextViewId)
+                        let begin = forceImmediateUpdate || context.subscribers.isEmpty
+                        let index = context.subscribers.add(viewId)
+                        
+                        if begin {
+                            if let account = strongSelf.account {
+                                let signal = (fetchAndUpdateCachedParticipants(peerId: peerId, network: account.network, postbox: account.postbox) |> then(Signal<Void, NoError>.complete() |> delay(10 * 60, queue: Queue.concurrentDefaultQueue()))) |> restart
+                                context.disposable.set(signal.start())
+                            }
+                        }
+                        
+                        disposable.set(ActionDisposable {
+                            if let strongSelf = self {
+                                if let currentContext = strongSelf.cachedChannelParticipantsContexts[peerId] {
+                                    currentContext.subscribers.remove(index)
+                                    currentContext.disposable.dispose()
+                                    if currentContext.subscribers.isEmpty {
+                                        strongSelf.cachedChannelParticipantsContexts.removeValue(forKey: peerId)
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
+                return disposable
+            }
+            return .never()
         } else {
             return .never()
         }

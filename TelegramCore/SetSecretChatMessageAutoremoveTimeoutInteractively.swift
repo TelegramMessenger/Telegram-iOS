@@ -1,0 +1,25 @@
+import Foundation
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+#endif
+
+public func setSecretChatMessageAutoremoveTimeoutInteractively(account: Account, peerId: PeerId, timeout: Int32?) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Void in
+        if let peer = modifier.getPeer(peerId) as? TelegramSecretChat, let state = modifier.getPeerChatState(peerId) as? SecretChatState {
+            let updatedPeer = peer.withUpdatedMessageAutoremoveTimeout(timeout)
+            let updatedState = state.withUpdatedMessageAutoremoveTimeout(timeout)
+            if !updatedPeer.isEqual(peer) {
+                modifier.updatePeers([updatedPeer], update: { $1 })
+            }
+            if updatedState != state {
+                modifier.setPeerChatState(peerId, state: updatedState)
+            }
+            
+            enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: [.message(text: "", attributes: [], media: TelegramMediaAction(action: TelegramMediaActionType.messageAutoremoveTimeoutUpdated(timeout == nil ? 0 : timeout!)), replyToMessageId: nil)])
+        }
+    }
+}

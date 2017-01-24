@@ -16,7 +16,7 @@ void setBridgingTraceFunction(void (*f)(NSString *, NSString *)) {
 #if TARGET_IPHONE_SIMULATOR
 static bool loggingEnabled = true;
 #else
-static bool loggingEnabled = true;
+static bool loggingEnabled = false;
 #endif
 
 static void TGTelegramLoggingFunction(NSString *format, va_list args) {

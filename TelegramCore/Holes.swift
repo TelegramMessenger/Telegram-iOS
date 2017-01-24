@@ -49,20 +49,29 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                     let offsetId: Int32
                     let addOffset: Int32
                     let selectedLimit = limit
+                    let maxId: Int32
+                    let minId: Int32
+                    
                     switch direction {
                         case .UpperToLower:
                             offsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
                             addOffset = 0
+                            maxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                            minId = 1
                         case .LowerToUpper:
                             offsetId = hole.min <= 1 ? 1 : (hole.min - 1)
                             addOffset = Int32(-limit)
+                            maxId = Int32.max
+                            minId = hole.min - 1
                         case let .AroundIndex(index):
                             offsetId = index.id.id
                             addOffset = Int32(-limit / 2)
+                            maxId = Int32.max
+                            minId = 1
                     }
                     
                     //request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1), minId: hole.min - 1))
-                    request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: Int32.max, minId: 1))
+                    request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                 }
                 
                 return request

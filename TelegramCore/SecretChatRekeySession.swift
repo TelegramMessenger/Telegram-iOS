@@ -7,7 +7,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-private let keyUseCountThreshold: Int32 = 5
+private let keyUseCountThreshold: Int32 = 100
 
 func secretChatInitiateRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, state: SecretChatState) -> SecretChatState {
     switch state.embeddedState {
@@ -100,15 +100,21 @@ func secretChatAdvanceRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, s
                         assertionFailure()
                     }
                 case let .pfsRequestKey(rekeySessionId, gA):
+                    var acceptSession = true
                     if let rekeySession = sequenceState.rekeyState {
                         switch rekeySession.data {
                             case .requesting, .requested:
-                                break
+                                if rekeySessionId < rekeySession.id {
+                                    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsAbortSession(layer: .layer46, actionGloballyUniqueId: arc4random64(), rekeySessionId: rekeySession.id), mutable: true, delivered: false))
+                                } else {
+                                    acceptSession = false
+                                }
                             case .accepting, .accepted:
                                 break
                         }
-                        assertionFailure()
-                    } else {
+                    }
+                    
+                    if acceptSession {
                         let sessionId = arc4random64()
                         let bBytes = malloc(256)!
                         let _ = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))

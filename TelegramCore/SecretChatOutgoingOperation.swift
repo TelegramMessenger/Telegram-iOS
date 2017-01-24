@@ -94,6 +94,7 @@ private enum SecretChatOutgoingOperationValue: Int32 {
     case pfsAbortSession = 10
     case pfsCommitKey = 11
     case noop = 12
+    case setMessageAutoremoveTimeout = 13
 }
 
 enum SecretChatOutgoingOperationContents: Coding {
@@ -110,6 +111,7 @@ enum SecretChatOutgoingOperationContents: Coding {
     case pfsAbortSession(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64)
     case pfsCommitKey(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, keyFingerprint: Int64)
     case noop(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64)
+    case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32)
     
     init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("r") as Int32 {
@@ -139,6 +141,8 @@ enum SecretChatOutgoingOperationContents: Coding {
                 self = .pfsCommitKey(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), rekeySessionId: decoder.decodeInt64ForKey("s"), keyFingerprint: decoder.decodeInt64ForKey("f"))
             case SecretChatOutgoingOperationValue.noop.rawValue:
                 self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"))
+            case SecretChatOutgoingOperationValue.setMessageAutoremoveTimeout.rawValue:
+                self = .setMessageAutoremoveTimeout(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), timeout: decoder.decodeInt32ForKey("t"))
             default:
                 self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: 0)
                 assertionFailure()
@@ -221,6 +225,11 @@ enum SecretChatOutgoingOperationContents: Coding {
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.noop.rawValue, forKey: "r")
                 encoder.encodeInt32(layer.rawValue, forKey: "l")
                 encoder.encodeInt64(actionGloballyUniqueId, forKey: "i")
+            case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout):
+                encoder.encodeInt32(SecretChatOutgoingOperationValue.setMessageAutoremoveTimeout.rawValue, forKey: "r")
+                encoder.encodeInt32(layer.rawValue, forKey: "l")
+                encoder.encodeInt64(actionGloballyUniqueId, forKey: "i")
+                encoder.encodeInt32(timeout, forKey: "t")
         }
     }
 }

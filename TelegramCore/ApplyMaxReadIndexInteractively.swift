@@ -16,7 +16,7 @@ public func applyMaxReadIndexInteractively(postbox: Postbox, network: Network, i
                 if let message = modifier.getMessage(id) {
                     for attribute in message.attributes {
                         if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                            if attribute.countdownBeginTime == nil {
+                            if attribute.countdownBeginTime == nil && !message.containsSecretMedia {
                                 modifier.updateMessage(message.id, update: { currentMessage in
                                     var storeForwardInfo: StoreMessageForwardInfo?
                                     if let forwardInfo = currentMessage.forwardInfo {
@@ -46,10 +46,10 @@ func applyOutgoingReadMaxIndex(modifier: Modifier, index: MessageIndex, beginAt 
     let messageIds = modifier.applyOutgoingReadMaxIndex(index)
     if index.id.peerId.namespace == Namespaces.Peer.SecretChat {
         for id in messageIds {
-            if let message = modifier.getMessage(id) {
+            if let message = modifier.getMessage(id), !message.flags.contains(.Incoming) {
                 for attribute in message.attributes {
                     if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                        if attribute.countdownBeginTime == nil {
+                        if attribute.countdownBeginTime == nil && !message.containsSecretMedia {
                             modifier.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {

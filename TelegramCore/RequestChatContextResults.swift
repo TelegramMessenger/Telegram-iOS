@@ -18,8 +18,12 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
         }
     }
     |> mapToSignal { botAndPeer -> Signal<ChatContextResultCollection?, NoError> in
-        if let (bot, peer) = botAndPeer, let inputBot = apiInputUser(bot), let inputPeer = apiInputPeer(peer) {
+        if let (bot, peer) = botAndPeer, let inputBot = apiInputUser(bot) {
             var flags: Int32 = 0
+            var inputPeer: Api.InputPeer = .inputPeerEmpty
+            if let actualInputPeer = apiInputPeer(peer) {
+                inputPeer = actualInputPeer
+            }
             return account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: nil, query: query, offset: offset))
                 |> map { result -> ChatContextResultCollection? in
                     return ChatContextResultCollection(apiResults: result, botId: bot.id)

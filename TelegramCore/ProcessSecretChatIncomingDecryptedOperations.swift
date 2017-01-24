@@ -53,7 +53,7 @@ struct SecretChatOperationProcessResult {
     let addedMessages: [StoreMessage]
 }
 
-func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: PeerId) -> SecretChatOperationProcessResult {
+func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: Modifier, peerId: PeerId) -> SecretChatOperationProcessResult {
     if let state = modifier.getPeerChatState(peerId) as? SecretChatState, let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
         var removeTagLocalIndices: [Int32] = []
         var addedDecryptedOperations = false
@@ -109,6 +109,7 @@ func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: Pe
                 if let operation = entry.contents as? SecretChatIncomingDecryptedOperation {
                     do {
                         var message: StoreMessage?
+                        var resources: [(MediaResource, Data)] = []
                         var serviceAction: SecretChatServiceAction?
                         
                         guard let parsedLayer = SecretChatLayer(rawValue: operation.layer) else {
@@ -125,9 +126,12 @@ func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: Pe
                                 }
                             case .layer46:
                                 if let parsedObject = SecretApi46.parse(Buffer(bufferNoCopy: operation.contents)), let apiMessage = parsedObject as? SecretApi46.DecryptedMessage {
-                                    message = StoreMessage(peerId: peerId, authorId: updatedPeer.regularPeerId, tagLocalIndex: entry.tagLocalIndex, timestamp: operation.timestamp, apiMessage: apiMessage, file: operation.file, messageIdForGloballyUniqueMessageId: { id in
+                                    if let (parsedMessage, parsedResources) = parseMessage(peerId: peerId, authorId: updatedPeer.regularPeerId, tagLocalIndex: entry.tagLocalIndex, timestamp: operation.timestamp, apiMessage: apiMessage, file: operation.file, messageIdForGloballyUniqueMessageId: { id in
                                         return modifier.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id)
-                                    })
+                                    }) {
+                                        message = parsedMessage
+                                        resources = parsedResources
+                                    }
                                     serviceAction = SecretChatServiceAction(apiMessage)
                                 } else {
                                     throw MessageParsingError.contentParsingError
@@ -203,6 +207,16 @@ func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: Pe
                                     }
                                 case .clearHistory:
                                     break
+                                case let .markMessagesContentAsConsumed(globallyUniqueIds):
+                                    var messageIds: [MessageId] = []
+                                    for id in globallyUniqueIds {
+                                        if let messageId = modifier.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id) {
+                                            messageIds.append(messageId)
+                                        }
+                                    }
+                                    for messageId in messageIds {
+                                        markMessageContentAsConsumedRemotely(modifier: modifier, messageId: messageId)
+                                    }
                                 default:
                                     break
                             }
@@ -217,6 +231,9 @@ func processSecretChatIncomingDecryptedOperations(modifier: Modifier, peerId: Pe
                         }
                         
                         if let message = message {
+                            for (resource, data) in resources {
+                                mediaBox.storeResourceData(resource.id, data: data)
+                            }
                             modifier.addMessages([message], location: .Random)
                             addedMessages.append(message)
                         }
@@ -401,91 +418,119 @@ extension TelegramMediaFileAttribute {
     }
 }
 
-extension StoreMessage {
-    convenience init?(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi46.DecryptedMessage, file: SecretChatFileReference?, messageIdForGloballyUniqueMessageId: (Int64) -> MessageId?) {
-        switch apiMessage {
-            case let .decryptedMessage(flags, randomId, ttl, message, media, entities, viaBotName, replyToRandomId):
-                var text = message
-                var parsedMedia: [Media] = []
-                var attributes: [MessageAttribute] = []
-                
-                if ttl > 0 {
-                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttl, countdownBeginTime: nil))
-                }
-                
-                if let media = media {
-                    switch media {
-                        case let .decryptedMessageMediaPhoto(_, thumbW, thumbH, w, h, size, key, iv, caption):
-                            if !caption.isEmpty {
-                                text = caption
+
+private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi46.DecryptedMessage, file: SecretChatFileReference?, messageIdForGloballyUniqueMessageId: (Int64) -> MessageId?) -> (StoreMessage, [(MediaResource, Data)])? {
+    switch apiMessage {
+        case let .decryptedMessage(flags, randomId, ttl, message, media, entities, viaBotName, replyToRandomId):
+            var text = message
+            var parsedMedia: [Media] = []
+            var attributes: [MessageAttribute] = []
+            var resources: [(MediaResource, Data)] = []
+            
+            if ttl > 0 {
+                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttl, countdownBeginTime: nil))
+            }
+            
+            if let media = media {
+                switch media {
+                    case let .decryptedMessageMediaPhoto(thumb, thumbW, thumbH, w, h, size, key, iv, caption):
+                        if !caption.isEmpty {
+                            text = caption
+                        }
+                        if let file = file {
+                            var representations: [TelegramMediaImageRepresentation] = []
+                            if thumb.size != 0 {
+                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(thumbW), height: CGFloat(thumbH)), resource: resource))
+                                resources.append((resource, thumb.makeData()))
                             }
-                            if let file = file {
-                                let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: file.id), representations: [TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size))])
-                                parsedMedia.append(image)
-                            }
-                        case let .decryptedMessageMediaAudio(duration, mimeType, size, key, iv):
-                            if let file = file {
-                                let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: [], mimeType: mimeType, size: Int(size), attributes: [TelegramMediaFileAttribute.Audio(isVoice: true, duration: Int(duration), title: nil, performer: nil, waveform: nil)])
-                                parsedMedia.append(fileMedia)
-                            }
-                        case let .decryptedMessageMediaDocument(thumb, thumbW, thumbH, mimeType, size, key, iv, attributes, caption):
-                            if !caption.isEmpty {
-                                text = caption
-                            }
-                            if let file = file {
-                                var parsedAttributes: [TelegramMediaFileAttribute] = []
-                                for attribute in attributes {
-                                    if let parsedAttribute = TelegramMediaFileAttribute(attribute) {
-                                        parsedAttributes.append(parsedAttribute)
-                                    }
-                                }
-                                let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: [], mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
-                                parsedMedia.append(fileMedia)
-                            }
-                        case let .decryptedMessageMediaExternalDocument(id, accessHash, date, mimeType, size, thumb, dcId, attributes):
+                            representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size)))
+                            let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: file.id), representations: representations)
+                            parsedMedia.append(image)
+                        }
+                    case let .decryptedMessageMediaAudio(duration, mimeType, size, key, iv):
+                        if let file = file {
+                            let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: [], mimeType: mimeType, size: Int(size), attributes: [TelegramMediaFileAttribute.Audio(isVoice: true, duration: Int(duration), title: nil, performer: nil, waveform: nil)])
+                            parsedMedia.append(fileMedia)
+                        }
+                    case let .decryptedMessageMediaDocument(thumb, thumbW, thumbH, mimeType, size, key, iv, attributes, caption):
+                        if !caption.isEmpty {
+                            text = caption
+                        }
+                        if let file = file {
                             var parsedAttributes: [TelegramMediaFileAttribute] = []
                             for attribute in attributes {
                                 if let parsedAttribute = TelegramMediaFileAttribute(attribute) {
                                     parsedAttributes.append(parsedAttribute)
                                 }
                             }
-                            let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size)), previewRepresentations: [], mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+                            var previewRepresentations: [TelegramMediaImageRepresentation] = []
+                            if thumb.size != 0 {
+                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(thumbW), height: CGFloat(thumbH)), resource: resource))
+                                resources.append((resource, thumb.makeData()))
+                            }
+                            let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: previewRepresentations, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                             parsedMedia.append(fileMedia)
-                        default:
-                            break
-                    }
+                        }
+                    case let .decryptedMessageMediaVideo(thumb, thumbW, thumbH, duration, mimeType, w, h, size, key, iv, caption):
+                        if !caption.isEmpty {
+                            text = caption
+                        }
+                        if let file = file {
+                            var parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h))), .FileName(fileName: "video.mov")]
+                            var previewRepresentations: [TelegramMediaImageRepresentation] = []
+                            if thumb.size != 0 {
+                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(thumbW), height: CGFloat(thumbH)), resource: resource))
+                                resources.append((resource, thumb.makeData()))
+                            }
+                            let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: previewRepresentations, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+                            parsedMedia.append(fileMedia)
+                        }
+                    case let .decryptedMessageMediaExternalDocument(id, accessHash, date, mimeType, size, thumb, dcId, attributes):
+                        var parsedAttributes: [TelegramMediaFileAttribute] = []
+                        for attribute in attributes {
+                            if let parsedAttribute = TelegramMediaFileAttribute(attribute) {
+                                parsedAttributes.append(parsedAttribute)
+                            }
+                        }
+                        let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size)), previewRepresentations: [], mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+                        parsedMedia.append(fileMedia)
+                    default:
+                        break
                 }
-                if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
-                    attributes.append(ReplyMessageAttribute(messageId: replyMessageId))
-                }
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: tagsForStoreMessage(parsedMedia), forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia)
-            case let .decryptedMessageService(randomId, action):
-                switch action {
-                    case let .decryptedMessageActionDeleteMessages(randomIds):
-                        return nil
-                    case .decryptedMessageActionFlushHistory:
-                        return nil
-                    case let .decryptedMessageActionNotifyLayer(layer):
-                        return nil
-                    case let .decryptedMessageActionReadMessages(randomIds):
-                        return nil
-                    case let .decryptedMessageActionScreenshotMessages(randomIds):
-                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .historyScreenshot)])
-                    case let .decryptedMessageActionSetMessageTTL(ttlSeconds):
-                        self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(ttlSeconds))])
-                    case let .decryptedMessageActionResend(startSeqNo, endSeqNo):
-                        return nil
-                    case let .decryptedMessageActionRequestKey(exchangeId, gA):
-                        return nil
-                    case let .decryptedMessageActionAcceptKey(exchangeId, gB, keyFingerprint):
-                        return nil
-                    case let .decryptedMessageActionCommitKey(exchangeId, keyFingerprint):
-                        return nil
-                    case let .decryptedMessageActionAbortKey(exchangeId):
-                        return nil
-                    case .decryptedMessageActionNoop:
-                        return nil
-                }
-        }
+            }
+            if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
+                attributes.append(ReplyMessageAttribute(messageId: replyMessageId))
+            }
+            return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: tagsForStoreMessage(parsedMedia), forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia), resources)
+        case let .decryptedMessageService(randomId, action):
+            switch action {
+                case let .decryptedMessageActionDeleteMessages(randomIds):
+                    return nil
+                case .decryptedMessageActionFlushHistory:
+                    return nil
+                case let .decryptedMessageActionNotifyLayer(layer):
+                    return nil
+                case let .decryptedMessageActionReadMessages(randomIds):
+                    return nil
+                case let .decryptedMessageActionScreenshotMessages(randomIds):
+                    return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .historyScreenshot)]), [])
+                case let .decryptedMessageActionSetMessageTTL(ttlSeconds):
+                    return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(ttlSeconds))]), [])
+                case let .decryptedMessageActionResend(startSeqNo, endSeqNo):
+                    return nil
+                case let .decryptedMessageActionRequestKey(exchangeId, gA):
+                    return nil
+                case let .decryptedMessageActionAcceptKey(exchangeId, gB, keyFingerprint):
+                    return nil
+                case let .decryptedMessageActionCommitKey(exchangeId, keyFingerprint):
+                    return nil
+                case let .decryptedMessageActionAbortKey(exchangeId):
+                    return nil
+                case .decryptedMessageActionNoop:
+                    return nil
+            }
     }
 }

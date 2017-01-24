@@ -42,16 +42,13 @@ private func updatedRemoteContactPeers(network: Network, hash: String) -> Signal
 }
 
 func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
-    if true {
-        return .never()
-    }
-    
     let initialContactPeerIdsHash = postbox.contactPeerIdsView()
         |> take(1)
         |> map { peerIds -> String in
             var stringToHash = ""
             var first = true
-            for userId in peerIds.peerIds.map({ $0.id }).sorted() {
+            let sortedUserIds = Set(peerIds.peerIds.filter({ $0.namespace == Namespaces.Peer.CloudUser }).map({ $0.id })).sorted()
+            for userId in sortedUserIds {
                 if first {
                     first = false
                 } else {

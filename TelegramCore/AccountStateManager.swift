@@ -197,6 +197,7 @@ public final class AccountStateManager {
                 self.operationTimer?.invalidate()
                 self.currentIsUpdatingValue = true
                 let account = self.account
+                let mediaBox = account.postbox.mediaBox
                 let queue = self.queue
                 let signal = account.postbox.state()
                     |> filter { state in
@@ -226,7 +227,7 @@ public final class AccountStateManager {
                                                         }
                                                     }
                                                     return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
-                                                        if let replayedState = replayFinalState(modifier, finalState: finalState) {
+                                                        if let replayedState = replayFinalState(mediaBox: mediaBox, modifier: modifier, finalState: finalState) {
                                                             return (difference, replayedState)
                                                         } else {
                                                             return (nil, nil)
@@ -310,6 +311,7 @@ public final class AccountStateManager {
             case let .processUpdateGroups(groups):
                 self.operationTimer?.invalidate()
                 let account = self.account
+                let mediaBox = account.postbox.mediaBox
                 let queue = self.queue
                 let signal = initialStateWithUpdateGroups(account, groups: groups)
                     |> mapToSignal { [weak self] state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
@@ -322,7 +324,7 @@ public final class AccountStateManager {
                                 }
                                 
                                 return account.postbox.modify { modifier -> AccountReplayedFinalState? in
-                                    return replayFinalState(modifier, finalState: finalState)
+                                    return replayFinalState(mediaBox: mediaBox, modifier: modifier, finalState: finalState)
                                 }
                                 |> map({ ($0, finalState) })
                                 |> deliverOn(queue)

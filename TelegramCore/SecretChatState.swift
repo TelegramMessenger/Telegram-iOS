@@ -113,7 +113,7 @@ enum SecretChatRekeySessionData: Coding, Equatable {
             case SecretChatRekeySessionDataValue.requesting.rawValue:
                 self = .requesting
             case SecretChatRekeySessionDataValue.requested.rawValue:
-                self = .requested(a: decoder.decodeBytesForKey("a")!, config: decoder.decodeObjectForKey("c", decoder: { SecretChatRekeySessionData(decoder: $0) }) as! SecretChatEncryptionConfig)
+                self = .requested(a: decoder.decodeBytesForKey("a")!, config: decoder.decodeObjectForKey("c", decoder: { SecretChatEncryptionConfig(decoder: $0) }) as! SecretChatEncryptionConfig)
             case SecretChatRekeySessionDataValue.accepting.rawValue:
                 self = .accepting
             case SecretChatRekeySessionDataValue.accepted.rawValue:

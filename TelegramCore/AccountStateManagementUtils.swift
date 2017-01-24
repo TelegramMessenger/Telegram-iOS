@@ -1225,7 +1225,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     return result
 }
 
-func replayFinalState(_ modifier: Modifier, finalState: AccountFinalState) -> AccountReplayedFinalState? {
+func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: AccountFinalState) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(modifier, finalState: finalState.state)
     if !verified { 
         return nil
@@ -1390,7 +1390,7 @@ func replayFinalState(_ modifier: Modifier, finalState: AccountFinalState) -> Ac
         while true {
             let keychain = (modifier.getPeerChatState(peerId) as? SecretChatState)?.keychain
             if processSecretChatIncomingEncryptedOperations(modifier: modifier, peerId: peerId) {
-                let processResult = processSecretChatIncomingDecryptedOperations(modifier: modifier, peerId: peerId)
+                let processResult = processSecretChatIncomingDecryptedOperations(mediaBox: mediaBox, modifier: modifier, peerId: peerId)
                 if !processResult.addedMessages.isEmpty {
                     for message in processResult.addedMessages {
                         if case let .Id(id) = message.id {

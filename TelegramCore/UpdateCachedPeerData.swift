@@ -108,8 +108,8 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                         
                                         modifier.updatePeerPresences(peerPresences)
                                         
-                                        modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, _ in
-                                            return cachedChannelData
+                                        modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, currentData in
+                                            return cachedChannelData.withUpdatedTopParticipants((currentData as? CachedChannelData)?.topParticipants)
                                         })
                                     }
                             }

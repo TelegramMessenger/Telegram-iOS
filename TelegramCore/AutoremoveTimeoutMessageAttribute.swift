@@ -30,3 +30,37 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         }
     }
 }
+
+public extension Message {
+    public var containsSecretMedia: Bool {
+        var found = false
+        for attribute in self.attributes {
+            if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                if attribute.timeout > 1 * 60 {
+                    return false
+                }
+                found = true
+                break
+            }
+        }
+        
+        if !found {
+            return false
+        }
+        
+        for media in self.media {
+            switch media {
+                case _ as TelegramMediaImage:
+                    return true
+                case let file as TelegramMediaFile:
+                    if file.isVideo {
+                        return true
+                    }
+                default:
+                    break
+            }
+        }
+        
+        return false
+    }
+}

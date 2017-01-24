@@ -129,6 +129,10 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .pfsAbortSession(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .noop(layer, actionGloballyUniqueId):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .noop(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                    case let .readMessagesContent(layer, actionGloballyUniqueId, globallyUniqueIds):
+                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .readMessageContents(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                    case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout):
+                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, timeout: timeout), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     default:
                                         assertionFailure()
                                 }
@@ -319,6 +323,8 @@ private enum SecretMessageAction {
     case pfsAbortSession(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64)
     case pfsCommitKey(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, keyFingerprint: Int64)
     case noop(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64)
+    case readMessageContents(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
+    case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32)
     
     var globallyUniqueId: Int64 {
         switch self {
@@ -339,6 +345,10 @@ private enum SecretMessageAction {
             case let .pfsCommitKey(_, actionGloballyUniqueId, _, _):
                 return actionGloballyUniqueId
             case let .noop(_, actionGloballyUniqueId):
+                return actionGloballyUniqueId
+            case let .readMessageContents(_, actionGloballyUniqueId, _):
+                return actionGloballyUniqueId
+            case let .setMessageAutoremoveTimeout(_, actionGloballyUniqueId, _):
                 return actionGloballyUniqueId
         }
     }
@@ -405,7 +415,7 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
                 case .layer46:
                     let decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: Buffer(), thumbW: 90, thumbH: 90, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
                     
-                    return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: 0, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
+                    return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
             }
         } else if let file = media as? TelegramMediaFile {
             switch layer {
@@ -445,7 +455,7 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
                     }
                     
                     if let decryptedMedia = decryptedMedia {
-                        return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: 0, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
+                        return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
                     }
             }
         }
@@ -526,6 +536,28 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
             switch layer {
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionNoop))
+            }
+        case let .readMessageContents(layer, actionGloballyUniqueId, globallyUniqueIds):
+            switch layer {
+                case .layer8:
+                    let randomBytesData = malloc(15)!
+                    arc4random_buf(randomBytesData, 15)
+                    let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
+                    
+                    return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionReadMessages(randomIds: globallyUniqueIds)))
+                case .layer46:
+                    return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionReadMessages(randomIds: globallyUniqueIds)))
+            }
+        case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout):
+            switch layer {
+                case .layer8:
+                    let randomBytesData = malloc(15)!
+                    arc4random_buf(randomBytesData, 15)
+                    let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
+                    
+                    return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionSetMessageTTL(ttlSeconds: timeout)))
+                case .layer46:
+                    return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionSetMessageTTL(ttlSeconds: timeout)))
             }
     }
 }
