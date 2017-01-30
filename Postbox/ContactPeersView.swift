@@ -1,14 +1,12 @@
 import Foundation
 
 final class MutableContactPeersView {
-    fileprivate let index: PeerNameIndex
     fileprivate var peers: [PeerId: Peer]
     fileprivate var peerPresences: [PeerId: PeerPresence]
     fileprivate var peerIds: Set<PeerId>
     fileprivate var accountPeer: Peer?
     
-    init(peers: [PeerId: Peer], peerPresences: [PeerId: PeerPresence], index: PeerNameIndex, accountPeer: Peer?) {
-        self.index = index
+    init(peers: [PeerId: Peer], peerPresences: [PeerId: PeerPresence], accountPeer: Peer?) {
         self.peers = peers
         self.peerIds = Set<PeerId>(peers.map { $0.0 })
         self.peerPresences = peerPresences
@@ -59,7 +57,6 @@ public final class ContactPeersView {
     public let accountPeer: Peer?
     
     init(_ mutableView: MutableContactPeersView) {
-        let index = mutableView.index
         if let accountPeer = mutableView.accountPeer {
             var peers: [Peer] = []
             peers.reserveCapacity(mutableView.peers.count)

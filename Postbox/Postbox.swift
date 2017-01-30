@@ -134,6 +134,10 @@ public final class Modifier {
         self.postbox?.updatePeerNotificationSettings(notificationSettings)
     }
     
+    public func resetAllPeerNotificationSettings(_ notificationSettings: PeerNotificationSettings) {
+        self.postbox?.resetAllPeerNotificationSettings(notificationSettings)
+    }
+    
     public func updatePeerCachedData(peerIds: Set<PeerId>, update: (PeerId, CachedPeerData?) -> CachedPeerData?) {
         self.postbox?.updatePeerCachedData(peerIds: peerIds, update: update)
     }
@@ -241,6 +245,18 @@ public final class Modifier {
     public func removeTimestampBasedMessageAttribute(tag: UInt16, messageId: MessageId) {
         self.postbox?.removeTimestampBasedMessageAttribute(tag: tag, messageId: messageId)
     }
+    
+    public func getPreferencesEntry(key: ValueBoxKey) -> PreferencesEntry? {
+        return self.postbox?.getPreferencesEntry(key: key)
+    }
+    
+    public func setPreferencesEntry(key: ValueBoxKey, value: PreferencesEntry?) {
+        self.postbox?.setPreferencesEntry(key: key, value: value)
+    }
+    
+    public func updatePreferencesEntry(key: ValueBoxKey, _ f: (PreferencesEntry?) -> PreferencesEntry?) {
+        self.postbox?.setPreferencesEntry(key: key, value: f(self.postbox?.getPreferencesEntry(key: key)))
+    }
 }
 
 fileprivate class PipeNotifier: NSObject {
@@ -295,6 +311,7 @@ public final class Postbox {
     private var currentUpdatedTotalUnreadCount: Int32?
     private var currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation] = []
     private var currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation] = []
+    private var currentPreferencesOperations: [PreferencesOperation] = []
     
     private var currentReplaceChatListHoles: [(MessageIndex, ChatListHole?)] = []
     private var currentReplacedContactPeerIds: Set<PeerId>?
@@ -346,6 +363,7 @@ public final class Postbox {
     var peerOperationLogTable: PeerOperationLogTable!
     var timestampBasedMessageAttributesTable: TimestampBasedMessageAttributesTable!
     var timestampBasedMessageAttributesIndexTable: TimestampBasedMessageAttributesIndexTable!
+    var preferencesTable: PreferencesTable!
     
     //temporary
     var peerRatingTable: RatingTable<PeerId>!
@@ -363,14 +381,14 @@ public final class Postbox {
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         
         self.pipeNotifier = PipeNotifier(basePath: basePath, notify: { [weak self] in
-            if let strongSelf = self {
+            //if let strongSelf = self {
                 /*strongSelf.queue.async {
                     if strongSelf.valueBox != nil {
                         let _ = strongSelf.modify({ _ -> Void in
                         }).start()
                     }
                 }*/
-            }
+            //}
         })
         
         self.openDatabase()
@@ -468,6 +486,7 @@ public final class Postbox {
             self.peerOperationLogMetadataTable = PeerOperationLogMetadataTable(valueBox: self.valueBox, table: PeerOperationLogMetadataTable.tableSpec(29))
             self.peerMergedOperationLogIndexTable = PeerMergedOperationLogIndexTable(valueBox: self.valueBox, table: PeerMergedOperationLogIndexTable.tableSpec(30), metadataTable: self.peerOperationLogMetadataTable!)
             self.peerOperationLogTable = PeerOperationLogTable(valueBox: self.valueBox, table: PeerOperationLogTable.tableSpec(31), metadataTable: self.peerOperationLogMetadataTable, mergedIndexTable: self.peerMergedOperationLogIndexTable)
+            self.preferencesTable = PreferencesTable(valueBox: self.valueBox, table: PreferencesTable.tableSpec(35))
             
             self.tables.append(self.keychainTable)
             self.tables.append(self.peerTable)
@@ -500,6 +519,7 @@ public final class Postbox {
             self.tables.append(self.peerOperationLogMetadataTable)
             self.tables.append(self.peerMergedOperationLogIndexTable)
             self.tables.append(self.peerOperationLogTable)
+            self.tables.append(self.preferencesTable)
             
             self.transactionStateVersion = self.metadataTable.transactionStateVersion()
             
@@ -521,6 +541,8 @@ public final class Postbox {
                 return self.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
             }, getTimestampBasedMessageAttributesHead: { tag in
                 return self.timestampBasedMessageAttributesTable.head(tag: tag)
+            }, getPreferencesEntry: { key in
+                return self.preferencesTable.get(key: key)
             }, unsentMessageIds: self.messageHistoryUnsentTable!.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable!.get(getCombinedPeerReadState: { peerId in
                 return self.readStateTable.getCombinedState(peerId)
             }))
@@ -942,7 +964,7 @@ public final class Postbox {
             return self.peerTable.get(peerId)
         }, updatedTotalUnreadCount: &self.currentUpdatedTotalUnreadCount)
         
-        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
+        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, currentPreferencesOperations: self.currentPreferencesOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
@@ -973,6 +995,7 @@ public final class Postbox {
         self.currentUpdatedTotalUnreadCount = nil
         self.currentPeerMergedOperationLogOperations.removeAll()
         self.currentTimestampBasedMessageAttributesOperations.removeAll()
+        self.currentPreferencesOperations.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
@@ -1019,6 +1042,12 @@ public final class Postbox {
                 self.peerNotificationSettingsTable.set(id: peerId, settings: settings)
                 self.currentUpdatedPeerNotificationSettings[peerId] = settings
             }
+        }
+    }
+    
+    fileprivate func resetAllPeerNotificationSettings(_ notificationSettings: PeerNotificationSettings) {
+        for peerId in self.peerNotificationSettingsTable.resetAll(to: notificationSettings) {
+            self.currentUpdatedPeerNotificationSettings[peerId] = notificationSettings
         }
     }
     
@@ -1166,7 +1195,7 @@ public final class Postbox {
     private func addLocationsToMessageHistoryViewEntries(tagMask: MessageTags, earlier: MutableMessageHistoryEntry?, later: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry]) -> ([MutableMessageHistoryEntry], MutableMessageHistoryEntry?, MutableMessageHistoryEntry?) {
         if let firstEntry = entries.first {
             if let location = self.messageHistoryTagsTable.entryLocation(at: firstEntry.index, tagMask: tagMask) {
-                var mappedEarlier = earlier?.updatedLocation(location.predecessor)
+                let mappedEarlier = earlier?.updatedLocation(location.predecessor)
                 var mappedEntries: [MutableMessageHistoryEntry] = []
                 var previousLocation: MessageHistoryEntryLocation?
                 for i in 0 ..< entries.count {
@@ -1179,7 +1208,7 @@ public final class Postbox {
                     }
                 }
                 previousLocation = previousLocation?.successor
-                var mappedLater = later?.updatedLocation(previousLocation)
+                let mappedLater = later?.updatedLocation(previousLocation)
                 return (mappedEntries, mappedEarlier, mappedLater)
             } else {
                 return (entries, earlier, later)
@@ -1333,7 +1362,7 @@ public final class Postbox {
         } |> switchToLatest
     }
     
-    public func contactPeersView(index: PeerNameIndex, accountPeerId: PeerId) -> Signal<ContactPeersView, NoError> {
+    public func contactPeersView(accountPeerId: PeerId) -> Signal<ContactPeersView, NoError> {
         return self.modify { modifier -> Signal<ContactPeersView, NoError> in
             var peers: [PeerId: Peer] = [:]
             var peerPresences: [PeerId: PeerPresence] = [:]
@@ -1347,7 +1376,7 @@ public final class Postbox {
                 }
             }
             
-            let view = MutableContactPeersView(peers: peers, peerPresences: peerPresences, index: index, accountPeer: self.peerTable.get(accountPeerId))
+            let view = MutableContactPeersView(peers: peers, peerPresences: peerPresences, accountPeer: self.peerTable.get(accountPeerId))
             let (index, signal) = self.viewTracker.addContactPeersView(view)
             
             return (.single(ContactPeersView(view))
@@ -1424,6 +1453,23 @@ public final class Postbox {
         } |> switchToLatest
     }
     
+    public func multiplePeersView(_ ids: [PeerId]) -> Signal<MultiplePeersView, NoError> {
+        return self.modify { modifier -> Signal<MultiplePeersView, NoError> in
+            let view = MutableMultiplePeersView(peerIds: ids, getPeer: { self.peerTable.get($0) }, getPeerPresence: { self.peerPresenceTable.get($0) })
+            let (index, signal) = self.viewTracker.addMultiplePeersView(view)
+            
+            return (.single(MultiplePeersView(view))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeMultiplePeersView(index)
+                        }
+                    }
+            }
+            } |> switchToLatest
+    }
+    
     public func loadedPeerWithId(_ id: PeerId) -> Signal<Peer, NoError> {
         return self.modify { modifier -> Signal<Peer, NoError> in
             if let peer = self.peerTable.get(id) {
@@ -1464,7 +1510,7 @@ public final class Postbox {
     }
     
     public func updateMessageHistoryViewVisibleRange(_ id: MessageHistoryViewId, earliestVisibleIndex: MessageIndex, latestVisibleIndex: MessageIndex) {
-        self.modify({ modifier -> Void in
+        let _ = self.modify({ modifier -> Void in
             self.viewTracker.updateMessageHistoryViewVisibleRange(id, earliestVisibleIndex: earliestVisibleIndex, latestVisibleIndex: latestVisibleIndex)
         }).start()
     }
@@ -1640,6 +1686,33 @@ public final class Postbox {
         } |> switchToLatest
     }
     
+    public func preferencesView(keys: [ValueBoxKey]) -> Signal<PreferencesView, NoError> {
+        return self.modify { modifier -> Signal<PreferencesView, NoError> in
+            let view = MutablePreferencesView(keys: Set(keys), get: { key in
+                return self.preferencesTable.get(key: key)
+            })
+            let (index, signal) = self.viewTracker.addPreferencesView(view)
+            
+            return (.single(PreferencesView(view))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removePreferencesView(index)
+                        }
+                    }
+            }
+        } |> switchToLatest
+    }
+    
+    fileprivate func getPreferencesEntry(key: ValueBoxKey) -> PreferencesEntry? {
+        return self.preferencesTable.get(key: key)
+    }
+    
+    fileprivate func setPreferencesEntry(key: ValueBoxKey, value: PreferencesEntry?) {
+        self.preferencesTable.set(key: key, value: value, operations: &self.currentPreferencesOperations)
+    }
+    
     public func isMasterClient() -> Signal<Bool, NoError> {
         return self.modify { modifier -> Signal<Bool, NoError> in
             let sessionClientId = self.sessionClientId
@@ -1650,7 +1723,7 @@ public final class Postbox {
     }
     
     public func becomeMasterClient() {
-        self.modify({ modifier in
+        let _ = self.modify({ modifier in
             if self.metadataTable.masterClientId() != self.sessionClientId {
                 self.currentUpdatedMasterClientId = self.sessionClientId
             }

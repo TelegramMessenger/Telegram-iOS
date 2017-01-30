@@ -17,8 +17,8 @@ protocol ValueBox {
     func beginStats()
     func endStats()
     
-    func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, values: @noescape(ValueBoxKey, ReadBuffer) -> Bool, limit: Int)
-    func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, keys: @noescape(ValueBoxKey) -> Bool, limit: Int)
+    func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, values: (ValueBoxKey, ReadBuffer) -> Bool, limit: Int)
+    func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, keys: (ValueBoxKey) -> Bool, limit: Int)
     func get(_ table: ValueBoxTable, key: ValueBoxKey) -> ReadBuffer?
     func exists(_ table: ValueBoxTable, key: ValueBoxKey) -> Bool
     func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer)

@@ -121,6 +121,18 @@ public struct ValueBoxKey: Hashable, CustomStringConvertible, Comparable {
         }
     }
     
+    public var reversed: ValueBoxKey {
+        let key = ValueBoxKey(length: self.length)
+        let keyMemory = key.memory.assumingMemoryBound(to: UInt8.self)
+        let selfMemory = self.memory.assumingMemoryBound(to: UInt8.self)
+        var i = self.length - 1
+        while i >= 0 {
+            keyMemory[i] = selfMemory[self.length - 1 - i]
+            i -= 1
+        }
+        return key
+    }
+    
     public var successor: ValueBoxKey {
         let key = ValueBoxKey(length: self.length)
         memcpy(key.memory, self.memory, self.length)

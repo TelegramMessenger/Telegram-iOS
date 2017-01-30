@@ -69,6 +69,14 @@ private struct SqlitePreparedStatement {
         return key
     }
     
+    func int64KeyAt(_ index: Int) -> ValueBoxKey {
+        let value = sqlite3_column_int64(statement, Int32(index))
+        
+        let key = ValueBoxKey(length: 9)
+        key.setInt64(0, value: value)
+        return key
+    }
+    
     func destroy() {
         sqlite3_finalize(statement)
     }
@@ -158,15 +166,14 @@ final class SqliteValueBox: ValueBox {
         }
         lock.unlock()
         
-        checkpoints.set((Signal<Void, NoError>.single(Void()) |> delay(10.0, queue: Queue.concurrentDefaultQueue()) |> restart).start(next: { [weak self] _ in
-            if let strongSelf = self , strongSelf.database != nil {
-                strongSelf.queue.async {
-                    strongSelf.lock.lock()
-                    var nLog: Int32 = 0
-                    var nFrames: Int32 = 0
-                    sqlite3_wal_checkpoint_v2(strongSelf.database.handle, nil, SQLITE_CHECKPOINT_PASSIVE, &nLog, &nFrames)
-                    strongSelf.lock.unlock()
-                }
+        checkpoints.set((Signal<Void, NoError>.single(Void()) |> delay(10.0, queue: self.queue) |> restart).start(next: { [weak self] _ in
+            if let strongSelf = self, strongSelf.database != nil {
+                assert(strongSelf.queue.isCurrent())
+                strongSelf.lock.lock()
+                var nLog: Int32 = 0
+                var nFrames: Int32 = 0
+                sqlite3_wal_checkpoint_v2(strongSelf.database.handle, nil, SQLITE_CHECKPOINT_PASSIVE, &nLog, &nFrames)
+                strongSelf.lock.unlock()
                 //print("(SQLite WAL size \(nLog) removed \(nFrames))")
             }
         }))
@@ -706,40 +713,78 @@ final class SqliteValueBox: ValueBox {
             
             var startTime = CFAbsoluteTimeGetCurrent()
             
-            if start < end {
-                if limit <= 0 {
-                    statement = self.rangeValueAscStatementNoLimit(table, start: start, end: end)
-                } else {
-                    statement = self.rangeValueAscStatementLimit(table, start: start, end: end, limit: limit)
-                }
-            } else {
-                if limit <= 0 {
-                    statement = self.rangeValueDescStatementNoLimit(table, start: end, end: start)
-                } else {
-                    statement = self.rangeValueDescStatementLimit(table, start: end, end: start, limit: limit)
-                }
+            switch table.keyType {
+                case .binary:
+                    if start < end {
+                        if limit <= 0 {
+                            statement = self.rangeValueAscStatementNoLimit(table, start: start, end: end)
+                        } else {
+                            statement = self.rangeValueAscStatementLimit(table, start: start, end: end, limit: limit)
+                        }
+                    } else {
+                        if limit <= 0 {
+                            statement = self.rangeValueDescStatementNoLimit(table, start: end, end: start)
+                        } else {
+                            statement = self.rangeValueDescStatementLimit(table, start: end, end: start, limit: limit)
+                        }
+                    }
+                
+                    var currentTime = CFAbsoluteTimeGetCurrent()
+                    self.readQueryTime += currentTime - startTime
+                    
+                    startTime = currentTime
+                    
+                    while statement.step() {
+                        startTime = CFAbsoluteTimeGetCurrent()
+                        
+                        let key = statement.keyAt(0)
+                        let value = statement.valueAt(1)
+                        
+                        currentTime = CFAbsoluteTimeGetCurrent()
+                        self.readQueryTime += currentTime - startTime
+                        
+                        if !values(key, value) {
+                            break
+                        }
+                    }
+                    
+                    statement.reset()
+                case .int64:
+                    if start.reversed < end.reversed {
+                        if limit <= 0 {
+                            statement = self.rangeValueAscStatementNoLimit(table, start: start, end: end)
+                        } else {
+                            statement = self.rangeValueAscStatementLimit(table, start: start, end: end, limit: limit)
+                        }
+                    } else {
+                        if limit <= 0 {
+                            statement = self.rangeValueDescStatementNoLimit(table, start: end, end: start)
+                        } else {
+                            statement = self.rangeValueDescStatementLimit(table, start: end, end: start, limit: limit)
+                        }
+                    }
+                
+                    var currentTime = CFAbsoluteTimeGetCurrent()
+                    self.readQueryTime += currentTime - startTime
+                    
+                    startTime = currentTime
+                    
+                    while statement.step() {
+                        startTime = CFAbsoluteTimeGetCurrent()
+                        
+                        let key = statement.int64KeyAt(0)
+                        let value = statement.valueAt(1)
+                        
+                        currentTime = CFAbsoluteTimeGetCurrent()
+                        self.readQueryTime += currentTime - startTime
+                        
+                        if !values(key, value) {
+                            break
+                        }
+                    }
+                    
+                    statement.reset()
             }
-            
-            var currentTime = CFAbsoluteTimeGetCurrent()
-            self.readQueryTime += currentTime - startTime
-            
-            startTime = currentTime
-            
-            while statement.step() {
-                startTime = CFAbsoluteTimeGetCurrent()
-                
-                let key = statement.keyAt(0)
-                let value = statement.valueAt(1)
-                
-                currentTime = CFAbsoluteTimeGetCurrent()
-                self.readQueryTime += currentTime - startTime
-                
-                if !values(key, value) {
-                    break
-                }
-            }
-            
-            statement.reset()
         }
     }
     
@@ -750,39 +795,76 @@ final class SqliteValueBox: ValueBox {
             
             var startTime = CFAbsoluteTimeGetCurrent()
             
-            if start < end {
-                if limit <= 0 {
-                    statement = self.rangeKeyAscStatementNoLimit(table, start: start, end: end)
-                } else {
-                    statement = self.rangeKeyAscStatementLimit(table, start: start, end: end, limit: limit)
-                }
-            } else {
-                if limit <= 0 {
-                    statement = self.rangeKeyDescStatementNoLimit(table, start: end, end: start)
-                } else {
-                    statement = self.rangeKeyDescStatementLimit(table, start: end, end: start, limit: limit)
-                }
+            switch table.keyType {
+                case .binary:
+                    if start < end {
+                        if limit <= 0 {
+                            statement = self.rangeKeyAscStatementNoLimit(table, start: start, end: end)
+                        } else {
+                            statement = self.rangeKeyAscStatementLimit(table, start: start, end: end, limit: limit)
+                        }
+                    } else {
+                        if limit <= 0 {
+                            statement = self.rangeKeyDescStatementNoLimit(table, start: end, end: start)
+                        } else {
+                            statement = self.rangeKeyDescStatementLimit(table, start: end, end: start, limit: limit)
+                        }
+                    }
+                
+                    var currentTime = CFAbsoluteTimeGetCurrent()
+                    self.readQueryTime += currentTime - startTime
+                    
+                    startTime = currentTime
+                    
+                    while statement.step() {
+                        startTime = CFAbsoluteTimeGetCurrent()
+                        
+                        let key = statement.keyAt(0)
+                        
+                        currentTime = CFAbsoluteTimeGetCurrent()
+                        self.readQueryTime += currentTime - startTime
+                        
+                        if !keys(key) {
+                            break
+                        }
+                    }
+                    
+                    statement.reset()
+                case .int64:
+                    if start.reversed < end.reversed {
+                        if limit <= 0 {
+                            statement = self.rangeKeyAscStatementNoLimit(table, start: start, end: end)
+                        } else {
+                            statement = self.rangeKeyAscStatementLimit(table, start: start, end: end, limit: limit)
+                        }
+                    } else {
+                        if limit <= 0 {
+                            statement = self.rangeKeyDescStatementNoLimit(table, start: end, end: start)
+                        } else {
+                            statement = self.rangeKeyDescStatementLimit(table, start: end, end: start, limit: limit)
+                        }
+                    }
+                
+                    var currentTime = CFAbsoluteTimeGetCurrent()
+                    self.readQueryTime += currentTime - startTime
+                    
+                    startTime = currentTime
+                    
+                    while statement.step() {
+                        startTime = CFAbsoluteTimeGetCurrent()
+                        
+                        let key = statement.int64KeyAt(0)
+                        
+                        currentTime = CFAbsoluteTimeGetCurrent()
+                        self.readQueryTime += currentTime - startTime
+                        
+                        if !keys(key) {
+                            break
+                        }
+                    }
+                    
+                    statement.reset()
             }
-            
-            var currentTime = CFAbsoluteTimeGetCurrent()
-            self.readQueryTime += currentTime - startTime
-            
-            startTime = currentTime
-            
-            while statement.step() {
-                startTime = CFAbsoluteTimeGetCurrent()
-                
-                let key = statement.keyAt(0)
-                
-                currentTime = CFAbsoluteTimeGetCurrent()
-                self.readQueryTime += currentTime - startTime
-                
-                if !keys(key) {
-                    break
-                }
-            }
-            
-            statement.reset()
         }
     }
     

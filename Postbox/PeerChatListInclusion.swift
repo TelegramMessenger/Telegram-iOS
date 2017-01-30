@@ -2,6 +2,6 @@ import Foundation
 
 public enum PeerChatListInclusion {
     case never
-    case ifNotEmpty
+    case ifHasMessages
     case always(minTimestamp: Int32)
 }

@@ -66,6 +66,28 @@ final class PeerNotificationSettingsTable: Table {
         return (added, removed)
     }
     
+    func resetAll(to settings: PeerNotificationSettings) -> [PeerId] {
+        let lowerBound = ValueBoxKey(length: 8)
+        lowerBound.setInt64(0, value: 0)
+        let upperBound = ValueBoxKey(length: 8)
+        upperBound.setInt64(0, value: Int64.max)
+        var peerIds: [PeerId] = []
+        self.valueBox.range(self.table, start: lowerBound, end: upperBound, keys: { key in
+            peerIds.append(PeerId(key.getInt64(0)))
+            return true
+        }, limit: 0)
+        
+        var updatedPeerIds: [PeerId] = []
+        for peerId in peerIds {
+            if let current = self.get(peerId), !current.isEqual(to: settings) {
+                updatedPeerIds.append(peerId)
+                self.set(id: peerId, settings: settings)
+            }
+        }
+        
+        return updatedPeerIds
+    }
+    
     override func beforeCommit() {
         if !self.updatedInitialSettings.isEmpty {
             for (peerId, _) in self.updatedInitialSettings {
