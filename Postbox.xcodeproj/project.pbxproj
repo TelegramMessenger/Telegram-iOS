@@ -145,6 +145,8 @@
 		D0B8440A1DAB91B5005F29E1 /* RandomAccessMediaResourceContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */; };
 		D0B844511DAC04FE005F29E1 /* PeerPresence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844501DAC04FE005F29E1 /* PeerPresence.swift */; };
 		D0BC386C1E3FCEE50044D6FE /* MultiplePeersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386B1E3FCEE50044D6FE /* MultiplePeersView.swift */; };
+		D0BC38721E409E670044D6FE /* RenderedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC38711E409E670044D6FE /* RenderedPeer.swift */; };
+		D0BC38731E409E670044D6FE /* RenderedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC38711E409E670044D6FE /* RenderedPeer.swift */; };
 		D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */; };
 		D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */; };
 		D0C674CC1CBB14A700183765 /* PeerReadState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674CB1CBB14A700183765 /* PeerReadState.swift */; };
@@ -309,6 +311,7 @@
 		D0B418601D7DFE95004562A4 /* SwiftSignalKitMac.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftSignalKitMac.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug/SwiftSignalKitMac.framework"; sourceTree = "<group>"; };
 		D0B844501DAC04FE005F29E1 /* PeerPresence.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerPresence.swift; sourceTree = "<group>"; };
 		D0BC386B1E3FCEE50044D6FE /* MultiplePeersView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplePeersView.swift; sourceTree = "<group>"; };
+		D0BC38711E409E670044D6FE /* RenderedPeer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RenderedPeer.swift; sourceTree = "<group>"; };
 		D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryReadStateTable.swift; sourceTree = "<group>"; };
 		D0C674CB1CBB14A700183765 /* PeerReadState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerReadState.swift; sourceTree = "<group>"; };
@@ -504,6 +507,7 @@
 				D07CFF801DCA765D00761F81 /* PeerChatInterfaceState.swift */,
 				D00C7CD31E365C4E0080C3D5 /* PeerChatListInclusion.swift */,
 				D08775021E3E3E7400A97350 /* PreferencesEntry.swift */,
+				D0BC38711E409E670044D6FE /* RenderedPeer.swift */,
 			);
 			name = Objects;
 			sourceTree = "<group>";
@@ -856,6 +860,7 @@
 				D073CE7C1DCBF3B4007511FD /* CachedPeerData.swift in Sources */,
 				D0F7B1DA1E045C6A007EB8A5 /* RatingTable.swift in Sources */,
 				D073CE9F1DCBF3C1007511FD /* InitialMessageHistoryData.swift in Sources */,
+				D0BC38731E409E670044D6FE /* RenderedPeer.swift in Sources */,
 				D0F7B1DE1E045C6A007EB8A5 /* PeerChatTopIndexableMessageIds.swift in Sources */,
 				D0B4184A1D7DFE20004562A4 /* UnsentMessageHistoryView.swift in Sources */,
 				D0B418231D7DFE0C004562A4 /* SimpleDictionary.swift in Sources */,
@@ -971,6 +976,7 @@
 				D0F9E86D1C5A0E5D00037222 /* MetadataTable.swift in Sources */,
 				D0E3A7841B28AE0900A402D9 /* Peer.swift in Sources */,
 				D0D510F61D63BBE100A97B8A /* MessageHistoryOperation.swift in Sources */,
+				D0BC38721E409E670044D6FE /* RenderedPeer.swift in Sources */,
 				D08775031E3E3E7400A97350 /* PreferencesEntry.swift in Sources */,
 				D0AB0B901D65D4AB002C78E7 /* UnsentMessageIndicesView.swift in Sources */,
 				D08775001E3E3D9F00A97350 /* PreferencesTable.swift in Sources */,

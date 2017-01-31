@@ -229,7 +229,7 @@ final class PeerNameIndexTable: Table {
             for peerId in peerIds {
                 var foundInChats = false
                 if categories.contains(.chats) {
-                    if let index = chatListIndexTable.get(peerId) {
+                    if let index = chatListIndexTable.get(peerId).includedIndex(peerId: peerId) {
                         foundInChats = true
                         chatIndices[peerId] = index
                     }

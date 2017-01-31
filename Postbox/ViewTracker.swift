@@ -270,7 +270,9 @@ final class ViewTracker {
         
         for (mutableView, pipe) in self.chatListViews.copyItems() {
             if mutableView.refreshDueToExternalTransaction(fetchAroundChatEntries: fetchAroundChatEntries) {
-                mutableView.render(self.renderMessage, getPeerNotificationSettings: self.getPeerNotificationSettings)
+                mutableView.render(self.renderMessage, getPeer: { id in
+                    return self.getPeer(id)
+                }, getPeerNotificationSettings: self.getPeerNotificationSettings)
                 pipe.putNext((ChatListView(mutableView), .Generic))
             }
         }
@@ -386,7 +388,9 @@ final class ViewTracker {
                 let context = MutableChatListViewReplayContext()
                 if mutableView.replay(transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, context: context) {
                     mutableView.complete(context: context, fetchEarlier: self.fetchEarlierChatEntries, fetchLater: self.fetchLaterChatEntries)
-                    mutableView.render(self.renderMessage, getPeerNotificationSettings: self.getPeerNotificationSettings)
+                    mutableView.render(self.renderMessage, getPeer: { id in
+                        return self.getPeer(id)
+                    }, getPeerNotificationSettings: self.getPeerNotificationSettings)
                     //var updateType: ViewUpdateType = .Generic
                     for operation in transaction.chatListOperations {
                         if case .RemoveHoles = operation {

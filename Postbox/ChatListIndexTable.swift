@@ -1,5 +1,37 @@
 import Foundation
 
+struct ChatListInclusionIndex {
+    let topMessageIndex: MessageIndex?
+    let inclusion: PeerChatListInclusion
+    
+    func includedIndex(peerId: PeerId) -> ChatListIndex? {
+        switch inclusion {
+            case .notSpecified, .never:
+                return nil
+            case .ifHasMessages:
+                if let topMessageIndex = self.topMessageIndex {
+                    return ChatListIndex(pinningIndex: nil, messageIndex: topMessageIndex)
+                } else {
+                    return nil
+                }
+            case let .ifHasMessagesOrOneOf(pinningIndex, minTimestamp):
+                if let minTimestamp = minTimestamp {
+                    if let topMessageIndex = self.topMessageIndex, topMessageIndex.timestamp >= minTimestamp {
+                        return ChatListIndex(pinningIndex: pinningIndex, messageIndex: topMessageIndex)
+                    } else {
+                        return ChatListIndex(pinningIndex: pinningIndex, messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: minTimestamp))
+                    }
+                } else if let topMessageIndex = self.topMessageIndex {
+                    return ChatListIndex(pinningIndex: pinningIndex, messageIndex: topMessageIndex)
+                } else if let pinningIndex = pinningIndex {
+                    return ChatListIndex(pinningIndex: pinningIndex, messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: 0))
+                } else {
+                    return nil
+                }
+        }
+    }
+}
+
 final class ChatListIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .int64)
@@ -12,8 +44,8 @@ final class ChatListIndexTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 8)
     
-    private var cachedIndices: [PeerId: ChatListIndex?] = [:]
-    private var updatedPreviousCachedIndices: [PeerId: ChatListIndex?] = [:]
+    private var cachedIndices: [PeerId: ChatListInclusionIndex] = [:]
+    private var updatedPreviousCachedIndices: [PeerId: ChatListInclusionIndex] = [:]
     
     init(valueBox: ValueBox, table: ValueBoxTable, peerNameIndexTable: PeerNameIndexTable, metadataTable: MessageHistoryMetadataTable, readStateTable: MessageHistoryReadStateTable, notificationSettingsTable: PeerNotificationSettingsTable) {
         self.peerNameIndexTable = peerNameIndexTable
@@ -29,34 +61,81 @@ final class ChatListIndexTable: Table {
         return self.sharedKey
     }
     
-    func set(_ index: ChatListIndex) {
-        self.updatedPreviousCachedIndices[index.messageIndex.id.peerId] = self.get(index.messageIndex.id.peerId)
-        self.cachedIndices[index.messageIndex.id.peerId] = index
+    func setTopMessageIndex(peerId: PeerId, index: MessageIndex?) -> ChatListInclusionIndex {
+        let current = self.get(peerId)
+        if self.updatedPreviousCachedIndices[peerId] == nil {
+            self.updatedPreviousCachedIndices[peerId] = current
+        }
+        let updated = ChatListInclusionIndex(topMessageIndex: index, inclusion: current.inclusion)
+        self.cachedIndices[peerId] = updated
+        return updated
     }
     
-    func remove(_ peerId: PeerId) {
-        self.updatedPreviousCachedIndices[peerId] = self.get(peerId)
-        self.cachedIndices[peerId] = nil
+    func setInclusion(peerId: PeerId, inclusion: PeerChatListInclusion) -> ChatListInclusionIndex {
+        let current = self.get(peerId)
+        if self.updatedPreviousCachedIndices[peerId] == nil {
+            self.updatedPreviousCachedIndices[peerId] = current
+        }
+        let updated = ChatListInclusionIndex(topMessageIndex: current.topMessageIndex, inclusion: inclusion)
+        self.cachedIndices[peerId] = updated
+        return updated
     }
     
-    func get(_ peerId: PeerId) -> ChatListIndex? {
+    func get(_ peerId: PeerId) -> ChatListInclusionIndex {
         if let cached = self.cachedIndices[peerId] {
             return cached
         } else {
             if let value = self.valueBox.get(self.table, key: self.key(peerId)) {
-                var pinningIndexValue: UInt16 = 0
-                var idNamespace: Int32 = 0
-                var idId: Int32 = 0
-                var idTimestamp: Int32 = 0
-                value.read(&pinningIndexValue, offset: 0, length: 2)
-                value.read(&idNamespace, offset: 0, length: 4)
-                value.read(&idId, offset: 0, length: 4)
-                value.read(&idTimestamp, offset: 0, length: 4)
-                let index = ChatListIndex(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: idNamespace, id: idId), timestamp: idTimestamp))
-                self.cachedIndices[peerId] = index
-                return index
+                let topMessageIndex: MessageIndex?
+                
+                var hasIndex: Int8 = 0
+                value.read(&hasIndex, offset: 0, length: 1)
+                if hasIndex != 0 {
+                    var idNamespace: Int32 = 0
+                    var idId: Int32 = 0
+                    var idTimestamp: Int32 = 0
+                    value.read(&idNamespace, offset: 0, length: 4)
+                    value.read(&idId, offset: 0, length: 4)
+                    value.read(&idTimestamp, offset: 0, length: 4)
+                    topMessageIndex = MessageIndex(id: MessageId(peerId: peerId, namespace: idNamespace, id: idId), timestamp: idTimestamp)
+                } else {
+                    topMessageIndex = nil
+                }
+                
+                let inclusion: PeerChatListInclusion
+                
+                var inclusionId: Int8 = 0
+                value.read(&inclusionId, offset: 0, length: 1)
+                if inclusionId == 0 {
+                    inclusion = .notSpecified
+                } else if inclusionId == 1 {
+                    inclusion = .never
+                } else if inclusionId == 2 {
+                    inclusion = .ifHasMessages
+                } else if inclusionId == 3 {
+                    var pinningIndexValue: UInt16 = 0
+                    value.read(&pinningIndexValue, offset: 0, length: 2)
+                    
+                    var hasMinTimestamp: Int8 = 0
+                    value.read(&hasMinTimestamp, offset: 0, length: 1)
+                    let minTimestamp: Int32?
+                    if hasMinTimestamp != 0 {
+                        var minTimestampValue: Int32 = 0
+                        value.read(&minTimestampValue, offset: 0, length: 4)
+                        minTimestamp = minTimestampValue
+                    } else {
+                        minTimestamp = nil
+                    }
+                    inclusion = .ifHasMessagesOrOneOf(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), minTimestamp: minTimestamp)
+                } else {
+                    preconditionFailure()
+                }
+                
+                let inclusionIndex = ChatListInclusionIndex(topMessageIndex: topMessageIndex, inclusion: inclusion)
+                self.cachedIndices[peerId] = inclusionIndex
+                return inclusionIndex
             } else {
-                return nil
+                return ChatListInclusionIndex(topMessageIndex: nil, inclusion: .notSpecified)
             }
         }
     }
@@ -73,28 +152,60 @@ final class ChatListIndexTable: Table {
             
             for (peerId, previousIndex) in self.updatedPreviousCachedIndices {
                 let index = self.cachedIndices[peerId]!
-                if let index = index {
-                    if previousIndex == nil {
+                if index.includedIndex(peerId: peerId) != nil {
+                    if previousIndex.includedIndex(peerId: peerId) == nil {
                         addedChatListPeerIds.insert(peerId)
                     }
-                    
-                    let writeBuffer = WriteBuffer()
-                    var pinningIndexValue: UInt16 = keyValueForChatListPinningIndex(index.pinningIndex)
-                    var idNamespace: Int32 = index.messageIndex.id.namespace
-                    var idId: Int32 = index.messageIndex.id.id
-                    var idTimestamp: Int32 = index.messageIndex.timestamp
-                    writeBuffer.write(&pinningIndexValue, offset: 0, length: 2)
+                } else if previousIndex.includedIndex(peerId: peerId) != nil {
+                    removedChatListPeerIds.insert(peerId)
+                }
+                
+                let writeBuffer = WriteBuffer()
+                
+                if let topMessageIndex = index.topMessageIndex {
+                    var hasIndex: Int8 = 1
+                    writeBuffer.write(&hasIndex, offset: 0, length: 1)
+                    var idNamespace: Int32 = topMessageIndex.id.namespace
+                    var idId: Int32 = topMessageIndex.id.id
+                    var idTimestamp: Int32 = topMessageIndex.timestamp
                     writeBuffer.write(&idNamespace, offset: 0, length: 4)
                     writeBuffer.write(&idId, offset: 0, length: 4)
                     writeBuffer.write(&idTimestamp, offset: 0, length: 4)
-                    self.valueBox.set(self.table, key: self.key(index.messageIndex.id.peerId), value: writeBuffer.readBufferNoCopy())
                 } else {
-                    if previousIndex != nil {
-                        removedChatListPeerIds.insert(peerId)
-                    }
-                    
-                    self.valueBox.remove(self.table, key: self.key(peerId))
+                    var hasIndex: Int8 = 0
+                    writeBuffer.write(&hasIndex, offset: 0, length: 1)
                 }
+                
+                switch index.inclusion {
+                    case .notSpecified:
+                        var key: Int8 = 0
+                        writeBuffer.write(&key, offset: 0, length: 1)
+                    case .never:
+                        var key: Int8 = 1
+                        writeBuffer.write(&key, offset: 0, length: 1)
+                    case .ifHasMessages:
+                        var key: Int8 = 2
+                        writeBuffer.write(&key, offset: 0, length: 1)
+                    case let .ifHasMessagesOrOneOf(pinningIndex, minTimestamp):
+                        var key: Int8 = 3
+                        writeBuffer.write(&key, offset: 0, length: 1)
+                    
+                        var pinningIndexValue: UInt16 = keyValueForChatListPinningIndex(pinningIndex)
+                        writeBuffer.write(&pinningIndexValue, offset: 0, length: 2)
+                    
+                        if let minTimestamp = minTimestamp {
+                            var hasMinTimestamp: Int8 = 1
+                            writeBuffer.write(&hasMinTimestamp, offset: 0, length: 1)
+                            
+                            var minTimestampValue = minTimestamp
+                            writeBuffer.write(&minTimestampValue, offset: 0, length: 4)
+                        } else {
+                            var hasMinTimestamp: Int8 = 0
+                            writeBuffer.write(&hasMinTimestamp, offset: 0, length: 1)
+                        }
+                }
+                
+                self.valueBox.set(self.table, key: self.key(peerId), value: writeBuffer.readBufferNoCopy())
             }
             self.updatedPreviousCachedIndices.removeAll()
             
@@ -112,7 +223,7 @@ final class ChatListIndexTable: Table {
                             notificationSettings = self.notificationSettingsTable.get(peerId)
                         }
                     }
-                    if let _ = self.get(peerId), let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
+                    if let _ = self.get(peerId).includedIndex(peerId: peerId), let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                         totalUnreadCount += delta
                     }
                 }
@@ -145,7 +256,7 @@ final class ChatListIndexTable: Table {
                         }
                     }
                 } else if startedParticipationInUnreadCount {
-                    if let _ = self.get(peerId) {
+                    if let _ = self.get(peerId).includedIndex(peerId: peerId) {
                         if let combinedState = self.readStateTable.getCombinedState(peerId) {
                             totalUnreadCount += combinedState.count
                         }
@@ -169,8 +280,8 @@ final class ChatListIndexTable: Table {
                     currentPeerUnreadCount -= delta
                 }
                 
-                var removedFromList = removedChatListPeerIds.contains(peerId)
-                var removedFromParticipationInUnreadCount = transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId)
+                let removedFromList = removedChatListPeerIds.contains(peerId)
+                let removedFromParticipationInUnreadCount = transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId)
                 if removedFromList && removedFromParticipationInUnreadCount {
                     totalUnreadCount -= currentPeerUnreadCount
                 } else if removedFromList {
@@ -186,7 +297,7 @@ final class ChatListIndexTable: Table {
                         totalUnreadCount -= currentPeerUnreadCount
                     }
                 } else if removedFromParticipationInUnreadCount {
-                    if let _ = self.get(peerId) {
+                    if let _ = self.get(peerId).includedIndex(peerId: peerId) {
                         totalUnreadCount -= currentPeerUnreadCount
                     }
                 } else {

@@ -78,5 +78,21 @@ public struct SimpleDictionary<K: Hashable, V>: Sequence {
             return nil
         }
     }
+    
+    public func isEqual(other: SimpleDictionary<K, V>, with f: (V, V) -> Bool) -> Bool {
+        if self.items.count != other.items.count {
+            return false
+        }
+        for i in 0 ..< self.items.count {
+            if self.items[i].0 != other.items[i].0 {
+                return false
+            }
+            if !f(self.items[i].1, other.items[i].1) {
+                return false
+            }
+        }
+        
+        return true
+    }
 }
 
