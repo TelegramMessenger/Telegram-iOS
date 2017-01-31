@@ -47,6 +47,10 @@ public final class Modifier {
         self.postbox?.deleteMessages(messageIds)
     }
     
+    public func clearHistory(_ peerId: PeerId) {
+        self.postbox?.clearHistory(peerId)
+    }
+    
     public func deleteMessagesWithGlobalIds(_ ids: [Int32]) {
         if let postbox = self.postbox {
             let messageIds = postbox.messageIdsForGlobalIds(ids)
@@ -751,6 +755,10 @@ public final class Postbox {
     
     fileprivate func deleteMessages(_ messageIds: [MessageId]) {
         self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+    }
+    
+    fileprivate func clearHistory(_ peerId: PeerId) {
+        self.messageHistoryTable.clearHistory(peerId: peerId, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
     fileprivate func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
