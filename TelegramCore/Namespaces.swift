@@ -64,6 +64,7 @@ struct OperationLogTags {
     static let CloudChatRemoveMessages = PeerOperationLogTag(value: 3)
     static let SynchronizePinnedCloudChats = PeerOperationLogTag(value: 4)
     static let AutoremoveMessages = PeerOperationLogTag(value: 5)
+    static let SynchronizePinnedChats = PeerOperationLogTag(value: 6)
 }
 
 private enum PreferencesKeyValues: Int32 {

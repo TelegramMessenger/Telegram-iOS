@@ -138,13 +138,6 @@ public func telegramMediaMapFromApiGeoPoint(_ geo: Api.GeoPoint, title: String?,
     switch geo {
         case let .geoPoint(long, lat):
             return TelegramMediaMap(latitude: lat, longitude: long, geoPlace: nil, venue: venue)
-        case let .geoPlace(long, lat, name):
-            var geoPlace: NamedGeoPlace?
-            switch name {
-                case let .geoPlaceName(country, state, city, district, street):
-                    geoPlace = NamedGeoPlace(country: country, state: state, city: city, district: district, street: street)
-            }
-            return TelegramMediaMap(latitude: lat, longitude: long, geoPlace: geoPlace, venue: venue)
         case .geoPointEmpty:
             return TelegramMediaMap(latitude: 0.0, longitude: 0.0, geoPlace: nil, venue: venue)
     }

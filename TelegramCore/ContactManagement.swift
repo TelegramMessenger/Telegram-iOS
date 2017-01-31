@@ -20,7 +20,7 @@ private func md5(_ data : Data) -> Data {
 }
 
 private func updatedRemoteContactPeers(network: Network, hash: String) -> Signal<([Peer], [PeerId: PeerPresence])?, NoError> {
-    return network.request(Api.functions.contacts.getContacts(nHash: hash))
+    return network.request(Api.functions.contacts.getContacts(hash: hash))
         |> retryRequest
         |> map { result -> ([Peer], [PeerId: PeerPresence])? in
             switch result {

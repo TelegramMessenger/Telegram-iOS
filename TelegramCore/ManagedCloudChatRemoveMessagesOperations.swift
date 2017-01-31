@@ -140,7 +140,7 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
             return .complete()
         }
     } else {
-        return network.request(Api.functions.messages.deleteMessages(id: operation.messageIds.map { $0.id }))
+        return network.request(Api.functions.messages.deleteMessages(flags: 0, id: operation.messageIds.map { $0.id }))
             |> map { result -> Api.messages.AffectedMessages? in
                 return result
             }
@@ -200,7 +200,7 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
             }
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer), let topMessageId = modifier.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
-            return network.request(Api.functions.messages.deleteHistory(peer: inputPeer, maxId: topMessageId.id))
+            return network.request(Api.functions.messages.deleteHistory(flags: 0, peer: inputPeer, maxId: topMessageId.id))
                 |> map { result -> Api.messages.AffectedHistory? in
                     return result
                 }

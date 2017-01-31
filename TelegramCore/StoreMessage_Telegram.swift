@@ -147,6 +147,8 @@ extension Api.Message {
                         result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId))
                     case let .messageActionChatMigrateTo(channelId):
                         result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
+                    case let .messageActionPhoneCall(flags, callId, reason, duration):
+                        break
                 }
             
                 return result

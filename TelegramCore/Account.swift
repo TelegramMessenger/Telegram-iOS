@@ -266,6 +266,7 @@ private var declaredEncodables: Void = {
     declareEncodable(AutoremoveTimeoutMessageAttribute.self, f: { AutoremoveTimeoutMessageAttribute(decoder: $0) })
     declareEncodable(GlobalNotificationSettings.self, f: { GlobalNotificationSettings(decoder: $0) })
     declareEncodable(CloudChatRemoveChatOperation.self, f: { CloudChatRemoveChatOperation(decoder: $0) })
+    declareEncodable(SynchronizePinnedChatsOperation.self, f: { SynchronizePinnedChatsOperation(decoder: $0) })
     
     return
 }()
@@ -484,7 +485,7 @@ public class Account {
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhone Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox, langCode: langCode))
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhone Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -519,7 +520,7 @@ public class Account {
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, deviceModel: "iPhone Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox, langCode: langCode))
+                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, deviceModel: "iPhone Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -565,6 +566,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged

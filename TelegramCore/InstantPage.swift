@@ -441,7 +441,7 @@ extension InstantPageBlock {
             case let .pageBlockSubtitle(text):
                 self = .subtitle(RichText(apiText: text))
             case let .pageBlockAuthorDate(author, publishedDate):
-                self = .authorDate(author: .plain(author), date: publishedDate)
+                self = .authorDate(author: RichText(apiText: author), date: publishedDate)
             case let .pageBlockHeader(text):
                 self = .header(RichText(apiText: text))
             case let .pageBlockSubheader(text):
@@ -468,8 +468,8 @@ extension InstantPageBlock {
                 self = .video(id: MediaId(namespace: Namespaces.Media.CloudVideo, id: videoId), caption: RichText(apiText: caption), autoplay: (flags & (1 << 0)) != 0, loop: (flags & (1 << 1)) != 0)
             case let .pageBlockCover(cover):
                 self = .cover(InstantPageBlock(apiBlock: cover))
-            case let .pageBlockEmbed(flags, url, html, w, h, caption):
-                self = .webEmbed(url: url, html: html, dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), caption: RichText(apiText: caption), stretchToWidth: (flags & (1 << 0)) != 0, allowScrolling: (flags & (1 << 3)) != 0)
+            case let .pageBlockEmbed(flags, url, html, posterPhotoId, w, h, caption):
+                self = .webEmbed(url: url, html: html, dimensions: CGSize(width: CGFloat(w ?? 0), height: CGFloat(h ?? 0)), caption: RichText(apiText: caption), stretchToWidth: (flags & (1 << 0)) != 0, allowScrolling: (flags & (1 << 3)) != 0)
             case let .pageBlockEmbedPost(url, webpageId, authorPhotoId, author, date, blocks, caption):
                 self = .postEmbed(url: url, webpageId: webpageId == 0 ? nil : MediaId(namespace: Namespaces.Media.CloudWebpage, id: webpageId), avatarId: authorPhotoId == 0 ? nil : MediaId(namespace: Namespaces.Media.CloudImage, id: authorPhotoId), author: author, date: date, blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), caption: RichText(apiText: caption))
             case let .pageBlockCollage(items, caption):

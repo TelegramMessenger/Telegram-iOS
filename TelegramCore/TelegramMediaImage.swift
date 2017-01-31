@@ -140,7 +140,5 @@ public func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaI
             return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes))
         case .photoEmpty:
             return nil
-        case .wallPhoto:
-            return nil
     }
 }

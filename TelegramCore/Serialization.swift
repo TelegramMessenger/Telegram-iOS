@@ -20,7 +20,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 60
+        return 62
     }
     
     public func parseMessage(_ data: Data!) -> Any! {
@@ -57,7 +57,7 @@ public class Serialization: NSObject, MTSerialization {
             if let config = parse(Buffer(data: response)) {
                 switch config {
                     //config flags:# date:int expires:int test_mode:Bool this_dc:int dc_options:Vector<DcOption> chat_size_max:int megagroup_size_max:int forwarded_count_max:int online_update_period_ms:int offline_blur_timeout_ms:int offline_idle_timeout_ms:int online_cloud_timeout_ms:int notify_cloud_delay_ms:int notify_default_delay_ms:int chat_big_size:int push_chat_period_ms:int push_chat_limit:int saved_gifs_limit:int edit_time_limit:int rating_e_decay:int stickers_recent_limit:int tmp_sessions:flags.0?int phonecalls_enabled:flags.1?true disabled_features:Vector<DisabledFeature> = Config;
-                    case let .config(_, _, _, _, _, dcOptions, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                    case let .config(_, _, _, _, _, dcOptions, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                         var addressList = [MTDatacenterAddress]()
                         for option in dcOptions {
                             switch option {

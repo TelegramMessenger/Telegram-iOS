@@ -157,7 +157,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
     }
     return offset
         |> mapToSignal { (timestamp, id, peer) in
-        return network.request(Api.functions.messages.getDialogs(offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100))
+            return network.request(Api.functions.messages.getDialogs(flags: 0, offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100))
             |> retryRequest
             |> mapToSignal { result -> Signal<Void, NoError> in
                 let dialogsChats: [Api.Chat]
