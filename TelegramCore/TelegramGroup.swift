@@ -50,6 +50,7 @@ public final class TelegramGroup: Peer {
     public let membership: TelegramGroupMembership
     public let flags: TelegramGroupFlags
     public let migrationReference: TelegramGroupToChannelMigrationReference?
+    public let creationDate: Int32
     public let version: Int
     
     public var indexName: PeerIndexNameRepresentation {
@@ -59,7 +60,7 @@ public final class TelegramGroup: Peer {
     public let associatedPeerIds: [PeerId]? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, migrationReference: TelegramGroupToChannelMigrationReference?, version: Int) {
+    public init(id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, migrationReference: TelegramGroupToChannelMigrationReference?, creationDate: Int32, version: Int) {
         self.id = id
         self.title = title
         self.photo = photo
@@ -68,6 +69,7 @@ public final class TelegramGroup: Peer {
         self.membership = membership
         self.flags = flags
         self.migrationReference = migrationReference
+        self.creationDate = creationDate
         self.version = version
     }
     
@@ -86,6 +88,7 @@ public final class TelegramGroup: Peer {
         } else {
             self.migrationReference = nil
         }
+        self.creationDate = decoder.decodeInt32ForKey("d")
         self.version = Int(decoder.decodeInt32ForKey("v"))
     }
     
@@ -103,6 +106,7 @@ public final class TelegramGroup: Peer {
             encoder.encodeNil(forKey: "mr.i")
             encoder.encodeNil(forKey: "mr.a")
         }
+        encoder.encodeInt32(self.creationDate, forKey: "d")
         encoder.encodeInt32(Int32(self.version), forKey: "v")
     }
     
@@ -132,6 +136,9 @@ public final class TelegramGroup: Peer {
             if self.migrationReference != other.migrationReference {
                 return false
             }
+            if self.creationDate != other.creationDate {
+                return false
+            }
             if self.flags != other.flags {
                 return false
             }
@@ -140,10 +147,8 @@ public final class TelegramGroup: Peer {
             return false
         }
     }
-    
-    //id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, migrationReference: TelegramGroupToChannelMigrationReference?, version: Int
 
     public func updateFlags(flags: TelegramGroupFlags, version: Int) -> TelegramGroup {
-        return TelegramGroup(id: self.id, title: self.title, photo: self.photo, participantCount: self.participantCount, role: self.role, membership: self.membership, flags: flags, migrationReference: self.migrationReference, version: version)
+        return TelegramGroup(id: self.id, title: self.title, photo: self.photo, participantCount: self.participantCount, role: self.role, membership: self.membership, flags: flags, migrationReference: self.migrationReference, creationDate: self.creationDate, version: version)
     }
 }

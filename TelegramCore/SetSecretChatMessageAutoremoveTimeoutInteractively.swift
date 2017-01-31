@@ -13,7 +13,7 @@ public func setSecretChatMessageAutoremoveTimeoutInteractively(account: Account,
             let updatedPeer = peer.withUpdatedMessageAutoremoveTimeout(timeout)
             let updatedState = state.withUpdatedMessageAutoremoveTimeout(timeout)
             if !updatedPeer.isEqual(peer) {
-                modifier.updatePeers([updatedPeer], update: { $1 })
+                updatePeers(modifier: modifier, peers: [updatedPeer], update: { $1 })
             }
             if updatedState != state {
                 modifier.setPeerChatState(peerId, state: updatedState)

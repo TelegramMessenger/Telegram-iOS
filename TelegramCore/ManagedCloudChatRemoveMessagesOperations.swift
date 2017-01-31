@@ -57,7 +57,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex:
     return postbox.modify { modifier -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
         modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: tagLocalIndex, { entry in
-            if let entry = entry, let _ = entry.mergedIndex, let operation = entry.contents as? CloudChatRemoveMessagesOperation {
+            if let entry = entry, let _ = entry.mergedIndex, (entry.contents is CloudChatRemoveMessagesOperation || entry.contents is CloudChatRemoveChatOperation)  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
             } else {
@@ -91,6 +91,12 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
                             } else {
                                 return .complete()
                             }
+                        } else if let operation = entry.contents as? CloudChatRemoveChatOperation {
+                            if let peer = modifier.getPeer(entry.peerId) {
+                                return removeChat(modifier: modifier, postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
+                            } else {
+                                return .complete()
+                            }
                         } else {
                             assertionFailure()
                         }
@@ -98,7 +104,7 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
                     return .complete()
                 })
                 |> then(postbox.modify { modifier -> Void in
-                    modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: entry.tagLocalIndex)
+                    let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: entry.tagLocalIndex)
                 })
                 
                 disposable.set(signal.start())
@@ -112,6 +118,7 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
             for disposable in disposables {
                 disposable.dispose()
             }
+            disposable.dispose()
         }
     }
 }
@@ -149,5 +156,70 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
                 }
                 return .complete()
             }
+    }
+}
+
+private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveChatOperation) -> Signal<Void, NoError> {
+    if peer.id.namespace == Namespaces.Peer.CloudChannel {
+        if let inputChannel = apiInputChannel(peer) {
+            let signal: Signal<Api.Updates, MTRpcError>
+            if let channel = peer as? TelegramChannel, case .creator = channel.role {
+                signal = network.request(Api.functions.channels.deleteChannel(channel: inputChannel))
+            } else {
+                signal = network.request(Api.functions.channels.leaveChannel(channel: inputChannel))
+            }
+            return signal
+                |> map { result -> Api.Updates? in
+                    return result
+                }
+                |> `catch` { _ in
+                    return .single(nil)
+                }
+                |> mapToSignal { updates in
+                    if let updates = updates {
+                        stateManager.addUpdates(updates)
+                    }
+                    return .complete()
+                }
+        } else {
+            return .complete()
+        }
+    } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
+        return network.request(Api.functions.messages.deleteChatUser(chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
+            |> map { result -> Api.Updates? in
+                return result
+            }
+            |> `catch` { _ in
+                return .single(nil)
+            }
+            |> mapToSignal { updates in
+                if let updates = updates {
+                    stateManager.addUpdates(updates)
+                }
+                return .complete()
+            }
+    } else if peer.id.namespace == Namespaces.Peer.CloudUser {
+        if let inputPeer = apiInputPeer(peer), let topMessageId = modifier.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
+            return network.request(Api.functions.messages.deleteHistory(peer: inputPeer, maxId: topMessageId.id))
+                |> map { result -> Api.messages.AffectedHistory? in
+                    return result
+                }
+                |> `catch` { _ in
+                    return .single(nil)
+                }
+                |> mapToSignal { result in
+                    if let result = result {
+                        switch result {
+                            case let .affectedHistory(pts, ptsCount, _):
+                                stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                        }
+                    }
+                    return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } else {
+        return .complete()
     }
 }

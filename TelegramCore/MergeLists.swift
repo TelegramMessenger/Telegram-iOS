@@ -93,7 +93,7 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T]) -> ([I
     #if (arch(i386) || arch(x86_64)) && os(iOS)
     var existingStableIds: [T.T: T] = [:]
     for item in leftList {
-        if let other = existingStableIds[item.stableId] {
+        if let _ = existingStableIds[item.stableId] {
             assertionFailure()
         } else {
             existingStableIds[item.stableId] = item

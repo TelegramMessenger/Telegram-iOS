@@ -165,7 +165,7 @@ public final class AccountStateManager {
         
         if !self.operations.isEmpty {
             for operation in self.operations {
-                if case let .pollCompletion(pollId, subscribers) = operation {
+                if case let .pollCompletion(_, subscribers) = operation {
                     collectedPollCompletionSubscribers.append(contentsOf: subscribers)
                 }
             }
@@ -174,7 +174,7 @@ public final class AccountStateManager {
         self.operations.removeAll()
         self.operations.append(operation)
         for (id, f) in collectedPollCompletionSubscribers {
-            self.addPollCompletion(f, id: id)
+            let _ = self.addPollCompletion(f, id: id)
         }
     }
     
@@ -289,7 +289,7 @@ public final class AccountStateManager {
                     assertionFailure()
                     trace("AccountStateManager", what: "processUpdateGroups signal completed with error")
                 })
-            case let .collectUpdateGroups(groups, timeout):
+            case let .collectUpdateGroups(_, timeout):
                 self.operationTimer?.invalidate()
                 let operationTimer = SignalKitTimer(timeout: timeout, repeat: false, completion: { [weak self] in
                     if let strongSelf = self {
@@ -314,7 +314,7 @@ public final class AccountStateManager {
                 let mediaBox = account.postbox.mediaBox
                 let queue = self.queue
                 let signal = initialStateWithUpdateGroups(account, groups: groups)
-                    |> mapToSignal { [weak self] state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
+                    |> mapToSignal { state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
                         return finalStateWithUpdateGroups(account, state: state, groups: groups)
                             |> mapToSignal { finalState in
                                 if !finalState.state.preCachedResources.isEmpty {
@@ -330,7 +330,7 @@ public final class AccountStateManager {
                                 |> deliverOn(queue)
                             }
                     }
-                signal.start(next: { [weak self] replayedState, finalState in
+                let _ = signal.start(next: { [weak self] replayedState, finalState in
                     if let strongSelf = self {
                         if case let .processUpdateGroups(groups) = strongSelf.operations.removeFirst() {
                             if let replayedState = replayedState, !finalState.shouldPoll {

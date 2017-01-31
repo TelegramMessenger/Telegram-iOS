@@ -163,3 +163,31 @@ public func peerViewMainPeer(_ view: PeerView) -> Peer? {
     }
 }
 
+public extension RenderedPeer {
+    public convenience init(message: Message) {
+        var peers = SimpleDictionary<PeerId, Peer>()
+        let peerId = message.id.peerId
+        if let peer = message.peers[peerId] {
+            peers[peer.id] = peer
+            if let peer = peer as? TelegramSecretChat {
+                if let regularPeer = message.peers[peer.regularPeerId] {
+                    peers[regularPeer.id] = regularPeer
+                }
+            }
+        }
+        self.init(peerId: message.id.peerId, peers: peers)
+    }
+    
+    public var chatMainPeer: Peer? {
+        if let peer = self.peers[self.peerId] {
+            if let peer = peer as? TelegramSecretChat {
+                return self.peers[peer.regularPeerId]
+            } else {
+                return peer
+            }
+        } else {
+            return nil
+        }
+    }
+}
+

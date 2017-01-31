@@ -130,7 +130,7 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                                 }
                             }
                             
-                            modifier.updatePeers(peers, update: { _, updated -> Peer in
+                            updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                                 return updated
                             })
                             modifier.updatePeerPresences(peerPresences)
@@ -298,7 +298,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                 }
                 
                 return postbox.modify { modifier in
-                    modifier.updatePeers(peers, update: { _, updated -> Peer in
+                    updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                         return updated
                     })
                     modifier.updatePeerPresences(peerPresences)

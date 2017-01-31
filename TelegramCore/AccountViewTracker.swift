@@ -99,7 +99,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                                 }
                             }
                             
-                            modifier.updatePeers(peers, update: { _, updated -> Peer in
+                            updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                                 return updated
                             })
                             modifier.updatePeerPresences(peerPresences)

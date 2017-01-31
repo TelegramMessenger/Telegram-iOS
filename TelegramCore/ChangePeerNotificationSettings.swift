@@ -20,10 +20,12 @@ public func changePeerNotificationSettings(account: Account, peerId: PeerId, set
                 }
                 let sound: String
                 switch settings.messageSound {
-                    case .appDefault:
-                        sound = "default"
-                    case let .bundled(index):
-                        sound = "\(index)"
+                    case .none:
+                        sound = ""
+                    case let .bundledModern(id):
+                        sound = "\(id)"
+                    case let .bundledClassic(id):
+                        sound = "\(id + 12)"
                 }
                 let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: Int32(1 << 0), muteUntil: muteUntil, sound: sound)
                 return account.network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyPeer(peer: inputPeer), settings: inputSettings))

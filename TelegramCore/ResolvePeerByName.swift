@@ -98,7 +98,7 @@ public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 
                                 if let peer = peers[apiPeer.peerId] {
                                     peerId = peer.id
                                     
-                                    modifier.updatePeers(Array(peers.values), update: { _, updated -> Peer in
+                                    updatePeers(modifier: modifier, peers: Array(peers.values), update: { _, updated -> Peer in
                                         return updated
                                     })
                                 }

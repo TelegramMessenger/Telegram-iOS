@@ -1285,7 +1285,7 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                         peers.append(groupOrChannel)
                     }
                 }
-                modifier.updatePeers(peers, update: { _, updated in
+                updatePeers(modifier: modifier, peers: peers, update: { _, updated in
                     return updated
                 })
             case let .MergeApiUsers(users):
@@ -1295,12 +1295,12 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                         peers.append(telegramUser)
                     }
                 }
-                modifier.updatePeers(peers, update: { _, updated in
+                updatePeers(modifier: modifier, peers: peers, update: { _, updated in
                     return updated
                 })
             case let .UpdatePeer(id, f):
                 if let peer = modifier.getPeer(id) {
-                    modifier.updatePeers([f(peer)], update: { _, updated in
+                    updatePeers(modifier: modifier, peers: [f(peer)], update: { _, updated in
                         return updated
                     })
                 }
@@ -1317,7 +1317,7 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                         if let currentPeer = currentPeer, let currentState = currentState {
                             let state = currentState.withUpdatedEmbeddedState(.terminated)
                             let peer = currentPeer.withUpdatedEmbeddedState(state.embeddedState.peerState)
-                            modifier.updatePeers([peer], update: { _, updated in return updated })
+                            updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
                             modifier.setPeerChatState(peer.id, state: state)
                             modifier.operationLogRemoveAllEntries(peerId: peer.id, tag: OperationLogTags.SecretOutgoing)
                         } else {
@@ -1327,9 +1327,9 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                         break
                     case let .encryptedChatRequested(_, accessHash, date, adminId, participantId, gA):
                         if currentPeer == nil {
-                            let state = SecretChatState(role: .participant, embeddedState: .handshake, keychain: SecretChatKeychain(keys: []), messageAutoremoveTimeout: nil)
-                            let peer = TelegramSecretChat(id: chat.peerId, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
-                            modifier.updatePeers([peer], update: { _, updated in return updated })
+                            let state = SecretChatState(role: .participant, embeddedState: .handshake, keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
+                            let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
+                            updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
                             modifier.resetIncomingReadStates([peer.id: [
                                 Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0),
                                 Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0)

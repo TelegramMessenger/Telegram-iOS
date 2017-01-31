@@ -19,7 +19,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                 
                                 case let .userFull(_, user, _, _, _, notifySettings, _, commonChatCount):
                                     let telegramUser = TelegramUser(user: user)
-                                    modifier.updatePeers([telegramUser], update: { _, updated -> Peer in
+                                    updatePeers(modifier: modifier, peers: [telegramUser], update: { _, updated -> Peer in
                                         return updated
                                     })
                                     modifier.updatePeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
@@ -59,7 +59,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             }
                                         }
                                         
-                                        modifier.updatePeers(peers, update: { _, updated -> Peer in
+                                        updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                                             return updated
                                         })
                                         
@@ -102,7 +102,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             }
                                         }
                                         
-                                        modifier.updatePeers(peers, update: { _, updated -> Peer in
+                                        updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                                             return updated
                                         })
                                         

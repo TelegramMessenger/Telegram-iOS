@@ -27,7 +27,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
                                         }
                                     }
                                     
-                                    modifier.updatePeers(peers, update: { _, updated -> Peer in
+                                    updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                                         return updated
                                     })
                                 
@@ -67,7 +67,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
                                         }
                                     }
                                     
-                                    modifier.updatePeers(peers, update: { _, updated -> Peer in
+                                    updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                                         return updated
                                     })
                                     

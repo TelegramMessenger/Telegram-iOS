@@ -264,6 +264,9 @@ private var declaredEncodables: Void = {
     declareEncodable(SecretFileMediaResource.self, f: { SecretFileMediaResource(decoder: $0) })
     declareEncodable(CloudChatRemoveMessagesOperation.self, f: { CloudChatRemoveMessagesOperation(decoder: $0) })
     declareEncodable(AutoremoveTimeoutMessageAttribute.self, f: { AutoremoveTimeoutMessageAttribute(decoder: $0) })
+    declareEncodable(GlobalNotificationSettings.self, f: { GlobalNotificationSettings(decoder: $0) })
+    declareEncodable(CloudChatRemoveChatOperation.self, f: { CloudChatRemoveChatOperation(decoder: $0) })
+    
     return
 }()
 
@@ -561,6 +564,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedSecretChatOutgoingOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
+        self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged

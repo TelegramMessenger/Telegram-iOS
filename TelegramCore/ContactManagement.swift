@@ -79,7 +79,7 @@ func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError>
         |> mapToSignal { peersAndPresences -> Signal<Void, NoError> in
             if let (peers, peerPresences) = peersAndPresences {
                 return postbox.modify { modifier in
-                    modifier.updatePeers(peers, update: { return $1 })
+                    updatePeers(modifier: modifier, peers: peers, update: { return $1 })
                     modifier.updatePeerPresences(peerPresences)
                     modifier.replaceContactPeerIds(Set(peers.map { $0.id }))
                 }

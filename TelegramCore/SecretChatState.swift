@@ -15,30 +15,44 @@ enum SecretChatLayer: Int32 {
     case layer46 = 46
 }
 
-struct SecretChatBasicFingerprint: Equatable {
-    let k0: Int64
-    let k1: Int64
+public struct SecretChatKeyFingerprint: Coding, Equatable {
+    public let k0: Int64
+    public let k1: Int64
+    public let k2: Int64
+    public let k3: Int64
     
-    static func ==(lhs: SecretChatBasicFingerprint, rhs: SecretChatBasicFingerprint) -> Bool {
-        if lhs.k0 != rhs.k0 {
-            return false
-        }
-        if lhs.k1 != rhs.k1 {
-            return false
-        }
-        return true
+    public init(k0: Int64, k1: Int64, k2: Int64, k3: Int64) {
+        self.k0 = k0
+        self.k1 = k1
+        self.k2 = k2
+        self.k3 = k3
     }
-}
-
-struct SecretChatExtendedFingerprint: Equatable {
-    let k0: Int64
-    let k1: Int64
     
-    static func ==(lhs: SecretChatExtendedFingerprint, rhs: SecretChatExtendedFingerprint) -> Bool {
+    public init(decoder: Decoder) {
+        self.k0 = decoder.decodeInt64ForKey("k0")
+        self.k1 = decoder.decodeInt64ForKey("k1")
+        self.k2 = decoder.decodeInt64ForKey("k2")
+        self.k3 = decoder.decodeInt64ForKey("k3")
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeInt64(self.k0, forKey: "")
+        encoder.encodeInt64(self.k1, forKey: "")
+        encoder.encodeInt64(self.k2, forKey: "")
+        encoder.encodeInt64(self.k3, forKey: "")
+    }
+    
+    public static func ==(lhs: SecretChatKeyFingerprint, rhs: SecretChatKeyFingerprint) -> Bool {
         if lhs.k0 != rhs.k0 {
             return false
         }
         if lhs.k1 != rhs.k1 {
+            return false
+        }
+        if lhs.k2 != rhs.k2 {
+            return false
+        }
+        if lhs.k3 != rhs.k3 {
             return false
         }
         return true
@@ -364,12 +378,14 @@ final class SecretChatState: PeerChatState, Equatable {
     let role: SecretChatRole
     let embeddedState: SecretChatEmbeddedState
     let keychain: SecretChatKeychain
+    let keyFingerprint: SecretChatKeyFingerprint?
     let messageAutoremoveTimeout: Int32?
     
-    init(role: SecretChatRole, embeddedState: SecretChatEmbeddedState, keychain: SecretChatKeychain, messageAutoremoveTimeout: Int32?) {
+    init(role: SecretChatRole, embeddedState: SecretChatEmbeddedState, keychain: SecretChatKeychain, keyFingerprint: SecretChatKeyFingerprint?, messageAutoremoveTimeout: Int32?) {
         self.role = role
         self.embeddedState = embeddedState
         self.keychain = keychain
+        self.keyFingerprint = keyFingerprint
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
     }
     
@@ -377,6 +393,7 @@ final class SecretChatState: PeerChatState, Equatable {
         self.role = SecretChatRole(rawValue: decoder.decodeInt32ForKey("r"))!
         self.embeddedState = decoder.decodeObjectForKey("s", decoder: { return SecretChatEmbeddedState(decoder: $0) }) as! SecretChatEmbeddedState
         self.keychain = decoder.decodeObjectForKey("k", decoder: { return SecretChatKeychain(decoder: $0) }) as! SecretChatKeychain
+        self.keyFingerprint = decoder.decodeObjectForKey("f", decoder: { return SecretChatKeyFingerprint(decoder: $0) }) as? SecretChatKeyFingerprint
         self.messageAutoremoveTimeout = decoder.decodeInt32ForKey("a")
     }
     
@@ -384,6 +401,11 @@ final class SecretChatState: PeerChatState, Equatable {
         encoder.encodeInt32(self.role.rawValue, forKey: "r")
         encoder.encodeObject(self.embeddedState, forKey: "s")
         encoder.encodeObject(self.keychain, forKey: "k")
+        if let keyFingerprint = self.keyFingerprint {
+            encoder.encodeObject(keyFingerprint, forKey: "f")
+        } else {
+            encoder.encodeNil(forKey: "f")
+        }
         if let messageAutoremoveTimeout = self.messageAutoremoveTimeout {
             encoder.encodeInt32(messageAutoremoveTimeout, forKey: "a")
         } else {
@@ -402,15 +424,19 @@ final class SecretChatState: PeerChatState, Equatable {
         return lhs.role == rhs.role && lhs.embeddedState == rhs.embeddedState && lhs.keychain == rhs.keychain && lhs.messageAutoremoveTimeout == rhs.messageAutoremoveTimeout
     }
     
+    func withUpdatedKeyFingerprint(_ keyFingerprint: SecretChatKeyFingerprint?) -> SecretChatState {
+        return SecretChatState(role: self.role, embeddedState: self.embeddedState, keychain: self.keychain, keyFingerprint: keyFingerprint, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
+    }
+    
     func withUpdatedEmbeddedState(_ embeddedState: SecretChatEmbeddedState) -> SecretChatState {
-        return SecretChatState(role: self.role, embeddedState: embeddedState, keychain: self.keychain, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
+        return SecretChatState(role: self.role, embeddedState: embeddedState, keychain: self.keychain, keyFingerprint: self.keyFingerprint, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
     }
     
     func withUpdatedKeychain(_ keychain: SecretChatKeychain) -> SecretChatState {
-        return SecretChatState(role: self.role, embeddedState: self.embeddedState, keychain: keychain, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
+        return SecretChatState(role: self.role, embeddedState: self.embeddedState, keychain: keychain, keyFingerprint: self.keyFingerprint, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
     }
     
     func withUpdatedMessageAutoremoveTimeout(_ messageAutoremoveTimeout: Int32?) -> SecretChatState {
-        return SecretChatState(role: self.role, embeddedState: self.embeddedState, keychain: self.keychain, messageAutoremoveTimeout: messageAutoremoveTimeout)
+        return SecretChatState(role: self.role, embeddedState: self.embeddedState, keychain: self.keychain, keyFingerprint: self.keyFingerprint, messageAutoremoveTimeout: messageAutoremoveTimeout)
     }
 }

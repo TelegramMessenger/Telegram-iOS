@@ -295,7 +295,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
             modifier.setPeerChatState(peerId, state: updatedState)
         }
         if !peer.isEqual(updatedPeer) {
-            modifier.updatePeers([updatedPeer], update: { _, updated in
+            updatePeers(modifier: modifier, peers: [updatedPeer], update: { _, updated in
                 return updated
             })
         }

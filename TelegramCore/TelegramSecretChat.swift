@@ -9,6 +9,7 @@ public final class TelegramSecretChat: Peer {
     public let id: PeerId
     public let regularPeerId: PeerId
     public let accessHash: Int64
+    public let creationDate: Int32
     public let embeddedState: SecretChatEmbeddedPeerState
     public let messageAutoremoveTimeout: Int32?
     
@@ -19,10 +20,11 @@ public final class TelegramSecretChat: Peer {
     public let associatedPeerIds: [PeerId]?
     public let notificationSettingsPeerId: PeerId?
     
-    init(id: PeerId, regularPeerId: PeerId, accessHash: Int64, embeddedState: SecretChatEmbeddedPeerState, messageAutoremoveTimeout: Int32?) {
+    init(id: PeerId, creationDate: Int32, regularPeerId: PeerId, accessHash: Int64, embeddedState: SecretChatEmbeddedPeerState, messageAutoremoveTimeout: Int32?) {
         self.id = id
         self.regularPeerId = regularPeerId
         self.accessHash = accessHash
+        self.creationDate = creationDate
         self.embeddedState = embeddedState
         self.associatedPeerIds = [regularPeerId]
         self.notificationSettingsPeerId = regularPeerId
@@ -34,6 +36,7 @@ public final class TelegramSecretChat: Peer {
         self.regularPeerId = PeerId(decoder.decodeInt64ForKey("r"))
         self.notificationSettingsPeerId = self.regularPeerId
         self.accessHash = decoder.decodeInt64ForKey("h")
+        self.creationDate = decoder.decodeInt32ForKey("d")
         self.embeddedState = SecretChatEmbeddedPeerState(rawValue: decoder.decodeInt32ForKey("s"))!
         self.associatedPeerIds = [self.regularPeerId]
         self.messageAutoremoveTimeout = decoder.decodeInt32ForKey("at")
@@ -43,6 +46,7 @@ public final class TelegramSecretChat: Peer {
         encoder.encodeInt64(self.id.toInt64(), forKey: "i")
         encoder.encodeInt64(self.regularPeerId.toInt64(), forKey: "r")
         encoder.encodeInt64(self.accessHash, forKey: "h")
+        encoder.encodeInt32(self.creationDate, forKey: "d")
         encoder.encodeInt32(self.embeddedState.rawValue, forKey: "s")
         if let messageAutoremoveTimeout = self.messageAutoremoveTimeout {
             encoder.encodeInt32(messageAutoremoveTimeout, forKey: "at")
@@ -53,17 +57,17 @@ public final class TelegramSecretChat: Peer {
     
     public func isEqual(_ other: Peer) -> Bool {
         if let other = other as? TelegramSecretChat {
-            return self.id == other.id && self.regularPeerId == other.regularPeerId && self.accessHash == other.accessHash && self.embeddedState == other.embeddedState && self.messageAutoremoveTimeout == other.messageAutoremoveTimeout
+            return self.id == other.id && self.regularPeerId == other.regularPeerId && self.accessHash == other.accessHash && self.embeddedState == other.embeddedState && self.messageAutoremoveTimeout == other.messageAutoremoveTimeout && self.creationDate == other.creationDate
         } else {
             return false
         }
     }
     
     func withUpdatedEmbeddedState(_ embeddedState: SecretChatEmbeddedPeerState) -> TelegramSecretChat {
-        return TelegramSecretChat(id: self.id, regularPeerId: self.regularPeerId, accessHash: self.accessHash, embeddedState: embeddedState, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
+        return TelegramSecretChat(id: self.id, creationDate: self.creationDate, regularPeerId: self.regularPeerId, accessHash: self.accessHash, embeddedState: embeddedState, messageAutoremoveTimeout: self.messageAutoremoveTimeout)
     }
     
     func withUpdatedMessageAutoremoveTimeout(_ messageAutoremoveTimeout: Int32?) -> TelegramSecretChat {
-        return TelegramSecretChat(id: self.id, regularPeerId: self.regularPeerId, accessHash: self.accessHash, embeddedState: self.embeddedState, messageAutoremoveTimeout: messageAutoremoveTimeout)
+        return TelegramSecretChat(id: self.id, creationDate: self.creationDate, regularPeerId: self.regularPeerId, accessHash: self.accessHash, embeddedState: self.embeddedState, messageAutoremoveTimeout: messageAutoremoveTimeout)
     }
 }

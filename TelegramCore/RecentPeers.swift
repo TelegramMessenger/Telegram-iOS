@@ -36,7 +36,7 @@ public func recentPeers(account: Account) -> Signal<[Peer], NoError> {
         |> mapToSignal { peersAndPresences -> Signal<[Peer], NoError> in
             if let (peers, peerPresences) = peersAndPresences {
                 return account.postbox.modify { modifier -> [Peer] in
-                    modifier.updatePeers(peers, update: { return $1 })
+                    updatePeers(modifier: modifier, peers: peers, update: { return $1 })
                     modifier.updatePeerPresences(peerPresences)
                     modifier.replaceRecentPeerIds(peers.map({ $0.id }))
                     return peers

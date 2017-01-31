@@ -50,46 +50,63 @@ public enum PeerMuteState: Equatable {
     }
 }
 
+private enum PeerMessageSoundValue: Int32 {
+    case none
+    case bundledModern
+    case bundledClassic
+}
+
 public enum PeerMessageSound: Equatable {
-    case appDefault
-    case bundled(index: Int32)
+    case none
+    case bundledModern(id: Int32)
+    case bundledClassic(id: Int32)
     
-    fileprivate static func decodeInline(_ decoder: Decoder) -> PeerMessageSound {
+    static func decodeInline(_ decoder: Decoder) -> PeerMessageSound {
         switch decoder.decodeInt32ForKey("s.v") as Int32 {
-            case 0:
-                return .appDefault
-            case 1:
-                return .bundled(index: decoder.decodeInt32ForKey("s.i"))
+            case PeerMessageSoundValue.none.rawValue:
+                return .none
+            case PeerMessageSoundValue.bundledModern.rawValue:
+                return .bundledModern(id: decoder.decodeInt32ForKey("s.i"))
+            case PeerMessageSoundValue.bundledClassic.rawValue:
+                return .bundledClassic(id: decoder.decodeInt32ForKey("s.i"))
             default:
-                return .appDefault
+                assertionFailure()
+                return .bundledModern(id: 0)
         }
     }
     
-    fileprivate func encodeInline(_ encoder: Encoder) {
+    func encodeInline(_ encoder: Encoder) {
         switch self {
-            case .appDefault:
-                encoder.encodeInt32(0, forKey: "s.v")
-            case let .bundled(index):
-                encoder.encodeInt32(1, forKey: "s.v")
-                encoder.encodeInt32(index, forKey: "s.i")
+            case .none:
+                encoder.encodeInt32(PeerMessageSoundValue.none.rawValue, forKey: "s.v")
+            case let .bundledModern(id):
+                encoder.encodeInt32(PeerMessageSoundValue.bundledModern.rawValue, forKey: "s.v")
+                encoder.encodeInt32(id, forKey: "s.i")
+            case let .bundledClassic(id):
+                encoder.encodeInt32(PeerMessageSoundValue.bundledClassic.rawValue, forKey: "s.v")
+                encoder.encodeInt32(id, forKey: "s.i")
         }
     }
     
     public static func ==(lhs: PeerMessageSound, rhs: PeerMessageSound) -> Bool {
         switch lhs {
-            case .appDefault:
-                switch rhs {
-                    case .appDefault:
-                        return true
-                    default:
-                        return false
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
                 }
-            case let .bundled(lhsIndex):
-                switch rhs {
-                    case .bundled(lhsIndex):
-                        return true
-                    default:
-                        return false
+            case let .bundledModern(id):
+                if case .bundledModern(id) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .bundledClassic(id):
+                if case .bundledClassic(id) = rhs {
+                    return true
+                } else {
+                    return false
                 }
         }
     }
@@ -98,6 +115,10 @@ public enum PeerMessageSound: Equatable {
 public final class TelegramPeerNotificationSettings: PeerNotificationSettings, Equatable {
     public let muteState: PeerMuteState
     public let messageSound: PeerMessageSound
+    
+    public static var defaultSettings: TelegramPeerNotificationSettings {
+        return TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .bundledModern(id: 0))
+    }
     
     public var isRemovedFromTotalUnreadCount: Bool {
         switch self.muteState {
@@ -137,12 +158,53 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
 }
 
 extension TelegramPeerNotificationSettings {
-    public convenience init(apiSettings: Api.PeerNotifySettings) {
+    convenience init(apiSettings: Api.PeerNotifySettings) {
         switch apiSettings {
             case .peerNotifySettingsEmpty:
-                self.init(muteState: .unmuted, messageSound: .appDefault)
+                self.init(muteState: .unmuted, messageSound: .bundledModern(id: 0))
             case let .peerNotifySettings(_, muteUntil, sound):
-                self.init(muteState: muteUntil == 0 ? .unmuted : .muted(until: muteUntil), messageSound: sound == "default" ? .appDefault : .bundled(index: Int32(sound) ?? 0))
+                self.init(muteState: muteUntil == 0 ? .unmuted : .muted(until: muteUntil), messageSound: PeerMessageSound(apiSound: sound))
+        }
+    }
+}
+
+extension PeerMessageSound {
+    init(apiSound: String) {
+        let parsedSound: PeerMessageSound
+        if apiSound == "default" {
+            parsedSound = .bundledModern(id: 0)
+        } else if apiSound == "" || apiSound == "0" {
+            parsedSound = .none
+        } else {
+            let soundId: Int32
+            if let id = Int32(apiSound) {
+                soundId = id
+            } else {
+                soundId = 1
+            }
+            if soundId >= 1 && soundId < 13 {
+                parsedSound = .bundledModern(id: soundId - 1)
+            } else if soundId >= 13 && soundId <= 20 {
+                parsedSound = .bundledClassic(id: soundId - 13)
+            } else {
+                parsedSound = .bundledModern(id: 0)
+            }
+        }
+        self = parsedSound
+    }
+    
+    var apiSound: String {
+        switch self {
+            case .none:
+                return ""
+            case let .bundledModern(id):
+                if id == 0 {
+                    return "default"
+                } else {
+                    return "\(id + 1)"
+                }
+            case let .bundledClassic(id):
+                return "\(id + 13)"
         }
     }
 }

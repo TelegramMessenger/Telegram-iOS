@@ -31,6 +31,12 @@ extension Api.MessageMedia {
                         return nil
                 }
             case let .messageMediaDocument(document, _):
+                switch document {
+                    case .document:
+                        break
+                    default:
+                        break
+                }
                 return nil
             default:
                 return nil
@@ -52,7 +58,7 @@ extension Api.Message {
     
     var id: MessageId? {
         switch self {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, _, entities, views, _):
+            case let .message(flags, id, fromId, toId, _, _, _, _, _, _, _, _, _, _):
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
@@ -65,7 +71,7 @@ extension Api.Message {
                 return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
             case .messageEmpty:
                 return nil
-            case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
+            case let .messageService(flags, id, fromId, toId, _, _, _):
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
@@ -226,8 +232,6 @@ extension Api.Update {
                 return message.peerIds
             case let .updateEditMessage(message, _, _):
                 return message.peerIds
-            case let .updateEditChannelMessage(message, _, _):
-                return message.peerIds
             //case let .updateReadChannelInbox(channelId, _):
             //    return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateUserName(userId, _, _, _):
@@ -322,7 +326,7 @@ extension Api.Updates {
                 } else {
                     return []
                 }
-            case let .updateShortSentMessage:
+            case .updateShortSentMessage:
                 return []
             case .updatesTooLong:
                 return []
