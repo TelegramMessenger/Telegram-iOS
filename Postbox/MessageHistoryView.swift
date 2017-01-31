@@ -821,7 +821,7 @@ public final class MessageHistoryView {
         self.entries = entries
         
         var topTaggedMessages: [Message] = []
-        for (namespace, message) in mutableView.topTaggedMessages {
+        for (_, message) in mutableView.topTaggedMessages {
             if let message = message {
                 switch message {
                     case let .message(message):

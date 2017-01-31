@@ -107,6 +107,31 @@ final class ChatListTable: Table {
         }
     }
     
+    func getPinnedPeerIds() -> [PeerId] {
+        var peerIds: [PeerId] = []
+        self.valueBox.range(self.table, start: self.upperBound(), end: self.key(ChatListIndex(pinningIndex: UInt16.max - 1, messageIndex: MessageIndex.absoluteUpperBound()), type: ChatListEntryType.Message).successor, keys: { key in
+            peerIds.append(PeerId(key.getInt64(2 + 4 + 4 + 4)))
+            return true
+        }, limit: 0)
+        return peerIds
+    }
+    
+    func setPinnedPeerIds(peerIds: [PeerId], updatedChatListInclusions: inout [PeerId: PeerChatListInclusion]) {
+        let updatedIds = Set(peerIds)
+        for peerId in self.getPinnedPeerIds() {
+            if !updatedIds.contains(peerId) {
+                self.updateInclusion(peerId: peerId, updatedChatListInclusions: &updatedChatListInclusions, { inclusion in
+                    return inclusion.withoutPinningIndex()
+                })
+            }
+        }
+        for i in 0 ..< peerIds.count {
+            self.updateInclusion(peerId: peerIds[i], updatedChatListInclusions: &updatedChatListInclusions, { inclusion in
+                return inclusion.withPinningIndex(UInt16(i))
+            })
+        }
+    }
+    
     func replay(historyOperationsByPeerId: [PeerId : [MessageHistoryOperation]], updatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?], updatedChatListInclusions: [PeerId: PeerChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         var changedPeerIds = Set<PeerId>()

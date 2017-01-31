@@ -241,7 +241,7 @@ final class MessageHistoryReadStateTable: Table {
         }
     }
     
-    func applyIncomingMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: MessageId.Id?) -> (CombinedPeerReadState?, Bool) {
+    func applyIncomingMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: (MessageId.Id, Bool)?) -> (CombinedPeerReadState?, Bool) {
         if let states = self.get(messageId.peerId), let state = states.namespaces[messageId.namespace] {
             if traceReadStates {
                 print("[ReadStateTable] applyMaxReadId peerId: \(messageId.peerId), maxReadId: \(messageId) (before: \(states.namespaces))")
@@ -249,14 +249,14 @@ final class MessageHistoryReadStateTable: Table {
             
             switch state {
                 case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
-                    if maxIncomingReadId < messageId.id || (messageId.id == topMessageId && state.count != 0) {
+                    if maxIncomingReadId < messageId.id || (topMessageId != nil && (messageId.id == topMessageId!.0 || topMessageId!.1) && state.count != 0) {
                         var (deltaCount, holes) = incomingStatsInRange(maxIncomingReadId + 1, messageId.id)
                         
                         if traceReadStates {
                             print("[ReadStateTable] applyMaxReadId after deltaCount: \(deltaCount), holes: \(holes)")
                         }
                         
-                        if messageId.id == topMessageId {
+                        if let topMessageId = topMessageId, (messageId.id == topMessageId.0 || topMessageId.1) {
                             if deltaCount != Int(state.count) {
                                 deltaCount = Int(state.count)
                                 holes = true
@@ -351,7 +351,7 @@ final class MessageHistoryReadStateTable: Table {
         return (nil, false, [])
     }
     
-    func applyInteractiveMaxReadIndex(_ messageIndex: MessageIndex, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), incomingIndexStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMesageIds: [MessageId]), topMessageId: MessageId.Id?) -> (combinedState: CombinedPeerReadState?, ApplyInteractiveMaxReadIdResult, readMesageIds: [MessageId]) {
+    func applyInteractiveMaxReadIndex(_ messageIndex: MessageIndex, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), incomingIndexStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMesageIds: [MessageId]), topMessageId: (MessageId.Id, Bool)?) -> (combinedState: CombinedPeerReadState?, ApplyInteractiveMaxReadIdResult, readMesageIds: [MessageId]) {
         if let states = self.get(messageIndex.id.peerId), let state = states.namespaces[messageIndex.id.namespace] {
             switch state {
                 case .idBased:

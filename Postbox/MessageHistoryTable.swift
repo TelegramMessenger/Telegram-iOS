@@ -362,9 +362,13 @@ final class MessageHistoryTable: Table {
     }
     
     func applyIncomingReadMaxId(_ messageId: MessageId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
-        var topMessageId: MessageId.Id?
+        var topMessageId: (MessageId.Id, Bool)?
         if let topEntry = self.messageHistoryIndexTable.top(messageId.peerId, namespace: messageId.namespace), case let .Message(index) = topEntry {
-            topMessageId = index.id.id
+            if let message = self.getMessage(index) {
+                topMessageId = (index.id.id, !message.flags.contains(.Incoming))
+            } else {
+                topMessageId = (index.id.id, false)
+            }
         }
         
         let (combinedState, invalidated) = self.readStateTable.applyIncomingMaxReadId(messageId, incomingStatsInRange: { fromId, toId in
@@ -421,9 +425,13 @@ final class MessageHistoryTable: Table {
     }
     
     func applyInteractiveMaxReadIndex(_ messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
-        var topMessageId: MessageId.Id?
+        var topMessageId: (MessageId.Id, Bool)?
         if let topEntry = self.messageHistoryIndexTable.top(messageIndex.id.peerId, namespace: messageIndex.id.namespace), case let .Message(index) = topEntry {
-            topMessageId = index.id.id
+            if let message = self.getMessage(index) {
+                topMessageId = (index.id.id, !message.flags.contains(.Incoming))
+            } else {
+                topMessageId = (index.id.id, false)
+            }
         }
         
         let (combinedState, result, messageIds) = self.readStateTable.applyInteractiveMaxReadIndex(messageIndex, incomingStatsInRange: { fromId, toId in

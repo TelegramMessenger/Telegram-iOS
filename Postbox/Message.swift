@@ -180,11 +180,15 @@ public struct ChatListIndex: Comparable, Hashable {
     
     public static func <(lhs: ChatListIndex, rhs: ChatListIndex) -> Bool {
         if let lhsPinningIndex = lhs.pinningIndex, let rhsPinningIndex = rhs.pinningIndex {
-            if lhsPinningIndex < rhsPinningIndex {
+            if lhsPinningIndex > rhsPinningIndex {
                 return true
-            } else if lhsPinningIndex > rhsPinningIndex {
+            } else if lhsPinningIndex < rhsPinningIndex {
                 return false
             }
+        } else if lhs.pinningIndex != nil {
+            return false
+        } else if rhs.pinningIndex != nil {
+            return true
         }
         return lhs.messageIndex < rhs.messageIndex
     }

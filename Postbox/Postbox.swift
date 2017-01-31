@@ -276,6 +276,18 @@ public final class Modifier {
     public func updatePreferencesEntry(key: ValueBoxKey, _ f: (PreferencesEntry?) -> PreferencesEntry?) {
         self.postbox?.setPreferencesEntry(key: key, value: f(self.postbox?.getPreferencesEntry(key: key)))
     }
+    
+    public func getPinnedPeerIds() -> [PeerId] {
+        if let postbox = self.postbox {
+            return postbox.chatListTable.getPinnedPeerIds()
+        } else {
+            return []
+        }
+    }
+    
+    public func setPinnedPeerIds(_ peerIds: [PeerId]) {
+        self.postbox?.setPinnedPeerIds(peerIds)
+    }
 }
 
 fileprivate class PipeNotifier: NSObject {
@@ -1058,6 +1070,10 @@ public final class Postbox {
         self.chatListTable.updateInclusion(peerId: id, updatedChatListInclusions: &self.currentUpdatedChatListInclusions, { _ in
             return inclusion
         })
+    }
+    
+    fileprivate func setPinnedPeerIds(_ peerIds: [PeerId]) {
+        self.chatListTable.setPinnedPeerIds(peerIds: peerIds, updatedChatListInclusions: &self.currentUpdatedChatListInclusions)
     }
     
     fileprivate func updatePeerNotificationSettings(_ notificationSettings: [PeerId: PeerNotificationSettings]) {

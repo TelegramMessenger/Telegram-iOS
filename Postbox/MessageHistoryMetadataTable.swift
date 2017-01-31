@@ -33,6 +33,9 @@ final class MessageHistoryMetadataTable: Table {
     private var nextPeerOperationLogIndex: UInt32?
     private var nextPeerOperationLogIndexUpdated = false
     
+    private var currentPinnedChatPeerIds: Set<PeerId>?
+    private var currentPinnedChatPeerIdsUpdated = false
+    
     private func peerHistoryInitializedKey(_ id: PeerId) -> ValueBoxKey {
         self.sharedPeerHistoryInitializedKey.setInt64(0, value: id.toInt64())
         self.sharedPeerHistoryInitializedKey.setInt8(8, value: MetadataPrefix.PeerHistoryInitialized.rawValue)

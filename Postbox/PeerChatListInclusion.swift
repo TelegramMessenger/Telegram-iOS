@@ -19,6 +19,24 @@ public enum PeerChatListInclusion: Equatable {
         }
     }
     
+    public func withPinningIndex(_ pinningIndex: UInt16?) -> PeerChatListInclusion {
+        switch self {
+            case let .ifHasMessagesOrOneOf(_, minTimestamp):
+                return .ifHasMessagesOrOneOf(pinningIndex: pinningIndex, minTimestamp: minTimestamp)
+            default:
+                return .ifHasMessagesOrOneOf(pinningIndex: pinningIndex, minTimestamp: nil)
+        }
+    }
+    
+    public func withoutPinningIndex() -> PeerChatListInclusion {
+        switch self {
+            case let .ifHasMessagesOrOneOf(_, minTimestamp):
+                return .ifHasMessagesOrOneOf(pinningIndex: nil, minTimestamp: minTimestamp)
+            default:
+                return self
+        }
+    }
+    
     public static func ==(lhs: PeerChatListInclusion, rhs: PeerChatListInclusion) -> Bool {
         switch lhs {
             case .notSpecified:
