@@ -18,19 +18,23 @@ public func updatePeers(modifier: Modifier, peers: [Peer], update: (Peer?, Peer)
                 }
             case Namespaces.Peer.CloudGroup:
                 if let group = updated as? TelegramGroup {
-                    switch group.membership {
-                        case .Member:
-                            if group.creationDate != 0 {
-                                updatedInclusion = currentInclusion.withSetIfHasMessagesOrMaxMinTimestamp(group.creationDate)
-                            } else {
-                                if currentInclusion == .notSpecified {
-                                    updatedInclusion = .ifHasMessages
+                    if group.flags.contains(.deactivated) {
+                        updatedInclusion = .never
+                    } else {
+                        switch group.membership {
+                            case .Member:
+                                if group.creationDate != 0 {
+                                    updatedInclusion = currentInclusion.withSetIfHasMessagesOrMaxMinTimestamp(group.creationDate)
+                                } else {
+                                    if currentInclusion == .notSpecified {
+                                        updatedInclusion = .ifHasMessages
+                                    }
                                 }
-                            }
-                        default:
-                            if currentInclusion == .notSpecified {
-                                updatedInclusion = .never
-                            }
+                            default:
+                                if currentInclusion == .notSpecified {
+                                    updatedInclusion = .never
+                                }
+                        }
                     }
                 } else {
                     assertionFailure()

@@ -13,7 +13,12 @@ public func removePeerChat(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoE
             
         } else {
             cloudChatAddRemoveChatOperation(modifier: modifier, peerId: peerId)
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                modifier.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessages)
+                modifier.clearHistory(peerId)
+            } else {
+                modifier.updatePeerChatListInclusion(peerId, inclusion: .never)
+            }
         }
-        modifier.updatePeerChatListInclusion(peerId, inclusion: .never)
     }
 }

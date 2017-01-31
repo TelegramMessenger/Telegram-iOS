@@ -7,6 +7,31 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            let currentSettings = modifier.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings
+            let previousSettings: TelegramPeerNotificationSettings
+            if let currentSettings = currentSettings {
+                previousSettings = currentSettings
+            } else {
+                previousSettings = TelegramPeerNotificationSettings.defaultSettings
+            }
+            
+            let updatedSettings: TelegramPeerNotificationSettings
+            switch previousSettings.muteState {
+                case .unmuted:
+                    updatedSettings = previousSettings.withUpdatedMuteState(.muted(until: Int32.max))
+                case .muted:
+                    updatedSettings = previousSettings.withUpdatedMuteState(.unmuted)
+            }
+            return changePeerNotificationSettings(account: account, peerId: peerId, settings: updatedSettings)
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
 public func changePeerNotificationSettings(account: Account, peerId: PeerId, settings: TelegramPeerNotificationSettings) -> Signal<Void, NoError> {
     return account.postbox.loadedPeerWithId(peerId)
         |> mapToSignal { peer -> Signal<Void, NoError> in

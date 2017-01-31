@@ -152,6 +152,14 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
         }
     }
     
+    public func withUpdatedMuteState(_ muteState: PeerMuteState) -> TelegramPeerNotificationSettings {
+        return TelegramPeerNotificationSettings(muteState: muteState, messageSound: self.messageSound)
+    }
+    
+    public func withUpdatedMessageSound(_ messageSound: PeerMessageSound) -> TelegramPeerNotificationSettings {
+        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: messageSound)
+    }
+    
     public static func ==(lhs: TelegramPeerNotificationSettings, rhs: TelegramPeerNotificationSettings) -> Bool {
         return lhs.muteState == rhs.muteState && lhs.messageSound == rhs.messageSound
     }
