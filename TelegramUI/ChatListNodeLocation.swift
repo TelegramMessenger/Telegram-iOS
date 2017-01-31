@@ -6,8 +6,8 @@ import Display
 
 enum ChatListNodeLocation: Equatable {
     case initial(count: Int)
-    case navigation(index: MessageIndex)
-    case scroll(index: MessageIndex, sourceIndex: MessageIndex, scrollPosition: ListViewScrollPosition, animated: Bool)
+    case navigation(index: ChatListIndex)
+    case scroll(index: ChatListIndex, sourceIndex: ChatListIndex, scrollPosition: ListViewScrollPosition, animated: Bool)
     
     static func ==(lhs: ChatListNodeLocation, rhs: ChatListNodeLocation) -> Bool {
         switch lhs {

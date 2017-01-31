@@ -53,16 +53,33 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     let resourceSize: Int = resource.size ?? 0
     
     let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
-    let data = postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
     var fetchedData: Data?
-    let semaphore = DispatchSemaphore(value: 0)
-    let _ = data.start(next: { data in
-        if data.count == readCount {
-            fetchedData = data
+    
+    if resource.streamable {
+        let data: Signal<Data, NoError>
+        data = postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
+        let semaphore = DispatchSemaphore(value: 0)
+        let _ = data.start(next: { data in
+            if data.count == readCount {
+                fetchedData = data
+                semaphore.signal()
+            }
+        })
+        semaphore.wait()
+    } else {
+        let data = postbox.mediaBox.resourceData(resource, pathExtension: nil, complete: true)
+        let range = context.readingOffset ..< (context.readingOffset + readCount)
+        let semaphore = DispatchSemaphore(value: 0)
+        let _ = data.start(next: { next in
+            if next.complete {
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [.mappedIfSafe]) {
+                    fetchedData = data.subdata(in: Range(range))
+                }
+            }
             semaphore.signal()
-        }
-    })
-    semaphore.wait()
+        })
+        semaphore.wait()
+    }
     if let fetchedData = fetchedData {
         fetchedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
             memcpy(buffer, bytes, fetchedData.count)
@@ -94,8 +111,14 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
             
             if context.readingOffset >= resourceSize {
                 context.fetchedDataDisposable.set(nil)
+                context.requestedCompleteFetch = false
             } else {
-                context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: context.readingOffset ..< resourceSize).start())
+                if resource.streamable {
+                    context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: context.readingOffset ..< resourceSize).start())
+                } else if !context.requestedCompleteFetch {
+                    context.requestedCompleteFetch = true
+                    context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResource(resource).start())
+                }
             }
         }
     }
@@ -116,6 +139,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     
     fileprivate var requestedDataOffset: Int?
     fileprivate let fetchedDataDisposable = MetaDisposable()
+    fileprivate var requestedCompleteFetch = false
     
     fileprivate var readingError = false
     
@@ -144,7 +168,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         let resourceSize: Int = resource.size ?? 0
         
-        self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: 0 ..< resourceSize).start())
+        if resource.streamable {
+            self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: 0 ..< resourceSize).start())
+        } else if !self.requestedCompleteFetch {
+            self.requestedCompleteFetch = true
+            self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResource(resource).start())
+        }
         
         var avFormatContextRef = avformat_alloc_context()
         guard let avFormatContext = avFormatContextRef else {

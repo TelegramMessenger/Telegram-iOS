@@ -65,7 +65,7 @@ public final class PeerSelectionController: ViewController {
             if let strongSelf = self {
                 let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
                     if modifier.getPeer(peer.id) == nil {
-                        modifier.updatePeers([peer], update: { previousPeer, updatedPeer in
+                        updatePeers(modifier: modifier, peers: [peer], update: { previousPeer, updatedPeer in
                             return updatedPeer
                         })
                     }
@@ -82,7 +82,7 @@ public final class PeerSelectionController: ViewController {
             if let strongSelf = self {
                 let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
                     if modifier.getPeer(peer.id) == nil {
-                        modifier.updatePeers([peer], update: { previousPeer, updatedPeer in
+                        updatePeers(modifier: modifier, peers: [peer], update: { previousPeer, updatedPeer in
                             return updatedPeer
                         })
                     }

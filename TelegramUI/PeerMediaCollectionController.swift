@@ -126,7 +126,7 @@ public class PeerMediaCollectionController: ViewController {
                     }
                 }
             }
-            }, openPeer: { [weak self] id, navigation in
+            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { [weak self] id, navigation in
                 if let strongSelf = self {
                     if let id = id {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
@@ -181,7 +181,7 @@ public class PeerMediaCollectionController: ViewController {
                 }
             }, sendMessage: { _ in
             },sendSticker: { _ in
-            }, requestMessageActionCallback: { _, _ in
+            }, requestMessageActionCallback: { _ in
             }, openUrl: { _ in
             }, shareCurrentLocation: {
             }, shareAccountContact: {
@@ -210,6 +210,7 @@ public class PeerMediaCollectionController: ViewController {
         }, botSwitchChatWithPayload: { _ in
         }, beginAudioRecording: {
         }, finishAudioRecording: { _ in 
+        }, setupMessageAutoremoveTimeout: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

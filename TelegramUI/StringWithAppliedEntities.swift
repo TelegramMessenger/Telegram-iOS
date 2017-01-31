@@ -11,7 +11,15 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
             continue
         }
         let entity = entities[i]
-        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+        var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+        if nsString == nil {
+            nsString = text as NSString
+        }
+        if range.location + range.length > nsString!.length {
+            let upperBound = nsString!.length
+            range.location = max(0, upperBound - range.length)
+            range.length = upperBound - range.location
+        }
         switch entity.type {
             case .Url:
                 string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)

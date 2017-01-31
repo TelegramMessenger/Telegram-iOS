@@ -12,6 +12,14 @@ public class ListController: ViewController {
         }
     }
     
+    override public init(navigationBar: NavigationBar = NavigationBar()) {
+        super.init(navigationBar: navigationBar)
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override public func loadDisplayNode() {
         self.displayNode = ListControllerNode()
         

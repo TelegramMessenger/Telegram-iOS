@@ -22,11 +22,23 @@ private func generateBackgroundImage() -> UIImage? {
 }
 
 private let backgroundImage = generateBackgroundImage()
+private let badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: UIColor(0x007ee5), backgroundColor: nil)
+private let badgeFont = Font.regular(13.0)
 
 class ChatHistoryNavigationButtonNode: ASControlNode {
     private let imageNode: ASImageNode
+    private let badgeBackgroundNode: ASImageNode
+    private let badgeTextNode: ASTextNode
     
     var tapped: (() -> Void)?
+    
+    var badge: String = "" {
+        didSet {
+            if self.badge != oldValue {
+                self.layoutBadge()
+            }
+        }
+    }
     
     override init() {
         self.imageNode = ASImageNode()
@@ -34,10 +46,24 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         self.imageNode.image = backgroundImage
         self.imageNode.isLayerBacked = true
         
+        self.badgeBackgroundNode = ASImageNode()
+        self.badgeBackgroundNode.isLayerBacked = true
+        self.badgeBackgroundNode.displayWithoutProcessing = true
+        self.badgeBackgroundNode.displaysAsynchronously = false
+        self.badgeBackgroundNode.image = badgeImage
+        
+        self.badgeTextNode = ASTextNode()
+        self.badgeTextNode.maximumNumberOfLines = 1
+        self.badgeTextNode.isLayerBacked = true
+        self.badgeTextNode.displaysAsynchronously = false
+        
         super.init()
         
         self.addSubnode(self.imageNode)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+        
+        self.addSubnode(self.badgeBackgroundNode)
+        self.addSubnode(self.badgeTextNode)
         
         self.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         
@@ -47,6 +73,23 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     @objc func onTap() {
         if let tapped = self.tapped {
             tapped()
+        }
+    }
+    
+    private func layoutBadge() {
+        if !self.badge.isEmpty {
+            self.badgeTextNode.attributedText = NSAttributedString(string: self.badge, font: badgeFont, textColor: .white)
+            self.badgeBackgroundNode.isHidden = false
+            self.badgeTextNode.isHidden = false
+            
+            let badgeSize = self.badgeTextNode.measure(CGSize(width: 200.0, height: 100.0))
+            let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
+            let backgroundFrame = CGRect(origin: CGPoint(x: floor((38.0 - backgroundSize.width) / 2.0), y: -6.0), size: backgroundSize)
+            self.badgeBackgroundNode.frame = backgroundFrame
+            self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: -5.0), size: badgeSize)
+        } else {
+            self.badgeBackgroundNode.isHidden = true
+            self.badgeTextNode.isHidden = true
         }
     }
 }

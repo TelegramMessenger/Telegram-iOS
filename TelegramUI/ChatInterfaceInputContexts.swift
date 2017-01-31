@@ -167,6 +167,9 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             } else {
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.isEmpty {
                     var accessoryItems: [ChatTextInputAccessoryItem] = []
+                    if let peer = chatPresentationInterfaceState.peer as? TelegramSecretChat {
+                        accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
+                    }
                     accessoryItems.append(.stickers)
                     if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup {
                         accessoryItems.append(.inputButtons)

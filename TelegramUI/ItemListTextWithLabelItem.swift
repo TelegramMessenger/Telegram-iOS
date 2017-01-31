@@ -3,13 +3,13 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-final class PeerInfoTextWithLabelItem: ListViewItem, PeerInfoItem {
+final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     let label: String
     let text: String
     let multiline: Bool
-    let sectionId: PeerInfoItemSectionId
+    let sectionId: ItemListSectionId
     
-    init(label: String, text: String, multiline: Bool, sectionId: PeerInfoItemSectionId) {
+    init(label: String, text: String, multiline: Bool, sectionId: ItemListSectionId) {
         self.label = label
         self.text = text
         self.multiline = multiline
@@ -18,8 +18,8 @@ final class PeerInfoTextWithLabelItem: ListViewItem, PeerInfoItem {
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
-            let node = PeerInfoTextWithLabelItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
+            let node = ItemListTextWithLabelItemNode()
+            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -31,12 +31,12 @@ final class PeerInfoTextWithLabelItem: ListViewItem, PeerInfoItem {
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? PeerInfoTextWithLabelItemNode {
+        if let node = node as? ItemListTextWithLabelItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
+                    let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -57,7 +57,7 @@ final class PeerInfoTextWithLabelItem: ListViewItem, PeerInfoItem {
 private let labelFont = Font.regular(14.0)
 private let textFont = Font.regular(17.0)
 
-class PeerInfoTextWithLabelItemNode: ListViewItemNode {
+class ItemListTextWithLabelItemNode: ListViewItemNode {
     let labelNode: TextNode
     let textNode: TextNode
     let separatorNode: ASDisplayNode
@@ -85,12 +85,12 @@ class PeerInfoTextWithLabelItemNode: ListViewItemNode {
         self.addSubnode(self.textNode)
     }
     
-    func asyncLayout() -> (_ item: PeerInfoTextWithLabelItem, _ width: CGFloat, _ insets: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ItemListTextWithLabelItem, _ width: CGFloat, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         return { item, width, neighbors in
-            let insets = peerInfoItemNeighborsPlainInsets(neighbors)
+            let insets = itemListNeighborsPlainInsets(neighbors)
             let leftInset: CGFloat = 35.0
             
             let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: labelFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), nil)

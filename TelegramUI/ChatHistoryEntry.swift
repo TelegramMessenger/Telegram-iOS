@@ -1,7 +1,7 @@
 import Postbox
 import TelegramCore
 
-enum ChatHistoryEntry: Identifiable, Comparable {
+enum ChatHistoryEntry: Identifiable, Comparable, CustomStringConvertible {
     case HoleEntry(MessageHistoryHole)
     case MessageEntry(Message, Bool)
     case UnreadEntry(MessageIndex)
@@ -30,6 +30,19 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 return index
             case .ChatInfoEntry:
                 return MessageIndex.absoluteLowerBound()
+        }
+    }
+    
+    var description: String {
+        switch self {
+            case let .HoleEntry(hole):
+                return "HoleEntry(\(hole))"
+            case let .MessageEntry(message, read):
+                return "MessageEntry(\(message), \(read))"
+            case let .UnreadEntry(index):
+                return "UnreadEntry(\(index))"
+            case .ChatInfoEntry:
+                return "ChatInfoEntry"
         }
     }
 }

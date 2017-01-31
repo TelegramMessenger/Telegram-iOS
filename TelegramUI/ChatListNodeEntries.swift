@@ -62,18 +62,18 @@ enum ChatListNodeEntryId: Hashable, CustomStringConvertible {
 
 enum ChatListNodeEntry: Comparable, Identifiable {
     case SearchEntry
-    case MessageEntry(MessageIndex, Message, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?)
+    case PeerEntry(index: ChatListIndex, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, editing: Bool, hasActiveRevealControls: Bool)
     case HoleEntry(ChatListHole)
-    case Nothing(MessageIndex)
+    case Nothing(ChatListIndex)
     
-    var index: MessageIndex {
+    var index: ChatListIndex {
         switch self {
             case .SearchEntry:
-                return MessageIndex.absoluteUpperBound()
-            case let .MessageEntry(index, _, _, _, _):
+                return ChatListIndex.absoluteUpperBound
+            case let .PeerEntry(index, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
-                return hole.index
+                return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
             case let .Nothing(index):
                 return index
         }
@@ -83,12 +83,12 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         switch self {
             case .SearchEntry:
                 return .Search
-            case let .MessageEntry(index, _, _, _, _):
-                return .PeerId(index.id.peerId.toInt64())
+            case let .PeerEntry(index, _, _, _, _, _, _, _):
+                return .PeerId(index.messageIndex.id.peerId.toInt64())
             case let .HoleEntry(hole):
                 return .Hole(Int64(hole.index.id.id))
             case let .Nothing(index):
-                return .PeerId(index.id.peerId.toInt64())
+                return .PeerId(index.messageIndex.id.peerId.toInt64())
         }
     }
     
@@ -105,16 +105,16 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     default:
                         return false
                 }
-            case let .MessageEntry(lhsIndex, lhsMessage, lhsUnreadCount, lhsNotificationSettings, lhsEmbeddedState):
+            case let .PeerEntry(lhsIndex, lhsMessage, lhsUnreadCount, lhsNotificationSettings, lhsEmbeddedState, lhsPeer, lhsEditing, lhsHasRevealControls):
                 switch rhs {
-                    case let .MessageEntry(rhsIndex, rhsMessage, rhsUnreadCount, rhsNotificationSettings, rhsEmbeddedState):
+                    case let .PeerEntry(rhsIndex, rhsMessage, rhsUnreadCount, rhsNotificationSettings, rhsEmbeddedState, rhsPeer, rhsEditing, rhsHasRevealControls):
                         if lhsIndex != rhsIndex {
                             return false
                         }
-                        if lhsMessage.stableVersion != rhsMessage.stableVersion {
+                        if lhsMessage?.stableVersion != rhsMessage?.stableVersion {
                             return false
                         }
-                        if lhsMessage.id != rhsMessage.id || lhsMessage.flags != rhsMessage.flags || lhsUnreadCount != rhsUnreadCount {
+                        if lhsMessage?.id != rhsMessage?.id || lhsMessage?.flags != rhsMessage?.flags || lhsUnreadCount != rhsUnreadCount {
                             return false
                         }
                         if let lhsNotificationSettings = lhsNotificationSettings, let rhsNotificationSettings = rhsNotificationSettings {
@@ -129,6 +129,15 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                                 return false
                             }
                         } else if (lhsEmbeddedState != nil) != (rhsEmbeddedState != nil) {
+                            return false
+                        }
+                        if lhsEditing != rhsEditing {
+                            return false
+                        }
+                        if lhsHasRevealControls != rhsHasRevealControls {
+                            return false
+                        }
+                        if lhsPeer != rhsPeer {
                             return false
                         }
                         return true
@@ -154,16 +163,14 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     }
 }
 
-func chatListNodeEntriesForView(_ view: ChatListView) -> [ChatListNodeEntry] {
+func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState) -> [ChatListNodeEntry] {
     var result: [ChatListNodeEntry] = []
     for entry in view.entries {
         switch entry {
-            case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState):
-                result.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState))
+            case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer):
+                result.append(.PeerEntry(index: index, message: message, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions))
             case let .HoleEntry(hole):
                 result.append(.HoleEntry(hole))
-            case let .Nothing(index):
-                result.append(.Nothing(index))
         }
     }
     if view.laterIndex == nil {

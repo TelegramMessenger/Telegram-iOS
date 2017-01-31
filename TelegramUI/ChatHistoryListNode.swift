@@ -305,25 +305,23 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.historyDisposable.set(appliedTransition.start())
         
-        let previousMaxIncomingMessageIdByNamespace = Atomic<[MessageId.Namespace: MessageId]>(value: [:])
+        let previousMaxIncomingMessageIndexByNamespace = Atomic<[MessageId.Namespace: MessageIndex]>(value: [:])
         let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get())
             |> map { messageIndex, canRead in
                 if canRead {
                     var apply = false
-                    let _ = previousMaxIncomingMessageIdByNamespace.modify { dict in
+                    let _ = previousMaxIncomingMessageIndexByNamespace.modify { dict in
                         let previousIndex = dict[messageIndex.id.namespace]
-                        if previousIndex == nil || previousIndex!.id < messageIndex.id.id {
+                        if previousIndex == nil || previousIndex! < messageIndex {
                             apply = true
                             var dict = dict
-                            dict[messageIndex.id.namespace] = messageIndex.id
+                            dict[messageIndex.id.namespace] = messageIndex
                             return dict
                         }
                         return dict
                     }
                     if apply {
-                        let _ = account.postbox.modify({ modifier in
-                            modifier.applyInteractiveReadMaxId(messageIndex.id)
-                        }).start()
+                        applyMaxReadIndexInteractively(postbox: account.postbox, network: account.network, index: messageIndex).start()
                     }
                 }
         }

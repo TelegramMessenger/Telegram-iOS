@@ -22,13 +22,17 @@ private class AvatarNodeParameters: NSObject {
     }
 }
 
-let gradientColors: [NSArray] = [
+private let gradientColors: [NSArray] = [
     [UIColor(0xff516a).cgColor, UIColor(0xff885e).cgColor],
     [UIColor(0xffa85c).cgColor, UIColor(0xffcd6a).cgColor],
     [UIColor(0x54cb68).cgColor, UIColor(0xa0de7e).cgColor],
     [UIColor(0x2a9ef1).cgColor, UIColor(0x72d5fd).cgColor],
     [UIColor(0x665fff).cgColor, UIColor(0x82b1ff).cgColor],
     [UIColor(0xd669ed).cgColor, UIColor(0xe0a2f3).cgColor]
+]
+
+private let grayscaleColors: NSArray = [
+    UIColor(0xefefef).cgColor, UIColor(0xeeeeee).cgColor
 ]
 
 private enum AvatarNodeState: Equatable {
@@ -150,12 +154,21 @@ public final class AvatarNode: ASDisplayNode {
         
         let colorIndex: Int
         if let parameters = parameters as? AvatarNodeParameters {
-            colorIndex = Int(parameters.account.peerId.id + parameters.peerId.id)
+            if parameters.peerId.id == 0 {
+                colorIndex = -1
+            } else {
+                colorIndex = abs(Int(parameters.account.peerId.id + parameters.peerId.id))
+            }
         } else {
-            colorIndex = 0
+            colorIndex = -1
         }
         
-        let colorsArray: NSArray = gradientColors[colorIndex % gradientColors.count]
+        let colorsArray: NSArray
+        if colorIndex == -1 {
+            colorsArray = grayscaleColors
+        } else {
+            colorsArray = gradientColors[colorIndex % gradientColors.count]
+        }
         
         var locations: [CGFloat] = [1.0, 0.2];
         

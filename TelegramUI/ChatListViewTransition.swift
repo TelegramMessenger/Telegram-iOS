@@ -41,7 +41,7 @@ struct ChatListNodeViewTransition {
 }
 
 enum ChatListNodeViewScrollPosition {
-    case index(index: MessageIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
+    case index(index: ChatListIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
 }
 
 func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toView: ChatListNodeView, reason: ChatListNodeViewTransitionReason, account: Account, scrollPosition: ChatListNodeViewScrollPosition?) -> Signal<ChatListNodeViewTransition, NoError> {
@@ -87,10 +87,10 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 if let (_, removeDirection) = removeHoleDirections.first {
                     switch removeDirection {
                     case .LowerToUpper:
-                        var holeIndex: MessageIndex?
+                        var holeIndex: ChatListIndex?
                         for (index, _) in filledHoleDirections {
-                            if holeIndex == nil || index < holeIndex! {
-                                holeIndex = index
+                            if holeIndex == nil || index < holeIndex!.messageIndex {
+                                holeIndex = ChatListIndex(pinningIndex: nil, messageIndex: index)
                             }
                         }
                         

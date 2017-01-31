@@ -67,7 +67,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
             //CGContextSetLineCap(context, .Round)
             
             switch parameters.state {
-                case .None, .Remote, .Play, .Pause, .Icon:
+                case .None, .Remote, .Play, .Pause, .Icon, .Image:
                     break
                 case let .Fetching(progress):
                     let startAngle = -CGFloat(M_PI_2)
@@ -111,6 +111,7 @@ public enum RadialProgressState {
     case Play
     case Pause
     case Icon
+    case Image(UIImage)
 }
 
 public struct RadialProgressTheme {
@@ -177,6 +178,12 @@ class RadialProgressNode: ASControlNode {
                             break
                         default:
                             self.setNeedsDisplay()
+                    }
+                case let .Image(lhsImage):
+                    if case let .Image(rhsImage) = self.state, lhsImage === rhsImage {
+                        break
+                    } else {
+                        self.setNeedsDisplay()
                     }
             }
         }
@@ -300,6 +307,8 @@ class RadialProgressNode: ASControlNode {
                         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                     }
                     context.translateBy(x: -(parameters.diameter - size.width) / 2.0, y: -(parameters.diameter - size.height) / 2.0)
+                case let .Image(image):
+                    image.draw(at: CGPoint(x: floor((parameters.diameter - image.size.width) / 2.0), y: floor((parameters.diameter - image.size.height) / 2.0)))
             }
         }
     }

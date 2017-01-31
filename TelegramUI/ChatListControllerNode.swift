@@ -54,7 +54,6 @@ class ChatListControllerNode: ASDisplayNode {
         }
         
         let listViewCurve: ListViewAnimationCurve
-        var speedFactor: CGFloat = 1.0
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {

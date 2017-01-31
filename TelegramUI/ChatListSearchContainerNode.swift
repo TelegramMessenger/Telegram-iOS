@@ -93,17 +93,17 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         
     static func <(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(lhsPeer, lhsIndex):
-                if case let .localPeer(rhsPeer, rhsIndex) = rhs {
+            case let .localPeer(_, lhsIndex):
+                if case let .localPeer(_, rhsIndex) = rhs {
                     return lhsIndex < rhsIndex
                 } else {
                     return true
                 }
-            case let .globalPeer(lhsPeer, lhsIndex):
+            case let .globalPeer(_, lhsIndex):
                 switch rhs {
                     case .localPeer:
                         return false
-                    case let .globalPeer(rhsPeer, rhsIndex):
+                    case let .globalPeer(_, rhsIndex):
                         return lhsIndex < rhsIndex
                     case .message:
                         return true
@@ -117,20 +117,18 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, enableHeaders: Bool, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Message) -> Void) -> ListViewItem {
+    func item(account: Account, enableHeaders: Bool, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
             case let .localPeer(peer, _):
-                return ContactsPeerItem(account: account, peer: peer, status: .none, index: nil, header: ChatListSearchItemHeader(type: .localPeers), action: { _ in
-                    openPeer(peer)
+                return ContactsPeerItem(account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .localPeers), action: { _ in
+                    interaction.peerSelected(peer)
                 })
             case let .globalPeer(peer, _):
-                return ContactsPeerItem(account: account, peer: peer, status: .addressName, index: nil, header: ChatListSearchItemHeader(type: .globalPeers), action: { _ in
-                    openPeer(peer)
+                return ContactsPeerItem(account: account, peer: peer, chatPeer: peer, status: .addressName, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .globalPeers), action: { _ in
+                    interaction.peerSelected(peer)
                 })
             case let .message(message):
-                return ChatListItem(account: account, message: message, combinedReadState: nil, notificationSettings: nil, embeddedState: nil, header: enableHeaders ? ChatListSearchItemHeader(type: .messages) : nil, action: { _ in
-                    openMessage(message)
-                })
+                return ChatListItem(account: account, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), message: message, peer: RenderedPeer(message: message), combinedReadState: nil, notificationSettings: nil, embeddedState: nil, editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages) : nil, interaction: interaction)
         }
     }
 }
@@ -142,12 +140,12 @@ struct ChatListSearchContainerTransition {
     let displayingResults: Bool
 }
 
-func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, account: Account, enableHeaders: Bool, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Message) -> Void) -> ChatListSearchContainerTransition {
+func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, account: Account, enableHeaders: Bool, interaction: ChatListNodeInteraction) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, enableHeaders: enableHeaders, openPeer: openPeer, openMessage: openMessage), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, enableHeaders: enableHeaders, openPeer: openPeer, openMessage: openMessage), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, enableHeaders: enableHeaders, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, enableHeaders: enableHeaders, interaction: interaction), directionHint: nil) }
     
     return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults)
 }
@@ -222,7 +220,21 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             }
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
-        let processingQueue = Queue()
+        
+        let interaction = ChatListNodeInteraction(activateSearch: {
+        }, peerSelected: { [weak self] peer in
+            openPeer(peer)
+            self?.listNode.clearHighlightAnimated(true)
+        }, messageSelected: { [weak self] message in
+            if let peer = message.peers[message.id.peerId] {
+                openMessage(peer, message.id)
+            }
+            self?.listNode.clearHighlightAnimated(true)
+        }, setPeerIdWithRevealedOptions: { _ in
+        }, setPeerPinned: { _ in
+        }, setPeerMuted: { _ in
+        }, deletePeer: { _ in
+        })
         
         self.searchDisposable.set((foundItems
             |> deliverOnMainQueue).start(next: { [weak self] entries in
@@ -230,15 +242,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     let previousEntries = previousSearchItems.swap(entries)
                     
                     let firstTime = previousEntries == nil
-                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, enableHeaders: true, openPeer: { peer in
-                        openPeer(peer)
-                        self?.listNode.clearHighlightAnimated(true)
-                    }, openMessage: { message in
-                        if let peer = message.peers[message.id.peerId] {
-                            openMessage(peer, message.id)
-                        }
-                        self?.listNode.clearHighlightAnimated(true)
-                    })
+                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, enableHeaders: true, interaction: interaction)
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 }
             }))

@@ -3,12 +3,6 @@ import Postbox
 import TelegramCore
 import Display
 
-protocol PeerInfoSection {
-    var rawValue: UInt32 { get }
-    func isEqual(to: PeerInfoSection) -> Bool
-    func isOrderedBefore(_ section: PeerInfoSection) -> Bool
-}
-
 protocol PeerInfoEntryStableId {
     func isEqual(to: PeerInfoEntryStableId) -> Bool
     var hashValue: Int { get }
@@ -31,7 +25,7 @@ struct IntPeerInfoEntryStableId: PeerInfoEntryStableId {
 }
 
 protocol PeerInfoEntry {
-    var section: PeerInfoSection { get }
+    var section: ItemListSectionId { get }
     var stableId: PeerInfoEntryStableId { get }
     func isEqual(to: PeerInfoEntry) -> Bool
     func isOrderedBefore(_ entry: PeerInfoEntry) -> Bool
@@ -56,15 +50,17 @@ struct PeerInfoEntries {
 func peerInfoEntries(view: PeerView, state: PeerInfoState?) -> PeerInfoEntries {
     if let user = view.peers[view.peerId] as? TelegramUser {
         return userInfoEntries(view: view, state: state)
+    } else if let secretChat = view.peers[view.peerId] as? TelegramSecretChat {
+        return userInfoEntries(view: view, state: state)
     } else if let channel = view.peers[view.peerId] as? TelegramChannel {
         switch channel.info {
             case .broadcast:
                 return channelBroadcastInfoEntries(view: view)
             case .group:
-                return groupInfoEntries(view: view)
+                return groupInfoEntries(view: view, state: state)
         }
     } else if let group = view.peers[view.peerId] as? TelegramGroup {
-        return groupInfoEntries(view: view)
+        return groupInfoEntries(view: view, state: state)
     }
     return PeerInfoEntries(entries: [], leftNavigationButton: nil, rightNavigationButton: nil)
 }

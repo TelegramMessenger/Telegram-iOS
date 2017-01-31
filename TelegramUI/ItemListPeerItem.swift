@@ -5,15 +5,15 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-final class PeerInfoPeerItem: ListViewItem, PeerInfoItem {
+final class ItemListPeerItem: ListViewItem, ItemListItem {
     let account: Account
     let peer: Peer?
     let presence: PeerPresence?
     let label: String?
-    let sectionId: PeerInfoItemSectionId
-    let action: () -> Void
+    let sectionId: ItemListSectionId
+    let action: (() -> Void)?
     
-    init(account: Account, peer: Peer?, presence: PeerPresence?, label: String?, sectionId: PeerInfoItemSectionId, action: @escaping () -> Void) {
+    init(account: Account, peer: Peer?, presence: PeerPresence?, label: String?, sectionId: ItemListSectionId, action: (() -> Void)?) {
         self.account = account
         self.peer = peer
         self.presence = presence
@@ -24,8 +24,8 @@ final class PeerInfoPeerItem: ListViewItem, PeerInfoItem {
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
-            let node = PeerInfoPeerItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
+            let node = ItemListPeerItemNode()
+            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -37,12 +37,12 @@ final class PeerInfoPeerItem: ListViewItem, PeerInfoItem {
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? PeerInfoPeerItemNode {
+        if let node = node as? ItemListPeerItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
+                    let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -57,7 +57,7 @@ final class PeerInfoPeerItem: ListViewItem, PeerInfoItem {
     
     func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
-        self.action()
+        self.action?()
     }
 }
 
@@ -67,7 +67,7 @@ private let statusFont = Font.regular(14.0)
 private let labelFont = Font.regular(13.0)
 private let avatarFont = Font.regular(17.0)
 
-class PeerInfoPeerItemNode: ListViewItemNode {
+class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -79,7 +79,15 @@ class PeerInfoPeerItemNode: ListViewItemNode {
     private let statusNode: TextNode
     
     private var peerPresenceManager: PeerPresenceStatusManager?
-    private var layoutParams: (PeerInfoPeerItem, CGFloat, PeerInfoItemNeighbors)?
+    private var layoutParams: (ItemListPeerItem, CGFloat, ItemListNeighbors)?
+    
+    override var canBeSelected: Bool {
+        if let item = self.layoutParams?.0, item.action != nil {
+            return true
+        } else {
+            return false
+        }
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -116,7 +124,7 @@ class PeerInfoPeerItemNode: ListViewItemNode {
         self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false)
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
@@ -131,7 +139,7 @@ class PeerInfoPeerItemNode: ListViewItemNode {
         })
     }
     
-    func asyncLayout() -> (_ item: PeerInfoPeerItem, _ width: CGFloat, _ neighbors: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ItemListPeerItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
@@ -182,26 +190,9 @@ class PeerInfoPeerItemNode: ListViewItemNode {
             let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - labelLayout.size.width, height: CGFloat.greatestFiniteMagnitude), nil)
             let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0), height: CGFloat.greatestFiniteMagnitude), nil)
             
-            let contentSize: CGSize
-            let insets: UIEdgeInsets
+            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let contentSize = CGSize(width: width, height: 48.0)
             let separatorHeight = UIScreenPixel
-            
-            contentSize = CGSize(width: width, height: 48.0)
-            let topInset: CGFloat
-            let bottomInset: CGFloat
-            switch neighbors.top {
-                case .sameSection, .none:
-                    topInset = 0.0
-                case .otherSection:
-                    topInset = separatorHeight + 35.0
-            }
-            switch neighbors.bottom {
-                case .none:
-                    bottomInset = separatorHeight + 35.0
-                case .otherSection, .sameSection:
-                    bottomInset = separatorHeight
-            }
-            insets = UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -209,6 +200,8 @@ class PeerInfoPeerItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, width, neighbors)
+                    
+                    let revealOffset = strongSelf.revealOffset
                     
                     let _ = titleApply()
                     let _ = statusApply()
@@ -226,27 +219,30 @@ class PeerInfoPeerItemNode: ListViewItemNode {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     switch neighbors.top {
-                        case .sameSection:
+                        case .sameSection(false):
                             strongSelf.topStripeNode.isHidden = true
-                        case .none, .otherSection:
+                        default:
                             strongSelf.topStripeNode.isHidden = false
                     }
                     let bottomStripeInset: CGFloat
+                    let bottomStripeOffset: CGFloat
                     switch neighbors.bottom {
-                        case .sameSection:
+                        case .sameSection(false):
                             bottomStripeInset = leftInset
-                        case .none, .otherSection:
+                            bottomStripeOffset = -separatorHeight
+                        default:
                             bottomStripeInset = 0.0
+                            bottomStripeOffset = 0.0
                     }
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 5.0), size: titleLayout.size)
-                    strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 25.0), size: statusLayout.size)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: width - labelLayout.size.width - 15.0, y: floor((contentSize.height - labelLayout.size.height) / 2.0 - labelLayout.size.height / 10.0)), size: labelLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset, y: 5.0), size: titleLayout.size)
+                    strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset, y: 25.0), size: statusLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: revealOffset + width - labelLayout.size.width - 15.0, y: floor((contentSize.height - labelLayout.size.height) / 2.0 - labelLayout.size.height / 10.0)), size: labelLayout.size)
                     
-                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
+                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: revealOffset + 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
                     if let peer = item.peer {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer)
                     }
@@ -305,5 +301,11 @@ class PeerInfoPeerItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        
     }
 }

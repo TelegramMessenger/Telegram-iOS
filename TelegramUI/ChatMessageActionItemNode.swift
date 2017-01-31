@@ -15,6 +15,29 @@ private func backgroundImage(color: UIColor) -> UIImage? {
 
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
+private let timeoutValues: [(Int32, String)] = [
+    (1, "1 second"),
+    (2, "2 seconds"),
+    (3, "3 seconds"),
+    (4, "4 seconds"),
+    (5, "5 seconds"),
+    (6, "6 seconds"),
+    (7, "7 seconds"),
+    (8, "8 seconds"),
+    (9, "9 seconds"),
+    (10, "10 seconds"),
+    (11, "11 seconds"),
+    (12, "12 seconds"),
+    (13, "13 seconds"),
+    (14, "14 seconds"),
+    (15, "15 seconds"),
+    (30, "30 seconds"),
+    (1 * 60, "1 minute"),
+    (1 * 60 * 60, "1 hour"),
+    (24 * 60 * 60, "1 day"),
+    (7 * 24 * 60 * 60, "1 week"),
+]
+
 class ChatMessageActionItemNode: ChatMessageItemView {
     let labelNode: TextNode
     let backgroundNode: ASImageNode
@@ -95,6 +118,49 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                             attributedString = NSAttributedString(string: tr(.ChatServiceGroupJoinedByLink(authorName)), font: titleFont, textColor: UIColor.white)
                         case .channelMigratedFromGroup, .groupMigratedToChannel:
                             attributedString = NSAttributedString(string: tr(.ChatServiceGroupMigratedToSupergroup), font: titleFont, textColor: UIColor.white)
+                        case let .messageAutoremoveTimeoutUpdated(timeout):
+                            /*
+                             "Notification.MessageLifetimeChanged" = "%1$@ set the self-destruct timer to %2$@";
+                             "Notification.MessageLifetimeChangedOutgoing" = "You set the self-destruct timer to %1$@";
+                             "Notification.MessageLifetimeRemoved" = "%1$@ disabled the self-destruct timer";
+                             "Notification.MessageLifetimeRemovedOutgoing" = "You disabled the self-destruct timer";
+                             */
+                            if timeout > 0 {
+                                var timeValue: String = "\(timeout) s"
+                                for (value, text) in timeoutValues {
+                                    if value == timeout {
+                                        timeValue = text
+                                    }
+                                }
+                                
+                                let string: String
+                                if item.message.author?.id == item.account.peerId {
+                                    string = String(format:  NSLocalizedString("Notification.MessageLifetimeChangedOutgoing", comment: ""), timeValue)
+                                } else {
+                                    let authorString: String
+                                    if let author = messageMainPeer(item.message) {
+                                        authorString = author.compactDisplayTitle
+                                    } else {
+                                        authorString = ""
+                                    }
+                                    string = String(format:  NSLocalizedString("Notification.MessageLifetimeChanged", comment: ""), authorString, timeValue)
+                                }
+                                attributedString = NSAttributedString(string: string, font: titleFont, textColor: UIColor.white)
+                            } else {
+                                let string: String
+                                if item.message.author?.id == item.account.peerId {
+                                    string = NSLocalizedString("Notification.MessageLifetimeRemovedOutgoing", comment: "")
+                                } else {
+                                    let authorString: String
+                                    if let author = messageMainPeer(item.message) {
+                                        authorString = author.compactDisplayTitle
+                                    } else {
+                                        authorString = ""
+                                    }
+                                    string = String(format: NSLocalizedString("Notification.MessageLifetimeRemoved", comment: ""), authorString)
+                                }
+                                attributedString = NSAttributedString(string: string, font: titleFont, textColor: UIColor.white)
+                            }
                         default:
                             attributedString = nil
                     }

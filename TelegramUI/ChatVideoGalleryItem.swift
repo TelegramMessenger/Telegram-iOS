@@ -21,7 +21,7 @@ class ChatVideoGalleryItem: GalleryItem {
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile, (file.isVideo || file.mimeType.hasPrefix("video/")) {
-                node.setFile(account: account, file: file)
+                node.setFile(account: account, file: file, loopVideo: file.isAnimated || self.message.containsSecretMedia)
                 break
             }
         }
@@ -50,7 +50,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let videoNode: MediaPlayerNode
     private let scrubberView: ChatVideoGalleryItemScrubberView
     
-    private var accountAndFile: (Account, TelegramMediaFile)?
+    private var accountAndFile: (Account, TelegramMediaFile, Bool)?
     
     private var isCentral = false
     
@@ -87,8 +87,8 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
-    func setFile(account: Account, file: TelegramMediaFile) {
-        if self.accountAndFile == nil || !self.accountAndFile!.1.isEqual(file) {
+    func setFile(account: Account, file: TelegramMediaFile, loopVideo: Bool) {
+        if self.accountAndFile == nil || !self.accountAndFile!.1.isEqual(file) || !self.accountAndFile!.2 != loopVideo {
             if let largestSize = file.dimensions {
                 self.snapshotNode.alphaTransitionOnFirstUpdate = false
                 let displaySize = largestSize.dividedByScreenScale()
@@ -100,7 +100,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             
             let shouldPlayVideo = self.accountAndFile?.1 != file
-            self.accountAndFile = (account, file)
+            self.accountAndFile = (account, file, loopVideo)
             if shouldPlayVideo && self.isCentral {
                 self.playVideo()
             }
@@ -108,7 +108,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     private func playVideo() {
-        if let (account, file) = self.accountAndFile {
+        if let (account, file, loopVideo) = self.accountAndFile {
             var dimensions: CGSize? = file.dimensions
             if dimensions == nil || dimensions!.width.isLessThanOrEqualTo(0.0) || dimensions!.height.isLessThanOrEqualTo(0.0) {
                 dimensions = largestImageRepresentation(file.previewRepresentations)?.dimensions.aspectFitted(CGSize(width: 1920, height: 1080))
@@ -122,6 +122,9 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.videoNode.player = VideoPlayer(source: source)*/
                 
                 let player = MediaPlayer(postbox: account.postbox, resource: file.resource)
+                if loopVideo {
+                    player.actionAtEnd = .loop
+                }
                 player.attachPlayerNode(self.videoNode)
                 self.player = player
                 self.videoStatusDisposable.set((player.status |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -130,7 +133,6 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }))
                 player.play()
-                
                 
                 self.zoomableContent = (dimensions, self.videoNode)
             }

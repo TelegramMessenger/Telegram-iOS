@@ -67,14 +67,15 @@ class ChatUnreadItemNode: ListViewItemNode {
         
         self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
         
-        self.scrollPositioningInsets = UIEdgeInsets(top: 6.0, left: 0.0, bottom: 5.0, right: 0.0)
+        self.scrollPositioningInsets = UIEdgeInsets(top: 5.0, left: 0.0, bottom: 6.0, right: 0.0)
+        self.canBeUsedAsScrollToItemAnchor = false
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
-        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-        self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        //self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        //self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         
         //self.transitionOffset = -self.bounds.size.height * 1.6
         //self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
@@ -82,8 +83,7 @@ class ChatUnreadItemNode: ListViewItemNode {
     }
     
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
-        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -124,7 +124,7 @@ class ChatUnreadItemNode: ListViewItemNode {
         }
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         super.animateRemoved(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)

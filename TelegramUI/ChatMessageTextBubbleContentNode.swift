@@ -72,7 +72,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     } else {
                         if message.flags.contains(.Failed) {
                             statusType = .BubbleOutgoing(.Failed)
-                        } else if message.flags.contains(.Unsent) {
+                        } else if message.flags.isSending {
                             statusType = .BubbleOutgoing(.Sending)
                         } else {
                             statusType = .BubbleOutgoing(.Sent(read: item.read))
@@ -97,6 +97,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     if let attribute = attribute as? TextEntitiesMessageAttribute {
                         entities = attribute
                         break
+                    }
+                }
+                if entities == nil {
+                    let parsedEntities = generateTextEntities(message.text)
+                    if !parsedEntities.isEmpty {
+                        entities = TextEntitiesMessageAttribute(entities: parsedEntities)
                     }
                 }
                 if let entities = entities {

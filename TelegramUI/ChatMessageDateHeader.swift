@@ -90,7 +90,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.stickBackgroundNode.displayWithoutProcessing = true
         self.stickBackgroundNode.displaysAsynchronously = false
         
-        super.init(dynamicBounce: true)
+        super.init(dynamicBounce: true, isRotated: true)
         
         self.isLayerBacked = true
         self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)

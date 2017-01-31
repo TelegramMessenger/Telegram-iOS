@@ -4,6 +4,21 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
+private let composeButtonImage = generateImage(CGSize(width: 24.0, height: 24.0), rotatedContext: { size, context in
+    /*
+     
+     <svg width="24px" height="24px" viewBox="0 -1 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+     <!-- Generator: Sketch 42 (36781) - http://www.bohemiancoding.com/sketch -->
+     <desc>Created with Sketch.</desc>
+     <defs></defs>
+     <path d="M0,4 L15,4 L14,5 L1,5 L1,22 L18,22 L18,9 L19,8 L19,23 L0,23 L0,4 Z M18.5944456,1.70209754 L19.5995507,2.70718758 L10.0510517,12.255543 L9.54849908,13.7631781 L11.0561568,13.2606331 L20.6046559,3.71227763 L21.6097611,4.71736767 L11.5587094,14.7682681 L7.53828874,15.7733582 L9.04594649,11.250453 L18.5944456,1.70209754 Z M19.0969982,1.19955251 L20.0773504,0.21921503 C20.3690844,-0.0725145755 20.8398084,-0.0729335627 21.1298838,0.217137419 L23.0947435,2.18196761 C23.3833646,2.47058439 23.3838887,2.94326675 23.0926659,3.23448517 L22.1123136,4.21482265 L19.0969982,1.19955251 Z" id="Edit" stroke="none" fill="#000000" fill-rule="evenodd"></path>
+     </svg>
+     */
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    context.setFillColor(UIColor(0x007ee5).cgColor)
+    try? drawSvgPath(context, path: "M0,4 L15,4 L14,5 L1,5 L1,22 L18,22 L18,9 L19,8 L19,23 L0,23 L0,4 Z M18.5944456,1.70209754 L19.5995507,2.70718758 L10.0510517,12.255543 L9.54849908,13.7631781 L11.0561568,13.2606331 L20.6046559,3.71227763 L21.6097611,4.71736767 L11.5587094,14.7682681 L7.53828874,15.7733582 L9.04594649,11.250453 L18.5944456,1.70209754 Z M19.0969982,1.19955251 L20.0773504,0.21921503 C20.3690844,-0.0725145755 20.8398084,-0.0729335627 21.1298838,0.217137419 L23.0947435,2.18196761 C23.3833646,2.47058439 23.3838887,2.94326675 23.0926659,3.23448517 L22.1123136,4.21482265 L19.0969982,1.19955251 Z ")
+})
+
 public class ChatListController: TelegramController {
     private let account: Account
     
@@ -33,7 +48,7 @@ public class ChatListController: TelegramController {
         self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconChatsSelected")
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: self, action: #selector(self.editPressed))
-        //self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Compose, target: self, action: Selector("composePressed"))
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: composeButtonImage, style: .plain, target: self, action: #selector(self.composePressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -119,7 +134,7 @@ public class ChatListController: TelegramController {
             if let strongSelf = self {
                 let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
                     if modifier.getPeer(peer.id) == nil {
-                        modifier.updatePeers([peer], update: { previousPeer, updatedPeer in
+                        updatePeers(modifier: modifier, peers: [peer], update: { previousPeer, updatedPeer in
                             return updatedPeer
                         })
                     }
@@ -150,7 +165,17 @@ public class ChatListController: TelegramController {
     }
     
     @objc func editPressed() {
-        
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.donePressed))
+        self.chatListDisplayNode.chatListNode.updateState { state in
+            return state.withUpdatedEditing(true)
+        }
+    }
+    
+    @objc func donePressed() {
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: self, action: #selector(self.editPressed))
+        self.chatListDisplayNode.chatListNode.updateState { state in
+            return state.withUpdatedEditing(false).withUpdatedPeerIdWithRevealedOptions(nil)
+        }
     }
     
     private func activateSearch() {
@@ -168,6 +193,10 @@ public class ChatListController: TelegramController {
             self.chatListDisplayNode.deactivateSearch()
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
         }
+    }
+    
+    @objc func composePressed() {
+        (self.navigationController as? NavigationController)?.pushViewController(ComposeController(account: self.account))
     }
 }
 

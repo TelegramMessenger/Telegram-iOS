@@ -4,24 +4,11 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
-private enum ChannelInfoSection: UInt32, PeerInfoSection {
+private enum ChannelInfoSection: ItemListSectionId {
     case info
     case sharedMediaAndNotifications
+    case members
     case reportOrLeave
-    
-    func isEqual(to: PeerInfoSection) -> Bool {
-        guard let section = to as? ChannelInfoSection else {
-            return false
-        }
-        return section == self
-    }
-    
-    func isOrderedBefore(_ section: PeerInfoSection) -> Bool {
-        guard let section = section as? ChannelInfoSection else {
-            return false
-        }
-        return self.rawValue < section.rawValue
-    }
 }
 
 enum ChannelInfoEntry: PeerInfoEntry {
@@ -31,16 +18,19 @@ enum ChannelInfoEntry: PeerInfoEntry {
     case sharedMedia
     case notifications(settings: PeerNotificationSettings?)
     case report
+    case member(index: Int, peerId: PeerId, peer: Peer?, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus)
     case leave
     
-    var section: PeerInfoSection {
+    var section: ItemListSectionId {
         switch self {
             case .info, .about, .userName:
-                return ChannelInfoSection.info
+                return ChannelInfoSection.info.rawValue
             case .sharedMedia, .notifications:
-                return ChannelInfoSection.sharedMediaAndNotifications
+                return ChannelInfoSection.sharedMediaAndNotifications.rawValue
+            case .member:
+                return ChannelInfoSection.members.rawValue
             case .report, .leave:
-                return ChannelInfoSection.reportOrLeave
+                return ChannelInfoSection.reportOrLeave.rawValue
         }
     }
     
@@ -107,6 +97,26 @@ enum ChannelInfoEntry: PeerInfoEntry {
                     default:
                         return false
                 }
+            case let .member(lhsIndex, lhsPeerId, lhsPeer, lhsPresence, lhsMemberStatus):
+                if case let .member(rhsIndex, rhsPeerId, rhsPeer, rhsPresence, rhsMemberStatus) = entry, lhsIndex == rhsIndex && lhsPeerId == rhsPeerId, lhsMemberStatus == rhsMemberStatus {
+                    if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
+                        if !lhsPeer.isEqual(rhsPeer) {
+                            return false
+                        }
+                    } else if (lhsPeer == nil) != (rhsPeer != nil) {
+                        return false
+                    }
+                    if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
+                        if !lhsPresence.isEqual(to: rhsPresence) {
+                            return false
+                        }
+                    } else if (lhsPresence == nil) != (rhsPresence != nil) {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
             case .report:
                 switch entry {
                     case .report:
@@ -131,15 +141,17 @@ enum ChannelInfoEntry: PeerInfoEntry {
             case .about:
                 return 1
             case .userName:
-                return 1000
+                return 2
             case .sharedMedia:
-                return 1004
+                return 3
             case .notifications:
-                return 1005
+                return 4
+            case let .member(index, _, _, _, _):
+                return 100 + index
             case .report:
-                return 1006
+                return 1001
             case .leave:
-                return 1007
+                return 1002
         }
     }
     
@@ -153,16 +165,18 @@ enum ChannelInfoEntry: PeerInfoEntry {
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem {
         switch self {
             case let .info(peer, cachedData):
-                return PeerInfoAvatarAndNameItem(account: account, peer: peer, cachedData: cachedData, editingState: nil, sectionId: self.section.rawValue, style: .plain)
+                return ItemListAvatarAndNameInfoItem(account: account, peer: peer, cachedData: cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: nil, updatingName: nil), sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+                    
+                })
             case let .about(text):
-                return PeerInfoTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section.rawValue)
+                return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section)
             case let .userName(value):
-                return PeerInfoTextWithLabelItem(label: "share link", text: "https://telegram.me/\(value)", multiline: false, sectionId: self.section.rawValue)
-                return PeerInfoActionItem(title: "Start Secret Chat", kind: .generic, alignment: .natural, sectionId: self.section.rawValue, style: .plain, action: {
+                return ItemListTextWithLabelItem(label: "share link", text: "https://telegram.me/\(value)", multiline: false, sectionId: self.section)
+                return ItemListActionItem(title: "Start Secret Chat", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     
                 })
             case .sharedMedia:
-                return PeerInfoDisclosureItem(title: "Shared Media", label: "", sectionId: self.section.rawValue, style: .plain, action: {
+                return ItemListDisclosureItem(title: "Shared Media", label: "", sectionId: self.section, style: .plain, action: {
                     interaction.openSharedMedia()
                 })
             case let .notifications(settings):
@@ -172,15 +186,28 @@ enum ChannelInfoEntry: PeerInfoEntry {
                 } else {
                     label = "Enabled"
                 }
-                return PeerInfoDisclosureItem(title: "Notifications", label: label, sectionId: self.section.rawValue, style: .plain, action: {
+                return ItemListDisclosureItem(title: "Notifications", label: label, sectionId: self.section, style: .plain, action: {
                     interaction.changeNotificationMuteSettings()
                 })
+            case let .member(_, peerId, peer, presence, memberStatus):
+                let label: String?
+                switch memberStatus {
+                    case .admin:
+                        label = "admin"
+                    case .member:
+                        label = nil
+                }
+                return ItemListPeerItem(account: account, peer: peer, presence: presence, label: label, sectionId: self.section, action: {
+                    if let peer = peer {
+                        interaction.openPeerInfo(peer.id)
+                    }
+                })
             case .report:
-                return PeerInfoActionItem(title: "Report", kind: .generic, alignment: .natural, sectionId: self.section.rawValue, style: .plain, action: {
+                return ItemListActionItem(title: "Report", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     
                 })
             case .leave:
-                return PeerInfoActionItem(title: "Leave Channel", kind: .destructive, alignment: .natural, sectionId: self.section.rawValue, style: .plain, action: {
+                return ItemListActionItem(title: "Leave Channel", kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     
                 })
         }

@@ -41,23 +41,33 @@ final class HashtagSearchController: TelegramController {
                     |> map { return $0.map({ .message($0) }) }
             }
         
+        let interaction = ChatListNodeInteraction(activateSearch: {
+        }, peerSelected: { peer in
+            
+        }, messageSelected: { [weak self] message in
+            if let strongSelf = self {
+                if let peer = message.peers[message.id.peerId] {
+                    strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: {
+                        if let strongSelf = self {
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: message.id.peerId, messageId: message.id))
+                        }
+                    }))
+                }
+                strongSelf.controllerNode.listNode.clearHighlightAnimated(true)
+            }
+        }, setPeerIdWithRevealedOptions: { _ in
+        }, setPeerPinned: { _ in
+        }, setPeerMuted: { _ in
+        }, deletePeer: { _ in
+        })
+        
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
         self.transitionDisposable = (foundMessages |> deliverOn(self.queue)).start(next: { [weak self] entries in
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, enableHeaders: false, openPeer: { peer in
-                }, openMessage: { message in
-                    if let peer = message.peers[message.id.peerId] {
-                        strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
-                            if let strongSelf = strongSelf {
-                                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: message.id.peerId, messageId: message.id))
-                            }
-                        }))
-                    }
-                    strongSelf.controllerNode.listNode.clearHighlightAnimated(true)
-                })
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, enableHeaders: false, interaction: interaction)
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })

@@ -88,8 +88,9 @@ public final class PeerInfoController: ListController {
     
     private let transitionDisposable = MetaDisposable()
     private let changeSettingsDisposable = MetaDisposable()
+    private let additionalInfoDisposable = MetaDisposable()
     
-    private var currentListStyle: PeerInfoListStyle = .plain
+    private var currentListStyle: ItemListStyle = .plain
     
     private var state = PeerInfoEquatableState(state: nil) {
         didSet {
@@ -119,6 +120,7 @@ public final class PeerInfoController: ListController {
     deinit {
         self.transitionDisposable.dispose()
         self.changeSettingsDisposable.dispose()
+        self.additionalInfoDisposable.dispose()
     }
     
     override public func displayNodeDidLoad() {
@@ -150,7 +152,7 @@ public final class PeerInfoController: ListController {
                         } else {
                             muteState = .muted(until: Int32(Date().timeIntervalSince1970) + muteUntil)
                         }
-                        strongSelf.changeSettingsDisposable.set(changePeerNotificationSettings(account: strongSelf.account, peerId: strongSelf.peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.appDefault)).start())
+                        strongSelf.changeSettingsDisposable.set(changePeerNotificationSettings(account: strongSelf.account, peerId: strongSelf.peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
                     }
                 }
                 controller.setItemGroups([
@@ -194,20 +196,26 @@ public final class PeerInfoController: ListController {
         let account = self.account
         let transition = combineLatest(account.viewTracker.peerView(self.peerId), self.statePromise.get()
             |> distinctUntilChanged)
-            |> map { view, state -> (PeerInfoEntryTransition, PeerInfoListStyle, Bool, Bool, PeerInfoNavigationButton?, PeerInfoNavigationButton?) in
+            |> map { view, state -> (PeerInfoEntryTransition, ItemListStyle, Bool, Bool, PeerInfoNavigationButton?, PeerInfoNavigationButton?) in
                 let infoEntries = peerInfoEntries(view: view, state: state.state)
                 let entries = infoEntries.entries.map { PeerInfoSortableEntry(entry: $0) }
                 assert(entries == entries.sorted())
                 let previous = previousEntries.swap(entries)
-                let style: PeerInfoListStyle
-                if let group = view.peers[view.peerId] as? TelegramGroup {
+                let style: ItemListStyle
+                if let _ = view.peers[view.peerId] as? TelegramGroup {
                     style = .blocks
                 } else if let channel = view.peers[view.peerId] as? TelegramChannel, case .group = channel.info {
                     style = .blocks
                 } else {
                     style = .plain
                 }
-                return (preparedPeerInfoEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), style, previous == nil, previous != nil, infoEntries.leftNavigationButton, infoEntries.rightNavigationButton)
+                let animated: Bool
+                if let previous = previous {
+                    animated = (entries.count - previous.count) < 20
+                } else {
+                    animated = false
+                }
+                return (preparedPeerInfoEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), style, previous == nil, animated, infoEntries.leftNavigationButton, infoEntries.rightNavigationButton)
             }
             |> deliverOnMainQueue
         
@@ -251,9 +259,13 @@ public final class PeerInfoController: ListController {
                 }
             }
         }))
+        
+        if self.peerId.namespace == Namespaces.Peer.CloudChannel {
+            self.additionalInfoDisposable.set(self.account.viewTracker.updatedCachedChannelParticipants(self.peerId, forceImmediateUpdate: true).start())
+        }
     }
     
-    private func enqueueTransition(_ transition: PeerInfoEntryTransition, style: PeerInfoListStyle, firstTime: Bool, animated: Bool) {
+    private func enqueueTransition(_ transition: PeerInfoEntryTransition, style: ItemListStyle, firstTime: Bool, animated: Bool) {
         if self.currentListStyle != style {
             self.currentListStyle = style
             switch style {

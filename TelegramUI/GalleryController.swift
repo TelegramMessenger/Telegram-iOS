@@ -47,7 +47,7 @@ private func mediaForMessage(message: Message) -> Media? {
     return nil
 }
 
-private func itemForEntry(account: Account, entry: MessageHistoryEntry) -> GalleryItem {
+func galleryItemForEntry(account: Account, entry: MessageHistoryEntry) -> GalleryItem {
     switch entry {
         case let .MessageEntry(message, _, location):
             if let media = mediaForMessage(message: message) {
@@ -181,7 +181,7 @@ class GalleryController: ViewController {
                         }
                     }
                     if strongSelf.isViewLoaded {
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ itemForEntry(account: account, entry: $0) }), centralItemIndex: strongSelf.centralEntryIndex)
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ galleryItemForEntry(account: account, entry: $0) }), centralItemIndex: strongSelf.centralEntryIndex)
                         
                         let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                             strongSelf?.didSetReady = true
@@ -286,7 +286,7 @@ class GalleryController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.galleryNode.pager.replaceItems(self.entries.map({ itemForEntry(account: self.account, entry: $0) }), centralItemIndex: self.centralEntryIndex)
+        self.galleryNode.pager.replaceItems(self.entries.map({ galleryItemForEntry(account: self.account, entry: $0) }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {

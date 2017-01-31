@@ -24,7 +24,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.interactiveImageNode.activateLocalContent = { [weak self] in
             if let strongSelf = self {
-                if let item = strongSelf.item, let controllerInteraction = strongSelf.controllerInteraction {
+                if let item = strongSelf.item, let controllerInteraction = strongSelf.controllerInteraction, !item.message.containsSecretMedia {
                     controllerInteraction.openMessage(item.message.id)
                 }
             }
@@ -104,5 +104,14 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         self.interactiveImageNode.isHidden = mediaHidden
+    }
+    
+    override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+        if self.interactiveImageNode.frame.contains(point) {
+            if let item = self.item, item.message.containsSecretMedia {
+                return .holdToPreviewSecretMedia
+            }
+        }
+        return .none
     }
 }

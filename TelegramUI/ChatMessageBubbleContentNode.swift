@@ -37,6 +37,7 @@ enum ChatMessageBubbleContentTapAction {
     case botCommand(String)
     case hashtag(String?, String)
     case instantPage
+    case holdToPreviewSecretMedia
 }
 
 class ChatMessageBubbleContentNode: ASDisplayNode {

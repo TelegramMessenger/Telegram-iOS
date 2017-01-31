@@ -10,14 +10,18 @@ private struct FetchControls {
     let cancel: () -> Void
 }
 
+private let secretMediaIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SecretMediaIcon"), color: .white)
+
 final class ChatMessageInteractiveMediaNode: ASTransformNode {
     private let imageNode: TransformImageNode
     private var progressNode: RadialProgressNode?
+    private var timeoutNode: RadialTimeoutNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
     private var account: Account?
     private var messageIdAndFlags: (MessageId, MessageFlags)?
     private var media: Media?
+    private var message: Message?
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
@@ -50,7 +54,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         if let fetchStatus = self.fetchStatus {
             switch fetchStatus {
                 case .Fetching:
-                    if let account = self.account, let (messageId, flags) = self.messageIdAndFlags, flags.contains(.Unsent) && !flags.contains(.Failed) {
+                    if let account = self.account, let (messageId, flags) = self.messageIdAndFlags, flags.isSending {
                         account.postbox.modify({ modifier -> Void in
                             modifier.deleteMessages([messageId])
                         }).start()
@@ -70,7 +74,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     
     @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let file = media as? TelegramMediaFile, (file.isVideo || file.isAnimated || file.mimeType.hasPrefix("video/")) {
+            if let file = self.media as? TelegramMediaFile, let message = self.message, (file.isVideo || file.isAnimated || file.mimeType.hasPrefix("video/")) && !message.containsSecretMedia {
                 self.activateLocalContent()
             } else {
                 if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
@@ -90,6 +94,19 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         return { account, message, media, corners, automaticDownload, constrainedSize, layoutConstants in
             var nativeSize: CGSize
             
+            var isSecretMedia = message.containsSecretMedia
+            var secretBeginTimeAndTimeout: (Double, Double)?
+            if isSecretMedia {
+                for attribute in message.attributes {
+                    if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                        if let countdownBeginTime = attribute.countdownBeginTime {
+                            secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                        }
+                        break
+                    }
+                }
+            }
+            
             if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                 nativeSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5)).fitted(constrainedSize)
             } else if let file = media as? TelegramMediaFile, let dimensions = file.dimensions {
@@ -101,10 +118,30 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 nativeSize = CGSize(width: 54.0, height: 54.0)
             }
             
-            return (layoutConstants.image.maxDimensions.width, { constrainedSize in
-                return (min(layoutConstants.image.maxDimensions.width, nativeSize.width), { boundingWidth in
-                    let drawingSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
-                    let boundingSize = CGSize(width: max(boundingWidth, drawingSize.width), height: drawingSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: layoutConstants.image.maxDimensions.height))
+            let maxWidth: CGFloat
+            if isSecretMedia {
+                maxWidth = 180.0
+            } else {
+                maxWidth = layoutConstants.image.maxDimensions.width
+            }
+            
+            var secretProgressIcon: UIImage?
+            if isSecretMedia {
+                secretProgressIcon = secretMediaIcon
+            }
+            
+            return (maxWidth, { constrainedSize in
+                return (min(maxWidth, nativeSize.width), { boundingWidth in
+                    let drawingSize: CGSize
+                    let boundingSize: CGSize
+                    
+                    if isSecretMedia {
+                        boundingSize = CGSize(width: maxWidth, height: maxWidth)
+                        drawingSize = nativeSize.aspectFilled(boundingSize)
+                    } else {
+                        drawingSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
+                        boundingSize = CGSize(width: max(boundingWidth, drawingSize.width), height: drawingSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: layoutConstants.image.maxDimensions.height))
+                    }
                     
                     var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                     var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
@@ -124,22 +161,30 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     
                     if mediaUpdated {
                         if let image = media as? TelegramMediaImage {
-                            updateImageSignal = chatMessagePhoto(account: account, photo: image)
+                            if isSecretMedia {
+                                updateImageSignal = chatSecretPhoto(account: account, photo: image)
+                            } else {
+                                updateImageSignal = chatMessagePhoto(account: account, photo: image)
+                            }
                             
                             updatedFetchControls = FetchControls(fetch: { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photo: image).start())
                                 }
-                                }, cancel: {
-                                    chatMessagePhotoCancelInteractiveFetch(account: account, photo: image)
+                            }, cancel: {
+                                chatMessagePhotoCancelInteractiveFetch(account: account, photo: image)
                             })
                         } else if let file = media as? TelegramMediaFile {
-                            updateImageSignal = chatMessageVideo(account: account, video: file)
+                            if isSecretMedia {
+                                updateImageSignal = chatSecretMessageVideo(account: account, video: file)
+                            } else {
+                                updateImageSignal = chatMessageVideo(account: account, video: file)
+                            }
                             updatedFetchControls = FetchControls(fetch: { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.fetchDisposable.set(chatMessageFileInteractiveFetched(account: account, file: file).start())
                                 }
-                                }, cancel: {
+                            }, cancel: {
                                     chatMessageFileCancelInteractiveFetch(account: account, file: file)
                             })
                         }
@@ -147,7 +192,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     
                     if statusUpdated {
                         if let image = media as? TelegramMediaImage {
-                            if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
+                            if message.flags.isSending {
                                 updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, photo: image), account.pendingMessageManager.pendingMessageStatus(message.id))
                                     |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                         if let pendingStatus = pendingStatus {
@@ -182,11 +227,32 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             strongSelf.account = account
                             strongSelf.messageIdAndFlags = (message.id, message.flags)
                             strongSelf.media = media
+                            strongSelf.message = message
                             strongSelf.imageNode.frame = imageFrame
                             strongSelf.progressNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
+                            strongSelf.timeoutNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             
                             if let updateImageSignal = updateImageSignal {
                                 strongSelf.imageNode.setSignal(account: account, signal: updateImageSignal)
+                            }
+                            
+                            if let secretBeginTimeAndTimeout = secretBeginTimeAndTimeout {
+                                if strongSelf.timeoutNode == nil {
+                                    let timeoutNode = RadialTimeoutNode(backgroundColor: UIColor(white: 0.0, alpha: 0.6), foregroundColor: UIColor(white: 1.0, alpha: 0.6))
+                                    timeoutNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
+                                    timeoutNode.position = strongSelf.imageNode.position
+                                    strongSelf.timeoutNode = timeoutNode
+                                    strongSelf.addSubnode(timeoutNode)
+                                    timeoutNode.setTimeout(beginTimestamp: secretBeginTimeAndTimeout.0, timeout: secretBeginTimeAndTimeout.1)
+                                }
+                                
+                                if let progressNode = strongSelf.progressNode {
+                                    progressNode.removeFromSupernode()
+                                    strongSelf.progressNode = nil
+                                }
+                            } else if let timeoutNode = strongSelf.timeoutNode {
+                                timeoutNode.removeFromSupernode()
+                                strongSelf.timeoutNode = nil
                             }
                             
                             if let updatedStatusSignal = updatedStatusSignal {
@@ -195,41 +261,49 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                         if let strongSelf = strongSelf {
                                             strongSelf.fetchStatus = status
                                             
-                                            if let file = media as? TelegramMediaFile, (file.isVideo || file.mimeType.hasPrefix("video/")) {
+                                            var progressRequired = false
+                                            if secretBeginTimeAndTimeout == nil {
+                                                if case .Local = status {
+                                                    if let file = media as? TelegramMediaFile, file.isVideo {
+                                                        progressRequired = true
+                                                    } else if isSecretMedia {
+                                                        progressRequired = true
+                                                    }
+                                                } else {
+                                                    progressRequired = true
+                                                }
+                                            }
+                                            
+                                            if progressRequired {
+                                                if strongSelf.progressNode == nil {
+                                                    let progressNode = RadialProgressNode()
+                                                    progressNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
+                                                    progressNode.position = strongSelf.imageNode.position
+                                                    strongSelf.progressNode = progressNode
+                                                    strongSelf.addSubnode(progressNode)
+                                                }
+                                            } else {
                                                 if let progressNode = strongSelf.progressNode {
                                                     progressNode.removeFromSupernode()
                                                     strongSelf.progressNode = nil
                                                 }
-                                            } else {
-                                                if case .Local = status {
-                                                    if let progressNode = strongSelf.progressNode {
-                                                        progressNode.removeFromSupernode()
-                                                        strongSelf.progressNode = nil
-                                                    }
-                                                } else {
-                                                    if strongSelf.progressNode == nil {
-                                                        let progressNode = RadialProgressNode()
-                                                        progressNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
-                                                        progressNode.position = strongSelf.imageNode.position
-                                                        strongSelf.progressNode = progressNode
-                                                        strongSelf.addSubnode(progressNode)
-                                                    }
-                                                }
-                                                
-                                                switch status {
-                                                    case let .Fetching(progress):
-                                                        strongSelf.progressNode?.state = .Fetching(progress: progress)
-                                                    case .Local:
-                                                        var state: RadialProgressState = .None
-                                                        if let file = media as? TelegramMediaFile {
-                                                            if file.isVideo {
-                                                                state = .Play
-                                                            }
+                                            }
+                                            
+                                            switch status {
+                                                case let .Fetching(progress):
+                                                    strongSelf.progressNode?.state = .Fetching(progress: progress)
+                                                case .Local:
+                                                    var state: RadialProgressState = .None
+                                                    if isSecretMedia && secretProgressIcon != nil {
+                                                        state = .Image(secretProgressIcon!)
+                                                    } else if let file = media as? TelegramMediaFile {
+                                                        if file.isVideo {
+                                                            state = .Play
                                                         }
-                                                        strongSelf.progressNode?.state = state
-                                                    case .Remote:
-                                                        strongSelf.progressNode?.state = .Remote
-                                                }
+                                                    }
+                                                    strongSelf.progressNode?.state = state
+                                                case .Remote:
+                                                    strongSelf.progressNode?.state = .Remote
                                             }
                                         }
                                     }

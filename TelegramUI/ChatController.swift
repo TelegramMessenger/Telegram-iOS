@@ -33,6 +33,7 @@ public class ChatController: TelegramController {
     private var historyStateDisposable: Disposable?
     
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
+    private weak var secretMediaPreviewController: SecretMediaPreviewController?
     
     private var controllerInteraction: ChatControllerInteraction?
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -60,6 +61,8 @@ public class ChatController: TelegramController {
     private var audioRecorderDisposable: Disposable?
     
     private var buttonKeyboardMessageDisposable: Disposable?
+    private var chatUnreadCountDisposable: Disposable?
+    private var peerInputActivitiesDisposable: Disposable?
     
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil) {
         self.account = account
@@ -145,6 +148,29 @@ public class ChatController: TelegramController {
                         }))
                     }
                 }
+            }
+        }, openSecretMessagePreview: { [weak self] messageId in
+            if let strongSelf = self {
+                var galleryMedia: Media?
+                if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                    for media in message.media {
+                        if let file = media as? TelegramMediaFile, file.isVideo {
+                            galleryMedia = file
+                        } else if let image = media as? TelegramMediaImage {
+                            galleryMedia = image
+                        }
+                    }
+                }
+                if let _ = galleryMedia {
+                    let gallery = SecretMediaPreviewController(account: strongSelf.account, messageId: messageId)
+                    strongSelf.secretMediaPreviewController = gallery
+                    strongSelf.present(gallery, in: .window)
+                }
+            }
+        }, closeSecretMessagePreview: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.secretMediaPreviewController?.dismiss()
+                strongSelf.secretMediaPreviewController = nil
             }
         }, openPeer: { [weak self] id, navigation in
             if let strongSelf = self {
@@ -240,7 +266,7 @@ public class ChatController: TelegramController {
                 })
                 enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: file, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId)]).start()
             }
-        }, requestMessageActionCallback: { [weak self] messageId, data in
+        }, requestMessageActionCallback: { [weak self] messageId, data, isGame in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                     return $0.updatedTitlePanelContext {
@@ -260,7 +286,7 @@ public class ChatController: TelegramController {
                     }
                 })
                 
-                strongSelf.messageActionCallbackDisposable.set((requestMessageActionCallback(account: strongSelf.account, messageId: messageId, data: data) |> afterDisposed {
+                strongSelf.messageActionCallbackDisposable.set((requestMessageActionCallback(account: strongSelf.account, messageId: messageId, isGame: isGame, data: data) |> afterDisposed {
                     Queue.mainQueue().async {
                         if let strongSelf = self {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -406,7 +432,7 @@ public class ChatController: TelegramController {
         peerDisposable.set((self.peerView.get()
             |> deliverOnMainQueue).start(next: { [weak self] peerView in
                 if let strongSelf = self {
-                    if let peer = peerView.peers[peerId] {
+                    if let peer = peerViewMainPeer(peerView) {
                         strongSelf.chatTitleView?.peerView = peerView
                         (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.account, peer: peer)
                     }
@@ -532,6 +558,8 @@ public class ChatController: TelegramController {
         self.audioRecorderDisposable?.dispose()
         self.buttonKeyboardMessageDisposable?.dispose()
         self.resolveUrlDisposable?.dispose()
+        self.chatUnreadCountDisposable?.dispose()
+        self.peerInputActivitiesDisposable?.dispose()
     }
     
     var chatDisplayNode: ChatControllerNode {
@@ -781,9 +809,7 @@ public class ChatController: TelegramController {
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                    strongSelf.account.postbox.modify({ modifier in
-                        modifier.deleteMessages(Array(messageIds))
-                    }).start()
+                    deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
                 }
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             }
@@ -902,7 +928,73 @@ public class ChatController: TelegramController {
             self?.requestAudioRecorder()
         }, finishAudioRecording: { [weak self] sendAudio in
             self?.dismissAudioRecorder(sendAudio: sendAudio)
+        }, setupMessageAutoremoveTimeout: { [weak self] in
+            if let strongSelf = self, strongSelf.peerId.namespace == Namespaces.Peer.SecretChat {
+                strongSelf.chatDisplayNode.dismissInput()
+                
+                if let peer = strongSelf.presentationInterfaceState.peer as? TelegramSecretChat {
+                    let controller = ChatSecretAutoremoveTimerActionSheetController(currentValue: peer.messageAutoremoveTimeout == nil ? 0 : peer.messageAutoremoveTimeout!, applyValue: { value in
+                        if let strongSelf = self {
+                            setSecretChatMessageAutoremoveTimeoutInteractively(account: strongSelf.account, peerId: strongSelf.peerId, timeout: value == 0 ? nil : value).start()
+                        }
+                    })
+                    strongSelf.present(controller, in: .window)
+                }
+            }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get()))
+        
+        self.chatUnreadCountDisposable = (self.account.postbox.unreadMessageCountsView(items: [.peer(self.peerId)]) |> deliverOnMainQueue).start(next: { [weak self] items in
+            if let strongSelf = self {
+                var unreadCount: Int32 = 0
+                if let count = items.count(for: .peer(strongSelf.peerId)) {
+                    unreadCount = count
+                }
+                if unreadCount != 0 {
+                    strongSelf.chatDisplayNode.navigateToLatestButton.badge = "\(unreadCount)"
+                } else {
+                    strongSelf.chatDisplayNode.navigateToLatestButton.badge = ""
+                }
+            }
+        })
+        
+        let postbox = self.account.postbox
+        var previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
+        self.peerInputActivitiesDisposable = (self.account.peerInputActivities(peerId: peerId)
+            |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
+                var foundAllPeers = true
+                var cachedResult: [(Peer, PeerInputActivity)] = []
+                previousPeerCache.with { dict -> Void in
+                    for (peerId, activity) in activities {
+                        if let peer = dict[peerId] {
+                            cachedResult.append((peer, activity))
+                        } else {
+                            foundAllPeers = false
+                            break
+                        }
+                    }
+                }
+                if foundAllPeers {
+                    return .single(cachedResult)
+                } else {
+                    return postbox.modify { modifier -> [(Peer, PeerInputActivity)] in
+                        var result: [(Peer, PeerInputActivity)] = []
+                        var peerCache: [PeerId: Peer] = [:]
+                        for (peerId, activity) in activities {
+                            if let peer = modifier.getPeer(peerId) {
+                                result.append((peer, activity))
+                                peerCache[peerId] = peer
+                            }
+                        }
+                        previousPeerCache.swap(peerCache)
+                        return result
+                    }
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] activities in
+                if let strongSelf = self {
+                    strongSelf.chatTitleView?.inputActivities = (strongSelf.peerId, activities)
+                }
+            })
         
         self.interfaceInteraction = interfaceInteraction
         self.chatDisplayNode.interfaceInteraction = interfaceInteraction

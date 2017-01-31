@@ -472,6 +472,117 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
     }
 }
 
+func chatSecretPhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMessagePhotoDatas(account: account, photo: photo)
+    
+    return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            
+            let drawingRect = arguments.drawingRect
+            var fittedSize = arguments.imageSize
+            if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                fittedSize.width = arguments.boundingSize.width
+            }
+            if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                fittedSize.height = arguments.boundingSize.height
+            }
+            
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            
+            var blurredImage: UIImage?
+            
+            if let fullSizeData = fullSizeData {
+                if fullSizeComplete {
+                    let options = NSMutableDictionary()
+                    options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                    if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        let thumbnailSize = CGSize(width: image.width, height: image.height)
+                        let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 20.0, height: 20.0))
+                        let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                        thumbnailContext.withFlippedContext { c in
+                            c.interpolationQuality = .none
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                        }
+                        telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                        
+                        let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
+                        let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0)
+                        thumbnailContext2.withFlippedContext { c in
+                            c.interpolationQuality = .none
+                            if let image = thumbnailContext.generateImage()?.cgImage {
+                                c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
+                            }
+                        }
+                        telegramFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+                        
+                        blurredImage = thumbnailContext2.generateImage()
+                    }
+                }/* else {
+                    let imageSource = CGImageSourceCreateIncremental(nil)
+                    CGImageSourceUpdateData(imageSource, fullSizeData as CFData, fullSizeComplete)
+                    
+                    let options = NSMutableDictionary()
+                    options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                    if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        fullSizeImage = image
+                    }
+                }*/
+            }
+            
+            if blurredImage == nil {
+                if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                    let thumbnailSize = CGSize(width: image.width, height: image.height)
+                    let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 20.0, height: 20.0))
+                    let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                    thumbnailContext.withFlippedContext { c in
+                        c.interpolationQuality = .none
+                        c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                    }
+                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                    let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
+                    let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0)
+                    thumbnailContext2.withFlippedContext { c in
+                        c.interpolationQuality = .none
+                        if let image = thumbnailContext.generateImage()?.cgImage {
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
+                        }
+                    }
+                    telegramFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+                    
+                    blurredImage = thumbnailContext2.generateImage()
+                }
+            }
+            
+            context.withFlippedContext { c in
+                c.setBlendMode(.copy)
+                if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
+                    //c.setFillColor(UIColor(white: 0.0, alpha: 0.4).cgColor)
+                    c.fill(arguments.drawingRect)
+                }
+                
+                c.setBlendMode(.copy)
+                if let blurredImage = blurredImage, let cgImage = blurredImage.cgImage {
+                    c.interpolationQuality = .low
+                    c.draw(cgImage, in: fittedRect)
+                }
+                
+                if !arguments.insets.left.isEqual(to: 0.0) {
+                    c.clear(CGRect(origin: CGPoint(), size: CGSize(width: arguments.insets.left, height: context.size.height)))
+                }
+                if !arguments.insets.right.isEqual(to: 0.0) {
+                    c.clear(CGRect(origin: CGPoint(x: context.size.width - arguments.insets.right, y: 0.0), size: CGSize(width: arguments.insets.right, height: context.size.height)))
+                }
+            }
+            
+            addCorners(context, arguments: arguments)
+            
+            return context
+        }
+    }
+}
+
 func mediaGridMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoDatas(account: account, photo: photo, fullRepresentationSize: CGSize(width: 127.0, height: 127.0), autoFetchFullSize: true)
     
@@ -824,6 +935,133 @@ func chatMessageVideo(account: Account, video: TelegramMediaFile) -> Signal<(Tra
                     c.setBlendMode(.normal)
                     c.interpolationQuality = .medium
                     c.draw(fullSizeImage, in: fittedRect)
+                }
+            }
+            
+            addCorners(context, arguments: arguments)
+            
+            return context
+        }
+    }
+}
+
+private func chatSecretMessageVideoData(account: Account, file: TelegramMediaFile) -> Signal<Data?, NoError> {
+    if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations) {
+        let thumbnailResource = smallestRepresentation.resource
+        
+        let fetchedThumbnail = account.postbox.mediaBox.fetchedResource(thumbnailResource)
+        
+        let thumbnail = Signal<Data?, NoError> { subscriber in
+            let fetchedDisposable = fetchedThumbnail.start()
+            let thumbnailDisposable = account.postbox.mediaBox.resourceData(thumbnailResource).start(next: { next in
+                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+            }, error: subscriber.putError, completed: subscriber.putCompletion)
+            
+            return ActionDisposable {
+                fetchedDisposable.dispose()
+                thumbnailDisposable.dispose()
+            }
+        }
+        return thumbnail
+    } else {
+        return .single(nil)
+    }
+}
+
+func chatSecretMessageVideo(account: Account, video: TelegramMediaFile) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatSecretMessageVideoData(account: account, file: video)
+    
+    return signal |> map { thumbnailData in
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            if arguments.drawingSize.width.isLessThanOrEqualTo(0.0) || arguments.drawingSize.height.isLessThanOrEqualTo(0.0) {
+                return context
+            }
+            
+            let drawingRect = arguments.drawingRect
+            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            
+            /*var fullSizeImage: CGImage?
+            if let fullSizeDataAndPath = fullSizeDataAndPath {
+                if fullSizeComplete {
+                    if video.mimeType.hasPrefix("video/") {
+                        let tempFilePath = NSTemporaryDirectory() + "\(arc4random()).mov"
+                        
+                        _ = try? FileManager.default.removeItem(atPath: tempFilePath)
+                        _ = try? FileManager.default.linkItem(atPath: fullSizeDataAndPath.1, toPath: tempFilePath)
+                        
+                        let asset = AVAsset(url: URL(fileURLWithPath: tempFilePath))
+                        let imageGenerator = AVAssetImageGenerator(asset: asset)
+                        imageGenerator.maximumSize = CGSize(width: 800.0, height: 800.0)
+                        imageGenerator.appliesPreferredTrackTransform = true
+                        if let image = try? imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil) {
+                            fullSizeImage = image
+                        }
+                    }
+                    /*let options: [NSString: NSObject] = [
+                     kCGImageSourceThumbnailMaxPixelSize: max(fittedSize.width * context.scale, fittedSize.height * context.scale),
+                     kCGImageSourceCreateThumbnailFromImageAlways: true
+                     ]
+                     if let imageSource = CGImageSourceCreateWithData(fullSizeData, nil), image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options) {
+                     fullSizeImage = image
+                     }*/
+                } else {
+                    /*let imageSource = CGImageSourceCreateIncremental(nil)
+                     CGImageSourceUpdateData(imageSource, fullSizeData as CFDataRef, fullSizeData.length >= fullTotalSize)
+                     
+                     var options: [NSString : NSObject!] = [:]
+                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                     if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionaryRef) {
+                     fullSizeImage = image
+                     }*/
+                }
+            }*/
+            var blurredImage: UIImage?
+            
+            if blurredImage == nil {
+                if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                    let thumbnailSize = CGSize(width: image.width, height: image.height)
+                    let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 20.0, height: 20.0))
+                    let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                    thumbnailContext.withFlippedContext { c in
+                        c.interpolationQuality = .none
+                        c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                    }
+                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                    let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
+                    let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0)
+                    thumbnailContext2.withFlippedContext { c in
+                        c.interpolationQuality = .none
+                        if let image = thumbnailContext.generateImage()?.cgImage {
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
+                        }
+                    }
+                    telegramFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+                    
+                    blurredImage = thumbnailContext2.generateImage()
+                }
+            }
+            
+            context.withFlippedContext { c in
+                c.setBlendMode(.copy)
+                if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
+                    //c.setFillColor(UIColor(white: 0.0, alpha: 0.4).cgColor)
+                    c.fill(arguments.drawingRect)
+                }
+                
+                c.setBlendMode(.copy)
+                if let blurredImage = blurredImage, let cgImage = blurredImage.cgImage {
+                    c.interpolationQuality = .low
+                    c.draw(cgImage, in: fittedRect)
+                }
+                
+                if !arguments.insets.left.isEqual(to: 0.0) {
+                    c.clear(CGRect(origin: CGPoint(), size: CGSize(width: arguments.insets.left, height: context.size.height)))
+                }
+                if !arguments.insets.right.isEqual(to: 0.0) {
+                    c.clear(CGRect(origin: CGPoint(x: context.size.width - arguments.insets.right, y: 0.0), size: CGSize(width: arguments.insets.right, height: context.size.height)))
                 }
             }
             

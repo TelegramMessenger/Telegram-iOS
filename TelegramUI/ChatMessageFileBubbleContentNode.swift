@@ -49,7 +49,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     if item.message.flags.contains(.Failed) {
                         statusType = .BubbleOutgoing(.Failed)
-                    } else if item.message.flags.contains(.Unsent) {
+                    } else if item.message.flags.isSending {
                         statusType = .BubbleOutgoing(.Sending)
                     } else {
                         statusType = .BubbleOutgoing(.Sent(read: item.read))

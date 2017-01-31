@@ -63,10 +63,40 @@ private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height
 private let attachmentIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: UIColor(0x9099A2))
 private let sendIcon = UIImage(bundleImageName: "Chat/Input/Text/IconSend")?.precomposed()
 
-enum ChatTextInputAccessoryItem {
+enum ChatTextInputAccessoryItem: Equatable {
     case keyboard
     case stickers
     case inputButtons
+    case messageAutoremoveTimeout(Int32?)
+    
+    static func ==(lhs: ChatTextInputAccessoryItem, rhs: ChatTextInputAccessoryItem) -> Bool {
+        switch lhs {
+            case .keyboard:
+                if case .keyboard = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .stickers:
+                if case .stickers = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .inputButtons:
+                if case .inputButtons = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .messageAutoremoveTimeout(lhsTimeout):
+                if case let .messageAutoremoveTimeout(rhsTimeout) = rhs, lhsTimeout == rhsTimeout {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 struct ChatTextInputPanelAudioRecordingState: Equatable {
@@ -122,9 +152,14 @@ private let keyboardImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryI
 private let stickersImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconStickers")?.precomposed()
 private let inputButtonsImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconInputButtons")?.precomposed()
 private let audioRecordingDotImage = generateFilledCircleImage(diameter: 9.0, color: UIColor(0xed2521))
+private let timerImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconTimer")?.precomposed()
 
 private final class AccessoryItemIconButton: HighlightableButton {
+    private let item: ChatTextInputAccessoryItem
+    
     init(item: ChatTextInputAccessoryItem) {
+        self.item = item
+        
         super.init(frame: CGRect())
         
         switch item {
@@ -134,6 +169,15 @@ private final class AccessoryItemIconButton: HighlightableButton {
                 self.setImage(stickersImage, for: [])
             case .inputButtons:
                 self.setImage(inputButtonsImage, for: [])
+            case let .messageAutoremoveTimeout(timeout):
+                if let timeout = timeout {
+                    self.setImage(nil, for: [])
+                    self.titleLabel?.font = Font.regular(12.0)
+                    self.setTitleColor(UIColor.lightGray, for: [])
+                    self.setTitle("\(timeout)s", for: [])
+                } else {
+                    self.setImage(timerImage, for: [])
+            }
         }
         
         //self.backgroundColor = UIColor.lightGray.withAlphaComponent(0.5)
@@ -144,7 +188,12 @@ private final class AccessoryItemIconButton: HighlightableButton {
     }
     
     var buttonWidth: CGFloat {
-        return (self.image(for: [])?.size.width ?? 0.0) + CGFloat(8.0)
+        switch self.item {
+            case .keyboard, .stickers, .inputButtons:
+                return (self.image(for: [])?.size.width ?? 0.0) + CGFloat(8.0)
+            case let .messageAutoremoveTimeout(timeout):
+                return 24.0
+        }
     }
 }
 
@@ -832,6 +881,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
                             return (.inputButtons, nil)
                         })
+                    case .messageAutoremoveTimeout:
+                        self.interfaceInteraction?.setupMessageAutoremoveTimeout()
                 }
                 break
             }

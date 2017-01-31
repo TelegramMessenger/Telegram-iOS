@@ -125,22 +125,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.doNotWaitForDoubleTapAtPoint = { [weak self] point in
+        recognizer.tapActionAtPoint = { [weak self] point in
             if let strongSelf = self {
                 if let nameNode = strongSelf.nameNode, nameNode.frame.contains(point) {
                     if let item = strongSelf.item {
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? InlineBotMessageAttribute {
-                                return true
+                                return .waitForSingleTap
                             }
                         }
                     }
                 }
                 if let replyInfoNode = strongSelf.replyInfoNode, replyInfoNode.frame.contains(point) {
-                    return true
+                    return .waitForSingleTap
                 }
                 if let forwardInfoNode = strongSelf.forwardInfoNode, forwardInfoNode.frame.contains(point) {
-                    return true
+                    return .waitForSingleTap
                 }
                 for contentNode in strongSelf.contentNodes {
                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY))
@@ -148,11 +148,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         case .none:
                             break
                         case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage:
-                            return true
+                            return .waitForSingleTap
+                        case .holdToPreviewSecretMedia:
+                            return .waitForHold
                     }
                 }
             }
-            return false
+            
+            return .waitForDoubleTap
         }
         self.view.addGestureRecognizer(recognizer)
     }
@@ -539,7 +542,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                     } else {
                         if let _ = strongSelf.backgroundFrameTransition {
-                            strongSelf.animateFrameTransition(1.0)
+                            strongSelf.animateFrameTransition(1.0, backgroundFrame.size.height)
                             strongSelf.backgroundFrameTransition = nil
                         }
                         strongSelf.backgroundNode.frame = backgroundFrame
@@ -635,8 +638,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
-    override func animateFrameTransition(_ progress: CGFloat) {
-        super.animateFrameTransition(progress)
+    override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
+        super.animateFrameTransition(progress, currentValue)
         
         if let backgroundFrameTransition = self.backgroundFrameTransition {
             let backgroundFrame = CGRect.interpolator()(backgroundFrameTransition.0, backgroundFrameTransition.1, progress) as! CGRect
@@ -662,6 +665,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
+            case .began:
+                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture {
+                    if let item = self.item, item.message.containsSecretMedia {
+                        self.controllerInteraction?.openSecretMessagePreview(item.message.id)
+                    }
+                }
             case .ended:
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
@@ -739,6 +748,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             controllerInteraction.openInstantPage(item.message.id)
                                         }
                                         break loop
+                                    case .holdToPreviewSecretMedia:
+                                        foundTapAction = true
+                                        break
                                 }
                             }
                             if !foundTapAction {
@@ -748,7 +760,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
                                 self.controllerInteraction?.openMessageContextMenu(item.message.id, self, self.backgroundNode.frame)
                             }
+                        case .hold:
+                            if let item = self.item, item.message.containsSecretMedia {
+                                self.controllerInteraction?.closeSecretMessagePreview()
+                            }
                     }
+                }
+            case .cancelled:
+                if let item = self.item, item.message.containsSecretMedia {
+                    self.controllerInteraction?.closeSecretMessagePreview()
                 }
             default:
                 break
@@ -866,9 +886,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 case .requestPhone:
                     controllerInteraction.shareAccountContact()
                 case .openWebApp:
-                    controllerInteraction.requestMessageActionCallback(item.message.id, nil)
+                    controllerInteraction.requestMessageActionCallback(item.message.id, nil, true)
                 case let .callback(data):
-                    controllerInteraction.requestMessageActionCallback(item.message.id, data)
+                    controllerInteraction.requestMessageActionCallback(item.message.id, data, false)
                 case let .switchInline(samePeer, query):
                     var botPeer: Peer?
                     

@@ -21,7 +21,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                 } else {
                     var scrollPosition: ChatHistoryViewScrollPosition?
                     
-                    if let maxReadIndex = view.maxReadIndex {
+                    if let maxReadIndex = view.maxReadIndex, tagMask == nil {
                         let aroundIndex = maxReadIndex
                         scrollPosition = .Unread(index: maxReadIndex)
                         

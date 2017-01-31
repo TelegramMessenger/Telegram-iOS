@@ -34,7 +34,7 @@ func fileMediaResourceStatus(account: Account, file: TelegramMediaFile, message:
         playbackStatus = .single(nil)
     }
     
-    if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
+    if message.flags.isSending {
         return combineLatest(chatMessageFileStatus(account: account, file: file), account.pendingMessageManager.pendingMessageStatus(message.id), playbackStatus)
             |> map { resourceStatus, pendingStatus, playbackStatus -> FileMediaResourceStatus in
                 if let playbackStatus = playbackStatus {

@@ -6,26 +6,14 @@ import Display
 
 private let addMemberPlusIcon = UIImage(bundleImageName: "Peer Info/PeerItemPlusIcon")?.precomposed()
 
-private enum GroupInfoSection: UInt32, PeerInfoSection {
+private enum GroupInfoSection: ItemListSectionId {
     case info
     case about
     case sharedMediaAndNotifications
+    case infoManagement
+    case memberManagement
     case members
     case leave
-    
-    func isEqual(to: PeerInfoSection) -> Bool {
-        guard let section = to as? GroupInfoSection else {
-            return false
-        }
-        return section == self
-    }
-    
-    func isOrderedBefore(_ section: PeerInfoSection) -> Bool {
-        guard let section = section as? GroupInfoSection else {
-            return false
-        }
-        return self.rawValue < section.rawValue
-    }
 }
 
 enum GroupInfoMemberStatus {
@@ -50,29 +38,38 @@ private struct GroupPeerEntryStableId: PeerInfoEntryStableId {
 }
 
 enum GroupInfoEntry: PeerInfoEntry {
-    case info(peer: Peer?, cachedData: CachedPeerData?)
+    case info(peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState)
     case setGroupPhoto
     case aboutHeader
     case about(text: String)
     case sharedMedia
     case notifications(settings: PeerNotificationSettings?)
+    case groupTypeSetup(isPublic: Bool)
+    case groupDescriptionSetup(text: String)
+    case groupManagementInfoLabel(text: String)
+    case membersAdmins(count: Int)
+    case membersBlacklist(count: Int)
     case usersHeader
     case addMember
     case member(index: Int, peerId: PeerId, peer: Peer?, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus)
     case leave
     
-    var section: PeerInfoSection {
+    var section: ItemListSectionId {
         switch self {
             case .info, .setGroupPhoto:
-                return GroupInfoSection.info
+                return GroupInfoSection.info.rawValue
             case .aboutHeader, .about:
-                return GroupInfoSection.about
+                return GroupInfoSection.about.rawValue
             case .sharedMedia, .notifications:
-                return GroupInfoSection.sharedMediaAndNotifications
+                return GroupInfoSection.sharedMediaAndNotifications.rawValue
+            case .groupTypeSetup, .groupDescriptionSetup, .groupManagementInfoLabel:
+                return GroupInfoSection.infoManagement.rawValue
+            case .membersAdmins, .membersBlacklist:
+                return GroupInfoSection.memberManagement.rawValue
             case .usersHeader, .addMember, .member:
-                return GroupInfoSection.members
+                return GroupInfoSection.members.rawValue
             case .leave:
-                return GroupInfoSection.leave
+                return GroupInfoSection.leave.rawValue
         }
     }
     
@@ -82,27 +79,29 @@ enum GroupInfoEntry: PeerInfoEntry {
         }
         
         switch self {
-            case let .info(lhsPeer, lhsCachedData):
-                switch entry {
-                case let .info(rhsPeer, rhsCachedData):
-                    if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
-                        if !lhsPeer.isEqual(rhsPeer) {
+            case let .info(lhsPeer, lhsCachedData, lhsState):
+                    if case let .info(rhsPeer, rhsCachedData, rhsState) = entry {
+                        if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
+                            if !lhsPeer.isEqual(rhsPeer) {
+                                return false
+                            }
+                        } else if (lhsPeer == nil) != (rhsPeer != nil) {
                             return false
                         }
-                    } else if (lhsPeer == nil) != (rhsPeer != nil) {
-                        return false
-                    }
-                    if let lhsCachedData = lhsCachedData, let rhsCachedData = rhsCachedData {
-                        if !lhsCachedData.isEqual(to: rhsCachedData) {
+                        if let lhsCachedData = lhsCachedData, let rhsCachedData = rhsCachedData {
+                            if !lhsCachedData.isEqual(to: rhsCachedData) {
+                                return false
+                            }
+                        } else if (rhsCachedData == nil) != (rhsCachedData != nil) {
                             return false
                         }
-                    } else if (rhsCachedData == nil) != (rhsCachedData != nil) {
+                        if lhsState != lhsState {
+                            return false
+                        }
+                        return true
+                    } else {
                         return false
                     }
-                    return true
-                default:
-                    return false
-                }
             case .setGroupPhoto:
                 if case .setGroupPhoto = entry {
                     return true
@@ -139,6 +138,36 @@ enum GroupInfoEntry: PeerInfoEntry {
                     }
                     return true
                 default:
+                    return false
+                }
+            case let .groupTypeSetup(isPublic):
+                if case .groupTypeSetup(isPublic) = entry {
+                    return true
+                } else {
+                    return false
+                }
+            case let .groupDescriptionSetup(text):
+                if case .groupDescriptionSetup(text) = entry {
+                    return true
+                } else {
+                    return false
+                }
+            case let .groupManagementInfoLabel(text):
+                if case .groupManagementInfoLabel(text) = entry {
+                    return true
+                } else {
+                    return false
+                }
+            case let .membersAdmins(lhsCount):
+                if case let .membersAdmins(rhsCount) = entry, lhsCount == rhsCount {
+                    return true
+                } else {
+                    return false
+                }
+            case let .membersBlacklist(lhsCount):
+                if case let .membersBlacklist(rhsCount) = entry, lhsCount == rhsCount {
+                    return true
+                } else {
                     return false
                 }
             case .usersHeader:
@@ -214,12 +243,22 @@ enum GroupInfoEntry: PeerInfoEntry {
                 return 4
             case .sharedMedia:
                 return 5
-            case .usersHeader:
+            case .groupTypeSetup:
                 return 6
-            case .addMember:
+            case .groupDescriptionSetup:
                 return 7
+            case .groupManagementInfoLabel:
+                return 8
+            case .membersAdmins:
+                return 9
+            case .membersBlacklist:
+                return 10
+            case .usersHeader:
+                return 11
+            case .addMember:
+                return 12
             case let .member(index, _, _, _, _):
-                return 10 + index
+                return 20 + index
             case .leave:
                 return 1000000
         }
@@ -235,10 +274,12 @@ enum GroupInfoEntry: PeerInfoEntry {
     
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem {
         switch self {
-            case let .info(peer, cachedData):
-                return PeerInfoAvatarAndNameItem(account: account, peer: peer, cachedData: cachedData, editingState: nil, sectionId: self.section.rawValue, style: .blocks)
+            case let .info(peer, cachedData, state):
+                return ItemListAvatarAndNameInfoItem(account: account, peer: peer, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks, editingNameUpdated: { editingName in
+                    
+                })
             case .setGroupPhoto:
-                return PeerInfoActionItem(title: "Set Group Photo", kind: .generic, alignment: .natural, sectionId: self.section.rawValue, style: .blocks, action: {
+                return ItemListActionItem(title: "Set Group Photo", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 })
             case let .notifications(settings):
                 let label: String
@@ -247,15 +288,38 @@ enum GroupInfoEntry: PeerInfoEntry {
                 } else {
                     label = "Enabled"
                 }
-                return PeerInfoDisclosureItem(title: "Notifications", label: label, sectionId: self.section.rawValue, style: .blocks, action: {
+                return ItemListDisclosureItem(title: "Notifications", label: label, sectionId: self.section, style: .blocks, action: {
                     interaction.changeNotificationMuteSettings()
                 })
             case .sharedMedia:
-                return PeerInfoDisclosureItem(title: "Shared Media", label: "", sectionId: self.section.rawValue, style: .blocks, action: {
+                return ItemListDisclosureItem(title: "Shared Media", label: "", sectionId: self.section, style: .blocks, action: {
                     interaction.openSharedMedia()
                 })
             case .addMember:
-                return PeerInfoPeerActionItem(icon: addMemberPlusIcon, title: "Add Member", sectionId: self.section.rawValue, action: {
+                return ItemListPeerActionItem(icon: addMemberPlusIcon, title: "Add Member", sectionId: self.section, action: {
+                    
+                })
+            case let .groupTypeSetup(isPublic):
+                return ItemListDisclosureItem(title: "Group Type", label: isPublic ? "Public" : "Private", sectionId: self.section, style: .blocks, action: {
+                    
+                })
+            case let .groupDescriptionSetup(text):
+                return ItemListMultilineInputItem(text: text, sectionId: self.section, textUpdated: { updatedText in
+                    interaction.updateState { state in
+                        if let state = state as? GroupInfoState, let editingState = state.editingState {
+                            return state.withUpdatedEditingState(editingState.withUpdatedEditingDescriptionText(updatedText))
+                        }
+                        return state
+                    }
+                }, action: {
+                    
+                })
+            case let .membersAdmins(count):
+                return ItemListDisclosureItem(title: "Admins", label: "\(count)", sectionId: self.section, style: .blocks, action: {
+                    
+                })
+            case let .membersBlacklist(count):
+                return ItemListDisclosureItem(title: "Blacklist", label: "\(count)", sectionId: self.section, style: .blocks, action: {
                     
                 })
             case let .member(_, _, peer, presence, memberStatus):
@@ -266,13 +330,13 @@ enum GroupInfoEntry: PeerInfoEntry {
                     case .member:
                         label = nil
                 }
-                return PeerInfoPeerItem(account: account, peer: peer, presence: presence, label: label, sectionId: self.section.rawValue, action: {
+                return ItemListPeerItem(account: account, peer: peer, presence: presence, label: label, sectionId: self.section, action: {
                     if let peer = peer {
                         interaction.openPeerInfo(peer.id)
                     }
                 })
             case .leave:
-                return PeerInfoActionItem(title: "Delete and Exit", kind: .destructive, alignment: .center, sectionId: self.section.rawValue, style: .blocks, action: {
+                return ItemListActionItem(title: "Delete and Exit", kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                 })
             default:
                 preconditionFailure()
@@ -280,9 +344,58 @@ enum GroupInfoEntry: PeerInfoEntry {
     }
 }
 
-func groupInfoEntries(view: PeerView) -> PeerInfoEntries {
+private struct GroupInfoState: PeerInfoState {
+    let editingState: GroupInfoEditingState?
+    let updatingName: ItemListAvatarAndNameInfoItemName?
+    
+    func isEqual(to: PeerInfoState) -> Bool {
+        if let to = to as? GroupInfoState {
+            if self.editingState != to.editingState {
+                return false
+            }
+            if self.updatingName != to.updatingName {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    func withUpdatedEditingState(_ editingState: GroupInfoEditingState?) -> GroupInfoState {
+        return GroupInfoState(editingState: editingState, updatingName: self.updatingName)
+    }
+    
+    func withUpdatedUpdatingName(_ updatingName: ItemListAvatarAndNameInfoItemName?) -> GroupInfoState {
+        return GroupInfoState(editingState: self.editingState, updatingName: updatingName)
+    }
+}
+
+private struct GroupInfoEditingState: Equatable {
+    let editingName: ItemListAvatarAndNameInfoItemName?
+    let editingDescriptionText: String
+    
+    func withUpdatedEditingDescriptionText(_ editingDescriptionText: String) -> GroupInfoEditingState {
+        return GroupInfoEditingState(editingName: self.editingName, editingDescriptionText: editingDescriptionText)
+    }
+    
+    static func ==(lhs: GroupInfoEditingState, rhs: GroupInfoEditingState) -> Bool {
+        if lhs.editingName != rhs.editingName {
+            return false
+        }
+        if lhs.editingDescriptionText != rhs.editingDescriptionText {
+            return false
+        }
+        return true
+    }
+}
+
+func groupInfoEntries(view: PeerView, state: PeerInfoState?) -> PeerInfoEntries {
     var entries: [PeerInfoEntry] = []
-    entries.append(GroupInfoEntry.info(peer: view.peers[view.peerId], cachedData: view.cachedData))
+    if let peer = peerViewMainPeer(view) {
+        let infoState = ItemListAvatarAndNameInfoItemState(editingName: (state as? GroupInfoState)?.editingState?.editingName, updatingName: (state as? GroupInfoState)?.updatingName)
+        entries.append(GroupInfoEntry.info(peer: peer, cachedData: view.cachedData, state: infoState))
+    }
     
     var highlightAdmins = false
     var canManageGroup = false
@@ -312,8 +425,22 @@ func groupInfoEntries(view: PeerView) -> PeerInfoEntries {
         entries.append(GroupInfoEntry.setGroupPhoto)
     }
     
-    entries.append(GroupInfoEntry.notifications(settings: view.notificationSettings))
-    entries.append(GroupInfoEntry.sharedMedia)
+    if let editingState = (state as? GroupInfoState)?.editingState {
+        if let cachedChannelData = view.cachedData as? CachedChannelData {
+            entries.append(GroupInfoEntry.groupTypeSetup(isPublic: cachedChannelData.exportedInvitation != nil))
+            entries.append(GroupInfoEntry.groupDescriptionSetup(text: editingState.editingDescriptionText))
+            
+            if let adminCount = cachedChannelData.participantsSummary.adminCount {
+                entries.append(GroupInfoEntry.membersAdmins(count: adminCount))
+            }
+            if let bannedCount = cachedChannelData.participantsSummary.bannedCount {
+                entries.append(GroupInfoEntry.membersBlacklist(count: bannedCount))
+            }
+        }
+    } else {
+        entries.append(GroupInfoEntry.notifications(settings: view.notificationSettings))
+        entries.append(GroupInfoEntry.sharedMedia)
+    }
     
     if canManageGroup {
         entries.append(GroupInfoEntry.addMember)
@@ -388,6 +515,105 @@ func groupInfoEntries(view: PeerView) -> PeerInfoEntries {
                 entries.append(GroupInfoEntry.member(index: i, peerId: peer.id, peer: peer, presence: view.peerPresences[peer.id], memberStatus: memberStatus))
             }
         }
+    } else if let cachedChannelData = view.cachedData as? CachedChannelData, let participants = cachedChannelData.topParticipants {
+        let sortedParticipants = participants.participants.sorted(by: { lhs, rhs in
+            let lhsPresence = view.peerPresences[lhs.peerId] as? TelegramUserPresence
+            let rhsPresence = view.peerPresences[rhs.peerId] as? TelegramUserPresence
+            if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
+                if lhsPresence.status < rhsPresence.status {
+                    return false
+                } else if lhsPresence.status > rhsPresence.status {
+                    return true
+                }
+            } else if let _ = lhsPresence {
+                return true
+            } else if let _ = rhsPresence {
+                return false
+            }
+            
+            switch lhs {
+                case .creator:
+                    return false
+                case let .moderator(lhsId, _, lhsInvitedAt):
+                    switch rhs {
+                        case .creator:
+                            return true
+                        case let .moderator(rhsId, _, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                            return lhsInvitedAt > rhsInvitedAt
+                        case let .editor(rhsId, _, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                            return lhsInvitedAt > rhsInvitedAt
+                        case let .member(rhsId, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                            return lhsInvitedAt > rhsInvitedAt
+                    }
+                case let .editor(lhsId, _, lhsInvitedAt):
+                    switch rhs {
+                        case .creator:
+                            return true
+                        case let .moderator(rhsId, _, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                            return lhsInvitedAt > rhsInvitedAt
+                        case let .editor(rhsId, _, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                            return lhsInvitedAt > rhsInvitedAt
+                        case let .member(rhsId, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                        return lhsInvitedAt > rhsInvitedAt
+                    }
+                case let .member(lhsId, lhsInvitedAt):
+                    switch rhs {
+                        case .creator:
+                            return true
+                        case let .moderator(rhsId, _, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                            return lhsInvitedAt > rhsInvitedAt
+                        case let .editor(rhsId, _, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                            return lhsInvitedAt > rhsInvitedAt
+                        case let .member(rhsId, rhsInvitedAt):
+                            if lhsInvitedAt == rhsInvitedAt {
+                                return lhsId.id < rhsId.id
+                            }
+                            return lhsInvitedAt > rhsInvitedAt
+                    }
+            }
+            return false
+        })
+        
+        for i in 0 ..< sortedParticipants.count {
+            if let peer = view.peers[sortedParticipants[i].peerId] {
+                let memberStatus: GroupInfoMemberStatus
+                if highlightAdmins {
+                    switch sortedParticipants[i] {
+                        case .moderator, .editor, .creator:
+                            memberStatus = .admin
+                        case .member:
+                            memberStatus = .member
+                    }
+                } else {
+                    memberStatus = .member
+                }
+                entries.append(GroupInfoEntry.member(index: i, peerId: peer.id, peer: peer, presence: view.peerPresences[peer.id], memberStatus: memberStatus))
+            }
+        }
     }
     
     if let group = view.peers[view.peerId] as? TelegramGroup {
@@ -399,6 +625,52 @@ func groupInfoEntries(view: PeerView) -> PeerInfoEntries {
             entries.append(GroupInfoEntry.leave)
         }
     }
+    
+    var leftNavigationButton: PeerInfoNavigationButton?
+    var rightNavigationButton: PeerInfoNavigationButton?
+    if canManageGroup {
+        if let state = state as? GroupInfoState, let _ = state.editingState {
+            leftNavigationButton = PeerInfoNavigationButton(title: "Cancel", action: { state in
+                if state == nil {
+                    return GroupInfoState(editingState: nil, updatingName: nil)
+                } else if let state = state as? GroupInfoState {
+                    return state.withUpdatedEditingState(nil)
+                } else {
+                    return state
+                }
+            })
+            rightNavigationButton = PeerInfoNavigationButton(title: "Done", action: { state in
+                if state == nil {
+                    return GroupInfoState(editingState: nil, updatingName: nil)
+                } else if let state = state as? GroupInfoState {
+                    return state.withUpdatedEditingState(nil)
+                } else {
+                    return state
+                }
+            })
+        } else {
+            var editingName: ItemListAvatarAndNameInfoItemName?
+            if let peer = peerViewMainPeer(view) {
+                editingName = ItemListAvatarAndNameInfoItemName(peer.indexName)
+            }
+            let editingDescriptionText: String
+            if let cachedChannelData = view.cachedData as? CachedChannelData, let about = cachedChannelData.about {
+                editingDescriptionText = about
+            } else {
+                editingDescriptionText = ""
+            }
+            rightNavigationButton = PeerInfoNavigationButton(title: "Edit", action: { state in
+                if state == nil {
+                    return GroupInfoState(editingState: GroupInfoEditingState(editingName: editingName, editingDescriptionText: editingDescriptionText), updatingName: nil)
+                } else if let state = state as? GroupInfoState {
+                    return state.withUpdatedEditingState(GroupInfoEditingState(editingName: editingName, editingDescriptionText: editingDescriptionText))
+                } else {
+                    return state
+                }
+            })
+        }
+    }
 
-    return PeerInfoEntries(entries: entries, leftNavigationButton: nil, rightNavigationButton: nil)
+
+    return PeerInfoEntries(entries: entries, leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
 }

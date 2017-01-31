@@ -10,16 +10,43 @@ private let titleFont = Font.regular(17.0)
 private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(13.0)
 
+private let selectedImage = UIImage(bundleImageName: "Contact List/SelectionChecked")?.precomposed()
+private let selectableImage = UIImage(bundleImageName: "Contact List/SelectionUnchecked")?.precomposed()
+
 enum ContactsPeerItemStatus {
     case none
     case presence(PeerPresence)
     case addressName
 }
 
+enum ContactsPeerItemSelection: Equatable {
+    case none
+    case selectable(selected: Bool)
+    
+    static func ==(lhs: ContactsPeerItemSelection, rhs: ContactsPeerItemSelection) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .selectable(selected):
+                if case .selectable(selected) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 class ContactsPeerItem: ListViewItem {
     let account: Account
     let peer: Peer?
+    let chatPeer: Peer?
     let status: ContactsPeerItemStatus
+    let selection: ContactsPeerItemSelection
     let action: (Peer) -> Void
     let selectable: Bool = true
     
@@ -27,10 +54,12 @@ class ContactsPeerItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(account: Account, peer: Peer?, status: ContactsPeerItemStatus, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void) {
+    init(account: Account, peer: Peer?, chatPeer: Peer?, status: ContactsPeerItemStatus, selection: ContactsPeerItemSelection, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void) {
         self.account = account
         self.peer = peer
+        self.chatPeer = chatPeer
         self.status = status
+        self.selection = selection
         self.action = action
         self.header = header
         
@@ -143,6 +172,7 @@ class ContactsPeerItemNode: ListViewItemNode {
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let statusNode: TextNode
+    private var selectionNode: ASImageNode?
     
     private var avatarState: (Account, Peer?)?
     
@@ -179,27 +209,27 @@ class ContactsPeerItemNode: ListViewItemNode {
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
                 let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.1, layoutParams.2, layoutParams.3, layoutParams.4)
-                apply()
+                let _ = apply()
             }
         })
     }
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let (item, _, _, _, _) = self.layoutParams {
-            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item as! ContactsPeerItem, previousItem: previousItem, nextItem: nextItem)
+            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
             self.layoutParams = (item, width, first, last, firstWithHeader)
             let makeLayout = self.asyncLayout()
             let (nodeLayout, nodeApply) = makeLayout(item, width, first, last, firstWithHeader)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
-            nodeApply()
+            let _ = nodeApply()
         }
     }
     
     override func setHighlighted(_ highlighted: Bool, animated: Bool) {
         super.setHighlighted(highlighted, animated: animated)
         
-        if highlighted {
+        if highlighted && self.selectionNode == nil {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
@@ -225,10 +255,31 @@ class ContactsPeerItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ContactsPeerItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, () -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
+        let currentSelectionNode = self.selectionNode
         
         return { [weak self] item, width, first, last, firstWithHeader in
-            let leftInset: CGFloat = 65.0
+            var leftInset: CGFloat = 65.0
             let rightInset: CGFloat = 10.0
+            
+            let updatedSelectionNode: ASImageNode?
+            var updatedSelectionImage: UIImage?
+            switch item.selection {
+                case .none:
+                    updatedSelectionNode = nil
+                case let .selectable(selected):
+                    leftInset += 28.0
+                    
+                    let selectionNode: ASImageNode
+                    if let current = currentSelectionNode {
+                        selectionNode = current
+                        updatedSelectionNode = selectionNode
+                    } else {
+                        selectionNode = ASImageNode()
+                        updatedSelectionNode = selectionNode
+                    }
+                    updatedSelectionImage = selected ? selectedImage : selectableImage
+            }
+
             
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
@@ -295,7 +346,7 @@ class ContactsPeerItemNode: ListViewItemNode {
                         if let strongSelf = strongSelf {
                             strongSelf.layoutParams = (item, width, first, last, firstWithHeader)
                             
-                            strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 14.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
+                            strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: leftInset - 51.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
                             
                             let _ = titleApply()
                             strongSelf.titleNode.frame = titleFrame
@@ -303,10 +354,27 @@ class ContactsPeerItemNode: ListViewItemNode {
                             let _ = statusApply()
                             strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 25.0), size: statusLayout.size)
                             
-                            let topHighlightInset: CGFloat = first ? 0.0 : separatorHeight
+                            if let updatedSelectionNode = updatedSelectionNode {
+                                if strongSelf.selectionNode !== updatedSelectionNode {
+                                    strongSelf.selectionNode?.removeFromSupernode()
+                                    strongSelf.selectionNode = updatedSelectionNode
+                                    strongSelf.addSubnode(updatedSelectionNode)
+                                }
+                                if updatedSelectionImage !== updatedSelectionNode.image {
+                                    updatedSelectionNode.image = updatedSelectionImage
+                                }
+                                if let updatedSelectionImage = updatedSelectionImage {
+                                    updatedSelectionNode.frame = CGRect(origin: CGPoint(x: 10.0, y: floor((nodeLayout.contentSize.height - updatedSelectionImage.size.height) / 2.0)), size: updatedSelectionImage.size)
+                                }
+                            } else if let selectionNode = strongSelf.selectionNode {
+                                selectionNode.removeFromSupernode()
+                                strongSelf.selectionNode = nil
+                            }
+                            
+                            let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
-                            strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 65.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - 65.0), height: separatorHeight))
+                            strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - 65.0), height: separatorHeight))
                             strongSelf.separatorNode.isHidden = last
                             
                             if let userPresence = userPresence {
