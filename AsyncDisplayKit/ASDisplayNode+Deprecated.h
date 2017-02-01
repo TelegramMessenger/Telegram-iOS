@@ -53,7 +53,7 @@
  *
  * @deprecated Deprecated in version 2.0: Use layoutThatFits: with a constrained size of (CGSizeZero, constrainedSize) and call size on the returned ASLayout
  */
-- (CGSize)measure:(CGSize)constrainedSize ASDISPLAYNODE_DEPRECATED_MSG("Use layoutThatFits: with a constrained size of (CGSizeZero, constrainedSize) and call size on the returned ASLayout.");
+- (CGSize)measure:(CGSize)constrainedSize/* ASDISPLAYNODE_DEPRECATED_MSG("Use layoutThatFits: with a constrained size of (CGSizeZero, constrainedSize) and call size on the returned ASLayout.")*/;
 
 ASLayoutElementStyleForwardingDeclaration
 
