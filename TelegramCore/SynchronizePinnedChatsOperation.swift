@@ -6,7 +6,7 @@ import Foundation
 #endif
 
 final class SynchronizePinnedChatsOperation: Coding {
-    private let previousPeerIds: [PeerId]
+    let previousPeerIds: [PeerId]
     
     init(previousPeerIds: [PeerId]) {
         self.previousPeerIds = previousPeerIds

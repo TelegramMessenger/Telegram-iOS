@@ -12,10 +12,10 @@ private func hashForInfos(_ infos: [StickerPackCollectionInfo]) -> Int32 {
     var acc: UInt32 = 0
     
     for info in infos {
-        acc = (acc &* 20261) &+ unsafeBitCast(info.hash, to: UInt32.self)
+        acc = (acc &* 20261) &+ UInt32(bitPattern: info.hash)
     }
     
-    return unsafeBitCast(acc % UInt32(0x7FFFFFFF), to: Int32.self)
+    return Int32(bitPattern: acc % UInt32(0x7FFFFFFF))
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
@@ -28,7 +28,7 @@ func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoEr
     let remoteStickerPacks = currentHash
         |> mapToSignal { hash -> Signal<Void, NoError> in
             if hash != 0 {
-                return .never()
+                //return .never()
             }
             
             return network.request(Api.functions.messages.getAllStickers(hash: hash))
@@ -55,10 +55,34 @@ func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoEr
                             |> map { result -> (ItemCollectionId, [ItemCollectionItem]) in
                                 var items: [ItemCollectionItem] = []
                                 switch result {
-                                    case let .stickerSet(_, _, documents):
+                                    case let .stickerSet(_, packs, documents):
+                                        var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
+                                        //stickerPack#12b299d4 emoticon:string documents:Vector<long> = StickerPack;
+                                        for pack in packs {
+                                            switch pack {
+                                                case let .stickerPack(text, fileIds):
+                                                    let key = ValueBoxKey(text).toMemoryBuffer()
+                                                    for fileId in fileIds {
+                                                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                                        if indexKeysByFile[mediaId] == nil {
+                                                            indexKeysByFile[mediaId] = [key]
+                                                        } else {
+                                                            indexKeysByFile[mediaId]!.append(key)
+                                                        }
+                                                    }
+                                                    break
+                                            }
+                                        }
+                                        
                                         for apiDocument in documents {
                                             if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
-                                                items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file))
+                                                let fileIndexKeys: [MemoryBuffer]
+                                                if let indexKeys = indexKeysByFile[id] {
+                                                    fileIndexKeys = indexKeys
+                                                } else {
+                                                    fileIndexKeys = []
+                                                }
+                                                items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
                                             }
                                         }
                                         break

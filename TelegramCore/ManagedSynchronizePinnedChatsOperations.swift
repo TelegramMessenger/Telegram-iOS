@@ -114,9 +114,107 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
 }
 
 private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, operation: SynchronizePinnedChatsOperation) -> Signal<Void, NoError> {
-    let peerIds = modifier.getPinnedPeerIds().filter {
+    let rawPeerIds = modifier.getPinnedPeerIds()
+    let peerIds = rawPeerIds.filter {
         $0.namespace != Namespaces.Peer.SecretChat
     }
+    
+    /*let peerIdsSet = Set(peerIds)
+    let previousCachedIds = Set(operation.previousPeerIds.filter { $0.namespace != Namespaces.Peer.SecretChat })
+    let removedIds = previousCachedIds.subtracting(peerIdsSet)
+    
+    //messages.peerDialogs#3371c354 dialogs:Vector<Dialog> messages:Vector<Message> chats:Vector<Chat> users:Vector<User> state:updates.State = messages.PeerDialogs;
+    let s = network.request(Api.functions.messages.getPinnedDialogs())
+        |> retryRequest
+        |> mapToSignal { dialogs -> Signal<Void, NoError> in
+            let dialogsChats: [Api.Chat]
+            let dialogsUsers: [Api.User]
+            
+            var storeMessages: [StoreMessage] = []
+            var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
+            var chatStates: [PeerId: PeerChatState] = [:]
+            var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+            
+            switch dialogs {
+                case let .peerDialogs(dialogs, messages, chats, users, _):
+                    dialogsChats = chats
+                    dialogsUsers = users
+                    
+                    for dialog in dialogs {
+                        let apiPeer: Api.Peer
+                        let apiReadInboxMaxId: Int32
+                        let apiReadOutboxMaxId: Int32
+                        let apiTopMessage: Int32
+                        let apiUnreadCount: Int32
+                        var apiChannelPts: Int32?
+                        let apiNotificationSettings: Api.PeerNotifySettings
+                        switch dialog {
+                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, peerNotificationSettings, pts, _):
+                                apiPeer = peer
+                                apiTopMessage = topMessage
+                                apiReadInboxMaxId = readInboxMaxId
+                                apiReadOutboxMaxId = readOutboxMaxId
+                                apiUnreadCount = unreadCount
+                                apiNotificationSettings = peerNotificationSettings
+                                apiChannelPts = pts
+                        }
+                        
+                        let peerId: PeerId
+                        switch apiPeer {
+                            case let .peerUser(userId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            case let .peerChat(chatId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                            case let .peerChannel(channelId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        }
+                        
+                        if readStates[peerId] == nil {
+                            readStates[peerId] = [:]
+                        }
+                        readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                        
+                        if let apiChannelPts = apiChannelPts {
+                            chatStates[peerId] = ChannelState(pts: apiChannelPts)
+                        }
+                        
+                        notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
+                    }
+                    
+                    for message in messages {
+                        if let storeMessage = StoreMessage(apiMessage: message) {
+                            storeMessages.append(storeMessage)
+                        }
+                    }
+            }
+            
+            var chatPeers: [Peer] = []
+            var peers: [Peer] = []
+            var peerPresences: [PeerId: PeerPresence] = [:]
+            for chat in dialogsChats {
+                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                    peers.append(groupOrChannel)
+                    chatPeers.append(groupOrChannel)
+                }
+            }
+            for user in dialogsUsers {
+                let telegramUser = TelegramUser(user: user)
+                peers.append(telegramUser)
+                if let presence = TelegramUserPresence(apiUser: user) {
+                    peerPresences[telegramUser.id] = presence
+                }
+            }
+            
+            let currentPeersIds = chatPeers.map({ $0.id })
+            
+            let cleanedUpPeerIds = currentPeersIds.filter { !removedIds.contains($0) }
+            
+            var finalPeerIds: [PeerId] = []
+            
+            
+            return .never()
+        }*/
+    
     
     var inputPeers: [Api.InputPeer] = []
     for peerId in peerIds {

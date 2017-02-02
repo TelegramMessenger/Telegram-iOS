@@ -185,7 +185,7 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
             return .complete()
         }
     } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
-        return network.request(Api.functions.messages.deleteChatUser(chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
+        let deleteUser: Signal<Void, NoError> = network.request(Api.functions.messages.deleteChatUser(chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
             |> map { result -> Api.Updates? in
                 return result
             }
@@ -198,6 +198,28 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
                 }
                 return .complete()
             }
+        let deleteMessages: Signal<Void, NoError>
+        if let inputPeer = apiInputPeer(peer), let topMessageId = modifier.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
+            deleteMessages = network.request(Api.functions.messages.deleteHistory(flags: 0, peer: inputPeer, maxId: topMessageId.id))
+                |> map { result -> Api.messages.AffectedHistory? in
+                    return result
+                }
+                |> `catch` { _ in
+                    return .single(nil)
+                }
+                |> mapToSignal { result in
+                    if let result = result {
+                        switch result {
+                        case let .affectedHistory(pts, ptsCount, _):
+                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                        }
+                    }
+                    return .complete()
+                }
+        } else {
+            deleteMessages = .complete()
+        }
+        return deleteMessages |> then(deleteUser)
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer), let topMessageId = modifier.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
             return network.request(Api.functions.messages.deleteHistory(flags: 0, peer: inputPeer, maxId: topMessageId.id))
@@ -215,7 +237,7 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
                         }
                     }
                     return .complete()
-            }
+                }
         } else {
             return .complete()
         }
