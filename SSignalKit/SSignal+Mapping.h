@@ -4,5 +4,6 @@
 
 - (SSignal *)map:(id (^)(id))f;
 - (SSignal *)filter:(bool (^)(id))f;
+- (SSignal *)ignoreRepeated;
 
 @end

@@ -1,16 +1,17 @@
 import Foundation
 
-private let _QueueSpecificKey = NSObject()
-private let QueueSpecificKey: UnsafePointer<Void> = UnsafePointer<Void>(Unmanaged<AnyObject>.passUnretained(_QueueSpecificKey).toOpaque())
+private let QueueSpecificKey = DispatchSpecificKey<NSObject>()
 
-private let globalMainQueue = Queue(queue: dispatch_get_main_queue(), specialIsMainQueue: true)
+private let globalMainQueue = Queue(queue: DispatchQueue.main, specialIsMainQueue: true)
+private let globalDefaultQueue = Queue(queue: DispatchQueue.global(qos: .default), specialIsMainQueue: false)
+private let globalBackgroundQueue = Queue(queue: DispatchQueue.global(qos: .background), specialIsMainQueue: false)
 
 public final class Queue {
-    private let nativeQueue: dispatch_queue_t
-    private var specific: UnsafeMutablePointer<Void>
+    private let nativeQueue: DispatchQueue
+    private var specific = NSObject()
     private let specialIsMainQueue: Bool
     
-    public var queue: dispatch_queue_t {
+    public var queue: DispatchQueue {
         get {
             return self.nativeQueue
         }
@@ -21,65 +22,67 @@ public final class Queue {
     }
     
     public class func concurrentDefaultQueue() -> Queue {
-        return Queue(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), specialIsMainQueue: false)
+        return globalDefaultQueue
     }
     
     public class func concurrentBackgroundQueue() -> Queue {
-        return Queue(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), specialIsMainQueue: false)
+        return globalBackgroundQueue
     }
     
-    public init(queue: dispatch_queue_t) {
+    public init(queue: DispatchQueue) {
         self.nativeQueue = queue
-        self.specific = nil
         self.specialIsMainQueue = false
     }
     
-    private init(queue: dispatch_queue_t, specialIsMainQueue: Bool) {
+    fileprivate init(queue: DispatchQueue, specialIsMainQueue: Bool) {
         self.nativeQueue = queue
-        self.specific = nil
         self.specialIsMainQueue = specialIsMainQueue
     }
     
     public init(name: String? = nil) {
-        if let name = name {
-            self.nativeQueue = dispatch_queue_create(name, DISPATCH_QUEUE_SERIAL)
-        } else {
-            self.nativeQueue = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
-        }
-        self.specific = nil
+        self.nativeQueue = DispatchQueue(label: name ?? "", qos: .default)
+        
         self.specialIsMainQueue = false
         
-        self.specific = UnsafeMutablePointer<Void>(Unmanaged<Queue>.passUnretained(self).toOpaque())
-        dispatch_queue_set_specific(self.nativeQueue, QueueSpecificKey, self.specific, nil)
+        self.nativeQueue.setSpecific(key: QueueSpecificKey, value: self.specific)
     }
     
-    public func async(f: Void -> Void) {
-        if self.specific != nil && dispatch_get_specific(QueueSpecificKey) == self.specific {
-            f()
-        } else if self.specialIsMainQueue && NSThread.isMainThread() {
-            f()
+    public func isCurrent() -> Bool {
+        if DispatchQueue.getSpecific(key: QueueSpecificKey) === self.specific {
+            return true
+        } else if self.specialIsMainQueue && Thread.isMainThread {
+            return true
         } else {
-            dispatch_async(self.nativeQueue, f)
+            return false
         }
     }
     
-    public func sync(f: Void -> Void) {
-        if self.specific != nil && dispatch_get_specific(QueueSpecificKey) == self.specific {
-            f()
-        } else if self.specialIsMainQueue && NSThread.isMainThread() {
+    public func async(_ f: @escaping () -> Void) {
+        if self.isCurrent() {
             f()
         } else {
-            dispatch_sync(self.nativeQueue, f)
+            self.nativeQueue.async(execute: f)
         }
     }
     
-    public func dispatch(f: Void -> Void) {
-        if self.specific != nil && dispatch_get_specific(QueueSpecificKey) == self.specific {
-            f()
-        } else if self.specialIsMainQueue && NSThread.isMainThread() {
+    public func sync(_ f: () -> Void) {
+        if self.isCurrent() {
             f()
         } else {
-            dispatch_async(self.nativeQueue, f)
+            self.nativeQueue.sync(execute: f)
         }
+    }
+    
+    public func justDispatch(_ f: @escaping () -> Void) {
+        self.nativeQueue.async(execute: f)
+    }
+    
+    public func justDispatchWithQoS(qos: DispatchQoS, _ f: @escaping () -> Void) {
+        self.nativeQueue.async(group: nil, qos: qos, flags: [.enforceQoS], execute: f)
+    }
+    
+    public func after(_ delay: Double, _ f: @escaping(Void) -> Void) {
+        let time: DispatchTime = DispatchTime.now() + delay
+        self.nativeQueue.asyncAfter(deadline: time, execute: f)
     }
 }

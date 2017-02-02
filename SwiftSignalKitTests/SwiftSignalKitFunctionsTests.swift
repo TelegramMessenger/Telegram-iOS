@@ -2,7 +2,7 @@ import UIKit
 import XCTest
 import SwiftSignalKit
 
-func singleSignalInt(value: Signal<Int, Void>) -> Signal<Signal<Int, Void>, Void> {
+func singleSignalInt(_ value: Signal<Int, Void>) -> Signal<Signal<Int, Void>, Void> {
     return Signal { subscriber in
         subscriber.putNext(value)
         subscriber.putCompletion()
@@ -30,14 +30,14 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
             let signal = Signal<Int, Void> { [object] subscriber in
                 subscriber.putNext(1)
                 return ActionDisposable {
-                    object?.description
+                    let _ = object?.description
                     disposed = true
                 }
             }
             
             let disposable = signal.start(next: { [object] next in
                 generated = true
-                object?.description
+                let _ = object?.description
             })
             
             object = nil
@@ -65,17 +65,17 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
                 subscriber.putCompletion()
                 
                 return ActionDisposable {
-                    object?.description
+                    let _ = object?.description
                     disposed = true
                 }
             }
             
             let disposable = signal.start(next: { [object] next in
                 generated = true
-                object?.description
+                let _ = object?.description
             }, completed: { [object]
                 completed = true
-                object?.description
+                let _ = object?.description
             })
             
             object = nil
@@ -105,21 +105,21 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
                 subscriber.putNext(1)
                 
                 return ActionDisposable {
-                    object?.description
+                    let _ = object?.description
                     disposed = true
                 }
             }
             
             let disposable = signal.start(next: { [object] next in
                 generated = true
-                object?.description
+                let _ = object?.description
             }, error: { [object] _ in
                 error = true
-                object?.description
+                let _ = object?.description
             },
              completed: { [object]
                 completed = true
-                object?.description
+                let _ = object?.description
             })
             
             object = nil
@@ -147,7 +147,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
                 subscriber.putNext(1)
                 
                 return ActionDisposable {
-                    object?.description
+                    let _ = object?.description
                     disposed = true
                 }
             }
@@ -155,7 +155,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
             
             let disposable = signal.start(next: { [object] next in
                 generated = next == 2
-                object?.description
+                let _ = object?.description
             })
             
             object = nil
@@ -185,7 +185,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         }
         
         var result = 0
-        catchSignal.start(next: { next in
+        let _ = catchSignal.start(next: { next in
             result += next
         })
         
@@ -195,14 +195,14 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
     func testSubscriberDisposal() {
         var disposed = false
         var generated = false
-        var queue = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL);
+        let queue = DispatchQueue(label: "")
         
         if true {
             let signal = Signal<Int, Void> { subscriber in
-                dispatch_async(queue, {
+                queue.async {
                     usleep(200)
                     subscriber.putNext(1)
-                })
+                }
                 return ActionDisposable {
                     disposed = true
                 }
@@ -213,7 +213,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
             })
             disposable.dispose()
             
-            dispatch_barrier_sync(queue, {})
+            queue.sync(flags: [.barrier], execute: {})
             
             XCTAssertTrue(disposed, "disposed != true")
             XCTAssertFalse(generated, "generated != false")
@@ -245,7 +245,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
             }
         })
         
-        signal.start(next: { next in
+        let _ = signal.start(next: { next in
             result += next
         })
         
@@ -271,7 +271,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         let signal = combineLatest(s1, s2)
         
         var completed = false
-        signal.start(next: { next in
+        let _ = signal.start(next: { next in
             XCTAssert(next.0 == 1 && next.1 == 2, "next != (1, 2)")
             return
         }, completed: {
@@ -300,7 +300,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         let signal = combineLatest(s1, s2, s3)
         
         var completed = false
-        signal.start(next: { next in
+        let _ = signal.start(next: { next in
             XCTAssert(next.0 == 1 && next.1 == 2 && next.2 == 3, "next != (1, 2, 3)")
             return
         }, completed: {
@@ -315,19 +315,19 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         let s3 = complete(Int.self, Void.self)
         
         var singleEmitted = false
-        s1.start(next: { next in
+        let _ = s1.start(next: { next in
             singleEmitted = next == 1
         })
         XCTAssert(singleEmitted == true, "singleEmitted != true")
         
         var errorEmitted = false
-        s2.start(error: { error in
+        let _ = s2.start(error: { error in
             errorEmitted = true
         })
         XCTAssert(errorEmitted == true, "errorEmitted != true")
         
         var completedEmitted = false
-        s3.start(completed: {
+        let _ = s3.start(completed: {
             completedEmitted = true
         })
         XCTAssert(completedEmitted == true, "errorEmitted != true")
@@ -345,15 +345,15 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         var deallocatedThree = false
         
         if true {
-            var objectOne: DeallocatingObject? = DeallocatingObject(deallocated: &deallocatedOne)
-            var objectTwo: DeallocatingObject? = DeallocatingObject(deallocated: &deallocatedTwo)
-            var objectThree: DeallocatingObject? = DeallocatingObject(deallocated: &deallocatedThree)
+            let objectOne: DeallocatingObject? = DeallocatingObject(deallocated: &deallocatedOne)
+            let objectTwo: DeallocatingObject? = DeallocatingObject(deallocated: &deallocatedTwo)
+            let objectThree: DeallocatingObject? = DeallocatingObject(deallocated: &deallocatedThree)
             
             let one = Signal<Int, Void> { subscriber in
                 subscriber.putNext(1)
                 subscriber.putCompletion()
                 return ActionDisposable { [objectOne] in
-                    objectOne?.description
+                    let _ = objectOne?.description
                     disposedOne = true
                 }
             }
@@ -362,7 +362,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
                 subscriber.putNext(2)
                 subscriber.putCompletion()
                 return ActionDisposable { [objectTwo] in
-                    objectTwo?.description
+                    let _ = objectTwo?.description
                     disposedTwo = true
                 }
             }
@@ -371,14 +371,14 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
                 subscriber.putNext(3)
                 subscriber.putCompletion()
                 return ActionDisposable { [objectThree] in
-                    objectThree?.description
+                    let _ = objectThree?.description
                     disposedThree = true
                 }
             }
             
             let signal = singleSignalInt(one) |> then(singleSignalInt(two)) |> then(singleSignalInt(three)) |> switchToLatest
             
-            signal.start(next: { next in
+            let _ = signal.start(next: { next in
                 result.append(next)
             }, completed: {
                 completedAll = true
@@ -405,7 +405,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         
         let signal = singleSignalInt(one) |> switchToLatest
         
-        signal.start(error: { error in
+        let _ = signal.start(error: { error in
             errorGenerated = true
         })
         
@@ -413,7 +413,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
     }
     
     func testQueue() {
-        let q = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
+        let q = DispatchQueue(label: "")
         
         var disposedOne = false
         var disposedTwo = false
@@ -422,30 +422,30 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         var result: [Int] = []
         
         let one = Signal<Int, Void> { subscriber in
-            dispatch_async(q, {
+            q.async {
                 subscriber.putNext(1)
                 subscriber.putCompletion()
-            })
+            }
             return ActionDisposable {
                 disposedOne = true
             }
         }
         
         let two = Signal<Int, Void> { subscriber in
-            dispatch_async(q, {
+            q.async {
                 subscriber.putNext(2)
                 subscriber.putCompletion()
-            })
+            }
             return ActionDisposable {
                 disposedTwo = true
             }
         }
         
         let three = Signal<Int, Void> { subscriber in
-            dispatch_async(q, {
+            q.async {
                 subscriber.putNext(3)
                 subscriber.putCompletion()
-            })
+            }
             return ActionDisposable {
                 disposedThree = true
             }
@@ -453,7 +453,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         
         let signal = singleSignalInt(one) |> then(singleSignalInt(two)) |> then(singleSignalInt(three)) |> queue
         
-        signal.start(next: { next in
+        let _ = signal.start(next: { next in
             print("next: \(next)")
             result.append(next)
         }, completed: {
@@ -470,7 +470,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
     }
     
     func testQueueInterrupted() {
-        let q = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
+        let q = DispatchQueue(label: "")
         
         var disposedOne = false
         var disposedTwo = false
@@ -480,20 +480,20 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         var result: [Int] = []
         
         let one = Signal<Int, Void> { subscriber in
-            dispatch_async(q, {
+            q.async {
                 subscriber.putNext(1)
                 subscriber.putCompletion()
-            })
+            }
             return ActionDisposable {
                 disposedOne = true
             }
         }
         
         let two = Signal<Int, Void> { subscriber in
-            dispatch_async(q, {
+            q.async {
                 subscriber.putNext(2)
                 subscriber.putError(Void())
-            })
+            }
             return ActionDisposable {
                 disposedTwo = true
             }
@@ -501,10 +501,10 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         
         let three = Signal<Int, Void> { subscriber in
             startedThird = true
-            dispatch_async(q, {
+            q.async {
                 subscriber.putNext(3)
                 subscriber.putCompletion()
-            })
+            }
             return ActionDisposable {
                 disposedThree = true
             }
@@ -512,7 +512,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         
         let signal = singleSignalInt(one) |> then(singleSignalInt(two)) |> then(singleSignalInt(three)) |> queue
         
-        signal.start(next: { next in
+        let _ = signal.start(next: { next in
             result.append(next)
         }, completed: {
             completedAll = true
@@ -529,7 +529,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
     }
     
     func testQueueDisposed() {
-        let q = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
+        let q = DispatchQueue(label: "")
         
         var disposedOne = false
         var disposedTwo = false
@@ -542,13 +542,13 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         let one = Signal<Int, Void> { subscriber in
             startedFirst = true
             var cancelled = false
-            dispatch_async(q, {
+            q.async {
                 if !cancelled {
                     usleep(100 * 1000)
                     subscriber.putNext(1)
                     subscriber.putCompletion()
                 }
-            })
+            }
             return ActionDisposable {
                 cancelled = true
                 disposedOne = true
@@ -558,13 +558,13 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         let two = Signal<Int, Void> { subscriber in
             startedSecond = true
             var cancelled = false
-            dispatch_async(q, {
+            q.async {
                 if !cancelled {
                     usleep(100 * 1000)
                     subscriber.putNext(2)
                     subscriber.putError(Void())
                 }
-            })
+            }
             return ActionDisposable {
                 cancelled = true
                 disposedTwo = true
@@ -574,13 +574,13 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         let three = Signal<Int, Void> { subscriber in
             startedThird = true
             var cancelled = false
-            dispatch_async(q, {
+            q.async {
                 if !cancelled {
                     usleep(100 * 1000)
                     subscriber.putNext(3)
                     subscriber.putCompletion()
                 }
-            })
+            }
             return ActionDisposable {
                 cancelled = true
                 disposedThree = true
@@ -605,18 +605,18 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
     }
     
     func testRestart() {
-        let q = dispatch_queue_create(nil, DISPATCH_QUEUE_CONCURRENT)
+        let q = DispatchQueue(label: "", attributes: [.concurrent])
         let signal = Signal<Int, Void> { subscriber in
-            dispatch_async(q, {
+            q.async {
                 subscriber.putNext(1)
                 subscriber.putCompletion()
-            })
+            }
             return EmptyDisposable
         }
         
         var result = 0
         
-        (signal |> restart |> take(3)).start(next: { next in
+        let _ = (signal |> restart |> take(3)).start(next: { next in
             result += next
         })
         
@@ -626,7 +626,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
     }
     
     func testPipe() {
-        let pipe = Pipe<Int>()
+        let pipe = ValuePipe<Int>()
         
         var result1 = 0
         let disposable1 = pipe.signal().start(next: { next in
@@ -674,7 +674,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
                 return complete(Void.self, NoError.self) |> deliverOn(q)
             }
         
-        queued.start()
+        let _ = queued.start()
     }
     
     func testReduceSignal() {
@@ -698,7 +698,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
             })
         
         var values: [Int] = []
-        reduced.start(next: { next in
+        let _ = reduced.start(next: { next in
             values.append(next)
         })
         
@@ -717,5 +717,17 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
             previous = value
             XCTAssert(values[i] == value, "at \(i): \(values[i]) != \(value)")
         }
+    }
+    
+    func testMainQueueReentrant() {
+        let q = Queue.mainQueue()
+        
+        var a = 1
+        q.async {
+            usleep(150 * 1000)
+            a = 2
+        }
+        
+        XCTAssert(a == 2)
     }
 }

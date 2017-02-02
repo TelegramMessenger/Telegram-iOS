@@ -8,9 +8,14 @@ public func identity<A>(a: A) -> A {
     return a;
 }
 
-infix operator |> { associativity left precedence 95 }
+precedencegroup PipeRight {
+    associativity: left
+    higherThan: DefaultPrecedence
+}
 
-public func |> <T, U>(value: T, function: (T -> U)) -> U {
+infix operator |> : PipeRight
+
+public func |> <T, U>(value: T, function: ((T) -> U)) -> U {
     return function(value)
 }
 
@@ -30,16 +35,47 @@ private final class SubscriberDisposable<T, E> : Disposable {
 }
 
 public struct Signal<T, E> {
-    private let generator: Subscriber<T, E> -> Disposable
+    private let generator: (Subscriber<T, E>) -> Disposable
     
-    public init(_ generator: Subscriber<T, E> -> Disposable) {
+    public init(_ generator: @escaping(Subscriber<T, E>) -> Disposable) {
         self.generator = generator
     }
     
-    public func start(next next: (T -> Void)! = nil, error: (E -> Void)! = nil, completed: (() -> Void)! = nil) -> Disposable {
+    public func start(next: ((T) -> Void)! = nil, error: ((E) -> Void)! = nil, completed: (() -> Void)! = nil) -> Disposable {
         let subscriber = Subscriber<T, E>(next: next, error: error, completed: completed)
         let disposable = self.generator(subscriber)
         subscriber.assignDisposable(disposable)
         return SubscriberDisposable(subscriber: subscriber, disposable: disposable)
+    }
+    
+    public static func single(_ value: T) -> Signal<T, E> {
+        return Signal<T, E> { subscriber in
+            subscriber.putNext(value)
+            subscriber.putCompletion()
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public static func complete() -> Signal<T, E> {
+        return Signal<T, E> { subscriber in
+            subscriber.putCompletion()
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public static func fail(_ error: E) -> Signal<T, E> {
+        return Signal<T, E> { subscriber in
+            subscriber.putError(error)
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public static func never() -> Signal<T, E> {
+        return Signal<T, E> { _ in
+            return EmptyDisposable
+        }
     }
 }

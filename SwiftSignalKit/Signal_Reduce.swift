@@ -1,35 +1,39 @@
 import Foundation
 
-public func reduceLeft<T, E>(value: T, f: (T, T) -> T)(signal: Signal<T, E>) -> Signal<T, E> {
-    return Signal<T, E> { subscriber in
-        var currentValue = value
-        
-        return signal.start(next: { next in
-            currentValue = f(currentValue, next)
-        }, error: { error in
-            subscriber.putError(error)
-        }, completed: {
-            subscriber.putNext(currentValue)
-            subscriber.putCompletion()
-        })
-    }
-}
-
-public func reduceLeft<T, E>(value: T, f: (T, T, T -> Void) -> T)(signal: Signal<T, E>) -> Signal<T, E> {
-    return Signal<T, E> { subscriber in
-        var currentValue = value
-        let emit: T -> Void = { next in
-            subscriber.putNext(next)
-        }
-        
-        return signal.start(next: { next in
-            currentValue = f(currentValue, next, emit)
+public func reduceLeft<T, E>(value: T, f: @escaping(T, T) -> T) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
+    return { signal in
+        return Signal<T, E> { subscriber in
+            var currentValue = value
+            
+            return signal.start(next: { next in
+                currentValue = f(currentValue, next)
             }, error: { error in
                 subscriber.putError(error)
             }, completed: {
                 subscriber.putNext(currentValue)
                 subscriber.putCompletion()
-        })
+            })
+        }
+    }
+}
+
+public func reduceLeft<T, E>(value: T, f: @escaping(T, T, (T) -> Void) -> T) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
+    return { signal in
+        return Signal<T, E> { subscriber in
+            var currentValue = value
+            let emit: (T) -> Void = { next in
+                subscriber.putNext(next)
+            }
+            
+            return signal.start(next: { next in
+                currentValue = f(currentValue, next, emit)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putNext(currentValue)
+                    subscriber.putCompletion()
+            })
+        }
     }
 }
 
@@ -51,17 +55,17 @@ private final class ReduceQueueState<T, E> : Disposable {
     var generator: (T, T) -> Signal<(T, Passthrough<T>), E>
     var value: T
     
-    init(subscriber: Subscriber<T, E>, value: T, generator: (T, T) -> Signal<(T, Passthrough<T>), E>) {
+    init(subscriber: Subscriber<T, E>, value: T, generator: @escaping(T, T) -> Signal<(T, Passthrough<T>), E>) {
         self.subscriber = subscriber
         self.generator = generator
         self.value = value
     }
     
-    func beginWithDisposable(disposable: Disposable) {
+    func beginWithDisposable(_ disposable: Disposable) {
         self.disposable = disposable
     }
     
-    func enqueueNext(next: T) {
+    func enqueueNext(_ next: T) {
         var startSignal = false
         var currentValue: T
         OSSpinLockLock(&self.lock)
@@ -92,7 +96,7 @@ private final class ReduceQueueState<T, E> : Disposable {
         }
     }
     
-    func updateValue(value: T) {
+    func updateValue(_ value: T) {
         OSSpinLockLock(&self.lock)
         self.value = value
         OSSpinLockUnlock(&self.lock)
@@ -110,7 +114,7 @@ private final class ReduceQueueState<T, E> : Disposable {
             self.executingSignal = false
             if self.queuedValues.count != 0 {
                 nextSignal = self.generator(self.value, self.queuedValues[0])
-                self.queuedValues.removeAtIndex(0)
+                self.queuedValues.remove(at: 0)
                 self.executingSignal = true
             } else {
                 currentValue = self.value
@@ -168,16 +172,18 @@ private final class ReduceQueueState<T, E> : Disposable {
     }
 }
 
-public func reduceLeft<T, E>(value: T, generator: (T, T) -> Signal<(T, Passthrough<T>), E>)(signal: Signal<T, E>) -> Signal<T, E> {
-    return Signal { subscriber in
-        let state = ReduceQueueState(subscriber: subscriber, value: value, generator: generator)
-        state.beginWithDisposable(signal.start(next: { next in
-            state.enqueueNext(next)
-        }, error: { error in
-            subscriber.putError(error)
-        }, completed: {
-            state.beginCompletion()
-        }))
-        return state
+public func reduceLeft<T, E>(_ value: T, generator: @escaping(T, T) -> Signal<(T, Passthrough<T>), E>) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
+    return { signal in
+        return Signal { subscriber in
+            let state = ReduceQueueState(subscriber: subscriber, value: value, generator: generator)
+            state.beginWithDisposable(signal.start(next: { next in
+                state.enqueueNext(next)
+            }, error: { error in
+                subscriber.putError(error)
+            }, completed: {
+                state.beginCompletion()
+            }))
+            return state
+        }
     }
 }

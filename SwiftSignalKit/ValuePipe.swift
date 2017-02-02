@@ -1,10 +1,9 @@
 import Foundation
 
-public final class Pipe<T> {
-    let subscribers = Atomic(value: Bag<T -> Void>())
+public final class ValuePipe<T> {
+    private let subscribers = Atomic(value: Bag<(T) -> Void>())
     
     public init() {
-        
     }
     
     public func signal() -> Signal<T, Void> {
@@ -29,8 +28,8 @@ public final class Pipe<T> {
         }
     }
     
-    public func putNext(next: T) {
-        let items = self.subscribers.with { value -> [T -> Void] in
+    public func putNext(_ next: T) {
+        let items = self.subscribers.with { value -> [(T) -> Void] in
             return value.copyItems()
         }
         for f in items {

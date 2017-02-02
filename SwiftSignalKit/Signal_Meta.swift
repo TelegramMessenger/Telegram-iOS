@@ -11,20 +11,25 @@ private final class SignalQueueState<T, E> : Disposable {
     
     var queuedSignals: [Signal<T, E>] = []
     let queueMode: Bool
+    let throttleMode: Bool
     
-    init(subscriber: Subscriber<T, E>, queueMode: Bool) {
+    init(subscriber: Subscriber<T, E>, queueMode: Bool, throttleMode: Bool) {
         self.subscriber = subscriber
         self.queueMode = queueMode
+        self.throttleMode = throttleMode
     }
     
-    func beginWithDisposable(disposable: Disposable) {
+    func beginWithDisposable(_ disposable: Disposable) {
         self.disposable = disposable
     }
     
-    func enqueueSignal(signal: Signal<T, E>) {
+    func enqueueSignal(_ signal: Signal<T, E>) {
         var startSignal = false
         OSSpinLockLock(&self.lock)
         if self.queueMode && self.executingSignal {
+            if self.throttleMode {
+                self.queuedSignals.removeAll()
+            }
             self.queuedSignals.append(signal)
         } else {
             self.executingSignal = true
@@ -56,7 +61,7 @@ private final class SignalQueueState<T, E> : Disposable {
             if self.queueMode {
                 if self.queuedSignals.count != 0 {
                     nextSignal = self.queuedSignals[0]
-                    self.queuedSignals.removeAtIndex(0)
+                    self.queuedSignals.remove(at: 0)
                     self.executingSignal = true
                 } else {
                     terminated = self.terminated
@@ -106,9 +111,9 @@ private final class SignalQueueState<T, E> : Disposable {
     }
 }
 
-public func switchToLatest<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
+public func switchToLatest<T, E>(_ signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     return Signal { subscriber in
-        let state = SignalQueueState(subscriber: subscriber, queueMode: false)
+        let state = SignalQueueState(subscriber: subscriber, queueMode: false, throttleMode: false)
         state.beginWithDisposable(signal.start(next: { next in
             state.enqueueSignal(next)
         }, error: { error in
@@ -120,9 +125,9 @@ public func switchToLatest<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E
     }
 }
 
-public func queue<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
+public func queue<T, E>(_ signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     return Signal { subscriber in
-        let state = SignalQueueState(subscriber: subscriber, queueMode: true)
+        let state = SignalQueueState(subscriber: subscriber, queueMode: true, throttleMode: false)
         state.beginWithDisposable(signal.start(next: { next in
             state.enqueueSignal(next)
         }, error: { error in
@@ -134,37 +139,83 @@ public func queue<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     }
 }
 
-public func mapToSignal<T, R, E>(f: T -> Signal<R, E>)(signal: Signal<T, E>) -> Signal<R, E> {
-    return signal |> map { f($0) } |> switchToLatest
-}
-
-public func mapToQueue<T, R, E>(f: T -> Signal<R, E>)(signal: Signal<T, E>) -> Signal<R, E> {
-    return signal |> map { f($0) } |> queue
-}
-
-public func then<T, E>(nextSignal: Signal<T, E>)(signal: Signal<T, E>) -> Signal<T, E> {
-    return Signal<T, E> { subscriber in
-        let disposable = DisposableSet()
-        
-        disposable.add(signal.start(next: { next in
-            subscriber.putNext(next)
+public func throttled<T, E>(_ signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
+    return Signal { subscriber in
+        let state = SignalQueueState(subscriber: subscriber, queueMode: true, throttleMode: true)
+        state.beginWithDisposable(signal.start(next: { next in
+            state.enqueueSignal(next)
         }, error: { error in
             subscriber.putError(error)
         }, completed: {
-            disposable.add(nextSignal.start(next: { next in
-                subscriber.putNext(next)
+            state.beginCompletion()
+        }))
+        return state
+    }
+}
+
+public func mapToSignal<T, R, E>(_ f: @escaping(T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
+    return { signal -> Signal<R, E> in
+        return Signal<Signal<R, E>, E> { subscriber in
+            return signal.start(next: { next in
+                subscriber.putNext(f(next))
             }, error: { error in
                 subscriber.putError(error)
             }, completed: {
                 subscriber.putCompletion()
-            }))
-        }))
-        
-        return disposable
+            })
+        } |> switchToLatest
     }
 }
 
-public func `defer`<T, E>(generator: () -> Signal<T, E>) -> Signal<T, E> {
+public func mapToSignalPromotingError<T, R, E>(_ f: @escaping(T) -> Signal<R, E>) -> (Signal<T, NoError>) -> Signal<R, E> {
+    return { signal -> Signal<R, E> in
+        return Signal<Signal<R, E>, E> { subscriber in
+            return signal.start(next: { next in
+                subscriber.putNext(f(next))
+            }, completed: { 
+                subscriber.putCompletion()
+            })
+        } |> switchToLatest
+    }
+}
+
+public func mapToQueue<T, R, E>(_ f: @escaping(T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
+    return { signal -> Signal<R, E> in
+        return signal |> map { f($0) } |> queue
+    }
+}
+
+public func mapToThrottled<T, R, E>(_ f: @escaping(T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
+    return { signal -> Signal<R, E> in
+        return signal |> map { f($0) } |> throttled
+    }
+}
+
+public func then<T, E>(_ nextSignal: Signal<T, E>) -> (Signal<T, E>) -> Signal<T, E> {
+    return { signal -> Signal<T, E> in
+        return Signal<T, E> { subscriber in
+            let disposable = DisposableSet()
+            
+            disposable.add(signal.start(next: { next in
+                subscriber.putNext(next)
+            }, error: { error in
+                subscriber.putError(error)
+            }, completed: {
+                disposable.add(nextSignal.start(next: { next in
+                    subscriber.putNext(next)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }))
+            
+            return disposable
+        }
+    }
+}
+
+public func deferred<T, E>(_ generator: @escaping() -> Signal<T, E>) -> Signal<T, E> {
     return Signal { subscriber in
         return generator().start(next: { next in
             subscriber.putNext(next)

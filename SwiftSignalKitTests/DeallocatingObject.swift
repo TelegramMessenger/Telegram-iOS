@@ -8,7 +8,7 @@ internal class DeallocatingObject : CustomStringConvertible {
     }
     
     deinit {
-        self.deallocated.memory = true
+        self.deallocated.pointee = true
     }
     
     var description: String {
