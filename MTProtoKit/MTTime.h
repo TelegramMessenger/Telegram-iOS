@@ -9,13 +9,13 @@
 #ifndef MtProtoKit_MTTime_h
 #define MtProtoKit_MTTime_h
 
-typedef double MTAbsoluteTime;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+    
+#import <Foundation/Foundation.h>
 
-MTAbsoluteTime MTAbsoluteSystemTime();
+CFAbsoluteTime MTAbsoluteSystemTime();
     
 #ifdef __cplusplus
 }

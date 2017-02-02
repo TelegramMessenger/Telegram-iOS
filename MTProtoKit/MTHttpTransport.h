@@ -6,7 +6,13 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTransport.h>
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTTransport.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTTransport.h>
+#else
+#   import <MTProtoKit/MTTransport.h>
+#endif
 
 @interface MTHttpTransport : MTTransport
 

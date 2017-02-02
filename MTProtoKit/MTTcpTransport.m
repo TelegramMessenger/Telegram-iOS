@@ -6,27 +6,27 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTcpTransport.h>
+#import "MTTcpTransport.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTTimer.h>
-#import <MTProtoKit/MTTime.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTTimer.h"
+#import "MTTime.h"
 
-#import <MTProtoKit/MTDatacenterAddressSet.h>
+#import "MTDatacenterAddressSet.h"
 
-#import <MTProtoKit/MTTransportTransaction.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTPreparedMessage.h>
+#import "MTTransportTransaction.h"
+#import "MTOutgoingMessage.h"
+#import "MTIncomingMessage.h"
+#import "MTMessageTransaction.h"
+#import "MTPreparedMessage.h"
 
-#import <MTProtoKit/MTTcpConnection.h>
-#import <MTProtoKit/MTTcpConnectionBehaviour.h>
+#import "MTTcpConnection.h"
+#import "MTTcpConnectionBehaviour.h"
 
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTPongMessage.h>
+#import "MTSerialization.h"
+#import "MTBuffer.h"
+#import "MTPongMessage.h"
 
 static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
@@ -69,6 +69,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     MTTcpTransportContext *_transportContext;
     __weak MTContext *_context;
     NSInteger _datacenterId;
+    MTNetworkUsageCalculationInfo *_usageCalculationInfo;
 }
 
 @end
@@ -86,7 +87,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     return queue;
 }
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -94,11 +95,12 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     NSAssert(address != nil, @"address should not be nil");
 #endif
     
-    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address];
+    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address usageCalculationInfo:usageCalculationInfo];
     if (self != nil)
     {
         _context = context;
         _datacenterId = datacenterId;
+        _usageCalculationInfo = usageCalculationInfo;
         
         MTTcpTransportContext *transportContext = [[MTTcpTransportContext alloc] init];
         _transportContext = transportContext;
@@ -132,6 +134,13 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         
         [transportContext.sleepWatchdogTimer invalidate];
         transportContext.sleepWatchdogTimer = nil;
+    }];
+}
+
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
+        _usageCalculationInfo = usageCalculationInfo;
+        [_transportContext.connection setUsageCalculationInfo:usageCalculationInfo];
     }];
 }
 
@@ -188,7 +197,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [self startSleepWatchdogTimer];
             
             MTContext *context = _context;
-            transportContext.connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:_datacenterId address:transportContext.address interface:nil];
+            transportContext.connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:_datacenterId address:transportContext.address interface:nil usageCalculationInfo:_usageCalculationInfo];
             transportContext.connection.delegate = self;
             [transportContext.connection start];
         }
@@ -258,7 +267,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                 {
                     if (ABS(currentTime - strongSelf->_transportContext.sleepWatchdogTimerLastTime) > MTTcpTransportSleepWatchdogTimeout * 2.0)
                     {
-                        MTLog(@"[MTTcpTransport#%p system sleep detected, resetting connection]", strongSelf);
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTTcpTransport#%p system sleep detected, resetting connection]", strongSelf);
+                        }
                         [strongSelf reset];
                     }
                     strongSelf->_transportContext.sleepWatchdogTimerLastTime = currentTime;
@@ -544,19 +555,25 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     {
         if (!transportContext.didSendActualizationPingAfterConnection)
         {
-            MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to connection context update task]", (int)self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to connection context update task]", (int)self);
+            }
             transportContext.isWaitingForTransactionToBecomeReady = false;
             transportContext.transactionLockTime = 0.0;
         }
         else if (CFAbsoluteTimeGetCurrent() > transportContext.transactionLockTime + 1.0)
         {
-            MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to timeout]", (int)self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to timeout]", (int)self);
+            }
             transportContext.isWaitingForTransactionToBecomeReady = false;
             transportContext.transactionLockTime = 0.0;
         }
         else
         {
-            MTLog(@"[MTTcpTransport#%x skipping transaction request]", (int)self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTTcpTransport#%x skipping transaction request]", (int)self);
+            }
             transportContext.requestAnotherTransactionWhenReady = true;
             
             return;

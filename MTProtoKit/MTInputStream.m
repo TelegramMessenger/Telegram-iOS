@@ -7,8 +7,8 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTInputStream.h>
+#import "MTLogging.h"
+#import "MTInputStream.h"
 
 #if TARGET_OS_IPHONE
 #   import <endian.h>
@@ -66,7 +66,11 @@ static inline int roundUpInput(int numToRound, int multiple)
     
     if ([_wrappedInputStream read:(uint8_t *)&value maxLength:4] != 4)
     {
-        MTLog(@"***** Couldn't read int32");
+        if (MTLogEnabled()) {
+            MTLog(@"***** Couldn't read int32");
+            
+            @throw [[NSException alloc] initWithName:@"MTInputStreamException" reason:@"readInt32 end of stream" userInfo:@{}];
+        }
     }
     
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -105,7 +109,9 @@ static inline int roundUpInput(int numToRound, int multiple)
     
     if ([_wrappedInputStream read:(uint8_t *)&value maxLength:8] != 8)
     {
-        MTLog(@"***** Couldn't read int64");
+        if (MTLogEnabled()) {
+            MTLog(@"***** Couldn't read int64");
+        }
     }
     
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -144,7 +150,9 @@ static inline int roundUpInput(int numToRound, int multiple)
     
     if ([_wrappedInputStream read:(uint8_t *)&value maxLength:8] != 8)
     {
-        MTLog(@"***** Couldn't read double");
+        if (MTLogEnabled()) {
+            MTLog(@"***** Couldn't read double");
+        }
     }
     
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -183,7 +191,9 @@ static inline int roundUpInput(int numToRound, int multiple)
     NSInteger readLen = [_wrappedInputStream read:bytes maxLength:length];
     if (readLen != length)
     {
-        MTLog(@"***** Couldn't read %d bytes", length);
+        if (MTLogEnabled()) {
+            MTLog(@"***** Couldn't read %d bytes", length);
+        }
     }
     NSData *data = [[NSData alloc] initWithBytesNoCopy:bytes length:length freeWhenDone:true];
     return data;
@@ -209,7 +219,9 @@ static inline int roundUpInput(int numToRound, int multiple)
     NSInteger readLen = [_wrappedInputStream read:bytes maxLength:length];
     if (readLen != length)
     {
-        MTLog(@"***** Couldn't read %d bytes", length);
+        if (MTLogEnabled()) {
+            MTLog(@"***** Couldn't read %d bytes", length);
+        }
     }
     NSMutableData *data = [[NSMutableData alloc] initWithBytesNoCopy:bytes length:length freeWhenDone:true];
     return data;
@@ -265,7 +277,9 @@ static inline int roundUpInput(int numToRound, int multiple)
         NSInteger readLen = [_wrappedInputStream read:bytes maxLength:length];
         if (readLen != length)
         {
-            MTLog(@"***** Couldn't read %d bytes", length);
+            if (MTLogEnabled()) {
+                MTLog(@"***** Couldn't read %d bytes", length);
+            }
         }
         
         string = [[NSString alloc] initWithBytesNoCopy:bytes length:length encoding:NSUTF8StringEncoding freeWhenDone:true];
@@ -360,7 +374,9 @@ static inline int roundUpInput(int numToRound, int multiple)
     NSInteger readLen = [_wrappedInputStream read:bytes maxLength:length];
     if (readLen != length)
     {
-        MTLog(@"***** Couldn't read %d bytes", length);
+        if (MTLogEnabled()) {
+            MTLog(@"***** Couldn't read %d bytes", length);
+        }
     }
     
     NSData *result = [NSData dataWithBytesNoCopy:bytes length:length freeWhenDone:true];

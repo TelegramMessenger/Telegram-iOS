@@ -6,27 +6,27 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAuthMessageService.h>
+#import "MTDatacenterAuthMessageService.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTSessionInfo.h>
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTPreparedMessage.h>
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTEncryption.h>
+#import "MTLogging.h"
+#import "MTContext.h"
+#import "MTProto.h"
+#import "MTSerialization.h"
+#import "MTSessionInfo.h"
+#import "MTIncomingMessage.h"
+#import "MTOutgoingMessage.h"
+#import "MTMessageTransaction.h"
+#import "MTPreparedMessage.h"
+#import "MTDatacenterAuthInfo.h"
+#import "MTDatacenterSaltInfo.h"
+#import "MTBuffer.h"
+#import "MTEncryption.h"
 
-#import <MTProtoKit/MTInternalMessageParser.h>
-#import <MTProtoKit/MTServerDhInnerDataMessage.h>
-#import <MTProtoKit/MTResPqMessage.h>
-#import <MTProtoKit/MTServerDhParamsMessage.h>
-#import <MTProtoKit/MTSetClientDhParamsResponseMessage.h>
+#import "MTInternalMessageParser.h"
+#import "MTServerDhInnerDataMessage.h"
+#import "MTResPqMessage.h"
+#import "MTServerDhParamsMessage.h"
+#import "MTSetClientDhParamsResponseMessage.h"
 
 static NSDictionary *selectPublicKey(NSArray *fingerprints)
 {
@@ -178,7 +178,7 @@ typedef enum {
                 if (_nonce == nil)
                 {
                     uint8_t nonceBytes[16];
-                    SecRandomCopyBytes(kSecRandomDefault, 16, nonceBytes);
+                    __unused int result = SecRandomCopyBytes(kSecRandomDefault, 16, nonceBytes);
                     _nonce = [[NSData alloc] initWithBytes:nonceBytes length:16];
                 }
                 
@@ -260,7 +260,9 @@ typedef enum {
             NSDictionary *publicKey = selectPublicKey(resPqMessage.serverPublicKeyFingerprints);
             if (publicKey == nil)
             {
-                MTLog(@"[MTDatacenterAuthMessageService#%p couldn't find valid server public key]", self);
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDatacenterAuthMessageService#%p couldn't find valid server public key]", self);
+                }
                 [self reset:mtProto];
             }
             else
@@ -306,7 +308,7 @@ typedef enum {
                 _dhPublicKeyFingerprint = [[publicKey objectForKey:@"fingerprint"] longLongValue];
                 
                 uint8_t nonceBytes[32];
-                SecRandomCopyBytes(kSecRandomDefault, 32, nonceBytes);
+                __unused int result = SecRandomCopyBytes(kSecRandomDefault, 32, nonceBytes);
                 _newNonce = [[NSData alloc] initWithBytes:nonceBytes length:32];
                 
                 MTBuffer *innerDataBuffer = [[MTBuffer alloc] init];
@@ -414,7 +416,9 @@ typedef enum {
                 
                 if (!hashVerified)
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p couldn't decode DH params]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p couldn't decode DH params]", self);
+                    }
                     [self reset:mtProto];
                     
                     return;
@@ -424,7 +428,9 @@ typedef enum {
                 
                 if (![dhInnerData isKindOfClass:[MTServerDhInnerDataMessage class]])
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p couldn't parse decoded DH params]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p couldn't parse decoded DH params]", self);
+                    }
                     [self reset:mtProto];
                     
                     return;
@@ -432,7 +438,9 @@ typedef enum {
                 
                 if (![_nonce isEqualToData:dhInnerData.nonce])
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH nonce]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH nonce]", self);
+                    }
                     [self reset:mtProto];
                     
                     return;
@@ -440,7 +448,9 @@ typedef enum {
                 
                 if (![_serverNonce isEqualToData:dhInnerData.serverNonce])
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH server nonce]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH server nonce]", self);
+                    }
                     [self reset:mtProto];
                     
                     return;
@@ -449,7 +459,9 @@ typedef enum {
                 int32_t innerDataG = dhInnerData.g;
                 if (innerDataG < 0 || !MTCheckIsSafeG((unsigned int)innerDataG))
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g]", self);
+                    }
                     [self reset:mtProto];
                     
                     return;
@@ -459,7 +471,9 @@ typedef enum {
                 NSData *innerDataDhPrime = dhInnerData.dhPrime;
                 if (!MTCheckIsSafeGAOrB(innerDataGA, innerDataDhPrime))
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g_a]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g_a]", self);
+                    }
                     [self reset:mtProto];
                     
                     return;
@@ -467,7 +481,9 @@ typedef enum {
                 
                 if (!MTCheckMod(innerDataDhPrime, (unsigned int)innerDataG, mtProto.context.keychain))
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g (2)]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g (2)]", self);
+                    }
                     [self reset:mtProto];
                     
                     return;
@@ -475,14 +491,16 @@ typedef enum {
                 
                 if (!MTCheckIsSafePrime(innerDataDhPrime, mtProto.context.keychain))
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH prime]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH prime]", self);
+                    }
                     [self reset:mtProto];
                     
                     return;
                 }
                 
                 uint8_t bBytes[256];
-                SecRandomCopyBytes(kSecRandomDefault, 256, bBytes);
+                __unused int result = SecRandomCopyBytes(kSecRandomDefault, 256, bBytes);
                 NSData *b = [[NSData alloc] initWithBytes:bBytes length:256];
                 
                 int32_t tmpG = innerDataG;
@@ -536,7 +554,9 @@ typedef enum {
             }
             else
             {
-                MTLog(@"[MTDatacenterAuthMessageService#%p couldn't set DH params]", self);
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDatacenterAuthMessageService#%p couldn't set DH params]", self);
+                }
                 [self reset:mtProto];
             }
         }
@@ -578,7 +598,9 @@ typedef enum {
             {
                 if (![newNonceHash1 isEqualToData:((MTSetClientDhParamsResponseOkMessage *)setClientDhParamsResponseMessage).nextNonceHash1])
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 1]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 1]", self);
+                    }
                     [self reset:mtProto];
                 }
                 else
@@ -597,12 +619,16 @@ typedef enum {
             {
                 if (![newNonceHash2 isEqualToData:((MTSetClientDhParamsResponseRetryMessage *)setClientDhParamsResponseMessage).nextNonceHash2])
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 2]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 2]", self);
+                    }
                     [self reset:mtProto];
                 }
                 else
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p retry DH]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p retry DH]", self);
+                    }
                     [self reset:mtProto];
                 }
             }
@@ -610,18 +636,24 @@ typedef enum {
             {
                 if (![newNonceHash3 isEqualToData:((MTSetClientDhParamsResponseFailMessage *)setClientDhParamsResponseMessage).nextNonceHash3])
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 3]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 3]", self);
+                    }
                     [self reset:mtProto];
                 }
                 else
                 {
-                    MTLog(@"[MTDatacenterAuthMessageService#%p server rejected DH params]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p server rejected DH params]", self);
+                    }
                     [self reset:mtProto];
                 }
             }
             else
             {
-                MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH params response]", self);
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH params response]", self);
+                }
                 [self reset:mtProto];
             }
         }

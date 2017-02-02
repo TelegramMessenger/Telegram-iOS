@@ -6,50 +6,56 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTProto.h>
+#import "MTProto.h"
 
 #import <inttypes.h>
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTOutputStream.h>
-#import <MTProtoKit/MTInputStream.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTOutputStream.h"
+#import "MTInputStream.h"
 
-#import <MTProtoKit/MTDatacenterAddressSet.h>
-#import <MtProtoKit/MTTransportScheme.h>
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-#import <MTProtoKit/MTSessionInfo.h>
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
-#import <MTProtoKit/MTTimeFixContext.h>
+#import "MTContext.h"
 
-#import <MTProtoKit/MTMessageService.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTTimeSyncMessageService.h>
-#import <MTProtoKit/MTResendMessageService.h>
+#import "MTDatacenterAddressSet.h"
+#import "MTTransportScheme.h"
+#import "MTDatacenterAuthInfo.h"
+#import "MTSessionInfo.h"
+#import "MTDatacenterSaltInfo.h"
+#import "MTTimeFixContext.h"
 
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTPreparedMessage.h>
-#import <MTProtoKit/MTMessageEncryptionKey.h>
+#import "MTMessageService.h"
+#import "MTMessageTransaction.h"
+#import "MTTimeSyncMessageService.h"
+#import "MTResendMessageService.h"
 
-#import <MTProtoKit/MTTransport.h>
-#import <MTProtoKit/MTTransportTransaction.h>
+#import "MTIncomingMessage.h"
+#import "MTOutgoingMessage.h"
+#import "MTPreparedMessage.h"
+#import "MTMessageEncryptionKey.h"
 
-#import <MTProtoKit/MTTcpTransport.h>
-#import <MTProtoKit/MTHttpTransport.h>
+#import "MTTransport.h"
+#import "MTTransportTransaction.h"
 
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTEncryption.h>
+#import "MTTcpTransport.h"
+#import "MTHttpTransport.h"
 
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTInternalMessageParser.h>
-#import <MTProtoKit/MTMsgContainerMessage.h>
-#import <MTProtoKit/MTMessage.h>
-#import <MTProtoKit/MTBadMsgNotificationMessage.h>
-#import <MTProtoKit/MTMsgsAckMessage.h>
-#import <MTProtoKit/MTMsgDetailedInfoMessage.h>
-#import <MTProtoKit/MTNewSessionCreatedMessage.h>
-#import <MTProtoKit/MTPongMessage.h>
+#import "MTSerialization.h"
+#import "MTEncryption.h"
+
+#import "MTBuffer.h"
+#import "MTInternalMessageParser.h"
+#import "MTMsgContainerMessage.h"
+#import "MTMessage.h"
+#import "MTBadMsgNotificationMessage.h"
+#import "MTMsgsAckMessage.h"
+#import "MTMsgDetailedInfoMessage.h"
+#import "MTNewSessionCreatedMessage.h"
+#import "MTPongMessage.h"
+
+#import "MTTime.h"
+
+#define MTProtoV2 1
 
 typedef enum {
     MTProtoStateAwaitingDatacenterScheme = 1,
@@ -79,6 +85,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     int _mtState;
     
     bool _willRequestTransactionOnNextQueuePass;
+    
+    MTNetworkUsageCalculationInfo *_usageCalculationInfo;
 }
 
 @end
@@ -96,7 +104,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return queue;
 }
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -109,6 +117,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     {
         _context = context;
         _datacenterId = datacenterId;
+        _usageCalculationInfo = usageCalculationInfo;
         
         [_context addChangeListener:self];
         
@@ -134,13 +143,22 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
+    [[MTProto managerQueue] dispatchOnQueue:^{
+        _usageCalculationInfo = usageCalculationInfo;
+        [_transport setUsageCalculationInfo:usageCalculationInfo];
+    }];
+}
+
 - (void)pause
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
         if ((_mtState & MTProtoStatePaused) == 0)
         {
-            MTLog(@"[MTProto#%p pause]", self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p pause]", self);
+            }
             
             _mtState |= MTProtoStatePaused;
             
@@ -156,7 +174,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     {
         if (_mtState & MTProtoStatePaused)
         {
-            MTLog(@"[MTProto#%p resume]", self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p resume]", self);
+            }
             
             [self setMtState:_mtState & (~MTProtoStatePaused)];
             
@@ -207,7 +227,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
-        MTLog(@"[MTProto#%p changing transport %@#%p to %@#%p]", self, [_transport class] == nil ? @"" : NSStringFromClass([_transport class]), _transport, [transport class] == nil ? @"" : NSStringFromClass([transport class]), transport);
+        if (MTLogEnabled()) {
+            MTLog(@"[MTProto#%p changing transport %@#%p to %@#%p]", self, [_transport class] == nil ? @"" : NSStringFromClass([_transport class]), _transport, [transport class] == nil ? @"" : NSStringFromClass([transport class]), transport);
+        }
         
         [self allTransactionsMayHaveFailed];
         
@@ -279,7 +301,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             MTTransport *transport = nil;
             
-            transport = [_transportScheme createTransportWithContext:_context datacenterId:_datacenterId delegate:self];
+            transport = [_transportScheme createTransportWithContext:_context datacenterId:_datacenterId delegate:self usageCalculationInfo:_usageCalculationInfo];
             
             [self setTransport:transport];
         }
@@ -290,7 +312,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
-        MTLog(@"[MTProto#%p resetting session]", self);
+        if (MTLogEnabled()) {
+            MTLog(@"[MTProto#%p resetting session]", self);
+        }
         
         _sessionInfo = [[MTSessionInfo alloc] initWithRandomSessionIdAndContext:_context];
         _timeFixContext = nil;
@@ -324,7 +348,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         
         if (!alreadySyncing)
         {
-            MTLog(@"[MTProto#%p begin time sync]", self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p begin time sync]", self);
+            }
             
             MTTimeSyncMessageService *timeSyncService = [[MTTimeSyncMessageService alloc] init];
             timeSyncService.delegate = self;
@@ -354,7 +380,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             }
         }
         
-        MTLog(@"[MTProto#%p service tasks state: %d, resend: %s]", self, _mtState, haveResendMessagesPending ? "yes" : "no");
+        if (MTLogEnabled()) {
+            MTLog(@"[MTProto#%p service tasks state: %d, resend: %s]", self, _mtState, haveResendMessagesPending ? "yes" : "no");
+        }
         
         for (id<MTMessageService> messageService in _messageServices)
         {
@@ -402,7 +430,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         
         if (notifyAboutServiceTask)
         {
-            MTLog(@"[MTProto#%p service tasks state: %d, resend: %s]", self, _mtState, true ? "yes" : "no");
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p service tasks state: %d, resend: %s]", self, _mtState, true ? "yes" : "no");
+            }
             
             for (id<MTMessageService> messageService in _messageServices)
             {
@@ -452,7 +482,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 bool performingServiceTasks = _mtState & MTProtoStateAwaitingTimeFixAndSalts;
                 if (!performingServiceTasks)
                 {
-                    MTLog(@"[MTProto#%p service tasks state: %d, resend: %s]", self, _mtState, false ? "yes" : "no");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTProto#%p service tasks state: %d, resend: %s]", self, _mtState, false ? "yes" : "no");
+                    }
                     
                     for (id<MTMessageService> messageService in _messageServices)
                     {
@@ -611,7 +643,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (transport != _transport)
             return;
         
-        MTLog(@"[MTProto#%p network state: %s]", self, isNetworkAvailable ? "available" : "waiting");
+        if (MTLogEnabled()) {
+            MTLog(@"[MTProto#%p network state: %s]", self, isNetworkAvailable ? "available" : "waiting");
+        }
         
         for (id<MTMessageService> messageService in _messageServices)
         {
@@ -632,7 +666,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (transport != _transport)
             return;
         
-        MTLog(@"[MTProto#%p connection state: %s]", self, isConnected ? "connected" : "connecting");
+        if (MTLogEnabled()) {
+            MTLog(@"[MTProto#%p connection state: %s]", self, isConnected ? "connected" : "connecting");
+        }
         
         for (id<MTMessageService> messageService in _messageServices)
         {
@@ -653,7 +689,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (transport != _transport)
             return;
         
-        MTLog(@"[MTProto#%p connection context update state: %s]", self, isUpdatingConnectionContext ? "updating" : "up to date");
+        if (MTLogEnabled()) {
+            MTLog(@"[MTProto#%p connection context update state: %s]", self, isUpdatingConnectionContext ? "updating" : "up to date");
+        }
         
         for (id<MTMessageService> messageService in _messageServices)
         {
@@ -823,7 +861,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         messageSeqNo = outgoingMessage.messageSeqNo;
                     }
                     
-                    MTLog(@"[MTProto#%p preparing %@]", self, [self outgoingMessageDescription:outgoingMessage messageId:messageId messageSeqNo:messageSeqNo]);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTProto#%p preparing %@]", self, [self outgoingMessageDescription:outgoingMessage messageId:messageId messageSeqNo:messageSeqNo]);
+                    }
                     
                     if (!monotonityViolated || _useUnauthorizedMode)
                     {
@@ -865,7 +905,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 
                 if (monotonityViolated)
                 {
-                    MTLog(@"[MTProto#%p client message id monotonity violated]", self);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTProto#%p client message id monotonity violated]", self);
+                    }
                     
                     [self resetSessionInfo];
                 }
@@ -1050,7 +1092,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                             }
                                         }
                                         
-                                        MTLog(@"[MTProto#%p transport did not accept transactions with messages (%@)]", self, idsString);
+                                        if (MTLogEnabled()) {
+                                            MTLog(@"[MTProto#%p transport did not accept transactions with messages (%@)]", self, idsString);
+                                        }
                                     }
                                 }];
                             } needsQuickAck:transactionNeedsQuickAck expectsDataInResponse:transactionExpectsDataInResponse]];
@@ -1104,7 +1148,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             
             MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
             
-            MTLog(@"[MTProto#%x sending time fix ping (%" PRId64 "/%" PRId32 ")]", self, timeFixMessageId, timeFixSeqNo);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%x sending time fix ping (%" PRId64 "/%" PRId32 ")]", self, timeFixMessageId, timeFixSeqNo);
+            }
             
             [decryptedOs writeInt64:[_authInfo authSaltForMessageId:timeFixMessageId]]; // salt
             [decryptedOs writeInt64:_sessionInfo.sessionId];
@@ -1114,21 +1160,25 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [decryptedOs writeInt32:(int32_t)messageData.length];
             [decryptedOs writeData:messageData];
             
-            uint8_t randomBytes[15];
-            arc4random_buf(randomBytes, 15);
-            for (int i = 0; ((int)messageData.length + i) % 16 != 0; i++)
-            {
-                [decryptedOs write:&randomBytes[i] maxLength:1];
-            }
+            NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
             
-            NSData *decryptedData = [decryptedOs currentBytes];
+#if MTProtoV2
+            int xValue = 0;
+            NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
+            [msgKeyLargeData appendBytes:_authInfo.authKey.bytes + 88 + xValue length:32];
+            [msgKeyLargeData appendData:decryptedData];
             
+            NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
+            NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
+            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+#else
             NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + messageData.length);
             NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
+            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+#endif
             
             NSData *transactionData = nil;
             
-            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
             if (encryptionKey != nil)
             {
                 NSMutableData *encryptedData = [[NSMutableData alloc] initWithCapacity:14 + decryptedData.length];
@@ -1215,7 +1265,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [idsString appendString:@","];
             [idsString appendFormat:@"%lld", [nMessageId longLongValue]];
         }
-        MTLog(@"    container (%" PRId64 ") of (%@)", containerMessageId, idsString);
+        if (MTLogEnabled()) {
+            MTLog(@"    container (%" PRId64 ") of (%@)", containerMessageId, idsString);
+        }
 #endif
     }
     
@@ -1227,27 +1279,32 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     [decryptedOs writeInt32:(int32_t)containerData.length];
     [decryptedOs writeData:containerData];
     
-    uint8_t randomBytes[15];
-    arc4random_buf(randomBytes, 15);
-    for (int i = 0; ((int)containerData.length + i) % 16 != 0; i++)
-    {
-        [decryptedOs write:&randomBytes[i] maxLength:1];
-    }
+    NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
     
-    NSData *decryptedData = [decryptedOs currentBytes];
+#if MTProtoV2
+    int xValue = 0;
+    NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
+    [msgKeyLargeData appendBytes:_authInfo.authKey.bytes + 88 + xValue length:32];
+    [msgKeyLargeData appendData:decryptedData];
     
+    NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
+    NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+    int32_t nQuickAckId = *((int32_t *)(msgKeyLarge.bytes));
+#else
     NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + containerData.length);
     NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
-    
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
     int32_t nQuickAckId = *((int32_t *)(messageKeyFull.bytes));
+#endif
+    
     nQuickAckId = nQuickAckId & 0x7fffffff;
     if (quickAckId != NULL)
         *quickAckId = nQuickAckId;
     
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
     if (encryptionKey != nil)
     {
-        NSMutableData *encryptedData = [[NSMutableData alloc] initWithCapacity:14 + decryptedData.length];
+        NSMutableData *encryptedData = [[NSMutableData alloc] init];
         [encryptedData appendData:decryptedData];
         MTAesEncryptInplace(encryptedData, encryptionKey.key, encryptionKey.iv);
         
@@ -1275,6 +1332,39 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return messageData;
 }
 
+- (NSData *)paddedData:(NSData *)data {
+    NSMutableData *padded = [[NSMutableData alloc] initWithData:data];
+    uint8_t randomBytes[128];
+    arc4random_buf(randomBytes, 128);
+#if MTProtoV2
+    int take = 0;
+    while (take < 12) {
+        [padded appendBytes:randomBytes + take length:1];
+        take++;
+    }
+    
+    while (padded.length % 16 != 0) {
+        [padded appendBytes:randomBytes + take length:1];
+        take++;
+    }
+    
+    int remainingCount = arc4random_uniform(72 + 1 - take);
+    while (remainingCount % 16 != 0) {
+        remainingCount--;
+    }
+    
+    for (int i = 0; i < remainingCount; i++) {
+        [padded appendBytes:randomBytes + take length:1];
+        take++;
+    }
+#else
+    for (int i = 0; ((int)data.length + i) % 16 != 0; i++) {
+        [padded appendBytes:randomBytes + i length:1];
+    }
+#endif
+    return padded;
+}
+
 - (NSData *)_dataForEncryptedMessage:(MTPreparedMessage *)preparedMessage sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId
 {
     MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
@@ -1287,15 +1377,18 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     [decryptedOs writeInt32:(int32_t)preparedMessage.data.length];
     [decryptedOs writeData:preparedMessage.data];
     
-    uint8_t randomBytes[15];
-    arc4random_buf(randomBytes, 15);
-    for (int i = 0; ((int)preparedMessage.data.length + i) % 16 != 0; i++)
-    {
-        [decryptedOs write:&randomBytes[i] maxLength:1];
-    }
+    NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
     
-    NSData *decryptedData = [decryptedOs currentBytes];
+#if MTProtoV2
+    int xValue = 0;
+    NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
+    [msgKeyLargeData appendBytes:_authInfo.authKey.bytes + 88 + xValue length:32];
+    [msgKeyLargeData appendData:decryptedData];
     
+    NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
+    NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+#else
     NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + preparedMessage.data.length);
     NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
     
@@ -1305,6 +1398,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         *quickAckId = nQuickAckId;
     
     MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+#endif
+    
     if (encryptionKey != nil)
     {
         NSMutableData *encryptedData = [[NSMutableData alloc] initWithCapacity:14 + decryptedData.length];
@@ -1405,16 +1500,21 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (keyId != 0 && _authInfo != nil)
         {
             NSData *messageKey = [is readData:16];
+#if MTProtoV2
+            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:messageKey toClient:true];
+#else
             MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:true];
+#endif
             
-            NSMutableData *messageData = [is readMutableData:(data.length - 24)];
-            while (messageData.length % 16 != 0)
-                   [messageData setLength:messageData.length - 1];
-            if (messageData.length != 0)
+            NSMutableData *encryptedMessageData = [is readMutableData:(data.length - 24)];
+            while (encryptedMessageData.length % 16 != 0) {
+                   [encryptedMessageData setLength:encryptedMessageData.length - 1];
+            }
+            if (encryptedMessageData.length != 0)
             {
-                MTAesDecryptInplace(messageData, encryptionKey.key, encryptionKey.iv);
+                NSData *decryptedData = MTAesDecrypt(encryptedMessageData, encryptionKey.key, encryptionKey.iv);
                 
-                MTInputStream *messageIs = [[MTInputStream alloc] initWithData:messageData];
+                MTInputStream *messageIs = [[MTInputStream alloc] initWithData:decryptedData];
                 [messageIs readInt64];
                 [messageIs readInt64];
                 
@@ -1557,7 +1657,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             int32_t protocolErrorCode = 0;
             [data getBytes:&protocolErrorCode range:NSMakeRange(0, 4)];
             
-            MTLog(@"[MTProto#%p protocol error %" PRId32 "", self, protocolErrorCode);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p protocol error %" PRId32 "", self, protocolErrorCode);
+            }
             
             if (decodeResult != nil)
                 decodeResult(transactionId, false);
@@ -1597,7 +1699,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             NSArray *parsedMessages = [self _parseIncomingMessages:decryptedData dataMessageId:&dataMessageId parseError:&parseError];
             if (parseError)
             {
-                MTLog(@"[MTProto#%p incoming data parse error]", self);
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTProto#%p incoming data parse error]", self);
+                }
                 
                 [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
                 
@@ -1618,7 +1722,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }
         else
         {
-            MTLog(@"[MTProto#%p couldn't decrypt incoming data]", self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p couldn't decrypt incoming data]", self);
+            }
             
             if (decodeResult != nil)
                 decodeResult(transactionId, false);
@@ -1644,7 +1750,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         return nil;
     
     NSData *embeddedMessageKey = [data subdataWithRange:NSMakeRange(8, 16)];
+    
+#if MTProtoV2
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:embeddedMessageKey toClient:true];
+#else
     MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:embeddedMessageKey toClient:true];
+#endif
+    
     if (encryptionKey == nil)
         return nil;
     
@@ -1653,11 +1765,22 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     int32_t messageDataLength = 0;
     [decryptedData getBytes:&messageDataLength range:NSMakeRange(28, 4)];
     
-    if (messageDataLength < 0 || messageDataLength < (int32_t)decryptedData.length - 32 - 16 || messageDataLength > (int32_t)decryptedData.length - 32)
+    if (messageDataLength < 0 || messageDataLength > (int32_t)decryptedData.length)
         return nil;
     
+#if MTProtoV2
+    int xValue = 8;
+    NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
+    [msgKeyLargeData appendBytes:_authInfo.authKey.bytes + 88 + xValue length:32];
+    [msgKeyLargeData appendData:decryptedData];
+    
+    NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
+    NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
+#else
     NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + messageDataLength);
     NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
+#endif
+    
     if (![messageKey isEqualToData:embeddedMessageKey])
         return nil;
     
@@ -1831,7 +1954,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 {
     if ([_sessionInfo messageProcessed:incomingMessage.messageId])
     {
-        MTLog(@"[MTProto#%p received duplicate message %" PRId64 "]", self, incomingMessage.messageId);
+        if (MTLogEnabled()) {
+            MTLog(@"[MTProto#%p received duplicate message %" PRId64 "]", self, incomingMessage.messageId);
+        }
         [_sessionInfo scheduleMessageConfirmation:incomingMessage.messageId size:incomingMessage.size];
         
         if ([_sessionInfo scheduledMessageConfirmationsExceedSize:MTMaxUnacknowledgedMessageSize orCount:MTMaxUnacknowledgedMessageCount])
@@ -1840,7 +1965,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         return;
     }
     
-    MTLog(@"[MTProto#%p received %@]", self, [self incomingMessageDescription:incomingMessage]);
+    if (MTLogEnabled()) {
+        MTLog(@"[MTProto#%p received %@]", self, [self incomingMessageDescription:incomingMessage]);
+    }
     
     [_sessionInfo setMessageProcessed:incomingMessage.messageId];
     if (!_useUnauthorizedMode && incomingMessage.seqNo % 2 != 0)
@@ -1968,7 +2095,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             int64_t requestMessageId = ((MTMsgDetailedResponseInfoMessage *)detailedInfoMessage).requestMessageId;
             
-            MTLog(@"[MTProto#%p detailed info %" PRId64 " is for %" PRId64 "", self, incomingMessage.messageId, requestMessageId);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p detailed info %" PRId64 " is for %" PRId64 "", self, incomingMessage.messageId, requestMessageId);
+            }
             
             for (id<MTMessageService> messageService in _messageServices)
             {
@@ -1988,7 +2117,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (shouldRequest)
         {
             [self requestMessageWithId:detailedInfoMessage.responseMessageId];
-            MTLog(@"[MTProto#%p will request message %" PRId64 "", self, detailedInfoMessage.responseMessageId);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p will request message %" PRId64 "", self, detailedInfoMessage.responseMessageId);
+            }
         }
         else
         {

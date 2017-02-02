@@ -6,16 +6,24 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTContext.h>
+#import <Foundation/Foundation.h>
 
+@class MTContext;
 @class MTDatacenterAddress;
 @class MTTransport;
 @class MTTransportTransaction;
 @class MTOutgoingMessage;
 @class MTIncomingMessage;
 @class MTMessageTransaction;
+@class MTNetworkUsageCalculationInfo;
 
-#import <MTProtoKit/MTMessageService.h>
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTMessageService.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTMessageService.h>
+#else
+#   import <MTProtoKit/MTMessageService.h>
+#endif
 
 @protocol MTTransportDelegate <NSObject>
 
@@ -44,7 +52,9 @@
 @property (nonatomic) bool simultaneousTransactionsEnabled;
 @property (nonatomic) bool reportTransportConnectionContextUpdateStates;
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address;
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
+
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 
 - (bool)needsParityCorrection;
 

@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDropResponseContext.h>
+#import "MTDropResponseContext.h"
 
 @implementation MTDropResponseContext
 

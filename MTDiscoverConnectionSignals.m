@@ -2,9 +2,39 @@
 
 #import "MTTcpConnection.h"
 #import "MTHttpWorker.h"
-#import "MTTransportScheme.h"
-#import "MTTcpTransport.h"
-#import "MTHttpTransport.h"
+
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTTransportScheme.h>
+#   import <MTProtoKitDynamic/MTTcpTransport.h>
+#   import <MTProtoKitDynamic/MTHttpTransport.h>
+#   import <MTProtoKitDynamic/MTQueue.h>
+#   import <MTProtoKitDynamic/MTProtoKitDynamic.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTTransportScheme.h>
+#   import <MTProtoKitMac/MTTcpTransport.h>
+#   import <MTProtoKitMac/MTHttpTransport.h>
+#   import <MTProtoKitMac/MTQueue.h>
+#   import <MTProtoKitMac/MTProtoKitMac.h>
+#else
+#   import <MTProtoKit/MTTransportScheme.h>
+#   import <MTProtoKit/MTTcpTransport.h>
+#   import <MTProtoKit/MTHttpTransport.h>
+#   import <MTProtoKit/MTQueue.h>
+#   import <MTProtoKit/MTProtoKit.h>
+#endif
+
+#import "MTDatacenterAddress.h"
+
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTDisposable.h>
+#   import <MTProtoKitDynamic/MTSignal.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTDisposable.h>
+#   import <MTProtoKitMac/MTSignal.h>
+#else
+#   import <MTProtoKit/MTDisposable.h>
+#   import <MTProtoKit/MTSignal.h>
+#endif
 
 #import <netinet/in.h>
 #import <arpa/inet.h>
@@ -63,14 +93,14 @@ typedef struct {
     return success == 1;
 }
 
-+ (SSignal *)tcpConnectionWithContext:(MTContext *)context datacenterId:(NSUInteger)datacenterId address:(MTDatacenterAddress *)address;
++ (MTSignal *)tcpConnectionWithContext:(MTContext *)context datacenterId:(NSUInteger)datacenterId address:(MTDatacenterAddress *)address;
 {
-    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
     {
         MTPayloadData payloadData;
         NSData *data = [self payloadData:&payloadData];
         
-        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId address:address interface:nil];
+        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId address:address interface:nil usageCalculationInfo:nil];
         __weak MTTcpConnection *weakConnection = connection;
         connection.connectionOpened = ^
         {
@@ -84,34 +114,43 @@ typedef struct {
             received = true;
             if ([self isResponseValid:data payloadData:payloadData])
             {
-                MTLog(@"success tcp://%@:%d", address.ip, (int)address.port);
+                if (MTLogEnabled()) {
+                    MTLog(@"success tcp://%@:%d", address.ip, (int)address.port);
+                }
                 [subscriber putCompletion];
             }
             else
             {
-                MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+                if (MTLogEnabled()) {
+                    MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+                }
                 [subscriber putError:nil];
             }
         };
         connection.connectionClosed = ^
         {
-            if (!received)
-                MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+            if (!received) {
+                if (MTLogEnabled()) {
+                    MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+                }
+            }
             [subscriber putError:nil];
         };
-        MTLog(@"trying tcp://%@:%d", address.ip, (int)address.port);
+        if (MTLogEnabled()) {
+            MTLog(@"trying tcp://%@:%d", address.ip, (int)address.port);
+        }
         [connection start];
         
-        return [[SBlockDisposable alloc] initWithBlock:^
+        return [[MTBlockDisposable alloc] initWithBlock:^
         {
             [connection stop];
         }];
     }];
 }
 
-+ (SSignal *)httpConnectionWithAddress:(MTDatacenterAddress *)address
++ (MTSignal *)httpConnectionWithAddress:(MTDatacenterAddress *)address
 {
-    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
     {
         MTPayloadData payloadData;
         NSData *data = [self payloadData:&payloadData];
@@ -130,10 +169,12 @@ typedef struct {
             [subscriber putError:nil];
         };
         
-        MTLog(@"trying http://%@:%d", address.ip, (int)address.port);
+        if (MTLogEnabled()) {
+            MTLog(@"trying http://%@:%d", address.ip, (int)address.port);
+        }
         MTHttpWorker *httpWorker = [[MTHttpWorker alloc] initWithDelegate:delegate address:address payloadData:data performsLongPolling:false];
         
-        return [[SBlockDisposable alloc] initWithBlock:^
+        return [[MTBlockDisposable alloc] initWithBlock:^
         {
             [delegate description]; // keep reference
             [httpWorker stop];
@@ -141,7 +182,7 @@ typedef struct {
     }];
 }
 
-+ (SSignal *)discoverSchemeWithContext:(MTContext *)context addressList:(NSArray *)addressList media:(bool)media
++ (MTSignal *)discoverSchemeWithContext:(MTContext *)context addressList:(NSArray *)addressList media:(bool)media
 {
     NSMutableArray *bestAddressList = [[NSMutableArray alloc] init];
     
@@ -165,52 +206,52 @@ typedef struct {
         
         if ([self isIpv6:address.ip])
         {
-            SSignal *signal = [[[[self tcpConnectionWithContext:context datacenterId:0 address:address] then:[SSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]] catch:^SSignal *(__unused id error)
+            MTSignal *signal = [[[[self tcpConnectionWithContext:context datacenterId:0 address:address] then:[MTSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]] catch:^MTSignal *(__unused id error)
             {
-                return [SSignal complete];
+                return [MTSignal complete];
             }];
             [bestTcp6Signals addObject:signal];
         }
         else
         {
-            SSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithContext:context datacenterId:0 address:address] then:[SSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]];
-            SSignal *signal = [tcpConnectionWithTimeout catch:^SSignal *(__unused id error)
+            MTSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithContext:context datacenterId:0 address:address] then:[MTSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]];
+            MTSignal *signal = [tcpConnectionWithTimeout catch:^MTSignal *(__unused id error)
             {
-                return [SSignal complete];
+                return [MTSignal complete];
             }];
             [bestTcp4Signals addObject:signal];
         }
         
         if (!address.restrictToTcp) {
-            SSignal *signal = [[[[self httpConnectionWithAddress:address] then:[SSignal single:httpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]] catch:^SSignal *(__unused id error)
+            MTSignal *signal = [[[[self httpConnectionWithAddress:address] then:[MTSignal single:httpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]] catch:^MTSignal *(__unused id error)
             {
-                return [SSignal complete];
+                return [MTSignal complete];
             }];
             [bestHttpSignals addObject:signal];
         }
     }
     
-    SSignal *repeatDelaySignal = [[SSignal complete] delay:1.0 onQueue:[SQueue concurrentDefaultQueue]];
-    SSignal *optimalDelaySignal = [[SSignal complete] delay:30.0 onQueue:[SQueue concurrentDefaultQueue]];
+    MTSignal *repeatDelaySignal = [[MTSignal complete] delay:1.0 onQueue:[MTQueue concurrentDefaultQueue]];
+    MTSignal *optimalDelaySignal = [[MTSignal complete] delay:30.0 onQueue:[MTQueue concurrentDefaultQueue]];
     
-    SSignal *firstTcp4Match = [[[[SSignal mergeSignals:bestTcp4Signals] then:repeatDelaySignal] restart] take:1];
-    SSignal *firstTcp6Match = [[[[SSignal mergeSignals:bestTcp6Signals] then:repeatDelaySignal] restart] take:1];
-    SSignal *firstHttpMatch = [[[[SSignal mergeSignals:bestHttpSignals] then:repeatDelaySignal] restart] take:1];
+    MTSignal *firstTcp4Match = [[[[MTSignal mergeSignals:bestTcp4Signals] then:repeatDelaySignal] restart] take:1];
+    MTSignal *firstTcp6Match = [[[[MTSignal mergeSignals:bestTcp6Signals] then:repeatDelaySignal] restart] take:1];
+    MTSignal *firstHttpMatch = [[[[MTSignal mergeSignals:bestHttpSignals] then:repeatDelaySignal] restart] take:1];
     
-    SSignal *optimalTcp4Match = [[[[SSignal mergeSignals:bestTcp4Signals] then:optimalDelaySignal] restart] take:1];
-    SSignal *optimalTcp6Match = [[[[SSignal mergeSignals:bestTcp6Signals] then:optimalDelaySignal] restart] take:1];
+    MTSignal *optimalTcp4Match = [[[[MTSignal mergeSignals:bestTcp4Signals] then:optimalDelaySignal] restart] take:1];
+    MTSignal *optimalTcp6Match = [[[[MTSignal mergeSignals:bestTcp6Signals] then:optimalDelaySignal] restart] take:1];
     
-    SSignal *anySignal = [[SSignal mergeSignals:@[firstTcp4Match, firstTcp6Match, firstHttpMatch]] take:1];
-    SSignal *optimalSignal = [[SSignal mergeSignals:@[optimalTcp4Match, optimalTcp6Match]] take:1];
+    MTSignal *anySignal = [[MTSignal mergeSignals:@[firstTcp4Match, firstTcp6Match, firstHttpMatch]] take:1];
+    MTSignal *optimalSignal = [[MTSignal mergeSignals:@[optimalTcp4Match, optimalTcp6Match]] take:1];
     
-    SSignal *signal = [anySignal mapToSignal:^SSignal *(MTTransportScheme *scheme)
+    MTSignal *signal = [anySignal mapToSignal:^MTSignal *(MTTransportScheme *scheme)
     {
         if (![scheme isOptimal])
         {
-            return [[SSignal single:scheme] then:[optimalSignal delay:5.0 onQueue:[SQueue concurrentDefaultQueue]]];
+            return [[MTSignal single:scheme] then:[optimalSignal delay:5.0 onQueue:[MTQueue concurrentDefaultQueue]]];
         }
         else
-            return [SSignal single:scheme];
+            return [MTSignal single:scheme];
     }];
     
     return signal;

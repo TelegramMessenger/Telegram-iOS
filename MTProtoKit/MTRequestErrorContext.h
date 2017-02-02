@@ -7,11 +7,10 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <MTProtoKit/MTTime.h>
 
 @interface MTRequestErrorContext : NSObject
 
-@property (nonatomic) MTAbsoluteTime minimalExecuteTime;
+@property (nonatomic) CFAbsoluteTime minimalExecuteTime;
 
 @property (nonatomic) NSUInteger internalServerErrorCount;
 @property (nonatomic) NSUInteger floodWaitSeconds;

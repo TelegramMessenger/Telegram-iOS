@@ -11,6 +11,7 @@
 @protocol MTMessageService;
 @class MTQueue;
 @class MTContext;
+@class MTNetworkUsageCalculationInfo;
 
 @class MTProto;
 
@@ -38,7 +39,9 @@
 @property (nonatomic) id requiredAuthToken;
 @property (nonatomic) NSInteger authTokenMasterDatacenterId;
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId;
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
+
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 
 - (void)pause;
 - (void)resume;

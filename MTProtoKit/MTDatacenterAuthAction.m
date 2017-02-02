@@ -6,14 +6,14 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAuthAction.h>
+#import "MTDatacenterAuthAction.h"
 
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTRequest.h>
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
+#import "MTContext.h"
+#import "MTProto.h"
+#import "MTRequest.h"
+#import "MTDatacenterSaltInfo.h"
 
-#import <MTProtoKit/MTDatacenterAuthMessageService.h>
+#import "MTDatacenterAuthMessageService.h"
 
 @interface MTDatacenterAuthAction () <MTDatacenterAuthMessageServiceDelegate>
 {
@@ -44,7 +44,7 @@
             [self complete];
         else
         {
-            _authMtProto = [[MTProto alloc] initWithContext:context datacenterId:_datacenterId];
+            _authMtProto = [[MTProto alloc] initWithContext:context datacenterId:_datacenterId usageCalculationInfo:nil];
             _authMtProto.useUnauthorizedMode = true;
             
             MTDatacenterAuthMessageService *authService = [[MTDatacenterAuthMessageService alloc] initWithContext:context];

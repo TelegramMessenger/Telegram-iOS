@@ -6,9 +6,9 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTPreparedMessage.h>
+#import "MTPreparedMessage.h"
 
-#import <MTProtoKit/MTInternalId.h>
+#import "MTInternalId.h"
 
 MTInternalIdClass(MTPreparedMessage)
 

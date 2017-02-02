@@ -6,19 +6,22 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTcpConnection.h>
+#import "MTTcpConnection.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTTimer.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTTimer.h"
 
 #import "GCDAsyncSocket.h"
 #import <sys/socket.h>
 
-#import <MTProtoKit/MTInternalId.h>
+#import "MTInternalId.h"
 
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTApiEnvironment.h>
+#import "MTContext.h"
+#import "MTApiEnvironment.h"
+#import "MTDatacenterAddress.h"
+
+#import "MTAes.h"
 
 MTInternalIdClass(MTTcpConnection)
 
@@ -32,6 +35,20 @@ typedef enum {
 
 static const NSTimeInterval MTMinTcpResponseTimeout = 12.0;
 static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
+static const bool useEncryption = true;
+
+struct ctr_state {
+    unsigned char ivec[16];  /* ivec[0..7] is the IV, ivec[8..15] is the big-endian counter */
+    unsigned int num;
+    unsigned char ecount[16];
+};
+
+static void init_ctr(struct ctr_state *state, const unsigned char *iv)
+{
+    state->num = 0;
+    memset(state->ecount, 0, 16);
+    memcpy(state->ivec, iv, 16);
+}
 
 @interface MTTcpConnection () <GCDAsyncSocketDelegate>
 {   
@@ -51,6 +68,11 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     NSData *_firstPacketControlByte;
     
     bool _addedControlHeader;
+    
+    MTAesCtr *_outgoingAesCtr;
+    MTAesCtr *_incomingAesCtr;
+    
+    MTNetworkUsageCalculationInfo *_usageCalculationInfo;
 }
 
 @property (nonatomic) int64_t packetHeadDecodeToken;
@@ -71,7 +93,7 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     return queue;
 }
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(address != nil, @"address should not be nil");
@@ -82,8 +104,16 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     {
         _internalId = [[MTInternalId(MTTcpConnection) alloc] init];
         
+/*#ifdef DEBUG
+        if (![address isIpv6]) {
+            address = [[MTDatacenterAddress alloc] initWithIp:@"127.0.0.1" port:443 preferForMedia:address.preferForMedia restrictToTcp:address.restrictToTcp];
+        }
+#endif*/
+        
         _address = address;
+        
         _interface = interface;
+        _usageCalculationInfo = usageCalculationInfo;
         
         if (context.apiEnvironment.datacenterAddressOverrides[@(datacenterId)] != nil) {
             _firstPacketControlByte = [context.apiEnvironment tcpPayloadPrefix];
@@ -108,6 +138,13 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     }];
 }
 
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
+    [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
+        _usageCalculationInfo = usageCalculationInfo;
+        _socket.usageCalculationInfo = usageCalculationInfo;
+    }];
+}
+
 - (void)setDelegate:(id<MTTcpConnectionDelegate>)delegate
 {
     _delegate = delegate;
@@ -122,8 +159,11 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
         if (_socket == nil)
         {
             _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
+            _socket.usageCalculationInfo = _usageCalculationInfo;
             
-            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
+            }
             
             NSString *ip = _address.ip;
             
@@ -221,21 +261,52 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
                         uint8_t controlBytes[64];
                         arc4random_buf(controlBytes, 64);
                         
-                        int32_t *firstByte = (int32_t *)controlBytes;
-                        while (*firstByte == 0x44414548 || *firstByte == 0x54534f50 || *firstByte == 0x20544547 || *firstByte == 0x4954504f || *firstByte == 0xeeeeeeee) {
-                            arc4random_buf(controlBytes, 4);
+                        if (useEncryption) {
+                            int32_t controlVersion = 0xefefefef;
+                            memcpy(controlBytes + 56, &controlVersion, 4);
+                            
+                            uint8_t controlBytesReversed[64];
+                            for (int i = 0; i < 64; i++) {
+                                controlBytesReversed[i] = controlBytes[64 - 1 - i];
+                            }
+                            
+                            _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytes + 8 keyLength:32 iv:controlBytes + 8 + 32];
+                            _incomingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytesReversed + 8 keyLength:32 iv:controlBytesReversed + 8 + 32];
+                            
+                            uint8_t encryptedControlBytes[64];
+                            [_outgoingAesCtr encryptIn:controlBytes out:encryptedControlBytes len:64];
+                            
+                            NSMutableData *outData = [[NSMutableData alloc] initWithLength:64 + packetData.length];
+                            memcpy(outData.mutableBytes, controlBytes, 56);
+                            memcpy(outData.mutableBytes + 56, encryptedControlBytes + 56, 8);
+                            
+                            [_outgoingAesCtr encryptIn:packetData.bytes out:outData.mutableBytes + 64 len:packetData.length];
+                            
+                            [_socket writeData:outData withTimeout:-1 tag:0];
+                        } else {
+                            int32_t *firstByte = (int32_t *)controlBytes;
+                            while (*firstByte == 0x44414548 || *firstByte == 0x54534f50 || *firstByte == 0x20544547 || *firstByte == 0x4954504f || *firstByte == 0xeeeeeeee) {
+                                arc4random_buf(controlBytes, 4);
+                            }
+                            
+                            while (controlBytes[0] == 0xef) {
+                                arc4random_buf(controlBytes, 1);
+                            }
+                            
+                            NSMutableData *controlData = [[NSMutableData alloc] init];
+                            [controlData appendBytes:controlBytes length:64];
+                            [controlData appendData:packetData];
+                            [_socket writeData:controlData withTimeout:-1 tag:0];
                         }
-                        
-                        while (controlBytes[0] == 0xef) {
-                            arc4random_buf(controlBytes, 1);
-                        }
-                        
-                        NSMutableData *controlData = [[NSMutableData alloc] init];
-                        [controlData appendBytes:controlBytes length:64];
-                        [controlData appendData:packetData];
-                        [_socket writeData:controlData withTimeout:-1 tag:0];
                     } else {
-                        [_socket writeData:packetData withTimeout:-1 tag:0];
+                        if (useEncryption) {
+                            NSMutableData *encryptedData = [[NSMutableData alloc] initWithLength:packetData.length];
+                            [_outgoingAesCtr encryptIn:packetData.bytes out:encryptedData.mutableBytes len:packetData.length];
+                            
+                            [_socket writeData:encryptedData withTimeout:-1 tag:0];
+                        } else {
+                            [_socket writeData:packetData withTimeout:-1 tag:0];
+                        }
                     }
                 }
                 
@@ -255,7 +326,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
             }
             else
             {
-                MTLog(@"***** %s: can't send data: connection is not opened", __PRETTY_FUNCTION__);
+                if (MTLogEnabled()) {
+                    MTLog(@"***** %s: can't send data: connection is not opened", __PRETTY_FUNCTION__);
+                }
                 
                 if (completion)
                     completion(false);
@@ -274,7 +347,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     [_responseTimeoutTimer invalidate];
     _responseTimeoutTimer = nil;
     
-    MTLog(@"[MTTcpConnection#%x response timeout]", (int)self);
+    if (MTLogEnabled()) {
+        MTLog(@"[MTTcpConnection#%x response timeout]", (int)self);
+    }
     [self stop];
 }
 
@@ -299,10 +374,20 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     }
 }
 
-- (void)socket:(GCDAsyncSocket *)__unused socket didReadData:(NSData *)data withTag:(long)tag
+- (void)socket:(GCDAsyncSocket *)__unused socket didReadData:(NSData *)rawData withTag:(long)tag
 {
     if (_closed)
         return;
+    
+    NSData *data = nil;
+    if (useEncryption) {
+        NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
+        [_incomingAesCtr encryptIn:rawData.bytes out:decryptedData.mutableBytes len:rawData.length];
+        
+        data = decryptedData;
+    } else {
+        data = rawData;
+    }
     
     if (tag == MTTcpReadTagPacketShortLength)
     {
@@ -336,7 +421,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
                 [_socket readDataToLength:3 withTimeout:-1 tag:MTTcpReadTagPacketLongLength];
             else
             {
-                MTLog(@"***** %s: invalid quarter length marker (%" PRIu8 ")", __PRETTY_FUNCTION__, quarterLengthMarker);
+                if (MTLogEnabled()) {
+                    MTLog(@"***** %s: invalid quarter length marker (%" PRIu8 ")", __PRETTY_FUNCTION__, quarterLengthMarker);
+                }
                 [self closeAndNotify];
             }
         }
@@ -352,7 +439,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
         
         if (quarterLength <= 0 || quarterLength > (4 * 1024 * 1024) / 4)
         {
-            MTLog(@"***** %s: invalid quarter length (%" PRIu32 ")", __PRETTY_FUNCTION__, quarterLength);
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid quarter length (%" PRIu32 ")", __PRETTY_FUNCTION__, quarterLength);
+            }
             [self closeAndNotify];
         }
         else
@@ -447,10 +536,16 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)__unused socket withError:(NSError *)error
 {
-    if (error != nil)
-        MTLog(@"[MTTcpConnection#%x disconnected from %@ (%@)]", (int)self, _address.ip, error);
-    else
-        MTLog(@"[MTTcpConnection#%x disconnected from %@]", (int)self, _address.ip);
+    if (error != nil) {
+        if (MTLogEnabled()) {
+            MTLog(@"[MTTcpConnection#%x disconnected from %@ (%@)]", (int)self, _address.ip, error);
+        }
+    }
+    else {
+        if (MTLogEnabled()) {
+            MTLog(@"[MTTcpConnection#%x disconnected from %@]", (int)self, _address.ip);
+        }
+    }
     
     [self closeAndNotify];
 }

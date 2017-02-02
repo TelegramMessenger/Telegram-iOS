@@ -6,11 +6,11 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTNetworkAvailability.h>
+#import "MTNetworkAvailability.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTTimer.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTTimer.h"
 
 #import <sys/socket.h>
 #import <netinet/in.h>
@@ -155,7 +155,9 @@ static void MTNetworkAvailabilityContextRelease(const void *info)
         if (![currentReachabilityState isEqualToString:_lastReachabilityState])
         {
             _lastReachabilityState = currentReachabilityState;
-            MTLog(@"[MTNetworkAvailability#%p state: %@]", self, _lastReachabilityState);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTNetworkAvailability#%p state: %@]", self, _lastReachabilityState);
+            }
             
             if (notify)
             {

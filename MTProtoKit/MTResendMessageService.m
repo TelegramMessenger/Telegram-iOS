@@ -7,18 +7,18 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTResendMessageService.h>
+#import "MTLogging.h"
+#import "MTResendMessageService.h"
 
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTPreparedMessage.h>
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTMsgsStateInfoMessage.h>
+#import "MTProto.h"
+#import "MTContext.h"
+#import "MTSerialization.h"
+#import "MTMessageTransaction.h"
+#import "MTOutgoingMessage.h"
+#import "MTPreparedMessage.h"
+#import "MTIncomingMessage.h"
+#import "MTBuffer.h"
+#import "MTMsgsStateInfoMessage.h"
 
 @interface MTResendMessageService ()
 {
@@ -73,7 +73,9 @@
                 _currentRequestMessageId = ((MTPreparedMessage *)messageInternalIdToPreparedMessage[outgoingMessage.internalId]).messageId;
                 _currentRequestTransactionId = messageInternalIdToTransactionId[outgoingMessage.internalId];
                 
-                MTLog(@"[MTResendMessageService#%p request %" PRId64 " for %" PRId64 "]", self, _currentRequestMessageId, _messageId);
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTResendMessageService#%p request %" PRId64 " for %" PRId64 "]", self, _currentRequestMessageId, _messageId);
+                }
             }
         }];
     }

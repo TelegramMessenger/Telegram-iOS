@@ -6,14 +6,14 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTHttpWorker.h>
+#import "MTHttpWorker.h"
 
-#import <MTProtoKit/MTTimer.h>
-#import <MTProtoKit/MTQueue.h>
+#import "MTTimer.h"
+#import "MTQueue.h"
 
-#import <MTProtoKit/MTDatacenterAddress.h>
+#import "MTDatacenterAddress.h"
 
-#import <MTProtoKit/MTInternalId.h>
+#import "MTInternalId.h"
 
 MTInternalIdClass(MTHttpWorker)
 
@@ -68,6 +68,12 @@ MTInternalIdClass(MTHttpWorker)
 {
     int32_t randomId = 0;
     arc4random_buf(&randomId, 4);
+    
+/*#ifdef DEBUG
+    if (![address isIpv6]) {
+        address = [[MTDatacenterAddress alloc] initWithIp:@"127.0.0.1" port:443 preferForMedia:address.preferForMedia restrictToTcp:address.restrictToTcp];
+    }
+#endif*/
     
     NSString *urlString = [[NSString alloc] initWithFormat:@"http://%@:%d/api%" PRIx32 "", address.ip, (int)address.port, randomId];
     

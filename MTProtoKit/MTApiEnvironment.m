@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTApiEnvironment.h>
+#import "MTApiEnvironment.h"
 
 #if TARGET_OS_IPHONE
 #   import <UIKit/UIKit.h>
@@ -31,6 +31,8 @@
 #define IPHONE_6Plus_NAMESTRING             @"iPhone 6 Plus"
 #define IPHONE_6S_NAMESTRING             @"iPhone 6S"
 #define IPHONE_6SPlus_NAMESTRING             @"iPhone 6S Plus"
+#define IPHONE_7_NAMESTRING             @"iPhone 7"
+#define IPHONE_7Plus_NAMESTRING             @"iPhone 7 Plus"
 #define IPHONE_UNKNOWN_NAMESTRING       @"Unknown iPhone"
 
 #define IPOD_1G_NAMESTRING              @"iPod touch 1G"
@@ -79,6 +81,8 @@ typedef enum {
     UIDevice6PlusiPhone,
     UIDevice6siPhone,
     UIDevice6SPlusiPhone,
+    UIDevice7iPhone,
+    UIDevice7PlusiPhone,
     
     UIDevice1GiPod,
     UIDevice2GiPod,
@@ -136,9 +140,25 @@ typedef enum {
         
         _langCode = [[NSLocale preferredLanguages] objectAtIndex:0];
         
-        _apiInitializationHash = [[NSString alloc] initWithFormat:@"apiId=%" PRId32 "&deviceModel=%@&systemVersion=%@&appVersion=%@&langCode=%@&layer=%@", _apiId, _deviceModel, _systemVersion, _appVersion, _langCode, _layer];
+        [self _updateApiInitializationHash];
     }
     return self;
+}
+
+- (void)_updateApiInitializationHash {
+    _apiInitializationHash = [[NSString alloc] initWithFormat:@"apiId=%" PRId32 "&deviceModel=%@&systemVersion=%@&appVersion=%@&langCode=%@&layer=%@", _apiId, _deviceModel, _systemVersion, _appVersion, _langCode, _layer];
+}
+
+- (void)setLayer:(NSNumber *)layer {
+    _layer = layer;
+    
+    [self _updateApiInitializationHash];
+}
+
+- (void)setAppVersion:(NSString *)appVersion {
+    _appVersion = appVersion;
+    
+    [self _updateApiInitializationHash];
 }
 
 - (NSString *)platformString
@@ -156,6 +176,8 @@ typedef enum {
         case UIDevice6PlusiPhone: return IPHONE_6Plus_NAMESTRING;
         case UIDevice6siPhone: return IPHONE_6S_NAMESTRING;
         case UIDevice6SPlusiPhone: return IPHONE_6SPlus_NAMESTRING;
+        case UIDevice7iPhone: return IPHONE_7_NAMESTRING;
+        case UIDevice7PlusiPhone: return IPHONE_7Plus_NAMESTRING;
         case UIDeviceUnknowniPhone: return IPHONE_UNKNOWN_NAMESTRING;
             
         case UIDevice1GiPod: return IPOD_1G_NAMESTRING;
@@ -212,6 +234,8 @@ typedef enum {
     if ([platform isEqualToString:@"iPhone7,2"])    return UIDevice6iPhone;
     if ([platform isEqualToString:@"iPhone8,1"])    return UIDevice6siPhone;
     if ([platform isEqualToString:@"iPhone8,2"])    return UIDevice6SPlusiPhone;
+    if ([platform isEqualToString:@"iPhone9,3"])    return UIDevice7iPhone;
+    if ([platform isEqualToString:@"iPhone9,2"])    return UIDevice7PlusiPhone;
     
     // iPod
     if ([platform hasPrefix:@"iPod1"])              return UIDevice1GiPod;
@@ -240,8 +264,7 @@ typedef enum {
     // Simulator thanks Jordan Breeding
     if ([platform hasSuffix:@"86"] || [platform isEqual:@"x86_64"])
     {
-        BOOL smallerScreen = [[UIScreen mainScreen] bounds].size.width < 768;
-        return smallerScreen ? UIDeviceSimulatoriPhone : UIDeviceSimulatoriPad;
+        return UIDeviceSimulatoriPhone;
     }
 #else
     return UIDeviceOSX;

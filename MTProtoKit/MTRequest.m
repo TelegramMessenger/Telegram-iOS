@@ -6,7 +6,9 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTRequest.h>
+#import "MTRequest.h"
+
+#import "MTRpcError.h"
 
 @interface MTRequestInternalId : NSObject <NSCopying>
 {

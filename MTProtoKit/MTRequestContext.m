@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTRequestContext.h>
+#import "MTRequestContext.h"
 
 @implementation MTRequestContext
 

@@ -6,9 +6,10 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTransport.h>
+#import "MTTransport.h"
 
-#import <MTProtoKit/MTNetworkAvailability.h>
+#import "MTContext.h"
+#import "MTNetworkAvailability.h"
 
 @interface MTTransport () <MTNetworkAvailabilityDelegate>
 {
@@ -19,7 +20,7 @@
 
 @implementation MTTransport
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address usageCalculationInfo:(MTNetworkUsageCalculationInfo *)__unused usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -38,6 +39,9 @@
         _reportTransportConnectionContextUpdateStates = true;
     }
     return self;
+}
+
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)__unused usageCalculationInfo {
 }
 
 - (bool)needsParityCorrection

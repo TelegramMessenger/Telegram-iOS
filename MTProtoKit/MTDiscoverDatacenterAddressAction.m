@@ -6,14 +6,14 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDiscoverDatacenterAddressAction.h>
+#import "MTDiscoverDatacenterAddressAction.h"
 
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTDatacenterAddressSet.h>
-#import <MTProtoKit/MTRequestMessageService.h>
-#import <MTProtoKit/MTRequest.h>
+#import "MTContext.h"
+#import "MTSerialization.h"
+#import "MTProto.h"
+#import "MTDatacenterAddressSet.h"
+#import "MTRequestMessageService.h"
+#import "MTRequest.h"
 
 @interface MTDiscoverDatacenterAddressAction () <MTContextChangeListener>
 {
@@ -98,7 +98,7 @@
     {
         if ([context authInfoForDatacenterWithId:_targetDatacenterId] != nil)
         {
-            _mtProto = [[MTProto alloc] initWithContext:context datacenterId:_targetDatacenterId];
+            _mtProto = [[MTProto alloc] initWithContext:context datacenterId:_targetDatacenterId usageCalculationInfo:nil];
             _requestService = [[MTRequestMessageService alloc] initWithContext:_context];
             [_mtProto addMessageService:_requestService];
             

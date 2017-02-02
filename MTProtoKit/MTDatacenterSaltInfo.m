@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
+#import "MTDatacenterSaltInfo.h"
 
 @implementation MTDatacenterSaltInfo
 

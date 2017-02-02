@@ -6,14 +6,14 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterTransferAuthAction.h>
+#import "MTDatacenterTransferAuthAction.h"
 
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTRequestMessageService.h>
-#import <MTProtoKit/MTRequest.h>
-#import <MTProtoKit/MTBuffer.h>
+#import "MTContext.h"
+#import "MTSerialization.h"
+#import "MTProto.h"
+#import "MTRequestMessageService.h"
+#import "MTRequest.h"
+#import "MTBuffer.h"
 
 @interface MTDatacenterTransferAuthAction () <MTContextChangeListener>
 {
@@ -90,7 +90,7 @@
         return;
     }
     
-    _sourceDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:sourceDatacenterId];
+    _sourceDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:sourceDatacenterId usageCalculationInfo:nil];
     
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [_sourceDatacenterMtProto addMessageService:requestService];
@@ -126,7 +126,7 @@
     _sourceDatacenterMtProto = nil;
     
     MTContext *context = _context;
-    _destinationDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:_destinationDatacenterId];
+    _destinationDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:_destinationDatacenterId usageCalculationInfo:nil];
     
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [_destinationDatacenterMtProto addMessageService:requestService];

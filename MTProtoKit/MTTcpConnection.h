@@ -6,11 +6,13 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAddress.h>
+#import <Foundation/Foundation.h>
 
+@class MTDatacenterAddress;
 @class MTContext;
 @class MTQueue;
 @class MTTcpConnection;
+@class MTNetworkUsageCalculationInfo;
 
 /*!
  MTTcpConnection delegate protocol
@@ -45,7 +47,9 @@
 
 + (MTQueue *)tcpQueue;
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface;
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
+
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 
 - (void)start;
 - (void)stop;

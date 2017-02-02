@@ -6,32 +6,44 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTContext.h>
+#import "MTContext.h"
 
 #import <inttypes.h>
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTTimer.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTKeychain.h>
+#import "MTLogging.h"
+#import "MTTimer.h"
+#import "MTQueue.h"
+#import "MTKeychain.h"
 
-#import <MTProtoKit/MTDatacenterAddressSet.h>
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
-#import <MTProtoKit/MTSessionInfo.h>
+#import "MTDatacenterAddressSet.h"
+#import "MTDatacenterAddress.h"
+#import "MTDatacenterAuthInfo.h"
+#import "MTDatacenterSaltInfo.h"
+#import "MTSessionInfo.h"
 
-#import <MTProtoKit/MTDiscoverDatacenterAddressAction.h>
-#import <MTProtoKit/MTDatacenterAuthAction.h>
-#import <MTProtoKit/MTDatacenterTransferAuthAction.h>
+#import "MTDiscoverDatacenterAddressAction.h"
+#import "MTDatacenterAuthAction.h"
+#import "MTDatacenterTransferAuthAction.h"
 
-#import <MTProtoKit/MTTransportScheme.h>
-#import <MTProtoKit/MTTcpTransport.h>
+#import "MTTransportScheme.h"
+#import "MTTcpTransport.h"
 
-#import <MTProtoKit/MTApiEnvironment.h>
+#import "MTApiEnvironment.h"
 
 #import <libkern/OSAtomic.h>
 
 #import "MTDiscoverConnectionSignals.h"
+
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTDisposable.h>
+#   import <MTProtoKitDynamic/MTSignal.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTDisposable.h>
+#   import <MTProtoKitMac/MTSignal.h>
+#else
+#   import <MTProtoKit/MTDisposable.h>
+#   import <MTProtoKit/MTSignal.h>
+#endif
 
 @implementation MTContextBlockChangeListener
 
@@ -63,7 +75,6 @@
     NSMutableArray *_changeListeners;
     
     NSMutableDictionary *_discoverDatacenterAddressActions;
-    NSMutableDictionary *_discoverDatacenterTransportSchemeActions;
     NSMutableDictionary *_datacenterAuthActions;
     NSMutableDictionary *_datacenterTransferAuthActions;
     
@@ -121,7 +132,6 @@
         _changeListeners = [[NSMutableArray alloc] init];
         
         _discoverDatacenterAddressActions = [[NSMutableDictionary alloc] init];
-        _discoverDatacenterTransportSchemeActions = [[NSMutableDictionary alloc] init];
         _datacenterAuthActions = [[NSMutableDictionary alloc] init];
         _datacenterTransferAuthActions = [[NSMutableDictionary alloc] init];
         
@@ -158,9 +168,6 @@
     
     NSDictionary *discoverDatacenterAddressActions = _discoverDatacenterAddressActions;
     _discoverDatacenterAddressActions = nil;
-    
-    NSDictionary *discoverDatacenterTransportSchemeActions = _discoverDatacenterTransportSchemeActions;
-    _discoverDatacenterTransportSchemeActions = nil;
     
     NSDictionary *datacenterTransferAuthActions = _datacenterTransferAuthActions;
     _datacenterTransferAuthActions = nil;
@@ -288,7 +295,9 @@
     {
         _globalTimeDifference = globalTimeDifference;
         
-        MTLog(@"[MTContext#%x: global time difference changed: %.1fs]", (int)self, globalTimeDifference);
+        if (MTLogEnabled()) {
+            MTLog(@"[MTContext#%x: global time difference changed: %.1fs]", (int)self, globalTimeDifference);
+        }
         
         [_keychain setObject:@(_globalTimeDifference) forKey:@"globalTimeDifference" group:@"temp"];
     }];
@@ -308,7 +317,9 @@
     {
         if (addressSet != nil && datacenterId != 0)
         {
-            MTLog(@"[MTContext#%x: address set updated for %d]", (int)self, datacenterId);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: address set updated for %d]", (int)self, datacenterId);
+            }
             
             bool previousAddressSetWasEmpty = ((MTDatacenterAddressSet *)_datacenterAddressSetById[@(datacenterId)]).addressList.count == 0;
             
@@ -359,7 +370,9 @@
         
         if (updated)
         {
-            MTLog(@"[MTContext#%x: added address %@ for datacenter %d]", (int)self, address, datacenterId);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: added address %@ for datacenter %d]", (int)self, address, datacenterId);
+            }
             
             _datacenterAddressSetById[@(datacenterId)] = addressSet;
             [_keychain setObject:_datacenterAddressSetById forKey:@"datacenterAddressSetById" group:@"persistent"];
@@ -381,7 +394,9 @@
     {
         if (authInfo != nil && datacenterId != 0)
         {
-            MTLog(@"[MTContext#%x: auth info updated for %d]", (int)self, datacenterId);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: auth info updated for %d]", (int)self, datacenterId);
+            }
             
             _datacenterAuthInfoById[@(datacenterId)] = authInfo;
             [_keychain setObject:_datacenterAuthInfoById forKey:@"datacenterAuthInfoById" group:@"persistent"];
@@ -461,7 +476,9 @@
             
             if (currentScheme != nil && (previousScheme == nil || ![previousScheme isEqualToScheme:currentScheme]))
             {
-                MTLog(@"[MTContext#%x: %@ transport scheme updated for %d: %@]", (int)self, media ? @"media" : @"generic", datacenterId, transportScheme);
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTContext#%x: %@ transport scheme updated for %d: %@]", (int)self, media ? @"media" : @"generic", datacenterId, transportScheme);
+                }
                 
                 for (id<MTContextChangeListener> listener in currentListeners)
                 {
@@ -748,7 +765,7 @@
     {
         if (_transportSchemeDisposableByDatacenterId == nil)
             _transportSchemeDisposableByDatacenterId = [[NSMutableDictionary alloc] init];
-        id<SDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
+        id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
         if (disposable == nil)
         {
             __weak MTContext *weakSelf = self;
@@ -765,7 +782,9 @@
                 }
             }] startWithNext:^(id next)
             {
-                MTLog(@"scheme: %@", next);
+                if (MTLogEnabled()) {
+                    MTLog(@"scheme: %@", next);
+                }
                 __strong MTContext *strongSelf = weakSelf;
                 if (strongSelf != nil)
                 {
@@ -801,7 +820,7 @@
         {
             if (_transportSchemeDisposableByDatacenterId == nil)
                 _transportSchemeDisposableByDatacenterId = [[NSMutableDictionary alloc] init];
-            id<SDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
+            id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
             [disposable dispose];
             [_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
         }

@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTOutputStream.h>
+#import "MTOutputStream.h"
 
 #if TARGET_OS_IPHONE
 #   import <endian.h>

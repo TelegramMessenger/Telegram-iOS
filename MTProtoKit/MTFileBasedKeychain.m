@@ -1,6 +1,6 @@
 #import "MTFileBasedKeychain.h"
 
-#import <MTProtoKit/MTLogging.h>
+#import "MTLogging.h"
 
 #import <pthread.h>
 
@@ -10,7 +10,7 @@
 #define TG_SYNCHRONIZED_END(lock) pthread_mutex_unlock(&_TG_SYNCHRONIZED_##lock);
 
 #import <CommonCrypto/CommonCrypto.h>
-#import <MTProtoKit/MTEncryption.h>
+#import "MTEncryption.h"
 
 static TG_SYNCHRONIZED_DEFINE(_keychains) = PTHREAD_MUTEX_INITIALIZER;
 static NSMutableDictionary *keychains()
@@ -136,10 +136,11 @@ static NSMutableDictionary *keychains()
                 {
                     uint8_t buf[32];
                     
-                    SecRandomCopyBytes(kSecRandomDefault, 32, buf);
+                    int result = 0;
+                    result = SecRandomCopyBytes(kSecRandomDefault, 32, buf);
                     _aesKey = [[NSData alloc] initWithBytes:buf length:32];
                     
-                    SecRandomCopyBytes(kSecRandomDefault, 32, buf);
+                    result = SecRandomCopyBytes(kSecRandomDefault, 32, buf);
                     _aesIv = [[NSData alloc] initWithBytes:buf length:32];
                 }
                 
@@ -192,8 +193,11 @@ static NSMutableDictionary *keychains()
                       
                       __autoreleasing NSError *error = nil;
                       [[NSFileManager defaultManager] createDirectoryAtPath:dataDirectory withIntermediateDirectories:true attributes:nil error:&error];
-                      if (error != nil)
-                          MTLog(@"[MTKeychain error creating keychain directory: %@]", error);
+                      if (error != nil) {
+                          if (MTLogEnabled()) {
+                              MTLog(@"[MTKeychain error creating keychain directory: %@]", error);
+                          }
+                      }
                   });
     
     return [dataDirectory stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%@_%@.bin", name, group]];
@@ -219,10 +223,16 @@ static NSMutableDictionary *keychains()
                 
                 if (data.length == 4 + paddedLength || data.length == 4 + paddedLength + 4)
                 {
-                    NSMutableData *decryptedData = [[NSMutableData alloc] init];
-                    [decryptedData appendData:[data subdataWithRange:NSMakeRange(4, paddedLength)]];
-                    if (_encrypted)
-                        MTAesDecryptInplace(decryptedData, _aesKey, _aesIv);
+                    NSMutableData *encryptedData = [[NSMutableData alloc] init];
+                    [encryptedData appendData:[data subdataWithRange:NSMakeRange(4, paddedLength)]];
+                    
+                    NSMutableData *decryptedData = nil;
+                    if (_encrypted) {
+                        decryptedData = [[NSMutableData alloc] initWithData:MTAesDecrypt(encryptedData, _aesKey, _aesIv)];
+                    } else {
+                        decryptedData = encryptedData;
+                    }
+                    
                     [decryptedData setLength:length];
                     
                     bool hashVerified = true;
@@ -235,7 +245,9 @@ static NSMutableDictionary *keychains()
                         int32_t decryptedHash = MTMurMurHash32(decryptedData.bytes, (int)decryptedData.length);
                         if (hash != decryptedHash)
                         {
-                            MTLog(@"[MTKeychain invalid decrypted hash]");
+                            if (MTLogEnabled()) {
+                                MTLog(@"[MTKeychain invalid decrypted hash]");
+                            }
                             hashVerified = false;
                         }
                     }
@@ -247,17 +259,25 @@ static NSMutableDictionary *keychains()
                             id object = [NSKeyedUnarchiver unarchiveObjectWithData:decryptedData];
                             if ([object respondsToSelector:@selector(objectForKey:)] && [object respondsToSelector:@selector(setObject:forKey:)])
                                 _dictByGroup[group] = object;
-                            else
-                                MTLog(@"[MTKeychain invalid root object %@]", object);
+                            else {
+                                if (MTLogEnabled()) {
+                                    MTLog(@"[MTKeychain invalid root object %@]", object);
+                                }
+                            }
                         }
                         @catch (NSException *e)
                         {
-                            MTLog(@"[MTKeychain error parsing keychain: %@]", e);
+                            if (MTLogEnabled()) {
+                                MTLog(@"[MTKeychain error parsing keychain: %@]", e);
+                            }
                         }
                     }
                 }
-                else
-                    MTLog(@"[MTKeychain error loading keychain: expected data length %d, got %d]", 4 + (int)paddedLength, (int)data.length);
+                else {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTKeychain error loading keychain: expected data length %d, got %d]", 4 + (int)paddedLength, (int)data.length);
+                    }
+                }
             }
         }
         
@@ -291,20 +311,29 @@ static NSMutableDictionary *keychains()
             [encryptedData appendBytes:&hash length:4];
             
             NSString *filePath = [self filePathForName:_name group:group];
-            if (![encryptedData writeToFile:filePath atomically:true])
-                MTLog(@"[MTKeychain error writing keychain to file]");
+            if (![encryptedData writeToFile:filePath atomically:true]) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTKeychain error writing keychain to file]");
+                }
+            }
             else
             {
 #if TARGET_OS_IPHONE
                 __autoreleasing NSError *error = nil;
                 [[NSURL fileURLWithPath:filePath] setResourceValue:[NSNumber numberWithBool:true] forKey:NSURLIsExcludedFromBackupKey error:&error];
-                if (error != nil)
-                    MTLog(@"[MTKeychain error setting \"exclude from backup\" flag]");
+                if (error != nil) {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTKeychain error setting \"exclude from backup\" flag]");
+                    }
+                }
 #endif
             }
         }
-        else
-            MTLog(@"[MTKeychain error serializing keychain]");
+        else {
+            if (MTLogEnabled()) {
+                MTLog(@"[MTKeychain error serializing keychain]");
+            }
+        }
     }
 }
 

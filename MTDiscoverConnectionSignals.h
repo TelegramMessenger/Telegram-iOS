@@ -1,10 +1,10 @@
 #import <Foundation/Foundation.h>
 
-#import <SSignalKit/SSignalKit.h>
-#import <MTProtoKit/MTContext.h>
+@class MTContext;
+@class MTSignal;
 
 @interface MTDiscoverConnectionSignals : NSObject
 
-+ (SSignal *)discoverSchemeWithContext:(MTContext *)context addressList:(NSArray *)addressList media:(bool)media;
++ (MTSignal *)discoverSchemeWithContext:(MTContext *)context addressList:(NSArray *)addressList media:(bool)media;
 
 @end

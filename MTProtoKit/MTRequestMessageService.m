@@ -6,31 +6,31 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTRequestMessageService.h>
+#import "MTRequestMessageService.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MtProtoKit/MTTime.h>
-#import <MtProtoKit/MTTimer.h>
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTPreparedMessage.h>
-#import <MTProtoKit/MTRequest.h>
-#import <MTProtoKit/MTRequestContext.h>
-#import <MtProtoKit/MTRequestErrorContext.h>
-#import <MTProtoKit/MTDropResponseContext.h>
-#import <MTProtoKit/MTApiEnvironment.h>
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-#import <MTProtoKit/MTBuffer.h>
+#import "MTLogging.h"
+#import "MTTime.h"
+#import "MTTimer.h"
+#import "MTContext.h"
+#import "MTSerialization.h"
+#import "MTProto.h"
+#import "MTQueue.h"
+#import "MTMessageTransaction.h"
+#import "MTIncomingMessage.h"
+#import "MTOutgoingMessage.h"
+#import "MTPreparedMessage.h"
+#import "MTRequest.h"
+#import "MTRequestContext.h"
+#import "MTRequestErrorContext.h"
+#import "MTDropResponseContext.h"
+#import "MTApiEnvironment.h"
+#import "MTDatacenterAuthInfo.h"
+#import "MTBuffer.h"
 
-#import <MTProtoKit/MTInternalMessageParser.h>
-#import <MTProtoKit/MTRpcResultMessage.h>
-#import <MTProtoKit/MTRpcError.h>
-#import <MTProtoKit/MTDropRpcResultMessage.h>
+#import "MTInternalMessageParser.h"
+#import "MTRpcResultMessage.h"
+#import "MTRpcError.h"
+#import "MTDropRpcResultMessage.h"
 
 @interface MTRequestMessageService ()
 {
@@ -125,8 +125,11 @@
                     anyNewDropRequests = true;
                 }
                 
-                if (request.requestContext.messageId != 0)
-                    MTLog(@"[MTRequestMessageService#%x drop %" PRId64 "]", (int)self, request.requestContext.messageId);
+                if (request.requestContext.messageId != 0) {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTRequestMessageService#%x drop %" PRId64 "]", (int)self, request.requestContext.messageId);
+                    }
+                }
                 
                 request.requestContext = nil;
                 [_requests removeObjectAtIndex:(NSUInteger)index];
@@ -193,9 +196,9 @@
 {
     [_queue dispatchOnQueue:^
     {
-        MTAbsoluteTime currentTime = MTAbsoluteSystemTime();
+        CFAbsoluteTime currentTime = MTAbsoluteSystemTime();
         
-        MTAbsoluteTime minWaitTime = DBL_MAX;
+        CFAbsoluteTime minWaitTime = DBL_MAX;
         bool needTimer = false;
         bool needTransaction = false;
         
@@ -345,9 +348,7 @@
     
     bool requestsWillInitializeApi = _apiEnvironment != nil && ![_apiEnvironment.apiInitializationHash isEqualToString:[_context authInfoForDatacenterWithId:mtProto.datacenterId].authKeyAttributes[@"apiInitializationHash"]];
     
-    MTAbsoluteTime currentTime = MTAbsoluteSystemTime();
-    
-    static bool catchPrepare = false;
+    CFAbsoluteTime currentTime = MTAbsoluteSystemTime();
     
     for (MTRequest *request in _requests)
     {
@@ -536,11 +537,15 @@
                     
                     if (rpcResult != nil)
                     {
-                        MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is %@]", self, request.requestContext.messageId, rpcResult);
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is %@]", self, request.requestContext.messageId, rpcResult);
+                        }
                     }
                     else
                     {
-                        MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, request.requestContext.messageId, (int)rpcError.errorCode, rpcError.errorDescription);
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, request.requestContext.messageId, (int)rpcError.errorCode, rpcError.errorDescription);
+                        }
                     }
                     
                     if (rpcResult != nil && request.requestContext.willInitializeApi)
@@ -620,13 +625,13 @@
                                         if (request.shouldContinueExecutionWithErrorContext(request.errorContext))
                                         {
                                             restartRequest = true;
-                                            request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                            request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (CFAbsoluteTime)errorWaitTime);
                                         }
                                     }
                                     else
                                     {
                                         restartRequest = true;
-                                        request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                        request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (CFAbsoluteTime)errorWaitTime);
                                     }
                                 }
                             }
@@ -645,7 +650,7 @@
                             }];
                         }
                         
-#warning TODO other service errors
+//#warning TODO other service errors
                     }
                     
                     request.requestContext = nil;
@@ -656,7 +661,7 @@
                     }
                     else
                     {
-                        void (^completed)(id result, NSTimeInterval completionTimestamp, id error) = request.completed;
+                        void (^completed)(id result, NSTimeInterval completionTimestamp, id error) = [request.completed copy];
                         [_requests removeObjectAtIndex:(NSUInteger)index];
                         
                         if (completed)
@@ -667,8 +672,11 @@
                 }
             }
             
-            if (!requestFound)
-                MTLog(@"[MTRequestMessageService#%p response %" PRId64 " didn't match any request]", self, message.messageId);
+            if (!requestFound) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTRequestMessageService#%p response %" PRId64 " didn't match any request]", self, message.messageId);
+                }
+            }
             else if (_requests.count == 0)
             {
                 id<MTRequestMessageServiceDelegate> delegate = _delegate;
