@@ -189,6 +189,14 @@ public final class Modifier {
         self.postbox?.replaceItemCollections(namespace: namespace, itemCollections: itemCollections)
     }
     
+    public func searchItemCollection(namespace: ItemCollectionId.Namespace, key: MemoryBuffer) -> [ItemCollectionItem] {
+        if let postbox = self.postbox {
+            return postbox.itemCollectionItemTable.exactIndexedItems(namespace: namespace, key: ValueBoxKey(key))
+        } else {
+            return []
+        }
+    }
+    
     public func getMessage(_ id: MessageId) -> Message? {
         if let postbox = self.postbox {
             if let entry = postbox.messageHistoryIndexTable.get(id) {
@@ -384,10 +392,11 @@ public final class Postbox {
     var contactsTable: ContactTable!
     var itemCollectionInfoTable: ItemCollectionInfoTable!
     var itemCollectionItemTable: ItemCollectionItemTable!
+    var itemCollectionReverseIndexTable: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>!
     var peerChatInterfaceStateTable: PeerChatInterfaceStateTable!
     var itemCacheMetaTable: ItemCacheMetaTable!
     var itemCacheTable: ItemCacheTable!
-    var peerNameTokenIndexTable: PeerNameTokenIndexTable!
+    var peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>!
     var peerNameIndexTable: PeerNameIndexTable!
     var peerChatTopTaggedMessageIdsTable: PeerChatTopTaggedMessageIdsTable!
     var peerOperationLogMetadataTable: PeerOperationLogMetadataTable!
@@ -506,11 +515,12 @@ public final class Postbox {
             self.peerNotificationSettingsTable = PeerNotificationSettingsTable(valueBox: self.valueBox, table: PeerNotificationSettingsTable.tableSpec(19))
             self.peerPresenceTable = PeerPresenceTable(valueBox: self.valueBox, table: PeerPresenceTable.tableSpec(20))
             self.itemCollectionInfoTable = ItemCollectionInfoTable(valueBox: self.valueBox, table: ItemCollectionInfoTable.tableSpec(21))
-            self.itemCollectionItemTable = ItemCollectionItemTable(valueBox: self.valueBox, table: ItemCollectionItemTable.tableSpec(22))
+            self.itemCollectionReverseIndexTable = ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>.tableSpec(36))
+            self.itemCollectionItemTable = ItemCollectionItemTable(valueBox: self.valueBox, table: ItemCollectionItemTable.tableSpec(22), reverseIndexTable: self.itemCollectionReverseIndexTable)
             self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox, table: PeerChatInterfaceStateTable.tableSpec(23))
             self.itemCacheMetaTable = ItemCacheMetaTable(valueBox: self.valueBox, table: ItemCacheMetaTable.tableSpec(24))
             self.itemCacheTable = ItemCacheTable(valueBox: self.valueBox, table: ItemCacheTable.tableSpec(25))
-            self.peerNameTokenIndexTable = PeerNameTokenIndexTable(valueBox: self.valueBox, table: PeerNameTokenIndexTable.tableSpec(26))
+            self.peerNameTokenIndexTable = ReverseIndexReferenceTable<PeerIdReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<PeerIdReverseIndexReference>.tableSpec(26))
             self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox, table: PeerNameIndexTable.tableSpec(27), peerTable: self.peerTable, peerNameTokenIndexTable: self.peerNameTokenIndexTable)
             self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable, metadataTable: self.messageHistoryMetadataTable, readStateTable: self.readStateTable, notificationSettingsTable: self.peerNotificationSettingsTable)
             self.chatListTable = ChatListTable(valueBox: self.valueBox, table: ChatListTable.tableSpec(9), indexTable: self.chatListIndexTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
@@ -542,6 +552,7 @@ public final class Postbox {
             self.tables.append(self.peerPresenceTable)
             self.tables.append(self.itemCollectionInfoTable)
             self.tables.append(self.itemCollectionItemTable)
+            self.tables.append(self.itemCollectionReverseIndexTable)
             self.tables.append(self.peerChatInterfaceStateTable)
             self.tables.append(self.itemCacheMetaTable)
             self.tables.append(self.itemCacheTable)

@@ -185,7 +185,7 @@ public final class ReadBuffer: MemoryBuffer {
         return Data(bytesNoCopy: self.memory.assumingMemoryBound(to: UInt8.self), count: self.length, deallocator: .none)
     }
     
-    public func read(_ data: UnsafeMutablePointer<Void>, offset: Int, length: Int) {
+    public func read(_ data: UnsafeMutableRawPointer, offset: Int, length: Int) {
         memcpy(data + offset, self.memory.advanced(by: self.offset), length)
         self.offset += length
     }
@@ -216,6 +216,8 @@ private enum ValueType: Int8 {
     case ObjectDictionary = 9
     case Bytes = 10
     case Nil = 11
+    case StringArray = 12
+    case BytesArray = 13
 }
 
 public final class Encoder {
@@ -326,7 +328,7 @@ public final class Encoder {
         var length: Int32 = Int32(value.count)
         self.buffer.write(&length, offset: 0, length: 4)
         value.withUnsafeBufferPointer { (data: UnsafeBufferPointer) -> Void in
-            self.buffer.write(UnsafePointer<Void>(data.baseAddress!), offset: 0, length: Int(length) * 4)
+            self.buffer.write(UnsafeRawPointer(data.baseAddress!), offset: 0, length: Int(length) * 4)
             return
         }
     }
@@ -338,7 +340,7 @@ public final class Encoder {
         var length: Int32 = Int32(value.count)
         self.buffer.write(&length, offset: 0, length: 4)
         value.withUnsafeBufferPointer { (data: UnsafeBufferPointer) -> Void in
-            self.buffer.write(UnsafePointer<Void>(data.baseAddress!), offset: 0, length: Int(length) * 8)
+            self.buffer.write(UnsafeRawPointer(data.baseAddress!), offset: 0, length: Int(length) * 8)
             return
         }
     }
@@ -363,6 +365,35 @@ public final class Encoder {
         }
     }
     
+    public func encodeStringArray(_ value: [String], forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.StringArray.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        
+        for object in value {
+            let data = object.data(using: .utf8, allowLossyConversion: true)!
+            var length: Int32 = Int32(data.count)
+            self.buffer.write(&length, offset: 0, length: 4)
+            self.buffer.write(data)
+        }
+    }
+    
+    public func encodeBytesArray(_ value: [MemoryBuffer], forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.BytesArray.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        
+        for object in value {
+            var length: Int32 = Int32(object.length)
+            self.buffer.write(&length, offset: 0, length: 4)
+            self.buffer.write(object.memory, offset: 0, length: object.length)
+        }
+    }
+    
     public func encodeGenericObjectArray(_ value: [Coding], forKey key: StaticString) {
         self.encodeKey(key)
         var type: Int8 = ValueType.ObjectArray.rawValue
@@ -383,7 +414,7 @@ public final class Encoder {
         }
     }
     
-    public func encodeObjectDictionary<K, V: Coding where K: Coding, K: Hashable>(_ value: [K : V], forKey key: StaticString) {
+    public func encodeObjectDictionary<K, V: Coding>(_ value: [K : V], forKey key: StaticString) where K: Coding, K: Hashable {
         self.encodeKey(key)
         var type: Int8 = ValueType.ObjectDictionary.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
@@ -506,6 +537,17 @@ public final class Decoder {
                 offset += 4 + Int(length)
             case .Nil:
                 break
+            case .StringArray, .BytesArray:
+                var length: Int32 = 0
+                memcpy(&length, bytes + offset, 4)
+                offset += 4
+                var i: Int32 = 0
+                while i < length {
+                    var stringLength: Int32 = 0
+                    memcpy(&stringLength, bytes + offset, 4)
+                    offset += 4 + Int(stringLength)
+                    i += 1
+                }
         }
     }
     
@@ -747,7 +789,7 @@ public final class Decoder {
         }
     }
     
-    public func decodeObjectArrayWithDecoderForKey<T where T: Coding>(_ key: StaticString) -> [T] {
+    public func decodeObjectArrayWithDecoderForKey<T>(_ key: StaticString) -> [T] where T: Coding {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.offset, 4)
@@ -756,7 +798,6 @@ public final class Decoder {
             var array: [T] = []
             array.reserveCapacity(Int(length))
             
-            let failed = false
             var i: Int32 = 0
             while i < length {
                 var typeHash: Int32 = 0
@@ -769,24 +810,76 @@ public final class Decoder {
                 let innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false))
                 self.offset += 4 + Int(objectLength)
                 
-                if !failed {
-                    array.append(T(decoder: innerDecoder))
-                }
+                array.append(T(decoder: innerDecoder))
                 
                 i += 1
             }
             
-            if failed {
-                return []
-            } else {
-                return array
-            }
+            return array
         } else {
             return []
         }
     }
     
-    public func decodeObjectArrayForKey<T where T: Coding>(_ key: StaticString) -> [T] {
+    public func decodeStringArrayForKey(_ key: StaticString) -> [String] {
+        if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .StringArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [String] = []
+            array.reserveCapacity(Int(length))
+            
+            var i: Int32 = 0
+            while i < length {
+                var length: Int32 = 0
+                memcpy(&length, self.buffer.memory + self.offset, 4)
+                let data = Data(bytes: self.buffer.memory.assumingMemoryBound(to: UInt8.self).advanced(by: self.offset + 4), count: Int(length))
+                self.offset += 4 + Int(length)
+                if let string = String(data: data, encoding: .utf8) {
+                    array.append(string)
+                } else {
+                    assertionFailure()
+                    array.append("")
+                }
+                
+                i += 1
+            }
+            
+            return array
+        } else {
+            return []
+        }
+    }
+    
+    public func decodeBytesArrayForKey(_ key: StaticString) -> [MemoryBuffer] {
+        if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .BytesArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [MemoryBuffer] = []
+            array.reserveCapacity(Int(length))
+            
+            var i: Int32 = 0
+            while i < length {
+                var length: Int32 = 0
+                memcpy(&length, self.buffer.memory + self.offset, 4)
+                let bytes = malloc(Int(length))!
+                memcpy(bytes, self.buffer.memory.advanced(by: self.offset + 4), Int(length))
+                array.append(MemoryBuffer(memory: bytes, capacity: Int(length), length: Int(length), freeWhenDone: true))
+                self.offset += 4 + Int(length)
+                
+                i += 1
+            }
+            
+            return array
+        } else {
+            return []
+        }
+    }
+    
+    public func decodeObjectArrayForKey<T>(_ key: StaticString) -> [T] where T: Coding {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.offset, 4)
@@ -872,7 +965,7 @@ public final class Decoder {
         }
     }
     
-    public func decodeObjectDictionaryForKey<K, V: Coding where K: Coding, K: Hashable>(_ key: StaticString) -> [K : V] {
+    public func decodeObjectDictionaryForKey<K, V: Coding>(_ key: StaticString) -> [K : V] where K: Coding, K: Hashable {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectDictionary) {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.offset, 4)
@@ -926,7 +1019,7 @@ public final class Decoder {
         }
     }
     
-    public func decodeObjectDictionaryForKey<K, V: Coding where K: Hashable>(_ key: StaticString, keyDecoder: (Decoder) -> K) -> [K : V] {
+    public func decodeObjectDictionaryForKey<K, V: Coding where K: Hashable>(_ key: StaticString, keyDecoder: (Decoder) -> K) -> [K : V] where K: Hashable {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectDictionary) {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.offset, 4)

@@ -94,19 +94,61 @@ private final class PeerNameIndexCategoriesEntryUpdate {
     }
 }
 
+struct PeerIdReverseIndexReference: ReverseIndexReference {
+    let value: Int64
+    
+    var hashValue: Int {
+        return self.value.hashValue
+    }
+    
+    static func ==(lhs: PeerIdReverseIndexReference, rhs: PeerIdReverseIndexReference) -> Bool {
+        return lhs.value == rhs.value
+    }
+    
+    static func <(lhs: PeerIdReverseIndexReference, rhs: PeerIdReverseIndexReference) -> Bool {
+        return lhs.value < rhs.value
+    }
+    
+    static func decodeArray(_ buffer: MemoryBuffer) -> [PeerIdReverseIndexReference] {
+        assert(buffer.length % 8 == 0)
+        var sortedPeerIds: [PeerIdReverseIndexReference] = []
+        sortedPeerIds.reserveCapacity(buffer.length % 8)
+        withExtendedLifetime(buffer, {
+            let memory = buffer.memory.assumingMemoryBound(to: Int64.self)
+            for i in 0 ..< buffer.length / 8 {
+                sortedPeerIds.append(PeerIdReverseIndexReference(value: memory[i]))
+            }
+        })
+        return sortedPeerIds
+    }
+    
+    static func encodeArray(_ array: [PeerIdReverseIndexReference]) -> MemoryBuffer {
+        let buffer = MemoryBuffer(memory: malloc(array.count * 8), capacity: array.count * 8, length: array.count * 8, freeWhenDone: true)
+        let memory = buffer.memory.assumingMemoryBound(to: Int64.self)
+        var index = 0
+        for peerId in array {
+            memory[index] = peerId.value
+            index += 1
+        }
+        return buffer
+    }
+}
+
+private let reverseIndexNamespace = ReverseIndexNamespace(nil)
+
 final class PeerNameIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
     private let peerTable: PeerTable
-    private let peerNameTokenIndexTable: PeerNameTokenIndexTable
+    private let peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>
     
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var entryUpdates: [PeerId: PeerNameIndexCategoriesEntryUpdate] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, peerTable: PeerTable, peerNameTokenIndexTable: PeerNameTokenIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, peerTable: PeerTable, peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>) {
         self.peerTable = peerTable
         self.peerNameTokenIndexTable = peerNameTokenIndexTable
         
@@ -160,7 +202,7 @@ final class PeerNameIndexTable: Table {
                     if updatedCategories.isEmpty != wasEmpty {
                         if updatedCategories.isEmpty {
                             if !entryUpdate.initialTokens.isEmpty {
-                                self.peerNameTokenIndexTable.remove(peerId: peerId, tokens: entryUpdate.initialTokens)
+                                self.peerNameTokenIndexTable.remove(namespace: reverseIndexNamespace, reference: PeerIdReverseIndexReference(value: peerId.toInt64()), tokens: entryUpdate.initialTokens)
                             }
                             if !entryUpdate.initialCategories.isEmpty {
                                 self.valueBox.remove(self.table, key: self.key(peerId))
@@ -177,7 +219,7 @@ final class PeerNameIndexTable: Table {
                                     updatedTokens = []
                                 }
                             }
-                            self.peerNameTokenIndexTable.add(peerId: peerId, tokens: updatedTokens)
+                            self.peerNameTokenIndexTable.add(namespace: reverseIndexNamespace, reference: PeerIdReverseIndexReference(value: peerId.toInt64()), tokens: updatedTokens)
                             sharedBuffer.reset()
                             PeerNameIndexCategoriesEntry(categories: updatedCategories, tokens: updatedTokens).write(to: sharedBuffer)
                             self.valueBox.set(self.table, key: self.key(peerId), value: sharedBuffer)
@@ -185,10 +227,10 @@ final class PeerNameIndexTable: Table {
                     } else {
                         if let updatedName = entryUpdate.updatedName {
                             if !entryUpdate.initialTokens.isEmpty {
-                                self.peerNameTokenIndexTable.remove(peerId: peerId, tokens: entryUpdate.initialTokens)
+                                self.peerNameTokenIndexTable.remove(namespace: reverseIndexNamespace, reference: PeerIdReverseIndexReference(value: peerId.toInt64()), tokens: entryUpdate.initialTokens)
                             }
                             let updatedTokens = updatedName.indexTokens
-                            self.peerNameTokenIndexTable.add(peerId: peerId, tokens: updatedTokens)
+                            self.peerNameTokenIndexTable.add(namespace: reverseIndexNamespace, reference: PeerIdReverseIndexReference(value: peerId.toInt64()), tokens: updatedTokens)
                             sharedBuffer.reset()
                             PeerNameIndexCategoriesEntry(categories: updatedCategories, tokens: updatedTokens).write(to: sharedBuffer)
                             self.valueBox.set(self.table, key: self.key(peerId), value: sharedBuffer)
@@ -201,10 +243,10 @@ final class PeerNameIndexTable: Table {
                 } else if let updatedName = entryUpdate.updatedName {
                     if !entryUpdate.initialCategories.isEmpty {
                         if !entryUpdate.initialTokens.isEmpty {
-                            self.peerNameTokenIndexTable.remove(peerId: peerId, tokens: entryUpdate.initialTokens)
+                            self.peerNameTokenIndexTable.remove(namespace: reverseIndexNamespace, reference: PeerIdReverseIndexReference(value: peerId.toInt64()), tokens: entryUpdate.initialTokens)
                         }
                         let updatedTokens = updatedName.indexTokens
-                        self.peerNameTokenIndexTable.add(peerId: peerId, tokens: updatedTokens)
+                        self.peerNameTokenIndexTable.add(namespace: reverseIndexNamespace, reference: PeerIdReverseIndexReference(value: peerId.toInt64()), tokens: updatedTokens)
                         sharedBuffer.reset()
                         PeerNameIndexCategoriesEntry(categories: entryUpdate.initialCategories, tokens: updatedTokens).write(to: sharedBuffer)
                         self.valueBox.set(self.table, key: self.key(peerId), value: sharedBuffer)
@@ -221,12 +263,13 @@ final class PeerNameIndexTable: Table {
         } else {
             var contacts: [PeerId] = []
             var chatIndices: [PeerId: ChatListIndex] = [:]
-            var peerIds = self.peerNameTokenIndexTable.matchingPeerIds(tokens: tokens.regular)
+            var peerIds = self.peerNameTokenIndexTable.matchingReferences(namespace: reverseIndexNamespace, tokens: tokens.regular)
             if let transliterated = tokens.transliterated, tokens.regular != transliterated {
-                let transliteratedPeerIds = self.peerNameTokenIndexTable.matchingPeerIds(tokens: transliterated)
+                let transliteratedPeerIds = self.peerNameTokenIndexTable.matchingReferences(namespace: reverseIndexNamespace, tokens: transliterated)
                 peerIds.formUnion(transliteratedPeerIds)
             }
-            for peerId in peerIds {
+            for peerIdReference in peerIds {
+                let peerId = PeerId(peerIdReference.value)
                 var foundInChats = false
                 if categories.contains(.chats) {
                     if let index = chatListIndexTable.get(peerId).includedIndex(peerId: peerId) {

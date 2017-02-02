@@ -199,6 +199,12 @@ public struct ValueBoxKey: Hashable, CustomStringConvertible, Comparable {
     public static func <(lhs: ValueBoxKey, rhs: ValueBoxKey) -> Bool {
         return mdb_cmp_memn(lhs.memory, lhs.length, rhs.memory, rhs.length) < 0
     }
+    
+    public func toMemoryBuffer() -> MemoryBuffer {
+        let data = malloc(self.length)!
+        memcpy(data, self.memory, self.length)
+        return MemoryBuffer(memory: data, capacity: self.length, length: self.length, freeWhenDone: true)
+    }
 }
 
 private func mdb_cmp_memn(_ a_memory: UnsafeMutableRawPointer, _ a_length: Int, _ b_memory: UnsafeMutableRawPointer, _ b_length: Int) -> Int

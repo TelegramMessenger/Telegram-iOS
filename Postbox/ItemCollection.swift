@@ -72,10 +72,5 @@ public struct ItemCollectionItemIndex: Comparable, Hashable {
 
 public protocol ItemCollectionItem: Coding {
     var index: ItemCollectionItemIndex { get }
-}
-
-public struct ItemCollectionSummary {
-    let id: ItemCollectionId
-    let info: ItemCollectionInfo
-    let itemIds: [ItemCollectionItem]
+    var indexKeys: [MemoryBuffer] { get }
 }
