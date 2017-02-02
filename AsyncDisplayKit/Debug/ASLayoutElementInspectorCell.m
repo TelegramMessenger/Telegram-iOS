@@ -5,10 +5,8 @@
 //  Created by Hannah Troisi on 3/27/16.
 //  Copyright © 2016 Facebook. All rights reserved.
 //
-
 #ifndef MINIMAL_ASDK
-
-#import "ASLayoutElementInspectorCell.h"
+#import <AsyncDisplayKit/ASLayoutElementInspectorCell.h>
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
 
 typedef NS_ENUM(NSInteger, CellDataType) {
@@ -187,7 +185,7 @@ __weak static ASLayoutElementInspectorCell *__currentlyOpenedCell = nil;
   switch (_propertyType) {
       
     case ASLayoutElementPropertyAlignSelf:
-      _layoutElementToEdit.style.alignSelf = index;
+      _layoutElementToEdit.style.alignSelf = (ASStackLayoutAlignSelf)index;
       _textNode.attributedText = [ASLayoutElementInspectorCell attributedStringFromString:[ASLayoutElementInspectorCell alignSelfEnumValueString:index]];
       break;
 

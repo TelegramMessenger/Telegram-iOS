@@ -9,8 +9,8 @@
 //
 
 #ifndef MINIMAL_ASDK
-
-#import "ASBatchFetching.h"
+#import <AsyncDisplayKit/ASBatchFetching.h>
+#import <AsyncDisplayKit/ASBatchContext.h>
 
 BOOL ASDisplayShouldFetchBatchForScrollView(UIScrollView<ASBatchFetchingScrollView> *scrollView, ASScrollDirection scrollDirection, ASScrollDirection scrollableDirections, CGPoint contentOffset)
 {

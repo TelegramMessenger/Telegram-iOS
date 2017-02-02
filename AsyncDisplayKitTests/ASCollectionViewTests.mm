@@ -9,16 +9,13 @@
 //
 
 #import <XCTest/XCTest.h>
-#import "ASCollectionView.h"
-#import "ASCollectionDataController.h"
-#import "ASCollectionViewFlowLayoutInspector.h"
-#import "ASCellNode.h"
-#import "ASCollectionNode.h"
-#import "ASDisplayNode+Beta.h"
-#import "ASSectionContext.h"
+#import <AsyncDisplayKit/AsyncDisplayKit.h>
+#import <AsyncDisplayKit/ASCollectionDataController.h>
+#import <AsyncDisplayKit/ASCollectionViewFlowLayoutInspector.h>
+#import <AsyncDisplayKit/ASSectionContext.h>
 #import <vector>
 #import <OCMock/OCMock.h>
-#import "ASCollectionView+Undeprecated.h"
+#import <AsyncDisplayKit/ASCollectionView+Undeprecated.h>
 
 @interface ASTextCellNodeWithSetSelectedCounter : ASTextCellNode
 
@@ -164,7 +161,7 @@
 
 @interface ASCollectionView (InternalTesting)
 
-- (NSArray *)supplementaryNodeKindsInDataController:(ASCollectionDataController *)dataController;
+- (NSArray *)supplementaryNodeKindsInDataController:(ASCollectionDataController *)dataController sections:(nonnull NSIndexSet *)sections;
 
 @end
 
@@ -173,6 +170,18 @@
 @end
 
 @implementation ASCollectionViewTests
+
+- (void)tearDown
+{
+  // We can't prevent the system from retaining windows, but we can at least clear them out to avoid
+  // pollution between test cases.
+  for (UIWindow *window in [UIApplication sharedApplication].windows) {
+    for (UIView *subview in window.subviews) {
+      [subview removeFromSuperview];
+    }
+  }
+  [super tearDown];
+}
 
 - (void)testDataSourceImplementsNecessaryMethods
 {
@@ -207,7 +216,7 @@
   UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
   ASCollectionView *collectionView = [[ASCollectionView alloc] initWithFrame:CGRectZero collectionViewLayout:layout];
   [collectionView registerSupplementaryNodeOfKind:UICollectionElementKindSectionHeader];
-  XCTAssertEqualObjects([collectionView supplementaryNodeKindsInDataController:nil], @[UICollectionElementKindSectionHeader]);
+  XCTAssertEqualObjects([collectionView supplementaryNodeKindsInDataController:nil sections:[NSIndexSet indexSetWithIndex:0]], @[UICollectionElementKindSectionHeader]);
 }
 
 - (void)testReloadIfNeeded
@@ -696,7 +705,7 @@
   XCTAssertTrue(toSection < originalSection);
   ASTestSectionContext *movedSectionContext = (ASTestSectionContext *)[cn contextForSection:toSection];
   XCTAssertNotNil(movedSectionContext);
-  // ASCollectionView currently uses ASChangeSetDataController which splits a move operation to a pair of delete and insert ones.
+  // ASCollectionView currently splits a move operation to a pair of delete and insert ones.
   // So this movedSectionContext is newly loaded and thus is second generation.
   XCTAssertEqual(movedSectionContext.sectionGeneration, 2);
   XCTAssertEqual(movedSectionContext.sectionIndex, toSection);
@@ -988,7 +997,7 @@
   }
   XCTAssertGreaterThan(batchFetchCount, 2);
   XCTAssertGreaterThanOrEqual(contentHeight, requiredContentHeight, @"Loaded too little content.");
-  XCTAssertLessThanOrEqual(contentHeight, requiredContentHeight + 2 * itemHeight, @"Loaded too much content.");
+  XCTAssertLessThanOrEqual(contentHeight, requiredContentHeight + 3 * itemHeight, @"Loaded too much content.");
 }
 
 - (void)testInitialRangeBounds

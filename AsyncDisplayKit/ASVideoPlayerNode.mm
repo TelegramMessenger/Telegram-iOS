@@ -11,10 +11,15 @@
 //
 
 #ifndef MINIMAL_ASDK
+#if TARGET_OS_IOS
 
-#import "ASVideoPlayerNode.h"
-#import "ASDefaultPlaybackButton.h"
-#import "ASDisplayNode+FrameworkSubclasses.h"
+#import <AsyncDisplayKit/ASVideoPlayerNode.h>
+
+#import <AVFoundation/AVFoundation.h>
+
+#import <AsyncDisplayKit/AsyncDisplayKit.h>
+#import <AsyncDisplayKit/ASDefaultPlaybackButton.h>
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
 
 static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 
@@ -971,4 +976,5 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 
 @end
 
+#endif // TARGET_OS_IOS
 #endif

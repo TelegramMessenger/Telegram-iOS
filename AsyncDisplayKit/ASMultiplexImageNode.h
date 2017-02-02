@@ -9,9 +9,6 @@
 //
 
 #ifndef MINIMAL_ASDK
-
-#if TARGET_OS_IOS
-
 #import <AsyncDisplayKit/ASImageNode.h>
 #import <AsyncDisplayKit/ASImageProtocols.h>
 #import <Photos/Photos.h>
@@ -275,10 +272,7 @@ didFinishDownloadingImageWithIdentifier:(ASImageIdentifier)imageIdentifier
                                options:(PHImageRequestOptions *)options AS_WARN_UNUSED_RESULT;
 
 @end
-#endif
 
 NS_ASSUME_NONNULL_END
-
 #endif
-
 #endif

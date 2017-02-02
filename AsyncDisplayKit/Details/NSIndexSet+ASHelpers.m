@@ -8,7 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
-#import "NSIndexSet+ASHelpers.h"
+#import <AsyncDisplayKit/NSIndexSet+ASHelpers.h>
 
 @implementation NSIndexSet (ASHelpers)
 
@@ -74,6 +74,15 @@
     }
   }];
   [result appendString:@"}"];
+  return result;
+}
+
++ (NSIndexSet *)as_sectionsFromIndexPaths:(NSArray<NSIndexPath *> *)indexPaths
+{
+  NSMutableIndexSet *result = [NSMutableIndexSet indexSet];
+  for (NSIndexPath *indexPath in indexPaths) {
+    [result addIndex:indexPath.section];
+  }
   return result;
 }
 

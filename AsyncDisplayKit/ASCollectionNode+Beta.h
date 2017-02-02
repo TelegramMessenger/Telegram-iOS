@@ -9,8 +9,8 @@
 //
 
 #ifndef MINIMAL_ASDK
+#import <AsyncDisplayKit/ASCollectionNode.h>
 
-#import "ASCollectionNode.h"
 @protocol ASCollectionViewLayoutFacilitatorProtocol;
 
 NS_ASSUME_NONNULL_BEGIN

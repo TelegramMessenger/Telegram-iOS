@@ -5,13 +5,12 @@
 //  Created by Garrett Moon on 11/19/16.
 //  Copyright © 2016 Facebook. All rights reserved.
 //
-
 #ifndef MINIMAL_ASDK
+#import <AsyncDisplayKit/ASCollectionViewLayoutInspector.h>
 
-#import "ASCollectionViewLayoutInspector.h"
-
-#import "ASCollectionView.h"
-#import "ASCollectionView+Undeprecated.h"
+#import <AsyncDisplayKit/ASCollectionView.h>
+#import <AsyncDisplayKit/ASCollectionView+Undeprecated.h>
+#import <AsyncDisplayKit/ASCollectionNode.h>
 
 #pragma mark - Helper Functions
 

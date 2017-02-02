@@ -8,13 +8,13 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#import "ASInternalHelpers.h"
-#import "ASRunLoopQueue.h"
+#import <AsyncDisplayKit/ASInternalHelpers.h>
 
 #import <objc/runtime.h>
-
-#import "ASThread.h"
 #import <tgmath.h>
+
+#import <AsyncDisplayKit/ASRunLoopQueue.h>
+#import <AsyncDisplayKit/ASThread.h>
 
 BOOL ASSubclassOverridesSelector(Class superclass, Class subclass, SEL selector)
 {
@@ -84,19 +84,19 @@ void ASPerformBackgroundDeallocation(id object)
   [[ASDeallocQueue sharedDeallocationQueue] releaseObjectInBackground:object];
 }
 
-BOOL ASClassRequiresMainThreadDeallocation(Class class)
+BOOL ASClassRequiresMainThreadDeallocation(Class c)
 {
-  if (class == [UIImage class] || class == [UIColor class]) {
+  if (c == [UIImage class] || c == [UIColor class]) {
     return NO;
   }
 
-  if ([class isSubclassOfClass:[UIResponder class]]
-      || [class isSubclassOfClass:[CALayer class]]
-      || [class isSubclassOfClass:[UIGestureRecognizer class]]) {
+  if ([c isSubclassOfClass:[UIResponder class]]
+      || [c isSubclassOfClass:[CALayer class]]
+      || [c isSubclassOfClass:[UIGestureRecognizer class]]) {
     return YES;
   }
 
-  const char *name = class_getName(class);
+  const char *name = class_getName(c);
   if (strncmp(name, "UI", 2) == 0 || strncmp(name, "AV", 2) == 0 || strncmp(name, "CA", 2) == 0) {
     return YES;
   }

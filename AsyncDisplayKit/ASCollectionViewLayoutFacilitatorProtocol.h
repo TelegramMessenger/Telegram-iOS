@@ -11,6 +11,7 @@
 #ifndef MINIMAL_ASDK
 
 #pragma once
+#import <Foundation/Foundation.h>
 
 /**
  * This facilitator protocol is intended to help Layout to better

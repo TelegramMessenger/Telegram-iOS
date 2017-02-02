@@ -7,8 +7,7 @@
 //
 
 #ifndef MINIMAL_ASDK
-
-#import <AsyncDisplayKit/AsyncDisplayKit.h>
+#import <AsyncDisplayKit/ASCollectionView.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

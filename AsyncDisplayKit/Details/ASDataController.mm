@@ -7,23 +7,22 @@
 //  LICENSE file in the root directory of this source tree. An additional grant
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
-
 #ifndef MINIMAL_ASDK
+#import <AsyncDisplayKit/ASDataController.h>
 
-#import "ASDataController.h"
-
-#import "ASAssert.h"
-#import "ASCellNode.h"
-#import "ASEnvironmentInternal.h"
-#import "ASLayout.h"
-#import "ASMainSerialQueue.h"
-#import "ASMultidimensionalArrayUtils.h"
-#import "ASThread.h"
-#import "ASIndexedNodeContext.h"
-#import "ASDataController+Subclasses.h"
-#import "ASDispatch.h"
-#import "ASInternalHelpers.h"
-#import "ASCellNode+Internal.h"
+#import <AsyncDisplayKit/_ASHierarchyChangeSet.h>
+#import <AsyncDisplayKit/ASAssert.h>
+#import <AsyncDisplayKit/ASCellNode.h>
+#import <AsyncDisplayKit/ASEnvironmentInternal.h>
+#import <AsyncDisplayKit/ASLayout.h>
+#import <AsyncDisplayKit/ASMainSerialQueue.h>
+#import <AsyncDisplayKit/ASMultidimensionalArrayUtils.h>
+#import <AsyncDisplayKit/ASThread.h>
+#import <AsyncDisplayKit/ASIndexedNodeContext.h>
+#import <AsyncDisplayKit/ASDataController+Subclasses.h>
+#import <AsyncDisplayKit/ASDispatch.h>
+#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import <AsyncDisplayKit/ASCellNode+Internal.h>
 
 //#define LOG(...) NSLog(__VA_ARGS__)
 #define LOG(...)
@@ -79,7 +78,6 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
   if (!(self = [super init])) {
     return nil;
   }
-  ASDisplayNodeAssert(![self isMemberOfClass:[ASDataController class]], @"ASDataController is an abstract class and should not be instantiated. Instantiate a subclass instead.");
   
   _dataSource = dataSource;
   
@@ -310,18 +308,22 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
   }];
 }
 
-- (void)deleteSectionsOfKind:(NSString *)kind atIndexSet:(NSIndexSet *)indexSet completion:(void (^)(NSIndexSet *indexSet))completionBlock
+- (void)deleteSections:(NSIndexSet *)indexSet completion:(void (^)())completionBlock
 {
   ASSERT_ON_EDITING_QUEUE;
   if (!indexSet.count || _dataSource == nil) {
     return;
   }
-  
-  [_editingNodes[kind] removeObjectsAtIndexes:indexSet];
+
+  [_editingNodes enumerateKeysAndObjectsUsingBlock:^(NSString *  _Nonnull kind, NSMutableArray *sections, BOOL * _Nonnull stop) {
+    [sections removeObjectsAtIndexes:indexSet];
+  }];
   [_mainSerialQueue performBlockOnMainThread:^{
-    [_completedNodes[kind] removeObjectsAtIndexes:indexSet];
+    [_completedNodes enumerateKeysAndObjectsUsingBlock:^(NSString *  _Nonnull kind, NSMutableArray *sections, BOOL * _Nonnull stop) {
+      [sections removeObjectsAtIndexes:indexSet];
+    }];
     if (completionBlock) {
-      completionBlock(indexSet);
+      completionBlock();
     }
   }];
 }
@@ -392,7 +394,7 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
 {
   ASSERT_ON_EDITING_QUEUE;
   
-  [self deleteSectionsOfKind:ASDataControllerRowNodeKind atIndexSet:indexSet completion:^(NSIndexSet *indexSet) {
+  [self deleteSections:indexSet completion:^() {
     ASDisplayNodeAssertMainThread();
     
     if (_delegateDidDeleteSections)
@@ -582,11 +584,6 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
   });
 }
 
-- (void)endUpdates
-{
-  [self endUpdatesAnimated:YES completion:nil];
-}
-
 - (void)endUpdatesAnimated:(BOOL)animated completion:(void (^)(BOOL))completion
 {
   LOG(@"endUpdatesWithCompletion - beginning");
@@ -603,6 +600,74 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
       [_delegate dataController:self endUpdatesAnimated:animated completion:completion];
     }];
   });
+}
+
+- (void)updateWithChangeSet:(_ASHierarchyChangeSet *)changeSet animated:(BOOL)animated
+{
+  ASDisplayNodeAssertMainThread();
+  
+  void (^batchCompletion)(BOOL) = changeSet.completionHandler;
+  
+  /**
+   * If the initial reloadData has not been called, just bail because we don't have
+   * our old data source counts.
+   * See ASUICollectionViewTests.testThatIssuingAnUpdateBeforeInitialReloadIsUnacceptable
+   * For the issue that UICollectionView has that we're choosing to workaround.
+   */
+  if (!self.initialReloadDataHasBeenCalled) {
+    if (batchCompletion != nil) {
+      batchCompletion(YES);
+    }
+    return;
+  }
+  
+  [self invalidateDataSourceItemCounts];
+  
+  // Attempt to mark the update completed. This is when update validation will occur inside the changeset.
+  // If an invalid update exception is thrown, we catch it and inject our "validationErrorSource" object,
+  // which is the table/collection node's data source, into the exception reason to help debugging.
+  @try {
+    [changeSet markCompletedWithNewItemCounts:[self itemCountsFromDataSource]];
+  } @catch (NSException *e) {
+    id responsibleDataSource = self.validationErrorSource;
+    if (e.name == ASCollectionInvalidUpdateException && responsibleDataSource != nil) {
+      [NSException raise:ASCollectionInvalidUpdateException format:@"%@: %@", [responsibleDataSource class], e.reason];
+    } else {
+      @throw e;
+    }
+  }
+  
+  ASDataControllerLogEvent(self, @"triggeredUpdate: %@", changeSet);
+  
+  [self beginUpdates];
+  
+  for (_ASHierarchyItemChange *change in [changeSet itemChangesOfType:_ASHierarchyChangeTypeDelete]) {
+    [self deleteRowsAtIndexPaths:change.indexPaths withAnimationOptions:change.animationOptions];
+  }
+  
+  for (_ASHierarchySectionChange *change in [changeSet sectionChangesOfType:_ASHierarchyChangeTypeDelete]) {
+    [self deleteSections:change.indexSet withAnimationOptions:change.animationOptions];
+  }
+  
+  for (_ASHierarchySectionChange *change in [changeSet sectionChangesOfType:_ASHierarchyChangeTypeInsert]) {
+    [self insertSections:change.indexSet withAnimationOptions:change.animationOptions];
+  }
+  
+  for (_ASHierarchyItemChange *change in [changeSet itemChangesOfType:_ASHierarchyChangeTypeInsert]) {
+    [self insertRowsAtIndexPaths:change.indexPaths withAnimationOptions:change.animationOptions];
+  }
+  
+#if ASEVENTLOG_ENABLE
+  NSString *changeSetDescription = ASObjectDescriptionMakeTiny(changeSet);
+  batchCompletion = ^(BOOL finished) {
+    if (batchCompletion != nil) {
+      batchCompletion(finished);
+    }
+    ASDataControllerLogEvent(self, @"finishedUpdate: %@", changeSetDescription);
+  };
+#endif
+  
+  [self endUpdatesAnimated:animated completion:batchCompletion];
 }
 
 #pragma mark - Section Editing (External API)
@@ -658,6 +723,8 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
   [_nodeContexts[ASDataControllerRowNodeKind] removeObjectsAtIndexes:sections];
 
   dispatch_group_wait(_editingTransactionGroup, DISPATCH_TIME_FOREVER);
+
+  [self prepareForDeleteSections:sections];
   dispatch_group_async(_editingTransactionGroup, _editingTransactionQueue, ^{
     [self willDeleteSections:sections];
 
@@ -666,17 +733,6 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
     [self _deleteSectionsAtIndexSet:sections withAnimationOptions:animationOptions];
   });
 }
-
-- (void)reloadSections:(NSIndexSet *)sections withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
-{
-  ASDisplayNodeAssert(NO, @"ASDataController does not support %@. Call this on ASChangeSetDataController the reload will be broken into delete & insert.", NSStringFromSelector(_cmd));
-}
-
-- (void)moveSection:(NSInteger)section toSection:(NSInteger)newSection withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
-{
-  ASDisplayNodeAssert(NO, @"ASDataController does not support %@. Call this on ASChangeSetDataController and the move will be processed along with the current batch of updates.", NSStringFromSelector(_cmd));
-}
-
 
 #pragma mark - Backing store manipulation optional hooks (Subclass API)
 
@@ -691,6 +747,11 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
 }
 
 - (void)prepareForInsertSections:(NSIndexSet *)sections
+{
+  // Optional template hook for subclasses (See ASDataController+Subclasses.h)
+}
+
+- (void)prepareForDeleteSections:(NSIndexSet *)sections
 {
   // Optional template hook for subclasses (See ASDataController+Subclasses.h)
 }
@@ -796,11 +857,6 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
   });
 }
 
-- (void)reloadRowsAtIndexPaths:(NSArray *)indexPaths withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
-{
-  ASDisplayNodeAssert(NO, @"ASDataController does not support %@. Call this on ASChangeSetDataController and the reload will be broken into delete & insert.", NSStringFromSelector(_cmd));
-}
-
 - (void)relayoutAllNodes
 {
   ASDisplayNodeAssertMainThread();
@@ -845,18 +901,7 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
   }
 }
 
-- (void)moveRowAtIndexPath:(NSIndexPath *)indexPath toIndexPath:(NSIndexPath *)newIndexPath withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
-{
-  ASDisplayNodeAssert(NO, @"ASDataController does not support %@. Call this on ASChangeSetDataController and the move will be processed along with the current batch of updates.", NSStringFromSelector(_cmd));
-}
-
 #pragma mark - Data Querying (Subclass API)
-
-- (NSArray<NSIndexPath *> *)indexPathsForEditingNodesOfKind:(NSString *)kind
-{
-  NSArray *nodes = _editingNodes[kind];
-  return nodes != nil ? ASIndexPathsForTwoDimensionalArray(nodes) : nil;
-}
 
 - (NSMutableArray *)editingNodesOfKind:(NSString *)kind
 {
@@ -914,7 +959,6 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
       context = completedNodesSection[row];
     }
   }
-  
   return context.node;
 }
 

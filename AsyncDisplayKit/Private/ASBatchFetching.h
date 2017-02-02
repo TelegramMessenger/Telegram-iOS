@@ -12,10 +12,11 @@
 
 #import <UIKit/UIKit.h>
 
-#import "ASBatchContext.h"
-#import "ASScrollDirection.h"
+#import <AsyncDisplayKit/ASScrollDirection.h>
 
 ASDISPLAYNODE_EXTERN_C_BEGIN
+
+@class ASBatchContext;
 
 @protocol ASBatchFetchingScrollView <NSObject>
 

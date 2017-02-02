@@ -11,8 +11,7 @@
 //
 
 #ifndef MINIMAL_ASDK
-
-#import "ASPagerFlowLayout.h"
+#import <AsyncDisplayKit/ASPagerFlowLayout.h>
 
 @interface ASPagerFlowLayout () {
   BOOL _didRotate;

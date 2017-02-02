@@ -11,8 +11,7 @@
 //
 
 #ifndef MINIMAL_ASDK
-
-#import "ASCellNode.h"
+#import <AsyncDisplayKit/ASCellNode.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

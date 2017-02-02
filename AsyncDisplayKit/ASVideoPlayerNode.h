@@ -13,12 +13,13 @@
 #ifndef MINIMAL_ASDK
 
 #if TARGET_OS_IOS
-#import <AsyncDisplayKit/AsyncDisplayKit.h>
-//#import <AsyncDisplayKit/ASThread.h>
-//#import <AsyncDisplayKit/ASVideoNode.h>
-//#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
+#import <CoreMedia/CoreMedia.h>
+#import <AsyncDisplayKit/ASThread.h>
+#import <AsyncDisplayKit/ASVideoNode.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 
 @class AVAsset;
+@class ASButtonNode;
 @protocol ASVideoPlayerNodeDelegate;
 
 typedef NS_ENUM(NSInteger, ASVideoPlayerNodeControlType) {

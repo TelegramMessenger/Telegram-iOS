@@ -11,8 +11,7 @@
 //
 
 #ifndef MINIMAL_ASDK
-
-#import "ASTabBarController.h"
+#import <AsyncDisplayKit/ASTabBarController.h>
 
 @implementation ASTabBarController
 {

@@ -9,10 +9,9 @@
 //
 
 #ifndef MINIMAL_ASDK
+#import <AsyncDisplayKit/ASBatchContext.h>
 
-#import "ASBatchContext.h"
-
-#import "ASThread.h"
+#import <AsyncDisplayKit/ASThread.h>
 
 typedef NS_ENUM(NSInteger, ASBatchContextState) {
   ASBatchContextStateFetching,

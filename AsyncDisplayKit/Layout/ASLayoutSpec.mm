@@ -8,11 +8,15 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#import "ASLayoutSpec.h"
-#import "ASLayoutSpecPrivate.h"
-#import "ASLayoutSpec+Subclasses.h"
-#import "ASLayoutElementStylePrivate.h"
-#import "ASLayoutSpec+Debug.h"
+#import <AsyncDisplayKit/ASLayoutSpec.h>
+#import <AsyncDisplayKit/ASLayoutSpecPrivate.h>
+
+#import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
+#import <AsyncDisplayKit/ASLayoutSpec+Debug.h>
+
+#import <AsyncDisplayKit/ASLayoutElementStylePrivate.h>
+#import <AsyncDisplayKit/ASTraitCollection.h>
+#import <AsyncDisplayKit/ASEqualityHelpers.h>
 
 #import <objc/runtime.h>
 #import <map>
@@ -31,7 +35,7 @@
 {
   [super initialize];
   if (self != [ASLayoutSpec class]) {
-    ASDisplayNodeAssert(!ASSubclassOverridesSelector([ASLayoutSpec class], self, @selector(measureWithSizeRange:)), @"Subclass %@ must not override measureWithSizeRange: method. Instead overwrite calculateLayoutThatFits:", NSStringFromClass(self));
+    ASDisplayNodeAssert(!ASSubclassOverridesSelector([ASLayoutSpec class], self, @selector(measureWithSizeRange:)), @"Subclass %@ must not override measureWithSizeRange: method. Instead override calculateLayoutThatFits:", NSStringFromClass(self));
   }
 }
 

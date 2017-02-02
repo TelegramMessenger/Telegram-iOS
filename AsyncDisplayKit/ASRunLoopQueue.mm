@@ -10,9 +10,9 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#import "ASRunLoopQueue.h"
-#import "ASThread.h"
-#import "ASLog.h"
+#import <AsyncDisplayKit/ASRunLoopQueue.h>
+#import <AsyncDisplayKit/ASThread.h>
+#import <AsyncDisplayKit/ASLog.h>
 
 #import <cstdlib>
 #import <deque>
@@ -48,6 +48,11 @@ static void runLoopSourceCallback(void *info) {
 
 - (void)releaseObjectInBackground:(id)object
 {
+  // Disable background deallocation on iOS 8 and below to avoid crashes related to UIAXDelegateClearer (#2767).
+  if (!AS_AT_LEAST_IOS9) {
+    return;
+  }
+
   _queueLock.lock();
   _queue.push_back(object);
   _queueLock.unlock();

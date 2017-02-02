@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = 'AsyncDisplayKit'
-  spec.version      = '2.0.1'
+  spec.version      = '2.1'
   spec.license      =  { :type => 'BSD' }
   spec.homepage     = 'http://asyncdisplaykit.org'
   spec.authors      = { 'Scott Goodson' => 'scottgoodson@gmail.com' }
@@ -9,11 +9,10 @@ Pod::Spec.new do |spec|
 
   spec.documentation_url = 'http://asyncdisplaykit.org/appledoc/'
 
-  spec.frameworks = 'AssetsLibrary'
-  spec.weak_frameworks = 'Photos','MapKit'
+  spec.weak_frameworks = 'Photos','MapKit','AssetsLibrary'
   spec.requires_arc = true
 
-  spec.ios.deployment_target = '7.0'
+  spec.ios.deployment_target = '8.0'
 
   # Uncomment when fixed: issues with tvOS build for release 2.0
   # spec.tvos.deployment_target = '9.0'
@@ -23,7 +22,7 @@ Pod::Spec.new do |spec|
     core.public_header_files = [
         'AsyncDisplayKit/*.h',
         'AsyncDisplayKit/Details/**/*.h',
-        'AsyncDisplayKit/Layout/*.h',
+        'AsyncDisplayKit/Layout/**/*.h',
         'Base/*.h',
         'AsyncDisplayKit/Debug/ASLayoutElementInspectorNode.h',
         'AsyncDisplayKit/TextKit/ASTextNodeTypes.h',
@@ -47,6 +46,12 @@ Pod::Spec.new do |spec|
       pin.dependency 'PINRemoteImage/iOS', '= 3.0.0-beta.7'
       pin.dependency 'PINRemoteImage/PINCache'
       pin.dependency 'AsyncDisplayKit/Core'
+  end
+
+  spec.subspec 'IGListKit' do |igl|
+      igl.xcconfig = { 'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) IG_LIST_KIT=1' }
+      igl.dependency 'IGListKit', '2.1.0'
+      igl.dependency 'AsyncDisplayKit/Core'
   end
   
   # Include optional PINRemoteImage module

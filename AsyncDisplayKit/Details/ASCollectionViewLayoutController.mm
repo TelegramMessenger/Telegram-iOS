@@ -7,15 +7,13 @@
 //  LICENSE file in the root directory of this source tree. An additional grant
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
-
 #ifndef MINIMAL_ASDK
+#import <AsyncDisplayKit/ASCollectionViewLayoutController.h>
 
-#import "ASCollectionViewLayoutController.h"
-
-#import "ASAssert.h"
-#import "ASCollectionView.h"
-#import "CoreGraphics+ASConvenience.h"
-#import "UICollectionViewLayout+ASConvenience.h"
+#import <AsyncDisplayKit/ASAssert.h>
+#import <AsyncDisplayKit/ASCollectionView.h>
+#import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
+#import <AsyncDisplayKit/UICollectionViewLayout+ASConvenience.h>
 
 struct ASRangeGeometry {
   CGRect rangeBounds;

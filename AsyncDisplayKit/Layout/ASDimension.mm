@@ -8,9 +8,11 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#import "ASDimension.h"
-#import "ASAssert.h"
-#import "CoreGraphics+ASConvenience.h"
+#import <AsyncDisplayKit/ASDimension.h>
+
+#import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
+
+#import <AsyncDisplayKit/ASAssert.h>
 
 #pragma mark - ASDimension
 
@@ -58,6 +60,10 @@ ASLayoutSize const ASLayoutSizeAuto = {ASDimensionAuto, ASDimensionAuto};
 
 
 #pragma mark - ASSizeRange
+
+ASSizeRange const ASSizeRangeZero = {};
+
+ASSizeRange const ASSizeRangeUnconstrained = { {0, 0}, { INFINITY, INFINITY }};
 
 struct _Range {
   CGFloat min;

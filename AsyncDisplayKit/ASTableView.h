@@ -11,10 +11,11 @@
 #ifndef MINIMAL_ASDK
 
 #import <UIKit/UIKit.h>
-#import <AsyncDisplayKit/ASRangeController.h>
-#import <AsyncDisplayKit/ASTableViewProtocols.h>
+
 #import <AsyncDisplayKit/ASBaseDefines.h>
-#import <AsyncDisplayKit/ASBatchContext.h>
+#import <AsyncDisplayKit/ASLayoutController.h>
+#import <AsyncDisplayKit/ASLayoutRangeType.h>
+#import <AsyncDisplayKit/ASTableViewProtocols.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -60,6 +61,11 @@ NS_ASSUME_NONNULL_BEGIN
  * Defaults to two screenfuls.
  */
 @property (nonatomic, assign) CGFloat leadingScreensForBatching;
+
+/*
+ * A Boolean value that determines whether the nodes that the data source renders will be flipped.
+ */
+@property (nonatomic, assign) BOOL inverted;
 
 @end
 

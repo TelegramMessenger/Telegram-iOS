@@ -14,15 +14,15 @@
 //
 
 #import <atomic>
-#import "ASDisplayNode.h"
-#import "ASThread.h"
-#import "_ASTransitionContext.h"
-#import "ASLayoutElement.h"
-#import "ASLayoutTransition.h"
-#import "ASEnvironment.h"
-#import "ASWeakSet.h"
+#import <AsyncDisplayKit/ASDisplayNode.h>
+#import <AsyncDisplayKit/ASThread.h>
+#import <AsyncDisplayKit/_ASTransitionContext.h>
+#import <AsyncDisplayKit/ASLayoutElement.h>
+#import <AsyncDisplayKit/ASLayoutTransition.h>
+#import <AsyncDisplayKit/ASEnvironment.h>
+#import <AsyncDisplayKit/ASWeakSet.h>
 
-#import "ASDisplayNode+Beta.h"
+#import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -108,13 +108,11 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   
 @protected
   ASDisplayNode * __weak _supernode;
+  NSMutableArray *_subnodes;
   
   ASLayoutElementStyle *_style;
 
   std::atomic_uint _displaySentinel;
-
-  int32_t _transitionID;
-  BOOL _transitionInProgress;
 
   // This is the desired contentsScale, not the scale at which the layer's contents should be displayed
   CGFloat _contentsScaleForDisplay;
@@ -122,7 +120,6 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   ASEnvironmentState _environmentState;
 
   UIEdgeInsets _hitTestSlop;
-  NSMutableArray *_subnodes;
   
 #if ASEVENTLOG_ENABLE
   ASEventLog *_eventLog;
@@ -135,10 +132,15 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   NSTimeInterval _defaultLayoutTransitionDelay;
   UIViewAnimationOptions _defaultLayoutTransitionOptions;
 
+  int32_t _transitionID;
+  BOOL _transitionInProgress;
+  
   int32_t _pendingTransitionID;
   ASLayoutTransition *_pendingLayoutTransition;
   std::shared_ptr<ASDisplayNodeLayout> _calculatedDisplayNodeLayout;
   std::shared_ptr<ASDisplayNodeLayout> _pendingDisplayNodeLayout;
+  ASLayoutSpec *_layoutSpec;
+  BOOL _shouldCacheLayoutSpec;
   
   ASDisplayNodeViewBlock _viewBlock;
   ASDisplayNodeLayerBlock _layerBlock;

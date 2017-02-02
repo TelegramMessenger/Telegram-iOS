@@ -11,16 +11,15 @@
 //
 
 #ifndef MINIMAL_ASDK
+#import <AsyncDisplayKit/ASPagerNode.h>
+#import <AsyncDisplayKit/ASDelegateProxy.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
+#import <AsyncDisplayKit/ASPagerFlowLayout.h>
+#import <AsyncDisplayKit/ASAssert.h>
+#import <AsyncDisplayKit/ASCellNode.h>
+#import <AsyncDisplayKit/ASCollectionView+Undeprecated.h>
 
-#import "ASPagerNode.h"
-#import "ASDelegateProxy.h"
-#import "ASDisplayNode+Subclasses.h"
-#import "ASPagerFlowLayout.h"
-#import "ASAssert.h"
-#import "ASCellNode.h"
-#import "ASCollectionView+Undeprecated.h"
-
-@interface ASPagerNode () <ASCollectionDataSource, ASCollectionDelegate, ASCollectionViewDelegateFlowLayout, ASDelegateProxyInterceptor>
+@interface ASPagerNode () <ASCollectionDataSource, ASCollectionDelegate, ASCollectionDelegateFlowLayout, ASDelegateProxyInterceptor>
 {
   ASPagerFlowLayout *_flowLayout;
 

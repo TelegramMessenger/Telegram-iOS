@@ -10,6 +10,7 @@
 
 #pragma once
 #import <UIKit/UIKit.h>
+
 #import <AsyncDisplayKit/ASBaseDefines.h>
 #import <AsyncDisplayKit/ASAssert.h>
 
@@ -199,6 +200,16 @@ typedef struct {
   CGSize min;
   CGSize max;
 } ASSizeRange;
+
+/**
+ * A size range with all dimensions zero.
+ */
+extern ASSizeRange const ASSizeRangeZero;
+
+/**
+ * A size range from zero to infinity in both directions.
+ */
+extern ASSizeRange const ASSizeRangeUnconstrained;
 
 /**
  * Creates an ASSizeRange with provided min and max size.

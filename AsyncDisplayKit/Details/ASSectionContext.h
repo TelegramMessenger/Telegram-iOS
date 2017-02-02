@@ -11,6 +11,7 @@
 //
 
 #ifndef MINIMAL_ASDK
+#import <Foundation/Foundation.h>
 
 @class ASCollectionView;
 

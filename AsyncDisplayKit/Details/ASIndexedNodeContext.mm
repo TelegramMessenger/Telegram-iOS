@@ -9,12 +9,10 @@
 //  LICENSE file in the root directory of this source tree. An additional grant
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
-
 #ifndef MINIMAL_ASDK
-
-#import "ASIndexedNodeContext.h"
-#import "ASEnvironmentInternal.h"
-#import "ASCellNode+Internal.h"
+#import <AsyncDisplayKit/ASIndexedNodeContext.h>
+#import <AsyncDisplayKit/ASEnvironmentInternal.h>
+#import <AsyncDisplayKit/ASCellNode+Internal.h>
 #import <mutex>
 
 @interface ASIndexedNodeContext ()
@@ -43,7 +41,6 @@
     _supplementaryElementKind = [supplementaryElementKind copy];
     _constrainedSize = constrainedSize;
     _environment = environment;
-    _environmentTraitCollection = environment.environmentTraitCollection;
   }
   return self;
 }
@@ -61,7 +58,7 @@
     node.cachedIndexPath = _indexPath;
     node.supplementaryElementKind = _supplementaryElementKind;
     node.owningNode = (ASDisplayNode *)_environment;
-    ASEnvironmentStatePropagateDown(node, _environmentTraitCollection);
+    ASEnvironmentStatePropagateDown(node, [_environment environmentTraitCollection]);
     _node = node;
   }
   return _node;

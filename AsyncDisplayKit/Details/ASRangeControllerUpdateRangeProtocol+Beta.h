@@ -9,7 +9,7 @@
 //
 
 #ifndef MINIMAL_ASDK
-
+#import <Foundation/Foundation.h>
 #import <AsyncDisplayKit/ASLayoutRangeType.h>
 
 @protocol ASRangeControllerUpdateRangeProtocol <NSObject>
