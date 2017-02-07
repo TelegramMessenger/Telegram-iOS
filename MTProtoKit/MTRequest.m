@@ -10,6 +10,8 @@
 
 #import "MTRpcError.h"
 
+#import <libkern/OSAtomic.h>
+
 @interface MTRequestInternalId : NSObject <NSCopying>
 {
     NSUInteger _value;
@@ -24,8 +26,8 @@
     self = [super init];
     if (self != nil)
     {
-        static NSUInteger nextValue = 1;
-        _value = nextValue++;
+        static int32_t nextValue = 1;
+        _value = OSAtomicIncrement32(&nextValue);
     }
     return self;
 }

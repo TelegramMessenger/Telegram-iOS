@@ -8,6 +8,8 @@
 
 #import "MTOutgoingMessage.h"
 
+#import <libkern/OSAtomic.h>
+
 @interface MTOutgoingMessageInternalId : NSObject <NSCopying>
 {
     NSUInteger _value;
@@ -22,8 +24,8 @@
     self = [super init];
     if (self != nil)
     {
-        static NSUInteger nextValue = 1;
-        _value = nextValue++;
+        static int32_t nextValue = 1;
+        _value = OSAtomicIncrement32(&nextValue);
     }
     return self;
 }
