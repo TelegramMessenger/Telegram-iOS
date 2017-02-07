@@ -47,6 +47,11 @@
 		D044E1641B2AD718001EE087 /* MurMurHash32.h in Headers */ = {isa = PBXBuildFile; fileRef = D044E1611B2AD667001EE087 /* MurMurHash32.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D049EAF01E44D9B900A2CD3A /* PostboxStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAEF1E44D9B900A2CD3A /* PostboxStateView.swift */; };
 		D049EAF11E44D9B900A2CD3A /* PostboxStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAEF1E44D9B900A2CD3A /* PostboxStateView.swift */; };
+		D050F2651E4A5B4800988324 /* fts3_tokenizer.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516741B2EC90400AE42E0 /* fts3_tokenizer.h */; };
+		D050F2661E4A5B5A00988324 /* MessageGloballyUniqueIdTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */; };
+		D050F2671E4A5B5A00988324 /* TimestampBasedMessageAttributesTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1B11E3266B100D5B9DE /* TimestampBasedMessageAttributesTable.swift */; };
+		D050F2681E4A5B5A00988324 /* TimestampBasedMessageAttributesIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1B01E3266B100D5B9DE /* TimestampBasedMessageAttributesIndexTable.swift */; };
+		D050F2691E4A5B5A00988324 /* MultiplePeersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386B1E3FCEE50044D6FE /* MultiplePeersView.swift */; };
 		D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D055BD321B7D3D2D00F06C0A /* MediaBox.swift */; };
 		D05F09A61C9E9F9300BB6F96 /* MediaResourceStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */; };
 		D060B77B1CF4845A0050BE9B /* ReadStateTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */; };
@@ -674,6 +679,7 @@
 			files = (
 				D0B418201D7DFDFD004562A4 /* sqlite3ext.h in Headers */,
 				D0B4185D1D7DFE35004562A4 /* IpcNotifier.h in Headers */,
+				D050F2651E4A5B4800988324 /* fts3_tokenizer.h in Headers */,
 				D0B4185B1D7DFE2C004562A4 /* MurMurHash32.h in Headers */,
 				D0B4181E1D7DFDF8004562A4 /* SQLite-Bridging.h in Headers */,
 				D0B4181F1D7DFDFB004562A4 /* sqlite3.h in Headers */,
@@ -824,6 +830,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D050F2661E4A5B5A00988324 /* MessageGloballyUniqueIdTable.swift in Sources */,
+				D050F2671E4A5B5A00988324 /* TimestampBasedMessageAttributesTable.swift in Sources */,
+				D050F2681E4A5B5A00988324 /* TimestampBasedMessageAttributesIndexTable.swift in Sources */,
+				D050F2691E4A5B5A00988324 /* MultiplePeersView.swift in Sources */,
 				C2A315BE1E2E733900D89000 /* PeerMergedOperationLogIndexTable.swift in Sources */,
 				C2A315BF1E2E733900D89000 /* PeerMergedOperationLogView.swift in Sources */,
 				C2A315BD1E2E732000D89000 /* PeerOperationLogMetadataTable.swift in Sources */,
