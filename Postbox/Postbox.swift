@@ -197,6 +197,22 @@ public final class Modifier {
         }
     }
     
+    public func replaceOrderedItemListItems(collectionId: Int32, items: [OrderedItemListEntry]) {
+        self.postbox?.replaceOrderedItemListItems(collectionId: collectionId, items: items)
+    }
+    
+    public func addOrMoveToFirstPositionOrderedItemListItem(collectionId: Int32, item: OrderedItemListEntry, removeTailIfCountExceeds: Int?) {
+        self.postbox?.addOrMoveToFirstPositionOrderedItemListItem(collectionId: collectionId, item: item, removeTailIfCountExceeds: removeTailIfCountExceeds)
+    }
+    
+    public func getOrderedListItemIds(collectionId: Int32) -> [MemoryBuffer] {
+        if let postbox = postbox {
+            return postbox.getOrderedListItemIds(collectionId: collectionId)
+        } else {
+            return []
+        }
+    }
+    
     public func getMessage(_ id: MessageId) -> Message? {
         if let postbox = self.postbox {
             if let entry = postbox.messageHistoryIndexTable.get(id) {
@@ -335,6 +351,7 @@ public final class Postbox {
     
     private var peerPipes: [PeerId: ValuePipe<Peer>] = [:]
     
+    private var currentUpdatedState: Coding?
     private var currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
     private var currentUpdatedChatListInclusions: [PeerId: PeerChatListInclusion] = [:]
     private var currentUnsentOperations: [IntermediateMessageHistoryUnsentOperation] = []
@@ -352,6 +369,7 @@ public final class Postbox {
     private var currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation] = []
     private var currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation] = []
     private var currentPreferencesOperations: [PreferencesOperation] = []
+    private var currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]] = [:]
     
     private var currentReplaceChatListHoles: [(MessageIndex, ChatListHole?)] = []
     private var currentReplacedContactPeerIds: Set<PeerId>?
@@ -405,6 +423,8 @@ public final class Postbox {
     var timestampBasedMessageAttributesTable: TimestampBasedMessageAttributesTable!
     var timestampBasedMessageAttributesIndexTable: TimestampBasedMessageAttributesIndexTable!
     var preferencesTable: PreferencesTable!
+    var orderedItemListTable: OrderedItemListTable!
+    var orderedItemListIndexTable: OrderedItemListIndexTable!
     
     //temporary
     var peerRatingTable: RatingTable<PeerId>!
@@ -529,6 +549,8 @@ public final class Postbox {
             self.peerMergedOperationLogIndexTable = PeerMergedOperationLogIndexTable(valueBox: self.valueBox, table: PeerMergedOperationLogIndexTable.tableSpec(30), metadataTable: self.peerOperationLogMetadataTable!)
             self.peerOperationLogTable = PeerOperationLogTable(valueBox: self.valueBox, table: PeerOperationLogTable.tableSpec(31), metadataTable: self.peerOperationLogMetadataTable, mergedIndexTable: self.peerMergedOperationLogIndexTable)
             self.preferencesTable = PreferencesTable(valueBox: self.valueBox, table: PreferencesTable.tableSpec(35))
+            self.orderedItemListIndexTable = OrderedItemListIndexTable(valueBox: self.valueBox, table: OrderedItemListIndexTable.tableSpec(37))
+            self.orderedItemListTable = OrderedItemListTable(valueBox: self.valueBox, table: OrderedItemListTable.tableSpec(38), indexTable: self.orderedItemListIndexTable)
             
             self.tables.append(self.keychainTable)
             self.tables.append(self.peerTable)
@@ -563,6 +585,8 @@ public final class Postbox {
             self.tables.append(self.peerMergedOperationLogIndexTable)
             self.tables.append(self.peerOperationLogTable)
             self.tables.append(self.preferencesTable)
+            self.tables.append(self.orderedItemListTable)
+            self.tables.append(self.orderedItemListIndexTable)
             
             self.transactionStateVersion = self.metadataTable.transactionStateVersion()
             
@@ -600,35 +624,15 @@ public final class Postbox {
         return nextId
     }
     
-    private var cachedState: Coding?
-    
     fileprivate func setState(_ state: Coding) {
-        self.cachedState = state
-        
+        self.currentUpdatedState = state
         self.metadataTable.setState(state)
         
         self.statePipe.putNext(state)
     }
     
     fileprivate func getState() -> Coding? {
-        if let cachedState = self.cachedState {
-            return cachedState
-        } else {
-            if let state = self.metadataTable.state() {
-                self.cachedState = state
-                return state
-            }
-            
-            return nil
-        }
-    }
-    
-    @available(*, deprecated: 1.0)
-    public func state() -> Signal<Coding?, NoError> {
-        return self.modify { modifier -> Signal<Coding?, NoError> in
-            return Signal<Coding?, NoError>.single(self.getState())
-                |> then(self.statePipe.signal() |> map { $0 })
-        } |> switchToLatest
+        return self.metadataTable.state()
     }
     
     public func keychainEntryForKey(_ key: String) -> Data? {
@@ -1001,7 +1005,7 @@ public final class Postbox {
             return self.peerTable.get(peerId)
         }, updatedTotalUnreadCount: &self.currentUpdatedTotalUnreadCount)
         
-        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, currentPreferencesOperations: self.currentPreferencesOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
+        let transaction = PostboxTransaction(currentUpdatedState: self.currentUpdatedState, currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, currentPreferencesOperations: self.currentPreferencesOperations, currentOrderedItemListOperations: self.currentOrderedItemListOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
@@ -1015,6 +1019,7 @@ public final class Postbox {
             }
         }
         
+        self.currentUpdatedState = nil
         self.currentOperationsByPeerId.removeAll()
         self.currentUpdatedChatListInclusions.removeAll()
         self.currentFilledHolesByPeerId.removeAll()
@@ -1034,6 +1039,7 @@ public final class Postbox {
         self.currentPeerMergedOperationLogOperations.removeAll()
         self.currentTimestampBasedMessageAttributesOperations.removeAll()
         self.currentPreferencesOperations.removeAll()
+        self.currentOrderedItemListOperations.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
@@ -1582,6 +1588,24 @@ public final class Postbox {
         } |> switchToLatest
     }
     
+    public func stateView() -> Signal<PostboxStateView, NoError> {
+        return self.modify { modifier -> Signal<PostboxStateView, NoError> in
+            let mutableView = MutablePostboxStateView(state: self.getState())
+            
+            let (index, signal) = self.viewTracker.addPostboxStateView(mutableView)
+            
+            return (.single(PostboxStateView(mutableView))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removePostboxStateView(index)
+                        }
+                    }
+            }
+            } |> switchToLatest
+    }
+    
     public func messageHistoryHolesView() -> Signal<MessageHistoryHolesView, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -1630,9 +1654,15 @@ public final class Postbox {
         }
     }
     
-    public func itemCollectionsView(namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) -> Signal<ItemCollectionsView, NoError> {
-        return self.modify { modifier -> ItemCollectionsView in
-            let mutableView = MutableItemCollectionsView(namespaces: namespaces, aroundIndex: aroundIndex, count: count, getInfos: { namespace in
+    public func itemCollectionsView(orderedItemListCollectionIds: [Int32], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) -> Signal<ItemCollectionsView, NoError> {
+        return self.modify { modifier -> Signal<ItemCollectionsView, NoError> in
+            let itemListViews = orderedItemListCollectionIds.map { collectionId -> MutableOrderedItemListView in
+                return MutableOrderedItemListView(collectionId: collectionId, getItems: { collectionId in
+                    return self.orderedItemListTable.getItems(collectionId: collectionId)
+                })
+            }
+            
+            let mutableView = MutableItemCollectionsView(orderedItemListsViews: itemListViews, namespaces: namespaces, aroundIndex: aroundIndex, count: count, getInfos: { namespace in
                 return self.itemCollectionInfoTable.getInfos(namespace: namespace)
             }, lowerCollectionId: { namespaceList, collectionId, collectionIndex in
                 return self.itemCollectionInfoTable.lowerCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
@@ -1643,8 +1673,39 @@ public final class Postbox {
             }, higherItems: { collectionId, itemIndex, count in
                 return self.itemCollectionItemTable.higherItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
             })
-            return ItemCollectionsView(mutableView)
-        }
+            
+            let (index, signal) = self.viewTracker.addItemCollectionView(mutableView)
+            
+            return (.single(ItemCollectionsView(mutableView))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeItemCollectionView(index)
+                        }
+                    }
+            }
+        } |> switchToLatest
+    }
+    
+    public func orderedItemListView(collectionId: Int32) -> Signal<OrderedItemListView, NoError> {
+        return self.modify { modifier -> Signal<OrderedItemListView, NoError> in
+            let mutableView = MutableOrderedItemListView(collectionId: collectionId, getItems: { collectionId in
+                return self.orderedItemListTable.getItems(collectionId: collectionId)
+            })
+            
+            let (index, signal) = self.viewTracker.addOrderedItemListView(mutableView)
+            
+            return (.single(OrderedItemListView(mutableView))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeOrderedItemListView(index)
+                        }
+                    }
+            }
+        } |> switchToLatest
     }
     
     public func mergedOperationLogView(tag: PeerOperationLogTag, limit: Int) -> Signal<PeerMergedOperationLogView, NoError> {
@@ -1765,6 +1826,18 @@ public final class Postbox {
     
     fileprivate func setPreferencesEntry(key: ValueBoxKey, value: PreferencesEntry?) {
         self.preferencesTable.set(key: key, value: value, operations: &self.currentPreferencesOperations)
+    }
+    
+    fileprivate func replaceOrderedItemListItems(collectionId: Int32, items: [OrderedItemListEntry]) {
+        self.orderedItemListTable.replaceItems(collectionId: collectionId, items: items, operations: &self.currentOrderedItemListOperations)
+    }
+    
+    fileprivate func addOrMoveToFirstPositionOrderedItemListItem(collectionId: Int32, item: OrderedItemListEntry, removeTailIfCountExceeds: Int?) {
+        self.orderedItemListTable.addItemOrMoveToFirstPosition(collectionId: collectionId, item: item, removeTailIfCountExceeds: removeTailIfCountExceeds, operations: &self.currentOrderedItemListOperations)
+    }
+    
+    fileprivate func getOrderedListItemIds(collectionId: Int32) -> [MemoryBuffer] {
+        return self.orderedItemListTable.getItemIds(collectionId: collectionId)
     }
     
     public func isMasterClient() -> Signal<Bool, NoError> {

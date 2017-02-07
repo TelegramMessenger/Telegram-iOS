@@ -5,6 +5,12 @@ public struct ItemCollectionViewEntryIndex: Comparable {
     public let collectionId: ItemCollectionId
     public let itemIndex: ItemCollectionItemIndex
     
+    public init(collectionIndex: Int32, collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex) {
+        self.collectionIndex = collectionIndex
+        self.collectionId = collectionId
+        self.itemIndex = itemIndex
+    }
+    
     public static func ==(lhs: ItemCollectionViewEntryIndex, rhs: ItemCollectionViewEntryIndex) -> Bool {
         return lhs.collectionIndex == rhs.collectionIndex && lhs.collectionId == rhs.collectionId && lhs.itemIndex == rhs.itemIndex
     }
@@ -42,7 +48,7 @@ private func fetchLowerEntries(namespaces: [ItemCollectionId.Namespace], collect
     while true {
         let remainingCount = count - entries.count
         assert(remainingCount > 0)
-        var collectionItems = lowerItems(currentCollectionId, currentItemIndex, remainingCount)
+        let collectionItems = lowerItems(currentCollectionId, currentItemIndex, remainingCount)
         for item in collectionItems {
             entries.append(ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: currentCollectionIndex, collectionId: currentCollectionId, itemIndex: item.index), item: item))
         }
@@ -75,7 +81,7 @@ private func fetchHigherEntries(namespaces: [ItemCollectionId.Namespace], collec
     while true {
         let remainingCount = count - entries.count
         assert(remainingCount > 0)
-        var collectionItems = higherItems(currentCollectionId, currentItemIndex, remainingCount)
+        let collectionItems = higherItems(currentCollectionId, currentItemIndex, remainingCount)
         for item in collectionItems {
             entries.append(ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: currentCollectionIndex, collectionId: currentCollectionId, itemIndex: item.index), item: item))
         }
@@ -148,6 +154,7 @@ private func aroundEntries(namespaces: [ItemCollectionId.Namespace],
 }
 
 final class MutableItemCollectionsView {
+    let orderedItemListsViews: [MutableOrderedItemListView]
     let namespaces: [ItemCollectionId.Namespace]
     
     var collectionInfos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?)]
@@ -155,7 +162,8 @@ final class MutableItemCollectionsView {
     var lower: ItemCollectionViewEntry?
     var higher: ItemCollectionViewEntry?
     
-    init(namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int, getInfos: (_ namespace: ItemCollectionId.Namespace) -> [(Int, ItemCollectionId, ItemCollectionInfo)], lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, lowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem], higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, higherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) {
+    init(orderedItemListsViews: [MutableOrderedItemListView], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int, getInfos: (_ namespace: ItemCollectionId.Namespace) -> [(Int, ItemCollectionId, ItemCollectionInfo)], lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, lowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem], higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, higherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) {
+        self.orderedItemListsViews = orderedItemListsViews
         self.namespaces = namespaces
         
         self.collectionInfos = []
@@ -187,15 +195,27 @@ final class MutableItemCollectionsView {
         self.lower = lower
         self.higher = higher
     }
+    
+    func replay(orderedItemListOperations: [Int32: [OrderedItemListOperation]]) -> Bool {
+        var updated = false
+        for view in self.orderedItemListsViews {
+            if view.replay(operations: orderedItemListOperations) {
+                updated = true
+            }
+        }
+        return updated
+    }
 }
 
 public final class ItemCollectionsView {
+    public let orderedItemListsViews: [OrderedItemListView]
     public let collectionInfos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?)]
     public let entries: [ItemCollectionViewEntry]
     public let lower: ItemCollectionViewEntry?
     public let higher: ItemCollectionViewEntry?
     
     init(_ mutableView: MutableItemCollectionsView) {
+        self.orderedItemListsViews = mutableView.orderedItemListsViews.map { OrderedItemListView($0) }
         self.collectionInfos = mutableView.collectionInfos
         self.entries = mutableView.entries
         self.lower = mutableView.lower

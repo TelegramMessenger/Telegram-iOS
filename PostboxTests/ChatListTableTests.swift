@@ -62,7 +62,7 @@ class ChatListTableTests: XCTestCase {
     var synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable?
     var peerChatInterfaceStateTable: PeerChatInterfaceStateTable?
     var peerTable: PeerTable?
-    var peerNameTokenIndexTable: PeerNameTokenIndexTable?
+    var peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>?
     var peerNameIndexTable: PeerNameIndexTable?
     var notificationSettingsTable: PeerNotificationSettingsTable?
     var globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable?
@@ -92,7 +92,7 @@ class ChatListTableTests: XCTestCase {
         self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox!, table: MessageGloballyUniqueIdTable.tableSpec(24))
         self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
         self.peerTable = PeerTable(valueBox: self.valueBox!, table: PeerTable.tableSpec(20))
-        self.peerNameTokenIndexTable = PeerNameTokenIndexTable(valueBox: self.valueBox!, table: PeerNameTokenIndexTable.tableSpec(21))
+        self.peerNameTokenIndexTable = ReverseIndexReferenceTable<PeerIdReverseIndexReference>(valueBox: self.valueBox!, table: ReverseIndexReferenceTable<PeerIdReverseIndexReference>.tableSpec(21))
         self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox!, table: PeerNameIndexTable.tableSpec(22), peerTable: self.peerTable!, peerNameTokenIndexTable: self.peerNameTokenIndexTable!)
         self.notificationSettingsTable = PeerNotificationSettingsTable(valueBox: self.valueBox!, table: PeerNotificationSettingsTable.tableSpec(23))
         self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox!, table: ChatListIndexTable.tableSpec(5), peerNameIndexTable: self.peerNameIndexTable!, metadataTable: self.historyMetadataTable!, readStateTable: self.readStateTable!, notificationSettingsTable: self.notificationSettingsTable!)

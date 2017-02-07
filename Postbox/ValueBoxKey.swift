@@ -165,8 +165,15 @@ public struct ValueBoxKey: Hashable, CustomStringConvertible, Comparable {
                 memory[i] = byte
                 break
             } else {
-                byte = 0xff
-                memory[i] = byte
+                if i == 0 {
+                    assert(self.length > 1)
+                    let previousKey = ValueBoxKey(length: self.length - 1)
+                    memcpy(previousKey.memory, self.memory, self.length - 1)
+                    return previousKey
+                } else {
+                    byte = 0xff
+                    memory[i] = byte
+                }
             }
             i -= 1
         }

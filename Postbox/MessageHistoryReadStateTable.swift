@@ -290,7 +290,7 @@ final class MessageHistoryReadStateTable: Table {
                     assertionFailure()
                 case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count):
                     if maxIncomingReadIndex < messageIndex {
-                        var (deltaCount, holes, messageIds) = incomingStatsInRange(maxIncomingReadIndex.successor(), messageIndex)
+                        let (deltaCount, holes, messageIds) = incomingStatsInRange(maxIncomingReadIndex.successor(), messageIndex)
                         
                         if traceReadStates {
                             print("[ReadStateTable] applyIncomingMaxReadIndex after deltaCount: \(deltaCount), holes: \(holes)")
@@ -428,7 +428,7 @@ final class MessageHistoryReadStateTable: Table {
                                 sharedBuffer.write(&maxOutgoingReadId, offset: 0, length: 4)
                                 sharedBuffer.write(&maxKnownId, offset: 0, length: 4)
                                 sharedBuffer.write(&count, offset: 0, length: 4)
-                            case var .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count):
+                            case .indexBased(let maxIncomingReadIndex, let maxOutgoingReadIndex, var count):
                                 var kind: Int8 = 1
                                 sharedBuffer.write(&kind, offset: 0, length: 1)
                             

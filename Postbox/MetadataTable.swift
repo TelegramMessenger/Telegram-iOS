@@ -12,6 +12,8 @@ final class MetadataTable: Table {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
+    private var cachedState: Coding?
+    
     private let sharedBuffer = WriteBuffer()
     
     override init(valueBox: ValueBox, table: ValueBoxTable) {
@@ -42,15 +44,22 @@ final class MetadataTable: Table {
     }
     
     func state() -> Coding? {
-        if let value = self.valueBox.get(self.table, key: self.key(.State)) {
-            if let state = Decoder(buffer: value).decodeRootObject() {
-                return state
+        if let cachedState = self.cachedState {
+            return cachedState
+        } else {
+            if let value = self.valueBox.get(self.table, key: self.key(.State)) {
+                if let state = Decoder(buffer: value).decodeRootObject() {
+                    self.cachedState = state
+                    return state
+                }
             }
+            return nil
         }
-        return nil
     }
     
     func setState(_ state: Coding) {
+        self.cachedState = state
+        
         let encoder = Encoder()
         encoder.encodeRootObject(state)
         self.valueBox.set(self.table, key: self.key(.State), value: encoder.readBufferNoCopy())
@@ -91,5 +100,9 @@ final class MetadataTable: Table {
         var clientId = id
         buffer.write(&clientId, offset: 0, length: 8)
         self.valueBox.set(self.table, key: self.key(.MasterClientId), value: buffer)
+    }
+    
+    override func clearMemoryCache() {
+        self.cachedState = nil
     }
 }
