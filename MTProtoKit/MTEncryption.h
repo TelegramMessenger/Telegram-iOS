@@ -24,7 +24,9 @@ int32_t MTMurMurHash32(const void *bytes, int length);
     
 void MTAesEncryptInplace(NSMutableData *data, NSData *key, NSData *iv);
 void MTAesEncryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv);
+void MTAesEncryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *key, void *iv);
 void MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv);
+void MTAesDecryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *key, void *iv);
 NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv);
 NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv);
 NSData *MTRsaEncrypt(NSString *publicKey, NSData *data);

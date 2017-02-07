@@ -9,6 +9,8 @@
 #ifndef MtProtoKit_MTInternalId_h
 #define MtProtoKit_MTInternalId_h
 
+#import <libkern/OSAtomic.h>
+
 #define MTInternalId(name) MT##name##InternalId
 
 #define MTInternalIdClass(name) \
@@ -26,8 +28,8 @@
     self = [super init]; \
     if (self != nil) \
     { \
-        static NSUInteger nextValue = 1; \
-        _value = nextValue++; \
+        static int32_t nextValue = 1; \
+        _value = OSAtomicIncrement32(&nextValue); \
     } \
     return self; \
 } \

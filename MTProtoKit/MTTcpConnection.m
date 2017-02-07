@@ -471,9 +471,11 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
             __weak MTTcpConnection *weakSelf = self;
             [delegate tcpConnectionDecodePacketProgressToken:self data:data token:_packetHeadDecodeToken completion:^(int64_t token, id packetProgressToken)
             {
-                __strong MTTcpConnection *strongSelf = weakSelf;
-                if (strongSelf != nil && token == strongSelf.packetHeadDecodeToken)
-                    strongSelf.packetProgressToken = packetProgressToken;
+                [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
+                    __strong MTTcpConnection *strongSelf = weakSelf;
+                    if (strongSelf != nil && token == strongSelf.packetHeadDecodeToken)
+                        strongSelf.packetProgressToken = packetProgressToken;
+                }];
             }];
         }
         

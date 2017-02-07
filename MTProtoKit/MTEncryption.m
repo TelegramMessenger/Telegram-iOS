@@ -189,6 +189,18 @@ void MTAesEncryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableD
     memcpy(iv.mutableBytes, aesIv, 16 * 2);
 }
 
+void MTAesEncryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *key, void *iv) {
+    unsigned char aesIv[32];
+    memcpy(aesIv, iv, 32);
+    
+    void *outData = malloc(length);
+    MyAesIgeEncrypt(data, (int)length, outData, key.bytes, (int)key.length, aesIv);
+    memcpy(data, outData, length);
+    free(outData);
+    
+    memcpy(iv, aesIv, 32);
+}
+
 void MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv)
 {
     unsigned char aesIv[16 * 2];
@@ -200,6 +212,18 @@ void MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableD
     free(outData);
     
     memcpy(iv.mutableBytes, aesIv, 16 * 2);
+}
+
+void MTAesDecryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *key, void *iv) {
+    unsigned char aesIv[16 * 2];
+    memcpy(aesIv, iv, 16 * 2);
+    
+    void *outData = malloc(length);
+    MyAesIgeDecrypt(data, (int)length, outData, key.bytes, (int)key.length, aesIv);
+    memcpy(data, outData, length);
+    free(outData);
+    
+    memcpy(iv, aesIv, 16 * 2);
 }
 
 NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv)
