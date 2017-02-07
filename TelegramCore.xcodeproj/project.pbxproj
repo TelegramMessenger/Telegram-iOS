@@ -149,6 +149,29 @@
 		D050F2111E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050F20F1E48AB0600988324 /* InteractivePhoneFormatter.swift */; };
 		D050F2511E4A59C200988324 /* JoinLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050F2501E4A59C200988324 /* JoinLink.swift */; };
 		D050F2521E4A59C200988324 /* JoinLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050F2501E4A59C200988324 /* JoinLink.swift */; };
+		D050F2531E4A5AC500988324 /* NBAsYouTypeFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843991DA7FF30005F29E1 /* NBAsYouTypeFormatter.h */; };
+		D050F2541E4A5AC500988324 /* NBMetadataCore.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B8439A1DA7FF30005F29E1 /* NBMetadataCore.h */; };
+		D050F2551E4A5AC500988324 /* NBMetadataCoreMapper.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B8439C1DA7FF30005F29E1 /* NBMetadataCoreMapper.h */; };
+		D050F2561E4A5AC500988324 /* NBMetadataCoreTest.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B8439E1DA7FF30005F29E1 /* NBMetadataCoreTest.h */; };
+		D050F2571E4A5AC500988324 /* NBMetadataCoreTestMapper.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843A01DA7FF30005F29E1 /* NBMetadataCoreTestMapper.h */; };
+		D050F2581E4A5AC500988324 /* NBMetadataHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843A21DA7FF30005F29E1 /* NBMetadataHelper.h */; };
+		D050F2591E4A5AC500988324 /* NBNumberFormat.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843A41DA7FF30005F29E1 /* NBNumberFormat.h */; };
+		D050F25A1E4A5AC500988324 /* NBPhoneMetaData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843A61DA7FF30005F29E1 /* NBPhoneMetaData.h */; };
+		D050F25B1E4A5AC500988324 /* NBPhoneMetaDataGenerator.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843A81DA7FF30005F29E1 /* NBPhoneMetaDataGenerator.h */; };
+		D050F25C1E4A5AC500988324 /* NBPhoneNumber.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843AA1DA7FF30005F29E1 /* NBPhoneNumber.h */; };
+		D050F25D1E4A5AC500988324 /* NBPhoneNumberDefines.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843AC1DA7FF30005F29E1 /* NBPhoneNumberDefines.h */; };
+		D050F25E1E4A5AC500988324 /* NBPhoneNumberDesc.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843AE1DA7FF30005F29E1 /* NBPhoneNumberDesc.h */; };
+		D050F25F1E4A5AC500988324 /* NBPhoneNumberUtil.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B843B01DA7FF30005F29E1 /* NBPhoneNumberUtil.h */; };
+		D050F2601E4A5AD500988324 /* AutoremoveTimeoutMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1A71E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift */; };
+		D050F2611E4A5AE700988324 /* PrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B27A11E394D8B0022A4C0 /* PrivacySettings.swift */; };
+		D050F2621E4A5AE700988324 /* GlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */; };
+		D050F2631E4A5AEB00988324 /* SynchronizePinnedChatsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC38781E40BAF20044D6FE /* SynchronizePinnedChatsOperation.swift */; };
+		D050F2641E4A5AEB00988324 /* ManagedSynchronizePinnedChatsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC38761E40BAAA0044D6FE /* ManagedSynchronizePinnedChatsOperations.swift */; };
+		D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */; };
+		D050F26B1E4A5B6D00988324 /* ApplyMaxReadIndexInteractively.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1A91E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift */; };
+		D050F26C1E4A5B6D00988324 /* UpdatePeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386F1E40853E0044D6FE /* UpdatePeers.swift */; };
+		D050F26D1E4A5B6D00988324 /* CreateGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386D1E3FDAB70044D6FE /* CreateGroup.swift */; };
+		D050F26E1E4A5B6D00988324 /* RemovePeerChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC38741E40A7F70044D6FE /* RemovePeerChat.swift */; };
 		D067066C1D512ADB00DED3E3 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706671D512ADB00DED3E3 /* Postbox.framework */; };
 		D067066D1D512ADB00DED3E3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706681D512ADB00DED3E3 /* SwiftSignalKit.framework */; };
 		D073CE5D1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE5C1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift */; };
@@ -1028,9 +1051,22 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D050F25A1E4A5AC500988324 /* NBPhoneMetaData.h in Headers */,
 				D0B4186B1D7E03D5004562A4 /* TelegramCoreMac.h in Headers */,
+				D050F2561E4A5AC500988324 /* NBMetadataCoreTest.h in Headers */,
 				D0B418BC1D7E05D0004562A4 /* TelegramCoreIncludes.h in Headers */,
 				D0B418BB1D7E05BE004562A4 /* NetworkLogging.h in Headers */,
+				D050F2551E4A5AC500988324 /* NBMetadataCoreMapper.h in Headers */,
+				D050F2541E4A5AC500988324 /* NBMetadataCore.h in Headers */,
+				D050F25C1E4A5AC500988324 /* NBPhoneNumber.h in Headers */,
+				D050F2531E4A5AC500988324 /* NBAsYouTypeFormatter.h in Headers */,
+				D050F25E1E4A5AC500988324 /* NBPhoneNumberDesc.h in Headers */,
+				D050F25F1E4A5AC500988324 /* NBPhoneNumberUtil.h in Headers */,
+				D050F2571E4A5AC500988324 /* NBMetadataCoreTestMapper.h in Headers */,
+				D050F2591E4A5AC500988324 /* NBNumberFormat.h in Headers */,
+				D050F25D1E4A5AC500988324 /* NBPhoneNumberDefines.h in Headers */,
+				D050F25B1E4A5AC500988324 /* NBPhoneMetaDataGenerator.h in Headers */,
+				D050F2581E4A5AC500988324 /* NBMetadataHelper.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1338,12 +1374,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */,
+				D050F26B1E4A5B6D00988324 /* ApplyMaxReadIndexInteractively.swift in Sources */,
+				D050F26C1E4A5B6D00988324 /* UpdatePeers.swift in Sources */,
+				D050F26D1E4A5B6D00988324 /* CreateGroup.swift in Sources */,
+				D050F26E1E4A5B6D00988324 /* RemovePeerChat.swift in Sources */,
 				D01D6BFA1E42A718006151C6 /* SearchStickers.swift in Sources */,
 				C2A315C01E2E776A00D89000 /* RequestStartBot.swift in Sources */,
 				D0F7B1EA1E045C87007EB8A5 /* ChangePeerNotificationSettings.swift in Sources */,
 				D0B418A71D7E0592004562A4 /* Fetch.swift in Sources */,
 				D02ABC7C1E30058F00CAE539 /* DeleteMessagesInteractively.swift in Sources */,
 				D050F2111E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */,
+				D050F2631E4A5AEB00988324 /* SynchronizePinnedChatsOperation.swift in Sources */,
 				D0B418B81D7E05A6004562A4 /* ContactManagement.swift in Sources */,
 				D050F2521E4A59C200988324 /* JoinLink.swift in Sources */,
 				D0F7B1E91E045C87007EB8A5 /* PeerCommands.swift in Sources */,
@@ -1401,6 +1443,7 @@
 				D073CE6E1DCBCF17007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
 				D001F3E81E128A1C007A8C60 /* ChannelState.swift in Sources */,
 				D0B844451DAB91FD005F29E1 /* AccountViewTracker.swift in Sources */,
+				D050F2601E4A5AD500988324 /* AutoremoveTimeoutMessageAttribute.swift in Sources */,
 				D049EAD91E43DAD200A2CD3A /* ManagedRecentStickers.swift in Sources */,
 				D0B418A61D7E0592004562A4 /* CloudFileMediaResource.swift in Sources */,
 				D073CEA51DCBF3F5007511FD /* StickerManagement.swift in Sources */,
@@ -1424,6 +1467,7 @@
 				D0F7AB301DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
 				D073CE6D1DCBCF17007511FD /* InlineBotMessageAttribute.swift in Sources */,
 				D0448C9A1E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */,
+				D050F2611E4A5AE700988324 /* PrivacySettings.swift in Sources */,
 				D0B8440F1DAB91CD005F29E1 /* Either.swift in Sources */,
 				D0DC35511DE36908000195EB /* RequestChatContextResults.swift in Sources */,
 				D0F7B1EC1E045C87007EB8A5 /* SearchPeers.swift in Sources */,
@@ -1442,6 +1486,7 @@
 				D0B4188E1D7E0578004562A4 /* StoreMessage_Telegram.swift in Sources */,
 				D0B844461DAB91FD005F29E1 /* RecentPeers.swift in Sources */,
 				D03C53681DAD5CA9004C17B3 /* PeerUtils.swift in Sources */,
+				D050F2621E4A5AE700988324 /* GlobalNotificationSettings.swift in Sources */,
 				D0B418991D7E0580004562A4 /* TelegramMediaMap.swift in Sources */,
 				D0B844471DAB91FD005F29E1 /* ManagedServiceViews.swift in Sources */,
 				D03C53691DAD5CA9004C17B3 /* PeerAccessRestrictionInfo.swift in Sources */,
@@ -1466,6 +1511,7 @@
 				D0B844101DAB91CD005F29E1 /* MergeLists.swift in Sources */,
 				D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
 				D001F3F11E128A1C007A8C60 /* SynchronizePeerReadState.swift in Sources */,
+				D050F2641E4A5AEB00988324 /* ManagedSynchronizePinnedChatsOperations.swift in Sources */,
 				D0F7B1E81E045C87007EB8A5 /* PeerParticipants.swift in Sources */,
 				D049EAD61E43D98500A2CD3A /* RecentMediaItem.swift in Sources */,
 				D0B844331DAB91E0005F29E1 /* NBPhoneNumber.m in Sources */,
