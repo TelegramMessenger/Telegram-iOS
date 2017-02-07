@@ -198,18 +198,17 @@ public final class AccountStateManager {
                 self.currentIsUpdatingValue = true
                 let account = self.account
                 let mediaBox = account.postbox.mediaBox
-                let queue = self.queue
-                let signal = account.postbox.state()
-                    |> filter { state in
-                        if let _ = state as? AuthorizedAccountState {
-                            return true
+                let signal = account.postbox.stateView()
+                    |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
+                        if let state = view.state as? AuthorizedAccountState {
+                            return .single(state)
                         } else {
-                            return false
+                            return .complete()
                         }
                     }
                     |> take(1)
                     |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
-                        if let authorizedState = (state as! AuthorizedAccountState).state {
+                        if let authorizedState = state.state {
                             let request = account.network.request(Api.functions.updates.getDifference(flags: 0, pts: authorizedState.pts, ptsTotalLimit: nil, date: authorizedState.date, qts: authorizedState.qts))
                                 |> retryRequest
                             return request |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
@@ -255,9 +254,9 @@ public final class AccountStateManager {
                         }
                     }
                     |> deliverOn(self.queue)
-                signal.start(next: { [weak self] difference, finalState in
+                let _ = signal.start(next: { [weak self] difference, finalState in
                     if let strongSelf = self {
-                        if case let .pollDifference = strongSelf.operations.removeFirst() {
+                        if case .pollDifference = strongSelf.operations.removeFirst() {
                             let events: AccountFinalStateEvents
                             if let finalState = finalState {
                                 events = currentEvents.union(with: AccountFinalStateEvents(state: finalState))
@@ -365,7 +364,7 @@ public final class AccountStateManager {
                         }
                     }
                 }
-                (signal |> deliverOn(self.queue)).start(error: { _ in
+                let _ = (signal |> deliverOn(self.queue)).start(error: { _ in
                     completed()
                 }, completed: {
                     completed()
@@ -441,10 +440,10 @@ public final class AccountStateManager {
                     return messages
                 }
                 
-                (signal |> deliverOn(self.queue)).start(next: { [weak self] messages in
+                let _ = (signal |> deliverOn(self.queue)).start(next: { [weak self] messages in
                     if let strongSelf = self {
                         for message in messages {
-                            print("notify: \(messageMainPeer(message)?.displayTitle): \(message.id)")
+                            print("notify: \(String(describing: messageMainPeer(message)?.displayTitle)): \(message.id)")
                         }
                         
                         strongSelf.notificationMessagesPipe.putNext(messages)
@@ -458,7 +457,7 @@ public final class AccountStateManager {
                 if self.operations.count > 1 {
                     self.operations.removeFirst()
                     for (id, f) in preSubscribers {
-                        self.addPollCompletion(f, id: id)
+                        let _ = self.addPollCompletion(f, id: id)
                     }
                     self.startFirstOperation()
                 } else {
@@ -477,7 +476,7 @@ public final class AccountStateManager {
                                     }
                                 } else {
                                     for (id, f) in subscribers {
-                                        strongSelf.addPollCompletion(f, id: id)
+                                        let _ = strongSelf.addPollCompletion(f, id: id)
                                     }
                                 }
                                 strongSelf.startFirstOperation()
@@ -486,7 +485,7 @@ public final class AccountStateManager {
                             }
                         }
                     }
-                    (signal |> deliverOn(self.queue)).start(error: { _ in
+                    let _ = (signal |> deliverOn(self.queue)).start(error: { _ in
                         completed()
                     }, completed: {
                         completed()

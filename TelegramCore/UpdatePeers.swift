@@ -50,6 +50,8 @@ public func updatePeers(modifier: Modifier, peers: [Peer], update: (Peer?, Peer)
                                     updatedInclusion = .ifHasMessages
                                 }
                             }
+                        case .left:
+                            updatedInclusion = .never
                         default:
                             if currentInclusion == .notSpecified {
                                 updatedInclusion = .never

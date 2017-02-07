@@ -130,7 +130,7 @@ func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoP
             }
             
             context.keychain = keychain
-            let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: networkUsageInfoPath == nil ? nil : MTNetworkUsageCalculationInfo(filePath: networkUsageInfoPath))!
+            let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: nil)!
             
             let connectionStatus = Promise<ConnectionStatus>(.WaitingForNetwork)
             

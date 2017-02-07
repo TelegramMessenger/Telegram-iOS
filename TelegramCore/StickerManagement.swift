@@ -12,14 +12,14 @@ private func hashForInfos(_ infos: [StickerPackCollectionInfo]) -> Int32 {
     var acc: UInt32 = 0
     
     for info in infos {
-        acc = (acc &* 20261) &+ UInt32(bitPattern: info.hash)
+        acc = UInt32(bitPattern: Int32(bitPattern: acc &* UInt32(20261)) &+ info.hash)
     }
     
-    return Int32(bitPattern: acc % UInt32(0x7FFFFFFF))
+    return Int32(bitPattern: acc % 0x7FFFFFFF)
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
-    let currentHash = postbox.itemCollectionsView(namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 1)
+    let currentHash = postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 1)
         |> take(1)
         |> map { view -> Int32 in
             return hashForInfos(view.collectionInfos.map({ $0.1 as! StickerPackCollectionInfo }))
@@ -28,7 +28,7 @@ func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoEr
     let remoteStickerPacks = currentHash
         |> mapToSignal { hash -> Signal<Void, NoError> in
             if hash != 0 {
-                //return .never()
+                return .never()
             }
             
             return network.request(Api.functions.messages.getAllStickers(hash: hash))

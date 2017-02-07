@@ -1290,4 +1290,8 @@
     return self.currentOutput_;
 }
 
+- (NSString *)regionPrefix {
+    return self.prefixBeforeNationalNumber_;
+}
+
 @end

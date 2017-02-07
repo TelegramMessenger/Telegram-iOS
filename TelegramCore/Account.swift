@@ -45,32 +45,6 @@ public func ==(lhs: AccountState, rhs: AccountState) -> Bool {
     return lhs.equalsTo(rhs)
 }
 
-public final class UnauthorizedAccountState: AccountState {
-    let masterDatacenterId: Int32
-    
-    public required init(decoder: Decoder) {
-        self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId")
-        super.init()
-    }
-    
-    override public func encode(_ encoder: Encoder) {
-        encoder.encodeInt32(self.masterDatacenterId, forKey: "masterDatacenterId")
-    }
-    
-    init(masterDatacenterId: Int32) {
-        self.masterDatacenterId = masterDatacenterId
-        super.init()
-    }
-    
-    override func equalsTo(_ other: AccountState) -> Bool {
-        if let other = other as? UnauthorizedAccountState {
-            return self.masterDatacenterId == other.masterDatacenterId
-        } else {
-            return false
-        }
-    }
-}
-
 public class AuthorizedAccountState: AccountState {
     public final class State: Coding, Equatable, CustomStringConvertible {
         let pts: Int32
@@ -177,21 +151,25 @@ public func generateAccountId() -> AccountId {
 
 public class UnauthorizedAccount {
     public let id: AccountId
+    public let appGroupPath: String
     public let basePath: String
     public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
+    public let logger: Logger
     
     public var masterDatacenterId: Int32 {
         return Int32(self.network.mtProto.datacenterId)
     }
     
-    init(id: AccountId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network) {
+    init(id: AccountId, appGroupPath: String, basePath: String, logger: Logger, testingEnvironment: Bool, postbox: Postbox, network: Network) {
         self.id = id
+        self.appGroupPath = appGroupPath
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
+        self.logger = logger
         network.shouldKeepConnection.set(.single(true))
     }
     
@@ -210,7 +188,7 @@ public class UnauthorizedAccount {
             
             return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
                 |> map { network in
-                    return UnauthorizedAccount(id: self.id, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
+                    return UnauthorizedAccount(id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, logger: self.logger, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                 }
         }
     }
@@ -267,6 +245,8 @@ private var declaredEncodables: Void = {
     declareEncodable(GlobalNotificationSettings.self, f: { GlobalNotificationSettings(decoder: $0) })
     declareEncodable(CloudChatRemoveChatOperation.self, f: { CloudChatRemoveChatOperation(decoder: $0) })
     declareEncodable(SynchronizePinnedChatsOperation.self, f: { SynchronizePinnedChatsOperation(decoder: $0) })
+    declareEncodable(RecentMediaItem.self, f: { RecentMediaItem(decoder: $0) })
+    declareEncodable(RecentPeerItem.self, f: { RecentPeerItem(decoder: $0) })
     
     return
 }()
@@ -275,8 +255,13 @@ func accountNetworkUsageInfoPath(basePath: String) -> String {
     return basePath + "/network-usage"
 }
 
-public func accountWithId(_ id: AccountId, appGroupPath: String, testingEnvironment: Bool) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
-    return Signal<(String, Postbox, AccountState?), NoError> { subscriber in
+public enum AccountLogger {
+    case named(String)
+    case instance(Logger)
+}
+
+public func accountWithId(_ id: AccountId, appGroupPath: String, logger: AccountLogger, testingEnvironment: Bool) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
+    return Signal<(String, Postbox, Coding?), NoError> { subscriber in
         let _ = declaredEncodables
         
         let path = "\(appGroupPath)/account\(id.stringValue)"
@@ -289,8 +274,9 @@ public func accountWithId(_ id: AccountId, appGroupPath: String, testingEnvironm
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: allMessageTags)
         
         let postbox = Postbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
-        return (postbox.state() |> take(1) |> map { accountState in
-            return (path, postbox, accountState as? AccountState)
+        return (postbox.stateView() |> take(1) |> map { view -> (String, Postbox, Coding?) in
+            let accountState = view.state
+            return (path, postbox, accountState)
         }).start(next: { args in
             subscriber.putNext(args)
             subscriber.putCompletion()
@@ -304,17 +290,25 @@ public func accountWithId(_ id: AccountId, appGroupPath: String, testingEnvironm
             postbox.removeKeychainEntryForKey(key)
         })
         
+        let concreteLogger: Logger
+        switch logger {
+            case let .named(name):
+                concreteLogger = Logger(basePath: basePath + "/" + name)
+            case let .instance(instance):
+                concreteLogger = instance
+        }
+        
         if let accountState = accountState {
             switch accountState {
                 case let unauthorizedState as UnauthorizedAccountState:
                     return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            .left(value: UnauthorizedAccount(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
+                            .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, logger: concreteLogger, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
                         }
                 case let authorizedState as AuthorizedAccountState:
                     return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            return .right(value: Account(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId))
+                            return .right(value: Account(id: id, basePath: basePath, logger: concreteLogger, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId))
                         }
                 case _:
                     assertionFailure("Unexpected accountState \(accountState)")
@@ -323,7 +317,7 @@ public func accountWithId(_ id: AccountId, appGroupPath: String, testingEnvironm
         
         return initializedNetwork(datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
             |> map { network -> Either<UnauthorizedAccount, Account> in
-                return .left(value: UnauthorizedAccount(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
+                return .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, logger: concreteLogger, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
         }
     }
 }
@@ -393,6 +387,8 @@ public class Account {
     public let network: Network
     public let peerId: PeerId
     
+    public let logger: Logger
+    
     public private(set) var stateManager: AccountStateManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
@@ -426,13 +422,14 @@ public class Account {
         return self.networkStateValue.get()
     }
     
-    public init(id: AccountId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId) {
+    public init(id: AccountId, basePath: String, logger: Logger, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
         self.peerId = peerId
+        self.logger = logger
         
         self.peerInputActivityManager = PeerInputActivityManager()
         self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager)
@@ -471,8 +468,6 @@ public class Account {
                 
                 let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
                 
-                let langCode = NSLocale.preferredLanguages.first ?? "en"
-                
                 #if os(macOS)
                     let pInfo = ProcessInfo.processInfo
                     let systemVersion = pInfo.operatingSystemVersionString
@@ -505,8 +500,6 @@ public class Account {
                 }
                 
                 let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
-                
-                let langCode = NSLocale.preferredLanguages.first ?? "en"
                 
                 #if os(macOS)
                     let pInfo = ProcessInfo.processInfo
@@ -567,6 +560,9 @@ public class Account {
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedRecentStickers(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedRecentGifs(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged
@@ -597,8 +593,6 @@ public class Account {
                         return combineLatest(pushStatusOnce, updatePresenceLocally)
                             |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
                     }
-                    
-                    return .complete()
                 } else {
                     return .complete()
                 }
@@ -616,7 +610,7 @@ public class Account {
         self.managedOperationsDisposable.dispose()
     }
     
-    public func currentNetworkStats() -> Signal<MTNetworkUsageManagerStats, NoError> {
+    /*public func currentNetworkStats() -> Signal<MTNetworkUsageManagerStats, NoError> {
         return Signal { subscriber in
             let manager = MTNetworkUsageManager(info: MTNetworkUsageCalculationInfo(filePath: accountNetworkUsageInfoPath(basePath: self.basePath)))!
             manager.currentStats().start(next: { next in
@@ -628,7 +622,7 @@ public class Account {
             
             return EmptyDisposable
         }
-    }
+    }*/
     
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
         return self.peerInputActivityManager.activities(peerId: peerId)

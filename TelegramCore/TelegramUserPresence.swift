@@ -126,7 +126,7 @@ public enum UserPresenceStatus: Comparable, Coding {
 public final class TelegramUserPresence: PeerPresence {
     public let status: UserPresenceStatus
     
-    init(status: UserPresenceStatus) {
+    public init(status: UserPresenceStatus) {
         self.status = status
     }
     

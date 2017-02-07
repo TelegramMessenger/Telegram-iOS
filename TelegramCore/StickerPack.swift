@@ -5,8 +5,6 @@ import Foundation
     import Postbox
 #endif
 
-//stickerSet#cd303b41 flags:# installed:flags.0?true archived:flags.1?true official:flags.2?true masks:flags.3?true id:long access_hash:long title:string short_name:string count:int hash:int = StickerSet;
-
 public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     public let id: ItemCollectionId
     public let accessHash: Int64
@@ -14,7 +12,7 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     public let shortName: String
     public let hash: Int32
     
-    init(id: ItemCollectionId, accessHash: Int64, title: String, shortName: String, hash: Int32) {
+    public init(id: ItemCollectionId, accessHash: Int64, title: String, shortName: String, hash: Int32) {
         self.id = id
         self.accessHash = accessHash
         self.title = title
@@ -48,7 +46,7 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
     public let file: TelegramMediaFile
     public var indexKeys: [MemoryBuffer]
     
-    init(index: ItemCollectionItemIndex, file: TelegramMediaFile, indexKeys: [MemoryBuffer]) {
+    public init(index: ItemCollectionItemIndex, file: TelegramMediaFile, indexKeys: [MemoryBuffer]) {
         self.index = index
         self.file = file
         self.indexKeys = indexKeys

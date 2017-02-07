@@ -1003,8 +1003,6 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Acc
                 return updatedState
             }
     }
-    
-    return .single(state)
 }
 
 private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
@@ -1135,7 +1133,7 @@ private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableS
         }
         
         if !previousStateMatches {
-            trace("State", what: ".UpdateState previous state \(previousState) doesn't match current state \(currentState)")
+            trace("State", what: ".UpdateState previous state \(previousState) doesn't match current state \(String(describing: currentState))")
             failed = true
         }
     }
@@ -1152,7 +1150,7 @@ private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableS
             previousStateMatches = true
         }
         if !previousStateMatches {
-            trace("State", what: ".UpdateChannelState for \(peerId), previous state \(previousState) doesn't match current state \(currentState)")
+            trace("State", what: ".UpdateChannelState for \(peerId), previous state \(previousState) doesn't match current state \(String(describing: currentState))")
             failed = true
         }
     }

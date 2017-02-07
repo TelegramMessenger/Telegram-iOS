@@ -162,7 +162,7 @@ public final class PendingMessageManager {
                 assert(strongSelf.queue.isCurrent())
                 
                 for message in messages {
-                    guard let peer = message.peers[message.id.peerId], let messageContext = strongSelf.messageContexts[message.id] else {
+                    guard let messageContext = strongSelf.messageContexts[message.id] else {
                         continue
                     }
                     
@@ -237,7 +237,7 @@ public final class PendingMessageManager {
                 }
                 
                 var layer: SecretChatLayer?
-                var state = modifier.getPeerChatState(message.id.peerId) as? SecretChatState
+                let state = modifier.getPeerChatState(message.id.peerId) as? SecretChatState
                 if let state = state {
                     switch state.embeddedState {
                         case .terminated, .handshake:
@@ -303,7 +303,6 @@ public final class PendingMessageManager {
             } else if let peer = modifier.getPeer(message.id.peerId), let inputPeer = apiInputPeer(peer) {
                 var uniqueId: Int64 = 0
                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
-                var outgoingChatContextResultAttribute: OutgoingChatContextResultMessageAttribute?
                 var replyMessageId: Int32?
                 
                 for attribute in message.attributes {
@@ -313,13 +312,11 @@ public final class PendingMessageManager {
                         uniqueId = outgoingInfo.uniqueId
                     } else if let attribute = attribute as? ForwardSourceInfoAttribute {
                         forwardSourceInfoAttribute = attribute
-                    } else if let attribute = attribute as? OutgoingChatContextResultMessageAttribute {
-                        outgoingChatContextResultAttribute = attribute
                     }
                 }
                 
                 var flags: Int32 = 0
-                if let replyMessageId = replyMessageId {
+                if let _ = replyMessageId {
                     flags |= Int32(1 << 0)
                 }
                 
@@ -327,7 +324,7 @@ public final class PendingMessageManager {
                 
                 let sendMessageRequest: Signal<Api.Updates, NoError>
                 switch content {
-                    case let .text(text):
+                    case .text:
                         sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: nil), tag: dependencyTag)
                             |> mapError { _ -> NoError in
                                 return NoError()
@@ -384,9 +381,6 @@ public final class PendingMessageManager {
     }
     
     private func applySentMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
-        let messageId = result.rawMessageIds.first
-        let apiMessage = result.messages.first
-        
         return applyUpdateMessage(postbox: postbox, stateManager: stateManager, message: message, result: result) |> afterDisposed { [weak self] in
             if let strongSelf = self {
                 strongSelf.queue.async {

@@ -47,6 +47,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         }
         
+        var sentStickers: [TelegramMediaFile] = []
+        
         modifier.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
@@ -97,10 +99,19 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
             }
             
+            for media in media {
+                if let file = media as? TelegramMediaFile, file.isSticker {
+                    sentStickers.append(file)
+                }
+            }
+            
             return StoreMessage(id: updatedId, globallyUniqueId: nil, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tagsForStoreMessage(media), forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
         })
         if let updatedTimestamp = updatedTimestamp {
             modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)
+        }
+        for file in sentStickers {
+            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
         }
         stateManager.addUpdates(result)
     }

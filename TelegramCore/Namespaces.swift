@@ -37,8 +37,14 @@ public struct Namespaces {
     public struct ItemCollection {
         public static let CloudStickerPacks: Int32 = 0
         public static let CloudMaskPacks: Int32 = 1
-        public static let CloudRecentGifs: Int32 = 2
+        public static let CloudRecentStickers: Int32 = 2
+    }
+    
+    public struct OrderedItemList {
         public static let CloudRecentStickers: Int32 = 0
+        public static let CloudRecentGifs: Int32 = 1
+        public static let RecentlySearchedPeerIds: Int32 = 2
+        public static let CloudRecentInlineBots: Int32 = 3
     }
     
     struct CachedItemCollection {

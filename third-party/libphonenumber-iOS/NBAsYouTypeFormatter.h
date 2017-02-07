@@ -33,4 +33,6 @@
 
 @property (nonatomic, assign, readonly) BOOL isSuccessfulFormatting;
 
+@property (nonatomic, strong, readonly) NSString *regionPrefix;
+
 @end
