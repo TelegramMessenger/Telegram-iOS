@@ -100,9 +100,15 @@ public func combineLatest<T1, T2, T3, E>(_ s1: Signal<T1, E>, _ s2: Signal<T2, E
     }, initialValues: [:])
 }
 
-public func combineLatest<T1, T2, T3, T4, E>(_ s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>, s4: Signal<T4, E>) -> Signal<(T1, T2, T3, T4), E> {
+public func combineLatest<T1, T2, T3, T4, E>(_ s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>, _ s4: Signal<T4, E>) -> Signal<(T1, T2, T3, T4), E> {
     return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3), signalOfAny(s4)], combine: { values in
         return (values[0] as! T1, values[1] as! T2, values[2] as! T3, values[3] as! T4)
+    }, initialValues: [:])
+}
+
+public func combineLatest<T1, T2, T3, T4, T5, E>(_ s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>, _ s4: Signal<T4, E>, _ s5: Signal<T5, E>) -> Signal<(T1, T2, T3, T4, T5), E> {
+    return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3), signalOfAny(s4), signalOfAny(s5)], combine: { values in
+        return (values[0] as! T1, values[1] as! T2, values[2] as! T3, values[3] as! T4, values[4] as! T5)
     }, initialValues: [:])
 }
 

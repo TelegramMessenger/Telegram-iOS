@@ -17,14 +17,30 @@ public final class Subscriber<T, E> {
     }
     
     deinit {
+        var freeDisposable: Disposable?
+        pthread_mutex_lock(&self.lock)
+        if let disposable = self.disposable {
+            freeDisposable = disposable
+            self.disposable = nil
+        }
+        pthread_mutex_unlock(&self.lock)
+        freeDisposable = nil
+        
         pthread_mutex_destroy(&self.lock)
     }
     
     internal func assignDisposable(_ disposable: Disposable) {
+        var dispose = false
+        pthread_mutex_lock(&self.lock)
         if self.terminated {
-            disposable.dispose()
+            dispose = true
         } else {
             self.disposable = disposable
+        }
+        pthread_mutex_unlock(&self.lock)
+        
+        if dispose {
+            disposable.dispose()
         }
     }
     
@@ -53,17 +69,20 @@ public final class Subscriber<T, E> {
     }
     
     public func putError(_ error: E) {
-        var shouldDispose = false
         var action: ((E) -> Void)! = nil
+        
+        var disposeDisposable: Disposable?
         
         pthread_mutex_lock(&self.lock)
         if !self.terminated {
             action = self.error
-            shouldDispose = true;
             self.next = nil
             self.error = nil
             self.completed = nil;
             self.terminated = true
+            disposeDisposable = self.disposable
+            self.disposable = nil
+            
         }
         pthread_mutex_unlock(&self.lock)
         
@@ -71,25 +90,26 @@ public final class Subscriber<T, E> {
             action(error)
         }
         
-        if shouldDispose && self.disposable != nil {
-            let disposable = self.disposable!
-            disposable.dispose()
-            self.disposable = nil
+        if let disposeDisposable = disposeDisposable {
+            disposeDisposable.dispose()
         }
     }
     
     public func putCompletion() {
-        var shouldDispose = false
         var action: (() -> Void)! = nil
+        
+        var disposeDisposable: Disposable? = nil
         
         pthread_mutex_lock(&self.lock)
         if !self.terminated {
             action = self.completed
-            shouldDispose = true;
             self.next = nil
             self.error = nil
-            self.completed = nil;
+            self.completed = nil
             self.terminated = true
+            
+            disposeDisposable = self.disposable
+            self.disposable = nil
         }
         pthread_mutex_unlock(&self.lock)
         
@@ -97,10 +117,8 @@ public final class Subscriber<T, E> {
             action()
         }
         
-        if shouldDispose && self.disposable != nil {
-            let disposable = self.disposable!
-            disposable.dispose()
-            self.disposable = nil
+        if let disposeDisposable = disposeDisposable {
+            disposeDisposable.dispose()
         }
     }
 }

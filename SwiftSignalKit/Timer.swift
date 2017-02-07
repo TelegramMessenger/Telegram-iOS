@@ -1,11 +1,11 @@
 import Foundation
 
 public final class Timer {
-    private var timer: DispatchSourceTimer?
-    private var timeout: Double
-    private var `repeat`: Bool
-    private var completion: (Void) -> Void
-    private var queue: Queue
+    private let timer = Atomic<DispatchSourceTimer?>(value: nil)
+    private let timeout: Double
+    private let `repeat`: Bool
+    private let completion: (Void) -> Void
+    private let queue: Queue
     
     public init(timeout: Double, `repeat`: Bool, completion: @escaping(Void) -> Void, queue: Queue) {
         self.timeout = timeout
@@ -28,7 +28,9 @@ public final class Timer {
                 }
             }
         })
-        self.timer = timer
+        self.timer.modify { _ in
+            return timer
+        }
         
         if self.`repeat` {
             let time: DispatchTime = DispatchTime.now() + self.timeout
@@ -42,9 +44,9 @@ public final class Timer {
     }
     
     public func invalidate() {
-        if let timer = self.timer {
-            timer.cancel()
-            self.timer = nil
+        self.timer.modify { timer in
+            timer?.cancel()
+            return nil
         }
     }
 }

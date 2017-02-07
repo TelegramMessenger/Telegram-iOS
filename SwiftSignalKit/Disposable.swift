@@ -12,18 +12,37 @@ final class _EmptyDisposable: Disposable {
 public let EmptyDisposable: Disposable = _EmptyDisposable()
 
 public final class ActionDisposable : Disposable {
-    private var action: () -> Void
-    private var lock: Int32 = 0
+    private var lock = pthread_mutex_t()
+    
+    private var action: (() -> Void)?
     
     public init(action: @escaping() -> Void) {
         self.action = action
+        
+        pthread_mutex_init(&self.lock, nil)
     }
     
-    public func dispose() {
-        if OSAtomicCompareAndSwap32(0, 1, &self.lock) {
-            self.action()
-            self.action = doNothing
-        }
+    deinit {
+        var freeAction: (() -> Void)?
+        pthread_mutex_lock(&self.lock)
+        freeAction = self.action
+        self.action = nil
+        pthread_mutex_unlock(&self.lock)
+        
+        freeAction = nil
+        
+        pthread_mutex_destroy(&self.lock)
+    }
+    
+    public func dispose() {var disposable: Disposable! = nil
+        let disposeAction: (() -> Void)?
+        
+        pthread_mutex_lock(&self.lock)
+        disposeAction = self.action
+        self.action = nil
+        pthread_mutex_unlock(&self.lock)
+        
+        disposeAction?()
     }
 }
 
@@ -37,6 +56,15 @@ public final class MetaDisposable : Disposable {
     }
     
     deinit {
+        var freeDisposable: Disposable?
+        pthread_mutex_lock(&self.lock)
+        if let disposable = self.disposable {
+            freeDisposable = disposable
+            self.disposable = nil
+        }
+        pthread_mutex_unlock(&self.lock)
+        freeDisposable = nil
+        
         pthread_mutex_destroy(&self.lock)
     }
     
@@ -95,6 +123,10 @@ public final class DisposableSet : Disposable {
     }
     
     deinit {
+        pthread_mutex_lock(&self.lock)
+        self.disposables.removeAll()
+        pthread_mutex_unlock(&self.lock)
+        
         pthread_mutex_destroy(&self.lock)
     }
     
