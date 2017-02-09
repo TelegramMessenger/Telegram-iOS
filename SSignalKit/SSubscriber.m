@@ -50,10 +50,17 @@
 
 - (void)_assignDisposable:(id<SDisposable>)disposable
 {
-    if (_terminated)
-        [disposable dispose];
-    else
+    bool dispose = false;
+    OSSpinLockLock(&_lock);
+    if (_terminated) {
+        dispose = true;
+    } else {
         _disposable = disposable;
+    }
+    OSSpinLockUnlock(&_lock);
+    if (dispose) {
+        [disposable dispose];
+    }
 }
 
 - (void)_markTerminatedWithoutDisposal
