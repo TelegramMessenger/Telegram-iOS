@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 private enum SentAuthorizationCodeTypeValue: Int32 {
     case otherSession = 0
