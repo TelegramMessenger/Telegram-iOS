@@ -256,7 +256,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         for updatedItem in transaction.updateItems {
             self.items[updatedItem.index] = updatedItem.item
             if let itemNode = self.itemNodes[updatedItem.index] {
-                //update node
+                updatedItem.item.update(node: itemNode)
             }
         }
         

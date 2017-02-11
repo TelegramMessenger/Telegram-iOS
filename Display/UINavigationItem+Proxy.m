@@ -62,6 +62,8 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 
 - (void)_ac91f40f_setLeftBarButtonItem:(UIBarButtonItem *)leftBarButtonItem animated:(BOOL)animated
 {
+    UIBarButtonItem *previousItem = self.leftBarButtonItem;
+    
     [self _ac91f40f_setLeftBarButtonItem:leftBarButtonItem animated:animated];
     
     UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
@@ -69,7 +71,7 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
         [targetItem setLeftBarButtonItem:leftBarButtonItem animated:animated];
     } else {
         [(NSBag *)[self associatedObjectForKey:setLeftBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
-            listener(leftBarButtonItem, animated);
+            listener(previousItem, leftBarButtonItem, animated);
         }];
     }
 }
@@ -80,6 +82,8 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 
 - (void)_ac91f40f_setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem animated:(BOOL)animated
 {
+    UIBarButtonItem *previousItem = self.rightBarButtonItem;
+    
     [self _ac91f40f_setRightBarButtonItem:rightBarButtonItem animated:animated];
     
     UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
@@ -87,7 +91,7 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
         [targetItem setRightBarButtonItem:rightBarButtonItem animated:animated];
     } else {
         [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
-            listener(rightBarButtonItem, animated);
+            listener(previousItem, rightBarButtonItem, animated);
         }];
     }
 }

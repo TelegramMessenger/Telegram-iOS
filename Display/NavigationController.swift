@@ -226,13 +226,28 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
         self.setViewControllers(controllers, animated: animated)
     }
     
-    public func replaceTopController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>?) {
+    public func replaceTopController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
         controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
-        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: {[weak self] _ in
+        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 ready?.set(true)
                 var controllers = strongSelf.viewControllers
                 controllers.removeLast()
+                controllers.append(controller)
+                strongSelf.setViewControllers(controllers, animated: animated)
+            }
+        }))
+    }
+    
+    public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
+        controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
+        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
+            if let strongSelf = self {
+                ready?.set(true)
+                var controllers = strongSelf.viewControllers
+                while controllers.count > 1 {
+                    controllers.removeLast()
+                }
                 controllers.append(controller)
                 strongSelf.setViewControllers(controllers, animated: animated)
             }

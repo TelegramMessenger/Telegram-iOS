@@ -17,6 +17,7 @@ public protocol ListViewItemHeader: class {
 open class ListViewItemHeaderNode: ASDisplayNode {
     private final var spring: ListViewItemSpring?
     let wantsScrollDynamics: Bool
+    let isRotated: Bool
     final private(set) var internalStickLocationDistanceFactor: CGFloat = 0.0
     final var internalStickLocationDistance: CGFloat = 0.0
     private var isFlashingOnScrolling = false
@@ -50,8 +51,9 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     open func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
     }
     
-    public init(dynamicBounce: Bool = false) {
+    public init(dynamicBounce: Bool = false, isRotated: Bool = false) {
         self.wantsScrollDynamics = dynamicBounce
+        self.isRotated = isRotated
         if dynamicBounce {
             self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
         }

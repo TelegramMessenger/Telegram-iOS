@@ -61,6 +61,41 @@ public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) 
     return UIImage(cgImage: image, scale: selectedScale, orientation: .up)
 }
 
+public func generateImage(_ size: CGSize, opaque: Bool = false, scale: CGFloat? = nil, rotatedContext: (CGSize, CGContext) -> Void) -> UIImage? {
+    let selectedScale = scale ?? deviceScale
+    let scaledSize = CGSize(width: size.width * selectedScale, height: size.height * selectedScale)
+    let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
+    let length = bytesPerRow * Int(scaledSize.height)
+    let bytes = malloc(length)!.assumingMemoryBound(to: Int8.self)
+    
+    guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
+        free(bytes)
+    })
+        else {
+            return nil
+    }
+    
+    let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | (opaque ? CGImageAlphaInfo.noneSkipFirst.rawValue : CGImageAlphaInfo.premultipliedFirst.rawValue))
+    
+    guard let context = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo.rawValue) else {
+        return nil
+    }
+    
+    context.scaleBy(x: selectedScale, y: selectedScale)
+    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context.scaleBy(x: 1.0, y: -1.0)
+    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    
+    rotatedContext(size, context)
+    
+    guard let image = CGImage(width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo, provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+        else {
+            return nil
+    }
+    
+    return UIImage(cgImage: image, scale: selectedScale, orientation: .up)
+}
+
 public func generateFilledCircleImage(diameter: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))

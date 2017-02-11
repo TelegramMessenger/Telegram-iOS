@@ -22,13 +22,29 @@ public struct Font {
         }
     }
     
+    public static func light(_ size: CGFloat) -> UIFont {
+        if #available(iOS 8.2, *) {
+            return UIFont.systemFont(ofSize: size, weight: UIFontWeightLight)
+        } else {
+            return CTFontCreateWithName("HelveticaNeue-Light" as CFString, size, nil)
+        }
+    }
+    
     public static func italic(_ size: CGFloat) -> UIFont {
         return UIFont.italicSystemFont(ofSize: size)
     }
 }
 
 public extension NSAttributedString {
-    convenience init(string: String, font: UIFont, textColor: UIColor = UIColor.black) {
-        self.init(string: string, attributes: [NSFontAttributeName: font, NSForegroundColorAttributeName  as String: textColor])
+    convenience init(string: String, font: UIFont, textColor: UIColor = UIColor.black, paragraphAlignment: NSTextAlignment? = nil) {
+        var attributes: [String: AnyObject] = [:]
+        attributes[NSFontAttributeName] = font
+        attributes[NSForegroundColorAttributeName] = textColor
+        if let paragraphAlignment = paragraphAlignment {
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = paragraphAlignment
+            attributes[NSParagraphStyleAttributeName] = paragraphStyle
+        }
+        self.init(string: string, attributes: attributes)
     }
 }

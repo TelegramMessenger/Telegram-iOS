@@ -21,7 +21,35 @@ public class NavigationButtonNode: ASTextNode {
         set(value) {
             _text = value
             
-            self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+            self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+        }
+    }
+    
+    private var imageNode: ASImageNode?
+    
+    private var _image: UIImage?
+    public var image: UIImage? {
+        get {
+            return _image
+        } set(value) {
+            _image = value
+            
+            if let _ = value {
+                if self.imageNode == nil {
+                    let imageNode = ASImageNode()
+                    imageNode.displayWithoutProcessing = true
+                    imageNode.displaysAsynchronously = false
+                    self.imageNode = imageNode
+                    self.addSubnode(imageNode)
+                }
+                self.imageNode?.image = image
+            } else if let imageNode = self.imageNode {
+                imageNode.removeFromSupernode()
+                self.imageNode = nil
+            }
+            
+            self.invalidateCalculatedLayout()
+            self.setNeedsLayout()
         }
     }
     
@@ -41,7 +69,7 @@ public class NavigationButtonNode: ASTextNode {
     public var color: UIColor = UIColor(0x007ee5) {
         didSet {
             if let text = self._text {
-                self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
     }
@@ -55,7 +83,7 @@ public class NavigationButtonNode: ASTextNode {
             if _bold != value {
                 _bold = value
                 
-                self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
     }
@@ -78,6 +106,11 @@ public class NavigationButtonNode: ASTextNode {
         if let node = self.node {
             let nodeSize = node.measure(constrainedSize)
             return CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
+        } else if let imageNode = self.imageNode {
+            let nodeSize = imageNode.measure(constrainedSize)
+            let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
+            imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0), y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
+            return size
         }
         return superSize
     }

@@ -20,7 +20,7 @@ static const void *customDisplayNodeKey = &customDisplayNodeKey;
 }
 
 - (instancetype)initWithCustomDisplayNode:(ASDisplayNode *)customDisplayNode {
-    self = [super init];
+    self = [self init];
     if (self != nil) {
         [self setAssociatedObject:customDisplayNode forKey:customDisplayNodeKey];
     }

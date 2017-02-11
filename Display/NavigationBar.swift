@@ -68,8 +68,13 @@ open class NavigationBar: ASDisplayNode {
     
     private var itemTitleListenerKey: Int?
     private var itemTitleViewListenerKey: Int?
+    
     private var itemLeftButtonListenerKey: Int?
+    private var itemLeftButtonSetEnabledListenerKey: Int?
+    
     private var itemRightButtonListenerKey: Int?
+    private var itemRightButtonSetEnabledListenerKey: Int?
+    
     private var _item: UINavigationItem?
     public var item: UINavigationItem? {
         get {
@@ -80,9 +85,25 @@ open class NavigationBar: ASDisplayNode {
                     previousValue.removeSetTitleListener(itemTitleListenerKey)
                     self.itemTitleListenerKey = nil
                 }
+                
                 if let itemLeftButtonListenerKey = self.itemLeftButtonListenerKey {
                     previousValue.removeSetLeftBarButtonItemListener(itemLeftButtonListenerKey)
                     self.itemLeftButtonListenerKey = nil
+                }
+                
+                if let itemLeftButtonSetEnabledListenerKey = self.itemLeftButtonSetEnabledListenerKey {
+                    previousValue.leftBarButtonItem?.removeSetEnabledListener(itemLeftButtonSetEnabledListenerKey)
+                    self.itemLeftButtonSetEnabledListenerKey = nil
+                }
+                
+                if let itemRightButtonListenerKey = self.itemRightButtonListenerKey {
+                    previousValue.removeSetRightBarButtonItemListener(itemRightButtonListenerKey)
+                    self.itemRightButtonListenerKey = nil
+                }
+                
+                if let itemRightButtonSetEnabledListenerKey = self.itemRightButtonSetEnabledListenerKey {
+                    previousValue.rightBarButtonItem?.removeSetEnabledListener(itemRightButtonSetEnabledListenerKey)
+                    self.itemRightButtonSetEnabledListenerKey = nil
                 }
             }
             self._item = value
@@ -105,16 +126,34 @@ open class NavigationBar: ASDisplayNode {
                     }
                 }
                 
-                self.itemLeftButtonListenerKey = item.addSetLeftBarButtonItemListener { [weak self] _, _ in
+                self.itemLeftButtonListenerKey = item.addSetLeftBarButtonItemListener { [weak self] previousItem, _, _ in
                     if let strongSelf = self {
+                        if let itemLeftButtonSetEnabledListenerKey = strongSelf.itemLeftButtonSetEnabledListenerKey {
+                            previousItem?.removeSetEnabledListener(itemLeftButtonSetEnabledListenerKey)
+                            strongSelf.itemLeftButtonSetEnabledListenerKey = nil
+                        }
+                        
                         strongSelf.updateLeftButton()
                         strongSelf.invalidateCalculatedLayout()
                         strongSelf.setNeedsLayout()
                     }
                 }
                 
-                self.itemRightButtonListenerKey = item.addSetRightBarButtonItemListener { [weak self] _, _ in
+                self.itemRightButtonListenerKey = item.addSetRightBarButtonItemListener { [weak self] previousItem, currentItem, _ in
                     if let strongSelf = self {
+                        if let itemRightButtonSetEnabledListenerKey = strongSelf.itemRightButtonSetEnabledListenerKey {
+                            previousItem?.removeSetEnabledListener(itemRightButtonSetEnabledListenerKey)
+                            strongSelf.itemRightButtonSetEnabledListenerKey = nil
+                        }
+                        
+                        if let currentItem = currentItem {
+                            strongSelf.itemRightButtonSetEnabledListenerKey = currentItem.addSetEnabledListener { _ in
+                                if let strongSelf = self {
+                                    strongSelf.updateRightButton()
+                                }
+                            }
+                        }
+                        
                         strongSelf.updateRightButton()
                         strongSelf.invalidateCalculatedLayout()
                         strongSelf.setNeedsLayout()
@@ -197,6 +236,8 @@ open class NavigationBar: ASDisplayNode {
                 self.backButtonArrow.removeFromSupernode()
                 
                 self.leftButtonNode.text = leftBarButtonItem.title ?? ""
+                self.leftButtonNode.bold = leftBarButtonItem.style == .done
+                self.leftButtonNode.isEnabled = leftBarButtonItem.isEnabled
                 if self.leftButtonNode.supernode == nil {
                     self.clippingNode.addSubnode(self.leftButtonNode)
                 }
@@ -230,6 +271,9 @@ open class NavigationBar: ASDisplayNode {
         if let item = self.item {
             if let rightBarButtonItem = item.rightBarButtonItem {
                 self.rightButtonNode.text = rightBarButtonItem.title ?? ""
+                self.rightButtonNode.image = rightBarButtonItem.image
+                self.rightButtonNode.bold = rightBarButtonItem.style == .done
+                self.rightButtonNode.isEnabled = rightBarButtonItem.isEnabled
                 self.rightButtonNode.node = rightBarButtonItem.customDisplayNode
                 if self.rightButtonNode.supernode == nil {
                     self.clippingNode.addSubnode(self.rightButtonNode)

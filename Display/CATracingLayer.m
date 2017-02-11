@@ -142,6 +142,12 @@ static void traceLayerSurfaces(int depth, CALayer * _Nonnull layer, NSMutableDic
 
 @implementation CATracingLayer
 
+- (void)setNeedsDisplay {
+}
+
+- (void)displayIfNeeded {
+}
+
 - (bool)isInvalidated {
     return [[self associatedObjectForKey:CATracingLayerInvalidatedKey] intValue] != 0;
 }

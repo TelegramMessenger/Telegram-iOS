@@ -66,7 +66,9 @@ class StatusBarManager {
     
     private func updateSurfaces(_ previousSurfaces: [StatusBarSurface]) {
         let statusBarFrame = self.host.statusBarFrame
-        let statusBarView = self.host.statusBarView!
+        guard let statusBarView = self.host.statusBarView else {
+            return
+        }
         
         var mappedSurfaces = self.surfaces.map({ optimizeMappedSurface(statusBarSize: statusBarFrame.size, surface: mappedSurface($0)) })
         

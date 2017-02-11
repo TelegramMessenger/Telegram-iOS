@@ -2,7 +2,7 @@
 
 typedef void (^UINavigationItemSetTitleListener)(NSString *);
 typedef void (^UINavigationItemSetTitleViewListener)(UIView *);
-typedef void (^UINavigationItemSetBarButtonItemListener)(UIBarButtonItem *, BOOL);
+typedef void (^UINavigationItemSetBarButtonItemListener)(UIBarButtonItem *, UIBarButtonItem *, BOOL);
 typedef void (^UITabBarItemSetBadgeListener)(NSString *);
 
 @interface UINavigationItem (Proxy)

@@ -31,6 +31,10 @@ open class TabBarController: ViewController {
                 _selectedIndex = index
                 
                 self.updateSelectedIndex()
+            } else {
+                if let controller = self.currentController {
+                    controller.scrollToTop?()
+                }
             }
         }
     }
@@ -87,12 +91,13 @@ open class TabBarController: ViewController {
             
             currentController.navigationItem.setTarget(self.navigationItem)
             displayNavigationBar = currentController.displayNavigationBar
-            //currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
+            currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
         } else {
             self.navigationItem.title = nil
             self.navigationItem.leftBarButtonItem = nil
             self.navigationItem.rightBarButtonItem = nil
             self.navigationItem.titleView = nil
+            self.navigationItem.backBarButtonItem = nil
             displayNavigationBar = false
         }
         if self.displayNavigationBar != displayNavigationBar {

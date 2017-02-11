@@ -219,6 +219,38 @@ public extension ContainedViewLayoutTransition {
                 })
         }
     }
+    
+    func updateBackgroundColor(node: ASDisplayNode, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let nodeColor = node.backgroundColor, nodeColor.isEqual(color) {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+            case .immediate:
+                node.backgroundColor = color
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                if let nodeColor = node.backgroundColor {
+                    node.backgroundColor = color
+                    node.layer.animate(from: nodeColor.cgColor, to: color.cgColor, keyPath: "backgroundColor", timingFunction: curve.timingFunction, duration: duration, completion: { result in
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
+                } else {
+                    node.backgroundColor = color
+                    if let completion = completion {
+                        completion(true)
+                    }
+                }
+        }
+    }
+    
 }
 
 public protocol ContainableController: class {

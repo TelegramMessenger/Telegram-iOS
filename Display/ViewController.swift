@@ -16,6 +16,19 @@ private func findCurrentResponder(_ view: UIView) -> UIResponder? {
     }
 }
 
+public enum ViewControllerPresentationAnimation {
+    case none
+    case modalSheet
+}
+
+open class ViewControllerPresentationArguments {
+    public let presentationAnimation: ViewControllerPresentationAnimation
+    
+    public init(presentationAnimation: ViewControllerPresentationAnimation) {
+        self.presentationAnimation = presentationAnimation
+    }
+}
+
 @objc open class ViewController: UIViewController, ContainableController {
     private var containerLayout = ContainerViewLayout()
     private let presentationContext: PresentationContext

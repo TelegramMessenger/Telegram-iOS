@@ -83,11 +83,18 @@ open class ListViewItemNode: ASDisplayNode {
     
     public final var scrollPositioningInsets: UIEdgeInsets = UIEdgeInsets()
     
+    public final var canBeUsedAsScrollToItemAnchor: Bool = true
+    
+    open var canBeSelected: Bool {
+        return true
+    }
+    
     public final var insets: UIEdgeInsets = UIEdgeInsets() {
         didSet {
             let effectiveInsets = self.insets
             self.frame = CGRect(origin: self.frame.origin, size: CGSize(width: self.contentSize.width, height: self.contentSize.height + effectiveInsets.top + effectiveInsets.bottom))
-            self.bounds = CGRect(origin: CGPoint(x: 0.0, y: -effectiveInsets.top + self.contentOffset + self.transitionOffset), size: self.bounds.size)
+            let bounds = self.bounds
+            self.bounds = CGRect(origin: CGPoint(x: bounds.origin.x, y: -effectiveInsets.top + self.contentOffset + self.transitionOffset), size: bounds.size)
             
             if oldValue != self.insets {
                 if let accessoryItemNode = self.accessoryItemNode {
@@ -110,14 +117,16 @@ open class ListViewItemNode: ASDisplayNode {
     private var contentOffset: CGFloat = 0.0 {
         didSet {
             let effectiveInsets = self.insets
-            self.bounds = CGRect(origin: CGPoint(x: 0.0, y: -effectiveInsets.top + self.contentOffset + self.transitionOffset), size: self.bounds.size)
+            let bounds = self.bounds
+            self.bounds = CGRect(origin: CGPoint(x: bounds.origin.x, y: -effectiveInsets.top + self.contentOffset + self.transitionOffset), size: bounds.size)
         }
     }
     
     public var transitionOffset: CGFloat = 0.0 {
         didSet {
             let effectiveInsets = self.insets
-            self.bounds = CGRect(origin: CGPoint(x: 0.0, y: -effectiveInsets.top + self.contentOffset + self.transitionOffset), size: self.bounds.size)
+            let bounds = self.bounds
+            self.bounds = CGRect(origin: CGPoint(x: bounds.origin.x, y: -effectiveInsets.top + self.contentOffset + self.transitionOffset), size: bounds.size)
         }
     }
     
@@ -378,12 +387,12 @@ open class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("insets", animation: animation)
     }
     
-    public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat) -> Void)? = nil) {
+    public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
         let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
                 strongSelf.apparentHeight = currentValue
                 if let update = update {
-                    update(progress)
+                    update(progress, currentValue)
                 }
             }
         })
@@ -432,7 +441,7 @@ open class ListViewItemNode: ASDisplayNode {
     open func setHighlighted(_ highlighted: Bool, animated: Bool) {
     }
     
-    open func animateFrameTransition(_ progress: CGFloat) {
+    open func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
         
     }
     

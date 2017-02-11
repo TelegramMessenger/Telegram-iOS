@@ -4,6 +4,14 @@ import SwiftSignalKit
 public enum ListViewItemUpdateAnimation {
     case None
     case System(duration: Double)
+    
+    public var isAnimated: Bool {
+        if case .None = self {
+            return false
+        } else {
+            return true
+        }
+    }
 }
 
 public struct ListViewItemConfigureNodeFlags: OptionSet {

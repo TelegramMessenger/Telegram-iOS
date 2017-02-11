@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0078A671C92B21400DF6D92 /* StatusBar.swift */; };
 		D007B9A81D1D3B5400DA746D /* PresentableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007B9A71D1D3B5400DA746D /* PresentableViewController.swift */; };
+		D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */; };
 		D015F7521D1AE08D00E269B5 /* ContainableController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7511D1AE08D00E269B5 /* ContainableController.swift */; };
 		D015F7541D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7531D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift */; };
 		D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7571D1B467200E269B5 /* ActionSheetController.swift */; };
@@ -80,6 +81,7 @@
 		D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */; };
 		D08E903E1D24187900533158 /* ActionSheetItemGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903D1D24187900533158 /* ActionSheetItemGroup.swift */; };
 		D08E90471D243C2F00533158 /* HighlightTrackingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E90461D243C2F00533158 /* HighlightTrackingButton.swift */; };
+		D0A749951E3A9E7B00AD786E /* SwitchNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A749941E3A9E7B00AD786E /* SwitchNode.swift */; };
 		D0AE2CA61C94548900F2FD3C /* GenerateImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE2CA51C94548900F2FD3C /* GenerateImage.swift */; };
 		D0AE3D4D1D25C816001CCE13 /* NavigationBarTransitionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */; };
 		D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */; };
@@ -102,6 +104,10 @@
 		D0C85DD61D1C600D00124894 /* ActionSheetButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD51D1C600D00124894 /* ActionSheetButtonNode.swift */; };
 		D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */; };
 		D0D94A171D3814F900740E02 /* UniversalTapRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */; };
+		D0DA444C1E4DCA4A005FDCA7 /* AlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA444B1E4DCA4A005FDCA7 /* AlertController.swift */; };
+		D0DA444E1E4DCA6E005FDCA7 /* AlertControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA444D1E4DCA6E005FDCA7 /* AlertControllerNode.swift */; };
+		D0DA44501E4DCBDE005FDCA7 /* AlertContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA444F1E4DCBDE005FDCA7 /* AlertContentNode.swift */; };
+		D0DA44521E4DCC11005FDCA7 /* TextAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA44511E4DCC11005FDCA7 /* TextAlertController.swift */; };
 		D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC48531BF93D8A00F672FD /* TabBarController.swift */; };
 		D0DC48561BF945DD00F672FD /* TabBarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC48551BF945DD00F672FD /* TabBarNode.swift */; };
 		D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */; };
@@ -125,6 +131,7 @@
 /* Begin PBXFileReference section */
 		D0078A671C92B21400DF6D92 /* StatusBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBar.swift; sourceTree = "<group>"; };
 		D007B9A71D1D3B5400DA746D /* PresentableViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentableViewController.swift; sourceTree = "<group>"; };
+		D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextFieldNode.swift; sourceTree = "<group>"; };
 		D015F7511D1AE08D00E269B5 /* ContainableController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainableController.swift; sourceTree = "<group>"; };
 		D015F7531D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemContainedControllerTransitionCoordinator.swift; sourceTree = "<group>"; };
 		D015F7571D1B467200E269B5 /* ActionSheetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetController.swift; sourceTree = "<group>"; };
@@ -199,6 +206,7 @@
 		D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonItem.swift; sourceTree = "<group>"; };
 		D08E903D1D24187900533158 /* ActionSheetItemGroup.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroup.swift; sourceTree = "<group>"; };
 		D08E90461D243C2F00533158 /* HighlightTrackingButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightTrackingButton.swift; sourceTree = "<group>"; };
+		D0A749941E3A9E7B00AD786E /* SwitchNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwitchNode.swift; sourceTree = "<group>"; };
 		D0AE2CA51C94548900F2FD3C /* GenerateImage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GenerateImage.swift; sourceTree = "<group>"; };
 		D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarTransitionState.swift; sourceTree = "<group>"; };
 		D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarProxyNode.swift; sourceTree = "<group>"; };
@@ -221,6 +229,10 @@
 		D0C85DD51D1C600D00124894 /* ActionSheetButtonNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonNode.swift; sourceTree = "<group>"; };
 		D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScrollToTopProxyView.swift; sourceTree = "<group>"; };
 		D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UniversalTapRecognizer.swift; sourceTree = "<group>"; };
+		D0DA444B1E4DCA4A005FDCA7 /* AlertController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlertController.swift; sourceTree = "<group>"; };
+		D0DA444D1E4DCA6E005FDCA7 /* AlertControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlertControllerNode.swift; sourceTree = "<group>"; };
+		D0DA444F1E4DCBDE005FDCA7 /* AlertContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlertContentNode.swift; sourceTree = "<group>"; };
+		D0DA44511E4DCC11005FDCA7 /* TextAlertController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextAlertController.swift; sourceTree = "<group>"; };
 		D0DC48531BF93D8A00F672FD /* TabBarController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarController.swift; sourceTree = "<group>"; };
 		D0DC48551BF945DD00F672FD /* TabBarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarNode.swift; sourceTree = "<group>"; };
 		D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarContollerNode.swift; sourceTree = "<group>"; };
@@ -312,6 +324,8 @@
 			children = (
 				D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */,
 				D0E35A021DE473B900BC6096 /* HighlightableButton.swift */,
+				D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */,
+				D0A749941E3A9E7B00AD786E /* SwitchNode.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -520,6 +534,7 @@
 				D015F7551D1B142300E269B5 /* Tab Bar */,
 				D015F7561D1B465600E269B5 /* Action Sheet */,
 				D03725BF1D6DF57B007FC290 /* Context Menu */,
+				D0DA444A1E4DCA36005FDCA7 /* Alert */,
 			);
 			name = Controllers;
 			sourceTree = "<group>";
@@ -541,6 +556,17 @@
 				D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */,
 			);
 			name = "List Node";
+			sourceTree = "<group>";
+		};
+		D0DA444A1E4DCA36005FDCA7 /* Alert */ = {
+			isa = PBXGroup;
+			children = (
+				D0DA444B1E4DCA4A005FDCA7 /* AlertController.swift */,
+				D0DA444D1E4DCA6E005FDCA7 /* AlertControllerNode.swift */,
+				D0DA444F1E4DCBDE005FDCA7 /* AlertContentNode.swift */,
+				D0DA44511E4DCC11005FDCA7 /* TextAlertController.swift */,
+			);
+			name = Alert;
 			sourceTree = "<group>";
 		};
 		D0DC48521BF93D7C00F672FD /* Tabs */ = {
@@ -708,8 +734,10 @@
 				D01E2BE01D90498E0066BF65 /* GridNodeScroller.swift in Sources */,
 				D0C85DD61D1C600D00124894 /* ActionSheetButtonNode.swift in Sources */,
 				D0C2DFD01CC4431D0044FF83 /* ListViewAccessoryItemNode.swift in Sources */,
+				D0DA44501E4DCBDE005FDCA7 /* AlertContentNode.swift in Sources */,
 				D0D94A171D3814F900740E02 /* UniversalTapRecognizer.swift in Sources */,
 				D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */,
+				D0DA444C1E4DCA4A005FDCA7 /* AlertController.swift in Sources */,
 				D0C2DFC91CC4431D0044FF83 /* ListView.swift in Sources */,
 				D03E7DF91C96C5F200C07816 /* NSWeakReference.m in Sources */,
 				D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */,
@@ -727,9 +755,11 @@
 				D05CC31B1B695A9600E235A3 /* NavigationTitleNode.swift in Sources */,
 				D05CC31C1B695A9600E235A3 /* BarButtonItemWrapper.swift in Sources */,
 				D0C2DFCF1CC4431D0044FF83 /* ListViewScroller.swift in Sources */,
+				D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */,
 				D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */,
 				D05CC2FA1B6955D000E235A3 /* UINavigationItem+Proxy.m in Sources */,
 				D0C2DFCE1CC4431D0044FF83 /* ListViewAccessoryItem.swift in Sources */,
+				D0A749951E3A9E7B00AD786E /* SwitchNode.swift in Sources */,
 				D03725C51D6DF8B9007FC290 /* ContextMenuController.swift in Sources */,
 				D03725C31D6DF7A6007FC290 /* ContextMenuAction.swift in Sources */,
 				D007B9A81D1D3B5400DA746D /* PresentableViewController.swift in Sources */,
@@ -737,6 +767,7 @@
 				D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */,
 				D053CB611D22B4F200DD41DF /* CATracingLayer.m in Sources */,
 				D01E2BE41D904A000066BF65 /* GridItem.swift in Sources */,
+				D0DA44521E4DCC11005FDCA7 /* TextAlertController.swift in Sources */,
 				D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */,
 				D0C2DFC71CC4431D0044FF83 /* ListViewItemNode.swift in Sources */,
 				D01E2BE21D9049F60066BF65 /* GridItemNode.swift in Sources */,
@@ -757,6 +788,7 @@
 				D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */,
 				D08E903E1D24187900533158 /* ActionSheetItemGroup.swift in Sources */,
 				D02383861DE0E3B4004018B6 /* ListViewIntermediateState.swift in Sources */,
+				D0DA444E1E4DCA6E005FDCA7 /* AlertControllerNode.swift in Sources */,
 				D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */,
 				D05CC2A21B69326C00E235A3 /* Window.swift in Sources */,
 				D015F7541D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift in Sources */,
