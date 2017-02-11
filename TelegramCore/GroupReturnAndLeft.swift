@@ -11,7 +11,7 @@
 
 
 public func returnGroup(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
-    return account.postbox.loadedPeerWithId(peerId)
+    return account.postbox.loadedPeerWithId(account.peerId)
         |> take(1)
         |> mapToSignal { peer -> Signal<Void, NoError> in
             if let inputUser = apiInputUser(peer) {
