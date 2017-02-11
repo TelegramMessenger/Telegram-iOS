@@ -115,7 +115,12 @@ static const CGSize kMinReleaseImageOnBackgroundSize = {20.0, 20.0};
 {
   ASDN::MutexLocker l(__instanceLock__);
   
-  _imageWasSetExternally = (image != nil && _URL == nil);
+  _imageWasSetExternally = (image != nil);
+  if (_imageWasSetExternally) {
+    ASDisplayNodeAssertNil(_URL, @"Directly setting an image on an ASNetworkImageNode causes it to behave like an ASImageNode instead of an ASNetworkImageNode. If this is what you want, set the URL to nil first.");
+    [self _cancelDownloadAndClearImage];
+    _URL = nil;
+  }
   
   [self _setImage:image];
 }
@@ -134,6 +139,8 @@ static const CGSize kMinReleaseImageOnBackgroundSize = {20.0, 20.0};
 {
   {
     ASDN::MutexLocker l(__instanceLock__);
+    
+    ASDisplayNodeAssert(_imageWasSetExternally == NO, @"Setting a URL to an ASNetworkImageNode after setting an image changes its behavior from an ASImageNode to an ASNetworkImageNode. If this is what you want, set the image to nil first.");
     
     _imageWasSetExternally = NO;
     
@@ -415,17 +422,22 @@ static const CGSize kMinReleaseImageOnBackgroundSize = {20.0, 20.0};
     } callbackQueue:dispatch_get_main_queue() withDownloadIdentifier:newDownloadIDForProgressBlock];
   }
 
-  // Update state.
+  // Update state local state with lock held.
   {
     ASDN::MutexLocker l(__instanceLock__);
+    // Check if the oldDownloadIDForProgressBlock still is the same as the _downloadIdentifierForProgressBlock
     if (_downloadIdentifierForProgressBlock == oldDownloadIDForProgressBlock) {
       _downloadIdentifierForProgressBlock = newDownloadIDForProgressBlock;
-    } else {
+    } else if (newDownloadIDForProgressBlock != nil) {
+      // If this is not the case another thread did change the _downloadIdentifierForProgressBlock already so
+      // we have to deregister the newDownloadIDForProgressBlock that we registered above
       clearAndReattempt = YES;
     }
   }
   
   if (clearAndReattempt) {
+    // In this case another thread changed the _downloadIdentifierForProgressBlock before we finished registering
+    // the new progress block for newDownloadIDForProgressBlock ID. Let's clear it now and reattempt to register
     [_downloader setProgressImageBlock:nil callbackQueue:dispatch_get_main_queue() withDownloadIdentifier:newDownloadIDForProgressBlock];
     [self _updateProgressImageBlockOnDownloaderIfNeeded];
   }

@@ -15,14 +15,12 @@
 
 #import <atomic>
 #import <AsyncDisplayKit/ASDisplayNode.h>
-#import <AsyncDisplayKit/ASThread.h>
-#import <AsyncDisplayKit/_ASTransitionContext.h>
+#import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/ASLayoutElement.h>
 #import <AsyncDisplayKit/ASLayoutTransition.h>
-#import <AsyncDisplayKit/ASEnvironment.h>
+#import <AsyncDisplayKit/ASThread.h>
+#import <AsyncDisplayKit/_ASTransitionContext.h>
 #import <AsyncDisplayKit/ASWeakSet.h>
-
-#import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -108,16 +106,15 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   
 @protected
   ASDisplayNode * __weak _supernode;
-  NSMutableArray *_subnodes;
-  
+  NSMutableArray<ASDisplayNode *> *_subnodes;
+
   ASLayoutElementStyle *_style;
+  ASPrimitiveTraitCollection _primitiveTraitCollection;
 
   std::atomic_uint _displaySentinel;
 
   // This is the desired contentsScale, not the scale at which the layer's contents should be displayed
   CGFloat _contentsScaleForDisplay;
-
-  ASEnvironmentState _environmentState;
 
   UIEdgeInsets _hitTestSlop;
   
@@ -139,8 +136,6 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   ASLayoutTransition *_pendingLayoutTransition;
   std::shared_ptr<ASDisplayNodeLayout> _calculatedDisplayNodeLayout;
   std::shared_ptr<ASDisplayNodeLayout> _pendingDisplayNodeLayout;
-  ASLayoutSpec *_layoutSpec;
-  BOOL _shouldCacheLayoutSpec;
   
   ASDisplayNodeViewBlock _viewBlock;
   ASDisplayNodeLayerBlock _layerBlock;
@@ -180,6 +175,12 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   NSInteger _layoutSpecNumberOfPasses;
   NSTimeInterval _layoutComputationTotalTime;
   NSInteger _layoutComputationNumberOfPasses;
+
+#if YOGA
+  YGNodeRef _yogaNode;
+  ASDisplayNode *_yogaParent;
+  NSMutableArray<ASDisplayNode *> *_yogaChildren;
+#endif
 
 #if TIME_DISPLAYNODE_OPS
 @public
@@ -280,7 +281,7 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
  *  Convenience method to access this node's trait collection struct. Externally, users should interact
  *  with the trait collection via ASTraitCollection
  */
-- (ASEnvironmentTraitCollection)environmentTraitCollection;
+- (ASPrimitiveTraitCollection)primitiveTraitCollection;
 
 @end
 

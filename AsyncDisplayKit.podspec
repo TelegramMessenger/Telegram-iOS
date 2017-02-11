@@ -19,6 +19,7 @@ Pod::Spec.new do |spec|
 
   # Subspecs
   spec.subspec 'Core' do |core|
+    core.prefix_header_file = 'AsyncDisplayKit/AsyncDisplayKit-Prefix.pch'
     core.public_header_files = [
         'AsyncDisplayKit/*.h',
         'AsyncDisplayKit/Details/**/*.h',
@@ -39,9 +40,11 @@ Pod::Spec.new do |spec|
         # See https://github.com/facebook/AsyncDisplayKit/issues/1153
         'AsyncDisplayKit/TextKit/*.h',
     ]
+    core.xcconfig = { 'GCC_PRECOMPILE_PREFIX_HEADER' => 'YES' }
   end
   
   spec.subspec 'PINRemoteImage' do |pin|
+      # Note: The core.prefix_header_file includes setup of PIN_REMOTE_IMAGE, so the line below could be removed.
       pin.xcconfig = { 'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) PIN_REMOTE_IMAGE=1' }
       pin.dependency 'PINRemoteImage/iOS', '= 3.0.0-beta.7'
       pin.dependency 'PINRemoteImage/PINCache'
@@ -49,11 +52,18 @@ Pod::Spec.new do |spec|
   end
 
   spec.subspec 'IGListKit' do |igl|
+      # Note: The core.prefix_header_file includes setup of IG_LIST_KIT, so the line below could be removed.
       igl.xcconfig = { 'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) IG_LIST_KIT=1' }
       igl.dependency 'IGListKit', '2.1.0'
       igl.dependency 'AsyncDisplayKit/Core'
   end
   
+  spec.subspec 'Yoga' do |yoga|
+      yoga.xcconfig = { 'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) YOGA=1' }
+      yoga.dependency 'Yoga', '1.0.2'
+      yoga.dependency 'AsyncDisplayKit/Core'
+  end
+
   # Include optional PINRemoteImage module
   spec.default_subspec = 'PINRemoteImage'
 

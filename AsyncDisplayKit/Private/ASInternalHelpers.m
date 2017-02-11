@@ -10,6 +10,12 @@
 
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 
+#if AS_TARGET_OS_IOS
+#import <UIKit/UIKit.h>
+#else
+#import <AppKit/AppKit.h>
+#endif
+
 #import <objc/runtime.h>
 #import <tgmath.h>
 
@@ -86,15 +92,29 @@ void ASPerformBackgroundDeallocation(id object)
 
 BOOL ASClassRequiresMainThreadDeallocation(Class c)
 {
+#if AS_TARGET_OS_IOS
   if (c == [UIImage class] || c == [UIColor class]) {
     return NO;
   }
-
+  
   if ([c isSubclassOfClass:[UIResponder class]]
       || [c isSubclassOfClass:[CALayer class]]
       || [c isSubclassOfClass:[UIGestureRecognizer class]]) {
     return YES;
   }
+#else
+  if (c == [NSImage class] || c == [NSColor class]) {
+    return NO;
+  }
+  
+  if ([c isSubclassOfClass:[NSResponder class]]
+      || [c isSubclassOfClass:[CALayer class]]
+      || [c isSubclassOfClass:[NSGestureRecognizer class]]) {
+    return YES;
+  }
+#endif
+
+
 
   const char *name = class_getName(c);
   if (strncmp(name, "UI", 2) == 0 || strncmp(name, "AV", 2) == 0 || strncmp(name, "CA", 2) == 0) {
@@ -104,7 +124,7 @@ BOOL ASClassRequiresMainThreadDeallocation(Class c)
   return NO;
 }
 
-Class _Nullable ASGetClassFromType(const char *type)
+Class _Nullable ASGetClassFromType(const char  * _Nullable type)
 {
   // Class types all start with @"
   if (type == NULL || strncmp(type, "@\"", 2) != 0) {
@@ -132,7 +152,11 @@ CGFloat ASScreenScale()
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
     ASDisplayNodeCAssertMainThread();
+#if AS_TARGET_OS_IOS
     __scale = [[UIScreen mainScreen] scale];
+#else
+    __scale = [[NSScreen mainScreen] backingScaleFactor];
+#endif
   });
   return __scale;
 }

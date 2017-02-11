@@ -10,11 +10,31 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
+#import "ASDisplayNode+FrameworkPrivate.h"
+#import <AsyncDisplayKit/ASLayout.h>
+#import <AsyncDisplayKit/ASLayoutElement.h>
+#import <AsyncDisplayKit/ASThread.h>
+#import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 
 #import <map>
 #import <atomic>
-#import <AsyncDisplayKit/ASThread.h>
+
+#if YOGA
+  #import <Yoga/Yoga.h>
+#endif
+
+extern void ASLayoutElementPerformBlockOnEveryElement(id<ASLayoutElement> element, void(^block)(id<ASLayoutElement> element))
+{
+  if (element) {
+    block(element);
+  }
+
+  for (id<ASLayoutElement> subelement in element.sublayoutElements) {
+    ASLayoutElementPerformBlockOnEveryElement(subelement, block);
+  }
+}
+
+#pragma mark - ASLayoutElementContext
 
 CGFloat const ASLayoutElementParentDimensionUndefined = NAN;
 CGSize const ASLayoutElementParentSizeUndefined = {ASLayoutElementParentDimensionUndefined, ASLayoutElementParentDimensionUndefined};
@@ -22,11 +42,10 @@ CGSize const ASLayoutElementParentSizeUndefined = {ASLayoutElementParentDimensio
 int32_t const ASLayoutElementContextInvalidTransitionID = 0;
 int32_t const ASLayoutElementContextDefaultTransitionID = ASLayoutElementContextInvalidTransitionID + 1;
 
-static inline ASLayoutElementContext _ASLayoutElementContextMake(int32_t transitionID, BOOL needsVisualizeNode)
+static inline ASLayoutElementContext _ASLayoutElementContextMake(int32_t transitionID)
 {
   struct ASLayoutElementContext context;
   context.transitionID = transitionID;
-  context.needsVisualizeNode = needsVisualizeNode;
   return context;
 }
 
@@ -35,17 +54,17 @@ static inline BOOL _IsValidTransitionID(int32_t transitionID)
   return transitionID > ASLayoutElementContextInvalidTransitionID;
 }
 
-struct ASLayoutElementContext const ASLayoutElementContextNull = _ASLayoutElementContextMake(ASLayoutElementContextInvalidTransitionID, NO);
+struct ASLayoutElementContext const ASLayoutElementContextNull = _ASLayoutElementContextMake(ASLayoutElementContextInvalidTransitionID);
 
 BOOL ASLayoutElementContextIsNull(struct ASLayoutElementContext context)
 {
   return !_IsValidTransitionID(context.transitionID);
 }
 
-ASLayoutElementContext ASLayoutElementContextMake(int32_t transitionID, BOOL needsVisualizeNode)
+ASLayoutElementContext ASLayoutElementContextMake(int32_t transitionID)
 {
   NSCAssert(_IsValidTransitionID(transitionID), @"Invalid transition ID");
-  return _ASLayoutElementContextMake(transitionID, needsVisualizeNode);
+  return _ASLayoutElementContextMake(transitionID);
 }
 
 // Note: This is a non-recursive static lock. If it needs to be recursive, use ASDISPLAYNODE_MUTEX_RECURSIVE_INITIALIZER
@@ -112,6 +131,7 @@ do {\
 @implementation ASLayoutElementStyle {
   ASDN::RecursiveMutex __instanceLock__;
   ASLayoutElementSize _size;
+  ASLayoutElementStyleExtensions _extensions;
   
   std::atomic<CGFloat> _spacingBefore;
   std::atomic<CGFloat> _spacingAfter;
@@ -122,6 +142,20 @@ do {\
   std::atomic<CGFloat> _ascender;
   std::atomic<CGFloat> _descender;
   std::atomic<CGPoint> _layoutPosition;
+
+#if YOGA
+  std::atomic<ASStackLayoutDirection> _direction;
+  std::atomic<CGFloat> _spacing;
+  std::atomic<ASStackLayoutJustifyContent> _justifyContent;
+  std::atomic<ASStackLayoutAlignItems> _alignItems;
+  std::atomic<YGPositionType> _positionType;
+  std::atomic<ASEdgeInsets> _position;
+  std::atomic<ASEdgeInsets> _margin;
+  std::atomic<ASEdgeInsets> _padding;
+  std::atomic<ASEdgeInsets> _border;
+  std::atomic<CGFloat> _aspectRatio;
+  std::atomic<YGWrap> _flexWrap;
+#endif
 }
 
 @dynamic width, height, minWidth, maxWidth, minHeight, maxHeight;
@@ -334,7 +368,6 @@ do {\
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMaxHeightProperty);
 }
 
-
 #pragma mark - ASStackLayoutElement
 
 - (void)setSpacingBefore:(CGFloat)spacingBefore
@@ -438,6 +471,56 @@ do {\
   return _layoutPosition.load();
 }
 
+#pragma mark - Extensions
+
+- (void)setLayoutOptionExtensionBool:(BOOL)value atIndex:(int)idx
+{
+  NSCAssert(idx < kMaxLayoutElementBoolExtensions, @"Setting index outside of max bool extensions space");
+  
+  ASDN::MutexLocker l(__instanceLock__);
+  _extensions.boolExtensions[idx] = value;
+}
+
+- (BOOL)layoutOptionExtensionBoolAtIndex:(int)idx\
+{
+  NSCAssert(idx < kMaxLayoutElementBoolExtensions, @"Accessing index outside of max bool extensions space");
+  
+  ASDN::MutexLocker l(__instanceLock__);
+  return _extensions.boolExtensions[idx];
+}
+
+- (void)setLayoutOptionExtensionInteger:(NSInteger)value atIndex:(int)idx
+{
+  NSCAssert(idx < kMaxLayoutElementStateIntegerExtensions, @"Setting index outside of max integer extensions space");
+  
+  ASDN::MutexLocker l(__instanceLock__);
+  _extensions.integerExtensions[idx] = value;
+}
+
+- (NSInteger)layoutOptionExtensionIntegerAtIndex:(int)idx
+{
+  NSCAssert(idx < kMaxLayoutElementStateIntegerExtensions, @"Accessing index outside of max integer extensions space");
+  
+  ASDN::MutexLocker l(__instanceLock__);
+  return _extensions.integerExtensions[idx];
+}
+
+- (void)setLayoutOptionExtensionEdgeInsets:(UIEdgeInsets)value atIndex:(int)idx
+{
+  NSCAssert(idx < kMaxLayoutElementStateEdgeInsetExtensions, @"Setting index outside of max edge insets extensions space");
+  
+  ASDN::MutexLocker l(__instanceLock__);
+  _extensions.edgeInsetsExtensions[idx] = value;
+}
+
+- (UIEdgeInsets)layoutOptionExtensionEdgeInsetsAtIndex:(int)idx
+{
+  NSCAssert(idx < kMaxLayoutElementStateEdgeInsetExtensions, @"Accessing index outside of max edge insets extensions space");
+  
+  ASDN::MutexLocker l(__instanceLock__);
+  return _extensions.edgeInsetsExtensions[idx];
+}
+
 #pragma mark - Debugging
 
 - (NSString *)description
@@ -464,9 +547,7 @@ do {\
     [result addObject:@{ @"maxLayoutSize" : NSStringFromASLayoutSize(self.maxLayoutSize) }];
   }
   
-  const ASEnvironmentLayoutOptionsState defaultState = ASEnvironmentLayoutOptionsStateMakeDefault();
-  
-  if (self.alignSelf != defaultState.alignSelf) {
+  if (self.alignSelf != ASStackLayoutAlignSelfAuto) {
     [result addObject:@{ @"alignSelf" : [@[@"ASStackLayoutAlignSelfAuto",
                                           @"ASStackLayoutAlignSelfStart",
                                           @"ASStackLayoutAlignSelfEnd",
@@ -474,40 +555,70 @@ do {\
                                           @"ASStackLayoutAlignSelfStretch"] objectAtIndex:self.alignSelf] }];
   }
   
-  if (self.ascender != defaultState.ascender) {
+  if (self.ascender != 0) {
     [result addObject:@{ @"ascender" : @(self.ascender) }];
   }
   
-  if (self.descender != defaultState.descender) {
+  if (self.descender != 0) {
     [result addObject:@{ @"descender" : @(self.descender) }];
   }
   
-  if (ASDimensionEqualToDimension(self.flexBasis, defaultState.flexBasis) == NO) {
+  if (ASDimensionEqualToDimension(self.flexBasis, ASDimensionAuto) == NO) {
     [result addObject:@{ @"flexBasis" : NSStringFromASDimension(self.flexBasis) }];
   }
   
-  if (self.flexGrow != defaultState.flexGrow) {
+  if (self.flexGrow != 0) {
     [result addObject:@{ @"flexGrow" : @(self.flexGrow) }];
   }
   
-  if (self.flexShrink != defaultState.flexShrink) {
+  if (self.flexShrink != 0) {
     [result addObject:@{ @"flexShrink" : @(self.flexShrink) }];
   }
   
-  if (self.spacingAfter != defaultState.spacingAfter) {
+  if (self.spacingAfter != 0) {
     [result addObject:@{ @"spacingAfter" : @(self.spacingAfter) }];
   }
   
-  if (self.spacingBefore != defaultState.spacingBefore) {
+  if (self.spacingBefore != 0) {
     [result addObject:@{ @"spacingBefore" : @(self.spacingBefore) }];
   }
   
-  if (CGPointEqualToPoint(self.layoutPosition, defaultState.layoutPosition) == NO) {
+  if (CGPointEqualToPoint(self.layoutPosition, CGPointZero) == NO) {
     [result addObject:@{ @"layoutPosition" : [NSValue valueWithCGPoint:self.layoutPosition] }];
   }
 
   return result;
 }
+
+#pragma mark - Yoga Flexbox Properties
+
+#if YOGA
+
+- (ASStackLayoutDirection)direction           { return _direction.load(); }
+- (CGFloat)spacing                            { return _spacing.load(); }
+- (ASStackLayoutJustifyContent)justifyContent { return _justifyContent.load(); }
+- (ASStackLayoutAlignItems)alignItems         { return _alignItems.load(); }
+- (YGPositionType)positionType                { return _positionType.load(); }
+- (ASEdgeInsets)position                      { return _position.load(); }
+- (ASEdgeInsets)margin                        { return _margin.load(); }
+- (ASEdgeInsets)padding                       { return _padding.load(); }
+- (ASEdgeInsets)border                        { return _border.load(); }
+- (CGFloat)aspectRatio                        { return _aspectRatio.load(); }
+- (YGWrap)flexWrap                            { return _flexWrap.load(); }
+
+- (void)setDirection:(ASStackLayoutDirection)direction         { _direction.store(direction); }
+- (void)setSpacing:(CGFloat)spacing                            { _spacing.store(spacing); }
+- (void)setJustifyContent:(ASStackLayoutJustifyContent)justify { _justifyContent.store(justify); }
+- (void)setAlignItems:(ASStackLayoutAlignItems)alignItems      { _alignItems.store(alignItems); }
+- (void)setPositionType:(YGPositionType)positionType           { _positionType.store(positionType); }
+- (void)setPosition:(ASEdgeInsets)position                     { _position.store(position); }
+- (void)setMargin:(ASEdgeInsets)margin                         { _margin.store(margin); }
+- (void)setPadding:(ASEdgeInsets)padding                       { _padding.store(padding); }
+- (void)setBorder:(ASEdgeInsets)border                         { _border.store(border); }
+- (void)setAspectRatio:(CGFloat)aspectRatio                    { _aspectRatio.store(aspectRatio); }
+- (void)setFlexWrap:(YGWrap)flexWrap                           { _flexWrap.store(flexWrap); }
+
+#endif
 
 #pragma mark Deprecated
 
@@ -528,4 +639,3 @@ do {\
 #pragma clang diagnostic pop
 
 @end
-

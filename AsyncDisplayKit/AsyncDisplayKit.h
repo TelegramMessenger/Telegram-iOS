@@ -48,7 +48,7 @@
 #import <AsyncDisplayKit/ASPagerFlowLayout.h>
 #import <AsyncDisplayKit/ASPagerNode.h>
 
-#import <AsyncDisplayKit/ASNodeController.h>
+#import <AsyncDisplayKit/ASNodeController+Beta.h>
 #import <AsyncDisplayKit/ASViewController.h>
 #import <AsyncDisplayKit/ASNavigationController.h>
 #import <AsyncDisplayKit/ASTabBarController.h>
@@ -60,7 +60,6 @@
 #import <AsyncDisplayKit/ASDimension.h>
 #import <AsyncDisplayKit/ASDimensionInternal.h>
 #import <AsyncDisplayKit/ASDimensionDeprecated.h>
-#import <AsyncDisplayKit/ASEnvironment.h>
 #import <AsyncDisplayKit/ASLayoutElement.h>
 #import <AsyncDisplayKit/ASLayoutSpec.h>
 #import <AsyncDisplayKit/ASBackgroundLayoutSpec.h>
@@ -89,7 +88,6 @@
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASHighlightOverlayLayer.h>
-#import <AsyncDisplayKit/ASIndexPath.h>
 #import <AsyncDisplayKit/ASImageContainerProtocolCategories.h>
 #import <AsyncDisplayKit/ASLog.h>
 #import <AsyncDisplayKit/ASMutableAttributedStringBuilder.h>

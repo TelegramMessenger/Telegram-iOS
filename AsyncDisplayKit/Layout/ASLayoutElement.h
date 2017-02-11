@@ -8,18 +8,23 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASLayoutElementPrivate.h>
 #import <AsyncDisplayKit/ASLayoutElementExtensibility.h>
 #import <AsyncDisplayKit/ASDimensionInternal.h>
-#import <AsyncDisplayKit/ASStackLayoutDefines.h>
 #import <AsyncDisplayKit/ASStackLayoutElement.h>
 #import <AsyncDisplayKit/ASAbsoluteLayoutElement.h>
-
-#import <AsyncDisplayKit/ASEnvironment.h>
 
 @class ASLayout;
 @class ASLayoutSpec;
 @protocol ASLayoutElementStylability;
+
+#if AS_TARGET_OS_IOS
+#import "ASTraitCollection.h"
+@protocol ASTraitEnvironment;
+#endif
+
+NS_ASSUME_NONNULL_BEGIN
 
 /** A constant that indicates that the parent's size is not yet determined in a given dimension. */
 extern CGFloat const ASLayoutElementParentDimensionUndefined;
@@ -33,9 +38,19 @@ typedef NS_ENUM(NSUInteger, ASLayoutElementType) {
   ASLayoutElementTypeDisplayNode
 };
 
-NS_ASSUME_NONNULL_BEGIN
+ASDISPLAYNODE_EXTERN_C_BEGIN
 
-/** 
+/**
+ This function will walk the layout element hierarchy. It does run the block on the node provided
+ directly to the function call.
+ */
+extern void ASLayoutElementPerformBlockOnEveryElement(id<ASLayoutElement> root, void(^block)(id<ASLayoutElement> element));
+
+ASDISPLAYNODE_EXTERN_C_END
+
+#pragma mark - ASLayoutElement
+
+/**
  * The ASLayoutElement protocol declares a method for measuring the layout of an object. A layout
  * is defined by an ASLayout return value, and must specify 1) the size (but not position) of the
  * layoutElement object, and 2) the size and position of all of its immediate child objects. The tree 
@@ -51,19 +66,18 @@ NS_ASSUME_NONNULL_BEGIN
  * access to the options via convenience properties. If you are creating custom layout spec, then you can
  * extend the backing layout options class to accommodate any new layout options.
  */
-@protocol ASLayoutElement <ASEnvironment, ASLayoutElementPrivate, ASLayoutElementExtensibility, ASLayoutElementStylability, NSFastEnumeration>
+#if AS_TARGET_OS_IOS
+@protocol ASLayoutElement <ASLayoutElementExtensibility, ASLayoutElementFinalLayoutElement, ASTraitEnvironment>
+#else
+@protocol ASLayoutElement <ASLayoutElementExtensibility, ASLayoutElementFinalLayoutElement>
+#endif
 
 #pragma mark - Getter
 
 /**
  * @abstract Returns type of layoutElement
  */
-@property (nonatomic, assign, readonly) ASLayoutElementType layoutElementType;
-
-/**
- * @abstract Returns if the layoutElement can be used to layout in an asynchronous way on a background thread.
- */
-@property (nonatomic, assign, readonly) BOOL canLayoutAsynchronous;
+@property (nonatomic, assign, readonly) ASLayoutElementType layoutElementType;;
 
 /**
  * @abstract A size constraint that should apply to this ASLayoutElement.
@@ -71,9 +85,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign, readonly) ASLayoutElementStyle *style;
 
 /**
- * @abstract Optional name that is printed by ascii art string and displayed in description. 
+ * @abstract Returns all children of an object which class conforms to the ASLayoutElement protocol
  */
-@property (nullable, nonatomic, copy) NSString *debugName;
+- (nullable NSArray<id<ASLayoutElement>> *)sublayoutElements;
 
 #pragma mark - Calculate layout
 
@@ -143,6 +157,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Deprecated
 
+#define ASLayoutable ASLayoutElement
+
 /**
  * @abstract Calculate a layout based on given size range.
  *
@@ -156,6 +172,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (nonnull ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize ASDISPLAYNODE_DEPRECATED_MSG("Use layoutThatFits: instead.");
 
 @end
+
+#pragma mark - ASLayoutElementStyle
 
 extern NSString * const ASLayoutElementStyleWidthProperty;
 extern NSString * const ASLayoutElementStyleMinWidthProperty;
@@ -176,13 +194,11 @@ extern NSString * const ASLayoutElementStyleDescenderProperty;
 
 extern NSString * const ASLayoutElementStyleLayoutPositionProperty;
 
-#pragma mark - ASLayoutElementStyle
-
 @protocol ASLayoutElementStyleDelegate <NSObject>
 - (void)style:(__kindof ASLayoutElementStyle *)style propertyDidChange:(NSString *)propertyName;
 @end
 
-@interface ASLayoutElementStyle : NSObject <ASStackLayoutElement, ASAbsoluteLayoutElement>
+@interface ASLayoutElementStyle : NSObject <ASStackLayoutElement, ASAbsoluteLayoutElement, ASLayoutElementExtensibility>
 
 /**
  * @abstract Initializes the layoutElement style with a specified delegate
@@ -244,7 +260,6 @@ extern NSString * const ASLayoutElementStyleLayoutPositionProperty;
  * Defaults to ASDimensionAuto
  */
 @property (nonatomic, assign, readwrite) ASDimension maxWidth;
-
 
 #pragma mark - ASLayoutElementStyleSizeHelpers
 
@@ -310,7 +325,6 @@ extern NSString * const ASLayoutElementStyleLayoutPositionProperty;
 @property (nonatomic, assign, readwrite) ASLayoutSize maxLayoutSize;
 
 @end
-
 
 #pragma mark - ASLayoutElementStylability
 

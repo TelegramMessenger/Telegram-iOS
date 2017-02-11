@@ -708,6 +708,59 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@protocol ASCollectionDataSourceInterop <ASCollectionDataSource>
+
+/**
+ * This method offers compatibility with synchronous, standard UICollectionViewCell objects.
+ * These cells will **not** have the performance benefits of ASCellNodes (like preloading, async layout, and
+ * async drawing) - even when mixed within the same ASCollectionNode.
+ *
+ * In order to use this method, you must:
+ * 1. Implement it on your ASCollectionDataSource object.
+ * 2. Call registerCellClass: on the collectionNode.view (in viewDidLoad, or register an onDidLoad: block).
+ * 3. Return nil from the nodeBlockForItem...: or nodeForItem...: method. NOTE: it is an error to return
+ *    nil from within a nodeBlock, if you have returned a nodeBlock object.
+ * 4. Lastly, you must implement a method to provide the size for the cell. There are two ways this is done:
+ * 4a. UICollectionViewFlowLayout (incl. ASPagerNode). Implement
+ collectionNode:constrainedSizeForItemAtIndexPath:.
+ * 4b. Custom collection layouts. Set .view.layoutInspector and have it implement
+ collectionView:constrainedSizeForNodeAtIndexPath:.
+ *
+ * For an example of using this method with all steps above (including a custom layout, 4b.),
+ * see the app in examples/CustomCollectionView and enable kShowUICollectionViewCells = YES.
+ */
+- (__kindof UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath;
+
+@optional
+
+- (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath;
+
+/**
+ * Implement this property and return YES if you want your interop data source to be
+ * used when dequeuing cells for node-backed items.
+ *
+ * If NO (the default), the interop data source will only be consulted in cases
+ * where no ASCellNode was provided to AsyncDisplayKit.
+ *
+ * If YES, the interop data source will always be consulted to dequeue cells, and
+ * will be expected to return _ASCollectionViewCells in cases where a node was provided.
+ *
+ * The default value is NO.
+ */
+@property (class, nonatomic, readonly) BOOL dequeuesCellsForNodeBackedItems;
+
+@end
+
+@protocol ASCollectionDelegateInterop <ASCollectionDelegate>
+
+@optional
+
+- (void)collectionView:(UICollectionView *)collectionView willDisplayCell:(UICollectionViewCell *)cell forItemAtIndexPath:(NSIndexPath *)indexPath;
+
+- (void)collectionView:(UICollectionView *)collectionView didEndDisplayingCell:(UICollectionViewCell *)cell forItemAtIndexPath:(NSIndexPath *)indexPath;
+
+@end
+
 NS_ASSUME_NONNULL_END
 
 #endif

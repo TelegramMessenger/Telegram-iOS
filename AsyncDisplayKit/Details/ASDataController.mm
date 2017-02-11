@@ -13,7 +13,6 @@
 #import <AsyncDisplayKit/_ASHierarchyChangeSet.h>
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASCellNode.h>
-#import <AsyncDisplayKit/ASEnvironmentInternal.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASMainSerialQueue.h>
 #import <AsyncDisplayKit/ASMultidimensionalArrayUtils.h>
@@ -174,6 +173,8 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
  */
 - (void)_layoutNode:(ASCellNode *)node withConstrainedSize:(ASSizeRange)constrainedSize
 {
+  ASDisplayNodeAssert(ASSizeRangeHasSignificantArea(constrainedSize), @"Attempt to layout cell node with invalid size range %@", NSStringFromASSizeRange(constrainedSize));
+
   CGRect frame = CGRectZero;
   frame.size = [node layoutThatFits:constrainedSize].size;
   node.frame = frame;
@@ -215,7 +216,12 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
       node = [[ASCellNode alloc] init]; // Fallback to avoid crash for production apps.
     }
     
-    [self _layoutNode:node withConstrainedSize:context.constrainedSize];
+    // Layout the node if the size range is valid.
+    ASSizeRange sizeRange = context.constrainedSize;
+    if (ASSizeRangeHasSignificantArea(sizeRange)) {
+      [self _layoutNode:node withConstrainedSize:sizeRange];
+    }
+
 #if AS_MEASURE_AVOIDED_DATACONTROLLER_WORK
     [ASDataController _didLayoutNode];
 #endif
@@ -518,7 +524,7 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
 {
   ASDisplayNodeAssertMainThread();
   
-  __weak id<ASEnvironment> environment = [self.environmentDelegate dataControllerEnvironment];
+  __weak id<ASTraitEnvironment> environment = [self.environmentDelegate dataControllerEnvironment];
   
   std::vector<NSInteger> counts = [self itemCountsFromDataSource];
   NSMutableArray<ASIndexedNodeContext *> *contexts = [NSMutableArray array];
@@ -807,7 +813,7 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
   NSArray *sortedIndexPaths = [indexPaths sortedArrayUsingSelector:@selector(compare:)];
   NSMutableArray<ASIndexedNodeContext *> *contexts = [[NSMutableArray alloc] initWithCapacity:indexPaths.count];
 
-  __weak id<ASEnvironment> environment = [self.environmentDelegate dataControllerEnvironment];
+  __weak id<ASTraitEnvironment> environment = [self.environmentDelegate dataControllerEnvironment];
   
   for (NSIndexPath *indexPath in sortedIndexPaths) {
     ASCellNodeBlock nodeBlock = [_dataSource dataController:self nodeBlockAtIndexPath:indexPath];
@@ -894,7 +900,9 @@ NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdat
       RETURN_IF_NO_DATASOURCE();
       NSIndexPath *indexPath = [NSIndexPath indexPathForRow:rowIndex inSection:sectionIndex];
       ASSizeRange constrainedSize = [self constrainedSizeForNodeOfKind:kind atIndexPath:indexPath];
-      [self _layoutNode:node withConstrainedSize:constrainedSize];
+      if (ASSizeRangeHasSignificantArea(constrainedSize)) {
+        [self _layoutNode:node withConstrainedSize:constrainedSize];
+      }
       rowIndex += 1;
     }
     sectionIndex += 1;

@@ -9,8 +9,8 @@
 //
 
 #pragma once
-#import <UIKit/UIKit.h>
-
+#import <Foundation/Foundation.h>
+#import <CoreGraphics/CoreGraphics.h>
 #import <AsyncDisplayKit/ASBaseDefines.h>
 #import <AsyncDisplayKit/ASAssert.h>
 
@@ -191,6 +191,15 @@ ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT NSString *NSStringFromASLayoutSize(AS
           NSStringFromASDimension(size.height)];
 }
 
+#pragma mark - ASEdgeInsets
+
+typedef struct {
+  ASDimension top;
+  ASDimension left;
+  ASDimension bottom;
+  ASDimension right;
+} ASEdgeInsets;
+
 #pragma mark - ASSizeRange
 
 /**
@@ -210,6 +219,15 @@ extern ASSizeRange const ASSizeRangeZero;
  * A size range from zero to infinity in both directions.
  */
 extern ASSizeRange const ASSizeRangeUnconstrained;
+
+/**
+ * Returns whether a size range has > 0.1 max width and max height.
+ */
+ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT BOOL ASSizeRangeHasSignificantArea(ASSizeRange sizeRange)
+{
+  static CGFloat const limit = 0.1;
+  return (sizeRange.max.width > limit && sizeRange.max.height > limit);
+}
 
 /**
  * Creates an ASSizeRange with provided min and max size.
