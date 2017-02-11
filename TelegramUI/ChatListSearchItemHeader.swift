@@ -4,6 +4,7 @@ import Display
 enum ChatListSearchItemHeaderType: Int32 {
     case localPeers
     case globalPeers
+    case recentPeers
     case messages
 }
 
@@ -43,6 +44,8 @@ final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
                 self.sectionHeaderNode.title = "GLOBAL SEARCH"
             case .messages:
                 self.sectionHeaderNode.title = "MESSAGES"
+            case .recentPeers:
+                self.sectionHeaderNode.title = "RECENT"
         }
         
         self.addSubnode(self.sectionHeaderNode)

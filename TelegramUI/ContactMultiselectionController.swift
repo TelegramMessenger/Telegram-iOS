@@ -68,12 +68,13 @@ public class ContactMultiselectionController: ViewController {
         self.displayNode = ContactMultiselectionControllerNode(account: self.account)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
-        self.contactsNode.contactListNode.openPeer = { [weak self] peer in
+        self.contactsNode.openPeer = { [weak self] peer in
             if let strongSelf = self {
                 var updatedCount: Int?
                 var addedToken: EditableTokenListToken?
                 var removedTokenId: AnyHashable?
                 
+                var selectionState: ContactListNodeGroupSelectionState?
                 strongSelf.contactsNode.contactListNode.updateSelectionState { state in
                     if let state = state {
                         let updatedState = state.withToggledPeerId(peer.id)
@@ -83,9 +84,15 @@ public class ContactMultiselectionController: ViewController {
                             addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle)
                         }
                         updatedCount = updatedState.selectedPeerIndices.count
+                        selectionState = updatedState
                         return updatedState
                     } else {
                         return nil
+                    }
+                }
+                if let searchResultsNode = strongSelf.contactsNode.searchResultsNode {
+                    searchResultsNode.updateSelectionState { _ in
+                        return selectionState
                     }
                 }
                 
@@ -97,6 +104,45 @@ public class ContactMultiselectionController: ViewController {
                 if let addedToken = addedToken {
                     strongSelf.contactsNode.editableTokens.append(addedToken)
                 } else if let removedTokenId = removedTokenId {
+                    strongSelf.contactsNode.editableTokens = strongSelf.contactsNode.editableTokens.filter { token in
+                        return token.id != removedTokenId
+                    }
+                }
+                strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+            }
+        }
+        
+        self.contactsNode.removeSelectedPeer = { [weak self] peerId in
+            if let strongSelf = self {
+                var updatedCount: Int?
+                var removedTokenId: AnyHashable?
+                
+                var selectionState: ContactListNodeGroupSelectionState?
+                strongSelf.contactsNode.contactListNode.updateSelectionState { state in
+                    if let state = state {
+                        let updatedState = state.withToggledPeerId(peerId)
+                        if updatedState.selectedPeerIndices[peerId] == nil {
+                            removedTokenId = peerId
+                        }
+                        updatedCount = updatedState.selectedPeerIndices.count
+                        selectionState = updatedState
+                        return updatedState
+                    } else {
+                        return nil
+                    }
+                }
+                if let searchResultsNode = strongSelf.contactsNode.searchResultsNode {
+                    searchResultsNode.updateSelectionState { _ in
+                        return selectionState
+                    }
+                }
+                
+                if let updatedCount = updatedCount {
+                    strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
+                    strongSelf.titleView.title = CounterContollerTitle(title: "New Group", counter: "\(updatedCount)/5000")
+                }
+                
+                if let removedTokenId = removedTokenId {
                     strongSelf.contactsNode.editableTokens = strongSelf.contactsNode.editableTokens.filter { token in
                         return token.id != removedTokenId
                     }

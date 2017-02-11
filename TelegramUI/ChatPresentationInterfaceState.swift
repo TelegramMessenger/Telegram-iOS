@@ -3,6 +3,7 @@ import Postbox
 import TelegramCore
 
 enum ChatPresentationInputQuery: Equatable {
+    case emoji(String)
     case hashtag(String)
     case mention(String)
     case command(String)
@@ -10,6 +11,12 @@ enum ChatPresentationInputQuery: Equatable {
     
     static func ==(lhs: ChatPresentationInputQuery, rhs: ChatPresentationInputQuery) -> Bool {
         switch lhs {
+            case let .emoji(query):
+                if case .emoji(query) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .hashtag(query):
                 if case .hashtag(query) = rhs {
                     return true
@@ -39,6 +46,7 @@ enum ChatPresentationInputQuery: Equatable {
 }
 
 enum ChatPresentationInputQueryResult: Equatable {
+    case stickers([StickerPackItem])
     case hashtags([String])
     case mentions([Peer])
     case commands([PeerCommand])
@@ -46,6 +54,12 @@ enum ChatPresentationInputQueryResult: Equatable {
     
     static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
         switch lhs {
+        case let .stickers(lhsItems):
+                if case let .stickers(rhsItems) = rhs, lhsItems == rhsItems {
+                    return true
+                } else {
+                    return false
+                }
             case let .hashtags(lhsResults):
                 if case let .hashtags(rhsResults) = rhs {
                     return lhsResults == rhsResults

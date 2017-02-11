@@ -30,17 +30,39 @@ private func tagsForMessage(_ message: Message) -> MessageTags? {
     return nil
 }
 
+private func galleryMediaForMedia(media: Media) -> Media? {
+    if let media = media as? TelegramMediaImage {
+        return media
+    } else if let file = media as? TelegramMediaFile {
+        if file.mimeType.hasPrefix("audio/") {
+            return nil
+        } else if !file.isVideo && file.mimeType.hasPrefix("video/") {
+            return file
+        } else {
+            return file
+        }
+    }
+    return nil
+}
+
 private func mediaForMessage(message: Message) -> Media? {
     for media in message.media {
-        if let media = media as? TelegramMediaImage {
-            return media
-        } else if let file = media as? TelegramMediaFile {
-            if file.mimeType.hasPrefix("audio/") {
-                return nil
-            } else if !file.isVideo && file.mimeType.hasPrefix("video/") {
-                return file
-            } else {
-                return file
+        if let result = galleryMediaForMedia(media: media) {
+            return result
+        } else if let webpage = media as? TelegramMediaWebpage {
+            switch webpage.content {
+                case let .Loaded(content):
+                    if let image = content.image {
+                        if let result = galleryMediaForMedia(media: image) {
+                            return result
+                        }
+                    } else if let file = content.file {
+                        if let result = galleryMediaForMedia(media: file) {
+                            return result
+                        }
+                    }
+                case .Pending:
+                    break
             }
         }
     }
@@ -171,7 +193,7 @@ class GalleryController: ViewController {
             if let strongSelf = self {
                 if let view = view {
                     strongSelf.entries = view.entries
-                    loop: for i in 0 ..< strongSelf.entries.count {
+                        loop: for i in 0 ..< strongSelf.entries.count {
                         switch strongSelf.entries[i] {
                             case let .MessageEntry(message, _, _) where message.id == messageId:
                                 strongSelf.centralEntryIndex = i

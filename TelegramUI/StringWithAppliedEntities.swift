@@ -5,6 +5,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
     var nsString: NSString?
     let string = NSMutableAttributedString(string: text, attributes: [NSFontAttributeName: baseFont, NSForegroundColorAttributeName: UIColor.black])
     var skipEntity = false
+    let stringLength = string.length
     for i in 0 ..< entities.count {
         if skipEntity {
             skipEntity = false
@@ -15,10 +16,9 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
         if nsString == nil {
             nsString = text as NSString
         }
-        if range.location + range.length > nsString!.length {
-            let upperBound = nsString!.length
-            range.location = max(0, upperBound - range.length)
-            range.length = upperBound - range.location
+        if range.location + range.length > stringLength {
+            range.location = max(0, stringLength - range.length)
+            range.length = stringLength - range.location
         }
         switch entity.type {
             case .Url:

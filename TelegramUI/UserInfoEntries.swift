@@ -17,7 +17,7 @@ enum DestructiveUserInfoAction {
 }
 
 enum UserInfoEntry: PeerInfoEntry {
-    case info(peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState)
+    case info(peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState)
     case about(text: String)
     case phoneNumber(index: Int, value: PhoneNumberWithLabel)
     case userName(value: String)
@@ -53,14 +53,21 @@ enum UserInfoEntry: PeerInfoEntry {
         }
         
         switch self {
-            case let .info(lhsPeer, lhsCachedData, lhsState):
+            case let .info(lhsPeer, lhsPresence, lhsCachedData, lhsState):
                 switch entry {
-                    case let .info(rhsPeer, rhsCachedData, rhsState):
+                    case let .info(rhsPeer, rhsPresence, rhsCachedData, rhsState):
                         if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                             if !lhsPeer.isEqual(rhsPeer) {
                                 return false
                             }
-                        } else if (lhsPeer == nil) != (rhsPeer != nil) {
+                        } else if (lhsPeer != nil) != (rhsPeer != nil) {
+                            return false
+                        }
+                        if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
+                            if !lhsPresence.isEqual(to: rhsPresence) {
+                                return false
+                            }
+                        } else if (lhsPresence != nil) != (rhsPresence != nil) {
                             return false
                         }
                         if let lhsCachedData = lhsCachedData, let rhsCachedData = rhsCachedData {
@@ -205,8 +212,8 @@ enum UserInfoEntry: PeerInfoEntry {
     
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem {
         switch self {
-            case let .info(peer, cachedData, state):
-                return ItemListAvatarAndNameInfoItem(account: account, peer: peer, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+            case let .info(peer, presence, cachedData, state):
+                return ItemListAvatarAndNameInfoItem(account: account, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     
                 })
             case let .about(text):
@@ -314,7 +321,7 @@ func userInfoEntries(view: PeerView, state: PeerInfoState?) -> PeerInfoEntries {
         }
     }
     
-    entries.append(UserInfoEntry.info(peer: user, cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: updatingName)))
+    entries.append(UserInfoEntry.info(peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: updatingName)))
     if let cachedUserData = view.cachedData as? CachedUserData {
         if let about = cachedUserData.about, !about.isEmpty {
             entries.append(UserInfoEntry.about(text: about))

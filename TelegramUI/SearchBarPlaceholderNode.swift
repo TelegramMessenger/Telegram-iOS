@@ -4,17 +4,15 @@ import UIKit
 import AsyncDisplayKit
 import Display
 
-private func generateBackground() -> UIImage? {
+private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
     let diameter: CGFloat = 8.0
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
-        context.setFillColor(UIColor.white.cgColor)
+        context.setFillColor(backgroundColor.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor(0xededed).cgColor)
+        context.setFillColor(foregroundColor.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
     }, opaque: true)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
-
-private let searchBarBackground = generateBackground()
 
 private class SearchBarPlaceholderNodeLayer: CALayer {
 }
@@ -29,6 +27,7 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
     var activate: (() -> Void)?
     
     let backgroundNode: ASImageNode
+    var foregroundColor: UIColor
     let labelNode: TextNode
     
     var placeholderString: NSAttributedString?
@@ -38,12 +37,15 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.backgroundNode.isLayerBacked = false
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = searchBarBackground
+        
+        self.foregroundColor = UIColor(0xededed)
+        
+        self.backgroundNode.image = generateBackground(backgroundColor: UIColor.white, foregroundColor: self.foregroundColor)
         
         self.labelNode = TextNode()
         self.labelNode.isOpaque = true
         self.labelNode.isLayerBacked = true
-        self.labelNode.backgroundColor = UIColor(0xededed)
+        self.labelNode.backgroundColor = self.foregroundColor
         
         super.init()
         /*super.init(viewBlock: {
@@ -62,15 +64,27 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.backgroundNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(backgroundTap(_:))))
     }
     
-    func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize) -> (() -> Void) {
+    func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ foregoundColor: UIColor) -> (() -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
+        let currentForegroundColor = self.foregroundColor
         
-        return { placeholderString, constrainedSize in
-            let (labelLayoutResult, labelApply) = labelLayout(placeholderString, UIColor(0xededed), 1, .end, constrainedSize, nil)
+        return { placeholderString, constrainedSize, foregroundColor in
+            let (labelLayoutResult, labelApply) = labelLayout(placeholderString, foregroundColor, 1, .end, constrainedSize, nil)
+            
+            var updatedBackgroundImage: UIImage?
+            if !currentForegroundColor.isEqual(foregroundColor) {
+                updatedBackgroundImage = generateBackground(backgroundColor: UIColor.white, foregroundColor: foregroundColor)
+            }
             
             return { [weak self] in
                 if let strongSelf = self {
                     let _ = labelApply()
+                    
+                    strongSelf.foregroundColor = foregroundColor
+                    if let updatedBackgroundImage = updatedBackgroundImage {
+                        strongSelf.backgroundNode.image = updatedBackgroundImage
+                        strongSelf.labelNode.backgroundColor = foregroundColor
+                    }
                     
                     strongSelf.placeholderString = placeholderString
                     

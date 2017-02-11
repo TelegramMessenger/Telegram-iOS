@@ -165,7 +165,7 @@ enum ChannelInfoEntry: PeerInfoEntry {
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem {
         switch self {
             case let .info(peer, cachedData):
-                return ItemListAvatarAndNameInfoItem(account: account, peer: peer, cachedData: cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: nil, updatingName: nil), sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: account, peer: peer, presence: nil, cachedData: cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: nil, updatingName: nil), sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     
                 })
             case let .about(text):

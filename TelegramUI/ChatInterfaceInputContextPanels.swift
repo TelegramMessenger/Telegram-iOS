@@ -7,6 +7,18 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
     }
     
     switch inputQueryResult {
+        case let .stickers(results):
+            if !results.isEmpty {
+                if let currentPanel = currentPanel as? HorizontalStickersChatContextPanelNode {
+                    currentPanel.updateResults(results.map({ $0.file }))
+                    return currentPanel
+                } else {
+                    let panel = HorizontalStickersChatContextPanelNode(account: account)
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.updateResults(results.map({ $0.file }))
+                    return panel
+                }
+            }
         case let .hashtags(results):
             if let currentPanel = currentPanel as? HashtagChatInputContextPanelNode {
                 currentPanel.updateResults(results)

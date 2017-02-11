@@ -1,0 +1,34 @@
+# Based from http://stackoverflow.com/questions/49478/git-ignore-file-for-xcode-projects
+
+# Temporary files
+.DS_Store
+.Trashes
+*.swp
+*.lock
+*~.nib
+
+# Meta files
+*._*
+
+# Build files
+DerivedData/
+build/
+
+# Private settings
+# *.pbxuser should not be ignored if using "custom executables".
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Some projects need the below
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+
+# XCode 4 semi-personal settings
+xcuserdata/
+
+# Deprecated classes
+*.moved-aside

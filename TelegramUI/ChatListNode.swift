@@ -148,6 +148,7 @@ final class ChatListNode: ListView {
     
     var peerSelected: ((PeerId) -> Void)?
     var activateSearch: (() -> Void)?
+    var deletePeerChat: ((PeerId) -> Void)?
     
     private let viewProcessingQueue = Queue()
     private var chatListView: ChatListNodeView?
@@ -187,10 +188,12 @@ final class ChatListNode: ListView {
                     }
                 }
             }
-        }, setPeerPinned: { _ in
-        }, setPeerMuted: { _ in
-        }, deletePeer: { peerId in
-            let _ = removePeerChat(postbox: account.postbox, peerId: peerId).start()
+        }, setPeerPinned: { peerId, _ in
+            let _ = togglePeerChatPinned(postbox: account.postbox, peerId: peerId).start()
+        }, setPeerMuted: { peerId, _ in
+            let _ = togglePeerMuted(account: account, peerId: peerId).start()
+        }, deletePeer: { [weak self] peerId in
+            self?.deletePeerChat?(peerId)
         })
         
         let viewProcessingQueue = self.viewProcessingQueue

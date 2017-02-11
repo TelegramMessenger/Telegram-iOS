@@ -8,6 +8,9 @@ final class GridHoleItem: GridItem {
     func node(layout: GridNodeLayout) -> GridItemNode {
         return GridHoleItemNode()
     }
+    
+    func update(node: GridItemNode) {
+    }
 }
 
 class GridHoleItemNode: GridItemNode {

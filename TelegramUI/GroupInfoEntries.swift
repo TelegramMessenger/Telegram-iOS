@@ -92,10 +92,10 @@ enum GroupInfoEntry: PeerInfoEntry {
                             if !lhsCachedData.isEqual(to: rhsCachedData) {
                                 return false
                             }
-                        } else if (rhsCachedData == nil) != (rhsCachedData != nil) {
+                        } else if (lhsCachedData != nil) != (rhsCachedData != nil) {
                             return false
                         }
-                        if lhsState != lhsState {
+                        if lhsState != rhsState {
                             return false
                         }
                         return true
@@ -116,10 +116,10 @@ enum GroupInfoEntry: PeerInfoEntry {
                 }
             case let .about(lhsText):
                 switch entry {
-                case let .about(lhsText):
-                    return true
-                default:
-                    return false
+                    case .about(lhsText):
+                        return true
+                    default:
+                        return false
                 }
             case .sharedMedia:
                 switch entry {
@@ -275,7 +275,7 @@ enum GroupInfoEntry: PeerInfoEntry {
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem {
         switch self {
             case let .info(peer, cachedData, state):
-                return ItemListAvatarAndNameInfoItem(account: account, peer: peer, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: account, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks, editingNameUpdated: { editingName in
                     
                 })
             case .setGroupPhoto:

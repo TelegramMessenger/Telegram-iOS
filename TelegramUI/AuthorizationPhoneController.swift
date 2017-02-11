@@ -48,7 +48,7 @@ class AuthorizationPhoneController: ViewController {
     @objc func nextPressed() {
         let phone = self.node.phoneNode.attributedText?.string ?? ""
         let account = self.account
-        let sendCode = Api.functions.auth.sendCode(flags: 0, phoneNumber: phone, currentNumber: nil, apiId: 10840, apiHash: "33c45224029d59cb3ad0c16134215aeb", langCode: "en")
+        let sendCode = Api.functions.auth.sendCode(flags: 0, phoneNumber: phone, currentNumber: nil, apiId: 10840, apiHash: "33c45224029d59cb3ad0c16134215aeb")
         
         let signal = account.network.request(sendCode)
             |> map { result in

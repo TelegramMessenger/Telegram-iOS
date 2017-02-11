@@ -32,6 +32,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     
     private let statusNode: ChatMessageDateAndStatusNode
     
+    private var item: ChatMessageItem?
     private var webPage: TelegramMediaWebpage?
     private var image: TelegramMediaImage?
     
@@ -319,6 +320,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     return (adjustedBoundingSize, { [weak self] animation in
                         if let strongSelf = self {
+                            strongSelf.item = item
+                            
                             var hasAnimation = true
                             if case .None = animation {
                                 hasAnimation = false
@@ -366,7 +369,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.contentImageNode = contentImageNode
                                     strongSelf.addSubnode(contentImageNode)
                                     contentImageNode.activateLocalContent = { [weak strongSelf] in
-                                        if let strongSelf = strongSelf {
+                                        if let strongSelf = strongSelf, let item = strongSelf.item {
                                             strongSelf.controllerInteraction?.openMessage(item.message.id)
                                         }
                                     }
@@ -384,7 +387,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.contentFileNode = contentFileNode
                                     strongSelf.addSubnode(contentFileNode)
                                     contentFileNode.activateLocalContent = { [weak strongSelf] in
-                                        if let strongSelf = strongSelf {
+                                        if let strongSelf = strongSelf, let item = strongSelf.item {
                                             strongSelf.controllerInteraction?.openMessage(item.message.id)
                                         }
                                     }
@@ -439,5 +442,47 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         return .none
+    }
+    
+    override func updateHiddenMedia(_ media: [Media]?) {
+        var currentMedia: Media?
+        if let webPage = self.webPage {
+            if case let .Loaded(content) = webPage.content {
+                if let image = content.image {
+                    currentMedia = image
+                } else if let file = content.file {
+                    currentMedia = file
+                }
+            }
+        }
+        if let currentMedia = currentMedia {
+            if let media = media {
+                var found = false
+                for m in media {
+                    if currentMedia.isEqual(m) {
+                        found = true
+                        break
+                    }
+                }
+                if let contentImageNode = self.contentImageNode {
+                    contentImageNode.isHidden = found
+                }
+            } else if let contentImageNode = self.contentImageNode {
+                contentImageNode.isHidden = false
+            }
+        }
+    }
+    
+    override func transitionNode(media: Media) -> ASDisplayNode? {
+        if let webPage = self.webPage {
+            if case let .Loaded(content) = webPage.content {
+                if let image = content.image, image.isEqual(media) {
+                    return self.contentImageNode
+                } else if let file = content.file, file.isEqual(media) {
+                    return self.contentImageNode
+                }
+            }
+        }
+        return nil
     }
 }

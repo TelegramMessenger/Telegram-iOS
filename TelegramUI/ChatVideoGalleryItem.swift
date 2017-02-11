@@ -23,6 +23,11 @@ class ChatVideoGalleryItem: GalleryItem {
             if let file = media as? TelegramMediaFile, (file.isVideo || file.mimeType.hasPrefix("video/")) {
                 node.setFile(account: account, file: file, loopVideo: file.isAnimated || self.message.containsSecretMedia)
                 break
+            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                if let file = content.file, (file.isVideo || file.mimeType.hasPrefix("video/")) {
+                    node.setFile(account: account, file: file, loopVideo: file.isAnimated || self.message.containsSecretMedia)
+                    break
+                }
             }
         }
         

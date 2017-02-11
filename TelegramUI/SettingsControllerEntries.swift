@@ -8,6 +8,7 @@ private struct SettingsItemArguments {
     let account: Account
     
     let pushController: (ViewController) -> Void
+    let presentController: (ViewController) -> Void
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let saveEditingState: () -> Void
 }
@@ -171,15 +172,22 @@ private enum SettingsEntry: ItemListNodeEntry {
     func item(_ arguments: SettingsItemArguments) -> ListViewItem {
         switch self {
             case let .userInfo(peer, cachedData, state):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max)), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 })
             case .setProfilePhoto:
                 return ItemListActionItem(title: "Set Profile Photo", kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.presentController(standardTextAlertController(title: "Verification Failed", text: "Your Apple ID or password is incorrect.", actions: [
+                        TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                            
+                        }),
+                        TextAlertAction(type: .defaultAction, title: "OK", action: {
+                            
+                        })
+                    ]))
                 })
             case .notificationsAndSounds:
-                return ItemListDisclosureItem(title: "Notifications ans Sounds", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(title: "Notifications and Sounds", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(notificationsAndSoundsController(account: arguments.account))
                 })
             case .privacyAndSecurity:
@@ -290,6 +298,7 @@ public func settingsController(account: Account) -> ViewController {
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -298,6 +307,8 @@ public func settingsController(account: Account) -> ViewController {
     
     let arguments = SettingsItemArguments(account: account, pushController: { controller in
         pushControllerImpl?(controller)
+    }, presentController: { controller in
+        presentControllerImpl?(controller)
     }, updateEditingName: { editingName in
         updateState { state in
             if let _ = state.editingState {
@@ -361,6 +372,9 @@ public func settingsController(account: Account) -> ViewController {
     controller.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconSettingsSelected")?.precomposed()
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
+    }
+    presentControllerImpl = { [weak controller] value in
+        controller?.present(value, in: .window)
     }
     return controller
 }

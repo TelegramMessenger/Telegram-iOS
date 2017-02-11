@@ -81,6 +81,13 @@ public class ComposeController: ViewController {
             }
         }
         
+        self.contactsNode.openCreateNewSecretChat = { [weak self] in
+            if let strongSelf = self {
+                let controller = ContactSelectionController(account: strongSelf.account, title: "New Secret Chat")
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+            }
+        }
+        
         self.displayNodeDidLoad()
     }
     

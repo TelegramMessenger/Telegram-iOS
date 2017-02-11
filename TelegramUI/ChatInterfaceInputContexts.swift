@@ -14,10 +14,11 @@ struct PossibleContextQueryTypes: OptionSet {
         self.rawValue = rawValue
     }
     
-    static let hashtag = PossibleContextQueryTypes(rawValue: (1 << 0))
-    static let mention = PossibleContextQueryTypes(rawValue: (1 << 1))
-    static let command = PossibleContextQueryTypes(rawValue: (1 << 2))
-    static let contextRequest = PossibleContextQueryTypes(rawValue: (1 << 3))
+    static let emoji = PossibleContextQueryTypes(rawValue: (1 << 0))
+    static let hashtag = PossibleContextQueryTypes(rawValue: (1 << 1))
+    static let mention = PossibleContextQueryTypes(rawValue: (1 << 2))
+    static let command = PossibleContextQueryTypes(rawValue: (1 << 3))
+    static let contextRequest = PossibleContextQueryTypes(rawValue: (1 << 4))
 }
 
 private func makeScalar(_ c: Character) -> Character {
@@ -81,6 +82,10 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
         
         var possibleQueryRange: Range<String.Index>?
         
+        if inputText.isSingleEmoji {
+            return (inputText.startIndex ..< inputText.endIndex, [.emoji], nil)
+        }
+        
         var possibleTypes = PossibleContextQueryTypes([.command, .mention])
         var definedType = false
         
@@ -128,7 +133,9 @@ func inputContextQueryForChatPresentationIntefaceState(_ chatPresentationInterfa
     let inputState = chatPresentationInterfaceState.interfaceState.effectiveInputState
     if let (possibleQueryRange, possibleTypes, additionalStringRange) = textInputStateContextQueryRangeAndType(inputState) {
         let query = inputState.inputText.substring(with: possibleQueryRange)
-        if possibleTypes == [.hashtag] {
+        if possibleTypes == [.emoji] {
+            return .emoji(query)
+        } else if possibleTypes == [.hashtag] {
             return .hashtag(query)
         } else if possibleTypes == [.mention] {
             return .mention(query)

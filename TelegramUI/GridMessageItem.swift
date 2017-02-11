@@ -41,6 +41,16 @@ final class GridMessageItem: GridItem {
         }
         return node
     }
+    
+    func update(node: GridItemNode) {
+        guard let node = node as? GridMessageItemNode else {
+            assertionFailure()
+            return
+        }
+        if let media = mediaForMessage(self.message) {
+            node.setup(account: self.account, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
+        }
+    }
 }
 
 final class GridMessageItemNode: GridItemNode {

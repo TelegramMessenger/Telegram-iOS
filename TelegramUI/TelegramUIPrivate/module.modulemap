@@ -12,4 +12,5 @@ module TelegramUIPrivateModule {
     header "../UIImage+WebP.h"
     header "../RingBuffer.h"
     header "../TelegramUIIncludes.h"
+    header "../../third-party/RMIntro/platform/ios/RMIntroViewController.h"
 }

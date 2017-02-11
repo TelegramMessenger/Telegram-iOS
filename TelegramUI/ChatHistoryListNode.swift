@@ -321,7 +321,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         return dict
                     }
                     if apply {
-                        applyMaxReadIndexInteractively(postbox: account.postbox, network: account.network, index: messageIndex).start()
+                        let _ = applyMaxReadIndexInteractively(postbox: account.postbox, network: account.network, index: messageIndex).start()
                     }
                 }
         }

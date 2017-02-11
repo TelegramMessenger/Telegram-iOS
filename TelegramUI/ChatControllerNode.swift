@@ -318,7 +318,7 @@ class ChatControllerNode: ASDisplayNode {
                 immediatelyLayoutAccessoryPanelAndAnimateAppearance = true
             }
         } else if let accessoryPanelNode = self.accessoryPanelNode {
-            dismissedAccessoryPanelNode = self.accessoryPanelNode
+            dismissedAccessoryPanelNode = accessoryPanelNode
             self.accessoryPanelNode = nil
         }
         
@@ -328,7 +328,7 @@ class ChatControllerNode: ASDisplayNode {
                 dismissedInputContextPanelNode = self.inputContextPanelNode
                 self.inputContextPanelNode = inputContextPanelNode
                 
-                self.insertSubnode(inputContextPanelNode, aboveSubnode: self.navigateToLatestButton)
+                self.addSubnode(inputContextPanelNode)
                 immediatelyLayoutInputContextPanelAndAnimateAppearance = true
                 
             }

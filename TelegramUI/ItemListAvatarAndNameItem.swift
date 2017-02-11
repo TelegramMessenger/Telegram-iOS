@@ -63,15 +63,17 @@ struct ItemListAvatarAndNameInfoItemState: Equatable {
 class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     let account: Account
     let peer: Peer?
+    let presence: PeerPresence?
     let cachedData: CachedPeerData?
     let state: ItemListAvatarAndNameInfoItemState
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let editingNameUpdated: (ItemListAvatarAndNameInfoItemName) -> Void
     
-    init(account: Account, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void) {
+    init(account: Account, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void) {
         self.account = account
         self.peer = peer
+        self.presence = presence
         self.cachedData = cachedData
         self.state = state
         self.sectionId = sectionId
@@ -132,6 +134,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
     private var inputSecondField: UITextField?
     
     private var item: ItemListAvatarAndNameInfoItem?
+    private var layoutWidthAndNeighbors: (width: CGFloat, neighbors: ItemListNeighbors)?
+    private var peerPresenceManager: PeerPresenceStatusManager?
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -163,6 +167,13 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.nameNode)
         self.addSubnode(self.statusNode)
+        
+        self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item, let layoutWidthAndNeighbors = strongSelf.layoutWidthAndNeighbors {
+                let (_, apply) = strongSelf.asyncLayout()(item, layoutWidthAndNeighbors.0, layoutWidthAndNeighbors.1)
+                apply(true)
+            }
+        })
     }
     
     func asyncLayout() -> (_ item: ItemListAvatarAndNameInfoItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
@@ -183,9 +194,15 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
             
             let statusText: String
             let statusColor: UIColor
-            if let user = item.peer as? TelegramUser {
-                statusText = "online"
-                statusColor = UIColor(0x007ee5)
+            if let presence = item.presence as? TelegramUserPresence {
+                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
+                statusText = string
+                if activity {
+                    statusColor = UIColor(0x007ee5)
+                } else {
+                    statusColor = UIColor(0xb3b3b3)
+                }
             } else if let channel = item.peer as? TelegramChannel {
                 if let cachedChannelData = item.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
                     statusText = "\(memberCount) members"
@@ -236,6 +253,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    strongSelf.layoutWidthAndNeighbors = (width, neighbors)
                     
                     let avatarOriginY: CGFloat
                     switch item.style {
@@ -342,7 +360,6 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                                 if strongSelf.inputSecondField == nil {
                                     let inputSecondField = TextFieldNodeView()
                                     inputSecondField.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
-                                    //inputSecondField.backgroundColor = UIColor.lightGray
                                     inputSecondField.attributedPlaceholder = NSAttributedString(string: "Last Name", font: Font.regular(17.0), textColor: UIColor(0xc8c8ce))
                                     inputSecondField.attributedText = NSAttributedString(string: lastName, font: Font.regular(17.0), textColor: UIColor.black)
                                     strongSelf.inputSecondField = inputSecondField
@@ -444,6 +461,9 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                             strongSelf.statusNode.alpha = 1.0
                             strongSelf.nameNode.alpha = 1.0
                         }
+                    }
+                    if let presence = item.presence as? TelegramUserPresence {
+                        strongSelf.peerPresenceManager?.reset(presence: presence)
                     }
                 }
             })

@@ -51,15 +51,19 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, from fr
             }
             stationaryItems = .indices(indices)
         case let .navigate(index):
-            for i in 0 ..< toEntries.count {
-                if toEntries[i].index >= index {
-                    var directionHint: GridNodePreviousItemsTransitionDirectionHint = .up
-                    if !fromEntries.isEmpty && fromEntries[0].index < toEntries[i].index {
-                        directionHint = .down
+            if let index = index {
+                for i in 0 ..< toEntries.count {
+                    if toEntries[i].index >= index {
+                        var directionHint: GridNodePreviousItemsTransitionDirectionHint = .up
+                        if !fromEntries.isEmpty && fromEntries[0].index < toEntries[i].index {
+                            directionHint = .down
+                        }
+                        scrollToItem = GridNodeScrollToItem(index: i, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: directionHint, adjustForSection: true)
+                        break
                     }
-                    scrollToItem = GridNodeScrollToItem(index: i, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: directionHint, adjustForSection: true)
-                    break
                 }
+            } else if !toEntries.isEmpty {
+                scrollToItem = GridNodeScrollToItem(index: 0, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: .up, adjustForSection: true)
             }
     }
     
@@ -77,8 +81,11 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, from fr
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
 
-private func chatMediaInputPanelEntries(view: ItemCollectionsView) -> [ChatMediaInputPanelEntry] {
+private func chatMediaInputPanelEntries(view: ItemCollectionsView, recentStickers: OrderedItemListView?) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
+    if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
+        entries.append(.recentPacks)
+    }
     var index = 0
     for (_, info, item) in view.collectionInfos {
         if let info = info as? StickerPackCollectionInfo {
@@ -89,13 +96,24 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView) -> [ChatMedia
     return entries
 }
 
-private func chatMediaInputGridEntries(view: ItemCollectionsView) -> [ChatMediaInputGridEntry] {
+private func chatMediaInputGridEntries(view: ItemCollectionsView, recentStickers: OrderedItemListView?) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     var stickerPackInfos: [ItemCollectionId: StickerPackCollectionInfo] = [:]
     for (id, info, _) in view.collectionInfos {
         if let info = info as? StickerPackCollectionInfo {
             stickerPackInfos[id] = info
+        }
+    }
+    
+    if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
+        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudRecentStickers, id: 0), accessHash: 0, title: "FREQUENTLY USED", shortName: "", hash: 0)
+        for i in 0 ..< min(20, recentStickers.items.count) {
+            if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
+                let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
+                let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
+                entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo))
+            }
         }
     }
     
@@ -109,8 +127,8 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView) -> [ChatMediaI
 
 private enum StickerPacksCollectionPosition: Equatable {
     case initial
-    case scroll(aroundIndex: ItemCollectionViewEntryIndex)
-    case navigate(index: ItemCollectionViewEntryIndex)
+    case scroll(aroundIndex: ItemCollectionViewEntryIndex?)
+    case navigate(index: ItemCollectionViewEntryIndex?)
     
     static func ==(lhs: StickerPacksCollectionPosition, rhs: StickerPacksCollectionPosition) -> Bool {
         switch lhs {
@@ -120,8 +138,8 @@ private enum StickerPacksCollectionPosition: Equatable {
                 } else {
                     return false
                 }
-            case let .scroll(aroundIndex):
-                if case .scroll(aroundIndex) = rhs {
+            case let .scroll(lhsAroundIndex):
+                if case let .scroll(rhsAroundIndex) = rhs, lhsAroundIndex == rhsAroundIndex {
                     return true
                 } else {
                     return false
@@ -135,7 +153,7 @@ private enum StickerPacksCollectionPosition: Equatable {
 private enum StickerPacksCollectionUpdate {
     case generic
     case scroll
-    case navigate(ItemCollectionViewEntryIndex)
+    case navigate(ItemCollectionViewEntryIndex?)
 }
 
 final class ChatMediaInputNodeInteraction {
@@ -146,6 +164,18 @@ final class ChatMediaInputNodeInteraction {
     init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void) {
         self.navigateToCollectionId = navigateToCollectionId
     }
+}
+
+private func clipScrollPosition(_ position: StickerPacksCollectionPosition) -> StickerPacksCollectionPosition {
+    switch position {
+        case let .scroll(index):
+            if let index = index, index.collectionId.namespace == Namespaces.ItemCollection.CloudRecentStickers {
+                return .scroll(aroundIndex: nil)
+            }
+        default:
+            break
+    }
+    return position
 }
 
 private let defaultPortraitPanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 271.0 : 258.0
@@ -190,14 +220,18 @@ final class ChatMediaInputNode: ChatInputNode {
         self.inputNodeInteraction = ChatMediaInputNodeInteraction(navigateToCollectionId: { [weak self] collectionId in
             if let strongSelf = self, let currentView = strongSelf.currentView, (collectionId != strongSelf.inputNodeInteraction.highlightedItemCollectionId || true) {
                 var index: Int32 = 0
-                for (id, _, _) in currentView.collectionInfos {
-                    if id.namespace == collectionId.namespace {
-                        if id == collectionId {
-                            let itemIndex = ItemCollectionViewEntryIndex.lowerBound(collectionIndex: index, collectionId: id)
-                            strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: itemIndex)))
-                            break
+                if collectionId.namespace == Namespaces.ItemCollection.CloudRecentStickers {
+                    strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil)))
+                } else {
+                    for (id, _, _) in currentView.collectionInfos {
+                        if id.namespace == collectionId.namespace {
+                            if id == collectionId {
+                                let itemIndex = ItemCollectionViewEntryIndex.lowerBound(collectionIndex: index, collectionId: id)
+                                strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: itemIndex)))
+                                break
+                            }
+                            index += 1
                         }
-                        index += 1
                     }
                 }
             }
@@ -216,13 +250,13 @@ final class ChatMediaInputNode: ChatInputNode {
             |> mapToSignal { position -> Signal<(ItemCollectionsView, StickerPacksCollectionUpdate), NoError> in
                 switch position {
                     case .initial:
-                        return account.postbox.itemCollectionsView(namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
+                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 return (view, .generic)
                             }
                     case let .scroll(aroundIndex):
                         var firstTime = true
-                        return account.postbox.itemCollectionsView(namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 140)
+                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 140)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 let update: StickerPacksCollectionUpdate
                                 if firstTime {
@@ -235,7 +269,7 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                     case let .navigate(index):
                         var firstTime = true
-                        return account.postbox.itemCollectionsView(namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 140)
+                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 140)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 let update: StickerPacksCollectionUpdate
                                 if firstTime {
@@ -255,8 +289,15 @@ final class ChatMediaInputNode: ChatInputNode {
         
         let transitions = itemCollectionsView
             |> map { (view, update) -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
-                let panelEntries = chatMediaInputPanelEntries(view: view)
-                let gridEntries = chatMediaInputGridEntries(view: view)
+                var recentStickers: OrderedItemListView?
+                for orderedView in view.orderedItemListsViews {
+                    if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
+                        recentStickers = orderedView
+                        break
+                    }
+                }
+                let panelEntries = chatMediaInputPanelEntries(view: view, recentStickers: recentStickers)
+                let gridEntries = chatMediaInputGridEntries(view: view, recentStickers: recentStickers)
                 let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
                 return (view, preparedChatMediaInputPanelEntryTransition(account: account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: account, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)
             }
@@ -281,7 +322,6 @@ final class ChatMediaInputNode: ChatInputNode {
                 if let collectionId = topVisibleCollectionId {
                     if strongSelf.inputNodeInteraction.highlightedItemCollectionId != collectionId {
                         strongSelf.inputNodeInteraction.highlightedItemCollectionId = collectionId
-                        var selectedItemNode: ChatMediaInputStickerPackItemNode?
                         var ensuredNodeVisible = false
                         var firstVisibleCollectionId: ItemCollectionId?
                         strongSelf.listView.forEachItemNode { itemNode in
@@ -289,6 +329,12 @@ final class ChatMediaInputNode: ChatInputNode {
                                 if firstVisibleCollectionId == nil {
                                     firstVisibleCollectionId = itemNode.currentCollectionId
                                 }
+                                itemNode.updateIsHighlighted()
+                                if itemNode.currentCollectionId == collectionId {
+                                    strongSelf.listView.ensureItemNodeVisible(itemNode)
+                                    ensuredNodeVisible = true
+                                }
+                            } else if let itemNode = itemNode as? ChatMediaInputRecentStickerPacksItemNode {
                                 itemNode.updateIsHighlighted()
                                 if itemNode.currentCollectionId == collectionId {
                                     strongSelf.listView.ensureItemNodeVisible(itemNode)
@@ -309,13 +355,13 @@ final class ChatMediaInputNode: ChatInputNode {
                 
                 if let currentView = strongSelf.currentView, let (topIndex, topItem) = visibleItems.top, let (bottomIndex, bottomItem) = visibleItems.bottom {
                     if topIndex <= 10 && currentView.lower != nil {
-                        let position: StickerPacksCollectionPosition = .scroll(aroundIndex: (topItem as! ChatMediaInputStickerGridItem).index)
+                        let position: StickerPacksCollectionPosition = clipScrollPosition(.scroll(aroundIndex: (topItem as! ChatMediaInputStickerGridItem).index))
                         if strongSelf.currentStickerPacksCollectionPosition != position {
                             strongSelf.currentStickerPacksCollectionPosition = position
                             strongSelf.itemCollectionsViewPosition.set(.single(position))
                         }
                     } else if bottomIndex >= visibleItems.count - 10 && currentView.higher != nil {
-                        let position: StickerPacksCollectionPosition = .scroll(aroundIndex: (bottomItem as! ChatMediaInputStickerGridItem).index)
+                        let position: StickerPacksCollectionPosition = clipScrollPosition(.scroll(aroundIndex: (bottomItem as! ChatMediaInputStickerGridItem).index))
                         if strongSelf.currentStickerPacksCollectionPosition != position {
                             strongSelf.currentStickerPacksCollectionPosition = position
                             strongSelf.itemCollectionsViewPosition.set(.single(position))

@@ -233,7 +233,7 @@ private extension PeerIndexNameRepresentation {
     }
 }
 
-private func contactListNodeEntries(view: ContactPeersView, presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var orderedPeers: [Peer]
@@ -241,14 +241,15 @@ private func contactListNodeEntries(view: ContactPeersView, presentation: Contac
     
     switch presentation {
         case let .orderedByPresence(displayVCard):
+            entries.append(.search)
             if displayVCard {
-                if let peer = view.accountPeer {
+                if let peer = accountPeer {
                     entries.append(.vcard(peer))
                 }
             }
-            orderedPeers = view.peers.sorted(by: { lhs, rhs in
-                let lhsPresence = view.peerPresences[lhs.id]
-                let rhsPresence = view.peerPresences[rhs.id]
+            orderedPeers = peers.sorted(by: { lhs, rhs in
+                let lhsPresence = presences[lhs.id]
+                let rhsPresence = presences[rhs.id]
                 if let lhsPresence = lhsPresence as? TelegramUserPresence, let rhsPresence = rhsPresence as? TelegramUserPresence {
                     if lhsPresence.status < rhsPresence.status {
                         return false
@@ -262,9 +263,8 @@ private func contactListNodeEntries(view: ContactPeersView, presentation: Contac
                 }
                 return lhs.id < rhs.id
             })
-            entries.append(.search)
         case let .natural(displaySearch, options):
-            orderedPeers = view.peers.sorted(by: { lhs, rhs in
+            orderedPeers = peers.sorted(by: { lhs, rhs in
                 let result = lhs.indexName.isLessThan(other: rhs.indexName)
                 if result == .orderedSame {
                     return lhs.id < rhs.id
@@ -302,6 +302,8 @@ private func contactListNodeEntries(view: ContactPeersView, presentation: Contac
             for i in 0 ..< options.count {
                 entries.append(.option(i, options[i]))
             }
+        case .search:
+            orderedPeers = peers
     }
     
     var removeIndices: [Int] = []
@@ -330,7 +332,7 @@ private func contactListNodeEntries(view: ContactPeersView, presentation: Contac
         } else {
             selection = .none
         }
-        entries.append(.peer(i, orderedPeers[i], view.peerPresences[orderedPeers[i].id], headers[orderedPeers[i].id], selection))
+        entries.append(.peer(i, orderedPeers[i], presences[orderedPeers[i].id], headers[orderedPeers[i].id], selection))
     }
     return entries
 }
@@ -366,6 +368,7 @@ struct ContactListAdditionalOption: Equatable {
 enum ContactListPresentation {
     case orderedByPresence(displayVCard: Bool)
     case natural(displaySearch: Bool, options: [ContactListAdditionalOption])
+    case search(Signal<String, NoError>)
 }
 
 struct ContactListNodeGroupSelectionState: Equatable {
@@ -400,7 +403,6 @@ struct ContactListNodeGroupSelectionState: Equatable {
 
 final class ContactListNode: ASDisplayNode {
     private let account: Account
-    private let presentation: ContactListPresentation
     
     let listNode: ListView
     
@@ -440,7 +442,6 @@ final class ContactListNode: ASDisplayNode {
     
     init(account: Account, presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
-        self.presentation = presentation
         
         self.listNode = ListView()
         
@@ -463,33 +464,54 @@ final class ContactListNode: ASDisplayNode {
         let account = self.account
         var firstTime: Int32 = 1
         let selectionStateSignal = self.selectionStatePromise.get()
-        let transition = self.enableUpdatesPromise.get()
-            |> mapToSignal { enableUpdates -> Signal<ContactsListNodeTransition, NoError> in
-                if enableUpdates {
-                    return combineLatest(account.postbox.contactPeersView(accountPeerId: account.peerId), selectionStateSignal)
-                    |> mapToQueue { view, selectionState -> Signal<ContactsListNodeTransition, NoError> in
-                        let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
-                            let entries = contactListNodeEntries(view: view, presentation: presentation, selectionState: selectionState)
-                            let previous = previousEntries.swap(entries)
-                            let animated: Bool
-                            if let previous = previous {
-                                animated = (entries.count - previous.count) < 20
-                            } else {
-                                animated = false
+        let transition: Signal<ContactsListNodeTransition, NoError>
+        if case let .search(query) = presentation {
+            transition = query
+                |> mapToSignal { query in
+                    return combineLatest(account.postbox.searchContacts(query: query), selectionStateSignal)
+                        |> mapToQueue { peers, selectionState -> Signal<ContactsListNodeTransition, NoError> in
+                            let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
+                                let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState)
+                                let previous = previousEntries.swap(entries)
+                                return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
                             }
-                            return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: animated))
+                            
+                            if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
+                                return signal |> runOn(Queue.mainQueue())
+                            } else {
+                                return signal |> runOn(processingQueue)
+                            }
                         }
-                
-                        if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
-                            return signal |> runOn(Queue.mainQueue())
-                        } else {
-                            return signal |> runOn(processingQueue)
-                        }
-                    }
-                } else {
-                    return .never()
                 }
-        } |> deliverOnMainQueue
+        } else {
+            transition = self.enableUpdatesPromise.get()
+                |> mapToSignal { enableUpdates -> Signal<ContactsListNodeTransition, NoError> in
+                    if enableUpdates {
+                        return combineLatest(account.postbox.contactPeersView(accountPeerId: account.peerId), selectionStateSignal)
+                        |> mapToQueue { view, selectionState -> Signal<ContactsListNodeTransition, NoError> in
+                            let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
+                                let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: view.peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState)
+                                let previous = previousEntries.swap(entries)
+                                let animated: Bool
+                                if let previous = previous {
+                                    animated = (entries.count - previous.count) < 20
+                                } else {
+                                    animated = false
+                                }
+                                return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: animated))
+                            }
+                    
+                            if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
+                                return signal |> runOn(Queue.mainQueue())
+                            } else {
+                                return signal |> runOn(processingQueue)
+                            }
+                        }
+                    } else {
+                        return .never()
+                    }
+            } |> deliverOnMainQueue
+        }
         self.disposable.set(transition.start(next: { [weak self] transition in
             self?.enqueueTransition(transition)
         }))

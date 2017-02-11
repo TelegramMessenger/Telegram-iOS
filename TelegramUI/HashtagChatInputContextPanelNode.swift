@@ -143,7 +143,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
-        var insets = UIEdgeInsets()
+        let insets = UIEdgeInsets()
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         

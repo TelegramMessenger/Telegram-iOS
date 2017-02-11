@@ -23,6 +23,11 @@ class ChatDocumentGalleryItem: GalleryItem {
             if let file = media as? TelegramMediaFile {
                 node.setFile(account: account, file: file)
                 break
+            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                if let file = content.file {
+                    node.setFile(account: account, file: file)
+                    break
+                }
             }
         }
         

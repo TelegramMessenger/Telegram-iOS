@@ -1,0 +1,27 @@
+/* 
+  Localizable.strings
+  intro
+
+  Created by Ilya Rimchikov on 17/01/14.
+  Copyright (c) 2014 Ilya Rimchikov. All rights reserved.
+*/
+
+"RMIntroHeadlineTelegram" = "Telegram";
+"RMIntroDescriptionTelegram" = "The world's **fastest** messaging app.\nIt is **free** and **secure**.";
+
+"RMIntroHeadlineFast" = "Fast";
+"RMIntroDescriptionFast" = "**Telegram** delivers messages faster\nthan any other application.";
+
+"RMIntroHeadlineFree" = "Free";
+"RMIntroDescriptionFree" = "**Telegram** is free forever. No ads.\nNo subscription fees.";
+
+"RMIntroHeadlinePowerful" = "Powerful";
+"RMIntroDescriptionPowerful" = "**Telegram** has no limits on\nthe size of your media and chats.";
+
+"RMIntroHeadlineSecure" = "Secure";
+"RMIntroDescriptionSecure" = "**Telegram** keeps your messages\nsafe from hacker attacks.";
+
+"RMIntroHeadlineCloud" = "Cloud-Based";
+"RMIntroDescriptionCloud" = "**Telegram** lets you access your\nmessages from multiple devices.";
+
+"RMIntroStartMessaging" = "Start Messaging";

@@ -64,6 +64,9 @@ public class ChatController: TelegramController {
     private var chatUnreadCountDisposable: Disposable?
     private var peerInputActivitiesDisposable: Disposable?
     
+    private var recentlyUsedInlineBotsValue: [Peer] = []
+    private var recentlyUsedInlineBotsDisposable: Disposable?
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil) {
         self.account = account
         self.peerId = peerId
@@ -264,7 +267,7 @@ public class ChatController: TelegramController {
                         })
                     }
                 })
-                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: file, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId)]).start()
+                let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: file, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId)]).start()
             }
         }, requestMessageActionCallback: { [weak self] messageId, data, isGame in
             if let strongSelf = self {
@@ -334,6 +337,7 @@ public class ChatController: TelegramController {
             }
         }, shareAccountContact: { [weak self] in
             if let strongSelf = self {
+                
             }
         }, sendBotCommand: { [weak self] messageId, command in
             if let strongSelf = self {
@@ -560,6 +564,7 @@ public class ChatController: TelegramController {
         self.resolveUrlDisposable?.dispose()
         self.chatUnreadCountDisposable?.dispose()
         self.peerInputActivitiesDisposable?.dispose()
+        self.recentlyUsedInlineBotsDisposable?.dispose()
     }
     
     var chatDisplayNode: ChatControllerNode {
@@ -698,7 +703,7 @@ public class ChatController: TelegramController {
                     let legacyController = LegacyController(legacyController: navigationController, presentation: .custom)
                     
                     var presentOverlayController: ((UIViewController) -> (() -> Void))?
-                    let controller = legacyAttachmentMenu(parentController: legacyController, presentOverlayController: { controller in
+                    let controller = legacyAttachmentMenu(parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, presentOverlayController: { controller in
                         if let presentOverlayController = presentOverlayController {
                             return presentOverlayController(controller)
                         } else {
@@ -715,8 +720,44 @@ public class ChatController: TelegramController {
                         }
                     }, openFileGallery: {
                         self?.presentMediaPicker(fileMode: true)
+                    }, openMap: {
+                        
+                    }, openContacts: {
+                        if let strongSelf = self {
+                            let contactsController = ContactSelectionController(account: strongSelf.account, title: "Select Contact")
+                            strongSelf.present(contactsController, in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            strongSelf.controllerNavigationDisposable.set((contactsController.result |> deliverOnMainQueue).start(next: { peerId in
+                                if let strongSelf = self, let peerId = peerId {
+                                    let peer = strongSelf.account.postbox.loadedPeerWithId(peerId)
+                                        |> take(1)
+                                    strongSelf.controllerNavigationDisposable.set((peer |> deliverOnMainQueue).start(next: { peer in
+                                        if let strongSelf = self, let user = peer as? TelegramUser, let phone = user.phone, !phone.isEmpty {
+                                            let media = TelegramMediaContact(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumber: phone, peerId: user.id)
+                                            let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                                            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                                                if let strongSelf = self {
+                                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                                                    })
+                                                }
+                                            })
+                                            let message = EnqueueMessage.message(text: "", attributes: [], media: media, replyToMessageId: replyMessageId)
+                                            let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [message]).start()
+                                        }
+                                    }))
+                                }
+                            }))
+                        }
                     }, sendMessagesWithSignals: { [weak self] signals in
                         self?.enqueueMediaMessages(signals: signals)
+                    }, selectRecentlyUsedInlineBot: { [weak self] peer in
+                        if let strongSelf = self, let addressName = peer.addressName {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                $0.updatedInterfaceState({ $0.withUpdatedComposeInputState(ChatTextInputState(inputText: "@" + addressName + " ")) }).updatedInputMode({ _ in
+                                    return .text
+                                })
+                            })
+                        }
                     })
                     controller.applicationInterface = legacyController.applicationInterface
                     controller.didDismiss = { [weak legacyController] _ in
@@ -727,7 +768,7 @@ public class ChatController: TelegramController {
                     controller.present(in: emptyController, sourceView: nil, animated: true)
                     
                     presentOverlayController = { [weak legacyController] controller in
-                        if let strongSelf = self, let legacyController = legacyController {
+                        if let legacyController = legacyController {
                             let childController = LegacyController(legacyController: controller, presentation: .custom)
                             legacyController.present(childController, in: .window)
                             return { [weak childController] in
@@ -741,42 +782,6 @@ public class ChatController: TelegramController {
                     
                     return
                 }
-                
-                let controller = ChatMediaActionSheetController()
-                controller.photo = { [weak strongSelf] asset in
-                    if let strongSelf = strongSelf {
-                        var randomId: Int64 = 0
-                        arc4random_buf(&randomId, 8)
-                        let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
-                        let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
-                        let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
-                        
-                        if false {
-                            let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
-                            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: media, replyToMessageId: nil)]).start()
-                        } else {
-                            let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: resource, previewRepresentations: [], mimeType: "image/jpeg", size: 0, attributes: [.FileName(fileName: "image.jpeg"), .ImageSize(size: scaledSize)])
-                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: media, replyToMessageId: nil)]).start()
-                        }
-                    }
-                }
-                controller.files = { [weak strongSelf] in
-                    if let strongSelf = strongSelf {
-                        
-                    }
-                }
-                controller.location = { [weak strongSelf] in
-                    if let strongSelf = strongSelf {
-                        let mapInputController = MapInputController()
-                        strongSelf.present(mapInputController, in: .window)
-                    }
-                }
-                controller.contacts = { [weak strongSelf] in
-                    if let strongSelf = strongSelf {
-                    }
-                }
-                strongSelf.present(controller, in: .window)
             }
         }
         
@@ -809,7 +814,7 @@ public class ChatController: TelegramController {
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                    deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                    let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
                 }
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             }
@@ -828,14 +833,13 @@ public class ChatController: TelegramController {
                                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds).withoutSelectionState() }) })
                                 strongController.dismiss()
                             } else {
-                                (strongSelf.account.postbox.modify({ modifier -> Void in
+                                let _ = (strongSelf.account.postbox.modify({ modifier -> Void in
                                     modifier.updatePeerChatInterfaceState(peerId, update: { currentState in
                                         if let currentState = currentState as? ChatInterfaceState {
                                             return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
                                         } else {
                                             return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
                                         }
-                                        return currentState
                                     })
                                 }) |> deliverOnMainQueue).start(completed: {
                                     if let strongSelf = self {
@@ -913,7 +917,7 @@ public class ChatController: TelegramController {
                     if !entities.isEmpty {
                         attributes.append(TextEntitiesMessageAttribute(entities: entities))
                     }
-                    enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: messageText, attributes: attributes, media: nil, replyToMessageId: replyMessageId)]).start()
+                    let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: messageText, attributes: attributes, media: nil, replyToMessageId: replyMessageId)]).start()
                 }
             }
         }, sendBotStart: { [weak self] payload in
@@ -935,11 +939,22 @@ public class ChatController: TelegramController {
                 if let peer = strongSelf.presentationInterfaceState.peer as? TelegramSecretChat {
                     let controller = ChatSecretAutoremoveTimerActionSheetController(currentValue: peer.messageAutoremoveTimeout == nil ? 0 : peer.messageAutoremoveTimeout!, applyValue: { value in
                         if let strongSelf = self {
-                            setSecretChatMessageAutoremoveTimeoutInteractively(account: strongSelf.account, peerId: strongSelf.peerId, timeout: value == 0 ? nil : value).start()
+                            let _ = setSecretChatMessageAutoremoveTimeoutInteractively(account: strongSelf.account, peerId: strongSelf.peerId, timeout: value == 0 ? nil : value).start()
                         }
                     })
                     strongSelf.present(controller, in: .window)
                 }
+            }
+        }, sendSticker: { [weak self] file in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")) }
+                        })
+                    }
+                })
+                let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: file, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId)]).start()
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get()))
         
@@ -1017,6 +1032,10 @@ public class ChatController: TelegramController {
         self.chatDisplayNode.historyNode.canReadHistory.set(true)
         
         self.chatDisplayNode.loadInputPanels()
+        
+        self.recentlyUsedInlineBotsDisposable = (recentlyUsedInlineBots(postbox: self.account.postbox) |> deliverOnMainQueue).start(next: { [weak self] peers in
+            self?.recentlyUsedInlineBotsValue = peers
+        })
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
@@ -1254,7 +1273,7 @@ public class ChatController: TelegramController {
                         })
                     }
                 })
-                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) }).start()
+                let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) }).start()
             }
         }))
     }

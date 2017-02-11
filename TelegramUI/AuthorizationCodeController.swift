@@ -6,7 +6,7 @@ import TelegramCore
 
 enum AuthorizationCodeResult {
     case Authorization(Api.auth.Authorization)
-    case Password
+    case Password(String)
 }
 
 class AuthorizationCodeController: ViewController {
@@ -61,24 +61,6 @@ class AuthorizationCodeController: ViewController {
                 phoneCodeHash = apiPhoneCodeHash
             default:
                 break
-        }
-        if let phoneCodeHash = phoneCodeHash {
-            let signal = self.account.network.request(Api.functions.auth.signIn(phoneNumber: self.phone, phoneCodeHash: phoneCodeHash, phoneCode: node.codeNode.attributedText?.string ?? "")) |> map { authorization in
-                return AuthorizationCodeResult.Authorization(authorization)
-            } |> `catch` { error -> Signal<AuthorizationCodeResult, MTRpcError> in
-                switch (error.errorCode, error.errorDescription) {
-                    case (401, "SESSION_PASSWORD_NEEDED"):
-                        return .single(.Password)
-                    case _:
-                        return .fail(error)
-                }
-            }
-            
-            self.signInDisposable.set(signal.start(next: { [weak self] result in
-                if let strongSelf = self {
-                    strongSelf.resultPipe.putNext(result)
-                }
-            }))
         }
     }
 }

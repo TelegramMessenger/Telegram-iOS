@@ -111,6 +111,7 @@ public class ImageNode: ASDisplayNode {
                     }
                     if !reportedHasImage {
                         if let hasImage = strongSelf.hasImage {
+                            reportedHasImage = true
                             hasImage.set(true)
                         }
                     }

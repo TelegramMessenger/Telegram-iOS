@@ -87,6 +87,17 @@ final class ChatMediaInputStickerGridItem: GridItem {
         node.selected = self.selected
         return node
     }
+    
+    func update(node: GridItemNode) {
+        guard let node = node as? ChatMediaInputStickerGridItemNode else {
+            assertionFailure()
+            return
+        }
+        node.interfaceInteraction = self.interfaceInteraction
+        node.inputNodeInteraction = self.inputNodeInteraction
+        node.setup(account: self.account, stickerItem: self.stickerItem)
+        node.selected = self.selected
+    }
 }
 
 final class ChatMediaInputStickerGridItemNode: GridItemNode {

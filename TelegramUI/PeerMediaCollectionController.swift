@@ -211,6 +211,7 @@ public class PeerMediaCollectionController: ViewController {
         }, beginAudioRecording: {
         }, finishAudioRecording: { _ in 
         }, setupMessageAutoremoveTimeout: {
+        }, sendSticker: { _ in
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

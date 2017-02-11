@@ -40,10 +40,10 @@ class ChatListItem: ListViewItem {
         async {
             let node = ChatListItemNode()
             node.setupItem(item: self)
-            let (first, last, firstWithHeader) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
             node.insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             
-            let (nodeLayout, apply) = node.asyncLayout()(self, width, first, last, firstWithHeader)
+            let (nodeLayout, apply) = node.asyncLayout()(self, width, first, last, firstWithHeader, nextIsPinned)
             
             node.insets = nodeLayout.insets
             node.contentSize = nodeLayout.contentSize
@@ -63,13 +63,13 @@ class ChatListItem: ListViewItem {
                 node.setupItem(item: self)
                 let layout = node.asyncLayout()
                 async {
-                    let (first, last, firstWithHeader) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
                     var animated = true
                     if case .None = animation {
                         animated = false
                     }
                     
-                    let (nodeLayout, apply) = layout(self, width, first, last, firstWithHeader)
+                    let (nodeLayout, apply) = layout(self, width, first, last, firstWithHeader, nextIsPinned)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply(animated)
@@ -88,7 +88,7 @@ class ChatListItem: ListViewItem {
         }
     }
     
-    static func mergeType(item: ChatListItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: ChatListItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
@@ -104,11 +104,15 @@ class ChatListItem: ListViewItem {
             first = true
             firstWithHeader = item.header != nil
         }
-        if let _ = nextItem {
+        var nextIsPinned = false
+        if let nextItem = nextItem as? ChatListItem {
+            if nextItem.index.pinningIndex != nil {
+                nextIsPinned = true
+            }
         } else {
             last = true
         }
-        return (first, last, firstWithHeader)
+        return (first, last, firstWithHeader, nextIsPinned)
     }
 }
 
@@ -199,6 +203,8 @@ private let peerMutedIcon = UIImage(bundleImageName: "Chat List/PeerMutedIcon")?
 
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
+private let pinnedBackgroundColor = UIColor(0xf7f7f7)
+
 class ChatListItemNode: ItemListRevealOptionsItemNode {
     var item: ChatListItem?
     
@@ -218,7 +224,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     var editableControlNode: ItemListEditableControlNode?
     
-    var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool)?
+    var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool)?
     
     override var canBeSelected: Bool {
         if self.editableControlNode != nil {
@@ -318,8 +324,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         let layout = self.asyncLayout()
-        let (first, last, firstWithHeader) = ChatListItem.mergeType(item: item as! ChatListItem, previousItem: previousItem, nextItem: nextItem)
-        let (nodeLayout, apply) = layout(item as! ChatListItem, width, first, last, firstWithHeader)
+        let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: item as! ChatListItem, previousItem: previousItem, nextItem: nextItem)
+        let (nodeLayout, apply) = layout(item as! ChatListItem, width, first, last, firstWithHeader, nextIsPinned)
         apply(false)
         self.contentSize = nodeLayout.contentSize
         self.insets = nodeLayout.insets
@@ -348,7 +354,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let strongSelf = self {
                             if completed {
                                 strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                                strongSelf.contentNode.backgroundColor = UIColor.white
+                                if let item = strongSelf.layoutParams?.0, item.index.pinningIndex != nil {
+                                    strongSelf.contentNode.backgroundColor = pinnedBackgroundColor
+                                } else {
+                                    strongSelf.contentNode.backgroundColor = UIColor.white
+                                }
+                                
                                 strongSelf.contentNode.isOpaque = true
                                 strongSelf.contentNode.displaysAsynchronously = true
                             }
@@ -357,7 +368,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     self.highlightedBackgroundNode.alpha = 0.0
                 } else {
                     self.highlightedBackgroundNode.removeFromSupernode()
-                    self.contentNode.backgroundColor = UIColor.white
+                    if let item = self.layoutParams?.0, item.index.pinningIndex != nil {
+                        self.contentNode.backgroundColor = pinnedBackgroundColor
+                    } else {
+                        self.contentNode.backgroundColor = UIColor.white
+                    }
                     self.contentNode.isOpaque = true
                     self.contentNode.displaysAsynchronously = true
                 }
@@ -365,14 +380,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatListItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ChatListItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         let textLayout = TextNode.asyncLayout(self.textNode)
         let titleLayout = TextNode.asyncLayout(self.titleNode)
         let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         
-        return { item, width, first, last, firstWithHeader in
+        return { item, width, first, last, firstWithHeader, nextIsPinned in
             let account = item.account
             let message = item.message
             let combinedReadState = item.combinedReadState
@@ -536,7 +551,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, first, last, firstWithHeader)
+                    strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned)
                     
                     let revealOffset = strongSelf.revealOffset
                     
@@ -633,9 +648,29 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.maxY - textLayout.size.height - 1.0), size: textLayout.size)
                     
-                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: editingOffset + 78.0 + contentRect.origin.x, y: 68.0 - separatorHeight), size: CGSize(width: width - 78.0 - editingOffset, height: separatorHeight)))
+                    let separatorInset: CGFloat
+                    if !nextIsPinned && item.index.pinningIndex != nil {
+                        separatorInset = 0.0
+                    } else {
+                        separatorInset = editingOffset + 78.0 + contentRect.origin.x
+                    }
+                    
+                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: 68.0 - separatorHeight), size: CGSize(width: width - separatorInset, height: separatorHeight)))
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    if item.index.pinningIndex != nil {
+                        strongSelf.backgroundNode.backgroundColor = pinnedBackgroundColor
+                        if strongSelf.contentNode.backgroundColor == nil || !strongSelf.contentNode.backgroundColor!.isEqual(pinnedBackgroundColor) {
+                            strongSelf.contentNode.backgroundColor = pinnedBackgroundColor
+                            updateContentNode = true
+                        }
+                    } else {
+                        strongSelf.backgroundNode.backgroundColor = UIColor.white
+                        if strongSelf.contentNode.backgroundColor == nil || !strongSelf.contentNode.backgroundColor!.isEqual(UIColor.white) {
+                            strongSelf.contentNode.backgroundColor = UIColor.white
+                            updateContentNode = true
+                        }
+                    }
                     let topNegativeInset: CGFloat = 0.0
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
@@ -672,7 +707,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     }
     
     override public func header() -> ListViewItemHeader? {
-        if let (item, _, _, _) = self.layoutParams {
+        if let (item, _, _, _, _) = self.layoutParams {
             return item.header
         } else {
             return nil
@@ -721,15 +756,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         if let item = self.item {
             switch option.key {
                 case RevealOptionKey.pin.rawValue:
-                    break
+                    item.interaction.setPeerPinned(item.index.messageIndex.id.peerId, true)
                 case RevealOptionKey.unpin.rawValue:
-                    break
+                    item.interaction.setPeerPinned(item.index.messageIndex.id.peerId, false)
                 case RevealOptionKey.mute.rawValue:
-                    break
+                    item.interaction.setPeerMuted(item.index.messageIndex.id.peerId, true)
                 case RevealOptionKey.unmute.rawValue:
-                    break
+                    item.interaction.setPeerMuted(item.index.messageIndex.id.peerId, false)
                 case RevealOptionKey.delete.rawValue:
-                    item.interaction
+                    item.interaction.deletePeer(item.index.messageIndex.id.peerId)
                 default:
                     break
             }

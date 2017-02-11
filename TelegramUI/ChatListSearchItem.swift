@@ -6,6 +6,9 @@ import Display
 import SwiftSignalKit
 
 private let searchBarFont = Font.regular(15.0)
+private let pinnedBackgroundColor = UIColor(0xf7f7f7)
+private let regularSearchBackgroundColor = UIColor(0xededed)
+private let pinnedSearchBackgroundColor = UIColor(0xe5e5e5)
 
 class ChatListSearchItem: ListViewItem {
     let selectable: Bool = false
@@ -24,14 +27,20 @@ class ChatListSearchItem: ListViewItem {
             node.placeholder = self.placeholder
             
             let makeLayout = node.asyncLayout()
-            let (layout, apply) = makeLayout(width)
+            var nextIsPinned = false
+            if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
+                nextIsPinned = true
+            }
+            let (layout, apply) = makeLayout(width, nextIsPinned)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
             node.activate = self.activate
             completion(node, {
-                return (nil, apply)
+                return (nil, {
+                    apply(false)
+                })
             })
         }
     }
@@ -41,10 +50,14 @@ class ChatListSearchItem: ListViewItem {
             Queue.mainQueue().async {
                 let layout = node.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(width)
+                    var nextIsPinned = false
+                    if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
+                        nextIsPinned = true
+                    }
+                    let (nodeLayout, apply) = layout(width, nextIsPinned)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
-                            apply()
+                            apply(animation.isAnimated)
                         })
                     }
                 }
@@ -73,27 +86,40 @@ class ChatListSearchItemNode: ListViewItemNode {
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         let makeLayout = self.asyncLayout()
-        let (layout, apply) = makeLayout(width)
-        apply()
+        var nextIsPinned = false
+        if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
+            nextIsPinned = true
+        }
+        let (layout, apply) = makeLayout(width, nextIsPinned)
+        apply(false)
         self.contentSize = layout.contentSize
         self.insets = layout.insets
     }
     
-    func asyncLayout() -> (_ width: CGFloat) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ width: CGFloat, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let searchBarNodeLayout = self.searchBarNode.asyncLayout()
         let placeholder = self.placeholder
         
-        return { width in
-            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "Search", font: searchBarFont, textColor: UIColor(0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude))
+        return { width, nextIsPinned in
+            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "Search", font: searchBarFont, textColor: UIColor(0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude), nextIsPinned ? pinnedSearchBackgroundColor : regularSearchBackgroundColor)
             
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 44.0 + 4.0), insets: UIEdgeInsets())
             
-            return (layout, { [weak self] in
+            return (layout, { [weak self] animated in
                 if let strongSelf = self {
+                    let transition: ContainedViewLayoutTransition
+                    if animated {
+                        transition = .animated(duration: 0.3, curve: .easeInOut)
+                    } else {
+                        transition = .immediate
+                    }
+                    
                     strongSelf.searchBarNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 8.0), size: CGSize(width: width - 16.0, height: 28.0))
                     searchBarApply()
                     
                     strongSelf.searchBarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: width - 16.0, height: 28.0))
+                    
+                    transition.updateBackgroundColor(node: strongSelf, color: nextIsPinned ? pinnedBackgroundColor : UIColor.white)
                 }
             })
         }

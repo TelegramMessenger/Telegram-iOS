@@ -96,7 +96,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     func item(_ arguments: CreateGroupArguments) -> ListViewItem {
         switch self {
             case let .groupInfo(peer, state):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 })
             case .setProfilePhoto:
@@ -126,7 +126,7 @@ private func createGroupEntries(state: CreateGroupState, peerIds: [PeerId], view
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
     
-    let peer = TelegramGroup(id: PeerId(namespace: 100, id: 0), title: "", photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
+    let peer = TelegramGroup(id: PeerId(namespace: 100, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
     
     entries.append(.groupInfo(peer, groupInfoState))
     entries.append(.setProfilePhoto)

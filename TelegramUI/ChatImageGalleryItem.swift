@@ -26,6 +26,14 @@ class ChatImageGalleryItem: GalleryItem {
             } else if let file = media as? TelegramMediaFile, file.mimeType.hasPrefix("image/") {
                 node.setFile(account: account, file: file)
                 break
+            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                if let image = content.image {
+                    node.setImage(account: account, image: image)
+                    break
+                } else if let file = content.file, file.mimeType.hasPrefix("image/") {
+                    node.setFile(account: account, file: file)
+                    break
+                }
             }
         }
         

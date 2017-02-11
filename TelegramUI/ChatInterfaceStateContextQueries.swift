@@ -9,6 +9,23 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
             return nil
         } else {
             switch inputQuery {
+                case let .emoji(query):
+                    var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+                    if let currentQuery = currentQuery {
+                        switch currentQuery {
+                            case .emoji:
+                                break
+                            default:
+                                signal = .single({ _ in return nil })
+                        }
+                    }
+                    let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = searchStickers(postbox: account.postbox, query: query)
+                        |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                            return { _ in
+                                return  .stickers(stickers)
+                            }
+                        }
+                    return (inputQuery, signal |> then(stickers))
                 case let .hashtag(query):
                     /*var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
                     if let currentQuery = currentQuery {

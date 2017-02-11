@@ -113,6 +113,26 @@ public class ChatListController: TelegramController {
             self?.activateSearch()
         }
         
+        self.chatListDisplayNode.chatListNode.deletePeerChat = { [weak self] peerId in
+            if let strongSelf = self {
+                let actionSheet = ActionSheetController()
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        if let strongSelf = self {
+                            let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId).start()
+                        }
+                    })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                })
+                ])])
+                strongSelf.present(actionSheet, in: .window)
+            }
+        }
+        
         self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId))
