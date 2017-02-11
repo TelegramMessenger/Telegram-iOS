@@ -1,5 +1,4 @@
 import Foundation
-import sqlcipher
 
 #if os(macOS)
     import SwiftSignalKitMac
@@ -488,15 +487,6 @@ public final class Postbox {
             
             //#if TARGET_IPHONE_SIMULATOR
             
-            //self.debugRestoreState("_empty")
-            
-            // debugging large amount of updates
-            //self.debugSaveState("beforeHoles")
-            //self.debugRestoreState("beforeHoles")
-            
-            // debugging unread counters
-            //self.debugRestoreState("afterLogin")
-            
             //self.debugSaveState(name: "previous")
             //self.debugRestoreState(name: "previous")
             
@@ -507,7 +497,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 11
+            let currentUserVersion: Int32 = 12
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
