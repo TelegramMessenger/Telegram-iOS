@@ -1,12 +1,4 @@
-//
-//  AskQuestion.swift
-//  Telegram
-//
-//  Created by keepcoder on 10/02/2017.
-//  Copyright © 2017 Telegram. All rights reserved.
-//
 
-import Cocoa
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
@@ -16,8 +8,6 @@ import Cocoa
     import SwiftSignalKit
     import MtProtoKitDynamic
 #endif
-
-import TelegramCoreMac
 
 
 public func supportPeerId(account:Account) -> Signal<PeerId?, Void> {

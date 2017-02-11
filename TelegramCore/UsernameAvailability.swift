@@ -1,23 +1,31 @@
-//
-//  UsernameAvailability.swift
-//  TelegramMac
-//
-//  Created by keepcoder on 12/12/2016.
-//  Copyright © 2016 Telegram. All rights reserved.
-//
 
-import Cocoa
-import TelegramCoreMac
-import PostboxMac
-import SwiftSignalKitMac
-import MtProtoKitMac
-enum UsernameAvailabilityState : Equatable {
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
+
+
+public enum UsernameAvailabilityError {
+    case underscopeStart
+    case underscopeEnd
+    case digitStart
+    case invalid
+    case short
+    case alreadyTaken
+}
+
+public enum UsernameAvailabilityState : Equatable {
     case none(username: String?)
     case success(username: String?)
     case progress(username: String?)
     case fail(username: String?, error: UsernameAvailabilityError)
     
-    var username:String? {
+    public var username:String? {
         switch self {
         case let .none(username:username):
             return username
@@ -33,7 +41,7 @@ enum UsernameAvailabilityState : Equatable {
 
 
 
-func ==(lhs:UsernameAvailabilityState, rhs:UsernameAvailabilityState) -> Bool {
+public func ==(lhs:UsernameAvailabilityState, rhs:UsernameAvailabilityState) -> Bool {
     switch lhs {
     case let .none(username:lhsName):
         if case let .none(username:rhsName) = rhs, lhsName == rhsName {
@@ -59,7 +67,7 @@ func ==(lhs:UsernameAvailabilityState, rhs:UsernameAvailabilityState) -> Bool {
 }
 
 
-func usernameAvailability(account:Account, def:String?, current:String) -> Signal<UsernameAvailabilityState,Void> {
+public func usernameAvailability(account:Account, def:String?, current:String) -> Signal<UsernameAvailabilityState,Void> {
     
     return Signal { subscriber in
         
@@ -90,7 +98,7 @@ func usernameAvailability(account:Account, def:String?, current:String) -> Signa
                 if char == current.characters.first {
                     return fail(.underscopeStart);
                 } else if char == current.characters.last {
-                    return fail(current.length < 5 ? .short : .underscopeEnd);
+                    return fail(current.characters.count < 5 ? .short : .underscopeEnd);
                 }
                 
             }
@@ -102,7 +110,7 @@ func usernameAvailability(account:Account, def:String?, current:String) -> Signa
             }
         }
         
-        if current.length < 5 {
+        if current.characters.count < 5 {
             if current.isEmpty {
                 return none()
             }
@@ -142,7 +150,7 @@ func usernameAvailability(account:Account, def:String?, current:String) -> Signa
     }
 }
 
-func updateUsername(account:Account, username:String) -> Signal<Bool,Void> {
+public func updateUsername(account:Account, username:String) -> Signal<Bool,Void> {
 
     return account.network.request(Api.functions.account.updateUsername(username: username)) |> map { result in
             return TelegramUser(user: result)

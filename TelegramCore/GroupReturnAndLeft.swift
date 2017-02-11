@@ -1,17 +1,12 @@
-//
-//  JoinGroup.swift
-//  Telegram
-//
-//  Created by keepcoder on 11/02/2017.
-//  Copyright © 2017 Telegram. All rights reserved.
-//
 
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import MtProtoKitMac
 #else
     import Postbox
     import SwiftSignalKit
+    import MtProtoKitDynamic
 #endif
 
 
@@ -49,4 +44,3 @@ public func leftGroup(account: Account, peerId: PeerId) -> Signal<Void, NoError>
     }
 }
 
-//[TLAPI_messages_addChatUser createWithChat_id:dialog.chat.n_id user_id:input fwd_limit:50]
