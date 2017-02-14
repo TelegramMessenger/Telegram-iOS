@@ -35,7 +35,7 @@
  * This may be used to avoid symbol conflicts between multiple libraries
  * that may both incorporate PLCrashReporter.
  */
-#define PLCRASHREPORTER_PREFIX BIT
+ #define PLCRASHREPORTER_PREFIX BIT
 
 
 // We need two extra layers of indirection to make CPP substitute
@@ -247,8 +247,8 @@
 #define plcrash_nasync_image_list_free PLNS(plcrash_nasync_image_list_free)
 #define plcrash_nasync_image_list_init PLNS(plcrash_nasync_image_list_init)
 #define plcrash_nasync_image_list_remove PLNS(plcrash_nasync_image_list_remove)
-#define plcrash_async_macho_free PLNS(plcrash_async_macho_free)
-#define plcrash_async_macho_init PLNS(plcrash_async_macho_init)
+#define plcrash_nasync_macho_free PLNS(plcrash_nasync_macho_free)
+#define plcrash_nasync_macho_init PLNS(plcrash_nasync_macho_init)
 #define plcrash_populate_error PLNS(plcrash_populate_error)
 #define plcrash_populate_mach_error PLNS(plcrash_populate_mach_error)
 #define plcrash_populate_posix_error PLNS(plcrash_populate_posix_error)
