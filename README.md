@@ -245,16 +245,22 @@ pod "HockeySDK"
 
 #### 3.2.1 Binary Distribution Options
 
-The default and recommended distribution is a binary (static library) and a resource bundle with translations and images for all SDK Features: Crash Reporting, User Feedback, Store Updates, Authentication, AdHoc Updates.
+The default and recommended distribution is a binary (static library) and a resource bundle with translations and images for all SDK Features.
 
-You can alternative use a Crash Reporting build only by using the following line in your `Podfile`:
+```ruby
+platform :ios, '8.0'
+pod "HockeySDK"
+```
 
-For the SDK with all features, add
+Will integrate the *default* configuration of the SDK, with all features except the Feedback feature.
+
+For the SDK with all features, including Feedback, add
 
 ```ruby
 pod "HockeySDK", :subspecs => ['AllFeaturesLib']
 ```
 to your podfile.
+
 To add the variant that only includes crash reporting, use
 
 ```ruby
@@ -269,7 +275,7 @@ pod "HockeySDK", :subspecs => ['CrashOnlyExtensionsLib']
 
 #### 3.2.2 Source Integration Options
 
-Alternatively you can integrate the SDK by source if you want to do any modifications or want a different feature set. The following entry will integrate the SDK:
+Alternatively you can integrate the SDK by source if you want to do modifications or want a different feature set. The following entry will integrate the SDK:
 
 ```ruby
 pod "HockeySDK-Source"
