@@ -11,11 +11,14 @@ import Foundation
 
 public func searchPeers(account: Account, query: String) -> Signal<[Peer], NoError> {
     let searchResult = account.network.request(Api.functions.contacts.search(q: query, limit: 10))
-        |> retryRequest
-    
+        |> map { Optional($0) }
+        |> `catch` { _ in
+            return Signal<Api.contacts.Found?, NoError>.single(nil)
+        }
     let processedSearchResult = searchResult
         |> mapToSignal { result -> Signal<[Peer], NoError> in
-            switch result {
+            if let result = result {
+                switch result {
                 case let .found(results, chats, users):
                     return account.postbox.modify { modifier -> [Peer] in
                         var peers: [PeerId: Peer] = [:]
@@ -36,12 +39,12 @@ public func searchPeers(account: Account, query: String) -> Signal<[Peer], NoErr
                         for result in results {
                             let peerId: PeerId
                             switch result {
-                                case let .peerUser(userId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                                case let .peerChat(chatId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                                case let .peerChannel(channelId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                            case let .peerUser(userId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            case let .peerChat(chatId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                            case let .peerChannel(channelId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                             }
                             if let peer = peers[peerId] {
                                 renderedPeers.append(peer)
@@ -49,8 +52,12 @@ public func searchPeers(account: Account, query: String) -> Signal<[Peer], NoErr
                         }
                         
                         return renderedPeers
+                    }
                 }
+            } else {
+                return .single([])
             }
+            
     }
     
     return processedSearchResult

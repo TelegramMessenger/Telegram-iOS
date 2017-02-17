@@ -31,13 +31,30 @@ private func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]
     return Message(stableId: 0, stableVersion: 0, id: id, globallyUniqueId: nil, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, forwardInfo: nil, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
 }
 
-public func searchMessages(account: Account, peerId: PeerId?, query: String) -> Signal<[Message], NoError> {
+public func searchMessages(account: Account, peerId: PeerId?, query: String, tagMask:MessageTags? = nil) -> Signal<[Message], NoError> {
     let searchResult: Signal<Api.messages.Messages, NoError>
+    
+    let filter:Api.MessagesFilter
+
+    if let tags = tagMask {
+        if tags.contains(.File) {
+            filter = .inputMessagesFilterDocument
+        } else if tags.contains(.Music) {
+            filter = .inputMessagesFilterMusic
+        } else if tags.contains(.WebPage) {
+            filter = .inputMessagesFilterUrl
+        } else {
+            filter = .inputMessagesFilterEmpty
+        }
+    } else {
+        filter = .inputMessagesFilterEmpty
+    }
+    
     if let peerId = peerId {
         searchResult = account.postbox.loadedPeerWithId(peerId)
             |> mapToSignal { peer -> Signal<Api.messages.Messages, NoError> in
                 if let inputPeer = apiInputPeer(peer) {
-                    return account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: query, filter: .inputMessagesFilterEmpty, minDate: 0, maxDate: Int32.max - 1, offset: 0, maxId: Int32.max - 1, limit: 64))
+                    return account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: query, filter: filter, minDate: 0, maxDate: Int32.max - 1, offset: 0, maxId: Int32.max - 1, limit: 64))
                         |> retryRequest
                 } else {
                     return .never()

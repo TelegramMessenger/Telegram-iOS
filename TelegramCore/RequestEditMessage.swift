@@ -9,12 +9,35 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func requestEditMessage(account: Account, messageId: MessageId, text: String) -> Signal<Bool, NoError> {
-    return account.postbox.loadedPeerWithId(messageId.peerId)
+public func requestEditMessage(account: Account, messageId: MessageId, text: String, entities:TextEntitiesMessageAttribute? = nil) -> Signal<Bool, NoError> {
+    return account.postbox.modify { modifier -> (Peer?, SimpleDictionary<PeerId, Peer>) in
+            var peers:SimpleDictionary<PeerId, Peer> = SimpleDictionary()
+
+            if let entities = entities {
+                for peerId in entities.associatedPeerIds {
+                    if let peer = modifier.getPeer(peerId) {
+                        peers[peer.id] = peer
+                    }
+                }
+            }
+        return (modifier.getPeer(messageId.peerId), peers)
+        }
         |> take(1)
-        |> mapToSignal { peer in
-            if let inputPeer = apiInputPeer(peer) {
-                return account.network.request(Api.functions.messages.editMessage(flags: (1 << 11), peer: inputPeer, id: messageId.id, message: text, replyMarkup: nil, entities: nil))
+        |> mapToSignal { peer, associatedPeers in
+            if let peer = peer, let inputPeer = apiInputPeer(peer) {
+                
+                var flags:Int32 = (1 << 11)
+
+                
+                var apiEntities:[Api.MessageEntity]?
+                if let entities = entities {
+                    apiEntities = apiTextAttributeEntities(entities, associatedPeers: associatedPeers)
+                    flags |= Int32(1 << 3)
+                }
+                
+                
+                
+                return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, replyMarkup: nil, entities: apiEntities))
                     |> map { result -> Api.Updates? in
                         return result
                     }
