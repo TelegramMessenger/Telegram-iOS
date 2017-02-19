@@ -36,9 +36,11 @@ public struct Font {
 }
 
 public extension NSAttributedString {
-    convenience init(string: String, font: UIFont, textColor: UIColor = UIColor.black, paragraphAlignment: NSTextAlignment? = nil) {
+    convenience init(string: String, font: UIFont? = nil, textColor: UIColor = UIColor.black, paragraphAlignment: NSTextAlignment? = nil) {
         var attributes: [String: AnyObject] = [:]
-        attributes[NSFontAttributeName] = font
+        if let font = font {
+            attributes[NSFontAttributeName] = font
+        }
         attributes[NSForegroundColorAttributeName] = textColor
         if let paragraphAlignment = paragraphAlignment {
             let paragraphStyle = NSMutableParagraphStyle()

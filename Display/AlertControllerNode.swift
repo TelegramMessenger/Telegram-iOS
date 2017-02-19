@@ -59,7 +59,7 @@ final class AlertControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.dimmingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         var insets = layout.insets(options: [.statusBar, .input])
-        let maxWidth = min(340.0, layout.size.width - 70.0)
+        let maxWidth = min(240.0, layout.size.width - 70.0)
         insets.left = floor((layout.size.width - maxWidth) / 2.0)
         insets.right = floor((layout.size.width - maxWidth) / 2.0)
         let contentAvailableFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: layout.size.width - insets.right, height: layout.size.height - insets.top - insets.bottom))
