@@ -119,5 +119,4 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                 return .complete()
             }
         }
-    return .never()
 }

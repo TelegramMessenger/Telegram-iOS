@@ -74,6 +74,17 @@ public enum GroupParticipant: Coding, Equatable {
                 }
         }
     }
+    
+    public var invitedBy: PeerId {
+        switch self {
+            case let .admin(_, invitedBy, _):
+                return invitedBy
+            case let .member(_, invitedBy, _):
+                return invitedBy
+            case let .creator(id):
+                return id
+        }
+    }
 }
 
 public final class CachedGroupParticipants: Coding, Equatable {

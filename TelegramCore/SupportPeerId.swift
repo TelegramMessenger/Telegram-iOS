@@ -1,4 +1,3 @@
-
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac

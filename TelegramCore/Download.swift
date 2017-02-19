@@ -9,7 +9,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-class Download {
+class Download: NSObject, MTRequestMessageServiceDelegate {
     let datacenterId: Int
     let context: MTContext
     let mtProto: MTProto
@@ -25,12 +25,21 @@ class Download {
             self.mtProto.requiredAuthToken = Int(datacenterId) as NSNumber
         }
         self.requestService = MTRequestMessageService(context: self.context)
+        
+        super.init()
+        
+        self.requestService.delegate = self
         self.mtProto.add(self.requestService)
     }
     
     deinit {
         self.mtProto.remove(self.requestService)
         self.mtProto.stop()
+    }
+    
+    func requestMessageServiceAuthorizationRequired(_ requestMessageService: MTRequestMessageService!) {
+        self.context.updateAuthTokenForDatacenter(withId: self.datacenterId, authToken: nil)
+        self.context.authTokenForDatacenter(withIdRequired: self.datacenterId, authToken:self.mtProto.requiredAuthToken, masterDatacenterId: self.mtProto.authTokenMasterDatacenterId)
     }
     
     func uploadPart(fileId: Int64, index: Int, data: Data) -> Signal<Void, NoError> {

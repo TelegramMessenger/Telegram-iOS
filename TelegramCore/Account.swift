@@ -10,22 +10,6 @@ import Foundation
 #endif
 import TelegramCorePrivateModule
 
-public struct AccountId: Comparable, Hashable {
-    let stringValue: String
-    
-    public static func ==(lhs: AccountId, rhs: AccountId) -> Bool {
-        return lhs.stringValue == rhs.stringValue
-    }
-    
-    public static func <(lhs: AccountId, rhs: AccountId) -> Bool {
-        return lhs.stringValue < rhs.stringValue
-    }
-    
-    public var hashValue: Int {
-        return self.stringValue.hash
-    }
-}
-
 public class AccountState: Coding, Equatable {
     public required init(decoder: Decoder) {
     }
@@ -129,47 +113,25 @@ public func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.St
         lhs.seq == rhs.seq
 }
 
-public func currentAccountId(appGroupPath: String, testingEnvironment: Bool) -> AccountId {
-    let filePath: String
-    if testingEnvironment {
-        filePath = "\(appGroupPath)/currentAccountId_test"
-    } else {
-        filePath = "\(appGroupPath)/currentAccountId"
-    }
-    if let id = try? String(contentsOfFile: filePath) {
-        return AccountId(stringValue: id)
-    } else {
-        let id = generateAccountId()
-        let _ = try? id.stringValue.write(toFile: filePath, atomically: true, encoding: .utf8)
-        return id
-    }
-}
-
-public func generateAccountId() -> AccountId {
-    return AccountId(stringValue: NSUUID().uuidString)
-}
-
 public class UnauthorizedAccount {
-    public let id: AccountId
+    public let id: AccountRecordId
     public let appGroupPath: String
     public let basePath: String
     public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
-    public let logger: Logger
     
     public var masterDatacenterId: Int32 {
         return Int32(self.network.mtProto.datacenterId)
     }
     
-    init(id: AccountId, appGroupPath: String, basePath: String, logger: Logger, testingEnvironment: Bool, postbox: Postbox, network: Network) {
+    init(id: AccountRecordId, appGroupPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network) {
         self.id = id
         self.appGroupPath = appGroupPath
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
-        self.logger = logger
         network.shouldKeepConnection.set(.single(true))
     }
     
@@ -188,7 +150,7 @@ public class UnauthorizedAccount {
             
             return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
                 |> map { network in
-                    return UnauthorizedAccount(id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, logger: self.logger, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
+                    return UnauthorizedAccount(id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                 }
         }
     }
@@ -247,6 +209,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SynchronizePinnedChatsOperation.self, f: { SynchronizePinnedChatsOperation(decoder: $0) })
     declareEncodable(RecentMediaItem.self, f: { RecentMediaItem(decoder: $0) })
     declareEncodable(RecentPeerItem.self, f: { RecentPeerItem(decoder: $0) })
+    declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
     
     return
 }()
@@ -255,16 +218,15 @@ func accountNetworkUsageInfoPath(basePath: String) -> String {
     return basePath + "/network-usage"
 }
 
-public enum AccountLogger {
-    case named(String)
-    case instance(Logger)
+private func accountRecordIdPathName(_ id: AccountRecordId) -> String {
+    return "account-\(UInt64(bitPattern: id.int64))"
 }
 
-public func accountWithId(_ id: AccountId, appGroupPath: String, logger: AccountLogger, testingEnvironment: Bool) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
+public func accountWithId(_ id: AccountRecordId, appGroupPath: String, testingEnvironment: Bool) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
     return Signal<(String, Postbox, Coding?), NoError> { subscriber in
         let _ = declaredEncodables
         
-        let path = "\(appGroupPath)/account\(id.stringValue)"
+        let path = "\(appGroupPath)/\(accountRecordIdPathName(id))"
         
         var initializeMessageNamespacesWithHoles: [(PeerId.Namespace, MessageId.Namespace)] = []
         for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {
@@ -274,6 +236,7 @@ public func accountWithId(_ id: AccountId, appGroupPath: String, logger: Account
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: allMessageTags)
         
         let postbox = Postbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
+        
         return (postbox.stateView() |> take(1) |> map { view -> (String, Postbox, Coding?) in
             let accountState = view.state
             return (path, postbox, accountState)
@@ -290,25 +253,17 @@ public func accountWithId(_ id: AccountId, appGroupPath: String, logger: Account
             postbox.removeKeychainEntryForKey(key)
         })
         
-        let concreteLogger: Logger
-        switch logger {
-            case let .named(name):
-                concreteLogger = Logger(basePath: basePath + "/" + name)
-            case let .instance(instance):
-                concreteLogger = instance
-        }
-        
         if let accountState = accountState {
             switch accountState {
                 case let unauthorizedState as UnauthorizedAccountState:
                     return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, logger: concreteLogger, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
+                            .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
                         }
                 case let authorizedState as AuthorizedAccountState:
                     return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            return .right(value: Account(id: id, basePath: basePath, logger: concreteLogger, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId))
+                            return .right(value: Account(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId))
                         }
                 case _:
                     assertionFailure("Unexpected accountState \(accountState)")
@@ -317,7 +272,7 @@ public func accountWithId(_ id: AccountId, appGroupPath: String, logger: Account
         
         return initializedNetwork(datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
             |> map { network -> Either<UnauthorizedAccount, Account> in
-                return .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, logger: concreteLogger, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
+                return .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
         }
     }
 }
@@ -380,14 +335,12 @@ public enum AccountNetworkState {
 }
 
 public class Account {
-    public let id: AccountId
+    public let id: AccountRecordId
     public let basePath: String
     public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
     public let peerId: PeerId
-    
-    public let logger: Logger
     
     public private(set) var stateManager: AccountStateManager!
     public private(set) var viewTracker: AccountViewTracker!
@@ -422,14 +375,13 @@ public class Account {
         return self.networkStateValue.get()
     }
     
-    public init(id: AccountId, basePath: String, logger: Logger, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId) {
+    public init(id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
         self.peerId = peerId
-        self.logger = logger
         
         self.peerInputActivityManager = PeerInputActivityManager()
         self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager)
@@ -546,10 +498,10 @@ public class Account {
             |> deliverOn(Queue.concurrentDefaultQueue())
             |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
                 if let strongSelf = self, value {
-                    trace("Account", what: "Became master")
+                    Logger.shared.log("Account", "Became master")
                     return managedServiceViews(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
                 } else {
-                    trace("Account", what: "Resigned master")
+                    Logger.shared.log("Account", "Resigned master")
                     return .never()
                 }
             }

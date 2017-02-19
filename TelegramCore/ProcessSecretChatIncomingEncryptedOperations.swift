@@ -112,18 +112,18 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                                 break
                                         }
                                     }
-                                    trace("SecretChat", what: "peerId \(peerId) malformed data after decryption")
+                                    Logger.shared.log("SecretChat", "peerId \(peerId) malformed data after decryption")
                                 }
                                 
                                 removeTagLocalIndices.append(entry.tagLocalIndex)
                             })
                         } else {
-                            trace("SecretChat", what: "peerId \(peerId) couldn't decrypt message content")
+                            Logger.shared.log("SecretChat", "peerId \(peerId) couldn't decrypt message content")
                             removeTagLocalIndices.append(entry.tagLocalIndex)
                         }
                     })
                 } else {
-                    trace("SecretChat", what: "peerId \(peerId) key \(operation.keyFingerprint) doesn't exist")
+                    Logger.shared.log("SecretChat", "peerId \(peerId) key \(operation.keyFingerprint) doesn't exist")
                 }
             } else {
                 assertionFailure()

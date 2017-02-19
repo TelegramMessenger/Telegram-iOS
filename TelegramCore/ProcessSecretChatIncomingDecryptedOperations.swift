@@ -249,7 +249,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                         if let error = error as? MessageParsingError {
                             switch error {
                                 case .contentParsingError:
-                                    print("Couldn't parse secret message payload")
+                                    Logger.shared.log("SecretChat", "Couldn't parse secret message payload")
                                     removeTagLocalIndices.append(entry.tagLocalIndex)
                                     return true
                                 case .unsupportedLayer:
@@ -261,10 +261,10 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                     removeTagLocalIndices.append(entry.tagLocalIndex)
                                     return true
                                 case .holesInSequenceBasedLayer:
-                                    print("Found holes in incoming operation sequence")
+                                    Logger.shared.log("SecretChat", "Found holes in incoming operation sequence")
                                     return false
                                 case .secretChatCorruption:
-                                    print("Secret chat corrupted")
+                                    Logger.shared.log("SecretChat", "Secret chat corrupted")
                                     return false
                             }
                         } else {
@@ -285,7 +285,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
             switch updatedState.embeddedState {
                 case let .sequenceBasedLayer(sequenceState):
                     let tagLocalIndex = max(0, sequenceState.outgoingOperationIndexFromCanonicalOperationIndex(maxAcknowledgedCanonicalOperationIndex) - 1)
-                    //trace("SecretChat", what: "peer \(peerId) dropping acknowledged operations <= \(tagLocalIndex)")
+                    //Logger.shared.log("SecretChat", "peer \(peerId) dropping acknowledged operations <= \(tagLocalIndex)")
                     modifier.operationLogRemoveEntries(peerId: peerId, tag: OperationLogTags.SecretOutgoing, withTagLocalIndicesEqualToOrLowerThan: tagLocalIndex)
                 default:
                     break

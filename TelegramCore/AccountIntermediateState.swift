@@ -43,7 +43,7 @@ enum AccountStateMutationOperation {
     case UpdatePeerNotificationSettings(PeerId, PeerNotificationSettings)
     case AddHole(MessageId)
     case MergeApiChats([Api.Chat])
-    case UpdatePeer(PeerId, (Peer) -> Peer)
+    case UpdatePeer(PeerId, (Peer?) -> Peer?)
     case MergeApiUsers([Api.User])
     case MergePeerPresences([PeerId: PeerPresence])
     case UpdateSecretChat(chat: Api.EncryptedChat, timestamp: Int32)
@@ -166,7 +166,7 @@ struct AccountMutableState {
         self.addOperation(.MergeApiChats(chats))
     }
     
-    mutating func updatePeer(_ id: PeerId, _ f: @escaping (Peer) -> Peer) {
+    mutating func updatePeer(_ id: PeerId, _ f: @escaping (Peer?) -> Peer?) {
         self.addOperation(.UpdatePeer(id, f))
     }
     
@@ -241,8 +241,8 @@ struct AccountMutableState {
                     }
                 }
             case let .UpdatePeer(id, f):
-                if let peer = self.peers[id] {
-                    let updatedPeer = f(peer)
+                let peer = self.peers[id]
+                if let updatedPeer = f(peer) {
                     peers[id] = updatedPeer
                     insertedPeers[id] = updatedPeer
                 }

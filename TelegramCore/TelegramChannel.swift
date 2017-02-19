@@ -269,4 +269,8 @@ public final class TelegramChannel: Peer {
         
         return true
     }
+    
+    func withUpdatedAddressName(_ addressName: String?) -> TelegramChannel {
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, role: self.role, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo)
+    }
 }

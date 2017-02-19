@@ -376,7 +376,7 @@ func finalStateWithUpdateGroups(_ account: Account, state: AccountMutableState, 
             updatedState.updateState(AuthorizedAccountState.State(pts: update.ptsRange.0, qts: updatedState.state.qts, date: updatedState.state.date, seq: updatedState.state.seq))
         } else {
             if ptsUpdatesAfterHole.count == 0 {
-                trace("State", what: "update pts hole: \(update.ptsRange.0) != \(updatedState.state.pts) + \(update.ptsRange.1)")
+                Logger.shared.log("State", "update pts hole: \(update.ptsRange.0) != \(updatedState.state.pts) + \(update.ptsRange.1)")
             }
             ptsUpdatesAfterHole.append(update)
         }
@@ -396,7 +396,7 @@ func finalStateWithUpdateGroups(_ account: Account, state: AccountMutableState, 
             updatedState.updateState(AuthorizedAccountState.State(pts: updatedState.state.pts, qts: update.qtsRange.0, date: updatedState.state.date, seq: updatedState.state.seq))
         } else {
             if qtsUpdatesAfterHole.count == 0 {
-                trace("State", what: "update qts hole: \(update.qtsRange.0) != \(updatedState.state.qts) + \(update.qtsRange.1)")
+                Logger.shared.log("State", "update qts hole: \(update.qtsRange.0) != \(updatedState.state.qts) + \(update.qtsRange.1)")
             }
             qtsUpdatesAfterHole.append(update)
         }
@@ -414,7 +414,7 @@ func finalStateWithUpdateGroups(_ account: Account, state: AccountMutableState, 
             updatedState.updateState(AuthorizedAccountState.State(pts: updatedState.state.pts, qts: updatedState.state.qts, date: group.date, seq: group.seqRange.0))
         } else {
             if seqGroupsAfterHole.count == 0 {
-                print("update seq hole: \(group.seqRange.0) != \(updatedState.state.seq) + \(group.seqRange.1)")
+                Logger.shared.log("State", "update seq hole: \(group.seqRange.0) != \(updatedState.state.seq) + \(group.seqRange.1)")
             }
             seqGroupsAfterHole.append(group)
         }
@@ -616,27 +616,27 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
             case let .updateChannelTooLong(_, channelId, _):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if !channelsToPoll.contains(peerId) {
-                    //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateChannelTooLong")
+                    //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateChannelTooLong")
                     channelsToPoll.insert(peerId)
                 }
             case let .updateDeleteChannelMessages(channelId, messages, pts: pts, ptsCount):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if let previousState = updatedState.channelStates[peerId] {
                     if previousState.pts >= pts {
-                        //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
+                        //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
                     } else if previousState.pts + ptsCount == pts {
                         updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
                         updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
                     } else {
                         if !channelsToPoll.contains(peerId) {
-                            trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) delete pts hole")
+                            Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) delete pts hole")
                             channelsToPoll.insert(peerId)
                             //updatedMissingUpdates = true
                         }
                     }
                 } else {
                     if !channelsToPoll.contains(peerId) {
-                        //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
+                        //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
                         channelsToPoll.insert(peerId)
                     }
                 }
@@ -645,7 +645,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     let peerId = messageId.peerId
                     if let previousState = updatedState.channelStates[peerId] {
                         if previousState.pts >= pts {
-                            //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
+                            //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old edit update")
                         } else if previousState.pts + ptsCount == pts {
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
@@ -656,19 +656,19 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                             updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
                         } else {
                             if !channelsToPoll.contains(peerId) {
-                                trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) edit message pts hole")
+                                Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) edit message pts hole")
                                 channelsToPoll.insert(peerId)
                                 //updatedMissingUpdates = true
                             }
                         }
                     } else {
                         if !channelsToPoll.contains(peerId) {
-                            //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
+                            //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
                             channelsToPoll.insert(peerId)
                         }
                     }
                 } else {
-                    trace("State", what: "Invalid updateEditChannelMessage")
+                    Logger.shared.log("State", "Invalid updateEditChannelMessage")
                 }
             case let .updateChannelWebPage(channelId, apiWebpage, pts, ptsCount):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
@@ -687,7 +687,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
                     } else {
                         if !channelsToPoll.contains(peerId) {
-                            trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateWebPage pts hole")
+                            Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateWebPage pts hole")
                             channelsToPoll.insert(peerId)
                         }
                     }
@@ -711,7 +711,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 if let message = StoreMessage(apiMessage: apiMessage) {
                     if let previousState = updatedState.channelStates[message.id.peerId] {
                         if previousState.pts >= pts {
-                            //trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
+                            //Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
                         } else if previousState.pts + ptsCount == pts {
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
@@ -722,7 +722,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                             updatedState.updateChannelState(message.id.peerId, state: previousState.setPts(pts))
                         } else {
                             if !channelsToPoll.contains(message.id.peerId) {
-                                trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) message pts hole")
+                                Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) message pts hole")
                                 ;
                                 channelsToPoll.insert(message.id.peerId)
                                 //updatedMissingUpdates = true
@@ -730,7 +730,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         }
                     } else {
                         if !channelsToPoll.contains(message.id.peerId) {
-                            trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
+                            Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
                             channelsToPoll.insert(message.id.peerId)
                         }
                     }
@@ -769,7 +769,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     }
                     
                     if alreadyStored {
-                        trace("State", what: "skipping message at \(date) for \(peerId): already stored")
+                        Logger.shared.log("State", "skipping message at \(date) for \(peerId): already stored")
                     } else {
                         var attributes: [MessageAttribute] = []
                         if !entities.isEmpty {
@@ -864,7 +864,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
         if let peer = updatedState.peers[peerId] {
             pollChannelSignals.append(pollChannel(account, peer: peer, state: updatedState.branch()))
         } else {
-            trace("State", what: "can't poll channel \(peerId): no peer found")
+            Logger.shared.log("State", "can't poll channel \(peerId): no peer found")
         }
     }
     
@@ -972,7 +972,7 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Acc
             if let peer = state.peers[peerId], let inputPeer = apiInputPeer(peer) {
                 missingPeers[peerId] = inputPeer
             } else {
-                trace("State", what: "can't fetch notification settings for peer \(peerId): can't create inputPeer")
+                Logger.shared.log("State", "can't fetch notification settings for peer \(peerId): can't create inputPeer")
             }
         }
     }
@@ -980,7 +980,7 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Acc
     if missingPeers.isEmpty {
         return .single(state)
     } else {
-        trace("State", what: "will fetch notification settings for \(missingPeers.count) peers")
+        Logger.shared.log("State", "will fetch notification settings for \(missingPeers.count) peers")
         var signals: [Signal<(PeerId, PeerNotificationSettings)?, NoError>] = []
         for (peerId, peer) in missingPeers {
             let fetchSettings = account.network.request(Api.functions.account.getNotifySettings(peer: .inputNotifyPeer(peer: peer)))
@@ -1088,7 +1088,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                 return updatedState
             }
     } else {
-        trace("State", what: "can't poll channel \(peer.id): can't create inputChannel")
+        Logger.shared.log("State", "can't poll channel \(peer.id): can't create inputChannel")
         return single(state, NoError.self)
     }
 }
@@ -1105,7 +1105,7 @@ private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableS
     }
     
     if !missingPeerIds.isEmpty {
-        trace("State", what: "missing peers \(missingPeerIds)")
+        Logger.shared.log("State", "missing peers \(missingPeerIds)")
         return false
     }
     
@@ -1133,7 +1133,7 @@ private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableS
         }
         
         if !previousStateMatches {
-            trace("State", what: ".UpdateState previous state \(previousState) doesn't match current state \(String(describing: currentState))")
+            Logger.shared.log("State", ".UpdateState previous state \(previousState) doesn't match current state \(String(describing: currentState))")
             failed = true
         }
     }
@@ -1150,7 +1150,7 @@ private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableS
             previousStateMatches = true
         }
         if !previousStateMatches {
-            trace("State", what: ".UpdateChannelState for \(peerId), previous state \(previousState) doesn't match current state \(String(describing: currentState))")
+            Logger.shared.log("State", ".UpdateChannelState for \(peerId), previous state \(previousState) doesn't match current state \(String(describing: currentState))")
             failed = true
         }
     }
@@ -1268,10 +1268,8 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
             case let .UpdateState(state):
                 let currentState = modifier.getState() as! AuthorizedAccountState
                 modifier.setState(currentState.changedState(state))
-                //trace("State", what: "setting state \(state)")
             case let .UpdateChannelState(peerId, channelState):
                 modifier.setPeerChatState(peerId, state: channelState)
-                //trace("State", what: "setting channel \(peerId) \(finalState.state.peers[peerId]?.displayTitle ?? "nil") state \(channelState)")
             case let .UpdatePeerNotificationSettings(peerId, notificationSettings):
                 modifier.updatePeerNotificationSettings([peerId: notificationSettings])
             case let .AddHole(messageId):
@@ -1297,8 +1295,8 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                     return updated
                 })
             case let .UpdatePeer(id, f):
-                if let peer = modifier.getPeer(id) {
-                    updatePeers(modifier: modifier, peers: [f(peer)], update: { _, updated in
+                if let peer = f(modifier.getPeer(id)) {
+                    updatePeers(modifier: modifier, peers: [peer], update: { _, updated in
                         return updated
                     })
                 }
@@ -1319,7 +1317,7 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                             modifier.setPeerChatState(peer.id, state: state)
                             modifier.operationLogRemoveAllEntries(peerId: peer.id, tag: OperationLogTags.SecretOutgoing)
                         } else {
-                            trace("State", what: "got encryptedChatDiscarded, but peer doesn't exist")
+                            Logger.shared.log("State", "got encryptedChatDiscarded, but peer doesn't exist")
                         }
                     case .encryptedChatEmpty(_):
                         break
@@ -1343,7 +1341,7 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                                 assertionFailure()
                             }
                         } else {
-                            trace("State", what: "got encryptedChatRequested, but peer already exists")
+                            Logger.shared.log("State", "got encryptedChatRequested, but peer already exists")
                         }
                     case let .encryptedChatWaiting(_, accessHash, date, adminId, participantId):
                         break

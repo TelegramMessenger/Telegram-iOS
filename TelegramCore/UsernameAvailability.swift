@@ -66,11 +66,14 @@ public func ==(lhs:UsernameAvailabilityState, rhs:UsernameAvailabilityState) -> 
     }
 }
 
+public enum AddressNameAvailabilityDomain {
+    case account
+    case peer(PeerId)
+}
 
-public func usernameAvailability(account:Account, def:String?, current:String) -> Signal<UsernameAvailabilityState,Void> {
+public func addressNameAvailability(account: Account, domain: AddressNameAvailabilityDomain, def: String?, current: String) -> Signal<UsernameAvailabilityState, NoError> {
     
     return Signal { subscriber in
-        
         let none = { () -> Disposable in
             subscriber.putNext(.none(username: current))
             subscriber.putCompletion()
@@ -117,10 +120,16 @@ public func usernameAvailability(account:Account, def:String?, current:String) -
             return fail(.short)
         }
         
-        
         subscriber.putNext(.progress(username: current))
         
         let disposable:Disposable
+        
+        switch domain {
+            case .account:
+                break
+            case let .peer(peerId):
+                break
+        }
         
         let req = account.network.request(Api.functions.account.checkUsername(username: current)) |> delay(0.3, queue: Queue.concurrentDefaultQueue()) |> map {result in
             switch result {
@@ -150,7 +159,7 @@ public func usernameAvailability(account:Account, def:String?, current:String) -
     }
 }
 
-public func updateUsername(account:Account, username:String) -> Signal<Bool,Void> {
+public func updateAddressName(account: Account, username: String) -> Signal<Bool,Void> {
 
     return account.network.request(Api.functions.account.updateUsername(username: username)) |> map { result in
             return TelegramUser(user: result)
@@ -176,4 +185,55 @@ public func updateUsername(account:Account, username:String) -> Signal<Bool,Void
         })
     
     
+}
+
+public enum UpdatePeerAddressNameError {
+    case generic
+}
+
+public func updatePeerAddressName(account: Account, peerId: PeerId, username: String?) -> Signal<Void, UpdatePeerAddressNameError> {
+    return account.postbox.modify { modifier -> Signal<Void, UpdatePeerAddressNameError> in
+        if let peer = modifier.getPeer(peerId) as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
+            return account.network.request(Api.functions.channels.updateUsername(channel: inputChannel, username: username ?? ""))
+                |> mapError { _ -> UpdatePeerAddressNameError in
+                    return .generic
+                }
+                |> mapToSignal { result -> Signal<Void, UpdatePeerAddressNameError> in
+                    return account.postbox.modify { modifier -> Void in
+                        if case .boolTrue = result {
+                            if let peer = modifier.getPeer(peerId) as? TelegramChannel {
+                                updatePeers(modifier: modifier, peers: [peer.withUpdatedAddressName(username)], update: { _, updated in
+                                    return updated
+                                })
+                            }
+                        }
+                    } |> mapError { _ -> UpdatePeerAddressNameError in return .generic }
+                }
+        } else {
+            return .fail(.generic)
+        }
+    } |> mapError { _ -> UpdatePeerAddressNameError in return .generic }  |> switchToLatest
+}
+
+public func adminedPublicChannels(account: Account) -> Signal<[Peer], NoError> {
+    return account.network.request(Api.functions.channels.getAdminedPublicChannels())
+        |> retryRequest
+        |> map { result -> [Peer] in
+            var peers: [Peer] = []
+            switch result {
+                case let .chats(apiChats):
+                    for chat in apiChats {
+                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                            peers.append(peer)
+                        }
+                    }
+                case let .chatsSlice(_, apiChats):
+                    for chat in apiChats {
+                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                            peers.append(peer)
+                        }
+                    }
+            }
+            return peers
+        }
 }

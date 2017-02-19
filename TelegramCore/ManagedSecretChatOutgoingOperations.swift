@@ -665,12 +665,12 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
             }
             let canonicalOperationIndex = sequenceState.canonicalOutgoingOperationIndex(operationIndex)
             maybeKey = state.keychain.latestKey(validForSequenceBasedCanonicalIndex: canonicalOperationIndex)
-            print("sending message with index \(canonicalOperationIndex) key \(maybeKey?.fingerprint)")
+            Logger.shared.log("SecretChat", "sending message with index \(canonicalOperationIndex) key \(maybeKey?.fingerprint)")
             sequenceInfo = SecretChatOperationSequenceInfo(topReceivedOperationIndex: topReceivedOperationIndex, operationIndex: canonicalOperationIndex)
     }
     
     guard let key = maybeKey else {
-        trace("SecretChat", what: "no valid key found")
+        Logger.shared.log("SecretChat", "no valid key found")
         return .single(nil)
     }
     

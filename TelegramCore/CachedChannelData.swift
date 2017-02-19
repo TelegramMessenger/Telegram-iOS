@@ -106,6 +106,10 @@ public final class CachedChannelData: CachedPeerData {
         return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: topParticipants)
     }
     
+    func withUpdatedParticipantsSummary(_ participantsSummary: CachedChannelParticipantsSummary) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants)
+    }
+    
     public init(decoder: Decoder) {
         self.flags = CachedChannelFlags(rawValue: decoder.decodeInt32ForKey("f"))
         self.about = decoder.decodeStringForKey("a")
@@ -177,6 +181,10 @@ public final class CachedChannelData: CachedPeerData {
         }
         
         return true
+    }
+    
+    func withUpdatedAbout(_ about: String?) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants)
     }
 }
 

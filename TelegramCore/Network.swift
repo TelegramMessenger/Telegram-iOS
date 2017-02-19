@@ -194,10 +194,10 @@ public class Network {
         self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    trace("Network", what: "Resume network connection")
+                    Logger.shared.log("Network", "Resume network connection")
                     strongSelf.mtProto.resume()
                 } else {
-                    trace("Network", what: "Pause network connection")
+                    Logger.shared.log("Network", "Pause network connection")
                     strongSelf.mtProto.pause()
                 }
             }

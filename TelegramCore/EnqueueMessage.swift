@@ -53,16 +53,17 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
     }
 }
 
-public func enqueueMessages(account: Account, peerId: PeerId, messages: [EnqueueMessage]) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Void in
-        enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages)
+public func enqueueMessages(account: Account, peerId: PeerId, messages: [EnqueueMessage]) -> Signal<[MessageId?], NoError> {
+    return account.postbox.modify { modifier -> [MessageId?] in
+        return enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages)
     }
 }
 
-func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messages: [EnqueueMessage]) {
+func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messages: [EnqueueMessage]) -> [MessageId?] {
     if let peer = modifier.getPeer(peerId) {
         var storeMessages: [StoreMessage] = []
         let timestamp = Int32(account.network.context.globalTime())
+        var globallyUniqueIds: [Int64] = []
         for message in messages {
             var attributes: [MessageAttribute] = []
             var flags = StoreMessageFlags()
@@ -71,6 +72,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
             var randomId: Int64 = 0
             arc4random_buf(&randomId, 8)
             attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId))
+            globallyUniqueIds.append(randomId)
             
             switch message {
                 case let .message(text, requestedAttributes, media, replyToMessageId):
@@ -122,8 +124,15 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     }
             }
         }
+        var messageIds: [MessageId?] = []
         if !storeMessages.isEmpty {
-            modifier.addMessages(storeMessages, location: .Random)
+            let globallyUniqueIdToMessageId = modifier.addMessages(storeMessages, location: .Random)
+            for globallyUniqueId in globallyUniqueIds {
+                messageIds.append(globallyUniqueIdToMessageId[globallyUniqueId])
+            }
         }
+        return messageIds
+    } else {
+        return []
     }
 }
