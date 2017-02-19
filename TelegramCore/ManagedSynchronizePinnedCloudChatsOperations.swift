@@ -133,7 +133,14 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
             return .complete()
         }
     } else {
-        return network.request(Api.functions.messages.deleteMessages(flags: 0, id: operation.messageIds.map { $0.id }))
+        var flags:Int32
+        switch operation.type {
+        case .forEveryone:
+            flags = (1 << 0)
+        default:
+            flags = 0
+        }
+        return network.request(Api.functions.messages.deleteMessages(flags: flags, id: operation.messageIds.map { $0.id }))
             |> map { result -> Api.messages.AffectedMessages? in
                 return result
             }

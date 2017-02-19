@@ -303,6 +303,7 @@ public final class PendingMessageManager {
             } else if let peer = modifier.getPeer(message.id.peerId), let inputPeer = apiInputPeer(peer) {
                 var uniqueId: Int64 = 0
                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
+                var messageEntities: [Api.MessageEntity]?
                 var replyMessageId: Int32?
                 
                 for attribute in message.attributes {
@@ -312,6 +313,8 @@ public final class PendingMessageManager {
                         uniqueId = outgoingInfo.uniqueId
                     } else if let attribute = attribute as? ForwardSourceInfoAttribute {
                         forwardSourceInfoAttribute = attribute
+                    } else if let attribute = attribute as? TextEntitiesMessageAttribute {
+                        messageEntities = apiTextAttributeEntities(attribute, associatedPeers: message.peers)
                     }
                 }
                 
@@ -319,13 +322,16 @@ public final class PendingMessageManager {
                 if let _ = replyMessageId {
                     flags |= Int32(1 << 0)
                 }
+                if let _ = messageEntities {
+                    flags |= Int32(1 << 3)
+                }
                 
                 let dependencyTag = PendingMessageRequestDependencyTag(messageId: message.id)
                 
                 let sendMessageRequest: Signal<Api.Updates, NoError>
                 switch content {
                     case .text:
-                        sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: nil), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities), tag: dependencyTag)
                             |> mapError { _ -> NoError in
                                 return NoError()
                             }

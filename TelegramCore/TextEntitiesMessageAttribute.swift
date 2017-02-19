@@ -82,7 +82,7 @@ public enum MessageTextEntityType: Equatable {
                     return false
                 }
             case let .TextUrl(url):
-                if case let .TextUrl(url) = rhs {
+                if case .TextUrl(url) = rhs {
                     return true
                 } else {
                     return false
@@ -207,3 +207,44 @@ public class TextEntitiesMessageAttribute: MessageAttribute, Equatable {
         return lhs.entities == rhs.entities
     }
 }
+
+
+func apiTextAttributeEntities(_ attribute: TextEntitiesMessageAttribute, associatedPeers:SimpleDictionary<PeerId, Peer>) -> [Api.MessageEntity] {
+    var entities:[Api.MessageEntity] = []
+    
+    for entity in attribute.entities {
+        let offset:Int32 = Int32(entity.range.lowerBound)
+        let length:Int32 = Int32(entity.range.upperBound - entity.range.lowerBound)
+        switch entity.type {
+        case .Unknown:
+            break
+        case .Mention:
+            entities.append(.messageEntityMention(offset: offset, length: length))
+        case .Hashtag:
+            entities.append(.messageEntityHashtag(offset: offset, length: length))
+        case .BotCommand:
+            entities.append(.messageEntityBotCommand(offset: offset, length: length))
+        case .Url:
+            entities.append(.messageEntityUrl(offset: offset, length: length))
+        case .Email:
+            entities.append(.messageEntityEmail(offset: offset, length: length))
+        case .Bold:
+            entities.append(.messageEntityBold(offset: offset, length: length))
+        case .Italic:
+            entities.append(.messageEntityItalic(offset: offset, length: length))
+        case .Code:
+            entities.append(.messageEntityCode(offset: offset, length: length))
+        case .Pre:
+            entities.append(.messageEntityPre(offset: offset, length: length, language: ""))
+        case let .TextUrl(url):
+            entities.append(.messageEntityTextUrl(offset: offset, length: length, url: url))
+        case let .TextMention(peerId):
+            if let peer = associatedPeers[peerId], let inputUser = apiInputUser(peer) {
+                entities.append(.inputMessageEntityMentionName(offset: offset, length: length, userId: inputUser))
+            }
+        }
+    }
+    return entities
+}
+
+
