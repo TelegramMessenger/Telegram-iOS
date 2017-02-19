@@ -11,12 +11,14 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     private let interactiveImageNode: ChatMessageInteractiveMediaNode
+    private let dateAndStatusNode: ChatMessageDateAndStatusNode
     
     private var item: ChatMessageItem?
     private var media: Media?
     
     required init() {
         self.interactiveImageNode = ChatMessageInteractiveMediaNode()
+        self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init()
         
@@ -37,6 +39,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let interactiveImageLayout = self.interactiveImageNode.asyncLayout()
+        let statusLayout = self.dateAndStatusNode.asyncLayout()
         
         return { item, layoutConstants, position, constrainedSize in
             var selectedMedia: Media?
@@ -58,12 +61,77 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 return (refinedWidth + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, { boundingWidth in
                     let (imageSize, imageApply) = finishLayout(boundingWidth - layoutConstants.image.bubbleInsets.left - layoutConstants.image.bubbleInsets.right)
                     
-                    return (CGSize(width: imageSize.width + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, height: imageSize.height + layoutConstants.image.bubbleInsets.top + layoutConstants.image.bubbleInsets.bottom), { [weak self] _ in
+                    var t = Int(item.message.timestamp)
+                    var timeinfo = tm()
+                    localtime_r(&t, &timeinfo)
+                    
+                    var edited = false
+                    var viewCount: Int?
+                    for attribute in item.message.attributes {
+                        if let _ = attribute as? EditedMessageAttribute {
+                            edited = true
+                        } else if let attribute = attribute as? ViewCountMessageAttribute {
+                            viewCount = attribute.count
+                        }
+                    }
+                    var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                    if let viewCount = viewCount {
+                        dateText = "\(viewCount) " + dateText
+                    }
+                    if edited {
+                        dateText = "edited " + dateText
+                    }
+                    
+                    let statusType: ChatMessageDateAndStatusType?
+                    if case .None = position.bottom {
+                        if item.message.flags.contains(.Incoming) {
+                            statusType = .ImageIncoming
+                        } else {
+                            if item.message.flags.contains(.Failed) {
+                                statusType = .ImageOutgoing(.Failed)
+                            } else if item.message.flags.isSending {
+                                statusType = .ImageOutgoing(.Sending)
+                            } else {
+                                statusType = .ImageOutgoing(.Sent(read: item.read))
+                            }
+                        }
+                    } else {
+                        statusType = nil
+                    }
+                    
+                    let imageLayoutSize = CGSize(width: imageSize.width + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, height: imageSize.height + layoutConstants.image.bubbleInsets.top + layoutConstants.image.bubbleInsets.bottom)
+                    
+                    var statusSize = CGSize()
+                    var statusApply: ((Bool) -> Void)?
+                    
+                    if let statusType = statusType {
+                        let (size, apply) = statusLayout(dateText, statusType, CGSize(width: imageLayoutSize.width, height: CGFloat.greatestFiniteMagnitude))
+                        statusSize = size
+                        statusApply = apply
+                    }
+                    
+                    let layoutSize = CGSize(width: max(imageLayoutSize.width, statusSize.width + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right + layoutConstants.image.statusInsets.left + layoutConstants.image.statusInsets.right), height: imageLayoutSize.height)
+                    
+                    return (layoutSize, { [weak self] animation in
                         if let strongSelf = self {
                             strongSelf.item = item
                             strongSelf.media = selectedMedia
                             
                             strongSelf.interactiveImageNode.frame = CGRect(origin: CGPoint(x: layoutConstants.image.bubbleInsets.left, y: layoutConstants.image.bubbleInsets.top), size: imageSize)
+                            
+                            if let statusApply = statusApply {
+                                if strongSelf.dateAndStatusNode.supernode == nil {
+                                    strongSelf.interactiveImageNode.addSubnode(strongSelf.dateAndStatusNode)
+                                }
+                                var hasAnimation = true
+                                if case .None = animation {
+                                    hasAnimation = false
+                                }
+                                statusApply(hasAnimation)
+                                strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutSize.width - layoutConstants.image.bubbleInsets.right - layoutConstants.image.statusInsets.right - statusSize.width, y: layoutSize.height -  layoutConstants.image.bubbleInsets.bottom - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
+                            } else if strongSelf.dateAndStatusNode.supernode != nil {
+                                strongSelf.dateAndStatusNode.removeFromSupernode()
+                            }
                             
                             imageApply()
                         }

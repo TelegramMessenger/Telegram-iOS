@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode {
+final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let navigationBackgroundNode: ASDisplayNode
     private let stripeNode: ASDisplayNode
     private let titleNode: ASTextNode
@@ -66,6 +66,8 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode {
         }, didLoad: nil)
         
         self.backgroundColor = UIColor.white
+        
+        self.codeField.textField.delegate = self
         
         self.addSubnode(self.navigationBackgroundNode)
         self.addSubnode(self.stripeNode)
@@ -170,5 +172,10 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode {
     
     @objc func passwordFieldTextChanged(_ textField: UITextField) {
         
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.loginWithCode?(self.currentPassword)
+        return false
     }
 }

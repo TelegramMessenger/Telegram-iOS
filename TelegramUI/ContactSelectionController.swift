@@ -24,10 +24,14 @@ public class ContactSelectionController: ViewController {
         return self._result.get()
     }
     
-    private let createActionDisposable = MetaDisposable()
+    private let confirmation: (PeerId) -> Signal<Bool, NoError>
     
-    public init(account: Account, title: String) {
+    private let createActionDisposable = MetaDisposable()
+    private let confirmationDisposable = MetaDisposable()
+    
+    public init(account: Account, title: String, confirmation: @escaping (PeerId) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.account = account
+        self.confirmation = confirmation
         
         super.init()
         
@@ -142,7 +146,14 @@ public class ContactSelectionController: ViewController {
     }
     
     private func openPeer(peerId: PeerId) {
-        self._result.set(.single(peerId))
-        self.contactsNode.animateOut()
+        self.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+        self.confirmationDisposable.set((self.confirmation(peerId) |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                if value {
+                    strongSelf._result.set(.single(peerId))
+                    strongSelf.contactsNode.animateOut()
+                }
+            }
+        }))
     }
 }

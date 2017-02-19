@@ -84,8 +84,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     @objc func nextPressed() {
-        let (code, number) = self.controllerNode.codeAndNumber
-        if code != nil && !number.isEmpty {
+        let (_, number) = self.controllerNode.codeAndNumber
+        if !number.isEmpty {
             self.loginWithNumber?(self.controllerNode.currentNumber)
         } else {
             hapticFeedback.error()

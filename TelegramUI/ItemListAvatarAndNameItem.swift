@@ -21,9 +21,24 @@ enum ItemListAvatarAndNameInfoItemName: Equatable {
     var composedTitle: String {
         switch self {
             case let .personName(firstName, lastName):
-                return firstName + " " + lastName
+                if !firstName.isEmpty && !lastName.isEmpty {
+                    return firstName + " " + lastName
+                } else if !firstName.isEmpty {
+                    return firstName
+                } else {
+                    return lastName
+                }
             case let .title(title):
                 return title
+        }
+    }
+    
+    var isEmpty: Bool {
+        switch self {
+            case let .personName(firstName, lastName):
+                return !firstName.isEmpty || !lastName.isEmpty
+            case let .title(title):
+                return title.isEmpty
         }
     }
     

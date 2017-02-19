@@ -133,6 +133,7 @@ public class ChatController: TelegramController {
                             }
                         }))
                         
+                        strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(gallery, in: .window, with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
                             if let strongSelf = self {
                                 var transitionNode: ASDisplayNode?
@@ -1029,7 +1030,7 @@ public class ChatController: TelegramController {
         super.viewDidAppear(animated)
         
         self.chatDisplayNode.historyNode.preloadPages = true
-        self.chatDisplayNode.historyNode.canReadHistory.set(true)
+        self.chatDisplayNode.historyNode.canReadHistory.set((self.account.applicationContext as! TelegramApplicationContext).applicationInForeground)
         
         self.chatDisplayNode.loadInputPanels()
         
@@ -1041,11 +1042,11 @@ public class ChatController: TelegramController {
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        self.chatDisplayNode.historyNode.canReadHistory.set(false)
+        self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
         let peerId = self.peerId
         let timestamp = Int32(Date().timeIntervalSince1970)
         let interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
-        self.account.postbox.modify({ modifier -> Void in
+        let _ = self.account.postbox.modify({ modifier -> Void in
             modifier.updatePeerChatInterfaceState(peerId, update: { _ in
                 return interfaceState
             })
@@ -1213,9 +1214,10 @@ public class ChatController: TelegramController {
                 self.navigationActionDisposable.set((self.peerView.get()
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                        if let strongSelf = self, let _ = peerView.peers[peerView.peerId] {
-                            let chatInfoController = PeerInfoController(account: strongSelf.account, peerId: peerView.peerId)
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(chatInfoController)
+                        if let strongSelf = self, let peer = peerView.peers[peerView.peerId] {
+                            if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                                (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                            }
                         }
                 }))
                 break

@@ -6,6 +6,7 @@ import SwiftSignalKit
 enum ItemListActionKind {
     case generic
     case destructive
+    case neutral
 }
 
 enum ItemListActionAlignment {
@@ -110,9 +111,17 @@ class ItemListActionItemNode: ListViewItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, width, neighbors in
-            let sectionInset: CGFloat = 22.0
+            let textColor: UIColor
+            switch item.kind {
+                case .destructive:
+                    textColor = UIColor(0xff3b30)
+                case .generic:
+                    textColor = UIColor(0x007ee5)
+                case .neutral:
+                    textColor = .black
+            }
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.kind == .destructive ? UIColor(0xff3b30) : UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: textColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let contentSize: CGSize
             let insets: UIEdgeInsets

@@ -38,7 +38,7 @@
 		D01AC91F1DD5E09000E8160F /* EditAccessoryPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC91E1DD5E09000E8160F /* EditAccessoryPanelNode.swift */; };
 		D01B27951E38F3BF0022A4C0 /* ItemListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B27941E38F3BF0022A4C0 /* ItemListControllerNode.swift */; };
 		D01B27991E39144C0022A4C0 /* ItemListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B27981E39144C0022A4C0 /* ItemListController.swift */; };
-		D01B279B1E39386C0022A4C0 /* SettingsControllerEntries.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B279A1E39386C0022A4C0 /* SettingsControllerEntries.swift */; };
+		D01B279B1E39386C0022A4C0 /* SettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B279A1E39386C0022A4C0 /* SettingsController.swift */; };
 		D01B279D1E394A500022A4C0 /* NotificationsAndSounds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B279C1E394A500022A4C0 /* NotificationsAndSounds.swift */; };
 		D01B279F1E394BD70022A4C0 /* InAppNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B279E1E394BD70022A4C0 /* InAppNotificationSettings.swift */; };
 		D01B27A41E394FC90022A4C0 /* SecuritySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B27A31E394FC90022A4C0 /* SecuritySettings.swift */; };
@@ -92,6 +92,9 @@
 		D03ADB4B1D70443F005A521C /* ReplyAccessoryPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03ADB4A1D70443F005A521C /* ReplyAccessoryPanelNode.swift */; };
 		D03ADB4D1D7045C9005A521C /* ChatInterfaceStateAccessoryPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03ADB4C1D7045C9005A521C /* ChatInterfaceStateAccessoryPanels.swift */; };
 		D03ADB4F1D70546B005A521C /* AccessoryPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03ADB4E1D70546B005A521C /* AccessoryPanelNode.swift */; };
+		D03E5E091E55C49C0029569A /* DebugAccountsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E5E081E55C49C0029569A /* DebugAccountsController.swift */; };
+		D03E5E0F1E55F8B90029569A /* ChannelVisibilityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E5E0E1E55F8B90029569A /* ChannelVisibilityController.swift */; };
+		D0486F0A1E523C8500091F0C /* GroupInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0486F091E523C8500091F0C /* GroupInfoController.swift */; };
 		D049EAE21E447AD500A2CD3A /* HorizontalStickersChatContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAE11E447AD500A2CD3A /* HorizontalStickersChatContextPanelNode.swift */; };
 		D049EAE41E44949F00A2CD3A /* HorizontalStickerGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAE31E44949F00A2CD3A /* HorizontalStickerGridItem.swift */; };
 		D049EAE61E44AD5600A2CD3A /* ChatMediaInputRecentStickerPacksItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAE51E44AD5600A2CD3A /* ChatMediaInputRecentStickerPacksItem.swift */; };
@@ -170,6 +173,10 @@
 		D050F2131E48B61500988324 /* PhoneInputNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050F2121E48B61500988324 /* PhoneInputNode.swift */; };
 		D050F2161E48D9E000988324 /* AuthorizationSequenceCountrySelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050F2151E48D9E000988324 /* AuthorizationSequenceCountrySelectionController.swift */; };
 		D050F2181E48D9EA00988324 /* AuthorizationSequenceCountrySelectionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050F2171E48D9EA00988324 /* AuthorizationSequenceCountrySelectionControllerNode.swift */; };
+		D0561DDF1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DDE1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift */; };
+		D0561DE11E57153000E6B9E9 /* ItemListActivityTextItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE01E57153000E6B9E9 /* ItemListActivityTextItem.swift */; };
+		D0561DE61E57424700E6B9E9 /* ItemListMultilineTextItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE51E57424700E6B9E9 /* ItemListMultilineTextItem.swift */; };
+		D0561DE81E574C3200E6B9E9 /* ChannelAdminsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE71E574C3200E6B9E9 /* ChannelAdminsController.swift */; };
 		D0568AAD1DF198130022E7DA /* AudioWaveformNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0568AAC1DF198130022E7DA /* AudioWaveformNode.swift */; };
 		D0568AAF1DF1B3920022E7DA /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0568AAE1DF1B3920022E7DA /* HapticFeedback.swift */; };
 		D05811941DD5F9380057C769 /* TelegramApplicationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */; };
@@ -243,6 +250,7 @@
 		D0B843DB1DAAB138005F29E1 /* ItemListPeerActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843DA1DAAB138005F29E1 /* ItemListPeerActionItem.swift */; };
 		D0B844561DAC3AEE005F29E1 /* PresenceStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */; };
 		D0B844581DAC44E8005F29E1 /* PeerPresenceStatusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */; };
+		D0B98E7F1E575D2C008084B1 /* ChannelBlacklistController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B98E7E1E575D2C008084B1 /* ChannelBlacklistController.swift */; };
 		D0BA6F831D784C520034826E /* ChatInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA6F821D784C520034826E /* ChatInputPanelNode.swift */; };
 		D0BA6F851D784ECD0034826E /* ChatInterfaceStateInputPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA6F841D784ECD0034826E /* ChatInterfaceStateInputPanels.swift */; };
 		D0BA6F881D784F880034826E /* ChatMessageSelectionInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA6F871D784F880034826E /* ChatMessageSelectionInputPanelNode.swift */; };
@@ -253,6 +261,7 @@
 		D0C932361E0988C60074F044 /* ChatButtonKeyboardInputNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C932351E0988C60074F044 /* ChatButtonKeyboardInputNode.swift */; };
 		D0C932381E09E0EA0074F044 /* ChatBotInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C932371E09E0EA0074F044 /* ChatBotInfoItem.swift */; };
 		D0C9323C1E0B4AE90074F044 /* DataAndStorageSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9323B1E0B4AE90074F044 /* DataAndStorageSettingsController.swift */; };
+		D0CE1BD31E51BC6100404327 /* DebugController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE1BD21E51BC6100404327 /* DebugController.swift */; };
 		D0D03AE31DECACB700220C46 /* ManagedAudioSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AE21DECACB700220C46 /* ManagedAudioSession.swift */; };
 		D0D03AE51DECAE8900220C46 /* ManagedAudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AE41DECAE8900220C46 /* ManagedAudioRecorder.swift */; };
 		D0D03B081DECB0FE00220C46 /* diag_range.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AE81DECB0FE00220C46 /* diag_range.c */; };
@@ -358,13 +367,6 @@
 		D0F69DE31D6B8A420046BCD6 /* ListControllerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DDC1D6B8A420046BCD6 /* ListControllerItem.swift */; };
 		D0F69DE41D6B8A420046BCD6 /* ListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DDD1D6B8A420046BCD6 /* ListControllerNode.swift */; };
 		D0F69DE51D6B8A420046BCD6 /* ListControllerSpacerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DDE1D6B8A420046BCD6 /* ListControllerSpacerItem.swift */; };
-		D0F69DEF1D6B8A6C0046BCD6 /* AuthorizationCodeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DE81D6B8A6C0046BCD6 /* AuthorizationCodeController.swift */; };
-		D0F69DF01D6B8A6C0046BCD6 /* AuthorizationCodeControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DE91D6B8A6C0046BCD6 /* AuthorizationCodeControllerNode.swift */; };
-		D0F69DF11D6B8A6C0046BCD6 /* AuthorizationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DEA1D6B8A6C0046BCD6 /* AuthorizationController.swift */; };
-		D0F69DF21D6B8A6C0046BCD6 /* AuthorizationPasswordController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DEB1D6B8A6C0046BCD6 /* AuthorizationPasswordController.swift */; };
-		D0F69DF31D6B8A6C0046BCD6 /* AuthorizationPasswordControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DEC1D6B8A6C0046BCD6 /* AuthorizationPasswordControllerNode.swift */; };
-		D0F69DF41D6B8A6C0046BCD6 /* AuthorizationPhoneController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DED1D6B8A6C0046BCD6 /* AuthorizationPhoneController.swift */; };
-		D0F69DF51D6B8A6C0046BCD6 /* AuthorizationPhoneControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DEE1D6B8A6C0046BCD6 /* AuthorizationPhoneControllerNode.swift */; };
 		D0F69DFE1D6B8A880046BCD6 /* AvatarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DF71D6B8A880046BCD6 /* AvatarNode.swift */; };
 		D0F69DFF1D6B8A880046BCD6 /* ChatListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DF81D6B8A880046BCD6 /* ChatListController.swift */; };
 		D0F69E001D6B8A880046BCD6 /* ChatListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DF91D6B8A880046BCD6 /* ChatListControllerNode.swift */; };
@@ -424,7 +426,6 @@
 		D0F69E771D6B8C340046BCD6 /* ContactsSectionHeaderAccessoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E711D6B8C340046BCD6 /* ContactsSectionHeaderAccessoryItem.swift */; };
 		D0F69E781D6B8C340046BCD6 /* ContactsVCardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E721D6B8C340046BCD6 /* ContactsVCardItem.swift */; };
 		D0F69E7C1D6B8C470046BCD6 /* SettingsAccountInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E7A1D6B8C470046BCD6 /* SettingsAccountInfoItem.swift */; };
-		D0F69E7D1D6B8C470046BCD6 /* SettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E7B1D6B8C470046BCD6 /* SettingsController.swift */; };
 		D0F69E881D6B8C850046BCD6 /* FastBlur.h in Headers */ = {isa = PBXBuildFile; fileRef = D0F69E7F1D6B8C850046BCD6 /* FastBlur.h */; };
 		D0F69E891D6B8C850046BCD6 /* FastBlur.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E801D6B8C850046BCD6 /* FastBlur.m */; };
 		D0F69E8A1D6B8C850046BCD6 /* FFMpegSwResample.h in Headers */ = {isa = PBXBuildFile; fileRef = D0F69E811D6B8C850046BCD6 /* FFMpegSwResample.h */; };
@@ -497,7 +498,7 @@
 		D01AC91E1DD5E09000E8160F /* EditAccessoryPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditAccessoryPanelNode.swift; sourceTree = "<group>"; };
 		D01B27941E38F3BF0022A4C0 /* ItemListControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListControllerNode.swift; sourceTree = "<group>"; };
 		D01B27981E39144C0022A4C0 /* ItemListController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListController.swift; sourceTree = "<group>"; };
-		D01B279A1E39386C0022A4C0 /* SettingsControllerEntries.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsControllerEntries.swift; sourceTree = "<group>"; };
+		D01B279A1E39386C0022A4C0 /* SettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsController.swift; sourceTree = "<group>"; };
 		D01B279C1E394A500022A4C0 /* NotificationsAndSounds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationsAndSounds.swift; sourceTree = "<group>"; };
 		D01B279E1E394BD70022A4C0 /* InAppNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InAppNotificationSettings.swift; sourceTree = "<group>"; };
 		D01B27A31E394FC90022A4C0 /* SecuritySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecuritySettings.swift; sourceTree = "<group>"; };
@@ -551,6 +552,9 @@
 		D03ADB4A1D70443F005A521C /* ReplyAccessoryPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReplyAccessoryPanelNode.swift; sourceTree = "<group>"; };
 		D03ADB4C1D7045C9005A521C /* ChatInterfaceStateAccessoryPanels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInterfaceStateAccessoryPanels.swift; sourceTree = "<group>"; };
 		D03ADB4E1D70546B005A521C /* AccessoryPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccessoryPanelNode.swift; sourceTree = "<group>"; };
+		D03E5E081E55C49C0029569A /* DebugAccountsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugAccountsController.swift; sourceTree = "<group>"; };
+		D03E5E0E1E55F8B90029569A /* ChannelVisibilityController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelVisibilityController.swift; sourceTree = "<group>"; };
+		D0486F091E523C8500091F0C /* GroupInfoController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupInfoController.swift; sourceTree = "<group>"; };
 		D049EAE11E447AD500A2CD3A /* HorizontalStickersChatContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalStickersChatContextPanelNode.swift; sourceTree = "<group>"; };
 		D049EAE31E44949F00A2CD3A /* HorizontalStickerGridItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalStickerGridItem.swift; sourceTree = "<group>"; };
 		D049EAE51E44AD5600A2CD3A /* ChatMediaInputRecentStickerPacksItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputRecentStickerPacksItem.swift; sourceTree = "<group>"; };
@@ -629,6 +633,10 @@
 		D050F2121E48B61500988324 /* PhoneInputNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhoneInputNode.swift; sourceTree = "<group>"; };
 		D050F2151E48D9E000988324 /* AuthorizationSequenceCountrySelectionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceCountrySelectionController.swift; sourceTree = "<group>"; };
 		D050F2171E48D9EA00988324 /* AuthorizationSequenceCountrySelectionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceCountrySelectionControllerNode.swift; sourceTree = "<group>"; };
+		D0561DDE1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListSingleLineInputItem.swift; sourceTree = "<group>"; };
+		D0561DE01E57153000E6B9E9 /* ItemListActivityTextItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListActivityTextItem.swift; sourceTree = "<group>"; };
+		D0561DE51E57424700E6B9E9 /* ItemListMultilineTextItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListMultilineTextItem.swift; sourceTree = "<group>"; };
+		D0561DE71E574C3200E6B9E9 /* ChannelAdminsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdminsController.swift; sourceTree = "<group>"; };
 		D0568AAC1DF198130022E7DA /* AudioWaveformNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AudioWaveformNode.swift; sourceTree = "<group>"; };
 		D0568AAE1DF1B3920022E7DA /* HapticFeedback.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
 		D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramApplicationContext.swift; sourceTree = "<group>"; };
@@ -705,6 +713,7 @@
 		D0B843DA1DAAB138005F29E1 /* ItemListPeerActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListPeerActionItem.swift; sourceTree = "<group>"; };
 		D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresenceStrings.swift; sourceTree = "<group>"; };
 		D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerPresenceStatusManager.swift; sourceTree = "<group>"; };
+		D0B98E7E1E575D2C008084B1 /* ChannelBlacklistController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelBlacklistController.swift; sourceTree = "<group>"; };
 		D0BA6F821D784C520034826E /* ChatInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInputPanelNode.swift; sourceTree = "<group>"; };
 		D0BA6F841D784ECD0034826E /* ChatInterfaceStateInputPanels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInterfaceStateInputPanels.swift; sourceTree = "<group>"; };
 		D0BA6F871D784F880034826E /* ChatMessageSelectionInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageSelectionInputPanelNode.swift; sourceTree = "<group>"; };
@@ -715,6 +724,7 @@
 		D0C932351E0988C60074F044 /* ChatButtonKeyboardInputNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatButtonKeyboardInputNode.swift; sourceTree = "<group>"; };
 		D0C932371E09E0EA0074F044 /* ChatBotInfoItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBotInfoItem.swift; sourceTree = "<group>"; };
 		D0C9323B1E0B4AE90074F044 /* DataAndStorageSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataAndStorageSettingsController.swift; sourceTree = "<group>"; };
+		D0CE1BD21E51BC6100404327 /* DebugController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugController.swift; sourceTree = "<group>"; };
 		D0D03AE21DECACB700220C46 /* ManagedAudioSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedAudioSession.swift; sourceTree = "<group>"; };
 		D0D03AE41DECAE8900220C46 /* ManagedAudioRecorder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedAudioRecorder.swift; sourceTree = "<group>"; };
 		D0D03AE81DECB0FE00220C46 /* diag_range.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = diag_range.c; sourceTree = "<group>"; };
@@ -820,13 +830,6 @@
 		D0F69DDC1D6B8A420046BCD6 /* ListControllerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListControllerItem.swift; sourceTree = "<group>"; };
 		D0F69DDD1D6B8A420046BCD6 /* ListControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListControllerNode.swift; sourceTree = "<group>"; };
 		D0F69DDE1D6B8A420046BCD6 /* ListControllerSpacerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListControllerSpacerItem.swift; sourceTree = "<group>"; };
-		D0F69DE81D6B8A6C0046BCD6 /* AuthorizationCodeController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationCodeController.swift; sourceTree = "<group>"; };
-		D0F69DE91D6B8A6C0046BCD6 /* AuthorizationCodeControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationCodeControllerNode.swift; sourceTree = "<group>"; };
-		D0F69DEA1D6B8A6C0046BCD6 /* AuthorizationController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationController.swift; sourceTree = "<group>"; };
-		D0F69DEB1D6B8A6C0046BCD6 /* AuthorizationPasswordController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationPasswordController.swift; sourceTree = "<group>"; };
-		D0F69DEC1D6B8A6C0046BCD6 /* AuthorizationPasswordControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationPasswordControllerNode.swift; sourceTree = "<group>"; };
-		D0F69DED1D6B8A6C0046BCD6 /* AuthorizationPhoneController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationPhoneController.swift; sourceTree = "<group>"; };
-		D0F69DEE1D6B8A6C0046BCD6 /* AuthorizationPhoneControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationPhoneControllerNode.swift; sourceTree = "<group>"; };
 		D0F69DF71D6B8A880046BCD6 /* AvatarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AvatarNode.swift; sourceTree = "<group>"; };
 		D0F69DF81D6B8A880046BCD6 /* ChatListController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListController.swift; sourceTree = "<group>"; };
 		D0F69DF91D6B8A880046BCD6 /* ChatListControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListControllerNode.swift; sourceTree = "<group>"; };
@@ -886,7 +889,6 @@
 		D0F69E711D6B8C340046BCD6 /* ContactsSectionHeaderAccessoryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactsSectionHeaderAccessoryItem.swift; sourceTree = "<group>"; };
 		D0F69E721D6B8C340046BCD6 /* ContactsVCardItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactsVCardItem.swift; sourceTree = "<group>"; };
 		D0F69E7A1D6B8C470046BCD6 /* SettingsAccountInfoItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsAccountInfoItem.swift; sourceTree = "<group>"; };
-		D0F69E7B1D6B8C470046BCD6 /* SettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsController.swift; sourceTree = "<group>"; };
 		D0F69E7F1D6B8C850046BCD6 /* FastBlur.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FastBlur.h; sourceTree = "<group>"; };
 		D0F69E801D6B8C850046BCD6 /* FastBlur.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FastBlur.m; sourceTree = "<group>"; };
 		D0F69E811D6B8C850046BCD6 /* FFMpegSwResample.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FFMpegSwResample.h; sourceTree = "<group>"; };
@@ -956,13 +958,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		D003702C1DA43006004308D3 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Components;
-			sourceTree = "<group>";
-		};
 		D00C7CDA1E3776CA0080C3D5 /* Secret Preview */ = {
 			isa = PBXGroup;
 			children = (
@@ -1479,11 +1474,12 @@
 		D0C932391E0B4AC60074F044 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				D01B279A1E39386C0022A4C0 /* SettingsControllerEntries.swift */,
+				D01B279A1E39386C0022A4C0 /* SettingsController.swift */,
 				D01B279C1E394A500022A4C0 /* NotificationsAndSounds.swift */,
 				D0A749961E3AA25200AD786E /* NotificationSoundSelection.swift */,
-				D0F69E7B1D6B8C470046BCD6 /* SettingsController.swift */,
 				D0F69E7A1D6B8C470046BCD6 /* SettingsAccountInfoItem.swift */,
+				D0CE1BD21E51BC6100404327 /* DebugController.swift */,
+				D03E5E081E55C49C0029569A /* DebugAccountsController.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -1686,9 +1682,12 @@
 				D00C7CD61E3664070080C3D5 /* ItemListMultilineInputItem.swift */,
 				D00B3F9D1E3A4847003872C3 /* ItemListSectionHeaderItem.swift */,
 				D00B3FA11E3A983E003872C3 /* ItemListTextItem.swift */,
+				D0561DE01E57153000E6B9E9 /* ItemListActivityTextItem.swift */,
 				D021E0A81E3AACA200AF709C /* ItemListEditableItem.swift */,
 				D021E0AA1E3B9E2700AF709C /* ItemListRevealOptionsNode.swift */,
 				D08774F71E3DE7BF00A97350 /* ItemListEditableDeleteControlNode.swift */,
+				D0561DDE1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift */,
+				D0561DE51E57424700E6B9E9 /* ItemListMultilineTextItem.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -1711,7 +1710,6 @@
 		D0EE97131D88BB1A006C18E1 /* Peer Info */ = {
 			isa = PBXGroup;
 			children = (
-				D003702C1DA43006004308D3 /* Components */,
 				D0EE97141D88BB39006C18E1 /* Controller */,
 			);
 			name = "Peer Info";
@@ -1725,6 +1723,10 @@
 				D0B843D41DA95427005F29E1 /* GroupInfoEntries.swift */,
 				D0B843D21DA922E3005F29E1 /* ChannelInfoEntries.swift */,
 				D0B843CC1DA903BB005F29E1 /* PeerInfoController.swift */,
+				D0486F091E523C8500091F0C /* GroupInfoController.swift */,
+				D03E5E0E1E55F8B90029569A /* ChannelVisibilityController.swift */,
+				D0561DE71E574C3200E6B9E9 /* ChannelAdminsController.swift */,
+				D0B98E7E1E575D2C008084B1 /* ChannelBlacklistController.swift */,
 			);
 			name = Controller;
 			sourceTree = "<group>";
@@ -1884,13 +1886,6 @@
 				D04BB2B71E44E5CB00650E93 /* Phone Entry */,
 				D04BB2BC1E44FD1300650E93 /* Code Entry */,
 				D04BB2C11E45016800650E93 /* Password Entry */,
-				D0F69DE81D6B8A6C0046BCD6 /* AuthorizationCodeController.swift */,
-				D0F69DE91D6B8A6C0046BCD6 /* AuthorizationCodeControllerNode.swift */,
-				D0F69DEA1D6B8A6C0046BCD6 /* AuthorizationController.swift */,
-				D0F69DEB1D6B8A6C0046BCD6 /* AuthorizationPasswordController.swift */,
-				D0F69DEC1D6B8A6C0046BCD6 /* AuthorizationPasswordControllerNode.swift */,
-				D0F69DED1D6B8A6C0046BCD6 /* AuthorizationPhoneController.swift */,
-				D0F69DEE1D6B8A6C0046BCD6 /* AuthorizationPhoneControllerNode.swift */,
 			);
 			name = Authorization;
 			sourceTree = "<group>";
@@ -2395,8 +2390,10 @@
 				D0F69EA21D6B8E380046BCD6 /* PhotoResources.swift in Sources */,
 				D08C367F1DB66A820064C744 /* ChatMediaInputPanelEntries.swift in Sources */,
 				D0568AAD1DF198130022E7DA /* AudioWaveformNode.swift in Sources */,
+				D03E5E0F1E55F8B90029569A /* ChannelVisibilityController.swift in Sources */,
 				D0D03B1E1DECB0FE00220C46 /* opusfile.c in Sources */,
 				D0DA44561E4E7F43005FDCA7 /* ShakeAnimation.swift in Sources */,
+				D0561DE61E57424700E6B9E9 /* ItemListMultilineTextItem.swift in Sources */,
 				D0BA6F831D784C520034826E /* ChatInputPanelNode.swift in Sources */,
 				D0F69DC71D6B89E70046BCD6 /* TransformImageNode.swift in Sources */,
 				D039EB031DEAEFEE00886EBC /* ChatTextInputAudioRecordingOverlayButton.swift in Sources */,
@@ -2417,7 +2414,6 @@
 				D0F69E4D1D6B8BB20046BCD6 /* ChatMediaActionSheetRollItem.swift in Sources */,
 				D0F69E661D6B8BF90046BCD6 /* ZoomableContentGalleryItemNode.swift in Sources */,
 				D0DE77001D92F1EB002B8809 /* ChatTitleView.swift in Sources */,
-				D0F69DF01D6B8A6C0046BCD6 /* AuthorizationCodeControllerNode.swift in Sources */,
 				D0B843DB1DAAB138005F29E1 /* ItemListPeerActionItem.swift in Sources */,
 				D0F69EA11D6B8E380046BCD6 /* FileResources.swift in Sources */,
 				D0F69D271D6B87D30046BCD6 /* FFMpegAudioFrameDecoder.swift in Sources */,
@@ -2483,6 +2479,7 @@
 				D07CFF791DCA226F00761F81 /* ChatListNode.swift in Sources */,
 				D0B7F8E81D8A1F5F0045D939 /* PeerMediaCollectionControllerNode.swift in Sources */,
 				D0215D561E043020001A0B1E /* InstantPageControllerNode.swift in Sources */,
+				D0B98E7F1E575D2C008084B1 /* ChannelBlacklistController.swift in Sources */,
 				D0F69DD21D6B8A0D0046BCD6 /* SearchDisplayControllerContentNode.swift in Sources */,
 				D0105D5A1D80B957008755D8 /* ChatChannelSubscriberInputPanelNode.swift in Sources */,
 				D0D03B121DECB0FE00220C46 /* bitwise.c in Sources */,
@@ -2566,6 +2563,7 @@
 				D0F69E581D6B8BDA0046BCD6 /* GalleryItemNode.swift in Sources */,
 				D0F69E971D6B8C9B0046BCD6 /* WebP.swift in Sources */,
 				D0F69E2F1D6B8B030046BCD6 /* ChatMessageBubbleContentCalclulateImageCorners.swift in Sources */,
+				D03E5E091E55C49C0029569A /* DebugAccountsController.swift in Sources */,
 				D075518B1DDA4D7D0073E051 /* LegacyController.swift in Sources */,
 				D0F69E361D6B8B030046BCD6 /* ChatMessageInteractiveMediaNode.swift in Sources */,
 				D08775191E3F53FC00A97350 /* ContactMultiselectionController.swift in Sources */,
@@ -2591,15 +2589,14 @@
 				D0F917B51E0DA396003687E6 /* GenerateTextEntities.swift in Sources */,
 				D0736F2E1DF4E54A00F2C02A /* MediaNavigationAccessoryHeaderNode.swift in Sources */,
 				D04BB33E1E48797500650E93 /* platform_log.c in Sources */,
-				D0F69DF51D6B8A6C0046BCD6 /* AuthorizationPhoneControllerNode.swift in Sources */,
-				D01B279B1E39386C0022A4C0 /* SettingsControllerEntries.swift in Sources */,
+				D01B279B1E39386C0022A4C0 /* SettingsController.swift in Sources */,
 				D08775201E3F595000A97350 /* ContactListActionItem.swift in Sources */,
 				D0F69E751D6B8C340046BCD6 /* ContactsPeerItem.swift in Sources */,
 				D01B27991E39144C0022A4C0 /* ItemListController.swift in Sources */,
+				D0561DE11E57153000E6B9E9 /* ItemListActivityTextItem.swift in Sources */,
 				D0F69DD61D6B8A2D0046BCD6 /* AlertController.swift in Sources */,
 				D00370301DA43077004308D3 /* ItemListItem.swift in Sources */,
 				D0215D381E040F53001A0B1E /* InstantPageNode.swift in Sources */,
-				D0F69E7D1D6B8C470046BCD6 /* SettingsController.swift in Sources */,
 				D0F69E8C1D6B8C850046BCD6 /* FrameworkBundle.swift in Sources */,
 				D0D03B101DECB0FE00220C46 /* wav_io.c in Sources */,
 				D0F69D661D6B87D30046BCD6 /* FFMpegMediaFrameSourceContextHelpers.swift in Sources */,
@@ -2611,12 +2608,10 @@
 				D07CFF7D1DCA273400761F81 /* ChatListViewTransition.swift in Sources */,
 				D0DF0C951D81B063008AEB01 /* ChatInterfaceStateContextMenus.swift in Sources */,
 				D04BB36F1E48797500650E93 /* RMGeometry.m in Sources */,
-				D0F69DF21D6B8A6C0046BCD6 /* AuthorizationPasswordController.swift in Sources */,
 				D0DE772B1D932E16002B8809 /* PeerMediaCollectionModeSelectionNode.swift in Sources */,
 				D0F69E8F1D6B8C850046BCD6 /* RingBuffer.m in Sources */,
 				D04BB2BE1E44FD2600650E93 /* AuthorizationSequenceCodeEntryController.swift in Sources */,
 				D01B279F1E394BD70022A4C0 /* InAppNotificationSettings.swift in Sources */,
-				D0F69DF31D6B8A6C0046BCD6 /* AuthorizationPasswordControllerNode.swift in Sources */,
 				D0F69E131D6B8ACF0046BCD6 /* ChatController.swift in Sources */,
 				D023837E1DDF50FD004018B6 /* ChatToastAlertPanelNode.swift in Sources */,
 				D0F69DFF1D6B8A880046BCD6 /* ChatListController.swift in Sources */,
@@ -2625,7 +2620,7 @@
 				D04BB3381E48797500650E93 /* rngs.c in Sources */,
 				D04BB2C01E44FD3100650E93 /* AuthorizationSequenceCodeEntryControllerNode.swift in Sources */,
 				D0D03B0E1DECB0FE00220C46 /* picture.c in Sources */,
-				D0F69DF11D6B8A6C0046BCD6 /* AuthorizationController.swift in Sources */,
+				D0486F0A1E523C8500091F0C /* GroupInfoController.swift in Sources */,
 				D04BB33C1E48797500650E93 /* timing.c in Sources */,
 				D01B27A41E394FC90022A4C0 /* SecuritySettings.swift in Sources */,
 				D050F2181E48D9EA00988324 /* AuthorizationSequenceCountrySelectionControllerNode.swift in Sources */,
@@ -2643,12 +2638,14 @@
 				D0F69E6A1D6B8C160046BCD6 /* MapInputController.swift in Sources */,
 				D00219041DDCC86400BE708A /* PerformanceSpinner.swift in Sources */,
 				D050F2161E48D9E000988324 /* AuthorizationSequenceCountrySelectionController.swift in Sources */,
+				D0561DDF1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift in Sources */,
 				D01749551E1082770057C89A /* StoredMessageFromSearchPeer.swift in Sources */,
 				D04BB32C1E48797500650E93 /* animations.c in Sources */,
 				D049EAEE1E44BB3200A2CD3A /* ChatListRecentPeersListItem.swift in Sources */,
 				D04BB2BB1E44EA2400650E93 /* AuthorizationSequenceSplashControllerNode.swift in Sources */,
 				D0215D581E04302E001A0B1E /* InstantPageTileNode.swift in Sources */,
 				D0215D521E0423EE001A0B1E /* InstantPageShapeItem.swift in Sources */,
+				D0561DE81E574C3200E6B9E9 /* ChannelAdminsController.swift in Sources */,
 				D0F69DE51D6B8A420046BCD6 /* ListControllerSpacerItem.swift in Sources */,
 				D0B843D51DA95427005F29E1 /* GroupInfoEntries.swift in Sources */,
 				D0BA6F851D784ECD0034826E /* ChatInterfaceStateInputPanels.swift in Sources */,
@@ -2667,11 +2664,9 @@
 				D0F69E631D6B8BF90046BCD6 /* ChatImageGalleryItem.swift in Sources */,
 				D0BA6F881D784F880034826E /* ChatMessageSelectionInputPanelNode.swift in Sources */,
 				D0F69E3B1D6B8B030046BCD6 /* ChatMessageStickerItemNode.swift in Sources */,
-				D0F69DEF1D6B8A6C0046BCD6 /* AuthorizationCodeController.swift in Sources */,
 				D099EA2F1DE775BB001AF5A8 /* ChatContextResultManagedMediaId.swift in Sources */,
 				D0E35A091DE4804900BC6096 /* VerticalListContextResultsChatInputPanelItem.swift in Sources */,
 				D01AC9181DD5033100E8160F /* ChatMessageActionButtonsNode.swift in Sources */,
-				D0F69DF41D6B8A6C0046BCD6 /* AuthorizationPhoneController.swift in Sources */,
 				D017494E1E1059570057C89A /* StringWithAppliedEntities.swift in Sources */,
 				D0DE77231D932043002B8809 /* PeerMediaCollectionInterfaceState.swift in Sources */,
 				D0F69D781D6B87DF0046BCD6 /* MediaTrackFrameBuffer.swift in Sources */,
@@ -2679,6 +2674,7 @@
 				D023EBB21DDA800700BD496D /* LegacyMediaPickers.swift in Sources */,
 				D0F69DD01D6B8A0D0046BCD6 /* SearchBarPlaceholderNode.swift in Sources */,
 				D03120F61DA534C1006A2A60 /* ItemListActionItem.swift in Sources */,
+				D0CE1BD31E51BC6100404327 /* DebugController.swift in Sources */,
 				D0F69E781D6B8C340046BCD6 /* ContactsVCardItem.swift in Sources */,
 				D0D268691D78865300C422DA /* ChatAvatarNavigationNode.swift in Sources */,
 				D0DC35441DE32230000195EB /* ChatInterfaceStateContextQueries.swift in Sources */,

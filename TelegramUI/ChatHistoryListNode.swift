@@ -193,7 +193,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     }
     
     private let maxVisibleIncomingMessageIndex = ValuePromise<MessageIndex>(ignoreRepeated: true)
-    let canReadHistory = ValuePromise<Bool>()
+    let canReadHistory = Promise<Bool>()
     
     private let _chatHistoryLocation = ValuePromise<ChatHistoryLocation>()
     private var chatHistoryLocation: Signal<ChatHistoryLocation, NoError> {

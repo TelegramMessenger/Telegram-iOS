@@ -39,11 +39,19 @@ private struct ItemListNodeTransition {
     let updateStyle: ItemListStyle?
     let firstTime: Bool
     let animated: Bool
+    let animateAlpha: Bool
 }
 
 struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let entries: [Entry]
     let style: ItemListStyle
+    let animateChanges: Bool
+    
+    init(entries: [Entry], style: ItemListStyle, animateChanges: Bool = true) {
+        self.entries = entries
+        self.style = style
+        self.animateChanges = animateChanges
+    }
 }
 
 final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
@@ -53,7 +61,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
     }
     private var didSetReady = false
     
-    private let listNode: ListView
+    let listNode: ListView
     private let transitionDisposable = MetaDisposable()
     
     private var enqueuedTransitions: [ItemListNodeTransition] = []
@@ -81,7 +89,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
             if previous?.style != state.style {
                 updatedStyle = state.style
             }
-            return ItemListNodeTransition(entries: transition, updateStyle: updatedStyle, firstTime: previous == nil, animated: previous != nil)
+            return ItemListNodeTransition(entries: transition, updateStyle: updatedStyle, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && !state.animateChanges)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -167,6 +175,9 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
                 options.insert(.LowLatency)
             } else if transition.animated {
                 options.insert(.AnimateInsertion)
+            } else if transition.animateAlpha {
+                options.insert(.PreferSynchronousResourceLoading)
+                options.insert(.AnimateAlpha)
             }
             self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self {

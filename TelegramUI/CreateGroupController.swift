@@ -104,7 +104,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                     
                 })
             case let .member(_, peer, presence):
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, label: nil, sectionId: self.section, action: nil)
+                return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .activity, label: nil, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _ in }, removePeer: { _ in })
         }
     }
 }

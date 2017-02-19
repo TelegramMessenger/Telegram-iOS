@@ -3,14 +3,16 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-class ItemListMultilineInputItem: ListViewItem, ItemListItem {
+class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
+    let title: NSAttributedString
     let text: String
     let placeholder: String
     let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
     
-    init(text: String, placeholder: String, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+    init(title: NSAttributedString, text: String, placeholder: String, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+        self.title = title
         self.text = text
         self.placeholder = placeholder
         self.sectionId = sectionId
@@ -20,7 +22,7 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
-            let node = ItemListMultilineInputItemNode()
+            let node = ItemListSingleLineInputItemNode()
             let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
@@ -33,7 +35,7 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ItemListMultilineInputItemNode {
+        if let node = node as? ItemListSingleLineInputItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
@@ -52,16 +54,15 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelegate {
+class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     
-    private let textClippingNode: ASDisplayNode
-    private let textNode: ASEditableTextNode
-    private let measureTextNode: TextNode
+    private let titleNode: TextNode
+    private let textNode: TextFieldNode
     
-    private var item: ItemListMultilineInputItem?
+    private var item: ItemListSingleLineInputItem?
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -76,47 +77,42 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
-        self.textClippingNode = ASDisplayNode()
-        self.textClippingNode.clipsToBounds = true
-        
-        self.textNode = ASEditableTextNode()
-        self.measureTextNode = TextNode()
+        self.titleNode = TextNode()
+        self.textNode = TextFieldNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.textClippingNode.addSubnode(self.textNode)
-        self.addSubnode(self.textClippingNode)
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.textNode)
     }
     
     override func didLoad() {
         super.didLoad()
         
-        self.textNode.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
+        self.textNode.textField.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
+        self.textNode.textField.font = Font.regular(17.0)
+        self.textNode.textField.textColor = .black
         self.textNode.clipsToBounds = true
-        self.textNode.delegate = self
+        self.textNode.textField.delegate = self
+        self.textNode.textField.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
     }
     
-    func asyncLayout() -> (_ item: ItemListMultilineInputItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let makeTextLayout = TextNode.asyncLayout(self.measureTextNode)
+    func asyncLayout() -> (_ item: ItemListSingleLineInputItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, width, neighbors in
             let leftInset: CGFloat = 16.0
             
-            var measureText = item.text
-            if measureText.hasSuffix("\n") || measureText.isEmpty {
-               measureText += "|"
-            }
-            let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
-            let attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: .black)
-            let (textLayout, textApply) = makeTextLayout(attributedMeasureText, nil, 0, .end, CGSize(width: width - 8 - leftInset, height: CGFloat.greatestFiniteMagnitude), nil)
+            let titleString = NSMutableAttributedString(attributedString: item.title)
+            titleString.removeAttribute(NSFontAttributeName, range: NSMakeRange(0, titleString.length))
+            titleString.addAttributes([NSFontAttributeName: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
+            
+            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 0, .end, CGSize(width: width - 32 - leftInset, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let separatorHeight = UIScreenPixel
             
-            let textTopInset: CGFloat = 11.0
-            let textBottomInset: CGFloat = 11.0
-            
-            let contentSize = CGSize(width: width, height: textLayout.size.height + textTopInset + textBottomInset)
+            let contentSize = CGSize(width: width, height: 44.0)
             let insets = itemListNeighborsGroupedInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -128,14 +124,18 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    let _ = textApply()
-                    if let currentText = strongSelf.textNode.attributedText {
-                        if !currentText.isEqual(to: attributedText) {
-                            strongSelf.textNode.attributedText = attributedText
+                    let _ = titleApply()
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((layout.contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
+                    
+                    if let currentText = strongSelf.textNode.textField.text {
+                        if currentText != item.text {
+                            strongSelf.textNode.textField.text = item.text
                         }
                     } else {
-                        strongSelf.textNode.attributedText = attributedText
+                        strongSelf.textNode.textField.text = item.text
                     }
+                    
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width, y: floor((layout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - (leftInset + titleLayout.size.width)), height: 40.0))
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -163,13 +163,9 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
-                    
-                    if strongSelf.textNode.attributedPlaceholderText == nil || !strongSelf.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
-                        strongSelf.textNode.attributedPlaceholderText = attributedPlaceholderText
+                    if strongSelf.textNode.textField.attributedPlaceholder == nil || !strongSelf.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
+                        strongSelf.textNode.textField.attributedPlaceholder = attributedPlaceholderText
                     }
-                    
-                    strongSelf.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: width - leftInset, height: textLayout.size.height))
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - leftInset - 8.0, height: textLayout.size.height))
                 }
             })
         }
@@ -183,26 +179,9 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
-        super.animateFrameTransition(progress, currentValue)
-        
-        let separatorHeight = UIScreenPixel
-        let insets = self.insets
-        let width = self.bounds.size.width
-        let contentSize = CGSize(width: width, height: currentValue - insets.top - insets.bottom)
-        let leftInset: CGFloat = 16.0
-        let textTopInset: CGFloat = 11.0
-        let textBottomInset: CGFloat = 11.0
-        
-        self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-        self.bottomStripeNode.frame = CGRect(origin: CGPoint(x: self.bottomStripeNode.frame.minX, y: contentSize.height), size: CGSize(width: self.bottomStripeNode.frame.size.width, height: separatorHeight))
-        
-        self.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: max(0.0, width - leftInset), height: max(0.0, contentSize.height - textTopInset - textBottomInset)))
-    }
-    
-    func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
+    @objc func textFieldTextChanged(_ textField: UITextField) {
         if let item = self.item {
-            if let text = self.textNode.attributedText?.string {
+            if let text = self.textNode.textField.text {
                 item.textUpdated(text)
             } else {
                 item.textUpdated("")

@@ -6,7 +6,7 @@ import SwiftSignalKit
 
 private let dateFont = UIFont.italicSystemFont(ofSize: 11.0)
 
-private func generateCheckImage(partial: Bool) -> UIImage? {
+private func generateCheckImage(partial: Bool, color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 11.0, height: 9.0), contextGenerator: { size, context in
         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
         context.scaleBy(x: 1.0, y: -1.0)
@@ -14,7 +14,7 @@ private func generateCheckImage(partial: Bool) -> UIImage? {
         
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.scaleBy(x: 0.5, y: 0.5)
-        context.setStrokeColor(UIColor(0x19C700).cgColor)
+        context.setStrokeColor(color.cgColor)
         context.setLineWidth(2.5)
         if partial {
             let _ = try? drawSvgPath(context, path: "M1,14.5 L2.5,16 L16.4985125,1 ")
@@ -25,11 +25,11 @@ private func generateCheckImage(partial: Bool) -> UIImage? {
     })
 }
 
-private func generateClockFrameImage() -> UIImage? {
+private func generateClockFrameImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setStrokeColor(UIColor(0x42b649).cgColor)
-        context.setFillColor(UIColor(0x42b649).cgColor)
+        context.setStrokeColor(color.cgColor)
+        context.setFillColor(color.cgColor)
         let strokeWidth: CGFloat = 1.0
         context.setLineWidth(strokeWidth)
         context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: size.width - strokeWidth, height: size.height - strokeWidth))
@@ -37,10 +37,10 @@ private func generateClockFrameImage() -> UIImage? {
     })
 }
 
-private func generateClockMinImage() -> UIImage? {
+private func generateClockMinImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor(0x42b649).cgColor)
+        context.setFillColor(color.cgColor)
         let strokeWidth: CGFloat = 1.0
         context.fill(CGRect(x: (11.0 - strokeWidth) / 2.0, y: (11.0 - strokeWidth) / 2.0, width: 11.0 / 2.0 - strokeWidth, height: strokeWidth))
     })
@@ -61,14 +61,21 @@ private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     layer.add(basicAnimation, forKey: "clockFrameAnimation")
 }
 
-private let checkFullImage = generateCheckImage(partial: false)
-private let checkPartialImage = generateCheckImage(partial: true)
+private let checkBubbleFullImage = generateCheckImage(partial: false, color: UIColor(0x19C700))
+private let checkBubblePartialImage = generateCheckImage(partial: true, color: UIColor(0x19C700))
+
+private let checkMediaFullImage = generateCheckImage(partial: false, color: .white)
+private let checkMediaPartialImage = generateCheckImage(partial: true, color: .white)
 
 private let incomingDateColor = UIColor(0x525252, 0.6)
 private let outgoingDateColor = UIColor(0x008c09, 0.8)
 
-private let clockFrameImage = generateClockFrameImage()
-private let clockMinImage = generateClockMinImage()
+private let imageBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: UIColor(white: 0.0, alpha: 0.5))
+
+private let clockBubbleFrameImage = generateClockFrameImage(color: UIColor(0x42b649))
+private let clockBubbleMinImage = generateClockMinImage(color: UIColor(0x42b649))
+private let clockMediaFrameImage = generateClockFrameImage(color: .white)
+private let clockMediaMinImage = generateClockMinImage(color: .white)
 
 enum ChatMessageDateAndStatusOutgoingType {
     case Sent(read: Bool)
@@ -79,9 +86,12 @@ enum ChatMessageDateAndStatusOutgoingType {
 enum ChatMessageDateAndStatusType {
     case BubbleIncoming
     case BubbleOutgoing(ChatMessageDateAndStatusOutgoingType)
+    case ImageIncoming
+    case ImageOutgoing(ChatMessageDateAndStatusOutgoingType)
 }
 
 class ChatMessageDateAndStatusNode: ASTransformLayerNode {
+    private var backgroundNode: ASImageNode?
     private var checkSentNode: ASImageNode?
     private var checkReadNode: ASImageNode?
     private var clockFrameNode: ASImageNode?
@@ -106,20 +116,55 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
         var clockFrameNode = self.clockFrameNode
         var clockMinNode = self.clockMinNode
         
+        var currentBackgroundNode = self.backgroundNode
+        
         return { dateText, type, constrainedSize in
             let dateColor: UIColor
+            var backgroundImage: UIImage?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
+            let leftInset: CGFloat
+            
+            let loadedCheckFullImage: UIImage?
+            let loadedCheckPartialImage: UIImage?
+            let clockFrameImage: UIImage?
+            let clockMinImage: UIImage?
+            
             switch type {
                 case .BubbleIncoming:
                     dateColor = incomingDateColor
+                    leftInset = 10.0
+                    loadedCheckFullImage = checkBubbleFullImage
+                    loadedCheckPartialImage = checkBubblePartialImage
+                    clockFrameImage = clockBubbleFrameImage
+                    clockMinImage = clockBubbleMinImage
                 case let .BubbleOutgoing(status):
                     dateColor = outgoingDateColor
                     outgoingStatus = status
+                    leftInset = 10.0
+                    loadedCheckFullImage = checkBubbleFullImage
+                    loadedCheckPartialImage = checkBubblePartialImage
+                    clockFrameImage = clockBubbleFrameImage
+                    clockMinImage = clockBubbleMinImage
+                case .ImageIncoming:
+                    dateColor = .white
+                    backgroundImage = imageBackground
+                    leftInset = 0.0
+                    loadedCheckFullImage = checkMediaFullImage
+                    loadedCheckPartialImage = checkMediaPartialImage
+                    clockFrameImage = clockMediaFrameImage
+                    clockMinImage = clockMediaMinImage
+                case let .ImageOutgoing(status):
+                    dateColor = .white
+                    outgoingStatus = status
+                    backgroundImage = imageBackground
+                    leftInset = 0.0
+                    loadedCheckFullImage = checkMediaFullImage
+                    loadedCheckPartialImage = checkMediaPartialImage
+                    clockFrameImage = clockMediaFrameImage
+                    clockMinImage = clockMediaMinImage
             }
             
             let (date, dateApply) = dateLayout(NSAttributedString(string: dateText, font: dateFont, textColor: dateColor), nil, 1, .end, constrainedSize, nil)
-            
-            let leftInset: CGFloat = 10.0
             
             let statusWidth: CGFloat
             
@@ -127,9 +172,6 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
             var checkReadFrame: CGRect?
             
             var clockPosition = CGPoint()
-            
-            let loadedCheckFullImage = checkFullImage
-            let loadedCheckPartialImage = checkPartialImage
             
             if let outgoingStatus = outgoingStatus {
                 switch outgoingStatus {
@@ -188,7 +230,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                         clockFrameNode = nil
                         clockMinNode = nil
                         
-                        let checkSize = checkFullImage!.size
+                        let checkSize = loadedCheckFullImage!.size
                         
                         if read {
                             checkReadFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0), size: checkSize)
@@ -211,18 +253,49 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                 clockMinNode = nil
             }
             
-            return (CGSize(width: leftInset + date.size.width + statusWidth, height: date.size.height), { [weak self] animated in
+            var backgroundInsets = UIEdgeInsets()
+            
+            if let backgroundImage = backgroundImage {
+                if currentBackgroundNode == nil {
+                    let backgroundNode = ASImageNode()
+                    backgroundNode.isLayerBacked = true
+                    backgroundNode.displayWithoutProcessing = true
+                    backgroundNode.displaysAsynchronously = false
+                    backgroundNode.image = backgroundImage
+                    currentBackgroundNode = backgroundNode
+                }
+                backgroundInsets = UIEdgeInsets(top: 2.0, left: 7.0, bottom: 2.0, right: 7.0)
+            }
+            
+            let layoutSize = CGSize(width: leftInset + date.size.width + statusWidth + backgroundInsets.left + backgroundInsets.right, height: date.size.height + backgroundInsets.top + backgroundInsets.bottom)
+            
+            return (layoutSize, { [weak self] animated in
                 if let strongSelf = self {
+                    if backgroundImage != nil {
+                        if let currentBackgroundNode = currentBackgroundNode {
+                            if currentBackgroundNode.supernode == nil {
+                                strongSelf.backgroundNode = currentBackgroundNode
+                                strongSelf.insertSubnode(currentBackgroundNode, at: 0)
+                            }
+                        }
+                        strongSelf.backgroundNode?.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    } else {
+                        if let backgroundNode = strongSelf.backgroundNode {
+                            backgroundNode.removeFromSupernode()
+                            strongSelf.backgroundNode = nil
+                        }
+                    }
+                    
                     let _ = dateApply()
                     
-                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: date.size)
+                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top), size: date.size)
                     
                     if let clockFrameNode = clockFrameNode {
                         if strongSelf.clockFrameNode == nil {
                             strongSelf.clockFrameNode = clockFrameNode
                             strongSelf.addSubnode(clockFrameNode)
                         }
-                        clockFrameNode.position = clockPosition
+                        clockFrameNode.position = CGPoint(x: backgroundInsets.left + clockPosition.x, y: backgroundInsets.top + clockPosition.y)
                         if let clockFrameNode = strongSelf.clockFrameNode {
                             maybeAddRotationAnimation(clockFrameNode.layer, duration: 6.0)
                         }
@@ -236,7 +309,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                             strongSelf.clockMinNode = clockMinNode
                             strongSelf.addSubnode(clockMinNode)
                         }
-                        clockMinNode.position = clockPosition
+                        clockMinNode.position = CGPoint(x: backgroundInsets.left + clockPosition.x, y: backgroundInsets.top + clockPosition.y)
                         if let clockMinNode = strongSelf.clockMinNode {
                             maybeAddRotationAnimation(clockMinNode.layer, duration: 1.0)
                         }
@@ -259,7 +332,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                                 animateSentNode = animated
                             }
                             checkSentNode.isHidden = false
-                            checkSentNode.frame = checkSentFrame
+                            checkSentNode.frame = checkSentFrame.offsetBy(dx: backgroundInsets.left, dy: backgroundInsets.top)
                         } else {
                             checkSentNode.isHidden = true
                         }
@@ -277,7 +350,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                                 animateReadNode = animated
                             }
                             checkReadNode.isHidden = false
-                            checkReadNode.frame = checkReadFrame
+                            checkReadNode.frame = checkReadFrame.offsetBy(dx: backgroundInsets.left, dy: backgroundInsets.top)
                         } else {
                             checkReadNode.isHidden = true
                         }

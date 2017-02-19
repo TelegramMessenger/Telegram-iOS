@@ -42,6 +42,10 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         self.displayNode = AuthorizationSequencePasswordEntryControllerNode()
         self.displayNodeDidLoad()
         
+        self.controllerNode.loginWithCode = { [weak self] _ in
+            self?.nextPressed()
+        }
+        
         if let hint = self.hint {
             self.controllerNode.updateData(hint: hint)
         }

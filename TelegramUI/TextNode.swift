@@ -184,7 +184,7 @@ final class TextNode: ASDisplayNode {
                 var lineAdditionalWidth: CGFloat = 0.0
                 
                 if cutoutEnabled {
-                    if lineOriginY < cutoutMaxY && lineOriginY + fontLineHeight > cutoutMinY {
+                    if lineOriginY - fontLineHeight < cutoutMaxY && lineOriginY + fontLineHeight > cutoutMinY {
                         lineConstrainedWidth = max(1.0, lineConstrainedWidth - cutoutWidth)
                         lineCutoutOffset = cutoutOffset
                         lineAdditionalWidth = cutoutWidth

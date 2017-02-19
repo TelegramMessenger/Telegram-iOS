@@ -49,7 +49,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var edited = false
                 var viewCount: Int?
                 for attribute in message.attributes {
-                    if let attribute = attribute as? EditedMessageAttribute {
+                    if let _ = attribute as? EditedMessageAttribute {
                         edited = true
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count

@@ -123,6 +123,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
             case .changed:
                 var translation = recognizer.translation(in: self.view)
                 translation.x += self.initialRevealOffset
+                translation.x = min(0.0, translation.x)
                 if self.revealNode == nil && translation.x.isLess(than: 0.0) {
                     self.setupAndAddRevealNode()
                     self.revealOptionsInteractivelyOpened()

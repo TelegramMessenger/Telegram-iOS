@@ -322,12 +322,12 @@ private final class AudioPlayerRendererContext {
             
             status = AudioOutputUnitStop(audioUnit)
             if status != noErr {
-                trace("AudioPlayerRenderer", what: "AudioOutputUnitStop error \(status)")
+                Logger.shared.log("AudioPlayerRenderer", "AudioOutputUnitStop error \(status)")
             }
             
             status = AudioComponentInstanceDispose(audioUnit);
             if status != noErr {
-                trace("AudioPlayerRenderer", what: "AudioComponentInstanceDispose error \(status)")
+                Logger.shared.log("AudioPlayerRenderer", "AudioComponentInstanceDispose error \(status)")
             }
             self.audioUnit = nil
         }

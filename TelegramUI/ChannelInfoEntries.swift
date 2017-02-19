@@ -1,4 +1,4 @@
-import Foundation
+/*import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
@@ -234,4 +234,4 @@ func channelBroadcastInfoEntries(view: PeerView) -> PeerInfoEntries {
         }
     }
     return PeerInfoEntries(entries: entries, leftNavigationButton: nil, rightNavigationButton: nil)
-}
+}*/

@@ -1,4 +1,4 @@
-import Foundation
+/*import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
@@ -674,3 +674,4 @@ func groupInfoEntries(view: PeerView, state: PeerInfoState?) -> PeerInfoEntries 
 
     return PeerInfoEntries(entries: entries, leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
 }
+*/

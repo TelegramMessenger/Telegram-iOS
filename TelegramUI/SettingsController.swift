@@ -1,75 +1,405 @@
 import Foundation
 import Display
-import Postbox
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 
-public class SettingsController: ListController {
-    private let account: Account
+private struct SettingsItemArguments {
+    let account: Account
+    let accountManager: AccountManager
     
-    private let peer = Promise<Peer>()
-    private let connectionStatus = Promise<ConnectionStatus>(.Online)
-    private let peerAndConnectionStatusDisposable = MetaDisposable()
+    let pushController: (ViewController) -> Void
+    let presentController: (ViewController) -> Void
+    let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
+    let saveEditingState: () -> Void
+    let logout: () -> Void
+}
+
+private enum SettingsSection: Int32 {
+    case info
+    case generalSettings
+    case accountSettings
+    case help
+    case logOut
+}
+
+private enum SettingsEntry: ItemListNodeEntry {
+    case userInfo(Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState)
+    case setProfilePhoto
     
-    public init(account: Account) {
-        self.account = account
-        
-        super.init()
-        
-        self.title = "Settings"
-        self.tabBarItem.title = "Settings"
-        self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")?.precomposed()
-        self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconSettingsSelected")?.precomposed()
-        
-        let deselectAction = { [weak self] () -> Void in
-            self?.listDisplayNode.listView.clearHighlightAnimated(true)
+    case notificationsAndSounds
+    case privacyAndSecurity
+    case dataAndStorage
+    case stickers
+    case phoneNumber(String)
+    case username(String)
+    case askAQuestion
+    case faq
+    case debug
+    case logOut
+    
+    var section: ItemListSectionId {
+        switch self {
+            case .userInfo, .setProfilePhoto:
+                return SettingsSection.info.rawValue
+            case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .stickers:
+                return SettingsSection.generalSettings.rawValue
+            case .phoneNumber, .username:
+                return SettingsSection.accountSettings.rawValue
+            case .askAQuestion, .faq, .debug:
+                return SettingsSection.help.rawValue
+            case .logOut:
+                return SettingsSection.logOut.rawValue
+        }
+    }
+    
+    var stableId: Int32 {
+        switch self {
+            case .userInfo:
+                return 0
+            case .setProfilePhoto:
+                return 1
+            case .notificationsAndSounds:
+                return 2
+            case .privacyAndSecurity:
+                return 3
+            case .dataAndStorage:
+                return 4
+            case .stickers:
+                return 5
+            case .phoneNumber:
+                return 6
+            case .username:
+                return 7
+            case .askAQuestion:
+                return 8
+            case .faq:
+                return 9
+            case .debug:
+                return 10
+            case .logOut:
+                return 11
+        }
+    }
+    
+    static func ==(lhs: SettingsEntry, rhs: SettingsEntry) -> Bool {
+        switch lhs {
+            case let .userInfo(lhsPeer, lhsCachedData, lhsEditingState):
+                if case let .userInfo(rhsPeer, rhsCachedData, rhsEditingState) = rhs {
+                    if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
+                        if !lhsPeer.isEqual(rhsPeer) {
+                            return false
+                        }
+                    } else if (lhsPeer != nil) != (rhsPeer != nil) {
+                        return false
+                    }
+                    if let lhsCachedData = lhsCachedData, let rhsCachedData = rhsCachedData {
+                        if !lhsCachedData.isEqual(to: rhsCachedData) {
+                            return false
+                        }
+                    } else if (lhsCachedData != nil) != (rhsCachedData != nil) {
+                        return false
+                    }
+                    if lhsEditingState != rhsEditingState {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+            case .setProfilePhoto:
+                if case .setProfilePhoto = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .notificationsAndSounds:
+                if case .notificationsAndSounds = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .privacyAndSecurity:
+                if case .privacyAndSecurity = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .dataAndStorage:
+                if case .dataAndStorage = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .stickers:
+                if case .stickers = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .phoneNumber(number):
+                if case .phoneNumber(number) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .username(address):
+                if case .username(address) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .askAQuestion:
+                if case .askAQuestion = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .faq:
+                if case .faq = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .debug:
+                if case .debug = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .logOut:
+                if case .logOut = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    static func <(lhs: SettingsEntry, rhs: SettingsEntry) -> Bool {
+        return lhs.stableId < rhs.stableId
+    }
+    
+    func item(_ arguments: SettingsItemArguments) -> ListViewItem {
+        switch self {
+            case let .userInfo(peer, cachedData, state):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max)), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
+                    arguments.updateEditingName(editingName)
+                })
+            case .setProfilePhoto:
+                return ItemListActionItem(title: "Set Profile Photo", kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.presentController(standardTextAlertController(title: "Verification Failed", text: "Your Apple ID or password is incorrect.", actions: [
+                        TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                            
+                        }),
+                        TextAlertAction(type: .defaultAction, title: "OK", action: {
+                            
+                        })
+                    ]))
+                })
+            case .notificationsAndSounds:
+                return ItemListDisclosureItem(title: "Notifications and Sounds", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.pushController(notificationsAndSoundsController(account: arguments.account))
+                })
+            case .privacyAndSecurity:
+                return ItemListDisclosureItem(title: "Privacy and Security", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    
+                })
+            case .dataAndStorage:
+                return ItemListDisclosureItem(title: "Data and Storage", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    
+                })
+            case .stickers:
+                return ItemListDisclosureItem(title: "Stickers", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    
+                })
+            case let .phoneNumber(number):
+                return ItemListDisclosureItem(title: "Phone Number", label: number, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    
+                })
+            case let .username(address):
+                return ItemListDisclosureItem(title: "Username", label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    
+                })
+            case .askAQuestion:
+                return ItemListDisclosureItem(title: "Ask a Question", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    
+                })
+            case .faq:
+                return ItemListDisclosureItem(title: "Telegram FAQ", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    
+                })
+            case .debug:
+                return ItemListDisclosureItem(title: "Debug", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.pushController(debugController(account: arguments.account, accountManager: arguments.accountManager))
+                })
+            case .logOut:
+                return ItemListActionItem(title: "Log Out", kind: .destructive, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.logout()
+                })
+        }
+    }
+}
+
+private struct SettingsEditingState: Equatable {
+    let editingName: ItemListAvatarAndNameInfoItemName
+    
+    static func ==(lhs: SettingsEditingState, rhs: SettingsEditingState) -> Bool {
+        if lhs.editingName != rhs.editingName {
+            return false
         }
         
-        self.items = [
-            SettingsAccountInfoItem(account: account, peer: nil, connectionStatus: .Online),
-            ListControllerButtonItem(title: "Set Profile Photo", action: deselectAction),
-            ListControllerSpacerItem(height: 35.0),
-            ListControllerDisclosureActionItem(title: "Notifications and Sounds", action: deselectAction),
-            ListControllerDisclosureActionItem(title: "Privacy and Security", action: deselectAction),
-            ListControllerDisclosureActionItem(title: "Data and Storage", action: { [weak self] in
-                deselectAction()
-                
-                if let strongSelf = self {
-                    strongSelf.navigationController?.pushViewController(DataAndStorageSettingsController(account: strongSelf.account), animated: true)
-                }
-            }),
-            //SettingsWallpaperListItem(),
-            ListControllerSpacerItem(height: 35.0),
-            ListControllerDisclosureActionItem(title: "Phone Number", action: deselectAction),
-            ListControllerDisclosureActionItem(title: "Username", action: deselectAction),
-            ListControllerSpacerItem(height: 35.0),
-            ListControllerDisclosureActionItem(title: "Ask a Question", action: deselectAction),
-            ListControllerDisclosureActionItem(title: "Telegram FAQ", action: deselectAction),
-            ListControllerSpacerItem(height: 35.0),
-            ListControllerButtonItem(title: "Logout", action: { }, color: UIColor.red),
-            ListControllerSpacerItem(height: 35.0)
-        ]
+        return true
+    }
+}
+
+private struct SettingsState: Equatable {
+    let editingState: SettingsEditingState?
+    let updatingName: ItemListAvatarAndNameInfoItemName?
+    
+    func withUpdatedEditingState(_ editingState: SettingsEditingState?) -> SettingsState {
+        return SettingsState(editingState: editingState, updatingName: self.updatingName)
+    }
+    
+    func withUpdatedUpdatingName(_ updatingName: ItemListAvatarAndNameInfoItemName?) -> SettingsState {
+        return SettingsState(editingState: self.editingState, updatingName: updatingName)
+    }
+    
+    static func ==(lhs: SettingsState, rhs: SettingsState) -> Bool {
+        if lhs.editingState != rhs.editingState {
+            return false
+        }
+        if lhs.updatingName != rhs.updatingName {
+            return false
+        }
+        return true
+    }
+}
+
+private func settingsEntries(state: SettingsState, view: PeerView) -> [SettingsEntry] {
+    var entries: [SettingsEntry] = []
+    
+    if let peer = peerViewMainPeer(view) as? TelegramUser {
+        let userInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingState?.editingName, updatingName: state.updatingName)
+        entries.append(.userInfo(peer, view.cachedData, userInfoState))
+        entries.append(.setProfilePhoto)
         
-        let peerAndConnectionStatus = combineLatest(peer.get(), connectionStatus.get()) |> deliverOn(Queue.mainQueue()) |> afterNext { [weak self] peer, connectionStatus in
-            if let strongSelf = self {
-                let item = SettingsAccountInfoItem(account: account, peer: peer, connectionStatus: connectionStatus)
-                strongSelf.items[0] = item
-                if strongSelf.isNodeLoaded {
-                    strongSelf.listDisplayNode.listView.transaction(deleteIndices: [ListViewDeleteItem(index: 0, directionHint: nil)], insertIndicesAndItems: [ListViewInsertItem(index: 0, previousIndex: 0, item: item, directionHint: .Down)], updateIndicesAndItems: [], options: [.AnimateInsertion], updateOpaqueState: nil)
-                }
+        entries.append(.notificationsAndSounds)
+        entries.append(.privacyAndSecurity)
+        entries.append(.dataAndStorage)
+        entries.append(.stickers)
+        
+        if let phone = peer.phone {
+            entries.append(.phoneNumber(formatPhoneNumber(phone)))
+        }
+        entries.append(.username(peer.addressName == nil ? "" : ("@" + peer.addressName!)))
+        
+        entries.append(.askAQuestion)
+        entries.append(.faq)
+        entries.append(.debug)
+        
+        if let _ = state.editingState {
+            entries.append(.logOut)
+        }
+    }
+    
+    return entries
+}
+
+public func settingsController(account: Account, accountManager: AccountManager) -> ViewController {
+    let statePromise = ValuePromise(SettingsState(editingState: nil, updatingName: nil), ignoreRepeated: true)
+    let stateValue = Atomic(value: SettingsState(editingState: nil, updatingName: nil))
+    let updateState: ((SettingsState) -> SettingsState) -> Void = { f in
+        statePromise.set(stateValue.modify { f($0) })
+    }
+    
+    var pushControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController) -> Void)?
+    
+    let actionsDisposable = DisposableSet()
+    
+    let updatePeerNameDisposable = MetaDisposable()
+    actionsDisposable.add(updatePeerNameDisposable)
+    
+    let arguments = SettingsItemArguments(account: account, accountManager: accountManager, pushController: { controller in
+        pushControllerImpl?(controller)
+    }, presentController: { controller in
+        presentControllerImpl?(controller)
+    }, updateEditingName: { editingName in
+        updateState { state in
+            if let _ = state.editingState {
+                return state.withUpdatedEditingState(SettingsEditingState(editingName: editingName))
+            } else {
+                return state
             }
         }
-        peerAndConnectionStatusDisposable.set(peerAndConnectionStatus.start())
-        
-        peer.set(account.postbox.loadedPeerWithId(account.peerId))
-        connectionStatus.set(account.network.connectionStatus)
-    }
-
-    required public init(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+    }, saveEditingState: {
+        var updateName: ItemListAvatarAndNameInfoItemName?
+        updateState { state in
+            if let editingState = state.editingState {
+                updateName = editingState.editingName
+                return state.withUpdatedEditingState(nil).withUpdatedUpdatingName(editingState.editingName)
+            } else {
+                return state
+            }
+        }
+        if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
+            updatePeerNameDisposable.set((updateAccountPeerName(account: account, firstName: firstName, lastName: lastName) |> afterDisposed {
+                Queue.mainQueue().async {
+                    updateState { state in
+                        return state.withUpdatedUpdatingName(nil)
+                    }
+                }
+            }).start())
+        }
+    }, logout: {
+        let alertController = standardTextAlertController(title: NSLocalizedString("Settings.LogoutConfirmationTitle", comment: ""), text: NSLocalizedString("Settings.LogoutConfirmationText", comment: ""), actions: [
+            TextAlertAction(type: .genericAction, title: "Cancel", action: {
+            }),
+            TextAlertAction(type: .defaultAction, title: "OK", action: {
+                let _ = logoutFromAccount(id: account.id, accountManager: accountManager).start()
+            })
+        ])
+        presentControllerImpl?(alertController)
+    })
+    
+    let peerView = account.viewTracker.peerView(account.peerId)
+    
+    let signal = combineLatest(statePromise.get(), peerView)
+        |> map { state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+            let peer = peerViewMainPeer(view)
+            let rightNavigationButton: ItemListNavigationButton
+            if let _ = state.editingState {
+                rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
+                    arguments.saveEditingState()
+                })
+            } else {
+                rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                    if let peer = peer as? TelegramUser {
+                        updateState { state in
+                            return state.withUpdatedEditingState(SettingsEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer.indexName)))
+                        }
+                    }
+                })
+            }
+            
+            let controllerState = ItemListControllerState(title: "Settings", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
+            let listState = ItemListNodeState(entries: settingsEntries(state: state, view: view), style: .blocks)
+            
+            return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
-    deinit {
-        peerAndConnectionStatusDisposable.dispose()
+    let controller = ItemListController(signal)
+    controller.tabBarItem.title = "Settings"
+    controller.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")?.precomposed()
+    controller.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconSettingsSelected")?.precomposed()
+    pushControllerImpl = { [weak controller] value in
+        (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
+    presentControllerImpl = { [weak controller] value in
+        controller?.present(value, in: .window)
+    }
+    return controller
 }

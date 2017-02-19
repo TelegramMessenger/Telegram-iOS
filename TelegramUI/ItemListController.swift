@@ -5,10 +5,11 @@ import SwiftSignalKit
 enum ItemListNavigationButtonStyle {
     case regular
     case bold
+    case activity
     
     var barButtonItemStyle: UIBarButtonItemStyle {
         switch self {
-            case .regular:
+            case .regular, .activity:
                 return .plain
             case .bold:
                 return .done
@@ -27,6 +28,14 @@ struct ItemListControllerState {
     let title: String
     let leftNavigationButton: ItemListNavigationButton?
     let rightNavigationButton: ItemListNavigationButton?
+    let animateChanges: Bool
+    
+    init(title: String, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, animateChanges: Bool = true) {
+        self.title = title
+        self.leftNavigationButton = leftNavigationButton
+        self.rightNavigationButton = rightNavigationButton
+        self.animateChanges = animateChanges
+    }
 }
 
 final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
@@ -73,7 +82,12 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                     
                     if strongSelf.rightNavigationButtonTitleAndStyle?.0 != controllerState.rightNavigationButton?.title || strongSelf.rightNavigationButtonTitleAndStyle?.1 != controllerState.rightNavigationButton?.style {
                         if let rightNavigationButton = controllerState.rightNavigationButton {
-                            let item = UIBarButtonItem(title: rightNavigationButton.title, style: rightNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.rightNavigationButtonPressed))
+                            let item: UIBarButtonItem
+                            if case .activity = rightNavigationButton.style {
+                                item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode())
+                            } else {
+                                item = UIBarButtonItem(title: rightNavigationButton.title, style: rightNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.rightNavigationButtonPressed))
+                            }
                             strongSelf.rightNavigationButtonTitleAndStyle = (rightNavigationButton.title, rightNavigationButton.style)
                             strongSelf.navigationItem.setRightBarButton(item, animated: false)
                             item.isEnabled = rightNavigationButton.enabled
@@ -112,6 +126,8 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        (self.displayNode as! ItemListNode<Entry>).listNode.preloadPages = true
+        
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
             if case .modalSheet = presentationArguments.presentationAnimation {
                 (self.displayNode as! ItemListNode<Entry>).animateIn()
@@ -121,5 +137,17 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     func dismiss() {
         (self.displayNode as! ItemListNode<Entry>).animateOut()
+    }
+    
+    func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
+        var result: CGRect?
+        (self.displayNode as! ItemListNode<Entry>).listNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ListViewItemNode {
+                if predicate(itemNode) {
+                    result = itemNode.convert(itemNode.bounds, to: self.displayNode)
+                }
+            }
+        }
+        return result
     }
 }

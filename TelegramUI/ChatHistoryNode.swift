@@ -31,5 +31,5 @@ public protocol ChatHistoryNode: class {
     
     func messageInCurrentHistoryView(_ id: MessageId) -> Message?
     func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets)
-    func forEachItemNode(_ f: @noescape(ASDisplayNode) -> Void)
+    func forEachItemNode(_ f: (ASDisplayNode) -> Void)
 }

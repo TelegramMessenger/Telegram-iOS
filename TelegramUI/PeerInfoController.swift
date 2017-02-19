@@ -4,6 +4,21 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
+func peerInfoController(account: Account, peer: Peer) -> ViewController? {
+    if let _ = peer as? TelegramGroup  {
+        return groupInfoController(account: account, peerId: peer.id)
+    } else if let channel = peer as? TelegramChannel {
+        if case .group = channel.info {
+            return groupInfoController(account: account, peerId: peer.id)
+        }
+    }
+    return nil
+}
+
+
+
+
+
 final class PeerInfoControllerInteraction {
     let updateState: ((PeerInfoState?) -> PeerInfoState?) -> Void
     let openSharedMedia: () -> Void

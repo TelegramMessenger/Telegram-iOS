@@ -48,7 +48,7 @@ struct PeerInfoEntries {
 }
 
 func peerInfoEntries(view: PeerView, state: PeerInfoState?) -> PeerInfoEntries {
-    if let user = view.peers[view.peerId] as? TelegramUser {
+    /*if let user = view.peers[view.peerId] as? TelegramUser {
         return userInfoEntries(view: view, state: state)
     } else if let secretChat = view.peers[view.peerId] as? TelegramSecretChat {
         return userInfoEntries(view: view, state: state)
@@ -61,6 +61,6 @@ func peerInfoEntries(view: PeerView, state: PeerInfoState?) -> PeerInfoEntries {
         }
     } else if let group = view.peers[view.peerId] as? TelegramGroup {
         return groupInfoEntries(view: view, state: state)
-    }
+    }*/
     return PeerInfoEntries(entries: [], leftNavigationButton: nil, rightNavigationButton: nil)
 }

@@ -263,7 +263,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     arguments.soundSelectionDisposable.set(result.start(next: { [weak arguments] value in
                         if let value = value {
-                            arguments?.updateMessageSound(value)
+                            arguments?.updateGroupSound(value)
                         }
                     }))
                 })

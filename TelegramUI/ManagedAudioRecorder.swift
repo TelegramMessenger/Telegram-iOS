@@ -124,7 +124,7 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
             }
         } else {
             free(buffer.mData)
-            trace("ManagedAudioRecorder", what: "AudioUnitRender returned \(status)")
+            Logger.shared.log("ManagedAudioRecorder", "AudioUnitRender returned \(status)")
         }
     })
     
@@ -327,17 +327,17 @@ final class ManagedAudioRecorderContext {
             
             status = AudioOutputUnitStop(audioUnit)
             if status != noErr {
-                trace("ManagedAudioRecorder", what: "AudioOutputUnitStop returned \(status)")
+                Logger.shared.log("ManagedAudioRecorder", "AudioOutputUnitStop returned \(status)")
             }
             
             status = AudioUnitUninitialize(audioUnit)
             if status != noErr {
-                trace("ManagedAudioRecorder", what: "AudioUnitUninitialize returned \(status)")
+                Logger.shared.log("ManagedAudioRecorder", "AudioUnitUninitialize returned \(status)")
             }
             
             status = AudioComponentInstanceDispose(audioUnit)
             if status != noErr {
-                trace("ManagedAudioRecorder", what: "AudioComponentInstanceDispose returned \(status)")
+                Logger.shared.log("ManagedAudioRecorder", "AudioComponentInstanceDispose returned \(status)")
             }
         }
         

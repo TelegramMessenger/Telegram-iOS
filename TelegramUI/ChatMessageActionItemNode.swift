@@ -169,7 +169,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                 }
             }
             
-            let (size, apply) = labelLayout(attributedString, nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (size, apply) = labelLayout(attributedString, nil, 1, .end, CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let backgroundSize = CGSize(width: size.size.width + 8.0 + 8.0, height: 20.0)
             var layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
