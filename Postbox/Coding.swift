@@ -365,6 +365,26 @@ public final class Encoder {
         }
     }
     
+    public func encodeGenericObjectArray(_ value: [Coding], forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.ObjectArray.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        let innerEncoder = Encoder()
+        for object in value {
+            var typeHash: Int32 = murMurHashString32("\(type(of: object))")
+            self.buffer.write(&typeHash, offset: 0, length: 4)
+            
+            innerEncoder.reset()
+            object.encode(innerEncoder)
+            
+            var length: Int32 = Int32(innerEncoder.buffer.offset)
+            self.buffer.write(&length, offset: 0, length: 4)
+            self.buffer.write(innerEncoder.buffer.memory, offset: 0, length: Int(length))
+        }
+    }
+    
     public func encodeStringArray(_ value: [String], forKey key: StaticString) {
         self.encodeKey(key)
         var type: Int8 = ValueType.StringArray.rawValue
@@ -391,26 +411,6 @@ public final class Encoder {
             var length: Int32 = Int32(object.length)
             self.buffer.write(&length, offset: 0, length: 4)
             self.buffer.write(object.memory, offset: 0, length: object.length)
-        }
-    }
-    
-    public func encodeGenericObjectArray(_ value: [Coding], forKey key: StaticString) {
-        self.encodeKey(key)
-        var type: Int8 = ValueType.ObjectArray.rawValue
-        self.buffer.write(&type, offset: 0, length: 1)
-        var length: Int32 = Int32(value.count)
-        self.buffer.write(&length, offset: 0, length: 4)
-        let innerEncoder = Encoder()
-        for object in value {
-            var typeHash: Int32 = murMurHashString32("\(type(of: object))")
-            self.buffer.write(&typeHash, offset: 0, length: 4)
-            
-            innerEncoder.reset()
-            object.encode(innerEncoder)
-            
-            var length: Int32 = Int32(innerEncoder.buffer.offset)
-            self.buffer.write(&length, offset: 0, length: 4)
-            self.buffer.write(innerEncoder.buffer.memory, offset: 0, length: Int(length))
         }
     }
     

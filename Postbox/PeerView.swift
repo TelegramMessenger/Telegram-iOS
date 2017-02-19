@@ -46,7 +46,7 @@ final class MutablePeerView {
     func replay(updatedPeers: [PeerId: Peer], updatedNotificationSettings: [PeerId: PeerNotificationSettings], updatedCachedPeerData: [PeerId: CachedPeerData], updatedPeerPresences: [PeerId: PeerPresence], replaceContactPeerIds: Set<PeerId>?, getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) -> Bool {
         var updated = false
         
-        if let cachedData = updatedCachedPeerData[self.peerId], self.cachedData == nil || self.cachedData!.peerIds != cachedData.peerIds {
+        if let cachedData = updatedCachedPeerData[self.peerId], self.cachedData == nil || !self.cachedData!.isEqual(to: cachedData) {
             self.cachedData = cachedData
             updated = true
             

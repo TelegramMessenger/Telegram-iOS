@@ -263,13 +263,21 @@ final class MessageHistoryTable: Table {
         return internalStoreMessages
     }
     
-    func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [Int64: MessageId] {
         let messagesByPeerId = self.messagesGroupedByPeerId(messages)
+        var globallyUniqueIdToMessageId: [Int64: MessageId] = [:]
         for (peerId, peerMessages) in messagesByPeerId {
             var operations: [MessageHistoryIndexOperation] = []
-            self.messageHistoryIndexTable.addMessages(self.internalStoreMessages(peerMessages), location: location, operations: &operations)
+            let internalPeerMessages = self.internalStoreMessages(peerMessages)
+            for message in internalPeerMessages {
+                if let globallyUniqueId = message.globallyUniqueId {
+                    globallyUniqueIdToMessageId[globallyUniqueId] = message.id
+                }
+            }
+            self.messageHistoryIndexTable.addMessages(internalPeerMessages, location: location, operations: &operations)
             self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         }
+        return globallyUniqueIdToMessageId
     }
     
     func addHoles(_ messageIds: [MessageId], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {

@@ -22,8 +22,12 @@ public final class Modifier {
         self.postbox = postbox
     }
     
-    public func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
-        self.postbox?.addMessages(messages, location: location)
+    public func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
+        if let postbox = self.postbox {
+            return postbox.addMessages(messages, location: location)
+        } else {
+            return [:]
+        }
     }
     
     public func addHole(_ messageId: MessageId) {
@@ -311,6 +315,14 @@ public final class Modifier {
     public func setPinnedPeerIds(_ peerIds: [PeerId]) {
         self.postbox?.setPinnedPeerIds(peerIds)
     }
+    
+    public func getTotalUnreadCount() -> Int32 {
+        if let postbox = self.postbox {
+            return postbox.messageHistoryMetadataTable.getChatListTotalUnreadCount()
+        } else {
+            return 0
+        }
+    }
 }
 
 fileprivate class PipeNotifier: NSObject {
@@ -338,7 +350,7 @@ public final class Postbox {
     private let globalMessageIdsNamespace: MessageId.Namespace
     
     private let ipcNotificationsDisposable = MetaDisposable()
-    private var pipeNotifier: PipeNotifier!
+    //private var pipeNotifier: PipeNotifier!
     
     private let queue = Queue(name: "org.telegram.postbox.Postbox")
     private var valueBox: ValueBox!
@@ -440,7 +452,7 @@ public final class Postbox {
         
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         
-        self.pipeNotifier = PipeNotifier(basePath: basePath, notify: { [weak self] in
+        /*self.pipeNotifier = PipeNotifier(basePath: basePath, notify: { [weak self] in
             //if let strongSelf = self {
                 /*strongSelf.queue.async {
                     if strongSelf.valueBox != nil {
@@ -449,9 +461,13 @@ public final class Postbox {
                     }
                 }*/
             //}
-        })
+        })*/
         
         self.openDatabase()
+    }
+    
+    deinit {
+        assert(true)
     }
     
     private func debugSaveState(name: String) {
@@ -678,8 +694,8 @@ public final class Postbox {
         metaDisposable.set(disposable)
     }
     
-    fileprivate func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
-        self.messageHistoryTable.addMessages(messages, location: location, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+    fileprivate func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
+        return self.messageHistoryTable.addMessages(messages, location: location, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
     fileprivate func addHole(_ id: MessageId) {
@@ -1593,7 +1609,7 @@ public final class Postbox {
                         }
                     }
             }
-            } |> switchToLatest
+        } |> switchToLatest
     }
     
     public func messageHistoryHolesView() -> Signal<MessageHistoryHolesView, NoError> {

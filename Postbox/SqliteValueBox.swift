@@ -97,6 +97,7 @@ final class SqliteValueBox: ValueBox {
     private var rangeValueAscStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeValueDescStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeValueDescStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
+    private var scanStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var existsStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var updateStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var insertStatements: [Int32 : SqlitePreparedStatement] = [:]
@@ -520,6 +521,26 @@ final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
+    private func scanStatement(_ table: ValueBoxTable) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
+        
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.scanStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) ORDER BY key ASC", -1, &statement, nil)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.scanStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        return resultStatement
+    }
+    
     private func existsStatement(_ table: ValueBoxTable, key: ValueBoxKey) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
         checkTableKey(table, key)
@@ -868,6 +889,37 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
+    public func scan(_ table: ValueBoxTable, values: (ValueBoxKey, ReadBuffer) -> Bool) {
+        assert(self.queue.isCurrent())
+        
+        if let _ = self.tables[table.id] {
+            let statement: SqlitePreparedStatement = self.scanStatement(table)
+            
+            var startTime = CFAbsoluteTimeGetCurrent()
+            
+            var currentTime = CFAbsoluteTimeGetCurrent()
+            self.readQueryTime += currentTime - startTime
+            
+            startTime = currentTime
+            
+            while statement.step() {
+                startTime = CFAbsoluteTimeGetCurrent()
+                
+                let key = statement.keyAt(0)
+                let value = statement.valueAt(1)
+                
+                currentTime = CFAbsoluteTimeGetCurrent()
+                self.readQueryTime += currentTime - startTime
+                
+                if !values(key, value) {
+                    break
+                }
+            }
+            
+            statement.reset()
+        }
+    }
+    
     public func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) {
         assert(self.queue.isCurrent())
         self.checkTable(table)
@@ -963,6 +1015,11 @@ final class SqliteValueBox: ValueBox {
             statement.destroy()
         }
         self.rangeValueDescStatementsNoLimit.removeAll()
+        
+        for (_, statement) in self.scanStatements {
+            statement.destroy()
+        }
+        self.scanStatements.removeAll()
         
         for (_, statement) in self.existsStatements {
             statement.destroy()
