@@ -9,8 +9,8 @@
 /* Begin PBXBuildFile section */
 		C2366C831E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */; };
 		C2366C841E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */; };
-		C2366C861E4F403C0097CCFF /* UsernameAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C851E4F403C0097CCFF /* UsernameAvailability.swift */; };
-		C2366C871E4F403C0097CCFF /* UsernameAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C851E4F403C0097CCFF /* UsernameAvailability.swift */; };
+		C2366C861E4F403C0097CCFF /* AddressNameAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C851E4F403C0097CCFF /* AddressNameAvailability.swift */; };
+		C2366C871E4F403C0097CCFF /* AddressNameAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C851E4F403C0097CCFF /* AddressNameAvailability.swift */; };
 		C2366C891E4F40480097CCFF /* SupportPeerId.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C881E4F40480097CCFF /* SupportPeerId.swift */; };
 		C2366C8A1E4F40480097CCFF /* SupportPeerId.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C881E4F40480097CCFF /* SupportPeerId.swift */; };
 		C2A315C01E2E776A00D89000 /* RequestStartBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749581E1092BC0057C89A /* RequestStartBot.swift */; };
@@ -393,7 +393,7 @@
 
 /* Begin PBXFileReference section */
 		C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupReturnAndLeft.swift; sourceTree = "<group>"; };
-		C2366C851E4F403C0097CCFF /* UsernameAvailability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UsernameAvailability.swift; sourceTree = "<group>"; };
+		C2366C851E4F403C0097CCFF /* AddressNameAvailability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddressNameAvailability.swift; sourceTree = "<group>"; };
 		C2366C881E4F40480097CCFF /* SupportPeerId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SupportPeerId.swift; sourceTree = "<group>"; };
 		D003702A1DA42586004308D3 /* PhoneNumber.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhoneNumber.swift; sourceTree = "<group>"; };
 		D00C7CCB1E3620C30080C3D5 /* CachedChannelParticipants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedChannelParticipants.swift; sourceTree = "<group>"; };
@@ -1039,7 +1039,7 @@
 				D049EAEA1E44B71B00A2CD3A /* RecentlySearchedPeerIds.swift */,
 				D050F2501E4A59C200988324 /* JoinLink.swift */,
 				C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */,
-				C2366C851E4F403C0097CCFF /* UsernameAvailability.swift */,
+				C2366C851E4F403C0097CCFF /* AddressNameAvailability.swift */,
 				C2366C881E4F40480097CCFF /* SupportPeerId.swift */,
 				D041E3F41E535464008C24B4 /* AddPeerMember.swift */,
 				D041E3F71E535A88008C24B4 /* RemovePeerMember.swift */,
@@ -1401,7 +1401,7 @@
 				D03B0CBB1D62233C00955575 /* MergeLists.swift in Sources */,
 				D03B0CC11D62235000955575 /* StringFormat.swift in Sources */,
 				D0B843C31DA7FF30005F29E1 /* NBPhoneMetaDataGenerator.m in Sources */,
-				C2366C861E4F403C0097CCFF /* UsernameAvailability.swift in Sources */,
+				C2366C861E4F403C0097CCFF /* AddressNameAvailability.swift in Sources */,
 				D0B843C11DA7FF30005F29E1 /* NBPhoneMetaData.m in Sources */,
 				D0FA8BA41E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */,
@@ -1582,7 +1582,7 @@
 				D0B844331DAB91E0005F29E1 /* NBPhoneNumber.m in Sources */,
 				D001F3F51E128A1C007A8C60 /* PendingMessageManager.swift in Sources */,
 				D001F3F61E128A1C007A8C60 /* PendingMessageUploadedContent.swift in Sources */,
-				C2366C871E4F403C0097CCFF /* UsernameAvailability.swift in Sources */,
+				C2366C871E4F403C0097CCFF /* AddressNameAvailability.swift in Sources */,
 				D02ABC7F1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */,
 				D0FA8BA51E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D0F7B1E71E045C87007EB8A5 /* JoinChannel.swift in Sources */,
