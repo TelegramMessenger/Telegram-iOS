@@ -64,6 +64,50 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
         }
 }
 
+public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void, AuthorizationCodeRequestError> {
+    return account.postbox.modify { modifier -> Signal<Void, AuthorizationCodeRequestError> in
+        if let state = modifier.getState() as? UnauthorizedAccountState {
+            switch state.contents {
+                case let .confirmationCodeEntry(number, _, hash, _, nextType):
+                    if nextType != nil {
+                        return account.network.request(Api.functions.auth.resendCode(phoneNumber: number, phoneCodeHash: hash))
+                            |> mapError { error -> AuthorizationCodeRequestError in
+                                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                                    return .limitExceeded
+                                } else if error.errorDescription == "PHONE_NUMBER_INVALID" {
+                                    return .invalidPhoneNumber
+                                } else {
+                                    return .generic
+                                }
+                            }
+                            |> mapToSignal { sentCode -> Signal<Void, AuthorizationCodeRequestError> in
+                                return account.postbox.modify { modifier -> Void in
+                                    switch sentCode {
+                                        case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+                                            var parsedNextType: AuthorizationCodeNextType?
+                                            if let nextType = nextType {
+                                                parsedNextType = AuthorizationCodeNextType(apiType: nextType)
+                                            }
+                                            modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)))
+                                    }
+                                } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
+                            }
+                    } else {
+                        return .fail(.generic)
+                    }
+                default:
+                    return .complete()
+            }
+        } else {
+            return .fail(.generic)
+        }
+    }
+    |> mapError { _ -> AuthorizationCodeRequestError in
+        return .generic
+    }
+    |> switchToLatest
+}
+
 public enum AuthorizationCodeVerificationError {
     case invalidCode
     case limitExceeded
@@ -171,4 +215,16 @@ public func authorizeWithPassword(account: UnauthorizedAccount, password: String
                 return .generic
             }
         }
+}
+
+public enum AuthorizationStateReset {
+    case empty
+}
+
+public func resetAuthorizationState(account: UnauthorizedAccount, to value: AuthorizationStateReset) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Void in
+        if let state = modifier.getState() as? UnauthorizedAccountState {
+            modifier.setState(UnauthorizedAccountState(masterDatacenterId: state.masterDatacenterId, contents: .empty))
+        }
+    }
 }
