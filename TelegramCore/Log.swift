@@ -1,6 +1,10 @@
 import Foundation
 import TelegramCorePrivateModule
-import SwiftSignalKit
+#if os(macOS)
+    import SwiftSignalKitMac
+#else
+    import SwiftSignalKit
+#endif
 
 private let queue = DispatchQueue(label: "org.telegram.Telegram.trace", qos: .utility)
 
