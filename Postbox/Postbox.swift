@@ -1862,4 +1862,12 @@ public final class Postbox {
             }
         }).start()
     }
+    
+    public func clearCaches() {
+        let _ = self.modify({ _ in
+            for table in self.tables {
+                table.clearMemoryCache()
+            }
+        }).start()
+    }
 }
