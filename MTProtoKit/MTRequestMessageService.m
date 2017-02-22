@@ -582,7 +582,7 @@
                                 }
                                 
                                 MTProto *mtProto = _mtProto;
-                                if (mtProto.requiredAuthToken != nil && [rpcError.errorDescription rangeOfString:@"SESSION_REVOKED"].location != NSNotFound)
+                                if (mtProto.requiredAuthToken != nil && ([rpcError.errorDescription rangeOfString:@"SESSION_REVOKED"].location != NSNotFound || [rpcError.errorDescription rangeOfString:@"AUTH_KEY_UNREGISTERED"].location != NSNotFound))
                                 {
                                     if (request.errorContext == nil)
                                         request.errorContext = [[MTRequestErrorContext alloc] init];
