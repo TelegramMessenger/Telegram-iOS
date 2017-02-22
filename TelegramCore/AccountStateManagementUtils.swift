@@ -1103,7 +1103,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
             }
     } else {
         Logger.shared.log("State", "can't poll channel \(peer.id): can't create inputChannel")
-        return single(state, NoError.self)
+        return single((state, true), NoError.self)
     }
 }
 
