@@ -18,7 +18,7 @@ static bool loggingEnabled = true;
 #elif defined(DEBUG)
 static bool loggingEnabled = true;
 #else
-static bool loggingEnabled = false;
+static bool loggingEnabled = true;
 #endif
 
 static void TGTelegramLoggingFunction(NSString *format, va_list args) {

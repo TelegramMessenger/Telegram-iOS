@@ -68,7 +68,11 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
                                     if !found {
                                         updatedParticipants.insert(.member(id: memberId, invitedAt: timestamp), at: 0)
                                     }
-                                    return cachedData.withUpdatedTopParticipants(CachedChannelParticipants(participants: updatedParticipants))
+                                    var updatedMemberCount: Int32?
+                                    if let memberCount = cachedData.participantsSummary.memberCount {
+                                        updatedMemberCount = memberCount + 1
+                                    }
+                                    return cachedData.withUpdatedTopParticipants(CachedChannelParticipants(participants: updatedParticipants)).withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedMemberCount(updatedMemberCount))
                                 } else {
                                     return cachedData
                                 }

@@ -21,11 +21,11 @@ public struct CachedChannelFlags: OptionSet {
 }
 
 public struct CachedChannelParticipantsSummary: Coding, Equatable {
-    public let memberCount: Int?
-    public let adminCount: Int?
-    public let bannedCount: Int?
+    public let memberCount: Int32?
+    public let adminCount: Int32?
+    public let bannedCount: Int32?
     
-    init(memberCount: Int?, adminCount: Int?, bannedCount: Int?) {
+    init(memberCount: Int32?, adminCount: Int32?, bannedCount: Int32?) {
         self.memberCount = memberCount
         self.adminCount = adminCount
         self.bannedCount = bannedCount
@@ -33,17 +33,17 @@ public struct CachedChannelParticipantsSummary: Coding, Equatable {
     
     public init(decoder: Decoder) {
         if let memberCount = decoder.decodeInt32ForKey("p.m") as Int32? {
-            self.memberCount = Int(memberCount)
+            self.memberCount = memberCount
         } else {
             self.memberCount = 0
         }
         if let adminCount = decoder.decodeInt32ForKey("p.a") as Int32? {
-            self.adminCount = Int(adminCount)
+            self.adminCount = adminCount
         } else {
             self.adminCount = 0
         }
         if let bannedCount = decoder.decodeInt32ForKey("p.b") as Int32? {
-            self.bannedCount = Int(bannedCount)
+            self.bannedCount = bannedCount
         } else {
             self.bannedCount = 0
         }
@@ -51,17 +51,17 @@ public struct CachedChannelParticipantsSummary: Coding, Equatable {
     
     public func encode(_ encoder: Encoder) {
         if let memberCount = self.memberCount {
-            encoder.encodeInt32(Int32(memberCount), forKey: "p.m")
+            encoder.encodeInt32(memberCount, forKey: "p.m")
         } else {
             encoder.encodeNil(forKey: "p.m")
         }
         if let adminCount = self.adminCount {
-            encoder.encodeInt32(Int32(adminCount), forKey: "p.a")
+            encoder.encodeInt32(adminCount, forKey: "p.a")
         } else {
             encoder.encodeNil(forKey: "p.a")
         }
         if let bannedCount = self.bannedCount {
-            encoder.encodeInt32(Int32(bannedCount), forKey: "p.b")
+            encoder.encodeInt32(bannedCount, forKey: "p.b")
         } else {
             encoder.encodeNil(forKey: "p.b")
         }
@@ -69,6 +69,18 @@ public struct CachedChannelParticipantsSummary: Coding, Equatable {
     
     public static func ==(lhs: CachedChannelParticipantsSummary, rhs: CachedChannelParticipantsSummary) -> Bool {
         return lhs.memberCount == rhs.memberCount && lhs.adminCount == rhs.adminCount && lhs.bannedCount == rhs.bannedCount
+    }
+    
+    public func withUpdatedMemberCount(_ memberCount: Int32?) -> CachedChannelParticipantsSummary {
+        return CachedChannelParticipantsSummary(memberCount: memberCount, adminCount: self.adminCount, bannedCount: self.bannedCount)
+    }
+    
+    public func withUpdatedAdminCount(_ adminCount: Int32?) -> CachedChannelParticipantsSummary {
+        return CachedChannelParticipantsSummary(memberCount: self.memberCount, adminCount: adminCount, bannedCount: self.bannedCount)
+    }
+    
+    public func withUpdatedBannedCount(_ bannedCount: Int32?) -> CachedChannelParticipantsSummary {
+        return CachedChannelParticipantsSummary(memberCount: self.memberCount, adminCount: self.adminCount, bannedCount: bannedCount)
     }
 }
 
@@ -199,18 +211,6 @@ extension CachedChannelData {
                 if (flags & (1 << 6)) != 0 {
                     channelFlags.insert(.canChangeUsername)
                 }
-                var intParticipantsCount: Int?
-                if let participantsCount = participantsCount {
-                    intParticipantsCount = Int(participantsCount)
-                }
-                var intAdminsCount: Int?
-                if let adminsCount = adminsCount {
-                    intAdminsCount = Int(adminsCount)
-                }
-                var intKickedCount: Int?
-                if let kickedCount = kickedCount {
-                    intKickedCount = Int(kickedCount)
-                }
                 var botInfos: [CachedPeerBotInfo] = []
                 for botInfo in apiBotInfos {
                     switch botInfo {
@@ -220,7 +220,7 @@ extension CachedChannelData {
                         botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))
                     }
                 }
-                self.init(flags: channelFlags, about: about, participantsSummary: CachedChannelParticipantsSummary(memberCount: intParticipantsCount, adminCount: intAdminsCount, bannedCount: intKickedCount), exportedInvitation: ExportedInvitation(apiExportedInvite: apiExportedInvite), botInfos: botInfos, topParticipants: nil)
+                self.init(flags: channelFlags, about: about, participantsSummary: CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: kickedCount), exportedInvitation: ExportedInvitation(apiExportedInvite: apiExportedInvite), botInfos: botInfos, topParticipants: nil)
             case .chatFull:
                 return nil
         }

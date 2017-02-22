@@ -61,12 +61,17 @@ public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId)
                                             break
                                         }
                                     }
-                                    return cachedData.withUpdatedTopParticipants(CachedChannelParticipants(participants: updatedParticipants))
+                                    let updatedData = cachedData.withUpdatedTopParticipants(CachedChannelParticipants(participants: updatedParticipants))
+                                    if let bannedCount = cachedData.participantsSummary.bannedCount {
+                                        return updatedData.withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedBannedCount(bannedCount + 1))
+                                    } else {
+                                        return updatedData
+                                    }
                                 } else {
                                     return cachedData
                                 }
                             })
-                        }
+                        } |> then(updateChannelParticipantsSummary(account: account, peerId: peerId))
                     }
             } else {
                 return .complete()
