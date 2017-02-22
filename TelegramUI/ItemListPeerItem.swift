@@ -27,6 +27,7 @@ struct ItemListPeerItemEditing: Equatable {
 enum ItemListPeerItemText {
     case activity
     case text(String)
+    case none
 }
 
 final class ItemListPeerItem: ListViewItem, ItemListItem {
@@ -65,7 +66,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
             node.insets = layout.insets
             
             completion(node, {
-                return (nil, { apply(false) })
+                return (node.avatarNode.ready, { apply(false) })
             })
         }
     }
@@ -113,7 +114,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private var disabledOverlayNode: ASDisplayNode?
     
-    private let avatarNode: AvatarNode
+    fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let labelNode: TextNode
     private let statusNode: TextNode
@@ -235,6 +236,8 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     }
                 case let .text(text):
                     statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: UIColor(0xa6a6a6))
+                case .none:
+                    break
             }
             
             if let label = item.label {
@@ -368,7 +371,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 5.0), size: titleLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: statusAttributedString == nil ? 13.0 : 5.0), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 25.0), size: statusLayout.size))
                     transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - labelLayout.size.width - 15.0, y: floor((contentSize.height - labelLayout.size.height) / 2.0 - labelLayout.size.height / 10.0)), size: labelLayout.size))
                     
@@ -450,7 +453,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             editingOffset = 0.0
         }
         
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 5.0), size: self.titleNode.bounds.size))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 25.0), size: self.statusNode.bounds.size))
         transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - self.labelNode.bounds.size.width - 15.0, y: floor((self.contentSize.height - self.labelNode.bounds.size.height) / 2.0 - self.labelNode.bounds.size.height / 10.0)), size: self.labelNode.bounds.size))
         

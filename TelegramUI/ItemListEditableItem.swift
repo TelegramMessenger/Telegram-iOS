@@ -176,7 +176,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
     
     override func layout() {
         if let revealNode = self.revealNode {
-            let height = self.bounds.size.height
+            let height = self.contentSize.height
             let revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: height))
             revealNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
         }

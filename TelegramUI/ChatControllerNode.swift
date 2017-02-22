@@ -213,7 +213,7 @@ class ChatControllerNode: ASDisplayNode {
         }
         
         if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
-            inputMediaNode.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            let _ = inputMediaNode.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
         }
         
         var insets: UIEdgeInsets
@@ -236,10 +236,9 @@ class ChatControllerNode: ASDisplayNode {
         
         var duration: Double = 0.0
         var curve: UInt = 0
-        var animated = true
         switch transition {
             case .immediate:
-                animated = false
+                break
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
@@ -340,14 +339,14 @@ class ChatControllerNode: ASDisplayNode {
         var inputPanelsHeight: CGFloat = 0.0
         
         var inputPanelFrame: CGRect?
-        if let inputPanelNode = self.inputPanelNode {
+        if self.inputPanelNode != nil {
             assert(inputPanelSize != nil)
             inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - inputPanelsHeight - inputPanelSize!.height), size: CGSize(width: layout.size.width, height: inputPanelSize!.height))
             inputPanelsHeight += inputPanelSize!.height
         }
         
         var accessoryPanelFrame: CGRect?
-        if let accessoryPanelNode = self.accessoryPanelNode {
+        if self.accessoryPanelNode != nil {
             assert(accessoryPanelSize != nil)
             accessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - inputPanelsHeight - accessoryPanelSize!.height), size: CGSize(width: layout.size.width, height: accessoryPanelSize!.height))
             inputPanelsHeight += accessoryPanelSize!.height
@@ -429,7 +428,7 @@ class ChatControllerNode: ASDisplayNode {
         if let dismissedInputPanelNode = dismissedInputPanelNode {
             var frameCompleted = false
             var alphaCompleted = false
-            var completed = { [weak self, weak dismissedInputPanelNode] in
+            let completed = { [weak self, weak dismissedInputPanelNode] in
                 if let strongSelf = self, let dismissedInputPanelNode = dismissedInputPanelNode, strongSelf.inputPanelNode === dismissedInputPanelNode {
                     return
                 }
@@ -452,7 +451,7 @@ class ChatControllerNode: ASDisplayNode {
         if let dismissedAccessoryPanelNode = dismissedAccessoryPanelNode {
             var frameCompleted = false
             var alphaCompleted = false
-            var completed = { [weak dismissedAccessoryPanelNode] in
+            let completed = { [weak dismissedAccessoryPanelNode] in
                 if frameCompleted && alphaCompleted {
                     dismissedAccessoryPanelNode?.removeFromSupernode()
                 }
@@ -475,7 +474,7 @@ class ChatControllerNode: ASDisplayNode {
         if let dismissedInputContextPanelNode = dismissedInputContextPanelNode {
             var frameCompleted = false
             var animationCompleted = false
-            var completed = { [weak dismissedInputContextPanelNode] in
+            let completed = { [weak dismissedInputContextPanelNode] in
                 if let dismissedInputContextPanelNode = dismissedInputContextPanelNode, frameCompleted, animationCompleted {
                     dismissedInputContextPanelNode.removeFromSupernode()
                 }
@@ -496,8 +495,16 @@ class ChatControllerNode: ASDisplayNode {
         }
         
         if let dismissedInputNode = dismissedInputNode {
-            transition.updateFrame(node: dismissedInputNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - CGFloat(FLT_EPSILON)), size: CGSize(width: layout.size.width, height: max(insets.bottom, dismissedInputNode.bounds.size.height))), completion: { [weak dismissedInputNode] _ in
-                dismissedInputNode?.removeFromSupernode()
+            transition.updateFrame(node: dismissedInputNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - CGFloat(FLT_EPSILON)), size: CGSize(width: layout.size.width, height: max(insets.bottom, dismissedInputNode.bounds.size.height))), completion: { [weak self, weak dismissedInputNode] completed in
+                if completed {
+                    if let strongSelf = self {
+                        if strongSelf.inputNode !== dismissedInputNode {
+                            dismissedInputNode?.removeFromSupernode()
+                        }
+                    } else {
+                        dismissedInputNode?.removeFromSupernode()
+                    }
+                }
             })
         }
     }
@@ -521,14 +528,14 @@ class ChatControllerNode: ASDisplayNode {
         }
         
         if self.chatPresentationInterfaceState != chatPresentationInterfaceState {
-            var updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
-            var updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
+            let updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
+            let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
             var extendedSearchLayout = false
             if let inputQueryResult = chatPresentationInterfaceState.inputQueryResult {
-                if case let .contextRequestResult(peer, _) = inputQueryResult {
+                if case .contextRequestResult = inputQueryResult {
                     extendedSearchLayout = true
                 }
             }
@@ -612,7 +619,7 @@ class ChatControllerNode: ASDisplayNode {
         self.scheduledLayoutTransitionRequest = (requestId, transition)
         (self.view as? UITracingLayerView)?.schedule(layout: { [weak self] in
             if let strongSelf = self {
-                if let (currentRequestId, currentRequestTransition) = strongSelf.scheduledLayoutTransitionRequest {
+                if let (currentRequestId, currentRequestTransition) = strongSelf.scheduledLayoutTransitionRequest, currentRequestId == requestId {
                     strongSelf.scheduledLayoutTransitionRequest = nil
                     strongSelf.requestLayout(currentRequestTransition)
                 }
@@ -626,7 +633,7 @@ class ChatControllerNode: ASDisplayNode {
             let inputNode = ChatMediaInputNode(account: self.account, controllerInteraction: self.controllerInteraction)
             inputNode.interfaceInteraction = interfaceInteraction
             self.inputMediaNode = inputNode
-            inputNode.updateLayout(width: self.bounds.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            let _ = inputNode.updateLayout(width: self.bounds.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
         }
     }
 }

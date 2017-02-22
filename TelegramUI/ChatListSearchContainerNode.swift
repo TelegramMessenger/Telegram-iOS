@@ -422,7 +422,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             self.enqueuedRecentTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
-            options.insert(.PreferSynchronousResourceLoading)
+            options.insert(.PreferSynchronousDrawing)
             if firstTime {
             } else {
             }
@@ -447,7 +447,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
-            options.insert(.PreferSynchronousResourceLoading)
+            options.insert(.PreferSynchronousDrawing)
             if firstTime {
             } else {
                 //options.insert(.AnimateAlpha)

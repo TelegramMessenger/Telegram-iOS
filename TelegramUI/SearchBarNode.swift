@@ -91,6 +91,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         self.textField = SearchBarTextField()
         self.textField.font = Font.regular(15.0)
+        self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .done
         
         self.cancelButton = ASButtonNode()
@@ -166,7 +167,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.placeholderLabel.isHidden = false
     }
     
-    func animateOut(to node: SearchBarPlaceholderNode, duration: Double, timingFunction: String, completion: () -> Void) {
+    func transitionOut(to node: SearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: () -> Void) {
         node.isHidden = false
         completion()
     }

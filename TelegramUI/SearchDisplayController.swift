@@ -54,19 +54,24 @@ final class SearchDisplayController {
         self.searchBar.animateIn(from: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    func deactivate(placeholder: SearchBarPlaceholderNode?) {
+    func deactivate(placeholder: SearchBarPlaceholderNode?, animated: Bool = true) {
         searchBar.deactivate()
         
         if let placeholder = placeholder {
             let searchBar = self.searchBar
-            searchBar.animateOut(to: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak searchBar] in
+            searchBar.transitionOut(to: placeholder, transition: animated ? ContainedViewLayoutTransition.animated(duration: 0.5, curve: .spring) : ContainedViewLayoutTransition.immediate, completion: {
+                [weak searchBar] in
                 searchBar?.removeFromSupernode()
             })
         }
         
         let contentNode = self.contentNode
-        contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak contentNode] _ in
-            contentNode?.removeFromSupernode()
-        })
+        if animated {
+            contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak contentNode] _ in
+                contentNode?.removeFromSupernode()
+            })
+        } else {
+            contentNode.removeFromSupernode()
+        }
     }
 }

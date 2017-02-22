@@ -107,7 +107,7 @@ class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func deactivateSearch() {
+    func deactivateSearch(animated: Bool) {
         if let searchDisplayController = self.searchDisplayController {
             var maybePlaceholderNode: SearchBarPlaceholderNode?
             self.chatListNode.forEachItemNode { node in
@@ -116,7 +116,7 @@ class ChatListControllerNode: ASDisplayNode {
                 }
             }
             
-            searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
+            searchDisplayController.deactivate(placeholder: maybePlaceholderNode, animated: animated)
             self.searchDisplayController = nil
         }
     }

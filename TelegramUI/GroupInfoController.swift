@@ -322,11 +322,11 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 })
             case let .membersAdmins(count):
                 return ItemListDisclosureItem(title: "Admins", label: "\(count)", sectionId: self.section, style: .blocks, action: {
-                    arguments.pushController(ChannelAdminsController(account: arguments.account, peerId: arguments.peerId))
+                    arguments.pushController(channelAdminsController(account: arguments.account, peerId: arguments.peerId))
                 })
             case let .membersBlacklist(count):
                 return ItemListDisclosureItem(title: "Blacklist", label: "\(count)", sectionId: self.section, style: .blocks, action: {
-                    
+                    arguments.pushController(channelBlacklistController(account: arguments.account, peerId: arguments.peerId))
                 })
             case let .member(_, _, peer, presence, memberStatus, editing, enabled):
                 let label: String?
@@ -524,10 +524,10 @@ private func groupInfoEntries(account: Account, view: PeerView, state: GroupInfo
             entries.append(GroupInfoEntry.groupDescriptionSetup(text: editingState.editingDescriptionText))
             
             if let adminCount = cachedChannelData.participantsSummary.adminCount {
-                entries.append(GroupInfoEntry.membersAdmins(count: adminCount))
+                entries.append(GroupInfoEntry.membersAdmins(count: Int(adminCount)))
             }
             if let bannedCount = cachedChannelData.participantsSummary.bannedCount {
-                entries.append(GroupInfoEntry.membersBlacklist(count: bannedCount))
+                entries.append(GroupInfoEntry.membersBlacklist(count: Int(bannedCount)))
             }
         }
     } else {

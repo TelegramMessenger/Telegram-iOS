@@ -100,9 +100,18 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 if entities == nil {
-                    let parsedEntities = generateTextEntities(message.text)
-                    if !parsedEntities.isEmpty {
-                        entities = TextEntitiesMessageAttribute(entities: parsedEntities)
+                    var generateEntities = false
+                    for media in message.media {
+                        if media is TelegramMediaImage || media is TelegramMediaFile {
+                            generateEntities = true
+                            break
+                        }
+                    }
+                    if generateEntities {
+                        let parsedEntities = generateTextEntities(message.text)
+                        if !parsedEntities.isEmpty {
+                            entities = TextEntitiesMessageAttribute(entities: parsedEntities)
+                        }
                     }
                 }
                 if let entities = entities {

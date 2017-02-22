@@ -21,14 +21,16 @@ class ItemListActionItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: () -> Void
+    let tag: Any?
     
-    init(title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void) {
+    init(title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, tag: Any? = nil) {
         self.title = title
         self.kind = kind
         self.alignment = alignment
         self.sectionId = sectionId
         self.style = style
         self.action = action
+        self.tag = tag
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -79,6 +81,12 @@ class ItemListActionItemNode: ListViewItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     
     private let titleNode: TextNode
+    
+    private var item: ItemListActionItem?
+    
+    var tag: Any? {
+        return self.item?.tag
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -141,6 +149,8 @@ class ItemListActionItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
                     let _ = titleApply()
                     
                     let leftInset: CGFloat

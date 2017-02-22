@@ -37,6 +37,7 @@ enum ItemListStyle {
 private struct ItemListNodeTransition {
     let entries: ItemListNodeEntryTransition
     let updateStyle: ItemListStyle?
+    let emptyStateItem: ItemListControllerEmptyStateItem?
     let firstTime: Bool
     let animated: Bool
     let animateAlpha: Bool
@@ -45,11 +46,13 @@ private struct ItemListNodeTransition {
 struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let entries: [Entry]
     let style: ItemListStyle
+    let emptyStateItem: ItemListControllerEmptyStateItem?
     let animateChanges: Bool
     
-    init(entries: [Entry], style: ItemListStyle, animateChanges: Bool = true) {
+    init(entries: [Entry], style: ItemListStyle, emptyStateItem: ItemListControllerEmptyStateItem? = nil, animateChanges: Bool = true) {
         self.entries = entries
         self.style = style
+        self.emptyStateItem = emptyStateItem
         self.animateChanges = animateChanges
     }
 }
@@ -62,10 +65,13 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
     private var didSetReady = false
     
     let listNode: ListView
+    private var emptyStateItem: ItemListControllerEmptyStateItem?
+    private var emptyStateNode: ItemListControllerEmptyStateItemNode?
+    
     private let transitionDisposable = MetaDisposable()
     
     private var enqueuedTransitions: [ItemListNodeTransition] = []
-    private var hadValidLayout = false
+    private var validLayout: (ContainerViewLayout, CGFloat)?
     
     var dismiss: (() -> Void)?
     
@@ -89,7 +95,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
             if previous?.style != state.style {
                 updatedStyle = state.style
             }
-            return ItemListNodeTransition(entries: transition, updateStyle: updatedStyle, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && !state.animateChanges)
+            return ItemListNodeTransition(entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && !state.animateChanges)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -144,15 +150,20 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        if !self.hadValidLayout {
-            self.hadValidLayout = true
+        if let emptyStateNode = self.emptyStateNode {
+            emptyStateNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        }
+        
+        let dequeue = self.validLayout == nil
+        self.validLayout = (layout, navigationBarHeight)
+        if dequeue {
             self.dequeueTransitions()
         }
     }
     
     private func enqueueTransition(_ transition: ItemListNodeTransition) {
         self.enqueuedTransitions.append(transition)
-        if self.hadValidLayout {
+        if self.validLayout != nil {
             self.dequeueTransitions()
         }
     }
@@ -177,6 +188,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
                 options.insert(.AnimateInsertion)
             } else if transition.animateAlpha {
                 options.insert(.PreferSynchronousResourceLoading)
+                options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateAlpha)
             }
             self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
@@ -187,6 +199,31 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
                     }
                 }
             })
+            var updateEmptyStateItem = false
+            if let emptyStateItem = self.emptyStateItem, let updatedEmptyStateItem = transition.emptyStateItem {
+                updateEmptyStateItem = !emptyStateItem.isEqual(to: updatedEmptyStateItem)
+            } else if (self.emptyStateItem != nil) != (transition.emptyStateItem != nil) {
+                updateEmptyStateItem = true
+            }
+            if updateEmptyStateItem {
+                self.emptyStateItem = transition.emptyStateItem
+                if let emptyStateItem = transition.emptyStateItem {
+                    let updatedNode = emptyStateItem.node(current: self.emptyStateNode)
+                    if let emptyStateNode = self.emptyStateNode, updatedNode !== emptyStateNode {
+                        emptyStateNode.removeFromSupernode()
+                    }
+                    if self.emptyStateNode !== updatedNode {
+                        self.emptyStateNode = updatedNode
+                        if let validLayout = self.validLayout {
+                            updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+                        }
+                        self.addSubnode(updatedNode)
+                    }
+                } else if let emptyStateNode = self.emptyStateNode {
+                    emptyStateNode.removeFromSupernode()
+                    self.emptyStateNode = nil
+                }
+            }
         }
     }
 }
