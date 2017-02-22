@@ -9,20 +9,6 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public struct RenderedChannelParticipant: Equatable {
-    public let participant: ChannelParticipant
-    public let peer: Peer
-    
-    public init(participant: ChannelParticipant, peer: Peer) {
-        self.participant = participant
-        self.peer = peer
-    }
-    
-    public static func ==(lhs: RenderedChannelParticipant, rhs: RenderedChannelParticipant) -> Bool {
-        return lhs.participant == rhs.participant && lhs.peer.isEqual(rhs.peer)
-    }
-}
-
 public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedChannelParticipant], NoError> {
     return account.postbox.modify { modifier -> Signal<[RenderedChannelParticipant], NoError> in
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
