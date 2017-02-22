@@ -859,7 +859,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
         }
     }
     
-    var pollChannelSignals: [Signal<AccountMutableState, NoError>] = []
+    var pollChannelSignals: [Signal<(AccountMutableState, Bool), NoError>] = []
     for peerId in channelsToPoll {
         if let peer = updatedState.peers[peerId] {
             pollChannelSignals.append(pollChannel(account, peer: peer, state: updatedState.branch()))
@@ -870,14 +870,18 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
     
     return combineLatest(pollChannelSignals) |> mapToSignal { states -> Signal<AccountFinalState, NoError> in
         var finalState = updatedState
-        for state in states {
+        var hadError = false
+        for (state, success) in states {
             finalState.merge(state)
+            if !success {
+                hadError = true
+            }
         }
         return resolveAssociatedMessages(account: account, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerNotificationSettings(account: account, state: resultingState)
                     |> map { resultingState -> AccountFinalState in
-                        return AccountFinalState(state: resultingState, shouldPoll: shouldPoll, incomplete: missingUpdates)
+                        return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError, incomplete: missingUpdates)
                     }
             }
     }
@@ -1005,87 +1009,97 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Acc
     }
 }
 
-private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool), NoError> {
     if let inputChannel = apiInputChannel(peer) {
-        return account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: state.channelStates[peer.id]?.pts ?? 1, limit: 20))
-            |> retryRequest
-            |> map { difference -> AccountMutableState in
-                var updatedState = state
-                switch difference {
-                    case let .channelDifference(_, pts, _, newMessages, otherUpdates, chats, users):
-                        let channelState: ChannelState
-                        if let previousState = updatedState.channelStates[peer.id] {
-                            channelState = previousState.setPts(pts)
-                        } else {
-                            channelState = ChannelState(pts: pts)
-                        }
-                        updatedState.updateChannelState(peer.id, state: channelState)
-                        
-                        updatedState.mergeChats(chats)
-                        updatedState.mergeUsers(users)
-                        
-                        for apiMessage in newMessages {
-                            if let message = StoreMessage(apiMessage: apiMessage) {
-                                if let preCachedResources = apiMessage.preCachedResources {
-                                    for (resource, data) in preCachedResources {
-                                        updatedState.addPreCachedResource(resource, data: data)
-                                    }
-                                }
-                                updatedState.addMessages([message], location: .UpperHistoryBlock)
-                            }
-                        }
-                        for update in otherUpdates {
-                            switch update {
-                                case let .updateDeleteChannelMessages(_, messages, _, _):
-                                    let peerId = peer.id
-                                    updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
-                                default:
-                                    break
-                            }
-                        }
-                    case let .channelDifferenceEmpty(_, pts, _):
-                        let channelState: ChannelState
-                        if let previousState = updatedState.channelStates[peer.id] {
-                            channelState = previousState.setPts(pts)
-                        } else {
-                            channelState = ChannelState(pts: pts)
-                        }
-                        updatedState.updateChannelState(peer.id, state: channelState)
-                    case let .channelDifferenceTooLong(_, pts, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, messages, chats, users):
-                        let channelState: ChannelState
-                        if let previousState = updatedState.channelStates[peer.id] {
-                            channelState = previousState.setPts(pts)
-                        } else {
-                            channelState = ChannelState(pts: pts)
-                        }
-                        updatedState.updateChannelState(peer.id, state: channelState)
-                        
-                        updatedState.mergeChats(chats)
-                        updatedState.mergeUsers(users)
-                        
-                        updatedState.addHole(MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32.max))
-                    
-                        for apiMessage in messages {
-                            if let message = StoreMessage(apiMessage: apiMessage) {
-                                if let preCachedResources = apiMessage.preCachedResources {
-                                    for (resource, data) in preCachedResources {
-                                        updatedState.addPreCachedResource(resource, data: data)
-                                    }
-                                }
-                                
-                                let location: AddMessagesLocation
-                                if case let .Id(id) = message.id, id.id == topMessage {
-                                    location = .UpperHistoryBlock
-                                } else {
-                                    location = .Random
-                                }
-                                updatedState.addMessages([message], location: location)
-                            }
-                        }
-                    
-                        updatedState.resetReadState(peer.id, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount)
+        return (account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: state.channelStates[peer.id]?.pts ?? 1, limit: 20))
+            |> map { Optional($0) }
+            |> `catch` { error -> Signal<Api.updates.ChannelDifference?, MTRpcError> in
+                if error.errorDescription == "CHANNEL_PRIVATE" {
+                    return .single(nil)
+                } else {
+                    return .fail(error)
                 }
-                return updatedState
+            })
+            |> retryRequest
+            |> map { difference -> (AccountMutableState, Bool) in
+                var updatedState = state
+                if let difference = difference {
+                    switch difference {
+                        case let .channelDifference(_, pts, _, newMessages, otherUpdates, chats, users):
+                            let channelState: ChannelState
+                            if let previousState = updatedState.channelStates[peer.id] {
+                                channelState = previousState.setPts(pts)
+                            } else {
+                                channelState = ChannelState(pts: pts)
+                            }
+                            updatedState.updateChannelState(peer.id, state: channelState)
+                            
+                            updatedState.mergeChats(chats)
+                            updatedState.mergeUsers(users)
+                            
+                            for apiMessage in newMessages {
+                                if let message = StoreMessage(apiMessage: apiMessage) {
+                                    if let preCachedResources = apiMessage.preCachedResources {
+                                        for (resource, data) in preCachedResources {
+                                            updatedState.addPreCachedResource(resource, data: data)
+                                        }
+                                    }
+                                    updatedState.addMessages([message], location: .UpperHistoryBlock)
+                                }
+                            }
+                            for update in otherUpdates {
+                                switch update {
+                                    case let .updateDeleteChannelMessages(_, messages, _, _):
+                                        let peerId = peer.id
+                                        updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
+                                    default:
+                                        break
+                                }
+                            }
+                        case let .channelDifferenceEmpty(_, pts, _):
+                            let channelState: ChannelState
+                            if let previousState = updatedState.channelStates[peer.id] {
+                                channelState = previousState.setPts(pts)
+                            } else {
+                                channelState = ChannelState(pts: pts)
+                            }
+                            updatedState.updateChannelState(peer.id, state: channelState)
+                        case let .channelDifferenceTooLong(_, pts, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, messages, chats, users):
+                            let channelState: ChannelState
+                            if let previousState = updatedState.channelStates[peer.id] {
+                                channelState = previousState.setPts(pts)
+                            } else {
+                                channelState = ChannelState(pts: pts)
+                            }
+                            updatedState.updateChannelState(peer.id, state: channelState)
+                            
+                            updatedState.mergeChats(chats)
+                            updatedState.mergeUsers(users)
+                            
+                            updatedState.addHole(MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32.max))
+                        
+                            for apiMessage in messages {
+                                if let message = StoreMessage(apiMessage: apiMessage) {
+                                    if let preCachedResources = apiMessage.preCachedResources {
+                                        for (resource, data) in preCachedResources {
+                                            updatedState.addPreCachedResource(resource, data: data)
+                                        }
+                                    }
+                                    
+                                    let location: AddMessagesLocation
+                                    if case let .Id(id) = message.id, id.id == topMessage {
+                                        location = .UpperHistoryBlock
+                                    } else {
+                                        location = .Random
+                                    }
+                                    updatedState.addMessages([message], location: location)
+                                }
+                            }
+                        
+                            updatedState.resetReadState(peer.id, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount)
+                    }
+                }
+                return (updatedState, difference != nil)
             }
     } else {
         Logger.shared.log("State", "can't poll channel \(peer.id): can't create inputChannel")
