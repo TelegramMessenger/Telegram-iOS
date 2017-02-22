@@ -45,7 +45,7 @@ public func recentPeers(account: Account) -> Signal<[Peer], NoError> {
                 return .complete()
             }
         }
-    return cachedPeers |> then(updatedRemotePeers) |> filter({ !$0.isEmpty })
+    return cachedPeers |> then(updatedRemotePeers |> filter({ !$0.isEmpty })) 
 }
 
 public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
