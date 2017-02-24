@@ -91,6 +91,10 @@ public final class CachedGroupData: CachedPeerData {
         
         return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos
     }
+    
+    func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation?) -> CachedGroupData {
+        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos)
+    }
 }
 
 extension CachedGroupData {
