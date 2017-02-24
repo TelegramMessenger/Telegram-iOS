@@ -198,6 +198,10 @@ public final class CachedChannelData: CachedPeerData {
     func withUpdatedAbout(_ about: String?) -> CachedChannelData {
         return CachedChannelData(flags: self.flags, about: about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants)
     }
+    
+    func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants)
+    }
 }
 
 extension CachedChannelData {
