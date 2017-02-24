@@ -164,6 +164,10 @@ public final class Modifier {
         self.postbox?.updatePeerCachedData(peerIds: peerIds, update: update)
     }
     
+    public func getPeerCachedData(peerId: PeerId) -> CachedPeerData? {
+        return self.postbox?.cachedPeerDataTable.get(peerId)
+    }
+    
     public func updatePeerPresences(_ peerPresences: [PeerId: PeerPresence]) {
         self.postbox?.updatePeerPresences(peerPresences)
     }
