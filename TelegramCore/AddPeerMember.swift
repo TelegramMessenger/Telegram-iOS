@@ -87,3 +87,33 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
         }
     } |> mapError { _ -> AddPeerMemberError in return .generic } |> switchToLatest
 }
+
+
+public func addSupergroupMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, Void> {
+    return account.postbox.modify { modifier -> Signal<Void, Void> in
+        
+        var memberPeerIds:[PeerId:Peer] = [:]
+        var inputUsers:[Api.InputUser] = []
+        for memberId in memberIds {
+            if let peer = modifier.getPeer(memberId) {
+                memberPeerIds[peerId] = peer
+                if let inputUser = apiInputUser(peer) {
+                    inputUsers.append(inputUser)
+                }
+            }
+        }
+        
+        if let peer = modifier.getPeer(peerId), let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
+            return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
+                |> retryRequest
+                |> mapToSignal { result -> Signal<Void, Void> in
+                    account.stateManager.addUpdates(result)
+                    return fetchAndUpdateCachedParticipants(peerId: peerId, network:account.network, postbox: account.postbox)
+            }
+        } else {
+            return .fail()
+        }
+        
+    } |> switchToLatest
+}
+
