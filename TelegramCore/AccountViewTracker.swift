@@ -231,7 +231,7 @@ public final class AccountViewTracker {
             
             if dataUpdated {
                 if let account = self.account {
-                    context.disposable.set(fetchAndUpdateCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox).start())
+                    context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox)).start())
                 }
             }
         }

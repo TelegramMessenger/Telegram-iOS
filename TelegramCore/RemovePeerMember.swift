@@ -33,7 +33,8 @@ public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId)
                                             break
                                         }
                                     }
-                                    return CachedGroupData(participants: CachedGroupParticipants(participants: updatedParticipants, version: participants.version), exportedInvitation: cachedData.exportedInvitation, botInfos: cachedData.botInfos)
+                                    
+                                    return cachedData.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
                                 } else {
                                     return cachedData
                                 }

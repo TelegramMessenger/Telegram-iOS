@@ -33,13 +33,24 @@ public final class CachedGroupData: CachedPeerData {
     public let participants: CachedGroupParticipants?
     public let exportedInvitation: ExportedInvitation?
     public let botInfos: [CachedPeerBotInfo]
+    public let reportStatus: PeerReportStatus
     
     public let peerIds: Set<PeerId>
     
-    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo]) {
+    init() {
+        self.participants = nil
+        self.exportedInvitation = nil
+        self.botInfos = []
+        self.reportStatus = .unknown
+        self.peerIds = Set()
+    }
+    
+    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], reportStatus: PeerReportStatus) {
         self.participants = participants
         self.exportedInvitation = exportedInvitation
         self.botInfos = botInfos
+        self.reportStatus = reportStatus
+        
         var peerIds = Set<PeerId>()
         if let participants = participants {
             for participant in participants.participants {
@@ -57,6 +68,8 @@ public final class CachedGroupData: CachedPeerData {
         self.participants = participants
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
+        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r"))!
+        
         var peerIds = Set<PeerId>()
         if let participants = participants {
             for participant in participants.participants {
@@ -82,6 +95,7 @@ public final class CachedGroupData: CachedPeerData {
             encoder.encodeNil(forKey: "i")
         }
         encoder.encodeObjectArray(self.botInfos, forKey: "b")
+        encoder.encodeInt32(self.reportStatus.rawValue, forKey: "r")
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
@@ -89,31 +103,22 @@ public final class CachedGroupData: CachedPeerData {
             return false
         }
         
-        return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos
+        return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos && self.reportStatus == other.reportStatus
+    }
+    
+    func withUpdatedParticipants(_ participants: CachedGroupParticipants?) -> CachedGroupData {
+        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus)
     }
     
     func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos)
+        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus)
     }
-}
-
-extension CachedGroupData {
-    convenience init?(apiChatFull: Api.ChatFull) {
-        switch apiChatFull {
-            case let .chatFull(_, apiParticipants, _, _, apiExportedInvite, apiBotInfos):
-                var botInfos: [CachedPeerBotInfo] = []
-                for botInfo in apiBotInfos {
-                    switch botInfo {
-                        case let .botInfo(userId, _, _):
-                            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                            let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
-                            botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))
-                    }
-                }
-                self.init(participants: CachedGroupParticipants(apiParticipants: apiParticipants), exportedInvitation: ExportedInvitation(apiExportedInvite: apiExportedInvite), botInfos: botInfos)
-                break
-            case .channelFull:
-                return nil
-        }
+    
+    func withUpdatedBotInfos(_ botInfos: [CachedPeerBotInfo]) -> CachedGroupData {
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, reportStatus: self.reportStatus)
+    }
+    
+    func withUpdatedReportStatus(_ reportStatus: PeerReportStatus) -> CachedGroupData {
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: reportStatus)
     }
 }

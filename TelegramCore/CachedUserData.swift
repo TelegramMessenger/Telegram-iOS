@@ -8,17 +8,34 @@ import Foundation
 public final class CachedUserData: CachedPeerData {
     public let about: String?
     public let botInfo: BotInfo?
+    public let reportStatus: PeerReportStatus
+    public let isBlocked: Bool
+    public let commonGroupCount: Int32
     
     public let peerIds = Set<PeerId>()
     
-    init(about: String?, botInfo: BotInfo?) {
+    init() {
+        self.about = nil
+        self.botInfo = nil
+        self.reportStatus = .unknown
+        self.isBlocked = false
+        self.commonGroupCount = 0
+    }
+    
+    init(about: String?, botInfo: BotInfo?, reportStatus: PeerReportStatus, isBlocked: Bool, commonGroupCount: Int32) {
         self.about = about
         self.botInfo = botInfo
+        self.reportStatus = reportStatus
+        self.isBlocked = isBlocked
+        self.commonGroupCount = commonGroupCount
     }
     
     public init(decoder: Decoder) {
         self.about = decoder.decodeStringForKey("a")
         self.botInfo = decoder.decodeObjectForKey("bi") as? BotInfo
+        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r"))!
+        self.isBlocked = decoder.decodeInt32ForKey("b") != 0
+        self.commonGroupCount = decoder.decodeInt32ForKey("cg")
     }
     
     public func encode(_ encoder: Encoder) {
@@ -32,6 +49,9 @@ public final class CachedUserData: CachedPeerData {
         } else {
             encoder.encodeNil(forKey: "bi")
         }
+        encoder.encodeInt32(self.reportStatus.rawValue, forKey: "r")
+        encoder.encodeInt32(self.isBlocked ? 1 : 0, forKey: "b")
+        encoder.encodeInt32(self.commonGroupCount, forKey: "cg")
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
@@ -39,21 +59,26 @@ public final class CachedUserData: CachedPeerData {
             return false
         }
         
-        return other.about == self.about && other.botInfo == self.botInfo
+        return other.about == self.about && other.botInfo == self.botInfo && self.reportStatus == other.reportStatus && self.isBlocked == other.isBlocked && self.commonGroupCount == other.commonGroupCount
     }
-}
-
-extension CachedUserData {
-    convenience init(apiUserFull: Api.UserFull) {
-        switch apiUserFull {
-            case let .userFull(_, _, about, _, _, _, apiBotInfo, commonChatsCount):
-                let botInfo: BotInfo?
-                if let apiBotInfo = apiBotInfo {
-                    botInfo = BotInfo(apiBotInfo: apiBotInfo)
-                } else {
-                    botInfo = nil
-                }
-                self.init(about: about, botInfo: botInfo)
-        }
+    
+    func withUpdatedAbout(_ about: String?) -> CachedUserData {
+        return CachedUserData(about: about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount)
+    }
+    
+    func withUpdatedBotInfo(_ botInfo: BotInfo?) -> CachedUserData {
+        return CachedUserData(about: self.about, botInfo: botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount)
+    }
+    
+    func withUpdatedReportStatus(_ reportStatus: PeerReportStatus) -> CachedUserData {
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount)
+    }
+    
+    func withUpdatedIsBlocked(_ isBlocked: Bool) -> CachedUserData {
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: isBlocked, commonGroupCount: self.commonGroupCount)
+    }
+    
+    func withUpdatedCommonGroupCount(_ commonGroupCount: Int32) -> CachedUserData {
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: commonGroupCount)
     }
 }
