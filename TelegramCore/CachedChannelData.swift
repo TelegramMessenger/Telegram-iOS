@@ -91,16 +91,32 @@ public final class CachedChannelData: CachedPeerData {
     public let exportedInvitation: ExportedInvitation?
     public let botInfos: [CachedPeerBotInfo]
     public let topParticipants: CachedChannelParticipants?
+    public let reportStatus: PeerReportStatus
+    public let pinnedMessageId: MessageId?
     
     public let peerIds: Set<PeerId>
     
-    init(flags: CachedChannelFlags, about: String?, participantsSummary: CachedChannelParticipantsSummary, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], topParticipants: CachedChannelParticipants?) {
+    init() {
+        self.flags = []
+        self.about = nil
+        self.participantsSummary = CachedChannelParticipantsSummary(memberCount: nil, adminCount: nil, bannedCount: nil)
+        self.exportedInvitation = nil
+        self.botInfos = []
+        self.topParticipants = nil
+        self.reportStatus = .unknown
+        self.pinnedMessageId = nil
+        self.peerIds = Set()
+    }
+    
+    init(flags: CachedChannelFlags, about: String?, participantsSummary: CachedChannelParticipantsSummary, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], topParticipants: CachedChannelParticipants?, reportStatus: PeerReportStatus, pinnedMessageId: MessageId?) {
         self.flags = flags
         self.about = about
         self.participantsSummary = participantsSummary
         self.exportedInvitation = exportedInvitation
         self.botInfos = botInfos
         self.topParticipants = topParticipants
+        self.reportStatus = reportStatus
+        self.pinnedMessageId = pinnedMessageId
         
         var peerIds = Set<PeerId>()
         if let topParticipants = topParticipants {
@@ -114,12 +130,36 @@ public final class CachedChannelData: CachedPeerData {
         self.peerIds = peerIds
     }
     
-    func withUpdatedTopParticipants(_ topParticipants: CachedChannelParticipants?) -> CachedChannelData {
-        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: topParticipants)
+    func withUpdatedFlags(_ flags: CachedChannelFlags) -> CachedChannelData {
+        return CachedChannelData(flags: flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
+    }
+    
+    func withUpdatedAbout(_ about: String?) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
     }
     
     func withUpdatedParticipantsSummary(_ participantsSummary: CachedChannelParticipantsSummary) -> CachedChannelData {
-        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants)
+        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
+    }
+    
+    func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation?) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
+    }
+    
+    func withUpdatedBotInfos(_ botInfos: [CachedPeerBotInfo]) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: botInfos, topParticipants: self.topParticipants, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
+    }
+    
+    func withUpdatedTopParticipants(_ topParticipants: CachedChannelParticipants?) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: topParticipants, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
+    }
+    
+    func withUpdatedReportStatus(_ reportStatus: PeerReportStatus) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants, reportStatus: reportStatus, pinnedMessageId: self.pinnedMessageId)
+    }
+    
+    func withUpdatedPinnedMessageId(_ pinnedMessageId: MessageId?) -> CachedChannelData {
+        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants, reportStatus: self.reportStatus, pinnedMessageId: pinnedMessageId)
     }
     
     public init(decoder: Decoder) {
@@ -130,6 +170,13 @@ public final class CachedChannelData: CachedPeerData {
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
         var peerIds = Set<PeerId>()
         self.topParticipants = decoder.decodeObjectForKey("p", decoder: { CachedChannelParticipants(decoder: $0) }) as? CachedChannelParticipants
+        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r"))!
+        if let pinnedMessagePeerId = (decoder.decodeInt64ForKey("pm.p") as Int64?), let pinnedMessageNamespace = (decoder.decodeInt32ForKey("pm.n") as Int32?), let pinnedMessageId = (decoder.decodeInt32ForKey("pm.i") as Int32?) {
+            self.pinnedMessageId = MessageId(peerId: PeerId(pinnedMessagePeerId), namespace: pinnedMessageNamespace, id: pinnedMessageId)
+        } else {
+            self.pinnedMessageId = nil
+        }
+        
         if let topParticipants = self.topParticipants {
             for participant in topParticipants.participants {
                 peerIds.insert(participant.peerId)
@@ -160,6 +207,16 @@ public final class CachedChannelData: CachedPeerData {
             encoder.encodeObject(topParticipants, forKey: "p")
         } else {
             encoder.encodeNil(forKey: "p")
+        }
+        encoder.encodeInt32(self.reportStatus.rawValue, forKey: "r")
+        if let pinnedMessageId = self.pinnedMessageId {
+            encoder.encodeInt64(pinnedMessageId.peerId.toInt64(), forKey: "pm.p")
+            encoder.encodeInt32(pinnedMessageId.namespace, forKey: "pm.n")
+            encoder.encodeInt32(pinnedMessageId.id, forKey: "pm.i")
+        } else {
+            encoder.encodeNil(forKey: "pm.p")
+            encoder.encodeNil(forKey: "pm.n")
+            encoder.encodeNil(forKey: "pm.i")
         }
     }
     
@@ -192,41 +249,14 @@ public final class CachedChannelData: CachedPeerData {
             return false
         }
         
-        return true
-    }
-    
-    func withUpdatedAbout(_ about: String?) -> CachedChannelData {
-        return CachedChannelData(flags: self.flags, about: about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants)
-    }
-    
-    func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation) -> CachedChannelData {
-        return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants)
-    }
-}
-
-extension CachedChannelData {
-    convenience init?(apiChatFull: Api.ChatFull) {
-        switch apiChatFull {
-            case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, _, pinnedMsgId):
-                var channelFlags = CachedChannelFlags()
-                if (flags & (1 << 3)) != 0 {
-                    channelFlags.insert(.canDisplayParticipants)
-                }
-                if (flags & (1 << 6)) != 0 {
-                    channelFlags.insert(.canChangeUsername)
-                }
-                var botInfos: [CachedPeerBotInfo] = []
-                for botInfo in apiBotInfos {
-                    switch botInfo {
-                    case let .botInfo(userId, _, _):
-                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                        let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
-                        botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))
-                    }
-                }
-                self.init(flags: channelFlags, about: about, participantsSummary: CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: kickedCount), exportedInvitation: ExportedInvitation(apiExportedInvite: apiExportedInvite), botInfos: botInfos, topParticipants: nil)
-            case .chatFull:
-                return nil
+        if other.reportStatus != self.reportStatus {
+            return false
         }
+        
+        if other.pinnedMessageId != self.pinnedMessageId {
+            return false
+        }
+        
+        return true
     }
 }
