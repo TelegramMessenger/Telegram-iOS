@@ -317,7 +317,7 @@ public func verifyPassword(_ account: UnauthorizedAccount, password: String) -> 
         data.append(authData.currentSalt!)
         let currentPasswordHash = sha256(data)
         
-        return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)))
+        return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
     }
 }
 

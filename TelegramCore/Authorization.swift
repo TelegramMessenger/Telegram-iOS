@@ -70,7 +70,7 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
             switch state.contents {
                 case let .confirmationCodeEntry(number, _, hash, _, nextType):
                     if nextType != nil {
-                        return account.network.request(Api.functions.auth.resendCode(phoneNumber: number, phoneCodeHash: hash))
+                        return account.network.request(Api.functions.auth.resendCode(phoneNumber: number, phoneCodeHash: hash), automaticFloodWait: false)
                             |> mapError { error -> AuthorizationCodeRequestError in
                                 if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                                     return .limitExceeded
