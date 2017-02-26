@@ -20,15 +20,15 @@ public func updatePinnedMessage(_ pinnedMessageId:MessageId?, silent:Bool = fals
             return .generic
         }  |> mapToSignal { peer -> Signal<Void, UpdatePinnedMessageError> in
             if let group = peer as? TelegramChannel {
-                let canDismiss:Bool
+                let canUpdate:Bool
                 switch group.role {
                 case .creator, .editor, .moderator:
-                    canDismiss = true
+                    canUpdate = true
                 default:
-                    canDismiss = false
+                    canUpdate = false
                 }
                 
-                if canDismiss, let inputChannel = apiInputChannel(group) {
+                if canUpdate, let inputChannel = apiInputChannel(group) {
                     
                     var flags:Int32 = 0
                     let messageId:Int32 = pinnedMessageId?.id ?? 0
