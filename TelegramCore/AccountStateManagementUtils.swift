@@ -887,20 +887,6 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
     }
 }
 
-private func messagesIdsGroupedByPeerId(_ ids: Set<MessageId>) -> [PeerId: [MessageId]] {
-    var dict: [PeerId: [MessageId]] = [:]
-    
-    for id in ids {
-        let peerId = id.peerId
-        if dict[peerId] == nil {
-            dict[peerId] = [id]
-        } else {
-            dict[peerId]!.append(id)
-        }
-    }
-    
-    return dict
-}
 
 private func resolveAssociatedMessages(account: Account, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     let missingMessageIds = state.initialState.messageIds.subtracting(state.storedMessages)

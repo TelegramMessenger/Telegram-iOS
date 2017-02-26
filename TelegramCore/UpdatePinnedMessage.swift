@@ -13,7 +13,7 @@ public enum UpdatePinnedMessageError {
     case generic
 }
 
-public func updatePinnedMessage(_ pinnedMessageId:MessageId?, for peerId:PeerId, account:Account) -> Signal<Void, UpdatePinnedMessageError> {
+public func updatePinnedMessage(_ pinnedMessageId:MessageId?, silent:Bool = false, for peerId:PeerId, account:Account) -> Signal<Void, UpdatePinnedMessageError> {
     return account.postbox.modify { modifier -> Peer? in
         return modifier.getPeer(peerId)
         } |> mapError { () -> UpdatePinnedMessageError in
@@ -32,7 +32,7 @@ public func updatePinnedMessage(_ pinnedMessageId:MessageId?, for peerId:PeerId,
                     
                     var flags:Int32 = 0
                     let messageId:Int32 = pinnedMessageId?.id ?? 0
-                    if messageId > 0 {
+                    if silent {
                         flags |= (1 << 0)
                     }
                     
@@ -43,6 +43,7 @@ public func updatePinnedMessage(_ pinnedMessageId:MessageId?, for peerId:PeerId,
                             return .generic
                         }
                         |> mapToSignal { updates -> Signal<Void, UpdatePinnedMessageError> in
+                            account.stateManager.addUpdates(updates)
                             return account.postbox.modify { modifier  in
                                 modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                     if let current = current as? CachedChannelData {

@@ -56,3 +56,19 @@ public extension Message {
         return false
     }
 }
+
+
+func messagesIdsGroupedByPeerId(_ ids: Set<MessageId>) -> [PeerId: [MessageId]] {
+    var dict: [PeerId: [MessageId]] = [:]
+    
+    for id in ids {
+        let peerId = id.peerId
+        if dict[peerId] == nil {
+            dict[peerId] = [id]
+        } else {
+            dict[peerId]!.append(id)
+        }
+    }
+    
+    return dict
+}
