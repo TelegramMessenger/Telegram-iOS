@@ -59,10 +59,38 @@ final class CloudChatRemoveChatOperation: Coding {
     }
 }
 
+final class CloudChatClearHistoryOperation: Coding {
+    let peerId: PeerId
+    let topMessageId: MessageId
+    
+    init(peerId: PeerId, topMessageId: MessageId) {
+        self.peerId = peerId
+        self.topMessageId = topMessageId
+    }
+    
+    init(decoder: Decoder) {
+        self.peerId = PeerId(decoder.decodeInt64ForKey("p"))
+        self.topMessageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p")), namespace: decoder.decodeInt32ForKey("m.n"), id: decoder.decodeInt32ForKey("m.i"))
+    }
+    
+    func encode(_ encoder: Encoder) {
+        encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
+        encoder.encodeInt64(self.topMessageId.peerId.toInt64(), forKey: "m.p")
+        encoder.encodeInt32(self.topMessageId.namespace, forKey: "m.n")
+        encoder.encodeInt32(self.topMessageId.id, forKey: "m.i")
+    }
+}
+
 func cloudChatAddRemoveMessagesOperation(modifier: Modifier, peerId: PeerId, messageIds: [MessageId], type: CloudChatRemoveMessagesType) {
     modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveMessagesOperation(messageIds: messageIds, type: type))
 }
 
 func cloudChatAddRemoveChatOperation(modifier: Modifier, peerId: PeerId) {
     modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId))
+}
+
+func cloudChatAddClearHistoryOperation(modifier: Modifier, peerId: PeerId) {
+    if let topMessageId = modifier.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+        modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId))
+    }
 }

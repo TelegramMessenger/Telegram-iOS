@@ -97,6 +97,12 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
                             } else {
                                 return .complete()
                             }
+                        } else if let operation = entry.contents as? CloudChatClearHistoryOperation {
+                            if let peer = modifier.getPeer(entry.peerId) {
+                                return clearHistory(modifier: modifier, postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
+                            } else {
+                                return .complete()
+                            }
                         } else {
                             assertionFailure()
                         }
@@ -249,6 +255,34 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
             return .complete()
         }
     } else {
+        return .complete()
+    }
+}
+
+private func clearHistory(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatClearHistoryOperation) -> Signal<Void, NoError> {
+    if peer.id.namespace == Namespaces.Peer.CloudGroup || peer.id.namespace == Namespaces.Peer.CloudUser {
+        if let inputPeer = apiInputPeer(peer) {
+            return network.request(Api.functions.messages.deleteHistory(flags: 0, peer: inputPeer, maxId: operation.topMessageId.id))
+                |> map { result -> Api.messages.AffectedHistory? in
+                    return result
+                }
+                |> `catch` { _ in
+                    return .single(nil)
+                }
+                |> mapToSignal { result in
+                    if let result = result {
+                        switch result {
+                        case let .affectedHistory(pts, ptsCount, _):
+                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                        }
+                    }
+                    return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } else {
+        assertionFailure()
         return .complete()
     }
 }

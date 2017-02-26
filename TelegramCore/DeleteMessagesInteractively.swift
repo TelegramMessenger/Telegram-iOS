@@ -57,6 +57,32 @@ public func deleteMessagesInteractively(postbox: Postbox, messageIds: [MessageId
     }
 }
 
-public func clearHistoryInteractively(peerId: PeerId) -> Signal<Void, NoError> {
-    return .never()
+public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Void in
+        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+            cloudChatAddClearHistoryOperation(modifier: modifier, peerId: peerId)
+            modifier.clearHistory(peerId)
+        } else if peerId.namespace == Namespaces.Peer.SecretChat {
+            modifier.clearHistory(peerId)
+            
+            if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
+                var layer: SecretChatLayer?
+                switch state.embeddedState {
+                    case .terminated, .handshake:
+                        break
+                    case .basicLayer:
+                        layer = .layer8
+                    case let .sequenceBasedLayer(sequenceState):
+                        layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                }
+                
+                if let layer = layer {
+                    let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.clearHistory(layer: layer, actionGloballyUniqueId: arc4random64()), state: state)
+                    if updatedState != state {
+                        modifier.setPeerChatState(peerId, state: updatedState)
+                    }
+                }
+            }
+        }
+    }
 }
