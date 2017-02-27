@@ -208,7 +208,7 @@ final class ViewTracker {
     }
     
     func removeUnreadMessageCountsView(_ index: Bag<(MutableUnreadMessageCountsView, ValuePipe<UnreadMessageCountsView>)>.Index) {
-        self.peerViews.remove(index)
+        self.unreadMessageCountsViews.remove(index)
     }
     
     func addPeerMergedOperationLogView(_ view: MutablePeerMergedOperationLogView) -> (Bag<(MutablePeerMergedOperationLogView, ValuePipe<PeerMergedOperationLogView>)>.Index, Signal<PeerMergedOperationLogView, NoError>) {
