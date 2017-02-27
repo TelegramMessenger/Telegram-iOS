@@ -118,7 +118,7 @@ private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<
                     peerIds.insert(peerId)
                 }
             }
-        case let .differenceTooLong(pts):
+        case .differenceTooLong:
             assertionFailure()
             break
     }
@@ -744,7 +744,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     }
                     updatedState.addMessages([message], location: .UpperHistoryBlock)
                 }
-            case let .updateServiceNotification(flags, date, type, text, media, entities):
+            case let .updateServiceNotification(_, date, type, text, media, entities):
                 if let date = date {
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)
                     
@@ -818,13 +818,73 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         break
                 }
             case let .updateChatParticipants(participants):
-                break
-            case let .updateChatParticipantAdd(chatId, userId, inviterId, date, version):
-                break
-            case let .updateChatParticipantDelete(chatId, userId, version):
-                break
-            case let .updateChatParticipantAdmin(chatId, userId, isAdmin, version):
-                break
+                let groupPeerId: PeerId
+                switch participants {
+                    case let .chatParticipants(chatId, _, _):
+                        groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                    case let .chatParticipantsForbidden(_, chatId, _):
+                        groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                }
+                updatedState.updateCachedPeerData(groupPeerId, { current in
+                    let previous: CachedGroupData
+                    if let current = current as? CachedGroupData {
+                        previous = current
+                    } else {
+                        previous = CachedGroupData()
+                    }
+                    return previous.withUpdatedParticipants(CachedGroupParticipants(apiParticipants: participants))
+                })
+            case let .updateChatParticipantAdd(chatId, userId, inviterId, date, _):
+                let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                let inviterPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId)
+                updatedState.updateCachedPeerData(groupPeerId, { current in
+                    if let current = current as? CachedGroupData, let participants = current.participants {
+                        var updatedParticipants = participants.participants
+                        if updatedParticipants.index(where: { $0.peerId == userPeerId }) == nil {
+                            updatedParticipants.append(.member(id: userPeerId, invitedBy: inviterPeerId, invitedAt: date))
+                        }
+                        return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
+                    } else {
+                        return current
+                    }
+                })
+            case let .updateChatParticipantDelete(chatId, userId, _):
+                let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                updatedState.updateCachedPeerData(groupPeerId, { current in
+                    if let current = current as? CachedGroupData, let participants = current.participants {
+                        var updatedParticipants = participants.participants
+                        if let index = updatedParticipants.index(where: { $0.peerId == userPeerId }) {
+                            updatedParticipants.remove(at: index)
+                        }
+                        return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
+                    } else {
+                        return current
+                    }
+                })
+            case let .updateChatParticipantAdmin(chatId, userId, isAdmin, _):
+                let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                updatedState.updateCachedPeerData(groupPeerId, { current in
+                    if let current = current as? CachedGroupData, let participants = current.participants {
+                        var updatedParticipants = participants.participants
+                        if let index = updatedParticipants.index(where: { $0.peerId == userPeerId }) {
+                            if isAdmin == .boolTrue {
+                                if case let .member(id, invitedBy, invitedAt) = updatedParticipants[index] {
+                                    updatedParticipants[index] = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+                                }
+                            } else {
+                                if case let .admin(id, invitedBy, invitedAt) = updatedParticipants[index] {
+                                    updatedParticipants[index] = .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+                                }
+                            }
+                        }
+                        return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
+                    } else {
+                        return current
+                    }
+                })
             case let .updateChatAdmins(chatId, enabled, version):
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), { peer in
                     if let group = peer as? TelegramGroup {//, group.version == version - 1 {
@@ -839,6 +899,28 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     } else {
                         return peer
                     }
+                })
+            case let .updateChannelPinnedMessage(channelId, id):
+                let channelPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                updatedState.updateCachedPeerData(channelPeerId, { current in
+                    let previous: CachedChannelData
+                    if let current = current as? CachedChannelData {
+                        previous = current
+                    } else {
+                        previous = CachedChannelData()
+                    }
+                    return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id))
+                })
+            case let .updateUserBlocked(userId, unblocked):
+                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                updatedState.updateCachedPeerData(userPeerId, { current in
+                    let previous: CachedUserData
+                    if let current = current as? CachedUserData {
+                        previous = current
+                    } else {
+                        previous = CachedUserData()
+                    }
+                    return previous.withUpdatedIsBlocked(unblocked == .boolFalse)
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
@@ -1187,7 +1269,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1223,7 +1305,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     return result
 }
 
-func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: AccountFinalState) -> AccountReplayedFinalState? {
+func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modifier, finalState: AccountFinalState) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(modifier, finalState: finalState.state)
     if !verified { 
         return nil
@@ -1300,6 +1382,10 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                         return updated
                     })
                 }
+            case let .UpdateCachedPeerData(id, f):
+                modifier.updatePeerCachedData(peerIds: Set([id]), update: { _, current in
+                    return f(current)
+                })
             case let .MergePeerPresences(presences):
                 modifier.updatePeerPresences(presences)
             case let .UpdateSecretChat(chat, timestamp):
@@ -1322,7 +1408,7 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                     case .encryptedChatEmpty(_):
                         break
                     case let .encryptedChatRequested(_, accessHash, date, adminId, participantId, gA):
-                        if currentPeer == nil {
+                        if currentPeer == nil && adminId == accountPeerId.id {
                             let state = SecretChatState(role: .participant, embeddedState: .handshake, keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
                             let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
                             updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
@@ -1336,7 +1422,7 @@ func replayFinalState(mediaBox: MediaBox, modifier: Modifier, finalState: Accoun
                             let b = MemoryBuffer(memory: bBytes, capacity: 256, length: 256, freeWhenDone: true)
                             if randomStatus == 0 {
                                 let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peer.id, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
-                                modifier.setPeerChatState(peer.id, state: state)
+                                modifier.setPeerChatState(peer.id, state: updatedState)
                             } else {
                                 assertionFailure()
                             }

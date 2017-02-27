@@ -201,6 +201,7 @@ public final class AccountStateManager {
                 self.currentIsUpdatingValue = true
                 let account = self.account
                 let mediaBox = account.postbox.mediaBox
+                let accountPeerId = account.peerId
                 let signal = account.postbox.stateView()
                     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
                         if let state = view.state as? AuthorizedAccountState {
@@ -229,7 +230,7 @@ public final class AccountStateManager {
                                                         }
                                                     }
                                                     return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
-                                                        if let replayedState = replayFinalState(mediaBox: mediaBox, modifier: modifier, finalState: finalState) {
+                                                        if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, finalState: finalState) {
                                                             return (difference, replayedState)
                                                         } else {
                                                             return (nil, nil)
@@ -313,6 +314,7 @@ public final class AccountStateManager {
             case let .processUpdateGroups(groups):
                 self.operationTimer?.invalidate()
                 let account = self.account
+                let accountPeerId = account.peerId
                 let mediaBox = account.postbox.mediaBox
                 let queue = self.queue
                 let signal = initialStateWithUpdateGroups(account, groups: groups)
@@ -326,7 +328,7 @@ public final class AccountStateManager {
                                 }
                                 
                                 return account.postbox.modify { modifier -> AccountReplayedFinalState? in
-                                    return replayFinalState(mediaBox: mediaBox, modifier: modifier, finalState: finalState)
+                                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, finalState: finalState)
                                 }
                                 |> map({ ($0, finalState) })
                                 |> deliverOn(queue)

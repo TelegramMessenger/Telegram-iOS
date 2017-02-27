@@ -409,7 +409,14 @@ extension TelegramMediaFileAttribute {
             case let .documentAttributeImageSize(w, h):
                 self = .ImageSize(size: CGSize(width: CGFloat(w), height: CGFloat(h)))
             case let .documentAttributeSticker(alt, stickerset):
-                self = .Sticker(displayText: alt)
+                let packReference: StickerPackReference?
+                switch stickerset {
+                    case .inputStickerSetEmpty:
+                        packReference = nil
+                    case let .inputStickerSetShortName(shortName):
+                        packReference = .name(shortName)
+                }
+                self = .Sticker(displayText: alt, packReference: packReference)
             case let .documentAttributeVideo(duration, w, h):
                 self = .Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h)))
             default:

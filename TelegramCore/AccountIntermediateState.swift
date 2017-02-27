@@ -44,6 +44,7 @@ enum AccountStateMutationOperation {
     case AddHole(MessageId)
     case MergeApiChats([Api.Chat])
     case UpdatePeer(PeerId, (Peer?) -> Peer?)
+    case UpdateCachedPeerData(PeerId, (CachedPeerData?) -> CachedPeerData?)
     case MergeApiUsers([Api.User])
     case MergePeerPresences([PeerId: PeerPresence])
     case UpdateSecretChat(chat: Api.EncryptedChat, timestamp: Int32)
@@ -170,6 +171,10 @@ struct AccountMutableState {
         self.addOperation(.UpdatePeer(id, f))
     }
     
+    mutating func updateCachedPeerData(_ id: PeerId, _ f: @escaping (CachedPeerData?) -> CachedPeerData?) {
+        self.addOperation(.UpdateCachedPeerData(id, f))
+    }
+    
     mutating func mergeUsers(_ users: [Api.User]) {
         self.addOperation(.MergeApiUsers(users))
         
@@ -212,7 +217,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {

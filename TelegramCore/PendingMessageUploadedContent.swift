@@ -91,8 +91,18 @@ private func inputDocumentAttributesFromFile(_ file: TelegramMediaFile) -> [Api.
                 attributes.append(.documentAttributeFilename(fileName: fileName))
             case let .ImageSize(size):
                 attributes.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
-            case let .Sticker(displayText):
-                attributes.append(.documentAttributeSticker(flags: 0, alt: displayText, stickerset: .inputStickerSetEmpty, maskCoords: nil))
+            case let .Sticker(displayText, packReference):
+                var stickerSet: Api.InputStickerSet = .inputStickerSetEmpty
+                let flags: Int32 = 0
+                if let packReference = packReference {
+                    switch packReference {
+                        case let .id(id, accessHash):
+                            stickerSet = .inputStickerSetID(id: id, accessHash: accessHash)
+                        case let .name(name):
+                            stickerSet = .inputStickerSetShortName(shortName: name)
+                    }
+                }
+                attributes.append(.documentAttributeSticker(flags: flags, alt: displayText, stickerset: stickerSet, maskCoords: nil))
             case .HasLinkedStickers:
                 attributes.append(.documentAttributeHasStickers)
             case let .Video(duration, size):
