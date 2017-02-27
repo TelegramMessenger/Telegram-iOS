@@ -45,3 +45,21 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
         }
     } |> switchToLatest
 }
+
+
+//NOT MARKING TO CLOUD, NEED REMOVE ON FUTURE
+public func dismissPeerReport(_ peerId:PeerId, postbox:Postbox) -> Signal<Void,Void> {
+    return postbox.modify { modifier -> Void in
+        modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+            if let current = current as? CachedUserData {
+                return current.withUpdatedReportStatus(.none)
+            } else if let current = current as? CachedGroupData {
+                return current.withUpdatedReportStatus(.none)
+            } else if let current = current as? CachedChannelData {
+                return current.withUpdatedReportStatus(.none)
+            } else {
+                return current
+            }
+        })
+    }
+}
