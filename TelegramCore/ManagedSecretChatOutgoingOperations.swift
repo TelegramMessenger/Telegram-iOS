@@ -147,6 +147,8 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
         })
         
         return ActionDisposable {
+            disposable.dispose()
+            
             let disposables = helper.with { helper -> [Disposable] in
                 return helper.reset()
             }
@@ -287,7 +289,7 @@ private enum BoxedDecryptedMessage {
     func serialize(_ buffer: Buffer, role: SecretChatRole, sequenceInfo: SecretChatOperationSequenceInfo?) {
         switch self {
             case let .layer8(message):
-                message.serialize(buffer, true)
+                let _ = message.serialize(buffer, true)
             case let .layer46(message):
                 //decryptedMessageLayer#1be31789 random_bytes:bytes layer:int in_seq_no:int out_seq_no:int message:DecryptedMessage = DecryptedMessageLayer;
                 buffer.appendInt32(0x1be31789)
@@ -308,7 +310,7 @@ private enum BoxedDecryptedMessage {
                     assertionFailure()
                 }
                 
-                message.serialize(buffer, true)
+                let _ = message.serialize(buffer, true)
         }
     }
 }

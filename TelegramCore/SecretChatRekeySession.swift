@@ -40,7 +40,7 @@ func secretChatAdvanceRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, s
                     if let rekeySession = sequenceState.rekeyState, rekeySession.id == rekeySessionId {
                         return state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(nil)))
                     }
-                case let .pfsAcceptKey(rekeySessionId, gB, keyFingerprint):
+                case let .pfsAcceptKey(rekeySessionId, gB, remoteKeyFingerprint):
                     if let rekeySession = sequenceState.rekeyState, rekeySession.id == rekeySessionId {
                         switch rekeySession.data {
                             case let .requested(a, config):
@@ -66,6 +66,8 @@ func secretChatAdvanceRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, s
                                 keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
                                     memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
                                 }
+                                
+                                assert(remoteKeyFingerprint == keyFingerprint)
                                 
                                 modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsCommitKey(layer: .layer46, actionGloballyUniqueId: arc4random64(), rekeySessionId: rekeySession.id, keyFingerprint: keyFingerprint), mutable: true, delivered: false))
                                 

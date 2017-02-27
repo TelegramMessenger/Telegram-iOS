@@ -72,6 +72,52 @@ private enum SecretChatEmbeddedStateValue: Int32 {
     case sequenceBasedLayer = 3
 }
 
+enum SecretChatHandshakeState: Coding, Equatable {
+    case accepting
+    case requested(g: Int32, p: MemoryBuffer, a: MemoryBuffer)
+    
+    init(decoder: Decoder) {
+        switch decoder.decodeInt32ForKey("r") as Int32 {
+            case 0:
+                self = .accepting
+            case 1:
+                self = .requested(g: decoder.decodeInt32ForKey("g"), p: decoder.decodeBytesForKey("p")!, a: decoder.decodeBytesForKey("a")!)
+            default:
+                self = .accepting
+                assertionFailure()
+        }
+    }
+    
+    func encode(_ encoder: Encoder) {
+        switch self {
+            case .accepting:
+                encoder.encodeInt32(0, forKey: "r")
+            case let .requested(g, p, a):
+                encoder.encodeInt32(1, forKey: "r")
+                encoder.encodeInt32(g, forKey: "g")
+                encoder.encodeBytes(p, forKey: "p")
+                encoder.encodeBytes(a, forKey: "a")
+        }
+    }
+    
+    static func ==(lhs: SecretChatHandshakeState, rhs: SecretChatHandshakeState) -> Bool {
+        switch lhs {
+            case .accepting:
+                if case .accepting = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .requested(g, p, a):
+                if case .requested(g, p, a) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 struct SecretChatLayerNegotiationState: Coding, Equatable {
     let activeLayer: Int32
     let locallyRequestedLayer: Int32
@@ -156,7 +202,7 @@ enum SecretChatRekeySessionData: Coding, Equatable {
     
     static func ==(lhs: SecretChatRekeySessionData, rhs: SecretChatRekeySessionData) -> Bool {
         switch lhs {
-            case let .requesting:
+            case .requesting:
                 if case .requesting = rhs {
                     return true
                 } else {
@@ -300,7 +346,7 @@ struct SecretChatSequenceBasedLayerState: Coding, Equatable {
 
 enum SecretChatEmbeddedState: Coding, Equatable {
     case terminated
-    case handshake
+    case handshake(SecretChatHandshakeState)
     case basicLayer
     case sequenceBasedLayer(SecretChatSequenceBasedLayerState)
     
@@ -317,16 +363,17 @@ enum SecretChatEmbeddedState: Coding, Equatable {
     
     init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("r") as Int32 {
-            case SecretChatEmbeddedStateValue.handshake.rawValue:
+            case SecretChatEmbeddedStateValue.terminated.rawValue:
                 self = .terminated
             case SecretChatEmbeddedStateValue.handshake.rawValue:
-                self = .handshake
+                self = .handshake(decoder.decodeObjectForKey("s", decoder: { SecretChatHandshakeState(decoder: $0) }) as! SecretChatHandshakeState)
             case SecretChatEmbeddedStateValue.basicLayer.rawValue:
                 self = .basicLayer
             case SecretChatEmbeddedStateValue.sequenceBasedLayer.rawValue:
                 self = .sequenceBasedLayer(decoder.decodeObjectForKey("s", decoder: { SecretChatSequenceBasedLayerState(decoder: $0) }) as! SecretChatSequenceBasedLayerState)
             default:
-                self = .handshake
+                assertionFailure()
+                self = .terminated
         }
     }
     
@@ -334,8 +381,9 @@ enum SecretChatEmbeddedState: Coding, Equatable {
         switch self {
             case .terminated:
                 encoder.encodeInt32(SecretChatEmbeddedStateValue.terminated.rawValue, forKey: "r")
-            case .handshake:
+            case let .handshake(state):
                 encoder.encodeInt32(SecretChatEmbeddedStateValue.handshake.rawValue, forKey: "r")
+                encoder.encodeObject(state, forKey: "s")
             case .basicLayer:
                 encoder.encodeInt32(SecretChatEmbeddedStateValue.basicLayer.rawValue, forKey: "r")
             case let .sequenceBasedLayer(state):
@@ -352,8 +400,8 @@ enum SecretChatEmbeddedState: Coding, Equatable {
                 } else {
                     return false
                 }
-            case .handshake:
-                if case .handshake = rhs {
+            case let .handshake(state):
+                if case .handshake(state) = rhs {
                     return true
                 } else {
                     return false

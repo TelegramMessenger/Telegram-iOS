@@ -1388,50 +1388,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 })
             case let .MergePeerPresences(presences):
                 modifier.updatePeerPresences(presences)
-            case let .UpdateSecretChat(chat, timestamp):
-                let currentPeer = modifier.getPeer(chat.peerId) as? TelegramSecretChat
-                let currentState = modifier.getPeerChatState(chat.peerId) as? SecretChatState
-                assert((currentPeer == nil) == (currentState == nil))
-                switch chat {
-                    case let .encryptedChat(_, accessHash, date, adminId, participantId, gAOrB, keyFingerprint):
-                        break
-                    case .encryptedChatDiscarded(_):
-                        if let currentPeer = currentPeer, let currentState = currentState {
-                            let state = currentState.withUpdatedEmbeddedState(.terminated)
-                            let peer = currentPeer.withUpdatedEmbeddedState(state.embeddedState.peerState)
-                            updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
-                            modifier.setPeerChatState(peer.id, state: state)
-                            modifier.operationLogRemoveAllEntries(peerId: peer.id, tag: OperationLogTags.SecretOutgoing)
-                        } else {
-                            Logger.shared.log("State", "got encryptedChatDiscarded, but peer doesn't exist")
-                        }
-                    case .encryptedChatEmpty(_):
-                        break
-                    case let .encryptedChatRequested(_, accessHash, date, adminId, participantId, gA):
-                        if currentPeer == nil && adminId == accountPeerId.id {
-                            let state = SecretChatState(role: .participant, embeddedState: .handshake, keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
-                            let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
-                            updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
-                            modifier.resetIncomingReadStates([peer.id: [
-                                Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0),
-                                Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0)
-                                ]
-                            ])
-                            let bBytes = malloc(256)!
-                            let randomStatus = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))
-                            let b = MemoryBuffer(memory: bBytes, capacity: 256, length: 256, freeWhenDone: true)
-                            if randomStatus == 0 {
-                                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peer.id, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
-                                modifier.setPeerChatState(peer.id, state: updatedState)
-                            } else {
-                                assertionFailure()
-                            }
-                        } else {
-                            Logger.shared.log("State", "got encryptedChatRequested, but peer already exists")
-                        }
-                    case let .encryptedChatWaiting(_, accessHash, date, adminId, participantId):
-                        break
-                }
+            case let .UpdateSecretChat(chat, _):
+                updateSecretChat(accountPeerId: accountPeerId, modifier: modifier, chat: chat, requestData: nil)
             case let .AddSecretMessages(messages):
                 for message in messages {
                     let peerId = message.peerId
