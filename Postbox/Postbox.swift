@@ -196,31 +196,38 @@ public final class Modifier {
         self.postbox?.replaceItemCollections(namespace: namespace, itemCollections: itemCollections)
     }
     
-    public func getItemCollections(namespace: ItemCollectionId.Namespace) -> [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])] {
-        if let postbox = postbox {
-            let items = postbox.itemCollectionItemTable.getItems(namespace: namespace)
-            let infos = postbox.itemCollectionInfoTable.getInfos(namespace: namespace)
-            
-            var result:[(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])] = []
-            for info in infos {
-                if let items = items[info.1] {
-                    result.append((info.1, info.2, items))
-                }
-            }
-            return result
-            
+    public func getItemCollectionItems(collectionId: ItemCollectionId) -> [ItemCollectionItem] {
+        if let postbox = self.postbox {
+            return postbox.itemCollectionItemTable.collectionItems(collectionId: collectionId)
         } else {
             return []
         }
     }
     
-    public func getItemCollection(namespace: ItemCollectionId.Namespace, id: ItemCollectionId) -> (ItemCollectionInfo, [ItemCollectionItem])? {
-        let collections = getItemCollections(namespace: namespace)
-        for collection in collections {
-            if collection.0 == id {
-                return (collection.1, collection.2)
+    public func getCollectionsItems(namespace: ItemCollectionId.Namespace) -> [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])] {
+        if let postbox = postbox {
+            let infos = postbox.itemCollectionInfoTable.getInfos(namespace: namespace)
+            var result: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])] = []
+            for info in infos {
+                let items = getItemCollectionItems(collectionId: info.1)
+                result.append((info.1, info.2, items))
+            }
+            return result
+        } else {
+            return []
+        }
+    }
+    
+    public func getItemCollectionInfoItems(namespace: ItemCollectionId.Namespace, id:ItemCollectionId) -> (ItemCollectionInfo, [ItemCollectionItem])? {
+        if let postbox = postbox {
+            let infos = postbox.itemCollectionInfoTable.getInfos(namespace: namespace)
+            for info in infos {
+                if info.1 == id {
+                    return (info.2, getItemCollectionItems(collectionId: id))
+                }
             }
         }
+        
         return nil
     }
     

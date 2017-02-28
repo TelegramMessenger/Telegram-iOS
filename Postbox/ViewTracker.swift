@@ -583,8 +583,10 @@ final class ViewTracker {
                 })
                 
                 disposable.set(ActionDisposable {
-                    pipeDisposable.dispose()
-                    self.messageHistoryHolesViewSubscribers.remove(index)
+                    self.queue.async {
+                        pipeDisposable.dispose()
+                        self.messageHistoryHolesViewSubscribers.remove(index)
+                    }
                 })
             }
             return disposable
@@ -605,8 +607,10 @@ final class ViewTracker {
                 })
                 
                 disposable.set(ActionDisposable {
-                    pipeDisposable.dispose()
-                    self.chatListHolesViewSubscribers.remove(index)
+                    self.queue.async {
+                        pipeDisposable.dispose()
+                        self.chatListHolesViewSubscribers.remove(index)
+                    }
                 })
             }
             return disposable
@@ -627,8 +631,10 @@ final class ViewTracker {
                 })
                 
                 disposable.set(ActionDisposable {
-                    pipeDisposable.dispose()
-                    self.unsendMessageIdsViewSubscribers.remove(index)
+                    self.queue.async {
+                        pipeDisposable.dispose()
+                        self.unsendMessageIdsViewSubscribers.remove(index)
+                    }
                 })
             }
             return disposable
@@ -649,8 +655,10 @@ final class ViewTracker {
                 })
                 
                 disposable.set(ActionDisposable {
-                    pipeDisposable.dispose()
-                    self.synchronizePeerReadStatesViewSubscribers.remove(index)
+                    self.queue.async {
+                        pipeDisposable.dispose()
+                        self.synchronizePeerReadStatesViewSubscribers.remove(index)
+                    }
                 })
             }
             return disposable
