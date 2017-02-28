@@ -95,7 +95,7 @@
 - (void)setData:(NSData *)data {
   self->_internalData = data;
   self.filename = [self possibleFilename];
-  [self->_internalData writeToFile:self.filename atomically:NO];
+  [self->_internalData writeToFile:self.filename atomically:YES];
 }
 
 - (NSData *)data {

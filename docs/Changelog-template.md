@@ -1,3 +1,10 @@
+## 4.1.4
+
+- [IMPROVEMENT] Test targets won't be build in the run phase of the framework, which makes it possible to build individual configurations when using Carthage. Thanks a lot @wiedem for your contribution! [394](https://github.com/bitstadium/HockeySDK-iOS/pull/394)
+- [IMPROVEMENT] We've reverted to a build based on PLCrashReporter 1.2.1 as 1.3 comes with unintended namespace collisions in some edge cases that result in worse crash reporting than you were used to.
+- [BUGFIX] Fixes a crash on iOS 9 when attaching data to feedback [#395](https://github.com/bitstadium/HockeySDK-iOS/issues/395)
+- [BUGFIX] Disabling the `BITFeedbackManager` now disables the various `BITFeedbackObservationModes`. [#390](https://github.com/bitstadium/HockeySDK-iOS/pull/390)
+
 ## 4.1.3
 
 - [NEW] Added `forceNewFeedbackThreadForFeedbackManager:`-callback to `BITFeedbackManagerDelegate` to force a new feedback thread for each new feedback.
