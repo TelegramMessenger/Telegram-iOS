@@ -296,7 +296,7 @@ This will integrate the **full-featured SDK** so you must include the `NSPhotoLi
 
 #### Version without Feedback
 
-`carthage build --platform iOS --configuration Default HockeySDK-iOS`
+`carthage build --platform iOS --configuration ReleaseDefault HockeySDK-iOS`
 
 #### Crash-only Version
 
