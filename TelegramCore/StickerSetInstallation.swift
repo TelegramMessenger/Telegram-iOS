@@ -7,7 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public enum CloudStickersLoadingError {
+
+public enum RequestStickerSetError {
     case generic
     case invalid
 }
@@ -30,32 +31,48 @@ fileprivate extension Api.StickerSet {
     }
 }
 
-public func requestCloudStickerPack(account:Account, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem], Bool), CloudStickersLoadingError> {
+public enum RequestStickerSetResult {
+    case local(info: ItemCollectionInfo, items: [ItemCollectionItem])
+    case remote(info: ItemCollectionInfo, items: [ItemCollectionItem], installed: Bool)
+}
+
+public func requestStickerSet(account:Account, reference: StickerPackReference) -> Signal<RequestStickerSetResult, RequestStickerSetError> {
     
+    let collectionId:ItemCollectionId?
     let input:Api.InputStickerSet
+    
     switch reference {
     case let .name(name):
+        collectionId = nil
         input = .inputStickerSetShortName(shortName: name)
     case let .id(id, accessHash):
+        collectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id)
         input = .inputStickerSetID(id: id, accessHash: accessHash)
     }
     
-    return account.network.request(Api.functions.messages.getStickerSet(stickerset: input))
-        |> mapError { _ -> CloudStickersLoadingError in
+    let localSignal:(ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, Void> = { collectionId in
+        return account.postbox.modify { modifier -> (ItemCollectionInfo, [ItemCollectionItem])? in
+            return modifier.getItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: collectionId)
+        }
+    }
+    
+    let remoteSignal = account.network.request(Api.functions.messages.getStickerSet(stickerset: input))
+        |> mapError { _ -> RequestStickerSetError in
             return .invalid
         }
-        |> map { result -> (StickerPackCollectionInfo, [ItemCollectionItem], Bool) in
+        |> map { result -> RequestStickerSetResult in
             var items: [ItemCollectionItem] = []
-            let info:StickerPackCollectionInfo
+            let info:ItemCollectionInfo
             let installed:Bool
             switch result {
             case let .stickerSet(set, packs, documents):
+
+                info = set.info
                 
                 switch set {
                 case let .stickerSet(data):
                     installed = (data.flags & (1 << 0) != 0)
                 }
-                info = set.info
                 
                 var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
                 for pack in packs {
@@ -87,8 +104,22 @@ public func requestCloudStickerPack(account:Account, reference: StickerPackRefer
                 }
                 break
             }
-            return (info, items, installed)
+            return .remote(info: info, items: items, installed: installed)
     }
+    
+    
+    if let collectionId = collectionId {
+        return localSignal(collectionId) |> mapError {_ in return .generic} |> mapToSignal { result -> Signal<RequestStickerSetResult, RequestStickerSetError> in
+            if let result = result {
+                return .single(.local(info: result.0, items: result.1))
+            } else {
+                return remoteSignal
+            }
+        }
+    } else {
+        return remoteSignal
+    }
+    
     
 }
 
@@ -171,11 +202,11 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
                 for index in removableIndexes {
                     collections.remove(at: index)
                 }
-
+                
                 collections.insert((info.id, info, items), at: 0)
                 
                 modifier.replaceItemCollections(namespace: info.id.namespace, itemCollections: collections)
-            } |> map { _ in return addResult} |> mapError {_ in return .generic}
+                } |> map { _ in return addResult} |> mapError {_ in return .generic}
     }
 }
 
