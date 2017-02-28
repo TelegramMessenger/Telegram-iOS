@@ -154,21 +154,28 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
             return account.postbox.modify { modifier -> Void in
                 var collections = modifier.getItemCollections(namespace: info.id.namespace)
                 
-                var foundIndex:Int? = nil
+                var removableIndexes:[Int] = []
                 for i in 0 ..< collections.count {
                     if collections[i].0 == info.id {
-                        foundIndex = i
-                        break
+                        removableIndexes.append(i)
+                    }
+                    if case let .archived(sets) = addResult {
+                        for set in sets {
+                            if collections[i].0 == set.info.id {
+                                removableIndexes.append(i)
+                            }
+                        }
                     }
                 }
                 
-                if let index = foundIndex {
+                for index in removableIndexes {
                     collections.remove(at: index)
                 }
+
                 collections.insert((info.id, info, items), at: 0)
                 
                 modifier.replaceItemCollections(namespace: info.id.namespace, itemCollections: collections)
-                } |> map { _ in return addResult} |> mapError {_ in return .generic}
+            } |> map { _ in return addResult} |> mapError {_ in return .generic}
     }
 }
 
