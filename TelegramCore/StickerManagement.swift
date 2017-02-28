@@ -39,8 +39,15 @@ func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoEr
                         case let .allStickers(_, sets):
                             for apiPack in sets {
                                 switch apiPack {
-                                    case let .stickerSet(_, id, accessHash, title, shortName, _, nHash):
-                                        stickerPackInfos.append(StickerPackCollectionInfo(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id), accessHash: accessHash, title: title, shortName: shortName, hash: nHash))
+                                    case let .stickerSet(flags, id, accessHash, title, shortName, _, nHash):
+                                        var setFlags:StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
+                                        if (flags & (1 << 2)) != 0 {
+                                            setFlags.insert(.official)
+                                        }
+                                        if (flags & (1 << 3)) != 0 {
+                                            setFlags.insert(.masks)
+                                        }
+                                        stickerPackInfos.append(StickerPackCollectionInfo(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, hash: nHash))
                                 }
                             }
                             break
