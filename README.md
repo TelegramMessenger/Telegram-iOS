@@ -165,7 +165,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
 4. Add the following lines to setup and start the HockeyApp SDK:
 
   ```swift
-  BITHockeyManager.shared().configure(withIdentifier: "cdef2c2b4ddf420b9cdf470a9667eb27")
+  BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
   BITHockeyManager.shared().start()
   BITHockeyManager.shared().authenticator.authenticateInstallation() // This line is obsolete in the crash only builds
 
