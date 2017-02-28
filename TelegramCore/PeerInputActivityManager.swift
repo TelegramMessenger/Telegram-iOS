@@ -16,6 +16,7 @@ import Foundation
 private final class PeerInputActivityContext {
     private let queue: Queue
     private let notifyEmpty: () -> Void
+    private let notifyUpdated: () -> Void
     
     private var nextId: Int32 = 0
     private var activities: [(PeerId, PeerInputActivity, Int32, SignalKitTimer)] = []
@@ -24,9 +25,10 @@ private final class PeerInputActivityContext {
     
     private var scheduledUpdateSubscribers = false
     
-    init(queue: Queue, notifyEmpty: @escaping () -> Void) {
+    init(queue: Queue, notifyEmpty: @escaping () -> Void, notifyUpdated: @escaping () -> Void) {
         self.queue = queue
         self.notifyEmpty = notifyEmpty
+        self.notifyUpdated = notifyUpdated
     }
     
     func addActivity(peerId: PeerId, activity: PeerInputActivity, timeout: Double) {
@@ -149,6 +151,8 @@ private final class PeerInputActivityContext {
             for subscriber in self.subscribers.copyItems() {
                 subscriber(topActivities)
             }
+            
+            self.notifyUpdated()
         }
     }
     
@@ -161,10 +165,33 @@ private final class PeerInputActivityContext {
     }
 }
 
+private final class PeerGlobalInputActivityContext {
+    private let subscribers = Bag<([PeerId: [PeerId: PeerInputActivity]]) -> Void>()
+    
+    func addSubscriber(_ subscriber: @escaping ([PeerId: [PeerId: PeerInputActivity]]) -> Void) -> Int {
+        return self.subscribers.add(subscriber)
+    }
+    
+    func removeSubscriber(_ index: Int) {
+        self.subscribers.remove(index)
+    }
+    
+    var isEmpty: Bool {
+        return self.subscribers.isEmpty
+    }
+    
+    func notify(_ activities: [PeerId: [PeerId: PeerInputActivity]]) {
+        for subscriber in self.subscribers.copyItems() {
+            subscriber(activities)
+        }
+    }
+}
+
 final class PeerInputActivityManager {
     private let queue = Queue()
     
     private var contexts: [PeerId: PeerInputActivityContext] = [:]
+    private var globalContext: PeerGlobalInputActivityContext?
     
     func activities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
         let queue = self.queue
@@ -179,6 +206,16 @@ final class PeerInputActivityManager {
                         context = PeerInputActivityContext(queue: queue, notifyEmpty: {
                             if let strongSelf = self {
                                 strongSelf.contexts.removeValue(forKey: peerId)
+                                
+                                if let globalContext = strongSelf.globalContext {
+                                    let activities = strongSelf.collectActivities()
+                                    globalContext.notify(activities)
+                                }
+                            }
+                        }, notifyUpdated: {
+                            if let strongSelf = self, let globalContext = strongSelf.globalContext {
+                                let activities = strongSelf.collectActivities()
+                                globalContext.notify(activities)
                             }
                         })
                         strongSelf.contexts[peerId] = context
@@ -205,6 +242,56 @@ final class PeerInputActivityManager {
         }
     }
     
+    private func collectActivities() -> [PeerId: [PeerId: PeerInputActivity]] {
+        assert(self.queue.isCurrent())
+        
+        var dict: [PeerId: [PeerId: PeerInputActivity]] = [:]
+        for (chatPeerId, context) in self.contexts {
+            var chatDict: [PeerId: PeerInputActivity] = [:]
+            for (peerId, activity) in context.topActivities() {
+                chatDict[peerId] = activity
+            }
+            dict[chatPeerId] = chatDict
+        }
+        return dict
+    }
+    
+    func allActivities() -> Signal<[PeerId: [PeerId: PeerInputActivity]], NoError> {
+        let queue = self.queue
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+            queue.async {
+                if let strongSelf = self {
+                    let context: PeerGlobalInputActivityContext
+                    if let current = strongSelf.globalContext {
+                        context = current
+                    } else {
+                        context = PeerGlobalInputActivityContext()
+                        strongSelf.globalContext = context
+                    }
+                    let index = context.addSubscriber({ next in
+                        subscriber.putNext(next)
+                    })
+                    subscriber.putNext(strongSelf.collectActivities())
+                    
+                    disposable.set(ActionDisposable {
+                        queue.async {
+                            if let strongSelf = self {
+                                if let currentContext = strongSelf.globalContext {
+                                    currentContext.removeSubscriber(index)
+                                    if currentContext.isEmpty {
+                                        strongSelf.globalContext = nil
+                                    }
+                                }
+                            }
+                        }
+                    })
+                }
+            }
+            return disposable
+        }
+    }
+    
     func addActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity) {
         self.queue.async {
             let context: PeerInputActivityContext
@@ -214,11 +301,39 @@ final class PeerInputActivityManager {
                 context = PeerInputActivityContext(queue: self.queue, notifyEmpty: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.contexts.removeValue(forKey: chatPeerId)
+                        
+                        if let globalContext = strongSelf.globalContext {
+                            let activities = strongSelf.collectActivities()
+                            globalContext.notify(activities)
+                        }
+                    }
+                }, notifyUpdated: { [weak self] in
+                    if let strongSelf = self, let globalContext = strongSelf.globalContext {
+                        let activities = strongSelf.collectActivities()
+                        globalContext.notify(activities)
                     }
                 })
-                self.contexts[peerId] = context
+                self.contexts[chatPeerId] = context
             }
             context.addActivity(peerId: peerId, activity: activity, timeout: 8.0)
+            
+            if let globalContext = self.globalContext {
+                let activities = self.collectActivities()
+                globalContext.notify(activities)
+            }
+        }
+    }
+    
+    func removeActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity) {
+        self.queue.async {
+            if let context = self.contexts[chatPeerId] {
+                context.removeActivity(peerId: peerId, activity: activity)
+                
+                if let globalContext = self.globalContext {
+                    let activities = self.collectActivities()
+                    globalContext.notify(activities)
+                }
+            }
         }
     }
     
@@ -226,6 +341,11 @@ final class PeerInputActivityManager {
         self.queue.async {
             if let currentContext = self.contexts[chatPeerId] {
                 currentContext.removeAllActivities(peerId: peerId)
+                
+                if let globalContext = self.globalContext {
+                    let activities = self.collectActivities()
+                    globalContext.notify(activities)
+                }
             }
         }
     }
