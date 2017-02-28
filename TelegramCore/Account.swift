@@ -346,6 +346,7 @@ public class Account {
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
     private var peerInputActivityManager: PeerInputActivityManager!
+    private var localInputActivityManager: PeerInputActivityManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
     fileprivate let managedStickerPacksDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
@@ -385,6 +386,7 @@ public class Account {
         
         self.peerInputActivityManager = PeerInputActivityManager()
         self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager)
+        self.localInputActivityManager = PeerInputActivityManager()
         self.viewTracker = AccountViewTracker(account: self)
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)
         
@@ -515,6 +517,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedRecentStickers(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentGifs(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network).start())
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged
@@ -578,6 +581,16 @@ public class Account {
     
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
         return self.peerInputActivityManager.activities(peerId: peerId)
+    }
+    
+    public func updateLocalInputActivity(peerId: PeerId, activity: PeerInputActivity, isPresent: Bool) {
+        self.localInputActivityManager.transaction { manager in
+            if isPresent {
+                manager.addActivity(chatPeerId: peerId, peerId: self.peerId, activity: activity)
+            } else {
+                manager.removeActivity(chatPeerId: peerId, peerId: self.peerId, activity: activity)
+            }
+        }
     }
 }
 

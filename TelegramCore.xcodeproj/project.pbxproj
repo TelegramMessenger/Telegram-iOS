@@ -201,6 +201,8 @@
 		D050F26C1E4A5B6D00988324 /* UpdatePeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386F1E40853E0044D6FE /* UpdatePeers.swift */; };
 		D050F26D1E4A5B6D00988324 /* CreateGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386D1E3FDAB70044D6FE /* CreateGroup.swift */; };
 		D050F26E1E4A5B6D00988324 /* RemovePeerChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC38741E40A7F70044D6FE /* RemovePeerChat.swift */; };
+		D0528E5A1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E591E658B3600E2FEF5 /* ManagedLocalInputActivities.swift */; };
+		D0528E5B1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E591E658B3600E2FEF5 /* ManagedLocalInputActivities.swift */; };
 		D0561DE31E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */; };
 		D0561DE41E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */; };
 		D0561DEA1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */; };
@@ -530,6 +532,7 @@
 		D049EAF41E44DF3300A2CD3A /* AccountState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountState.swift; sourceTree = "<group>"; };
 		D050F20F1E48AB0600988324 /* InteractivePhoneFormatter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractivePhoneFormatter.swift; sourceTree = "<group>"; };
 		D050F2501E4A59C200988324 /* JoinLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JoinLink.swift; sourceTree = "<group>"; };
+		D0528E591E658B3600E2FEF5 /* ManagedLocalInputActivities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedLocalInputActivities.swift; sourceTree = "<group>"; };
 		D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatePeerInfo.swift; sourceTree = "<group>"; };
 		D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdmins.swift; sourceTree = "<group>"; };
 		D0613FC91E60440600202CDB /* InvitationLinks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InvitationLinks.swift; sourceTree = "<group>"; };
@@ -932,6 +935,7 @@
 				D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */,
 				D0BEAF5C1E54941B00BD963D /* Authorization.swift */,
 				D0BEAF5F1E54ACF900BD963D /* AccountManager.swift */,
+				D0528E591E658B3600E2FEF5 /* ManagedLocalInputActivities.swift */,
 			);
 			name = Account;
 			sourceTree = "<group>";
@@ -1472,6 +1476,7 @@
 				D0B843C31DA7FF30005F29E1 /* NBPhoneMetaDataGenerator.m in Sources */,
 				C2366C861E4F403C0097CCFF /* AddressNames.swift in Sources */,
 				D0B843C11DA7FF30005F29E1 /* NBPhoneMetaData.m in Sources */,
+				D0528E5A1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */,
 				D0FA8BA41E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */,
 				D02ABC811E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift in Sources */,
@@ -1667,6 +1672,7 @@
 				D001F3F61E128A1C007A8C60 /* PendingMessageUploadedContent.swift in Sources */,
 				C2366C871E4F403C0097CCFF /* AddressNames.swift in Sources */,
 				D02ABC7F1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */,
+				D0528E5B1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */,
 				D0FA8BA51E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D0F7B1E71E045C87007EB8A5 /* JoinChannel.swift in Sources */,
 				D0E652201E3A364A004EEA91 /* UpdateAccountPeerName.swift in Sources */,
