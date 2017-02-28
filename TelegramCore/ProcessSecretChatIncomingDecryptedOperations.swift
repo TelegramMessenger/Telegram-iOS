@@ -293,6 +293,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
         }
         if updatedState != state {
             modifier.setPeerChatState(peerId, state: updatedState)
+            updatedPeer = peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)
         }
         if !peer.isEqual(updatedPeer) {
             updatePeers(modifier: modifier, peers: [updatedPeer], update: { _, updated in

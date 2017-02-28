@@ -43,7 +43,11 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
                         memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
                     }
                     
-                    modifier.setPeerChatState(currentPeer.id, state: currentState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer))
+                    let updatedState = currentState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer)
+                    modifier.setPeerChatState(currentPeer.id, state: updatedState)
+                    updatePeers(modifier: modifier, peers: [currentPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                        return updated
+                    })
                 } else {
                     Logger.shared.log("State", "got encryptedChat, but chat is not in handshake state")
                 }
@@ -65,19 +69,21 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
         case let .encryptedChatRequested(_, accessHash, date, adminId, participantId, gA):
             if currentPeer == nil && participantId == accountPeerId.id {
                 let state = SecretChatState(role: .participant, embeddedState: .handshake(.accepting), keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
-                let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
-                updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
-                modifier.resetIncomingReadStates([peer.id: [
-                    Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0),
-                    Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0)
-                    ]
-                ])
+                
                 let bBytes = malloc(256)!
                 let randomStatus = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))
                 let b = MemoryBuffer(memory: bBytes, capacity: 256, length: 256, freeWhenDone: true)
                 if randomStatus == 0 {
-                    let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peer.id, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
-                    modifier.setPeerChatState(peer.id, state: updatedState)
+                    let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: chat.peerId, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
+                    modifier.setPeerChatState(chat.peerId, state: updatedState)
+                    
+                    let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, embeddedState: updatedState.embeddedState.peerState, messageAutoremoveTimeout: nil)
+                    updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
+                    modifier.resetIncomingReadStates([peer.id: [
+                        Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0),
+                        Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0)
+                        ]
+                    ])
                 } else {
                     assertionFailure()
                 }

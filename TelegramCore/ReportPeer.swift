@@ -48,8 +48,8 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
 
 
 //NOT MARKING TO CLOUD, NEED REMOVE ON FUTURE
-public func dismissPeerReport(_ peerId:PeerId, postbox:Postbox) -> Signal<Void,Void> {
-    return postbox.modify { modifier -> Void in
+public func dismissReportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Signal<Void, NoError> in
         modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
             if let current = current as? CachedUserData {
                 return current.withUpdatedReportStatus(.none)
@@ -61,5 +61,17 @@ public func dismissPeerReport(_ peerId:PeerId, postbox:Postbox) -> Signal<Void,V
                 return current
             }
         })
-    }
+        
+        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.messages.hideReportSpam(peer: inputPeer))
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
 }
