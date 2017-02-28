@@ -119,6 +119,8 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .reportLayerSupport(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, layerSupport: layerSupport), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .deleteMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .deleteMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                    case let .clearHistory(layer, actionGloballyUniqueId):
+                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .clearHistory(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .pfsRequestKey(layer, actionGloballyUniqueId, rekeySessionId, a):
                                         return pfsRequestKey(postbox: postbox, network: network, peerId: entry.peerId, layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId, a: a, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .pfsCommitKey(layer, actionGloballyUniqueId, rekeySessionId, keyFingerprint):
@@ -133,8 +135,12 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .readMessageContents(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, timeout: timeout), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    default:
-                                        assertionFailure()
+                                    case let .resendOperations(layer, actionGloballyUniqueId, fromSeqNo, toSeqNo):
+                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .resendOperations(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                    case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
+                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .screenshotMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                    case .terminate:
+                                        return requestTerminateSecretChat(postbox: postbox, network: network, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex)
                                 }
                             } else {
                                 assertionFailure()
@@ -203,7 +209,13 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                         let removed = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
                         assert(removed)
                         if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
-                            modifier.setPeerChatState(peerId, state: state.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer))
+                            let updatedState = state.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer)
+                            modifier.setPeerChatState(peerId, state: updatedState)
+                            if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
+                                updatePeers(modifier: modifier, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                                    return updated
+                                })
+                            }
                         } else {
                             assertionFailure()
                         }
@@ -317,6 +329,7 @@ private enum BoxedDecryptedMessage {
 
 private enum SecretMessageAction {
     case deleteMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
+    case screenshotMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
     case clearHistory(layer: SecretChatLayer, actionGloballyUniqueId: Int64)
     case resendOperations(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, fromSeqNo: Int32, toSeqNo: Int32)
     case reportLayerSupport(layer: SecretChatLayer, actionGloballyUniqueId: Int64, layerSupport: Int32)
@@ -331,6 +344,8 @@ private enum SecretMessageAction {
     var globallyUniqueId: Int64 {
         switch self {
             case let .deleteMessages(_, actionGloballyUniqueId, _):
+                return actionGloballyUniqueId
+            case let .screenshotMessages(_, actionGloballyUniqueId, _):
                 return actionGloballyUniqueId
             case let .clearHistory(_, actionGloballyUniqueId):
                 return actionGloballyUniqueId
@@ -492,6 +507,17 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionDeleteMessages(randomIds: globallyUniqueIds)))
             }
+        case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
+            switch layer {
+                case .layer8:
+                    let randomBytesData = malloc(15)!
+                    arc4random_buf(randomBytesData, 15)
+                    let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
+                    
+                    return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionScreenshotMessages(randomIds: globallyUniqueIds)))
+                case .layer46:
+                    return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionScreenshotMessages(randomIds: globallyUniqueIds)))
+            }
         case let .clearHistory(layer, actionGloballyUniqueId):
             switch layer {
                 case .layer8:
@@ -630,7 +656,6 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                 assertionFailure()
                 return .never()
             }
-            return .complete()
         } else {
             return .complete()
         }
@@ -671,7 +696,7 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
             }
             let canonicalOperationIndex = sequenceState.canonicalOutgoingOperationIndex(operationIndex)
             maybeKey = state.keychain.latestKey(validForSequenceBasedCanonicalIndex: canonicalOperationIndex)
-            Logger.shared.log("SecretChat", "sending message with index \(canonicalOperationIndex) key \(maybeKey?.fingerprint)")
+            Logger.shared.log("SecretChat", "sending message with index \(canonicalOperationIndex) key \(String(describing: maybeKey?.fingerprint))")
             sequenceInfo = SecretChatOperationSequenceInfo(topReceivedOperationIndex: topReceivedOperationIndex, operationIndex: canonicalOperationIndex)
     }
     
@@ -685,11 +710,7 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
     let sendMessage: Signal<Api.messages.SentEncryptedMessage, MTRpcError>
     let inputPeer = Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)
     
-    /*if !wasDelivered && arc4random_uniform(100) < 20 {
-        let timestamp = Int32(network.context.globalTime())
-        sendMessage = .single(Api.messages.SentEncryptedMessage.sentEncryptedMessage(date: timestamp))
-        print("dropping secret message")
-    } else */if asService {
+    if asService {
         sendMessage = network.request(Api.functions.messages.sendEncryptedService(peer: inputPeer, randomId: globallyUniqueId, data: Buffer(data: encryptedPayload)))
     } else {
         if let file = file {
@@ -704,5 +725,18 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
         }
         |> `catch`{ _ in
             return .single(nil)
+        }
+}
+
+private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32) -> Signal<Void, NoError> {
+    return network.request(Api.functions.messages.discardEncryption(chatId: peerId.id))
+        |> map { Optional($0) }
+        |> `catch` { _ in
+            return .single(nil)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return postbox.modify { modifier -> Void in
+                markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex)
+            }
         }
 }

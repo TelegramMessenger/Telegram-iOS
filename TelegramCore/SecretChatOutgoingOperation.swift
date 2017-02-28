@@ -95,6 +95,7 @@ private enum SecretChatOutgoingOperationValue: Int32 {
     case pfsCommitKey = 11
     case noop = 12
     case setMessageAutoremoveTimeout = 13
+    case terminate = 14
 }
 
 enum SecretChatOutgoingOperationContents: Coding {
@@ -112,6 +113,7 @@ enum SecretChatOutgoingOperationContents: Coding {
     case pfsCommitKey(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, keyFingerprint: Int64)
     case noop(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64)
     case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32)
+    case terminate
     
     init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("r") as Int32 {
@@ -143,6 +145,8 @@ enum SecretChatOutgoingOperationContents: Coding {
                 self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"))
             case SecretChatOutgoingOperationValue.setMessageAutoremoveTimeout.rawValue:
                 self = .setMessageAutoremoveTimeout(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), timeout: decoder.decodeInt32ForKey("t"))
+            case SecretChatOutgoingOperationValue.terminate.rawValue:
+                self = .terminate
             default:
                 self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: 0)
                 assertionFailure()
@@ -230,6 +234,8 @@ enum SecretChatOutgoingOperationContents: Coding {
                 encoder.encodeInt32(layer.rawValue, forKey: "l")
                 encoder.encodeInt64(actionGloballyUniqueId, forKey: "i")
                 encoder.encodeInt32(timeout, forKey: "t")
+            case .terminate:
+                encoder.encodeInt32(SecretChatOutgoingOperationValue.terminate.rawValue, forKey: "r")
         }
     }
 }
