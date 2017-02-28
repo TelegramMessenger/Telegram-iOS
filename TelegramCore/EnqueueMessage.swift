@@ -118,7 +118,13 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         if let sourceForwardInfo = sourceMessage.forwardInfo {
                             forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date)
                         } else {
-                            forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: nil, sourceMessageId: nil, date: sourceMessage.timestamp)
+                            var sourceId:PeerId? = nil
+                            var sourceMessageId:MessageId? = nil
+                            if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
+                                sourceId = peer.id
+                                sourceMessageId = sourceMessage.id
+                            }
+                            forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp)
                         }
                         storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(sourceMessage.media), forwardInfo: forwardInfo, authorId: account.peerId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                     }

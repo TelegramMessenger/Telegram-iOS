@@ -214,8 +214,7 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
 public func uninstallStickerSetInteractively(account:Account, info:StickerPackCollectionInfo) -> Signal<Void, Void> {
     return account.network.request(Api.functions.messages.uninstallStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
         |> mapError {_ in
-            var bp:Int = 0
-            bp += 1
+            
         }
         |> mapToSignal { result-> Signal<Void, Void> in
             switch result {
