@@ -52,7 +52,7 @@ public func requestStickerSet(account:Account, reference: StickerPackReference) 
     
     let localSignal:(ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, Void> = { collectionId in
         return account.postbox.modify { modifier -> (ItemCollectionInfo, [ItemCollectionItem])? in
-            return modifier.getItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: collectionId)
+            return modifier.getItemCollectionInfoItems(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: collectionId)
         }
     }
     
@@ -183,7 +183,7 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
             
             
             return account.postbox.modify { modifier -> Void in
-                var collections = modifier.getItemCollections(namespace: info.id.namespace)
+                var collections = modifier.getCollectionsItems(namespace: info.id.namespace)
                 
                 var removableIndexes:[Int] = []
                 for i in 0 ..< collections.count {
@@ -199,7 +199,7 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
                     }
                 }
                 
-                for index in removableIndexes {
+                for index in removableIndexes.reversed() {
                     collections.remove(at: index)
                 }
                 
@@ -213,12 +213,15 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
 
 public func uninstallStickerSetInteractively(account:Account, info:StickerPackCollectionInfo) -> Signal<Void, Void> {
     return account.network.request(Api.functions.messages.uninstallStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
-        |> mapError {_ in }
+        |> mapError {_ in
+            var bp:Int = 0
+            bp += 1
+        }
         |> mapToSignal { result-> Signal<Void, Void> in
             switch result {
             case .boolTrue:
                 return account.postbox.modify { modifier -> Void in
-                    var collections = modifier.getItemCollections(namespace: info.id.namespace)
+                    var collections = modifier.getCollectionsItems(namespace: info.id.namespace)
                     
                     for i in 0 ..< collections.count {
                         if collections[i].0 == info.id {

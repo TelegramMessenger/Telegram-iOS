@@ -63,6 +63,7 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.id.namespace, forKey: "i.n")
+        encoder.encodeInt64(self.accessHash, forKey: "a")
         encoder.encodeInt64(self.id.id, forKey: "i.i")
         encoder.encodeString(self.title, forKey: "t")
         encoder.encodeString(self.shortName, forKey: "s")
