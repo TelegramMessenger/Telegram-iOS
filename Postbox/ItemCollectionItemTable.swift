@@ -156,6 +156,20 @@ final class ItemCollectionItemTable: Table {
         return items
     }
     
+    func collectionItems(collectionId: ItemCollectionId) -> [ItemCollectionItem] {
+        var items: [ItemCollectionItem] = []
+        self.valueBox.range(self.table, start: self.lowerBound(collectionId: collectionId), end: self.upperBound(collectionId: collectionId), values: { key, value in
+            let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
+            if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
+                items.append(item)
+            } else {
+                assertionFailure()
+            }
+            return true
+        }, limit: 0)
+        return items
+    }
+    
     func replaceItems(collectionId: ItemCollectionId, items: [ItemCollectionItem]) {
         let updatedIndices = Set(items.map({ $0.index }))
         var itemByIndex: [ItemCollectionItemIndex: ItemCollectionItem] = [:]

@@ -196,6 +196,14 @@ public final class Modifier {
         self.postbox?.replaceItemCollections(namespace: namespace, itemCollections: itemCollections)
     }
     
+    public func getItemCollectionItems(collectionId: ItemCollectionId) -> [ItemCollectionItem] {
+        if let postbox = self.postbox {
+            return postbox.itemCollectionItemTable.collectionItems(collectionId: collectionId)
+        } else {
+            return []
+        }
+    }
+    
     public func searchItemCollection(namespace: ItemCollectionId.Namespace, key: MemoryBuffer) -> [ItemCollectionItem] {
         if let postbox = self.postbox {
             return postbox.itemCollectionItemTable.exactIndexedItems(namespace: namespace, key: ValueBoxKey(key))
