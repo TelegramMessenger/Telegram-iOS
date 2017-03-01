@@ -83,7 +83,7 @@ public func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 if (flags & Int32(1 << 11)) != 0 {
                     infoFlags.insert(.messagesShouldHaveSignatures)
                 }
-                info = .broadcast(TelegramChannelBroadcastInfo(flags: []))
+                info = .broadcast(TelegramChannelBroadcastInfo(flags: infoFlags))
             }
             
             var channelFlags = TelegramChannelFlags()

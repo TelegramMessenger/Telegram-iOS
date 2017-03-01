@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C22EE61B1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */; };
+		C22EE61C1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */; };
 		C2366C831E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */; };
 		C2366C841E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */; };
 		C2366C861E4F403C0097CCFF /* AddressNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C851E4F403C0097CCFF /* AddressNames.swift */; };
@@ -424,6 +426,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ToggleChannelSignatures.swift; sourceTree = "<group>"; };
 		C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupReturnAndLeft.swift; sourceTree = "<group>"; };
 		C2366C851E4F403C0097CCFF /* AddressNames.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddressNames.swift; sourceTree = "<group>"; };
 		C2366C881E4F40480097CCFF /* SupportPeerId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SupportPeerId.swift; sourceTree = "<group>"; };
@@ -1109,6 +1112,7 @@
 				D033FEB21E61F3C000644997 /* ReportPeer.swift */,
 				D033FEB51E61F3F900644997 /* BlockedPeers.swift */,
 				C239BE9B1E630CA700C2C453 /* UpdatePinnedMessage.swift */,
+				C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -1338,6 +1342,7 @@
 				D0BC386E1E3FDAB70044D6FE /* CreateGroup.swift in Sources */,
 				D0FA8BB31E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
 				D0E305AA1E5BA02D00D7A3A2 /* ChannelBlacklist.swift in Sources */,
+				C22EE61B1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */,
 				D073CE601DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
 				D03B0D6B1D631A9D00955575 /* Phonebook.swift in Sources */,
 				D0AAD1A81E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift in Sources */,
@@ -1535,6 +1540,7 @@
 				D0F7B1E91E045C87007EB8A5 /* PeerCommands.swift in Sources */,
 				D00D97C81E32901700E5C2B6 /* PeerInputActivity.swift in Sources */,
 				D0B844311DAB91E0005F29E1 /* NBPhoneMetaData.m in Sources */,
+				C22EE61C1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */,
 				D0B418AC1D7E0597004562A4 /* Network.swift in Sources */,
 				D0B844141DAB91CD005F29E1 /* PhoneNumbers.swift in Sources */,
 				D0E305AB1E5BA02D00D7A3A2 /* ChannelBlacklist.swift in Sources */,
