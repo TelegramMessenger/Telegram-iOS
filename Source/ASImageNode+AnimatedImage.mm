@@ -100,11 +100,15 @@ NSString *const ASAnimatedImageDefaultRunLoopMode = NSRunLoopCommonModes;
 {
   //If we're a network image node, we want to set the default image so
   //that it will correctly be restored if it exits the range.
+#ifndef MINIMAL_ASDK
   if ([self isKindOfClass:[ASNetworkImageNode class]]) {
     [(ASNetworkImageNode *)self setDefaultImage:coverImage];
   } else {
+#endif
     self.image = coverImage;
+#ifndef MINIMAL_ASDK
   }
+#endif
 }
 
 - (NSString *)animatedImageRunLoopMode

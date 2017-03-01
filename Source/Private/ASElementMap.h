@@ -6,6 +6,8 @@
 //  Copyright © 2017 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <Foundation/Foundation.h>
 #import <AsyncDisplayKit/ASBaseDefines.h>
 
@@ -88,3 +90,5 @@ typedef NSDictionary<NSString *, NSDictionary<NSIndexPath *, ASCollectionElement
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

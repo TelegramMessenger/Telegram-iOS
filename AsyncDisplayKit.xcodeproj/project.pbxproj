@@ -959,7 +959,7 @@
 			isa = PBXGroup;
 			children = (
 				CC57EAF91E394EA40034C595 /* Info.plist */,
-				044285011BAA3CC700D16268 /* module.modulemap */,
+				044285011BAA3CC700D16268 /* AsyncDisplayKit.modulemap */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -2162,7 +2162,7 @@
 				INFOPLIST_FILE = "$(SRCROOT)/Source/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = Source/module.modulemap;
+				MODULEMAP_FILE = Source/asdkmodule.modulemap;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = "-DMINIMAL_ASDK=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
@@ -2195,7 +2195,7 @@
 				INFOPLIST_FILE = "$(SRCROOT)/Source/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = Source/module.modulemap;
+				MODULEMAP_FILE = Source/asdkmodule.modulemap;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMINIMAL_ASDK=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
@@ -2206,6 +2206,13 @@
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Release;
+		};
+		D063755A1E67124400F00C9A /* Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = AsyncDisplayKitTests;
+			};
+			name = Hockeyapp;
 		};
 		D086A5691CC0115200F08284 /* Hockeyapp */ = {
 			isa = XCBuildConfiguration;
@@ -2247,31 +2254,6 @@
 			};
 			name = Hockeyapp;
 		};
-		DB1020821CBCA2AD00FA6FE1 /* Profile */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = BDC2D162BD55A807C1475DA5 /* Pods-AsyncDisplayKitTests.profile.xcconfig */;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CLANG_ENABLE_CODE_COVERAGE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-				);
-				GCC_INSTRUMENT_PROGRAM_FLOW_ARCS = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"COCOAPODS=1",
-				);
-				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
-				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
-				INFOPLIST_FILE = "Tests/AsyncDisplayKitTests-Info.plist";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AsyncDisplayKitTestHost.app/AsyncDisplayKitTestHost";
-				WRAPPER_EXTENSION = xctest;
-			};
-			name = Hockeyapp;
-		};
 		D086A56C1CC0115200F08284 /* Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2310,7 +2292,7 @@
 				INFOPLIST_FILE = "$(SRCROOT)/Source/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = Source/module.modulemap;
+				MODULEMAP_FILE = Source/asdkmodule.modulemap;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMINIMAL_ASDK=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
@@ -2350,7 +2332,7 @@
 			buildConfigurations = (
 				058D09D3195D04C000B7D73C /* Debug */,
 				058D09D4195D04C000B7D73C /* Release */,
-				D086A56B1CC0115200F08284 /* Hockeyapp */,
+				D063755A1E67124400F00C9A /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

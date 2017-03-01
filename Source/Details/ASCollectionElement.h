@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/ASDataController.h>
 #import <AsyncDisplayKit/ASTraitCollection.h>
 
@@ -42,3 +44,5 @@ AS_SUBCLASSING_RESTRICTED
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

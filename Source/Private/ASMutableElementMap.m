@@ -6,6 +6,8 @@
 //  Copyright © 2017 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASMutableElementMap.h"
 
 #import <AsyncDisplayKit/ASCollectionElement.h>
@@ -113,3 +115,5 @@ typedef NSMutableDictionary<NSString *, NSMutableDictionary<NSIndexPath *, ASCol
 }
 
 @end
+
+#endif

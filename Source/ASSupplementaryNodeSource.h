@@ -6,6 +6,8 @@
 //  Copyright © 2017 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <Foundation/Foundation.h>
 #import <AsyncDisplayKit/ASDimension.h>
 
@@ -41,3 +43,5 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

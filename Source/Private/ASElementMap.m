@@ -6,6 +6,8 @@
 //  Copyright © 2017 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASElementMap.h"
 #import <UIKit/UIKit.h>
 #import <AsyncDisplayKit/ASCollectionElement.h>
@@ -149,3 +151,5 @@
 }
 
 @end
+
+#endif

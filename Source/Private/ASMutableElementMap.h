@@ -6,6 +6,8 @@
 //  Copyright © 2017 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <Foundation/Foundation.h>
 #import <AsyncDisplayKit/ASBaseDefines.h>
 #import <AsyncDisplayKit/ASElementMap.h>
@@ -50,3 +52,5 @@ AS_SUBCLASSING_RESTRICTED
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif
