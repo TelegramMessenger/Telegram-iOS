@@ -9,27 +9,6 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-private func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Message? {
-    guard case let .Id(id) = message.id else {
-        return nil
-    }
-    
-    var messagePeers = SimpleDictionary<PeerId, Peer>()
-    
-    var author: Peer?
-    if let authorId = message.authorId {
-        author = peers[authorId]
-        if let author = author {
-            messagePeers[author.id] = author
-        }
-    }
-    
-    if let peer = peers[id.peerId] {
-        messagePeers[peer.id] = peer
-    }
-    
-    return Message(stableId: 0, stableVersion: 0, id: id, globallyUniqueId: nil, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, forwardInfo: nil, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
-}
 
 public func searchMessages(account: Account, peerId: PeerId?, query: String, tagMask:MessageTags? = nil) -> Signal<[Message], NoError> {
     let searchResult: Signal<Api.messages.Messages, NoError>
