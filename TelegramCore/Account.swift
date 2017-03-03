@@ -376,6 +376,8 @@ public class Account {
         return self.networkStateValue.get()
     }
     
+    var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
+    
     public init(id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
         self.basePath = basePath
@@ -594,7 +596,10 @@ public class Account {
     }
 }
 
-public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: ((_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>)? = nil) {
+public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
+public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: Media, _ userInteractive: Bool) -> Signal<Media?, NoError>
+
+public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
     account.postbox.mediaBox.fetchResource = { [weak account] resource, range -> Signal<MediaResourceDataFetchResult, NoError> in
         if let strongAccount = account {
             return fetchResource(account: strongAccount, resource: resource, range: range)
@@ -610,6 +615,9 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
             return .never()
         }
     }
+    
+    account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
+    account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     
     account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
     account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
