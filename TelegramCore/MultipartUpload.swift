@@ -44,6 +44,7 @@ private struct UploadPart {
     let fileId: Int64
     let index: Int
     let data: Data
+    let bigTotalParts: Int?
 }
 
 private func md5(_ data : Data) -> Data {
@@ -127,11 +128,13 @@ private struct MultipartIntermediateResult {
     let partCount: Int32
     let md5Digest: String
     let size: Int32
+    let bigTotalParts: Int?
 }
 
 private final class MultipartUploadManager {
     let parallelParts: Int = 3
-    let defaultPartSize = 32 * 1024
+    let defaultPartSize: Int
+    let bigTotalParts: Int?
     
     let queue = Queue()
     let fileId: Int64
@@ -151,7 +154,7 @@ private final class MultipartUploadManager {
     
     let state: MultipartUploadState
     
-    init(data: Signal<MediaResourceData, NoError>, encryptionKey: SecretFileEncryptionKey?, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult) -> Void) {
+    init(data: Signal<MediaResourceData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult) -> Void) {
         self.dataSignal = data
         
         var fileId: Int64 = 0
@@ -164,6 +167,14 @@ private final class MultipartUploadManager {
         self.uploadPart = uploadPart
         self.progress = progress
         self.completed = completed
+        
+        if let hintFileSize = hintFileSize, hintFileSize > 1 * 1024 * 1024 {
+            self.defaultPartSize = 512 * 1024
+            self.bigTotalParts = (hintFileSize / self.defaultPartSize) + (hintFileSize % self.defaultPartSize == 0 ? 0 : 1)
+        } else {
+            self.defaultPartSize = 32 * 1024
+            self.bigTotalParts = nil
+        }
     }
     
     func start() {
@@ -203,7 +214,7 @@ private final class MultipartUploadManager {
         
         if let resourceData = self.resourceData, resourceData.complete, self.committedOffset >= resourceData.size {
             let (md5Digest, effectiveSize) = self.state.finalize()
-            self.completed(MultipartIntermediateResult(id: self.fileId, partCount: Int32(effectiveSize / self.defaultPartSize + (effectiveSize % self.defaultPartSize == 0 ? 0 : 1)), md5Digest: md5Digest, size: Int32(resourceData.size)))
+            self.completed(MultipartIntermediateResult(id: self.fileId, partCount: Int32(effectiveSize / self.defaultPartSize + (effectiveSize % self.defaultPartSize == 0 ? 0 : 1)), md5Digest: md5Digest, size: Int32(resourceData.size), bigTotalParts: self.bigTotalParts))
         } else {
             while uploadingParts.count < self.parallelParts {
                 var nextOffset = self.committedOffset
@@ -220,7 +231,7 @@ private final class MultipartUploadManager {
                     let partIndex = partOffset / self.defaultPartSize
                     let fileData = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.alwaysMapped])
                     let partData = self.state.transform(data: fileData!.subdata(in: partOffset ..< (partOffset + partSize)))
-                    let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData))
+                    let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: self.bigTotalParts))
                         |> deliverOn(self.queue)
                     self.uploadingParts[nextOffset] = (partSize, part.start(completed: { [weak self] in
                         if let strongSelf = self {
@@ -243,7 +254,7 @@ enum MultipartUploadResult {
     case inputSecretFile(Api.InputEncryptedFile, Int32, SecretFileEncryptionKey)
 }
 
-func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource, encrypt: Bool) -> Signal<MultipartUploadResult, NoError> {
+func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource, encrypt: Bool, hintFileSize: Int? = nil) -> Signal<MultipartUploadResult, NoError> {
     return network.download(datacenterId: network.datacenterId)
         |> mapToSignal { download -> Signal<MultipartUploadResult, NoError> in
             return Signal { subscriber in
@@ -262,10 +273,10 @@ func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource
                     encryptionKey = SecretFileEncryptionKey(aesKey: aesKey, aesIv: aesIv)
                 }
                 
-                let resourceData = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: false))
+                let resourceData = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: true))
                 
-                let manager = MultipartUploadManager(data: resourceData, encryptionKey: encryptionKey, uploadPart: { part in
-                    return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data)
+                let manager = MultipartUploadManager(data: resourceData, encryptionKey: encryptionKey, hintFileSize: hintFileSize, uploadPart: { part in
+                    return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, bigTotalParts: part.bigTotalParts)
                 }, progress: { progress in
                     subscriber.putNext(.progress(progress))
                 }, completed: { result in
@@ -284,8 +295,13 @@ func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource
                         let inputFile = Api.InputEncryptedFile.inputEncryptedFileUploaded(id: result.id, parts: result.partCount, md5Checksum: result.md5Digest, keyFingerprint: fingerprint)
                         subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
                     } else {
-                        let inputFile = Api.InputFile.inputFile(id: result.id, parts: result.partCount, name: "file.jpg", md5Checksum: result.md5Digest)
-                        subscriber.putNext(.inputFile(inputFile))
+                        if let _ = result.bigTotalParts {
+                            let inputFile = Api.InputFile.inputFileBig(id: result.id, parts: result.partCount, name: "file.jpg")
+                            subscriber.putNext(.inputFile(inputFile))
+                        } else {
+                            let inputFile = Api.InputFile.inputFile(id: result.id, parts: result.partCount, name: "file.jpg", md5Checksum: result.md5Digest)
+                            subscriber.putNext(.inputFile(inputFile))
+                        }
                     }
                     subscriber.putCompletion()
                 })
