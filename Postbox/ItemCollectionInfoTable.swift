@@ -28,6 +28,7 @@ final class ItemCollectionInfoTable: Table {
         return key.successor
     }
     
+    
     func getInfos(namespace: ItemCollectionId.Namespace) -> [(Int, ItemCollectionId, ItemCollectionInfo)] {
         if let cachedInfo = self.cachedInfos[namespace] {
             return cachedInfo
