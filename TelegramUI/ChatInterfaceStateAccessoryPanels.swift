@@ -34,12 +34,12 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
-    } else if let urlPreview = chatPresentationInterfaceState.urlPreview {
-        if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode, previewPanelNode.webpage.id == urlPreview.id {
+    } else if let urlPreview = chatPresentationInterfaceState.urlPreview, chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != urlPreview.0 {
+        if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode, previewPanelNode.webpage.id == urlPreview.1.id {
             previewPanelNode.interfaceInteraction = interfaceInteraction
             return previewPanelNode
         } else {
-            let panelNode = WebpagePreviewAccessoryPanelNode(account: account, webpage: urlPreview)
+            let panelNode = WebpagePreviewAccessoryPanelNode(account: account, webpage: urlPreview.1)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

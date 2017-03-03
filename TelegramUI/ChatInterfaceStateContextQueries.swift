@@ -182,22 +182,22 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
 
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 
-func urlPreviewStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentQuery: URL?) -> (URL?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
+func urlPreviewStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
     if let dataDetector = dataDetector {
         let text = chatPresentationInterfaceState.interfaceState.composeInputState.inputText
         let utf16 = text.utf16
         
-        var detectedUrl: URL?
+        var detectedUrl: String?
         
         let matches = dataDetector.matches(in: text, options: [], range: NSRange(location: 0, length: utf16.count))
         if let match = matches.first {
             let urlText = (text as NSString).substring(with: match.range)
-            detectedUrl = URL(string: urlText)
+            detectedUrl = urlText
         }
         
         if detectedUrl != currentQuery {
             if let detectedUrl = detectedUrl {
-                return (detectedUrl, webpagePreview(account: account, url: detectedUrl.absoluteString) |> map { value in
+                return (detectedUrl, webpagePreview(account: account, url: detectedUrl) |> map { value in
                     return { _ in return value }
                 })
             } else {

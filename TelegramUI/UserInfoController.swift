@@ -9,14 +9,16 @@ private final class UserInfoControllerArguments {
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let changeNotificationMuteSettings: () -> Void
     let openSharedMedia: () -> Void
+    let openGroupsInCommon: () -> Void
     let updatePeerBlocked: (Bool) -> Void
     let deleteContact: () -> Void
     
-    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void) {
+    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void) {
         self.account = account
         self.updateEditingName = updateEditingName
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.openSharedMedia = openSharedMedia
+        self.openGroupsInCommon = openGroupsInCommon
         self.updatePeerBlocked = updatePeerBlocked
         self.deleteContact = deleteContact
     }
@@ -40,6 +42,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
     case sharedMedia
     case notifications(settings: PeerNotificationSettings?)
     case notificationSound(settings: PeerNotificationSettings?)
+    case groupsInCommon(Int32)
     case secretEncryptionKey(SecretChatKeyFingerprint)
     case block(action: DestructiveUserInfoAction)
     
@@ -49,7 +52,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return UserInfoSection.info.rawValue
             case .sendMessage, .shareContact, .startSecretChat:
                 return UserInfoSection.actions.rawValue
-            case .sharedMedia, .notifications, .notificationSound, .secretEncryptionKey:
+            case .sharedMedia, .notifications, .notificationSound, .secretEncryptionKey, .groupsInCommon:
                 return UserInfoSection.sharedMediaAndNotifications.rawValue
             case .block:
                 return UserInfoSection.block.rawValue
@@ -166,6 +169,12 @@ private enum UserInfoEntry: ItemListNodeEntry {
                     default:
                         return false
                 }
+            case let .groupsInCommon(count):
+                if case .groupsInCommon(count) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .secretEncryptionKey(fingerprint):
                 if case .secretEncryptionKey(fingerprint) = rhs {
                     return true
@@ -204,10 +213,12 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return 1005
             case .notificationSound:
                 return 1006
-            case .secretEncryptionKey:
+            case .groupsInCommon:
                 return 1007
-            case .block:
+            case .secretEncryptionKey:
                 return 1008
+            case .block:
+                return 1009
         }
     }
     
@@ -257,6 +268,10 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 let label: String
                 label = "Default"
                 return ItemListDisclosureItem(title: "Sound", label: label, sectionId: self.section, style: .plain, action: {
+                })
+            case let .groupsInCommon(count):
+                return ItemListDisclosureItem(title: "Groups in Common", label: "\(count)", sectionId: self.section, style: .plain, action: {
+                    arguments.openGroupsInCommon()
                 })
             case let .secretEncryptionKey(fingerprint):
                 return ItemListDisclosureItem(title: "Encryption Key", label: "", sectionId: self.section, style: .plain, action: {
@@ -360,11 +375,6 @@ private func userInfoEntries(account: Account, view: PeerView, state: UserInfoSt
         }
     }
     
-    var editable = true
-    if peer is TelegramSecretChat {
-        editable = false
-    }
-    
     if let phoneNumber = user.phone, !phoneNumber.isEmpty {
         entries.append(UserInfoEntry.phoneNumber(index: 0, value: PhoneNumberWithLabel(label: "home", number: phoneNumber)))
     }
@@ -384,6 +394,9 @@ private func userInfoEntries(account: Account, view: PeerView, state: UserInfoSt
         entries.append(UserInfoEntry.sharedMedia)
     }
     entries.append(UserInfoEntry.notifications(settings: view.notificationSettings))
+    if let groupsInCommon = (view.cachedData as? CachedUserData)?.commonGroupCount, !isEditing {
+        entries.append(UserInfoEntry.groupsInCommon(groupsInCommon))
+    }
     
     if let _ = peer as? TelegramSecretChat {
         entries.append(UserInfoEntry.secretEncryptionKey(SecretChatKeyFingerprint(k0: 0, k1: 0, k2: 0, k3: 0)))
@@ -486,6 +499,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         if let controller = peerSharedMediaController(account: account, peerId: peerId) {
             pushControllerImpl?(controller)
         }
+    }, openGroupsInCommon: {
+        pushControllerImpl?(groupsInCommonController(account: account, peerId: peerId))
     }, updatePeerBlocked: { value in
         updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: value).start())
     }, deleteContact: {

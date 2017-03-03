@@ -38,6 +38,7 @@ public class ChatController: TelegramController {
     private var controllerInteraction: ChatControllerInteraction?
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
+    private let messageContextDisposable = MetaDisposable()
     private let controllerNavigationDisposable = MetaDisposable()
     private let sentMessageEventsDisposable = MetaDisposable()
     private let messageActionCallbackDisposable = MetaDisposable()
@@ -55,7 +56,7 @@ public class ChatController: TelegramController {
     private var resolveUrlDisposable: MetaDisposable?
     
     private var contextQueryState: (ChatPresentationInputQuery?, Disposable)?
-    private var urlPreviewQueryState: (URL?, Disposable)?
+    private var urlPreviewQueryState: (String?, Disposable)?
     
     private var audioRecorderValue: ManagedAudioRecorder?
     private var audioRecorderFeedback: HapticFeedback?
@@ -336,7 +337,7 @@ public class ChatController: TelegramController {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")) }
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")).withUpdatedComposeDisableUrlPreview(nil) }
                         })
                     }
                 })
@@ -529,6 +530,7 @@ public class ChatController: TelegramController {
         self.navigationActionDisposable.dispose()
         self.galleryHiddenMesageAndMediaDisposable.dispose()
         self.peerDisposable.dispose()
+        self.messageContextDisposable.dispose()
         self.controllerNavigationDisposable.dispose()
         self.sentMessageEventsDisposable.dispose()
         self.messageActionCallbackDisposable.dispose()
@@ -872,6 +874,18 @@ public class ChatController: TelegramController {
             }
         }
         
+        self.chatDisplayNode.dismissUrlPreview = { [weak self] in
+            if let strongSelf = self {
+                if let (link, _) = strongSelf.presentationInterfaceState.urlPreview {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        $0.updatedInterfaceState {
+                            $0.withUpdatedComposeDisableUrlPreview(link)
+                        }
+                    })
+                }
+            }
+        }
+        
         self.chatDisplayNode.navigateToLatestButton.tapped = { [weak self] in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
@@ -901,9 +915,53 @@ public class ChatController: TelegramController {
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                    let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                    strongSelf.messageContextDisposable.set((chatDeleteMessagesOptions(account: strongSelf.account, messageIds: messageIds) |> deliverOnMainQueue).start(next: { options in
+                        if let strongSelf = self, !options.isEmpty {
+                            let actionSheet = ActionSheetController()
+                            var items: [ActionSheetItem] = []
+                            var personalPeerName: String?
+                            var isChannel = false
+                            if let user = strongSelf.presentationInterfaceState.peer as? TelegramUser {
+                                personalPeerName = user.compactDisplayTitle
+                            } else if let channel = strongSelf.presentationInterfaceState.peer as? TelegramChannel, case .broadcast = channel.info {
+                                isChannel = true
+                            }
+                            
+                            if options.contains(.globally) {
+                                let globalTitle: String
+                                if isChannel {
+                                    globalTitle = "Delete"
+                                } else if let personalPeerName = personalPeerName {
+                                    globalTitle = "Delete for me and \(personalPeerName)"
+                                } else {
+                                    globalTitle = "Delete for everyone"
+                                }
+                                items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    if let strongSelf = self {
+                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                                        let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                    }
+                                }))
+                            }
+                            if options.contains(.locally) {
+                                items.append(ActionSheetButtonItem(title: "Delete for me", color: .destructive, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    if let strongSelf = self {
+                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                                        let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                    }
+                                }))
+                            }
+                            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                })
+                            ])])
+                            strongSelf.present(actionSheet, in: .window)
+                        }
+                    }))
                 }
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             }
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
@@ -997,7 +1055,7 @@ public class ChatController: TelegramController {
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                         if let strongSelf = self {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")) }
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")).withUpdatedComposeDisableUrlPreview(nil) }
                             })
                         }
                     })
@@ -1039,7 +1097,7 @@ public class ChatController: TelegramController {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")) }
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")).withUpdatedComposeDisableUrlPreview(nil) }
                         })
                     }
                 })
@@ -1316,14 +1374,22 @@ public class ChatController: TelegramController {
                         inScopeResult = result
                     } else {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedUrlPreview(result($0.urlPreview))
+                            if let updatedUrlPreviewUrl = updatedUrlPreviewUrl, let webpage = result($0.urlPreview?.1) {
+                                return $0.updatedUrlPreview((updatedUrlPreviewUrl, webpage))
+                            } else {
+                                return $0.updatedUrlPreview(nil)
+                            }
                         })
                     }
                 }
             }))
             inScope = false
             if let inScopeResult = inScopeResult {
-                updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedUrlPreview(inScopeResult(updatedChatPresentationInterfaceState.urlPreview))
+                if let updatedUrlPreviewUrl = updatedUrlPreviewUrl, let webpage = inScopeResult(updatedChatPresentationInterfaceState.urlPreview?.1) {
+                    updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedUrlPreview((updatedUrlPreviewUrl, webpage))
+                } else {
+                    updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedUrlPreview(nil)
+                }
             }
         }
         
@@ -1383,6 +1449,7 @@ public class ChatController: TelegramController {
                     ActionSheetButtonItem(title: "Delete All Messages", color: .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         if let strongSelf = self {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                             let _ = clearHistoryInteractively(postbox: strongSelf.account.postbox, peerId: strongSelf.peerId).start()
                         }
                     })
@@ -1468,7 +1535,7 @@ public class ChatController: TelegramController {
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")) }
+                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")).withUpdatedComposeDisableUrlPreview(nil) }
                     })
                 }
             })

@@ -34,7 +34,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                     if data.complete {
                         if file.mimeType.hasPrefix("image/") {
                             return Signal { subscriber in
-                                if let image = UIImage(contentsOfFile: data.path), let scaledImage = generateImage(image.size.fitted(CGSize(width: 90.0, height: 90.0)), context: { size, context in
+                                if let image = UIImage(contentsOfFile: data.path), let scaledImage = generateImage(image.size.fitted(CGSize(width: 90.0, height: 90.0)), contextGenerator: { size, context in
                                     context.setBlendMode(.copy)
                                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
                                 }), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {

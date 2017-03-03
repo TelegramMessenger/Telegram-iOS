@@ -240,6 +240,7 @@
 		D08D452F1D5E340300A7428A /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452A1D5E340300A7428A /* Display.framework */; };
 		D08D45301D5E340300A7428A /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452B1D5E340300A7428A /* Postbox.framework */; };
 		D08D45311D5E340300A7428A /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452C1D5E340300A7428A /* SwiftSignalKit.framework */; };
+		D099261F1E69791E00D95539 /* GroupsInCommonController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099261E1E69791E00D95539 /* GroupsInCommonController.swift */; };
 		D099EA1F1DE7450B001AF5A8 /* HorizontalListContextResultsChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099EA1E1DE7450B001AF5A8 /* HorizontalListContextResultsChatInputContextPanelNode.swift */; };
 		D099EA211DE7451D001AF5A8 /* HorizontalListContextResultsChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099EA201DE7451D001AF5A8 /* HorizontalListContextResultsChatInputPanelItem.swift */; };
 		D099EA271DE765DB001AF5A8 /* ManagedMediaId.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099EA261DE765DB001AF5A8 /* ManagedMediaId.swift */; };
@@ -717,6 +718,7 @@
 		D08D452B1D5E340300A7428A /* Postbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Postbox.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/Postbox.framework"; sourceTree = "<group>"; };
 		D08D452C1D5E340300A7428A /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/SwiftSignalKit.framework"; sourceTree = "<group>"; };
 		D08D452D1D5E340300A7428A /* TelegramCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TelegramCore.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/TelegramCore.framework"; sourceTree = "<group>"; };
+		D099261E1E69791E00D95539 /* GroupsInCommonController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupsInCommonController.swift; sourceTree = "<group>"; };
 		D099EA1E1DE7450B001AF5A8 /* HorizontalListContextResultsChatInputContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalListContextResultsChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D099EA201DE7451D001AF5A8 /* HorizontalListContextResultsChatInputPanelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalListContextResultsChatInputPanelItem.swift; sourceTree = "<group>"; };
 		D099EA261DE765DB001AF5A8 /* ManagedMediaId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedMediaId.swift; sourceTree = "<group>"; };
@@ -1781,6 +1783,7 @@
 				D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */,
 				D033FEAA1E61BFC100644997 /* GroupAdminsController.swift */,
 				D0528E621E65BECA00E2FEF5 /* UserInfoController.swift */,
+				D099261E1E69791E00D95539 /* GroupsInCommonController.swift */,
 			);
 			name = Controller;
 			sourceTree = "<group>";
@@ -2778,6 +2781,7 @@
 				D0EE971A1D88BCA0006C18E1 /* ChatInfo.swift in Sources */,
 				D0F69DE31D6B8A420046BCD6 /* ListControllerItem.swift in Sources */,
 				D0736F211DF41CFD00F2C02A /* ManagedAudioPlaylistPlayer.swift in Sources */,
+				D099261F1E69791E00D95539 /* GroupsInCommonController.swift in Sources */,
 				D0177B801DFAE18500A5083A /* MediaPlayerTimeTextNode.swift in Sources */,
 				D07A7DA31D957671005BCD27 /* ListMessageSnippetItemNode.swift in Sources */,
 				D0F69E6B1D6B8C160046BCD6 /* MapInputControllerNode.swift in Sources */,

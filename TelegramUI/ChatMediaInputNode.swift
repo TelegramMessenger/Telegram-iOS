@@ -107,7 +107,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, recentStickers
     }
     
     if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
-        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudRecentStickers, id: 0), accessHash: 0, title: "FREQUENTLY USED", shortName: "", hash: 0)
+        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudRecentStickers, id: 0), flags: [], accessHash: 0, title: "FREQUENTLY USED", shortName: "", hash: 0)
         for i in 0 ..< min(20, recentStickers.items.count) {
             if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
                 let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)

@@ -179,7 +179,7 @@ struct ChatPresentationInterfaceState: Equatable {
     let canReportPeer: Bool
     let chatHistoryState: ChatHistoryNodeHistoryState?
     let botStartPayload: String?
-    let urlPreview: TelegramMediaWebpage?
+    let urlPreview: (String, TelegramMediaWebpage)?
     
     init() {
         self.interfaceState = ChatInterfaceState()
@@ -197,7 +197,7 @@ struct ChatPresentationInterfaceState: Equatable {
         self.urlPreview = nil
     }
     
-    init(interfaceState: ChatInterfaceState, peer: Peer?, inputTextPanelState: ChatTextInputPanelState, inputQueryResult: ChatPresentationInputQueryResult?, inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, peerIsBlocked: Bool, canReportPeer: Bool, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: TelegramMediaWebpage?) {
+    init(interfaceState: ChatInterfaceState, peer: Peer?, inputTextPanelState: ChatTextInputPanelState, inputQueryResult: ChatPresentationInputQueryResult?, inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, peerIsBlocked: Bool, canReportPeer: Bool, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: (String, TelegramMediaWebpage)?) {
         self.interfaceState = interfaceState
         self.peer = peer
         self.inputTextPanelState = inputTextPanelState
@@ -273,7 +273,10 @@ struct ChatPresentationInterfaceState: Equatable {
         }
         
         if let lhsUrlPreview = lhs.urlPreview, let rhsUrlPreview = rhs.urlPreview {
-            if !lhsUrlPreview.isEqual(rhsUrlPreview) {
+            if lhsUrlPreview.0 != rhsUrlPreview.0 {
+                return false
+            }
+            if !lhsUrlPreview.1.isEqual(rhsUrlPreview.1) {
                 return false
             }
         } else if (lhs.urlPreview != nil) != (rhs.urlPreview != nil) {
@@ -331,7 +334,7 @@ struct ChatPresentationInterfaceState: Equatable {
         return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
     }
     
-    func updatedUrlPreview(_ urlPreview: TelegramMediaWebpage?) -> ChatPresentationInterfaceState {
+    func updatedUrlPreview(_ urlPreview: (String, TelegramMediaWebpage)?) -> ChatPresentationInterfaceState {
         return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: urlPreview)
     }
 }

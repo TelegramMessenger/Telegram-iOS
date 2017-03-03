@@ -44,6 +44,7 @@ class ChatControllerNode: ASDisplayNode {
     var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
     var updateTypingActivity: () -> Void = { }
+    var dismissUrlPreview: () -> Void = { }
     var setupSendActionOnViewUpdate: (@escaping () -> Void) -> Void = { _ in }
     var requestLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     
@@ -131,7 +132,7 @@ class ChatControllerNode: ASDisplayNode {
                             if let strongSelf = strongSelf, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
                                 strongSelf.ignoreUpdateHeight = true
                                 textInputPanelNode.text = ""
-                                strongSelf.requestUpdateChatInterfaceState(false, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil) })
+                                strongSelf.requestUpdateChatInterfaceState(false, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
                                 strongSelf.ignoreUpdateHeight = false
                             }
                         })
@@ -143,7 +144,11 @@ class ChatControllerNode: ASDisplayNode {
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
-                            messages.append(.message(text: text, attributes: attributes, media: nil, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId))
+                            if strongSelf.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != nil {
+                                attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
+                            }
+                            let webpage = strongSelf.chatPresentationInterfaceState.urlPreview?.1
+                            messages.append(.message(text: text, attributes: attributes, media: webpage, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId))
                         }
                         if let forwardMessageIds = strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                             for id in forwardMessageIds {
@@ -316,7 +321,7 @@ class ChatControllerNode: ASDisplayNode {
                         } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedEditMessage(nil) })
                         } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
-                            
+                            strongSelf.dismissUrlPreview()
                         }
                     }
                 }
