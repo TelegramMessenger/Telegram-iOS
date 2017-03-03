@@ -12,8 +12,9 @@ private final class ResourceStatusContext {
 
 private final class ResourceDataContext {
     var data: MediaResourceData
-    let progresiveDataSubscribers = Bag<(MediaResourceData) -> Void>()
-    let completeDataSubscribers = Bag<(MediaResourceData) -> Void>()
+    var processedFetch: Bool = false
+    let progresiveDataSubscribers = Bag<(waitUntilFetchStatus: Bool, sink: (MediaResourceData) -> Void)>()
+    let completeDataSubscribers = Bag<(waitUntilFetchStatus: Bool, sink: (MediaResourceData) -> Void)>()
     
     var fetchDisposable: Disposable?
     let fetchSubscribers = Bag<Void>()
@@ -83,6 +84,11 @@ private struct CachedMediaResourceRepresentationKey: Hashable {
 private final class CachedMediaResourceRepresentationContext {
     let dataSubscribers = Bag<(MediaResourceData) -> Void>()
     var disposable: Disposable?
+}
+
+public enum ResourceDataRequestOption {
+    case complete(waitUntilFetchStatus: Bool)
+    case incremental(waitUntilFetchStatus: Bool)
 }
 
 public final class MediaBox {
@@ -246,7 +252,7 @@ public final class MediaBox {
     
     public func completedResourcePath(_ resource: MediaResource, pathExtension: String? = nil) -> String? {
         let paths = self.storePathsForId(resource.id)
-        if let completeSize = fileSize(paths.complete) {
+        if let _ = fileSize(paths.complete) {
             if let pathExtension = pathExtension {
                 let symlinkPath = paths.complete + ".\(pathExtension)"
                 if fileSize(symlinkPath) == nil {
@@ -261,7 +267,7 @@ public final class MediaBox {
         }
     }
     
-    public func resourceData(_ resource: MediaResource, pathExtension: String? = nil, complete: Bool = true) -> Signal<MediaResourceData, NoError> {
+    public func resourceData(_ resource: MediaResource, pathExtension: String? = nil, option: ResourceDataRequestOption = .complete(waitUntilFetchStatus: false)) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.concurrentQueue.async {
@@ -281,7 +287,7 @@ public final class MediaBox {
                 } else {
                     self.dataQueue.async {
                         let resourceId = WrappedMediaResourceId(resource.id)
-                        var currentContext: ResourceDataContext? = self.dataContexts[resourceId]
+                        let currentContext: ResourceDataContext? = self.dataContexts[resourceId]
                         if let currentContext = currentContext, currentContext.data.complete {
                             if let pathExtension = pathExtension {
                                 let symlinkPath = paths.complete + ".\(pathExtension)"
@@ -317,47 +323,53 @@ public final class MediaBox {
                             }
 
                             let index: Bag<(MediaResourceData) -> Void>.Index
-                            if complete {
-                                index = dataContext.completeDataSubscribers.add { data in
-                                    if let pathExtension = pathExtension, data.complete {
-                                        let symlinkPath = paths.complete + ".\(pathExtension)"
-                                        if fileSize(symlinkPath) == nil {
-                                            let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
-                                        }
-                                        subscriber.putNext(MediaResourceData(path: symlinkPath, size: data.size, complete: data.complete))
-                                        subscriber.putCompletion()
-                                    } else {
-                                        subscriber.putNext(data)
-                                        subscriber.putCompletion()
-                                    }
-                                }
-                                subscriber.putNext(MediaResourceData(path: dataContext.data.path, size: 0, complete: false))
-                            } else {
-                                index = dataContext.progresiveDataSubscribers.add { data in
-                                    if let pathExtension = pathExtension, data.complete {
-                                        let symlinkPath = paths.complete + ".\(pathExtension)"
-                                        if fileSize(symlinkPath) == nil {
-                                            let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
-                                        }
-                                        subscriber.putNext(MediaResourceData(path: symlinkPath, size: data.size, complete: data.complete))
-                                        subscriber.putCompletion()
-                                    } else {
-                                        subscriber.putNext(data)
-                                        if data.complete {
+                            switch option {
+                                case let .complete(waitUntilFetchStatus):
+                                    index = dataContext.completeDataSubscribers.add((waitUntilFetchStatus, { data in
+                                        if let pathExtension = pathExtension, data.complete {
+                                            let symlinkPath = paths.complete + ".\(pathExtension)"
+                                            if fileSize(symlinkPath) == nil {
+                                                let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                                            }
+                                            subscriber.putNext(MediaResourceData(path: symlinkPath, size: data.size, complete: data.complete))
+                                            subscriber.putCompletion()
+                                        } else {
+                                            subscriber.putNext(data)
                                             subscriber.putCompletion()
                                         }
+                                    }))
+                                    if !waitUntilFetchStatus || dataContext.processedFetch {
+                                        subscriber.putNext(MediaResourceData(path: dataContext.data.path, size: 0, complete: false))
                                     }
-                                }
-                                subscriber.putNext(dataContext.data)
+                                case let .incremental(waitUntilFetchStatus):
+                                    index = dataContext.progresiveDataSubscribers.add((waitUntilFetchStatus, { data in
+                                        if let pathExtension = pathExtension, data.complete {
+                                            let symlinkPath = paths.complete + ".\(pathExtension)"
+                                            if fileSize(symlinkPath) == nil {
+                                                let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                                            }
+                                            subscriber.putNext(MediaResourceData(path: symlinkPath, size: data.size, complete: data.complete))
+                                            subscriber.putCompletion()
+                                        } else {
+                                            subscriber.putNext(data)
+                                            if data.complete {
+                                                subscriber.putCompletion()
+                                            }
+                                        }
+                                    }))
+                                    if !waitUntilFetchStatus || dataContext.processedFetch {
+                                        subscriber.putNext(dataContext.data)
+                                    }
                             }
                             
                             disposable.set(ActionDisposable {
                                 self.dataQueue.async {
                                     if let dataContext = self.dataContexts[resourceId] {
-                                        if complete {
-                                            dataContext.completeDataSubscribers.remove(index)
-                                        } else {
-                                            dataContext.progresiveDataSubscribers.remove(index)
+                                        switch option {
+                                            case .complete:
+                                                dataContext.completeDataSubscribers.remove(index)
+                                            case .incremental:
+                                                dataContext.progresiveDataSubscribers.remove(index)
                                         }
                                         
                                         if dataContext.progresiveDataSubscribers.isEmpty && dataContext.completeDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
@@ -583,13 +595,22 @@ public final class MediaBox {
                                     
                                     dataContext.data = updatedData
                                     
-                                    for subscriber in dataContext.progresiveDataSubscribers.copyItems() {
+                                    let hadProcessedFetch = dataContext.processedFetch
+                                    dataContext.processedFetch = true
+                                    
+                                    for (_, subscriber) in dataContext.progresiveDataSubscribers.copyItems() {
                                         subscriber(updatedData)
                                     }
                                     
                                     if updatedData.complete {
-                                        for subscriber in dataContext.completeDataSubscribers.copyItems() {
+                                        for (_, subscriber) in dataContext.completeDataSubscribers.copyItems() {
                                             subscriber(updatedData)
+                                        }
+                                    } else if !hadProcessedFetch {
+                                        for (waitUntilFetchStatus, subscriber) in dataContext.completeDataSubscribers.copyItems() {
+                                            if waitUntilFetchStatus {
+                                                subscriber(updatedData)
+                                            }
                                         }
                                     }
                                     
@@ -721,7 +742,7 @@ public final class MediaBox {
                         })
                         
                         if context.disposable == nil {
-                            let signal = self.resourceData(resource, complete: true)
+                            let signal = self.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
                                 |> mapToSignal { resourceData in
                                 return self.wrappedFetchCachedResourceRepresentation.get()
                                     |> take(1)
