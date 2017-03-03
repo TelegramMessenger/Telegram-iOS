@@ -30,6 +30,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as OutgoingMessageInfoAttribute:
                 return true
+            case _ as OutgoingContentInfoMessageAttribute:
+                return true
             case _ as ReplyMarkupMessageAttribute:
                 return true
             case _ as OutgoingChatContextResultMessageAttribute:

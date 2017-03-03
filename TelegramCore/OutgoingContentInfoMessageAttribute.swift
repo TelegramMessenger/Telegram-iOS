@@ -22,7 +22,7 @@ public struct OutgoingContentInfoFlags: OptionSet {
 public class OutgoingContentInfoMessageAttribute: MessageAttribute {
     public let flags: OutgoingContentInfoFlags
     
-    init(flags: OutgoingContentInfoFlags) {
+    public init(flags: OutgoingContentInfoFlags) {
         self.flags = flags
     }
     
