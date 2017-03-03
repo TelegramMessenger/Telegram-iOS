@@ -45,6 +45,8 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     private var rightNavigationButtonTitleAndStyle: (String, ItemListNavigationButtonStyle)?
     private var navigationButtonActions: (left: (() -> Void)?, right: (() -> Void)?) = (nil, nil)
     
+    private var didPlayPresentationAnimation = false
+    
     init(_ state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
         self.state = state
         
@@ -128,7 +130,8 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         
         (self.displayNode as! ItemListNode<Entry>).listNode.preloadPages = true
         
-        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
+        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
+            self.didPlayPresentationAnimation = true
             if case .modalSheet = presentationArguments.presentationAnimation {
                 (self.displayNode as! ItemListNode<Entry>).animateIn()
             }

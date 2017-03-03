@@ -43,6 +43,7 @@ class ChatControllerNode: ASDisplayNode {
     
     var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
+    var updateTypingActivity: () -> Void = { }
     var setupSendActionOnViewUpdate: (@escaping () -> Void) -> Void = { _ in }
     var requestLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     
@@ -159,6 +160,10 @@ class ChatControllerNode: ASDisplayNode {
         self.textInputPanelNode?.displayAttachmentMenu = { [weak self] in
             self?.displayAttachmentMenu()
         }
+        
+        self.textInputPanelNode?.updateActivity = { [weak self] in
+            self?.updateTypingActivity()
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets) -> Void) {
@@ -178,7 +183,7 @@ class ChatControllerNode: ASDisplayNode {
         
         var dismissedTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
         var immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = false
-        if let titleAccessoryPanelNode = titlePanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.titleAccessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
+        if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.titleAccessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
             if self.titleAccessoryPanelNode != titleAccessoryPanelNode {
                  dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
                 self.titleAccessoryPanelNode = titleAccessoryPanelNode
@@ -310,6 +315,8 @@ class ChatControllerNode: ASDisplayNode {
                             strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedForwardMessageIds(nil) })
                         } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedEditMessage(nil) })
+                        } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
+                            
                         }
                     }
                 }
@@ -393,14 +400,16 @@ class ChatControllerNode: ASDisplayNode {
         }
         
         let inputContextPanelsFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - insets.bottom - inputPanelsHeight - insets.top - UIScreenPixel)))
+        let inputContextPanelsOverMainPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - insets.bottom - (inputPanelSize == nil ? CGFloat(0.0) : inputPanelSize!.height) - insets.top - UIScreenPixel)))
         
         if let inputContextPanelNode = self.inputContextPanelNode {
+            let panelFrame = inputContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
             if immediatelyLayoutInputContextPanelAndAnimateAppearance {
-                inputContextPanelNode.frame = inputContextPanelsFrame
-                inputContextPanelNode.updateLayout(size: inputContextPanelsFrame.size, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
-            } else if !inputContextPanelNode.frame.equalTo(inputContextPanelsFrame) {
-                transition.updateFrame(node: inputContextPanelNode, frame: inputContextPanelsFrame)
-                inputContextPanelNode.updateLayout(size: inputContextPanelsFrame.size, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                inputContextPanelNode.frame = panelFrame
+                inputContextPanelNode.updateLayout(size: panelFrame.size, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            } else if !inputContextPanelNode.frame.equalTo(panelFrame) {
+                transition.updateFrame(node: inputContextPanelNode, frame: panelFrame)
+                inputContextPanelNode.updateLayout(size: panelFrame.size, transition: transition, interfaceState: self.chatPresentationInterfaceState)
             }
         }
         
@@ -479,8 +488,9 @@ class ChatControllerNode: ASDisplayNode {
                     dismissedInputContextPanelNode.removeFromSupernode()
                 }
             }
-            if !dismissedInputContextPanelNode.frame.equalTo(inputContextPanelsFrame) {
-                transition.updateFrame(node: dismissedInputContextPanelNode, frame: inputContextPanelsFrame, completion: { _ in
+            let panelFrame = dismissedInputContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
+            if !dismissedInputContextPanelNode.frame.equalTo(panelFrame) {
+                transition.updateFrame(node: dismissedInputContextPanelNode, frame: panelFrame, completion: { _ in
                     frameCompleted = true
                     completed()
                 })

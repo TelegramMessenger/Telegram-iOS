@@ -10,12 +10,14 @@ func peerInfoController(account: Account, peer: Peer) -> ViewController? {
     } else if let channel = peer as? TelegramChannel {
         if case .group = channel.info {
             return groupInfoController(account: account, peerId: peer.id)
+        } else {
+            return channelInfoController(account: account, peerId: peer.id)
         }
+    } else if let _ = peer as? TelegramUser {
+        return userInfoController(account: account, peerId: peer.id)
     }
     return nil
 }
-
-
 
 
 

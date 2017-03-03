@@ -6,10 +6,12 @@ import TelegramCore
 final class ChatPanelInterfaceInteractionStatuses {
     let editingMessage: Signal<Bool, NoError>
     let startingBot: Signal<Bool, NoError>
+    let unblockingPeer: Signal<Bool, NoError>
     
-    init(editingMessage: Signal<Bool, NoError>, startingBot: Signal<Bool, NoError>) {
+    init(editingMessage: Signal<Bool, NoError>, startingBot: Signal<Bool, NoError>, unblockingPeer: Signal<Bool, NoError>) {
         self.editingMessage = editingMessage
         self.startingBot = startingBot
+        self.unblockingPeer = unblockingPeer
     }
 }
 
@@ -23,6 +25,7 @@ final class ChatPanelInterfaceInteraction {
     let updateInputModeAndDismissedButtonKeyboardMessageId: ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void
     let editMessage: (MessageId, String) -> Void
     let beginMessageSearch: () -> Void
+    let navigateToMessage: (MessageId) -> Void
     let openPeerInfo: () -> Void
     let togglePeerNotifications: () -> Void
     let sendContextResult: (ChatContextResultCollection, ChatContextResult) -> Void
@@ -33,9 +36,15 @@ final class ChatPanelInterfaceInteraction {
     let finishAudioRecording: (Bool) -> Void
     let setupMessageAutoremoveTimeout: () -> Void
     let sendSticker: (TelegramMediaFile) -> Void
+    let unblockPeer: () -> Void
+    let pinMessage: (MessageId) -> Void
+    let unpinMessage: () -> Void
+    let reportPeer: () -> Void
+    let dismissReportPeer: () -> Void
+    let deleteChat: () -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
-    init(setupReplyMessage: @escaping (MessageId) -> Void, setupEditMessage: @escaping (MessageId) -> Void, beginMessageSelection: @escaping (MessageId) -> Void, deleteSelectedMessages: @escaping () -> Void, forwardSelectedMessages: @escaping () -> Void, updateTextInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void, editMessage: @escaping (MessageId, String) -> Void, beginMessageSearch: @escaping () -> Void, openPeerInfo: @escaping () -> Void, togglePeerNotifications: @escaping () -> Void, sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult) -> Void, sendBotCommand: @escaping (Peer, String) -> Void, sendBotStart: @escaping (String?) -> Void, botSwitchChatWithPayload: @escaping (PeerId, String) -> Void, beginAudioRecording: @escaping () -> Void, finishAudioRecording: @escaping (Bool) -> Void, setupMessageAutoremoveTimeout: @escaping () -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, statuses: ChatPanelInterfaceInteractionStatuses?) {
+    init(setupReplyMessage: @escaping (MessageId) -> Void, setupEditMessage: @escaping (MessageId) -> Void, beginMessageSelection: @escaping (MessageId) -> Void, deleteSelectedMessages: @escaping () -> Void, forwardSelectedMessages: @escaping () -> Void, updateTextInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void, editMessage: @escaping (MessageId, String) -> Void, beginMessageSearch: @escaping () -> Void, navigateToMessage: @escaping (MessageId) -> Void, openPeerInfo: @escaping () -> Void, togglePeerNotifications: @escaping () -> Void, sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult) -> Void, sendBotCommand: @escaping (Peer, String) -> Void, sendBotStart: @escaping (String?) -> Void, botSwitchChatWithPayload: @escaping (PeerId, String) -> Void, beginAudioRecording: @escaping () -> Void, finishAudioRecording: @escaping (Bool) -> Void, setupMessageAutoremoveTimeout: @escaping () -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, unblockPeer: @escaping () -> Void, pinMessage: @escaping (MessageId) -> Void, unpinMessage: @escaping () -> Void, reportPeer: @escaping () -> Void, dismissReportPeer: @escaping () -> Void, deleteChat: @escaping () -> Void, statuses: ChatPanelInterfaceInteractionStatuses?) {
         self.setupReplyMessage = setupReplyMessage
         self.setupEditMessage = setupEditMessage
         self.beginMessageSelection = beginMessageSelection
@@ -45,6 +54,7 @@ final class ChatPanelInterfaceInteraction {
         self.updateInputModeAndDismissedButtonKeyboardMessageId = updateInputModeAndDismissedButtonKeyboardMessageId
         self.editMessage = editMessage
         self.beginMessageSearch = beginMessageSearch
+        self.navigateToMessage = navigateToMessage
         self.openPeerInfo = openPeerInfo
         self.togglePeerNotifications = togglePeerNotifications
         self.sendContextResult = sendContextResult
@@ -55,6 +65,12 @@ final class ChatPanelInterfaceInteraction {
         self.finishAudioRecording = finishAudioRecording
         self.setupMessageAutoremoveTimeout = setupMessageAutoremoveTimeout
         self.sendSticker = sendSticker
+        self.unblockPeer = unblockPeer
+        self.pinMessage = pinMessage
+        self.unpinMessage = unpinMessage
+        self.reportPeer = reportPeer
+        self.dismissReportPeer = dismissReportPeer
+        self.deleteChat = deleteChat
         self.statuses = statuses
     }
 }

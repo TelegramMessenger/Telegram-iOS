@@ -188,3 +188,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             }
     }
 }
+
+func urlPreviewForPresentationInterfaceState() {
+    
+}

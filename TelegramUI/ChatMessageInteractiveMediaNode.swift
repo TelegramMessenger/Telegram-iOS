@@ -55,7 +55,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             switch fetchStatus {
                 case .Fetching:
                     if let account = self.account, let (messageId, flags) = self.messageIdAndFlags, flags.isSending {
-                        account.postbox.modify({ modifier -> Void in
+                       let _ = account.postbox.modify({ modifier -> Void in
                             modifier.deleteMessages([messageId])
                         }).start()
                     }
@@ -94,7 +94,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         return { account, message, media, corners, automaticDownload, constrainedSize, layoutConstants in
             var nativeSize: CGSize
             
-            var isSecretMedia = message.containsSecretMedia
+            let isSecretMedia = message.containsSecretMedia
             var secretBeginTimeAndTimeout: (Double, Double)?
             if isSecretMedia {
                 for attribute in message.attributes {

@@ -114,6 +114,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         
         super.init(account: account)
         
+        self.placement = .overTextInput
         self.isOpaque = false
         
         self.addSubnode(self.backgroundNode)

@@ -99,7 +99,7 @@ private func chatMessageFileDatas(account: Account, file: TelegramMediaFile, pro
                 }
                 
                 
-                let fullSizeDataAndPath = account.postbox.mediaBox.resourceData(fullSizeResource, complete: !progressive) |> map { next -> ((Data, String)?, Bool) in
+                let fullSizeDataAndPath = account.postbox.mediaBox.resourceData(fullSizeResource, option: !progressive ? .complete(waitUntilFetchStatus: false) : .incremental(waitUntilFetchStatus: false)) |> map { next -> ((Data, String)?, Bool) in
                     let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe)
                     return (data == nil ? nil : (data!, next.path), next.complete)
                 }

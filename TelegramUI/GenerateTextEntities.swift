@@ -67,13 +67,18 @@ func generateTextEntities(_ text: String) -> [MessageTextEntity] {
             entities.append(MessageTextEntity(range: indexRange, type: entityType))
         }
     }
+    var previousScalar: UnicodeScalar?
     while index != unicodeScalars.endIndex {
         let c = unicodeScalars[index]
         if c == "/" {
-            if let (type, range) = currentEntity {
-                commitEntity(unicodeScalars, type, range, &entities)
+            if previousScalar != nil && !identifierDelimiterSet.contains(previousScalar!) {
+                currentEntity = nil
+            } else {
+                if let (type, range) = currentEntity {
+                    commitEntity(unicodeScalars, type, range, &entities)
+                }
+                currentEntity = (.command, index ..< index)
             }
-            currentEntity = (.command, index ..< index)
         } else if c == "@" {
             if let (type, range) = currentEntity {
                 if case .command = type {
@@ -115,6 +120,7 @@ func generateTextEntities(_ text: String) -> [MessageTextEntity] {
             }
         }
         index = unicodeScalars.index(after: index)
+        previousScalar = c
     }
     if let (type, range) = currentEntity {
         commitEntity(unicodeScalars, type, range, &entities)

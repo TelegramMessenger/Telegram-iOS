@@ -21,6 +21,8 @@ final class ChatMessageSelectionNode: ASDisplayNode {
         
         self.checkNode.image = uncheckedImage
         self.addSubnode(self.checkNode)
+        
+        self.hitTestSlop = UIEdgeInsetsMake(0.0, 42.0, 0.0, 0.0)
     }
     
     override func didLoad() {

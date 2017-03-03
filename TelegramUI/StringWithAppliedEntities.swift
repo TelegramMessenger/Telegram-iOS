@@ -28,27 +28,27 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 }
                 string.addAttribute(TextNode.UrlAttribute, value: nsString!.substring(with: range), range: range)
             case .Email:
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(TextNode.UrlAttribute, value: "mailto:\(nsString!.substring(with: range))", range: range)
             case let .TextUrl(url):
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(TextNode.UrlAttribute, value: url, range: range)
             case .Bold:
-                string.addAttribute(NSFontAttributeName, value: boldFont, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                string.addAttribute(NSFontAttributeName, value: boldFont, range: range)
             case .Mention:
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(TextNode.TelegramPeerTextMentionAttribute, value: nsString!.substring(with: range), range: range)
             case let .TextMention(peerId):
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
                 string.addAttribute(TextNode.TelegramPeerMentionAttribute, value: peerId.toInt64() as NSNumber, range: range)
             case .Hashtag:
                 if nsString == nil {
@@ -73,13 +73,13 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                     string.addAttribute(TextNode.TelegramHashtagAttribute, value: TelegramHashtag(peerName: nil, hashtag: hashtag), range: range)
                 }
             case .BotCommand:
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(TextNode.TelegramBotCommandAttribute, value: nsString!.substring(with: range), range: range)
             case .Code, .Pre:
-                string.addAttribute(NSFontAttributeName, value: fixedFont, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                string.addAttribute(NSFontAttributeName, value: fixedFont, range: range)
             default:
                 break
         }

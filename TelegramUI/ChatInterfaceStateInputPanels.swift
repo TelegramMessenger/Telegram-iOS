@@ -16,8 +16,56 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             return panel
         }
     } else {
+        if chatPresentationInterfaceState.peerIsBlocked {
+            if let currentPanel = currentPanel as? ChatUnblockInputPanelNode {
+                currentPanel.interfaceInteraction = interfaceInteraction
+                return currentPanel
+            } else {
+                let panel = ChatUnblockInputPanelNode()
+                panel.account = account
+                panel.interfaceInteraction = interfaceInteraction
+                return panel
+            }
+        }
+        
         if let peer = chatPresentationInterfaceState.peer {
-            if let channel = peer as? TelegramChannel {
+            if let secretChat = peer as? TelegramSecretChat {
+                switch secretChat.embeddedState {
+                    case .handshake:
+                        if let currentPanel = currentPanel as? SecretChatHandshakeStatusInputPanelNode {
+                            return currentPanel
+                        } else {
+                            let panel = SecretChatHandshakeStatusInputPanelNode()
+                            panel.account = account
+                            panel.interfaceInteraction = interfaceInteraction
+                            return panel
+                        }
+                    case .terminated:
+                        if let currentPanel = currentPanel as? DeleteChatInputPanelNode {
+                            return currentPanel
+                        } else {
+                            let panel = DeleteChatInputPanelNode()
+                            panel.account = account
+                            panel.interfaceInteraction = interfaceInteraction
+                            return panel
+                        }
+                    case .active:
+                        break
+                }
+            } else if let channel = peer as? TelegramChannel {
+                switch channel.participationStatus {
+                    case .kicked, .left:
+                        if let currentPanel = currentPanel as? DeleteChatInputPanelNode {
+                            return currentPanel
+                        } else {
+                            let panel = DeleteChatInputPanelNode()
+                            panel.account = account
+                            panel.interfaceInteraction = interfaceInteraction
+                            return panel
+                        }
+                    case .member:
+                        break
+                }
                 switch channel.info {
                     case .broadcast:
                         switch channel.role {
@@ -46,10 +94,24 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                                 break
                         }
                 }
+            } else if let group = peer as? TelegramGroup {
+                switch group.membership {
+                    case .Removed, .Left:
+                        if let currentPanel = currentPanel as? DeleteChatInputPanelNode {
+                            return currentPanel
+                        } else {
+                            let panel = DeleteChatInputPanelNode()
+                            panel.account = account
+                            panel.interfaceInteraction = interfaceInteraction
+                            return panel
+                        }
+                    case .Member:
+                        break
+                }
             }
             
             var displayBotStartPanel = false
-            if let botStartPayload = chatPresentationInterfaceState.botStartPayload {
+            if let _ = chatPresentationInterfaceState.botStartPayload {
                 displayBotStartPanel = true
             } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
                 if let user = chatPresentationInterfaceState.peer as? TelegramUser, user.botInfo != nil {

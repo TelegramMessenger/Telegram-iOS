@@ -98,7 +98,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
             if let fileName = file.fileName {
                 pathExtension = (fileName as NSString).pathExtension
             }
-            let data = account.postbox.mediaBox.resourceData(file.resource, pathExtension: pathExtension, complete: true)
+            let data = account.postbox.mediaBox.resourceData(file.resource, pathExtension: pathExtension, option: .complete(waitUntilFetchStatus: false))
                 |> deliverOnMainQueue
             self.dataDisposable.set(data.start(next: { [weak self] data in
                 if let strongSelf = self {

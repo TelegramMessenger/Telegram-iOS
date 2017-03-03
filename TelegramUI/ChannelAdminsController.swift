@@ -211,7 +211,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                     default:
                         peerText = "Moderator"
                 }
-                return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: nil, editing: editing, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removeAdmin(peerId)
@@ -627,6 +627,8 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     
     adminsPromise.set(adminsSignal)
     
+    var previousPeers: [RenderedChannelParticipant]?
+    
     let signal = combineLatest(statePromise.get(), peerView, adminsPromise.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
         |> map { state, view, admins -> (ItemListControllerState, (ItemListNodeState<ChannelAdminsEntry>, ChannelAdminsEntry.ItemGenerationArguments)) in
@@ -647,8 +649,11 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                 }
             }
             
+            let previous = previousPeers
+            previousPeers = admins
+            
             let controllerState = ItemListControllerState(title: "Admins", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
-            let listState = ItemListNodeState(entries: ChannelAdminsControllerEntries(view: view, state: state, participants: admins), style: .blocks, animateChanges: true)
+            let listState = ItemListNodeState(entries: ChannelAdminsControllerEntries(view: view, state: state, participants: admins), style: .blocks, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

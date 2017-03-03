@@ -828,7 +828,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             if let selectionNode = self.selectionNode {
                 selectionNode.updateSelected(selected, animated: false)
-                selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.bounds.size.width, height: self.bounds.size.height))
+                selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
                 let selectionNode = ChatMessageSelectionNode(toggle: { [weak self] in
@@ -837,7 +837,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     }
                 })
                 
-                selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.bounds.size.width, height: self.bounds.size.height))
+                selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 self.addSubnode(selectionNode)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)

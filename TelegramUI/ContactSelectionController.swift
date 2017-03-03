@@ -29,6 +29,18 @@ public class ContactSelectionController: ViewController {
     private let createActionDisposable = MetaDisposable()
     private let confirmationDisposable = MetaDisposable()
     
+    public var displayNavigationActivity: Bool = false {
+        didSet {
+            if self.displayNavigationActivity != oldValue {
+                if self.displayNavigationActivity {
+                    self.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode()), animated: false)
+                } else {
+                    self.navigationItem.setRightBarButton(nil, animated: false)
+                }
+            }
+        }
+    }
+    
     public init(account: Account, title: String, confirmation: @escaping (PeerId) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.account = account
         self.confirmation = confirmation
@@ -56,7 +68,15 @@ public class ContactSelectionController: ViewController {
     
     @objc func cancelPressed() {
         self._result.set(.single(nil))
-        self.contactsNode.animateOut()
+        
+        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
+            switch presentationArguments.presentationAnimation {
+                case .modalSheet:
+                    self.contactsNode.animateOut()
+                case .none:
+                    break
+            }
+        }
     }
     
     override public func loadDisplayNode() {
@@ -151,9 +171,24 @@ public class ContactSelectionController: ViewController {
             if let strongSelf = self {
                 if value {
                     strongSelf._result.set(.single(peerId))
-                    strongSelf.contactsNode.animateOut()
+                    strongSelf.dismiss()
                 }
             }
         }))
+    }
+    
+    public func dismiss() {
+        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
+            switch presentationArguments.presentationAnimation {
+                case .modalSheet:
+                    self.contactsNode.animateOut()
+                case .none:
+                    break
+            }
+        }
+    }
+    
+    public func dismissSearch() {
+        self.deactivateSearch()
     }
 }

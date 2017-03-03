@@ -212,7 +212,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     
     let avatarNode: AvatarNode
-    let contentNode: ASDisplayNode
     let titleNode: TextNode
     let textNode: TextNode
     let dateNode: TextNode
@@ -246,15 +245,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
-        
-        self.contentNode = ASDisplayNode()
-        self.contentNode.isLayerBacked = true
-        self.contentNode.displaysAsynchronously = true
-        self.contentNode.shouldRasterizeDescendants = true
-        self.contentNode.isOpaque = true
-        self.contentNode.backgroundColor = UIColor.white
-        self.contentNode.contentMode = .left
-        self.contentNode.contentsScale = UIScreenScale
         
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
@@ -296,15 +286,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.avatarNode)
-        self.addSubnode(self.contentNode)
         
-        self.contentNode.addSubnode(self.titleNode)
-        self.contentNode.addSubnode(self.textNode)
-        self.contentNode.addSubnode(self.dateNode)
-        self.contentNode.addSubnode(self.statusNode)
-        self.contentNode.addSubnode(self.badgeBackgroundNode)
-        self.contentNode.addSubnode(self.badgeTextNode)
-        self.contentNode.addSubnode(self.mutedIconNode)
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.dateNode)
+        self.addSubnode(self.statusNode)
+        self.addSubnode(self.badgeBackgroundNode)
+        self.addSubnode(self.badgeTextNode)
+        self.addSubnode(self.mutedIconNode)
     }
     
     func setupItem(item: ChatListItem) {
@@ -339,9 +328,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         super.setHighlighted(highlighted, animated: animated)
         
         if highlighted {
-            self.contentNode.displaysAsynchronously = false
-            self.contentNode.backgroundColor = UIColor.clear
-            self.contentNode.isOpaque = false
+            /*var nodes: [ASDisplayNode] = [self.titleNode, self.textNode, self.dateNode, self.statusNode]
+            for node in nodes {
+                node.backgroundColor = .clear
+                node.recursivelyEnsureDisplaySynchronously(true)
+            }*/
             
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
@@ -354,31 +345,35 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let strongSelf = self {
                             if completed {
                                 strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                                if let item = strongSelf.layoutParams?.0, item.index.pinningIndex != nil {
+                                /*if let item = strongSelf.layoutParams?.0, item.index.pinningIndex != nil {
                                     strongSelf.contentNode.backgroundColor = pinnedBackgroundColor
                                 } else {
                                     strongSelf.contentNode.backgroundColor = UIColor.white
                                 }
                                 
-                                strongSelf.contentNode.isOpaque = true
-                                strongSelf.contentNode.displaysAsynchronously = true
+                                if !strongSelf.contentNode.isOpaque {
+                                    strongSelf.contentNode.isOpaque = true
+                                    strongSelf.contentNode.recursivelyEnsureDisplaySynchronously(true)
+                                }*/
                             }
                         }
                         })
                     self.highlightedBackgroundNode.alpha = 0.0
                 } else {
                     self.highlightedBackgroundNode.removeFromSupernode()
-                    if let item = self.layoutParams?.0, item.index.pinningIndex != nil {
+                    
+                    /*if let item = self.layoutParams?.0, item.index.pinningIndex != nil {
                         self.contentNode.backgroundColor = pinnedBackgroundColor
                     } else {
                         self.contentNode.backgroundColor = UIColor.white
                     }
                     self.contentNode.isOpaque = true
-                    self.contentNode.displaysAsynchronously = true
+                    self.contentNode.displaysAsynchronously = true*/
                 }
             }
         }
     }
+    
     
     func asyncLayout() -> (_ item: ChatListItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
@@ -526,9 +521,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 muteWidth = currentMutedIconImage.size.width + 4.0
             }
             
-            let contentRect = CGRect(origin: CGPoint(x: 2.0, y: 12.0), size: CGSize(width: width - 78.0 - 10.0 - 1.0 - editingOffset, height: 68.0 - 12.0 - 9.0))
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 12.0), size: CGSize(width: width - 78.0 - 10.0 - 1.0 - editingOffset, height: 68.0 - 12.0 - 9.0))
             
-            let (dateLayout, dateApply) = dateLayout(dateAttributedString, nil, 1, .end, CGSize(width: contentRect.width, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (dateLayout, dateApply) = dateLayout(dateAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let (badgeLayout, badgeApply) = badgeTextLayout(badgeAttributedString, nil, 1, .end, CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), nil)
             
@@ -539,9 +534,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 badgeSize = 0.0
             }
             
-            let (textLayout, textApply) = textLayout(textAttributedString, nil, 1, .end, CGSize(width: contentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (textLayout, textApply) = textLayout(textAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), nil)
             
-            let titleRect = CGRect(origin: contentRect.origin, size: CGSize(width: contentRect.width - dateLayout.size.width - 10.0 - statusWidth - muteWidth, height: contentRect.height))
+            let titleRect = CGRect(origin: rawContentRect.origin, size: CGSize(width: rawContentRect.width - dateLayout.size.width - 10.0 - statusWidth - muteWidth, height: rawContentRect.height))
             let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
@@ -593,21 +588,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: editingOffset + 10.0 + revealOffset, y: 4.0), size: CGSize(width: 60.0, height: 60.0)))
-                    let previousContentNodeFrame = strongSelf.contentNode.frame
-                    transition.updateFrame(node: strongSelf.contentNode, frame: CGRect(origin: CGPoint(x: editingOffset + 78.0 + revealOffset, y: 0.0), size: CGSize(width: width - 78.0, height: 60.0)))
                     
                     let _ = dateApply()
                     let _ = textApply()
                     let _ = titleApply()
                     let _ = badgeApply()
                     
-                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: contentRect.size.width - dateLayout.size.width, y: contentRect.origin.y + 2.0), size: dateLayout.size)
+                    let contentRect = rawContentRect.offsetBy(dx: editingOffset + 78.0 + revealOffset, dy: 0.0)
+                    
+                    transition.updateFrame(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width, y: contentRect.origin.y + 2.0), size: dateLayout.size))
                     
                     if let statusImage = statusImage {
                         strongSelf.statusNode.image = statusImage
                         strongSelf.statusNode.isHidden = false
                         let statusSize = statusImage.size
-                        strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: contentRect.size.width - dateLayout.size.width - 2.0 - statusSize.width, y: contentRect.origin.y + 5.0), size: statusSize)
+                        transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width - 2.0 - statusSize.width, y: contentRect.origin.y + 5.0), size: statusSize))
                     } else {
                         strongSelf.statusNode.image = nil
                         strongSelf.statusNode.isHidden = true
@@ -621,38 +616,31 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let badgeBackgroundFrame = CGRect(x: contentRect.maxX - badgeBackgroundWidth, y: contentRect.maxY - currentBadgeBackgroundImage.size.height - 2.0, width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
                         let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 1.0), size: badgeLayout.size)
                         
-                        strongSelf.badgeTextNode.frame = badgeTextFrame
-                        strongSelf.badgeBackgroundNode.frame = badgeBackgroundFrame
+                        transition.updateFrame(node: strongSelf.badgeTextNode, frame: badgeTextFrame)
+                        transition.updateFrame(node: strongSelf.badgeBackgroundNode, frame: badgeBackgroundFrame)
                     } else {
                         strongSelf.badgeBackgroundNode.image = nil
                         strongSelf.badgeBackgroundNode.isHidden = true
                     }
                     
-                    var updateContentNode = false
                     if let currentMutedIconImage = currentMutedIconImage {
                         strongSelf.mutedIconNode.image = currentMutedIconImage
-                        if strongSelf.mutedIconNode.isHidden {
-                            updateContentNode = true
-                        }
                         strongSelf.mutedIconNode.isHidden = false
-                        strongSelf.mutedIconNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x + titleLayout.size.width + 3.0, y: contentRect.origin.y + 6.0), size: currentMutedIconImage.size)
+                        transition.updateFrame(node: strongSelf.mutedIconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleLayout.size.width + 3.0, y: contentRect.origin.y + 6.0), size: currentMutedIconImage.size))
                     } else {
-                        if !strongSelf.mutedIconNode.isHidden {
-                            updateContentNode = true
-                        }
                         strongSelf.mutedIconNode.image = nil
                         strongSelf.mutedIconNode.isHidden = true
                     }
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y), size: titleLayout.size)
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y), size: titleLayout.size))
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.maxY - textLayout.size.height - 1.0), size: textLayout.size)
+                    transition.updateFrame(node: strongSelf.textNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.maxY - textLayout.size.height - 1.0), size: textLayout.size))
                     
                     let separatorInset: CGFloat
                     if !nextIsPinned && item.index.pinningIndex != nil {
                         separatorInset = 0.0
                     } else {
-                        separatorInset = editingOffset + 78.0 + contentRect.origin.x
+                        separatorInset = editingOffset + 78.0 + rawContentRect.origin.x
                     }
                     
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: 68.0 - separatorHeight), size: CGSize(width: width - separatorInset, height: separatorHeight)))
@@ -660,21 +648,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     if item.index.pinningIndex != nil {
                         strongSelf.backgroundNode.backgroundColor = pinnedBackgroundColor
-                        if strongSelf.contentNode.backgroundColor == nil || !strongSelf.contentNode.backgroundColor!.isEqual(pinnedBackgroundColor) {
+                        /*if strongSelf.contentNode.backgroundColor == nil || !strongSelf.contentNode.backgroundColor!.isEqual(pinnedBackgroundColor) {
                             strongSelf.contentNode.backgroundColor = pinnedBackgroundColor
                             updateContentNode = true
-                        }
+                        }*/
                     } else {
                         strongSelf.backgroundNode.backgroundColor = UIColor.white
-                        if strongSelf.contentNode.backgroundColor == nil || !strongSelf.contentNode.backgroundColor!.isEqual(UIColor.white) {
+                        /*if strongSelf.contentNode.backgroundColor == nil || !strongSelf.contentNode.backgroundColor!.isEqual(UIColor.white) {
                             strongSelf.contentNode.backgroundColor = UIColor.white
                             updateContentNode = true
-                        }
+                        }*/
                     }
                     let topNegativeInset: CGFloat = 0.0
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
-                    if crossfadeContent && animated {
+                    /*if crossfadeContent && animated {
                         if let contents = strongSelf.contentNode.contents {
                             let tempNode = ASDisplayNode()
                             tempNode.isLayerBacked = true
@@ -689,7 +677,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     if updateContentNode {
                         strongSelf.contentNode.setNeedsDisplay()
-                    }
+                    }*/
                     
                     strongSelf.setRevealOptions(peerRevealOptions)
                     strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: animated)
@@ -728,13 +716,36 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 12.0), size: CGSize(width: self.contentSize.width - 78.0 - 10.0 - 1.0 - editingOffset, height: 68.0 - 12.0 - 9.0))
+            
+            let contentRect = rawContentRect.offsetBy(dx: editingOffset + 78.0 + offset, dy: 0.0)
+            
             var avatarFrame = self.avatarNode.frame
             avatarFrame.origin.x = editingOffset + 10.0 + offset
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
             
-            var contentFrame = self.contentNode.frame
-            contentFrame.origin.x = editingOffset + 78.0 + offset
-            transition.updateFrame(node: self.contentNode, frame: contentFrame)
+            let titleFrame = self.titleNode.frame
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: titleFrame.origin.y), size: titleFrame.size))
+            
+            let textFrame = self.textNode.frame
+            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: textFrame.origin.y), size: textFrame.size))
+            
+            let dateFrame = self.dateNode.frame
+            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width, y: contentRect.origin.y + 2.0), size: dateFrame.size))
+            
+            let statusFrame = self.statusNode.frame
+            transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width - 2.0 - statusFrame.size.width, y: contentRect.origin.y + 5.0), size: statusFrame.size))
+            
+            let mutedIconFrame = self.mutedIconNode.frame
+            transition.updateFrame(node: self.mutedIconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleFrame.size.width + 3.0, y: contentRect.origin.y + 6.0), size: mutedIconFrame.size))
+            
+            
+            let badgeBackgroundFrame = self.badgeBackgroundNode.frame
+            let updatedBadgeBackgroundFrame = CGRect(origin: CGPoint(x: contentRect.maxX - badgeBackgroundFrame.size.width, y: contentRect.maxY - badgeBackgroundFrame.size.height - 2.0), size: badgeBackgroundFrame.size)
+            transition.updateFrame(node: self.badgeBackgroundNode, frame: updatedBadgeBackgroundFrame)
+            
+            let badgeTextFrame = self.badgeTextNode.frame
+            transition.updateFrame(node: self.badgeTextNode, frame: CGRect(origin: CGPoint(x: updatedBadgeBackgroundFrame.midX - badgeTextFrame.size.width / 2.0, y: badgeBackgroundFrame.minY + 1.0), size: badgeTextFrame.size))
         }
     }
     

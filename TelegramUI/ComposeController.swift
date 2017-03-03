@@ -84,7 +84,32 @@ public class ComposeController: ViewController {
         self.contactsNode.openCreateNewSecretChat = { [weak self] in
             if let strongSelf = self {
                 let controller = ContactSelectionController(account: strongSelf.account, title: "New Secret Chat")
+                strongSelf.createActionDisposable.set((controller.result
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak controller] peerId in
+                    if let strongSelf = self, let peerId = peerId {
+                        controller?.dismissSearch()
+                        controller?.displayNavigationActivity = true
+                        strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.account, peerId: peerId) |> deliverOnMainQueue).start(next: { peerId in
+                            if let strongSelf = self, let controller = controller {
+                                controller.displayNavigationActivity = false
+                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: strongSelf.account, peerId: peerId), animated: true)
+                            }
+                        }, error: { _ in
+                            if let controller = controller {
+                                controller.displayNavigationActivity = false
+                                controller.present(standardTextAlertController(title: nil, text: "An error occurred.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window)
+                            }
+                        }))
+                    }
+                }))
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+            }
+        }
+        
+        self.contactsNode.openCreateNewChannel = { [weak self] in
+            if let strongSelf = self {
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(createChannelController(account: strongSelf.account))
             }
         }
         

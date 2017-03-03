@@ -114,23 +114,32 @@ enum ChatInputMode {
 }
 
 enum ChatTitlePanelContext: Comparable {
+    case pinnedMessage
     case chatInfo
     case requestInProgress
     case toastAlert(String)
     
     private var index: Int {
         switch self {
-            case .chatInfo:
+            case .pinnedMessage:
                 return 0
-            case .requestInProgress:
+            case .chatInfo:
                 return 1
-            case .toastAlert:
+            case .requestInProgress:
                 return 2
+            case .toastAlert:
+                return 3
         }
     }
     
     static func ==(lhs: ChatTitlePanelContext, rhs: ChatTitlePanelContext) -> Bool {
         switch lhs {
+            case .pinnedMessage:
+                if case .pinnedMessage = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case .chatInfo:
                 if case .chatInfo = rhs {
                     return true
@@ -165,8 +174,12 @@ struct ChatPresentationInterfaceState: Equatable {
     let inputMode: ChatInputMode
     let titlePanelContexts: [ChatTitlePanelContext]
     let keyboardButtonsMessage: Message?
+    let pinnedMessageId: MessageId?
+    let peerIsBlocked: Bool
+    let canReportPeer: Bool
     let chatHistoryState: ChatHistoryNodeHistoryState?
     let botStartPayload: String?
+    let urlPreview: TelegramMediaWebpage?
     
     init() {
         self.interfaceState = ChatInterfaceState()
@@ -176,11 +189,15 @@ struct ChatPresentationInterfaceState: Equatable {
         self.inputMode = .none
         self.titlePanelContexts = []
         self.keyboardButtonsMessage = nil
+        self.pinnedMessageId = nil
+        self.peerIsBlocked = false
+        self.canReportPeer = false
         self.chatHistoryState = nil
         self.botStartPayload = nil
+        self.urlPreview = nil
     }
     
-    init(interfaceState: ChatInterfaceState, peer: Peer?, inputTextPanelState: ChatTextInputPanelState, inputQueryResult: ChatPresentationInputQueryResult?, inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?) {
+    init(interfaceState: ChatInterfaceState, peer: Peer?, inputTextPanelState: ChatTextInputPanelState, inputQueryResult: ChatPresentationInputQueryResult?, inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, peerIsBlocked: Bool, canReportPeer: Bool, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: TelegramMediaWebpage?) {
         self.interfaceState = interfaceState
         self.peer = peer
         self.inputTextPanelState = inputTextPanelState
@@ -188,8 +205,12 @@ struct ChatPresentationInterfaceState: Equatable {
         self.inputMode = inputMode
         self.titlePanelContexts = titlePanelContexts
         self.keyboardButtonsMessage = keyboardButtonsMessage
+        self.pinnedMessageId = pinnedMessageId
+        self.peerIsBlocked = peerIsBlocked
+        self.canReportPeer = canReportPeer
         self.chatHistoryState = chatHistoryState
         self.botStartPayload = botStartPayload
+        self.urlPreview = urlPreview
     }
     
     static func ==(lhs: ChatPresentationInterfaceState, rhs: ChatPresentationInterfaceState) -> Bool {
@@ -231,6 +252,18 @@ struct ChatPresentationInterfaceState: Equatable {
             return false
         }
         
+        if lhs.pinnedMessageId != rhs.pinnedMessageId {
+            return false
+        }
+        
+        if lhs.canReportPeer != rhs.canReportPeer {
+            return false
+        }
+        
+        if lhs.peerIsBlocked != rhs.peerIsBlocked {
+            return false
+        }
+        
         if lhs.chatHistoryState != rhs.chatHistoryState {
             return false
         }
@@ -239,42 +272,66 @@ struct ChatPresentationInterfaceState: Equatable {
             return false
         }
         
+        if let lhsUrlPreview = lhs.urlPreview, let rhsUrlPreview = rhs.urlPreview {
+            if !lhsUrlPreview.isEqual(rhsUrlPreview) {
+                return false
+            }
+        } else if (lhs.urlPreview != nil) != (rhs.urlPreview != nil) {
+            return false
+        }
+        
         return true
     }
     
     func updatedInterfaceState(_ f: (ChatInterfaceState) -> ChatInterfaceState) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: f(self.interfaceState), peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: f(self.interfaceState), peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
     }
     
     func updatedPeer(_ f: (Peer?) -> Peer?) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: f(self.peer), inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: f(self.peer), inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
     }
     
     func updatedInputQueryResult(_ f: (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: f(self.inputQueryResult), inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: f(self.inputQueryResult), inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
     }
     
     func updatedInputTextPanelState(_ f: (ChatTextInputPanelState) -> ChatTextInputPanelState) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: f(self.inputTextPanelState), inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: f(self.inputTextPanelState), inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
     }
     
     func updatedInputMode(_ f: (ChatInputMode) -> ChatInputMode) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: f(self.inputMode), titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: f(self.inputMode), titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
     }
     
     func updatedTitlePanelContext(_ f: ([ChatTitlePanelContext]) -> [ChatTitlePanelContext]) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: f(self.titlePanelContexts), keyboardButtonsMessage: self.keyboardButtonsMessage, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: f(self.titlePanelContexts), keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
     }
     
     func updatedKeyboardButtonsMessage(_ message: Message?) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: message, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: message, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
+    }
+    
+    func updatedPinnedMessageId(_ pinnedMessageId: MessageId?) -> ChatPresentationInterfaceState {
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
+    }
+    
+    func updatedPeerIsBlocked(_ peerIsBlocked: Bool) -> ChatPresentationInterfaceState {
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
+    }
+    
+    func updatedCanReportPeer(_ canReportPeer: Bool) -> ChatPresentationInterfaceState {
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
     }
     
     func updatedBotStartPayload(_ botStartPayload: String?) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, chatHistoryState: self.chatHistoryState, botStartPayload: botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: botStartPayload, urlPreview: self.urlPreview)
     }
     
     func updatedChatHistoryState(_ chatHistoryState: ChatHistoryNodeHistoryState?) -> ChatPresentationInterfaceState {
-        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, chatHistoryState: chatHistoryState, botStartPayload: self.botStartPayload)
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview)
+    }
+    
+    func updatedUrlPreview(_ urlPreview: TelegramMediaWebpage?) -> ChatPresentationInterfaceState {
+        return ChatPresentationInterfaceState(interfaceState: self.interfaceState, peer: self.peer, inputTextPanelState: self.inputTextPanelState, inputQueryResult: self.inputQueryResult, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, peerIsBlocked: self.peerIsBlocked, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: urlPreview)
     }
 }

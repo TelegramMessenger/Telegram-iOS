@@ -96,7 +96,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
     func item(_ arguments: ChannelBlacklistControllerArguments) -> ListViewItem {
         switch self {
             case let .peerItem(_, participant, editing, enabled):
-                return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: nil, editing: editing, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -260,6 +260,8 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     
     peersPromise.set(peersSignal)
     
+    var previousPeers: [RenderedChannelParticipant]?
+    
     let signal = combineLatest(statePromise.get(), peerView, peersPromise.get())
         |> deliverOnMainQueue
         |> map { state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelBlacklistEntry>, ChannelBlacklistEntry.ItemGenerationArguments)) in
@@ -283,14 +285,23 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if let peers = peers {
                 if peers.isEmpty {
-                    emptyStateItem = ItemListTextEmptyStateItem(text: "Blacklisted users are removed from the group and can only come back if invited by an admin. Invite links don't work for them.")
+                    if let peer = view.peers[view.peerId] as? TelegramChannel {
+                        if case .group = peer.info {
+                            emptyStateItem = ItemListTextEmptyStateItem(text: "Blacklisted users are removed from the group and can only come back if invited by an admin. Invite links don't work for them.")
+                        } else {
+                            emptyStateItem = ItemListTextEmptyStateItem(text: "Blacklisted users are removed from the channel and can only come back if invited by an admin. Invite links don't work for them.")
+                        }
+                    }
                 }
             } else if peers == nil {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
             }
             
+            let previous = previousPeers
+            previousPeers = peers
+            
             let controllerState = ItemListControllerState(title: "Blacklist", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
-            let listState = ItemListNodeState(entries: channelBlacklistControllerEntries(view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: true)
+            let listState = ItemListNodeState(entries: channelBlacklistControllerEntries(view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

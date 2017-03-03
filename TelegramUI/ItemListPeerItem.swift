@@ -25,7 +25,7 @@ struct ItemListPeerItemEditing: Equatable {
 }
 
 enum ItemListPeerItemText {
-    case activity
+    case presence
     case text(String)
     case none
 }
@@ -37,19 +37,21 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let text: ItemListPeerItemText
     let label: String?
     let editing: ItemListPeerItemEditing
+    let switchValue: Bool?
     let enabled: Bool
     let sectionId: ItemListSectionId
     let action: (() -> Void)?
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removePeer: (PeerId) -> Void
     
-    init(account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: String?, editing: ItemListPeerItemEditing, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void) {
+    init(account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: String?, editing: ItemListPeerItemEditing, switchValue: Bool?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void) {
         self.account = account
         self.peer = peer
         self.presence = presence
         self.text = text
         self.label = label
         self.editing = editing
+        self.switchValue = switchValue
         self.enabled = enabled
         self.sectionId = sectionId
         self.action = action
@@ -118,6 +120,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     private let titleNode: TextNode
     private let labelNode: TextNode
     private let statusNode: TextNode
+    private var switchNode: SwitchNode?
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (ItemListPeerItem, CGFloat, ItemListNeighbors)?
@@ -193,6 +196,8 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
+        var currentSwitchNode = self.switchNode
+        
         return { item, width, neighbors in
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
@@ -203,6 +208,14 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                 peerRevealOptions = [ItemListRevealOption(key: 0, title: "Remove", icon: nil, color: UIColor(0xff3824))]
             } else {
                 peerRevealOptions = []
+            }
+            
+            if let switchValue = item.switchValue {
+                if currentSwitchNode == nil {
+                    currentSwitchNode = SwitchNode()
+                }
+            } else {
+                currentSwitchNode = nil
             }
             
             if let user = item.peer as? TelegramUser {
@@ -226,7 +239,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             }
             
             switch item.text {
-                case .activity:
+                case .presence:
                     if let presence = item.presence as? TelegramUserPresence {
                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                         let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))

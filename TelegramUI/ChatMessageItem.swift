@@ -192,8 +192,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             Queue.mainQueue().async {
                 node.setupItem(self)
                 
-                node.updateSelectionState(animated: false)
-                
                 let nodeLayout = node.asyncLayout()
                 
                 async {
@@ -203,6 +201,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
+                            node.updateSelectionState(animated: false)
                         })
                     }
                 }

@@ -104,15 +104,19 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                     
                 })
             case let .member(_, peer, presence):
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .activity, label: nil, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _ in }, removePeer: { _ in })
+                return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: nil, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _ in }, removePeer: { _ in })
         }
     }
 }
 
 private struct CreateGroupState: Equatable {
+    let creating: Bool
     let editingName: ItemListAvatarAndNameInfoItemName
     
     static func ==(lhs: CreateGroupState, rhs: CreateGroupState) -> Bool {
+        if lhs.creating != rhs.creating {
+            return false
+        }
         if lhs.editingName != rhs.editingName {
             return false
         }
@@ -166,7 +170,7 @@ private func createGroupEntries(state: CreateGroupState, peerIds: [PeerId], view
 }
 
 public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewController {
-    let initialState = CreateGroupState(editingName: .title(title: ""))
+    let initialState = CreateGroupState(creating: false, editingName: .title(title: ""))
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((CreateGroupState) -> CreateGroupState) -> Void = { f in
@@ -178,16 +182,25 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
     let actionsDisposable = DisposableSet()
     
     let arguments = CreateGroupArguments(account: account, updateEditingName: { editingName in
-        updateState { _ in
-            return CreateGroupState(editingName: editingName)
+        updateState { current in
+            return CreateGroupState(creating: current.creating, editingName: editingName)
         }
     }, done: {
-        let title = stateValue.with { state -> String in
-            return state.editingName.composedTitle
+        let (creating, title) = stateValue.with { state -> (Bool, String) in
+            return (state.creating, state.editingName.composedTitle)
         }
         
-        if !title.isEmpty {
-            actionsDisposable.add((createGroup(account: account, title: title, peerIds: peerIds) |> deliverOnMainQueue).start(next: { peerId in
+        if !creating && !title.isEmpty {
+            updateState { current in
+                return CreateGroupState(creating: true, editingName: current.editingName)
+            }
+            actionsDisposable.add((createGroup(account: account, title: title, peerIds: peerIds) |> deliverOnMainQueue |> afterDisposed {
+                Queue.mainQueue().async {
+                    updateState { current in
+                        return CreateGroupState(creating: false, editingName: current.editingName)
+                    }
+                }
+            }).start(next: { peerId in
                 if let peerId = peerId {
                     let controller = ChatController(account: account, peerId: peerId)
                     replaceControllerImpl?(controller)
@@ -199,9 +212,14 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
     let signal = combineLatest(statePromise.get(), account.postbox.multiplePeersView(peerIds))
         |> map { state, view -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
             
-            let rightNavigationButton = ItemListNavigationButton(title: "Create", style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
-                arguments.done()
-            })
+            let rightNavigationButton: ItemListNavigationButton
+            if state.creating {
+                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+            } else {
+                rightNavigationButton = ItemListNavigationButton(title: "Create", style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+                    arguments.done()
+                })
+            }
             
             let controllerState = ItemListControllerState(title: "Create Group", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: createGroupEntries(state: state, peerIds: peerIds, view: view), style: .blocks)
@@ -212,6 +230,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
         }
     
     let controller = ItemListController(signal)
+    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
     }

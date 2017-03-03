@@ -36,7 +36,7 @@ enum ItemListAvatarAndNameInfoItemName: Equatable {
     var isEmpty: Bool {
         switch self {
             case let .personName(firstName, lastName):
-                return !firstName.isEmpty || !lastName.isEmpty
+                return firstName.isEmpty
             case let .title(title):
                 return title.isEmpty
         }
@@ -363,6 +363,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                                     let inputFirstField = TextFieldNodeView()
                                     inputFirstField.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
                                     //inputFirstField.backgroundColor = UIColor.lightGray
+                                    inputFirstField.autocorrectionType = .no
                                     inputFirstField.attributedPlaceholder = NSAttributedString(string: "First Name", font: Font.regular(17.0), textColor: UIColor(0xc8c8ce))
                                     inputFirstField.attributedText = NSAttributedString(string: firstName, font: Font.regular(17.0), textColor: UIColor.black)
                                     strongSelf.inputFirstField = inputFirstField
@@ -375,6 +376,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                                 if strongSelf.inputSecondField == nil {
                                     let inputSecondField = TextFieldNodeView()
                                     inputSecondField.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
+                                    inputSecondField.autocorrectionType = .no
                                     inputSecondField.attributedPlaceholder = NSAttributedString(string: "Last Name", font: Font.regular(17.0), textColor: UIColor(0xc8c8ce))
                                     inputSecondField.attributedText = NSAttributedString(string: lastName, font: Font.regular(17.0), textColor: UIColor.black)
                                     strongSelf.inputSecondField = inputSecondField
@@ -406,6 +408,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                                     let inputFirstField = TextFieldNodeView()
                                     inputFirstField.typingAttributes = [NSFontAttributeName: Font.regular(19.0)]
                                     //inputFirstField.backgroundColor = UIColor.lightGray
+                                    inputFirstField.autocorrectionType = .no
                                     inputFirstField.attributedPlaceholder = NSAttributedString(string: "Title", font: Font.regular(19.0), textColor: UIColor(0xc8c8ce))
                                     inputFirstField.attributedText = NSAttributedString(string: title, font: Font.regular(19.0), textColor: UIColor.black)
                                     strongSelf.inputFirstField = inputFirstField

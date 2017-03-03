@@ -202,6 +202,7 @@ public class PeerMediaCollectionController: ViewController {
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
         }, editMessage: { _, _ in
         }, beginMessageSearch: {
+        }, navigateToMessage: { _ in 
         }, openPeerInfo: {
         }, togglePeerNotifications: {
         }, sendContextResult: { _ in
@@ -212,6 +213,12 @@ public class PeerMediaCollectionController: ViewController {
         }, finishAudioRecording: { _ in 
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _ in
+        }, unblockPeer: {
+        }, pinMessage: { _ in
+        }, unpinMessage: {
+        }, reportPeer: {
+        }, dismissReportPeer: {
+        }, deleteChat: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

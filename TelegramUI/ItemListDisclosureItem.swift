@@ -111,7 +111,6 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
         return { item, width, neighbors in
-            let sectionInset: CGFloat = 22.0
             let rightInset: CGFloat = 34.0
             
             let contentSize: CGSize

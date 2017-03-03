@@ -204,7 +204,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     return ItemListActivityTextItem(displayActivity: false, text: NSAttributedString(string: "Sorry, you have reserved too many public usernames. You can revoke the link from one of your older groups or channels, or create a private entity instead.", textColor: UIColor(0xcf3030)), sectionId: self.section)
                 }
             case let .privateLink(link):
-                return ItemListActionItem(title: link ?? "Loading", kind: .neutral, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(title: link ?? "Loading...", kind: link != nil ? .neutral : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     if let link = link {
                         arguments.displayPrivateLinkMenu(link)
                     }
@@ -257,7 +257,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 if let addressName = peer.addressName {
                     label = "t.me/" + addressName
                 }
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .text(label), label: nil, editing: editing, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .text(label), label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)
@@ -432,7 +432,11 @@ private func channelVisibilityControllerEntries(view: PeerView, publicChannelsTo
                 }
             case .privateChannel:
                 entries.append(.privateLink((view.cachedData as? CachedChannelData)?.exportedInvitation?.link))
-                entries.append(.publicLinkInfo("People can join your group by following this link. You can revoke the link at any time."))
+                if isGroup {
+                    entries.append(.publicLinkInfo("People can join your group by following this link. You can revoke the link at any time."))
+                } else {
+                    entries.append(.publicLinkInfo("People can join your channel by following this link. You can revoke the link at any time."))
+                }
         }
     }
     
@@ -485,7 +489,12 @@ private func updatedAddressName(state: ChannelVisibilityControllerState, peer: T
     }
 }
 
-public func channelVisibilityController(account: Account, peerId: PeerId) -> ViewController {
+public enum ChannelVisibilityControllerMode {
+    case initialSetup
+    case generic
+}
+
+public func channelVisibilityController(account: Account, peerId: PeerId, mode: ChannelVisibilityControllerMode) -> ViewController {
     let statePromise = ValuePromise(ChannelVisibilityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelVisibilityControllerState())
     let updateState: ((ChannelVisibilityControllerState) -> ChannelVisibilityControllerState) -> Void = { f in
@@ -503,6 +512,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId) -> Vie
     }))
     
     var dismissImpl: (() -> Void)?
+    var nextImpl: (() -> Void)?
     var displayPrivateLinkMenuImpl: ((String) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -515,6 +525,8 @@ public func channelVisibilityController(account: Account, peerId: PeerId) -> Vie
     
     let revokeAddressNameDisposable = MetaDisposable()
     actionsDisposable.add(revokeAddressNameDisposable)
+    
+    actionsDisposable.add(ensuredExistingPeerExportedInvitation(account: account, peerId: peerId).start())
     
     let arguments = ChannelVisibilityControllerArguments(account: account, updateCurrentType: { type in
         updateState { state in
@@ -571,8 +583,9 @@ public func channelVisibilityController(account: Account, peerId: PeerId) -> Vie
     })
     
     let peerView = account.viewTracker.peerView(peerId)
+        |> deliverOnMainQueue
     
-    let signal = combineLatest(statePromise.get(), peerView, peersDisablingAddressNameAssignment.get())
+    let signal = combineLatest(statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
         |> map { state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState<ChannelVisibilityEntry>, ChannelVisibilityEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             
@@ -595,7 +608,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId) -> Vie
                     }
                 }
                 
-                rightNavigationButton = ItemListNavigationButton(title: "Done", style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
+                rightNavigationButton = ItemListNavigationButton(title: mode == .initialSetup ? "Next" : "Done", style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
                     var updatedAddressNameValue: String?
                     updateState { state in
                         updatedAddressNameValue = updatedAddressName(state: state, peer: peer)
@@ -618,10 +631,20 @@ public func channelVisibilityController(account: Account, peerId: PeerId) -> Vie
                                 return state.withUpdatedUpdatingAddressName(false)
                             }
                             
-                            dismissImpl?()
+                            switch mode {
+                                case .initialSetup:
+                                    nextImpl?()
+                                case .generic:
+                                    dismissImpl?()
+                            }
                         }))
                     } else {
-                        dismissImpl?()
+                        switch mode {
+                            case .initialSetup:
+                                nextImpl?()
+                            case .generic:
+                                dismissImpl?()
+                        }
                     }
                 })
             }
@@ -633,9 +656,15 @@ public func channelVisibilityController(account: Account, peerId: PeerId) -> Vie
                 }
             }
             
-            let leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
-                dismissImpl?()
-            })
+            let leftNavigationButton: ItemListNavigationButton?
+            switch mode {
+                case .initialSetup:
+                    leftNavigationButton = nil
+                case .generic:
+                    leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
+                        dismissImpl?()
+                    })
+            }
             
             let controllerState = ItemListControllerState(title: isGroup ? "Group Type" : "Channel Link", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: channelVisibilityControllerEntries(view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state), style: .blocks, animateChanges: false)
@@ -646,8 +675,14 @@ public func channelVisibilityController(account: Account, peerId: PeerId) -> Vie
         }
     
     let controller = ItemListController(signal)
+    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
     dismissImpl = { [weak controller] in
         controller?.dismiss()
+    }
+    nextImpl = { [weak controller] in
+        if let controller = controller {
+            (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: account, peerId: peerId), animated: true)
+        }
     }
     displayPrivateLinkMenuImpl = { [weak controller] text in
         if let strongController = controller {

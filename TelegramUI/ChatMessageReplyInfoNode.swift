@@ -22,7 +22,6 @@ class ChatMessageReplyInfoNode: ASTransformLayerNode {
         self.contentNode = ASDisplayNode()
         self.contentNode.displaysAsynchronously = true
         self.contentNode.isLayerBacked = true
-        self.contentNode.shouldRasterizeDescendants = true
         self.contentNode.contentMode = .left
         self.contentNode.contentsScale = UIScreenScale
         

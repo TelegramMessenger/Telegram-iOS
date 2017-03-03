@@ -1,9 +1,43 @@
 import Foundation
 import TelegramCore
 
-func titlePanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
+func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
+    var selectedContext: ChatTitlePanelContext?
     if !chatPresentationInterfaceState.titlePanelContexts.isEmpty {
-        switch chatPresentationInterfaceState.titlePanelContexts[chatPresentationInterfaceState.titlePanelContexts.count - 1] {
+        loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {
+            switch context {
+                case .pinnedMessage:
+                    if chatPresentationInterfaceState.pinnedMessageId != chatPresentationInterfaceState.interfaceState.messageActionsState.closedPinnedMessageId {
+                        selectedContext = context
+                        break loop
+                    }
+                case .chatInfo, .requestInProgress, .toastAlert:
+                    selectedContext = context
+                    break loop
+            }
+        }
+    }
+    
+    if chatPresentationInterfaceState.canReportPeer && (selectedContext == nil || selectedContext! <= .pinnedMessage) {
+        if let currentPanel = currentPanel as? ChatReportPeerTitlePanelNode {
+            return currentPanel
+        } else {
+            let panel = ChatReportPeerTitlePanelNode()
+            panel.interfaceInteraction = interfaceInteraction
+            return panel
+        }
+    }
+    
+    if let selectedContext = selectedContext {
+        switch selectedContext {
+            case .pinnedMessage:
+                if let currentPanel = currentPanel as? ChatPinnedMessageTitlePanelNode {
+                    return currentPanel
+                } else {
+                    let panel = ChatPinnedMessageTitlePanelNode(account: account)
+                    panel.interfaceInteraction = interfaceInteraction
+                    return panel
+                }
             case .chatInfo:
                 if let currentPanel = currentPanel as? ChatInfoTitlePanelNode {
                     return currentPanel
@@ -32,5 +66,6 @@ func titlePanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
         }
     }
+    
     return nil
 }

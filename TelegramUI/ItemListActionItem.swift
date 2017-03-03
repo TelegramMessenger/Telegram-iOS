@@ -7,6 +7,7 @@ enum ItemListActionKind {
     case generic
     case destructive
     case neutral
+    case disabled
 }
 
 enum ItemListActionAlignment {
@@ -127,6 +128,8 @@ class ItemListActionItemNode: ListViewItemNode {
                     textColor = UIColor(0x007ee5)
                 case .neutral:
                     textColor = .black
+                case .disabled:
+                    textColor = UIColor(0x8e8e93)
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: textColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)

@@ -219,7 +219,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case let .username(address):
                 return ItemListDisclosureItem(title: "Username", label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.presentController(usernameSetupController(account: arguments.account))
                 })
             case .askAQuestion:
                 return ItemListDisclosureItem(title: "Ask a Question", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -399,7 +399,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value in
-        controller?.present(value, in: .window)
+        controller?.present(value, in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     return controller
 }

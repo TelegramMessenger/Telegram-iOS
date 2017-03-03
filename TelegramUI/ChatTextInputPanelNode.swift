@@ -219,6 +219,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var sendMessage: () -> Void = { }
     var updateHeight: () -> Void = { }
     
+    var updateActivity: () -> Void = { }
+    
     private var updatingInputState = false
     
     private var currentPlaceholder: String?
@@ -803,8 +805,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         })
     }
     
+    @objc func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        self.updateActivity()
+        return true
+    }
+    
     @objc func sendButtonPressed() {
-        let text = self.textInputNode?.attributedText?.string ?? ""
         self.sendMessage()
     }
     

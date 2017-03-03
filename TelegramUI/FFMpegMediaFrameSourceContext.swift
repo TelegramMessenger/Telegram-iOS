@@ -67,7 +67,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         })
         semaphore.wait()
     } else {
-        let data = postbox.mediaBox.resourceData(resource, pathExtension: nil, complete: true)
+        let data = postbox.mediaBox.resourceData(resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
         let range = context.readingOffset ..< (context.readingOffset + readCount)
         let semaphore = DispatchSemaphore(value: 0)
         let _ = data.start(next: { next in

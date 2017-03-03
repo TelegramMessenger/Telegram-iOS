@@ -12,12 +12,23 @@ func contextMenuForChatPresentationIntefaceState(_ chatPresentationInterfaceStat
     var actions: [ContextMenuAction] = []
     
     var canReply = false
-    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-        switch channel.role {
-            case .creator, .editor, .moderator:
-                canReply = true
-            case .member:
-                canReply = false
+    var canPin = false
+    if let channel = peer as? TelegramChannel {
+        switch channel.info {
+            case .broadcast:
+                switch channel.role {
+                    case .creator, .editor, .moderator:
+                        canReply = true
+                    case .member:
+                        canReply = false
+                }
+            case .group:
+                switch channel.role {
+                    case .creator, .editor, .moderator:
+                        canPin = true
+                    case .member:
+                        canPin = false
+                }
         }
     } else {
         canReply = true
@@ -58,6 +69,18 @@ func contextMenuForChatPresentationIntefaceState(_ chatPresentationInterfaceStat
             UIPasteboard.general.string = message.text
         }
     }))
+    
+    if canPin {
+        if chatPresentationInterfaceState.pinnedMessageId != message.id {
+            actions.append(ContextMenuAction(content: .text("Pin"), action: {
+                interfaceInteraction.pinMessage(message.id)
+            }))
+        } else {
+            actions.append(ContextMenuAction(content: .text("Unpin"), action: {
+                interfaceInteraction.unpinMessage()
+            }))
+        }
+    }
     
     actions.append(ContextMenuAction(content: .text("More..."), action: {
         interfaceInteraction.beginMessageSelection(message.id)

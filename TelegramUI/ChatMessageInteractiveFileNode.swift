@@ -79,17 +79,23 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         if let resourceStatus = self.resourceStatus {
             switch resourceStatus {
                 case let .fetchStatus(fetchStatus):
-                    switch fetchStatus {
-                        case .Fetching:
-                            if let cancel = self.fetchControls.with({ return $0?.cancel }) {
-                                cancel()
-                            }
-                        case .Remote:
-                            if let fetch = self.fetchControls.with({ return $0?.fetch }) {
-                                fetch()
-                            }
-                        case .Local:
-                            self.activateLocalContent()
+                    if let account = self.account, let message = self.message, message.flags.isSending {
+                        let _ = account.postbox.modify({ modifier -> Void in
+                            modifier.deleteMessages([message.id])
+                        }).start()
+                    } else {
+                        switch fetchStatus {
+                            case .Fetching:
+                                if let cancel = self.fetchControls.with({ return $0?.cancel }) {
+                                    cancel()
+                                }
+                            case .Remote:
+                                if let fetch = self.fetchControls.with({ return $0?.fetch }) {
+                                    fetch()
+                                }
+                            case .Local:
+                                self.activateLocalContent()
+                        }
                     }
                 case .playbackStatus:
                     if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext {

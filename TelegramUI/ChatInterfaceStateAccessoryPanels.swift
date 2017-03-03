@@ -34,6 +34,15 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
+    } else if let urlPreview = chatPresentationInterfaceState.urlPreview {
+        if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode, previewPanelNode.webpage.id == urlPreview.id {
+            previewPanelNode.interfaceInteraction = interfaceInteraction
+            return previewPanelNode
+        } else {
+            let panelNode = WebpagePreviewAccessoryPanelNode(account: account, webpage: urlPreview)
+            panelNode.interfaceInteraction = interfaceInteraction
+            return panelNode
+        }
     } else {
         return nil
     }

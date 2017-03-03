@@ -7,13 +7,15 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let text: String
     let placeholder: String
     let sectionId: ItemListSectionId
+    let style: ItemListStyle
     let action: () -> Void
     let textUpdated: (String) -> Void
     
-    init(text: String, placeholder: String, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+    init(text: String, placeholder: String, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
         self.text = text
         self.placeholder = placeholder
         self.sectionId = sectionId
+        self.style = style
         self.textUpdated = textUpdated
         self.action = action
     }
@@ -101,7 +103,13 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         let makeTextLayout = TextNode.asyncLayout(self.measureTextNode)
         
         return { item, width, neighbors in
-            let leftInset: CGFloat = 16.0
+            let leftInset: CGFloat
+            switch item.style {
+                case .blocks:
+                    leftInset = 16.0
+                case .plain:
+                    leftInset = 35.0
+            }
             
             var measureText = item.text
             if measureText.hasSuffix("\n") || measureText.isEmpty {
@@ -190,14 +198,24 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         let insets = self.insets
         let width = self.bounds.size.width
         let contentSize = CGSize(width: width, height: currentValue - insets.top - insets.bottom)
-        let leftInset: CGFloat = 16.0
-        let textTopInset: CGFloat = 11.0
-        let textBottomInset: CGFloat = 11.0
         
-        self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-        self.bottomStripeNode.frame = CGRect(origin: CGPoint(x: self.bottomStripeNode.frame.minX, y: contentSize.height), size: CGSize(width: self.bottomStripeNode.frame.size.width, height: separatorHeight))
-        
-        self.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: max(0.0, width - leftInset), height: max(0.0, contentSize.height - textTopInset - textBottomInset)))
+        if let item = self.item {
+            let leftInset: CGFloat
+            switch item.style {
+                case .blocks:
+                    leftInset = 16.0
+                case .plain:
+                    leftInset = 35.0
+            }
+            
+            let textTopInset: CGFloat = 11.0
+            let textBottomInset: CGFloat = 11.0
+            
+            self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+            self.bottomStripeNode.frame = CGRect(origin: CGPoint(x: self.bottomStripeNode.frame.minX, y: contentSize.height), size: CGSize(width: self.bottomStripeNode.frame.size.width, height: separatorHeight))
+            
+            self.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: max(0.0, width - leftInset), height: max(0.0, contentSize.height - textTopInset - textBottomInset)))
+        }
     }
     
     func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {

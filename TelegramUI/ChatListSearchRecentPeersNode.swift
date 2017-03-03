@@ -23,7 +23,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         self.addSubnode(self.sectionHeaderNode)
         self.addSubnode(self.listView)
         
-        self.disposable.set((recentPeers(account: account) |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peers in
+        self.disposable.set((recentPeers(account: account) |> filter { !$0.isEmpty } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peers in
             if let strongSelf = self {
                 var items: [ListViewItem] = []
                 for peer in peers {
