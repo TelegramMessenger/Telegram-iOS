@@ -24,15 +24,15 @@ public enum EnqueueMessage {
 private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {
     return attributes.filter { attribute in
         switch attribute {
-            case let _ as TextEntitiesMessageAttribute:
+            case _ as TextEntitiesMessageAttribute:
                 return true
-            case let _ as InlineBotMessageAttribute:
+            case _ as InlineBotMessageAttribute:
                 return true
-            case let _ as OutgoingMessageInfoAttribute:
+            case _ as OutgoingMessageInfoAttribute:
                 return true
-            case let _ as ReplyMarkupMessageAttribute:
+            case _ as ReplyMarkupMessageAttribute:
                 return true
-            case let _ as OutgoingChatContextResultMessageAttribute:
+            case _ as OutgoingChatContextResultMessageAttribute:
                 return true
             default:
                 return false
@@ -43,9 +43,9 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
 private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {
     return attributes.filter { attribute in
         switch attribute {
-            case let _ as TextEntitiesMessageAttribute:
+            case _ as TextEntitiesMessageAttribute:
                 return true
-            case let _ as InlineBotMessageAttribute:
+            case _ as InlineBotMessageAttribute:
                 return true
             default:
                 return false
@@ -53,25 +53,83 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
     }
 }
 
+func opportunisticallyTransformMessageWithMedia(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia, media: Media, userInteractive: Bool) -> Signal<Media?, NoError> {
+    return transformOutgoingMessageMedia(postbox, network, media, userInteractive)
+        |> timeout(2.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
+}
+
+private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia, messages: [EnqueueMessage], userInteractive: Bool) -> Signal<[(Bool, EnqueueMessage)], NoError> {
+    var hasMedia = false
+    loop: for message in messages {
+        switch message {
+            case let .message(_, _, media, _):
+                if media != nil {
+                    hasMedia = true
+                    break loop
+                }
+            case .forward:
+                break
+        }
+    }
+    
+    if !hasMedia {
+        return .single(messages.map { (true, $0) })
+    }
+    
+    var signals: [Signal<(Bool, EnqueueMessage), NoError>] = []
+    for message in messages {
+        switch message {
+            case let .message(text, attributes, media, replyToMessageId):
+                if let media = media {
+                    signals.append(opportunisticallyTransformMessageWithMedia(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, media: media, userInteractive: userInteractive) |> map { result -> (Bool, EnqueueMessage) in
+                        if let result = result {
+                            return (true, .message(text: text, attributes: attributes, media: result, replyToMessageId: replyToMessageId))
+                        } else {
+                            return (false, .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId))
+                        }
+                    })
+                } else {
+                    signals.append(.single((false, message)))
+                }
+            case .forward:
+                signals.append(.single((false, message)))
+        }
+    }
+    return combineLatest(signals)
+}
+
 public func enqueueMessages(account: Account, peerId: PeerId, messages: [EnqueueMessage]) -> Signal<[MessageId?], NoError> {
-    return account.postbox.modify { modifier -> [MessageId?] in
-        return enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages)
+    let signal: Signal<[(Bool, EnqueueMessage)], NoError>
+    if let transformOutgoingMessageMedia = account.transformOutgoingMessageMedia {
+        signal = opportunisticallyTransformOutgoingMedia(network: account.network, postbox: account.postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messages: messages, userInteractive: true)
+    } else {
+        signal = .single(messages.map { (false, $0) })
+    }
+    return signal
+        |> mapToSignal { messages -> Signal<[MessageId?], NoError> in
+        return account.postbox.modify { modifier -> [MessageId?] in
+            return enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages)
+        }
     }
 }
 
-func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messages: [EnqueueMessage]) -> [MessageId?] {
+func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
     if let peer = modifier.getPeer(peerId) {
         var storeMessages: [StoreMessage] = []
         let timestamp = Int32(account.network.context.globalTime())
         var globallyUniqueIds: [Int64] = []
-        for message in messages {
+        for (transformedMedia, message) in messages {
             var attributes: [MessageAttribute] = []
             var flags = StoreMessageFlags()
             flags.insert(.Unsent)
             
             var randomId: Int64 = 0
             arc4random_buf(&randomId, 8)
-            attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId))
+            var infoFlags = OutgoingMessageInfoFlags()
+            if transformedMedia {
+                infoFlags.insert(.transformedMedia)
+            }
+            attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId, flags: infoFlags))
             globallyUniqueIds.append(randomId)
             
             switch message {

@@ -173,7 +173,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource {
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? CloudDocumentMediaResource {
-            return self.datacenterId != to.datacenterId && self.fileId != to.fileId && self.accessHash != to.accessHash && self.size != to.size
+            return self.datacenterId == to.datacenterId && self.fileId == to.fileId && self.accessHash == to.accessHash && self.size == to.size
         } else {
             return false
         }

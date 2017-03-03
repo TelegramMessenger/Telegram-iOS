@@ -245,12 +245,43 @@ public final class TelegramMediaFile: Media, Equatable {
     }
     
     public func isEqual(_ other: Media) -> Bool {
-        if let other = other as? TelegramMediaFile {
-            if self.fileId == other.fileId {
-                return true
-            }
+        guard let other = other as? TelegramMediaFile else {
+            return false
         }
-        return false
+        
+        if self.fileId != other.fileId {
+            return false
+        }
+        
+        if !self.resource.isEqual(to: other.resource) {
+            return false
+        }
+        
+        if self.previewRepresentations != other.previewRepresentations {
+            return false
+        }
+        
+        if self.size != other.size {
+            return false
+        }
+        
+        if self.mimeType != other.mimeType {
+            return false
+        }
+        
+        /*if self.attributes != other.attributes {
+            return false
+        }*/
+        
+        return true
+    }
+    
+    public func withUpdatedSize(_ size: Int?) -> TelegramMediaFile {
+        return TelegramMediaFile(fileId: self.fileId, resource: self.resource, previewRepresentations: self.previewRepresentations, mimeType: self.mimeType, size: size, attributes: self.attributes)
+    }
+    
+    public func withUpdatedPreviewRepresentations(_ previewRepresentations: [TelegramMediaImageRepresentation]) -> TelegramMediaFile {
+        return TelegramMediaFile(fileId: self.fileId, resource: self.resource, previewRepresentations: previewRepresentations, mimeType: self.mimeType, size: self.size, attributes: self.attributes)
     }
 }
 

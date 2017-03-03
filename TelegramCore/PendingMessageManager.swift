@@ -57,6 +57,8 @@ public final class PendingMessageManager {
     
     private var peerSummaryContexts: [PeerId: PeerPendingMessagesSummaryContext] = [:]
     
+    var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
+    
     init(network: Network, postbox: Postbox, stateManager: AccountStateManager) {
         self.network = network
         self.postbox = postbox
@@ -170,7 +172,7 @@ public final class PendingMessageManager {
                         continue
                     }
                     
-                    let uploadedContent = uploadedMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, message: message)
+                    let uploadedContent = uploadedMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, message: message)
                     
                     let sendMessage = uploadedContent
                         |> mapToSignal { contentResult -> Signal<PendingMessageResult, NoError> in
@@ -255,13 +257,15 @@ public final class PendingMessageManager {
                         if let media = media as? TelegramMediaAction {
                             if case let .messageAutoremoveTimeoutUpdated(value) = media.action {
                                 sentAsAction = true
-                                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value), state: state)
+                                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value, messageId: message.id), state: state)
                                 if updatedState != state {
                                     modifier.setPeerChatState(message.id.peerId, state: updatedState)
                                 }
                                 modifier.updateMessage(message.id, update: { currentMessage in
                                     var flags = StoreMessageFlags(message.flags)
-                                    flags.remove(.Sending)
+                                    if !flags.contains(.Failed) {
+                                        flags.insert(.Sending)
+                                    }
                                     var storeForwardInfo: StoreMessageForwardInfo?
                                     if let forwardInfo = currentMessage.forwardInfo {
                                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)

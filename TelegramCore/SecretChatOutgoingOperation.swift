@@ -112,7 +112,7 @@ enum SecretChatOutgoingOperationContents: Coding {
     case pfsAbortSession(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64)
     case pfsCommitKey(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, keyFingerprint: Int64)
     case noop(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64)
-    case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32)
+    case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32, messageId: MessageId)
     case terminate
     
     init(decoder: Decoder) {
@@ -144,7 +144,7 @@ enum SecretChatOutgoingOperationContents: Coding {
             case SecretChatOutgoingOperationValue.noop.rawValue:
                 self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"))
             case SecretChatOutgoingOperationValue.setMessageAutoremoveTimeout.rawValue:
-                self = .setMessageAutoremoveTimeout(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), timeout: decoder.decodeInt32ForKey("t"))
+                self = .setMessageAutoremoveTimeout(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), timeout: decoder.decodeInt32ForKey("t"), messageId: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p")), namespace: decoder.decodeInt32ForKey("m.n"), id: decoder.decodeInt32ForKey("m.i")))
             case SecretChatOutgoingOperationValue.terminate.rawValue:
                 self = .terminate
             default:
@@ -229,11 +229,14 @@ enum SecretChatOutgoingOperationContents: Coding {
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.noop.rawValue, forKey: "r")
                 encoder.encodeInt32(layer.rawValue, forKey: "l")
                 encoder.encodeInt64(actionGloballyUniqueId, forKey: "i")
-            case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout):
+            case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout, messageId):
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.setMessageAutoremoveTimeout.rawValue, forKey: "r")
                 encoder.encodeInt32(layer.rawValue, forKey: "l")
                 encoder.encodeInt64(actionGloballyUniqueId, forKey: "i")
                 encoder.encodeInt32(timeout, forKey: "t")
+                encoder.encodeInt64(messageId.peerId.toInt64(), forKey: "m.p")
+                encoder.encodeInt32(messageId.namespace, forKey: "m.n")
+                encoder.encodeInt32(messageId.id, forKey: "m.i")
             case .terminate:
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.terminate.rawValue, forKey: "r")
         }

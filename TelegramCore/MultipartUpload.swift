@@ -262,7 +262,7 @@ func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource
                     encryptionKey = SecretFileEncryptionKey(aesKey: aesKey, aesIv: aesIv)
                 }
                 
-                let resourceData = postbox.mediaBox.resourceData(resource, complete: true)
+                let resourceData = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: false))
                 
                 let manager = MultipartUploadManager(data: resourceData, encryptionKey: encryptionKey, uploadPart: { part in
                     return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data)

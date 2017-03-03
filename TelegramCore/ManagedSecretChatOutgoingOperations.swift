@@ -133,8 +133,8 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .noop(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .readMessagesContent(layer, actionGloballyUniqueId, globallyUniqueIds):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .readMessageContents(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, timeout: timeout), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                    case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout,messageId):
+                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, timeout: timeout, messageId: messageId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .resendOperations(layer, actionGloballyUniqueId, fromSeqNo, toSeqNo):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .resendOperations(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
@@ -339,7 +339,7 @@ private enum SecretMessageAction {
     case pfsCommitKey(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, keyFingerprint: Int64)
     case noop(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64)
     case readMessageContents(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
-    case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32)
+    case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32, messageId: MessageId)
     
     var globallyUniqueId: Int64 {
         switch self {
@@ -365,8 +365,17 @@ private enum SecretMessageAction {
                 return actionGloballyUniqueId
             case let .readMessageContents(_, actionGloballyUniqueId, _):
                 return actionGloballyUniqueId
-            case let .setMessageAutoremoveTimeout(_, actionGloballyUniqueId, _):
+            case let .setMessageAutoremoveTimeout(_, actionGloballyUniqueId, _, _):
                 return actionGloballyUniqueId
+        }
+    }
+    
+    var messageId: MessageId? {
+        switch self {
+            case let .setMessageAutoremoveTimeout(_, _, _, messageId):
+                return messageId
+            default:
+                return nil
         }
     }
 }
@@ -580,7 +589,7 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionReadMessages(randomIds: globallyUniqueIds)))
             }
-        case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout):
+        case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout, _):
             switch layer {
                 case .layer8:
                     let randomBytesData = malloc(15)!
@@ -670,6 +679,29 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
                 |> mapToSignal { result in
                     return postbox.modify { modifier -> Void in
                         markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex)
+                        if let messageId = action.messageId {
+                            modifier.updateMessage(messageId, update: { currentMessage in
+                                var flags = StoreMessageFlags(currentMessage.flags)
+                                var timestamp = currentMessage.timestamp
+                                if let result = result {
+                                    switch result {
+                                        case let .sentEncryptedMessage(date):
+                                            timestamp = date
+                                        case let .sentEncryptedFile(date, _):
+                                            timestamp = date
+                                    }
+                                    flags.remove(.Unsent)
+                                    flags.remove(.Sending)
+                                } else {
+                                    flags = [.Failed]
+                                }
+                                var storeForwardInfo: StoreMessageForwardInfo?
+                                if let forwardInfo = currentMessage.forwardInfo {
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                                }
+                                return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: timestamp, flags: flags, tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
+                            })
+                        }
                     }
                 }
         } else {
