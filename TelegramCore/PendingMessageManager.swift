@@ -310,6 +310,8 @@ public final class PendingMessageManager {
                 var messageEntities: [Api.MessageEntity]?
                 var replyMessageId: Int32?
                 
+                var flags: Int32 = 0
+                
                 for attribute in message.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id
@@ -319,10 +321,13 @@ public final class PendingMessageManager {
                         forwardSourceInfoAttribute = attribute
                     } else if let attribute = attribute as? TextEntitiesMessageAttribute {
                         messageEntities = apiTextAttributeEntities(attribute, associatedPeers: message.peers)
+                    } else if let attribute = attribute as? OutgoingContentInfoMessageAttribute {
+                        if attribute.flags.contains(.disableLinkPreviews) {
+                            flags |= Int32(1 << 1)
+                        }
                     }
                 }
                 
-                var flags: Int32 = 0
                 if let _ = replyMessageId {
                     flags |= Int32(1 << 0)
                 }

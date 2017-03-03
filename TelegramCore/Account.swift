@@ -210,6 +210,8 @@ private var declaredEncodables: Void = {
     declareEncodable(RecentMediaItem.self, f: { RecentMediaItem(decoder: $0) })
     declareEncodable(RecentPeerItem.self, f: { RecentPeerItem(decoder: $0) })
     declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
+    declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
+    declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     
     return
 }()

@@ -174,6 +174,8 @@
 		D0448CA31E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */; };
 		D0448CA51E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */; };
 		D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */; };
+		D0458C881E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */; };
+		D0458C891E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */; };
 		D049EAD51E43D98500A2CD3A /* RecentMediaItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAD41E43D98500A2CD3A /* RecentMediaItem.swift */; };
 		D049EAD61E43D98500A2CD3A /* RecentMediaItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAD41E43D98500A2CD3A /* RecentMediaItem.swift */; };
 		D049EAD81E43DAD200A2CD3A /* ManagedRecentStickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAD71E43DAD200A2CD3A /* ManagedRecentStickers.swift */; };
@@ -546,6 +548,7 @@
 		D0448C9E1E27F5EB005A61A7 /* Random.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Random.swift; sourceTree = "<group>"; };
 		D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchSecretFileResource.swift; sourceTree = "<group>"; };
 		D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceApiUtils.swift; sourceTree = "<group>"; };
+		D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OutgoingContentInfoMessageAttribute.swift; sourceTree = "<group>"; };
 		D049EAD41E43D98500A2CD3A /* RecentMediaItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentMediaItem.swift; sourceTree = "<group>"; };
 		D049EAD71E43DAD200A2CD3A /* ManagedRecentStickers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedRecentStickers.swift; sourceTree = "<group>"; };
 		D049EAE71E44B67100A2CD3A /* RecentPeerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentPeerItem.swift; sourceTree = "<group>"; };
@@ -858,6 +861,7 @@
 				D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */,
 				D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */,
 				D0E35A111DE4A25E00BC6096 /* OutgoingChatContextResultMessageAttribute.swift */,
+				D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */,
 			);
 			name = Attributes;
 			sourceTree = "<group>";
@@ -1351,6 +1355,7 @@
 				D033FEB01E61EB0200644997 /* PeerReportStatus.swift in Sources */,
 				D050F2511E4A59C200988324 /* JoinLink.swift in Sources */,
 				D07827C91E02F59C00071108 /* InstantPage.swift in Sources */,
+				D0458C881E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */,
 				D07827CB1E02F5B200071108 /* RichText.swift in Sources */,
 				D0613FD71E606B3B00202CDB /* ConvertGroupToSupergroup.swift in Sources */,
 				D03B0CE01D62249100955575 /* StoreMessage_Telegram.swift in Sources */,
@@ -1555,6 +1560,7 @@
 				D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */,
 				D050F26B1E4A5B6D00988324 /* ApplyMaxReadIndexInteractively.swift in Sources */,
 				D033FEB11E61EB0200644997 /* PeerReportStatus.swift in Sources */,
+				D0458C891E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */,
 				D050F26C1E4A5B6D00988324 /* UpdatePeers.swift in Sources */,
 				D050F26D1E4A5B6D00988324 /* CreateGroup.swift in Sources */,
 				D050F26E1E4A5B6D00988324 /* RemovePeerChat.swift in Sources */,
