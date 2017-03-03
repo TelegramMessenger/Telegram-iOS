@@ -369,6 +369,27 @@ extension Api.Updates {
     }
 }
 
+extension Api.Updates {
+    var chats: [Api.Chat] {
+        switch self {
+        case let .updates(_, _, chats, _, _):
+            var result: [Api.Chat] = []
+            for chat in chats {
+                result.append(chat)
+            }
+            return result
+        case let .updatesCombined(_, _, chats, _, _, _):
+            var result: [Api.Chat] = []
+            for chat in chats {
+                result.append(chat)
+            }
+            return result
+        default:
+            return []
+        }
+    }
+}
+
 extension Api.EncryptedChat {
     var peerId: PeerId {
         switch self {

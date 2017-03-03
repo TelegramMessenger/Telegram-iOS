@@ -924,6 +924,23 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
+            case let .updateUserName(userId, firstName, lastName, username):
+                //TODO add contact checing for apply first and last name
+                updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), { peer in
+                    if let user = peer as? TelegramUser {
+                        return user.withUpdatedUsername(username)
+                    } else {
+                        return peer
+                    }
+                })
+            case let .updateUserPhone(userId, phone):
+                updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), { peer in
+                    if let user = peer as? TelegramUser {
+                        return user.withUpdatedPhone(phone)
+                    } else {
+                        return peer
+                    }
+                })
             case let .updateEncryption(chat, date):
                 updatedState.updateSecretChat(chat: chat, timestamp: date)
             case let .updateNewEncryptedMessage(message, _):
