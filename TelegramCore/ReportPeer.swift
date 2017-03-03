@@ -46,8 +46,67 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
     } |> switchToLatest
 }
 
+public enum ReportPeerReason : Equatable {
+    case spam
+    case violence
+    case porno
+    case custom(String)
+}
 
-//NOT MARKING TO CLOUD, NEED REMOVE ON FUTURE
+public func ==(lhs:ReportPeerReason, rhs: ReportPeerReason) -> Bool {
+    switch lhs {
+    case .spam:
+        if case .spam = rhs {
+            return true
+        } else {
+            return false
+        }
+    case .violence:
+        if case .violence = rhs {
+            return true
+        } else {
+            return false
+        }
+    case .porno:
+        if case .porno = rhs {
+            return true
+        } else {
+            return false
+        }
+    case let .custom(text):
+        if case .custom(text) = rhs {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+private extension ReportPeerReason {
+    var apiReason:Api.ReportReason {
+        switch self {
+        case .spam:
+            return .inputReportReasonSpam
+        case .violence:
+            return .inputReportReasonViolence
+        case .porno:
+            return .inputReportReasonPornography
+        case let .custom(text):
+            return .inputReportReasonOther(text: text)
+        }
+    }
+}
+
+public func reportPeer(account: Account, peerId:PeerId, reason:ReportPeerReason) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.account.reportPeer(peer: inputPeer, reason: reason.apiReason)) |> mapError {_ in} |> map {_ in}
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
 public func dismissReportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in

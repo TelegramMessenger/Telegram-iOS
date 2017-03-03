@@ -89,7 +89,7 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
 }
 
 
-public func addSupergroupMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, Void> {
+public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, Void> {
     return account.postbox.modify { modifier -> Signal<Void, Void> in
         
         var memberPeerIds:[PeerId:Peer] = [:]

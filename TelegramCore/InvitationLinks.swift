@@ -9,11 +9,11 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func ensuredExistingPeerExportedInvitation(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+public func ensuredExistingPeerExportedInvitation(account: Account, peerId: PeerId, revokeExisted:Bool = false) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-                if let cachedData = modifier.getPeerCachedData(peerId: peerId) as? CachedChannelData, cachedData.exportedInvitation != nil {
+                if let cachedData = modifier.getPeerCachedData(peerId: peerId) as? CachedChannelData, cachedData.exportedInvitation != nil && !revokeExisted {
                     return .complete()
                 } else {
                     return account.network.request(Api.functions.channels.exportInvite(channel: inputChannel))
@@ -33,7 +33,7 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                         }
                 }
             } else if let group = peer as? TelegramGroup {
-                if let cachedData = modifier.getPeerCachedData(peerId: peerId) as? CachedGroupData, cachedData.exportedInvitation != nil {
+                if let cachedData = modifier.getPeerCachedData(peerId: peerId) as? CachedGroupData, cachedData.exportedInvitation != nil && !revokeExisted {
                     return .complete()
                 } else {
                     return account.network.request(Api.functions.messages.exportChatInvite(chatId: group.id.id))
