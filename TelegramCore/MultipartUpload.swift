@@ -237,13 +237,13 @@ private final class MultipartUploadManager {
     }
 }
 
-public enum MultipartUploadResult {
+enum MultipartUploadResult {
     case progress(Float)
     case inputFile(Api.InputFile)
     case inputSecretFile(Api.InputEncryptedFile, Int32, SecretFileEncryptionKey)
 }
 
-public func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource, encrypt: Bool) -> Signal<MultipartUploadResult, NoError> {
+func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource, encrypt: Bool) -> Signal<MultipartUploadResult, NoError> {
     return network.download(datacenterId: network.datacenterId)
         |> mapToSignal { download -> Signal<MultipartUploadResult, NoError> in
             return Signal { subscriber in
