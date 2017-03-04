@@ -5,6 +5,40 @@ private enum MetadataKey: Int32 {
     case State = 2
     case TransactionStateVersion = 3
     case MasterClientId = 4
+    case AccessChallenge = 5
+}
+
+enum PostboxAccessChallengeData: Coding {
+    case none
+    case numericalPassword(String)
+    case plaintextPassword(String)
+    
+    init(decoder: Decoder) {
+        switch decoder.decodeInt32ForKey("r") as Int32 {
+            case 0:
+                self = .none
+            case 1:
+                self = .numericalPassword(decoder.decodeStringForKey("t"))
+            case 2:
+                self = .plaintextPassword(decoder.decodeStringForKey("t"))
+            default:
+                assertionFailure()
+                self = .none
+        }
+    }
+    
+    func encode(_ encoder: Encoder) {
+        switch self {
+            case .none:
+                encoder.encodeInt32(0, forKey: "r")
+            case let .numericalPassword(text):
+                encoder.encodeInt32(1, forKey: "r")
+                encoder.encodeString(text, forKey: "t")
+            case let .plaintextPassword(text):
+                encoder.encodeInt32(2, forKey: "r")
+                encoder.encodeString(text, forKey: "t")
+        }
+    }
 }
 
 final class MetadataTable: Table {
@@ -100,6 +134,20 @@ final class MetadataTable: Table {
         var clientId = id
         buffer.write(&clientId, offset: 0, length: 8)
         self.valueBox.set(self.table, key: self.key(.MasterClientId), value: buffer)
+    }
+    
+    func accessChallengeData() -> PostboxAccessChallengeData {
+        if let value = self.valueBox.get(self.table, key: self.key(.AccessChallenge)) {
+            return PostboxAccessChallengeData(decoder: Decoder(buffer: value))
+        } else {
+            return .none
+        }
+    }
+    
+    func setAccessChallengeData(_ data: PostboxAccessChallengeData) {
+        let encoder = Encoder()
+        data.encode(encoder)
+        self.valueBox.set(self.table, key: self.key(.AccessChallenge), value: encoder.readBufferNoCopy())
     }
     
     override func clearMemoryCache() {
