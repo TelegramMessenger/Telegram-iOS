@@ -94,7 +94,7 @@ private enum UnauthorizedAccountStateContentsValue: Int32 {
     case passwordEntry = 3
 }
 
-public enum UnauthorizedAccountStateContents: Coding {
+public enum UnauthorizedAccountStateContents: Coding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
     case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?)
@@ -148,9 +148,53 @@ public enum UnauthorizedAccountStateContents: Coding {
                 encoder.encodeString(hint, forKey: "h")
         }
     }
+    
+    public static func ==(lhs: UnauthorizedAccountStateContents, rhs: UnauthorizedAccountStateContents) -> Bool {
+        switch lhs {
+            case .empty:
+                if case .empty = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .phoneEntry(countryCode, number):
+                if case .phoneEntry(countryCode, number) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .confirmationCodeEntry(lhsNumber, lhsType, lhsHash, lhsTimeout, lhsNextType):
+                if case let .confirmationCodeEntry(rhsNumber, rhsType, rhsHash, rhsTimeout, rhsNextType) = rhs {
+                    if lhsNumber != rhsNumber {
+                        return false
+                    }
+                    if lhsType != rhsType {
+                        return false
+                    }
+                    if lhsHash != rhsHash {
+                        return false
+                    }
+                    if lhsTimeout != rhsTimeout {
+                        return false
+                    }
+                    if lhsNextType != rhsNextType {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+            case let .passwordEntry(hint):
+                if case .passwordEntry(hint) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
-public final class UnauthorizedAccountState: Coding {
+public final class UnauthorizedAccountState: AccountState {
     public let masterDatacenterId: Int32
     public let contents: UnauthorizedAccountStateContents
     
@@ -167,6 +211,19 @@ public final class UnauthorizedAccountState: Coding {
     public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.masterDatacenterId, forKey: "dc")
         encoder.encodeObject(self.contents, forKey: "c")
+    }
+    
+    public func equalsTo(_ other: AccountState) -> Bool {
+        guard let other = other as? UnauthorizedAccountState else {
+            return false
+        }
+        if self.masterDatacenterId != other.masterDatacenterId {
+            return false
+        }
+        if self.contents != other.contents {
+            return false
+        }
+        return true
     }
 }
 
