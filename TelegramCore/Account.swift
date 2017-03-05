@@ -344,13 +344,10 @@ public class Account {
     private let managedOperationsDisposable = DisposableSet()
     
     public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
-    //let imageCache: ImageCache = ImageCache(maxResidentSize: 5 * 1024 * 1024)
     
     public var applicationContext: Any?
     
     public let settings: AccountSettings = defaultAccountSettings()
-    
-    var player: AnyObject?
     
     public let notificationToken = Promise<Data>()
     public let voipToken = Promise<Data>()
@@ -363,6 +360,11 @@ public class Account {
     private let networkStateValue = Promise<AccountNetworkState>(.connecting)
     public var networkState: Signal<AccountNetworkState, NoError> {
         return self.networkStateValue.get()
+    }
+    
+    private let _loggedOut = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var loggedOut: Signal<Bool, NoError> {
+        return self._loggedOut.get()
     }
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
@@ -380,6 +382,10 @@ public class Account {
         self.localInputActivityManager = PeerInputActivityManager()
         self.viewTracker = AccountViewTracker(account: self)
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)
+        
+        self.network.loggedOut = { [weak self] in
+            self?._loggedOut.set(true)
+        }
         
         let networkStateSignal = combineLatest(self.stateManager.isUpdating, network.connectionStatus)
             |> map { isUpdating, connectionStatus -> AccountNetworkState in

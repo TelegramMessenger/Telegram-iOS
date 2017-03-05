@@ -166,7 +166,7 @@ func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoP
     }
 }
 
-public class Network {
+public class Network: NSObject, MTRequestMessageServiceDelegate {
     let datacenterId: Int
     let context: MTContext
     let mtProto: MTProto
@@ -181,6 +181,8 @@ public class Network {
     public let shouldKeepConnection = Promise<Bool>(false)
     private let shouldKeepConnectionDisposable = MetaDisposable()
     
+    var loggedOut: (() -> Void)?
+    
     fileprivate init(datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>) {
         self.datacenterId = datacenterId
         self.context = context
@@ -188,6 +190,10 @@ public class Network {
         self.requestService = requestService
         self.connectionStatusDelegate = connectionStatusDelegate
         self._connectionStatus = _connectionStatus
+        
+        super.init()
+        
+        requestService.delegate = self
         
         let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
             |> distinctUntilChanged
@@ -206,6 +212,10 @@ public class Network {
     
     deinit {
         self.shouldKeepConnectionDisposable.dispose()
+    }
+    
+    public func requestMessageServiceAuthorizationRequired(_ requestMessageService: MTRequestMessageService!) {
+        self.loggedOut?()
     }
     
     func download(datacenterId: Int) -> Signal<Download, NoError> {
