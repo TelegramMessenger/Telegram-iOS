@@ -2278,7 +2278,7 @@ static const char *ASDisplayNodeDrawingPriorityKey = "ASDrawingPriority";
   }
 
   ASDisplayNodeAssert(_flags.layerBacked, @"We shouldn't get called back here unless we are layer-backed.");
-  return nil;
+  return [NSNull null];
 }
 
 #pragma mark - Error Handling

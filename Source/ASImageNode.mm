@@ -28,6 +28,7 @@
 #import <AsyncDisplayKit/ASEqualityHashHelpers.h>
 #import <AsyncDisplayKit/ASWeakMap.h>
 #import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
+#import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
 
 // TODO: It would be nice to remove this dependency; it's the only subclass using more than +FrameworkSubclasses.h
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
@@ -224,6 +225,16 @@ struct ASImageNodeDrawParameters {
   ASDN::MutexLocker l(__instanceLock__);
   if (!ASObjectIsEqual(_image, image)) {
     _image = image;
+    
+    if (_displayWithoutProcessing && ASDisplayNodeThreadIsMain()) {
+      BOOL stretchable = !UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero);
+      if (stretchable) {
+        ASDisplayNodeSetupLayerContentsWithResizableImage(self.layer, image);
+      } else {
+        self.contents = (id)image.CGImage;
+      }
+      return;
+    }
     
     [self setNeedsLayout];
     if (image) {
