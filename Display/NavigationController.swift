@@ -253,6 +253,14 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
             }
         }))
     }
+
+    public func popToRoot(animated: Bool) {
+        var controllers = self.viewControllers
+        while controllers.count > 1 {
+            controllers.removeLast()
+        }
+        self.setViewControllers(controllers, animated: animated)
+    }
     
     open override func popViewController(animated: Bool) -> UIViewController? {
         var controller: UIViewController?

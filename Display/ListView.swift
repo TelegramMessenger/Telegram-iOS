@@ -1158,7 +1158,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             let beginReplay = { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), animateTopItemVerticalOrigin: options.contains(.AnimateTopItemPosition), operations: updatedOperations, requestItemInsertionAnimationsIndices: options.contains(.RequestItemInsertionAnimations) ? insertedIndexSet : Set(), scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, updateOpaqueState: updateOpaqueState, completion: {
-                                        if options.contains(.PreferSynchronousResourceLoading) {
+                                        if options.contains(.PreferSynchronousDrawing) {
                                             let startTime = CACurrentMediaTime()
                                             self?.recursivelyEnsureDisplaySynchronously(true)
                                             let deltaTime = CACurrentMediaTime() - startTime

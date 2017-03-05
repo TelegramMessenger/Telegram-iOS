@@ -18,6 +18,8 @@ public final class ContextMenuController: ViewController {
     
     private var layout: ContainerViewLayout?
     
+    public var dismissed: (() -> Void)?
+    
     public init(actions: [ContextMenuAction]) {
         self.actions = actions
         
@@ -30,6 +32,7 @@ public final class ContextMenuController: ViewController {
     
     open override func loadDisplayNode() {
         self.displayNode = ContextMenuNode(actions: self.actions, dismiss: { [weak self] in
+            self?.dismissed?()
             self?.contextMenuNode.animateOut { [weak self] in
                 self?.presentingViewController?.dismiss(animated: false)
             }
@@ -48,6 +51,7 @@ public final class ContextMenuController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if self.layout != nil && self.layout! != layout {
+            self.dismissed?()
             self.contextMenuNode.animateOut { [weak self] in
                 self?.presentingViewController?.dismiss(animated: false)
             }

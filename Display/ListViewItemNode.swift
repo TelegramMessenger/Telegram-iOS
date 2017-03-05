@@ -234,6 +234,12 @@ open class ListViewItemNode: ASDisplayNode {
         }
     }
     
+    public var contentBounds: CGRect {
+        let bounds = self.bounds
+        let effectiveInsets = self.insets
+        return CGRect(origin: CGPoint(x: 0.0, y: bounds.origin.y + effectiveInsets.top), size: CGSize(width: bounds.size.width, height: bounds.size.height - effectiveInsets.top - effectiveInsets.bottom))
+    }
+    
     open override var position: CGPoint {
         get {
             return self._position

@@ -119,6 +119,10 @@ public extension UIImage {
 private func makeSubtreeSnapshot(layer: CALayer) -> UIView? {
     let view = UIView()
     view.layer.contents = layer.contents
+    view.layer.contentsRect = layer.contentsRect
+    view.layer.contentsScale = layer.contentsScale
+    view.layer.contentsCenter = layer.contentsCenter
+    view.layer.contentsGravity = layer.contentsGravity
     if let sublayers = layer.sublayers {
         for sublayer in sublayers {
             let subtree = makeSubtreeSnapshot(layer: sublayer)

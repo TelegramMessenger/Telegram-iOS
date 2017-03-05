@@ -118,4 +118,16 @@ open class TabBarController: ViewController {
             currentController.containerLayoutUpdated(layout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: transition)
         }
     }
+    
+    override open func viewDidAppear(_ animated: Bool) {
+        if let currentController = self.currentController {
+            currentController.viewDidAppear(animated)
+        }
+    }
+    
+    override open func viewDidDisappear(_ animated: Bool) {
+        if let currentController = self.currentController {
+            currentController.viewDidDisappear(animated)
+        }
+    }
 }

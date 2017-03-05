@@ -36,8 +36,7 @@ CABasicAnimation * _Nonnull makeSpringAnimation(NSString * _Nonnull keyPath) {
     springAnimation.mass = 3.0f;
     springAnimation.stiffness = 1000.0f;
     springAnimation.damping = 500.0f;
-    springAnimation.initialVelocity = 0.0f;
-    springAnimation.duration = 0.5;//springAnimation.settlingDuration;
+    springAnimation.duration = 0.5;
     springAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
     return springAnimation;
 }
@@ -47,7 +46,14 @@ CABasicAnimation * _Nonnull makeSpringBounceAnimation(NSString * _Nonnull keyPat
     springAnimation.mass = 5.0f;
     springAnimation.stiffness = 900.0f;
     springAnimation.damping = 88.0f;
-    springAnimation.initialVelocity = initialVelocity;
+    static bool canSetInitialVelocity = true;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        canSetInitialVelocity = [springAnimation respondsToSelector:@selector(setInitialVelocity:)];
+    });
+    if (canSetInitialVelocity) {
+        springAnimation.initialVelocity = initialVelocity;
+    }
     springAnimation.duration = springAnimation.settlingDuration;
     springAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
     return springAnimation;

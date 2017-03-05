@@ -33,8 +33,6 @@ static void *CATracingLayerTraceablInfoKey = &CATracingLayerTraceablInfoKey;
 }
 
 static void traceLayerSurfaces(int depth, CALayer * _Nonnull layer, NSMutableDictionary<NSNumber *, NSMutableArray<CALayer *> *> *layersByDepth) {
-    NSMutableArray<CALayer *> *result = nil;
-    
     bool hadTraceableSublayers = false;
     for (CALayer *sublayer in layer.sublayers.reverseObjectEnumerator) {
         if ([sublayer traceableInfo] != nil) {
