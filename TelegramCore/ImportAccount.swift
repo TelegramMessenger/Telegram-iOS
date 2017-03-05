@@ -11,9 +11,15 @@ public struct ImportAccountProvider {
     let mtProtoKeychain: () -> Signal<[String: [String: Data]], NoError>
     let accountState: () -> Signal<AccountState, NoError>
     let peers: () -> Signal<[Peer], NoError>
+    
+    public init(mtProtoKeychain: @escaping () -> Signal<[String: [String: Data]], NoError>, accountState: @escaping() -> Signal<AccountState, NoError>, peers: @escaping() -> Signal<[Peer], NoError>) {
+        self.mtProtoKeychain = mtProtoKeychain
+        self.accountState = accountState
+        self.peers = peers
+    }
 }
 
-public func importAccount(account: Account, provider: ImportAccountProvider) -> Signal<Void, NoError> {
+public func importAccount(account: UnauthorizedAccount, provider: ImportAccountProvider) -> Signal<Void, NoError> {
     return provider.mtProtoKeychain()
         |> mapToSignal { keychain -> Signal<Void, NoError> in
             for (group, dict) in keychain {
