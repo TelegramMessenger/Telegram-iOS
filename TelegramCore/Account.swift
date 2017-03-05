@@ -329,6 +329,8 @@ public class Account {
     public let network: Network
     public let peerId: PeerId
     
+    private let serviceQueue = Queue()
+    
     public private(set) var stateManager: AccountStateManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
@@ -466,7 +468,7 @@ public class Account {
         
         let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()
             |> distinctUntilChanged
-            |> deliverOn(Queue.concurrentDefaultQueue())
+            |> deliverOn(self.serviceQueue)
         
         self.becomeMasterDisposable.set(serviceTasksMasterBecomeMaster.start(next: { [weak self] value in
             if let strongSelf = self, (value == .now || value == .always) {
@@ -486,7 +488,7 @@ public class Account {
         self.network.shouldKeepConnection.set(shouldBeMaster)
         
         let serviceTasksMaster = shouldBeMaster
-            |> deliverOn(Queue.concurrentDefaultQueue())
+            |> deliverOn(self.serviceQueue)
             |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
                 if let strongSelf = self, value {
                     Logger.shared.log("Account", "Became master")
