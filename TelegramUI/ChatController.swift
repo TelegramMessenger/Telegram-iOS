@@ -210,6 +210,20 @@ public class ChatController: TelegramController {
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) {
                     if let contextMenuController = contextMenuForChatPresentationIntefaceState(strongSelf.presentationInterfaceState, account: strongSelf.account, message: message, interfaceInteraction: strongSelf.interfaceInteraction) {
+                        if let controllerInteraction = strongSelf.controllerInteraction {
+                            controllerInteraction.highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
+                            strongSelf.updateItemNodesHighlightedStates(animated: true)
+                        }
+                        
+                        contextMenuController.dismissed = {
+                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                if controllerInteraction.highlightedState?.messageStableId == message.stableId {
+                                    controllerInteraction.highlightedState = nil
+                                    strongSelf.updateItemNodesHighlightedStates(animated: true)
+                                }
+                            }
+                        }
+                        
                         strongSelf.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak node] in
                             if let node = node {
                                 return (node, frame)
@@ -1418,11 +1432,23 @@ public class ChatController: TelegramController {
             if updatedChatPresentationInterfaceState.interfaceState.selectionState != controllerInteraction.selectionState {
                 let animated = controllerInteraction.selectionState == nil || updatedChatPresentationInterfaceState.interfaceState.selectionState == nil
                 controllerInteraction.selectionState = updatedChatPresentationInterfaceState.interfaceState.selectionState
-                self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? ChatMessageItemView {
-                        itemNode.updateSelectionState(animated: animated)
-                    }
-                }
+                self.updateItemNodesSelectionStates(animated: animated)
+            }
+        }
+    }
+    
+    private func updateItemNodesSelectionStates(animated: Bool) {
+        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                itemNode.updateSelectionState(animated: animated)
+            }
+        }
+    }
+    
+    private func updateItemNodesHighlightedStates(animated: Bool) {
+        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                itemNode.updateHighlightedState(animated: animated)
             }
         }
     }

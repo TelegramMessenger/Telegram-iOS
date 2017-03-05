@@ -43,8 +43,9 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let action: (() -> Void)?
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removePeer: (PeerId) -> Void
+    let toggleUpdated: ((Bool) -> Void)?
     
-    init(account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: String?, editing: ItemListPeerItemEditing, switchValue: Bool?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void) {
+    init(account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: String?, editing: ItemListPeerItemEditing, switchValue: Bool?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
         self.account = account
         self.peer = peer
         self.presence = presence
@@ -57,6 +58,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.action = action
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
+        self.toggleUpdated = toggleUpdated
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -210,10 +212,14 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                 peerRevealOptions = []
             }
             
-            if let switchValue = item.switchValue {
+            var rightInset: CGFloat = 0.0
+            let switchSize = CGSize(width: 51.0, height: 31.0)
+            
+            if let _ = item.switchValue {
                 if currentSwitchNode == nil {
                     currentSwitchNode = SwitchNode()
                 }
+                rightInset += switchSize.width
             } else {
                 currentSwitchNode = nil
             }
@@ -270,10 +276,10 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), nil)
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - labelLayout.size.width - editingOffset, height: CGFloat.greatestFiniteMagnitude), nil)
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0) - editingOffset, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - labelLayout.size.width - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0) - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
             let contentSize = CGSize(width: width, height: 48.0)
@@ -386,7 +392,31 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: statusAttributedString == nil ? 13.0 : 5.0), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 25.0), size: statusLayout.size))
-                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - labelLayout.size.width - 15.0, y: floor((contentSize.height - labelLayout.size.height) / 2.0 - labelLayout.size.height / 10.0)), size: labelLayout.size))
+                    
+                    if let currentSwitchNode = currentSwitchNode {
+                        if currentSwitchNode !== strongSelf.switchNode {
+                            strongSelf.switchNode = currentSwitchNode
+                            if let disabledOverlayNode = strongSelf.disabledOverlayNode, disabledOverlayNode.supernode != nil {
+                                strongSelf.insertSubnode(currentSwitchNode, belowSubnode: disabledOverlayNode)
+                            } else {
+                                strongSelf.addSubnode(currentSwitchNode)
+                            }
+                            currentSwitchNode.valueUpdated = { value in
+                                if let strongSelf = self {
+                                    strongSelf.toggleUpdated(value)
+                                }
+                            }
+                        }
+                        currentSwitchNode.frame = CGRect(origin: CGPoint(x: revealOffset + width - switchSize.width - 15.0, y: floor((contentSize.height - switchSize.height) / 2.0)), size: switchSize)
+                        if let switchValue = item.switchValue {
+                            currentSwitchNode.setOn(switchValue, animated: animated)
+                        }
+                    } else if let switchNode = strongSelf.switchNode {
+                        switchNode.removeFromSupernode()
+                        strongSelf.switchNode = nil
+                    }
+
+                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - labelLayout.size.width - 15.0 - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0 - labelLayout.size.height / 10.0)), size: labelLayout.size))
                     
                     transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0)))
                     strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer)
@@ -491,6 +521,12 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         
         if let (item, _, _) = self.layoutParams {
             item.removePeer(item.peer.id)
+        }
+    }
+    
+    private func toggleUpdated(_ value: Bool) {
+        if let (item, _, _) = self.layoutParams {
+            item.toggleUpdated?(value)
         }
     }
 }

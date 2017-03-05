@@ -59,7 +59,7 @@ final class ChatBotInfoItem: ListViewItem {
     }
 }
 
-private let infoItemBackground = messageSingleBubbleLikeImage(incoming: true)
+private let infoItemBackground = messageSingleBubbleLikeImage(incoming: true, highlighted: false)
 
 final class ChatBotInfoItemNode: ListViewItemNode {
     var controllerInteraction: ChatControllerInteraction?

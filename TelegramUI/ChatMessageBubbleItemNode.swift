@@ -68,6 +68,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
     private var messageId: MessageId?
+    private var messageStableId: UInt32?
+    private var backgroundType: ChatMessageBackgroundType?
+    private var highlightedState: Bool = false
     
     private var backgroundFrameTransition: (CGRect, CGRect)?
     
@@ -416,6 +419,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return (layout, { [weak self] animation in
                 if let strongSelf = self {
                     strongSelf.messageId = message.id
+                    strongSelf.messageStableId = message.stableId
+                    
+                    let mergeType = ChatMessageBackgroundMergeType(top: mergedBottom, bottom: mergedTop)
+                    let backgroundType: ChatMessageBackgroundType
+                    if !incoming {
+                        backgroundType = .Outgoing(mergeType)
+                    } else {
+                        backgroundType = .Incoming(mergeType)
+                    }
+                    strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState)
+                    
+                    strongSelf.backgroundType = backgroundType
                     
                     if let nameNode = nameNodeSizeApply.1() {
                         strongSelf.nameNode = nameNode
@@ -526,13 +541,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                         contentNodeIndex += 1
                         contentNodeOrigin.y += size.height
-                    }
-                    
-                    let mergeType = ChatMessageBackgroundMergeType(top: mergedBottom, bottom: mergedTop)
-                    if !incoming {
-                        strongSelf.backgroundNode.setType(type: .Outgoing(mergeType))
-                    } else {
-                        strongSelf.backgroundNode.setType(type: .Incoming(mergeType))
                     }
                     
                     if case .System = animation {
@@ -869,6 +877,36 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     }
                 } else {
                     selectionNode.removeFromSupernode()
+                }
+            }
+        }
+    }
+    
+    override func updateHighlightedState(animated: Bool) {
+        if let controllerInteraction = self.controllerInteraction {
+            var highlighted = false
+            if let messageStableId = self.messageStableId, let highlightedState = controllerInteraction.highlightedState {
+                if highlightedState.messageStableId == messageStableId {
+                    highlighted = true
+                }
+            }
+            
+            if self.highlightedState != highlighted {
+                self.highlightedState = highlighted
+                if let backgroundType = self.backgroundType {
+                    if highlighted {
+                        self.backgroundNode.setType(type: backgroundType, highlighted: true)
+                    } else {
+                        if let previousContents = self.backgroundNode.layer.contents, animated {
+                            self.backgroundNode.setType(type: backgroundType, highlighted: false)
+                            
+                            if let updatedContents = self.backgroundNode.layer.contents {
+                                self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
+                            }
+                        } else {
+                            self.backgroundNode.setType(type: backgroundType, highlighted: false)
+                        }
+                    }
                 }
             }
         }

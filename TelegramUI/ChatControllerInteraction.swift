@@ -19,6 +19,10 @@ public enum ChatControllerInteractionNavigateToPeer {
     case withBotStartPayload(ChatControllerInitialBotStart)
 }
 
+struct ChatInterfaceHighlightedState {
+    let messageStableId: UInt32
+}
+
 public final class ChatControllerInteraction {
     let openMessage: (MessageId) -> Void
     let openSecretMessagePreview: (MessageId) -> Void
@@ -30,6 +34,7 @@ public final class ChatControllerInteraction {
     let clickThroughMessage: () -> Void
     var hiddenMedia: [MessageId: [Media]] = [:]
     var selectionState: ChatInterfaceSelectionState?
+    var highlightedState: ChatInterfaceHighlightedState?
     let toggleMessageSelection: (MessageId) -> Void
     let sendMessage: (String) -> Void
     let sendSticker: (TelegramMediaFile) -> Void

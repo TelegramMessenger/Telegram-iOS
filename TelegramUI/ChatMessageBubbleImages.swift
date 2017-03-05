@@ -2,9 +2,11 @@ import Foundation
 import Display
 
 private let incomingFillColor = UIColor(0xffffff)
+private let incomingFillHighlightedColor = UIColor(0xaaaaff)
 private let incomingStrokeColor = UIColor(0x86A9C9, 0.5)
 
 private let outgoingFillColor = UIColor(0xE1FFC7)
+private let outgoingFillHighlightedColor = UIColor(0xaaffaa)
 private let outgoingStrokeColor = UIColor(0x86A9C9, 0.5)
 
 enum MessageBubbleImageNeighbors {
@@ -14,21 +16,21 @@ enum MessageBubbleImageNeighbors {
     case both
 }
 
-func messageSingleBubbleLikeImage(incoming: Bool) -> UIImage {
+func messageSingleBubbleLikeImage(incoming: Bool, highlighted: Bool) -> UIImage {
     let diameter: CGFloat = 36.0
     return generateImage(CGSize(width: 36.0, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         let lineWidth: CGFloat = 0.5
         
-        context.setFillColor((incoming ? incomingStrokeColor : outgoingStrokeColor).cgColor)
+        context.setFillColor((incoming ? (highlighted ? incomingStrokeColor : incomingStrokeColor) : (highlighted ? outgoingStrokeColor : outgoingStrokeColor)).cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        context.setFillColor((incoming ? incomingFillColor : outgoingFillColor).cgColor)
+        context.setFillColor((incoming ? (highlighted ? incomingFillHighlightedColor : incomingFillColor) : (highlighted ? outgoingFillHighlightedColor : outgoingFillColor)).cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(x: lineWidth, y: lineWidth), size: CGSize(width: size.width - lineWidth * 2.0, height: size.height - lineWidth * 2.0)))
     })!.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-func messageBubbleImage(incoming: Bool, neighbors: MessageBubbleImageNeighbors) -> UIImage {
+func messageBubbleImage(incoming: Bool, highlighted: Bool, neighbors: MessageBubbleImageNeighbors) -> UIImage {
     let diameter: CGFloat = 36.0
     let corner: CGFloat = 7.0
     return generateImage(CGSize(width: 42.0, height: diameter), contextGenerator: { size, context in
@@ -48,7 +50,7 @@ func messageBubbleImage(incoming: Bool, neighbors: MessageBubbleImageNeighbors) 
         
         let lineWidth: CGFloat = 1.0
         
-        context.setFillColor((incoming ? incomingFillColor : outgoingFillColor).cgColor)
+        context.setFillColor((incoming ? (highlighted ? incomingFillHighlightedColor : incomingFillColor) : (highlighted ? outgoingFillHighlightedColor : outgoingFillColor)).cgColor)
         context.setLineWidth(lineWidth)
         context.setStrokeColor((incoming ? incomingStrokeColor : outgoingStrokeColor).cgColor)
         

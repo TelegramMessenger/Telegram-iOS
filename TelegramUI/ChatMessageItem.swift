@@ -137,6 +137,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
             
             node.updateSelectionState(animated: false)
+            node.updateHighlightedState(animated: false)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -202,6 +203,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                         completion(layout, {
                             apply(animation)
                             node.updateSelectionState(animated: false)
+                            node.updateHighlightedState(animated: false)
                         })
                     }
                 }

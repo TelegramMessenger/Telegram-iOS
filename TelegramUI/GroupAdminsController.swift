@@ -145,32 +145,41 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
         switch self {
         case let .allAdmins(value):
             return ItemListSwitchItem(title: "All Members Are Admins", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                
+                arguments.updateAllAreAdmins(updatedValue)
             })
         case let .allAdminsInfo(text):
             return ItemListTextItem(text: text, sectionId: self.section)
         case let .peerItem(_, peer, presence, toggled, enabled):
-            return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: nil, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _ in }, removePeer: { _ in })
+            return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: nil, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: toggled, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _ in }, removePeer: { _ in }, toggleUpdated: { value in
+                arguments.updatePeerIsAdmin(peer.id, value)
+            })
         }
     }
 }
 
 private struct GroupAdminsControllerState: Equatable {
     let updatingAllAdminsValue: Bool?
+    let updatedAllAdminsValue: Bool?
+    
     let updatingAdminValue: [PeerId: Bool]
     
     init() {
         self.updatingAllAdminsValue = nil
+        self.updatedAllAdminsValue = nil
         self.updatingAdminValue = [:]
     }
     
-    init(updatingAllAdminsValue: Bool?, updatingAdminValue: [PeerId: Bool]) {
+    init(updatingAllAdminsValue: Bool?, updatedAllAdminsValue: Bool?, updatingAdminValue: [PeerId: Bool]) {
         self.updatingAllAdminsValue = updatingAllAdminsValue
+        self.updatedAllAdminsValue = updatedAllAdminsValue
         self.updatingAdminValue = updatingAdminValue
     }
     
     static func ==(lhs: GroupAdminsControllerState, rhs: GroupAdminsControllerState) -> Bool {
         if lhs.updatingAllAdminsValue != rhs.updatingAllAdminsValue {
+            return false
+        }
+        if lhs.updatedAllAdminsValue != rhs.updatedAllAdminsValue {
             return false
         }
         if lhs.updatingAdminValue != rhs.updatingAdminValue {
@@ -181,11 +190,15 @@ private struct GroupAdminsControllerState: Equatable {
     }
     
     func withUpdatedUpdatingAllAdminsValue(_ updatingAllAdminsValue: Bool?) -> GroupAdminsControllerState {
-        return GroupAdminsControllerState(updatingAllAdminsValue: updatingAllAdminsValue, updatingAdminValue: self.updatingAdminValue)
+        return GroupAdminsControllerState(updatingAllAdminsValue: updatingAllAdminsValue, updatedAllAdminsValue: self.updatedAllAdminsValue, updatingAdminValue: self.updatingAdminValue)
+    }
+    
+    func withUpdatedUpdatedAllAdminsValue(_ updatedAllAdminsValue: Bool?) -> GroupAdminsControllerState {
+        return GroupAdminsControllerState(updatingAllAdminsValue: self.updatingAllAdminsValue, updatedAllAdminsValue: updatedAllAdminsValue, updatingAdminValue: self.updatingAdminValue)
     }
     
     func withUpdatedUpdatingAdminValue(_ updatingAdminValue: [PeerId: Bool]) -> GroupAdminsControllerState {
-        return GroupAdminsControllerState(updatingAllAdminsValue: self.updatingAllAdminsValue, updatingAdminValue: updatingAdminValue)
+        return GroupAdminsControllerState(updatingAllAdminsValue: self.updatingAllAdminsValue, updatedAllAdminsValue: self.updatedAllAdminsValue, updatingAdminValue: updatingAdminValue)
     }
 }
 
@@ -193,8 +206,15 @@ private func groupAdminsControllerEntries(account: Account, view: PeerView, stat
     var entries: [GroupAdminsEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramGroup, let cachedData = view.cachedData as? CachedGroupData, let participants = cachedData.participants {
-        entries.append(.allAdmins(!peer.flags.contains(.adminsEnabled)))
-        if peer.flags.contains(.adminsEnabled) {
+        let effectiveAdminsEnabled: Bool
+        if let updatingAllAdminsValue = state.updatingAllAdminsValue {
+            effectiveAdminsEnabled = updatingAllAdminsValue
+        } else {
+            effectiveAdminsEnabled = peer.flags.contains(.adminsEnabled)
+        }
+        
+        entries.append(.allAdmins(!effectiveAdminsEnabled))
+        if effectiveAdminsEnabled {
             entries.append(.allAdminsInfo("Only admins can add and remove members, edit name and photo of this group."))
         } else {
             entries.append(.allAdminsInfo("Group members can add new members, edit name and photo of this group."))
@@ -226,7 +246,31 @@ private func groupAdminsControllerEntries(account: Account, view: PeerView, stat
         var index: Int32 = 0
         for participant in sortedParticipants {
             if let peer = view.peers[participant.peerId] {
-                entries.append(.peerItem(index, peer, view.peerPresences[participant.peerId], false, false))
+                var isAdmin = false
+                var isEnabled = true
+                if !effectiveAdminsEnabled {
+                    isAdmin = true
+                    isEnabled = false
+                } else {
+                    switch participant {
+                        case .creator:
+                            isAdmin = true
+                            isEnabled = false
+                        case .admin:
+                            if let value = state.updatingAdminValue[peer.id] {
+                                isAdmin = value
+                            } else {
+                                isAdmin = true
+                            }
+                        case .member:
+                            if let value = state.updatingAdminValue[peer.id] {
+                                isAdmin = value
+                            } else {
+                                isAdmin = false
+                            }
+                    }
+                }
+                entries.append(.peerItem(index, peer, view.peerPresences[participant.peerId], isAdmin, isEnabled))
                 index += 1
             }
         }
@@ -242,22 +286,63 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
-    
     let actionsDisposable = DisposableSet()
     
     let toggleAllAdminsDisposable = MetaDisposable()
     actionsDisposable.add(toggleAllAdminsDisposable)
     
-    let toggleAdminsMetaDisposable = MetaDisposable()
-    let toggleAdminsDisposable = DisposableSet()
-    toggleAdminsMetaDisposable.set(toggleAdminsDisposable)
-    actionsDisposable.add(toggleAdminsMetaDisposable)
+    let toggleAdminsDisposables = DisposableDict<PeerId>()
+    actionsDisposable.add(toggleAdminsDisposables)
     
     let arguments = GroupAdminsControllerArguments(account: account, updateAllAreAdmins: { value in
+        updateState { state in
+            return state.withUpdatedUpdatingAllAdminsValue(value)
+        }
+        toggleAllAdminsDisposable.set((updateGroupManagementType(account: account, peerId: peerId, type: value ? .unrestricted : .restrictedToAdmins) |> deliverOnMainQueue).start(error: {
+            updateState { state in
+                return state.withUpdatedUpdatingAllAdminsValue(nil)
+            }
+        }, completed: {
+            updateState { state in
+                return state.withUpdatedUpdatingAllAdminsValue(nil).withUpdatedUpdatedAllAdminsValue(value)
+            }
+        }))
+    }, updatePeerIsAdmin: { memberId, value in
+        updateState { state in
+            var updatingAdminValue = state.updatingAdminValue
+            updatingAdminValue[memberId] = value
+            return state.withUpdatedUpdatingAdminValue(updatingAdminValue)
+        }
         
-    }, updatePeerIsAdmin: { peerId, value in
-        
+        if value {
+            toggleAdminsDisposables.set((addPeerAdmin(account: account, peerId: peerId, adminId: memberId) |> deliverOnMainQueue).start(error: { _ in
+                updateState { state in
+                    var updatingAdminValue = state.updatingAdminValue
+                    updatingAdminValue.removeValue(forKey: memberId)
+                    return state.withUpdatedUpdatingAdminValue(updatingAdminValue)
+                }
+            }, completed: {
+                updateState { state in
+                    var updatingAdminValue = state.updatingAdminValue
+                    updatingAdminValue.removeValue(forKey: memberId)
+                    return state.withUpdatedUpdatingAdminValue(updatingAdminValue)
+                }
+            }), forKey: memberId)
+        } else {
+            toggleAdminsDisposables.set((removePeerAdmin(account: account, peerId: peerId, adminId: memberId) |> deliverOnMainQueue).start(error: { _ in
+                updateState { state in
+                    var updatingAdminValue = state.updatingAdminValue
+                    updatingAdminValue.removeValue(forKey: memberId)
+                    return state.withUpdatedUpdatingAdminValue(updatingAdminValue)
+                }
+            }, completed: {
+                updateState { state in
+                    var updatingAdminValue = state.updatingAdminValue
+                    updatingAdminValue.removeValue(forKey: memberId)
+                    return state.withUpdatedUpdatingAdminValue(updatingAdminValue)
+                }
+            }), forKey: memberId)
+        }
     })
     
     let peerView = account.viewTracker.peerView(peerId)
@@ -271,7 +356,12 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
             }
             
-            let controllerState = ItemListControllerState(title: "Admins", leftNavigationButton: nil, rightNavigationButton: nil, animateChanges: true)
+            var rightNavigationButton: ItemListNavigationButton?
+            if !state.updatingAdminValue.isEmpty || state.updatingAllAdminsValue != nil {
+                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+            }
+            
+            let controllerState = ItemListControllerState(title: "Admins", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             let listState = ItemListNodeState(entries: groupAdminsControllerEntries(account: account, view: view, state: state), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: true)
             
             return (controllerState, (listState, arguments))
@@ -280,10 +370,5 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
         }
     
     let controller = ItemListController(signal)
-    presentControllerImpl = { [weak controller] c, p in
-        if let controller = controller {
-            controller.present(c, in: .window, with: p)
-        }
-    }
     return controller
 }

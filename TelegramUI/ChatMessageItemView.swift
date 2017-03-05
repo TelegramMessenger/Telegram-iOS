@@ -127,6 +127,9 @@ public class ChatMessageItemView: ListViewItemNode {
     func updateSelectionState(animated: Bool) {
     }
     
+    func updateHighlightedState(animated: Bool) {
+    }
+    
     override public func header() -> ListViewItemHeader? {
         if let item = self.item {
             return item.header
