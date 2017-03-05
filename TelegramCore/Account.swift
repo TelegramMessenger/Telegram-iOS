@@ -10,19 +10,8 @@ import Foundation
 #endif
 import TelegramCorePrivateModule
 
-public class AccountState: Coding, Equatable {
-    public required init(decoder: Decoder) {
-    }
-    
-    public func encode(_ encoder: Encoder) {
-    }
-    
-    fileprivate init() {
-    }
-    
-    fileprivate func equalsTo(_ other: AccountState) -> Bool {
-        return false
-    }
+public protocol AccountState: Coding {
+    func equalsTo(_ other: AccountState) -> Bool
 }
 
 public func ==(lhs: AccountState, rhs: AccountState) -> Bool {
@@ -71,11 +60,9 @@ public class AuthorizedAccountState: AccountState {
         self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId")
         self.peerId = PeerId(decoder.decodeInt64ForKey("peerId"))
         self.state = decoder.decodeObjectForKey("state", decoder: { return State(decoder: $0) }) as? State
-        
-        super.init()
     }
     
-    override public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.masterDatacenterId, forKey: "masterDatacenterId")
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "peerId")
         if let state = self.state {
@@ -87,15 +74,13 @@ public class AuthorizedAccountState: AccountState {
         self.masterDatacenterId = masterDatacenterId
         self.peerId = peerId
         self.state = state
-        
-        super.init()
     }
     
     func changedState(_ state: State) -> AuthorizedAccountState {
         return AuthorizedAccountState(masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: state)
     }
     
-    override func equalsTo(_ other: AccountState) -> Bool {
+    public func equalsTo(_ other: AccountState) -> Bool {
         if let other = other as? AuthorizedAccountState {
             return self.masterDatacenterId == other.masterDatacenterId &&
                 self.peerId == other.peerId &&

@@ -1,8 +1,12 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
 #else
     import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
 #endif
 
 public class AutoremoveTimeoutMessageAttribute: MessageAttribute {

@@ -86,6 +86,8 @@
 		D02ABC841E32183300CAE539 /* ManagedSynchronizePinnedCloudChatsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC831E32183300CAE539 /* ManagedSynchronizePinnedCloudChatsOperations.swift */; };
 		D02ABC851E32183300CAE539 /* ManagedSynchronizePinnedCloudChatsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC831E32183300CAE539 /* ManagedSynchronizePinnedCloudChatsOperations.swift */; };
 		D03121021DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */; };
+		D03229F41E6B39700000AF9C /* ImportAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03229F31E6B39700000AF9C /* ImportAccount.swift */; };
+		D03229F51E6B39700000AF9C /* ImportAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03229F31E6B39700000AF9C /* ImportAccount.swift */; };
 		D033FEB01E61EB0200644997 /* PeerReportStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */; };
 		D033FEB11E61EB0200644997 /* PeerReportStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */; };
 		D033FEB31E61F3C000644997 /* ReportPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEB21E61F3C000644997 /* ReportPeer.swift */; };
@@ -477,6 +479,7 @@
 		D02ABC801E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedCloudChatRemoveMessagesOperations.swift; sourceTree = "<group>"; };
 		D02ABC831E32183300CAE539 /* ManagedSynchronizePinnedCloudChatsOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizePinnedCloudChatsOperations.swift; sourceTree = "<group>"; };
 		D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramPeerNotificationSettings.swift; sourceTree = "<group>"; };
+		D03229F31E6B39700000AF9C /* ImportAccount.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImportAccount.swift; sourceTree = "<group>"; };
 		D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerReportStatus.swift; sourceTree = "<group>"; };
 		D033FEB21E61F3C000644997 /* ReportPeer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportPeer.swift; sourceTree = "<group>"; };
 		D033FEB51E61F3F900644997 /* BlockedPeers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlockedPeers.swift; sourceTree = "<group>"; };
@@ -794,6 +797,7 @@
 				D0FA8BAC1E1FD6E2001E855B /* MemoryBufferExtensions.swift */,
 				D0448C9E1E27F5EB005A61A7 /* Random.swift */,
 				D050F20F1E48AB0600988324 /* InteractivePhoneFormatter.swift */,
+				D03229F31E6B39700000AF9C /* ImportAccount.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1350,6 +1354,7 @@
 				D00DBBD71E64E41100DB5485 /* CreateSecretChat.swift in Sources */,
 				C2FD33EB1E696C78008D13D4 /* GroupsInCommon.swift in Sources */,
 				D0FA8BB01E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */,
+				D03229F41E6B39700000AF9C /* ImportAccount.swift in Sources */,
 				D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */,
 				D03B0D091D62255C00955575 /* EnqueueMessage.swift in Sources */,
 				D033FEB01E61EB0200644997 /* PeerReportStatus.swift in Sources */,
@@ -1555,6 +1560,7 @@
 				D00DBBD81E64E41100DB5485 /* CreateSecretChat.swift in Sources */,
 				C2FD33EC1E696C79008D13D4 /* GroupsInCommon.swift in Sources */,
 				C239BE9D1E630CB300C2C453 /* UpdatePinnedMessage.swift in Sources */,
+				D03229F51E6B39700000AF9C /* ImportAccount.swift in Sources */,
 				C239BE981E62F0D200C2C453 /* LoadMessagesIfNecessary.swift in Sources */,
 				C26A37EF1E5E0C41006977AC /* ChannelParticipants.swift in Sources */,
 				D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */,

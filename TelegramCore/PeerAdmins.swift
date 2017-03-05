@@ -75,7 +75,33 @@ public func removePeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -
                         } |> mapError { _ -> RemovePeerAdminError in return .generic }
                     }
             } else if let group = peer as? TelegramGroup {
-                return .fail(.generic)
+                return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolFalse))
+                    |> mapError { _ -> RemovePeerAdminError in return .generic }
+                    |> mapToSignal { result -> Signal<Void, RemovePeerAdminError> in
+                        return account.postbox.modify { modifier -> Void in
+                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                if let current = current as? CachedGroupData, let participants = current.participants {
+                                    var updatedParticipants = participants.participants
+                                    if case .boolTrue = result {
+                                        for i in 0 ..< updatedParticipants.count {
+                                            if updatedParticipants[i].peerId == adminId {
+                                                switch updatedParticipants[i] {
+                                                    case let .admin(id, invitedBy, invitedAt):
+                                                        updatedParticipants[i] = .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+                                                    default:
+                                                        break
+                                                }
+                                                break
+                                            }
+                                        }
+                                    }
+                                    return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
+                                } else {
+                                    return current
+                                }
+                            })
+                        } |> mapError { _ -> RemovePeerAdminError in return .generic }
+                }
             } else {
                 return .fail(.generic)
             }
@@ -132,7 +158,33 @@ public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> S
                         } |> mapError { _ -> AddPeerAdminError in return .generic }
                     }
             } else if let group = peer as? TelegramGroup {
-                return .fail(.generic)
+                return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolTrue))
+                    |> mapError { _ -> AddPeerAdminError in return .generic }
+                    |> mapToSignal { result -> Signal<Void, AddPeerAdminError> in
+                        return account.postbox.modify { modifier -> Void in
+                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                if let current = current as? CachedGroupData, let participants = current.participants {
+                                    var updatedParticipants = participants.participants
+                                    if case .boolTrue = result {
+                                        for i in 0 ..< updatedParticipants.count {
+                                            if updatedParticipants[i].peerId == adminId {
+                                                switch updatedParticipants[i] {
+                                                    case let .member(id, invitedBy, invitedAt):
+                                                        updatedParticipants[i] = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+                                                    default:
+                                                        break
+                                                }
+                                                break
+                                            }
+                                        }
+                                    }
+                                    return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
+                                } else {
+                                    return current
+                                }
+                            })
+                        } |> mapError { _ -> AddPeerAdminError in return .generic }
+                    }
             } else {
                 return .fail(.generic)
             }
