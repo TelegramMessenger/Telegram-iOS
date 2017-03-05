@@ -374,7 +374,7 @@ extension ChatContextResult {
                     dimensions = CGSize(width: CGFloat(w), height: CGFloat(h))
                 }
                 self = .externalReference(id: id, type: type, title: title, description: description, url: url, thumbnailUrl: thumbUrl, contentUrl: contentUrl, contentType: contentType, dimensions: dimensions, duration: duration, message: ChatContextResultMessage(apiMessage: sendMessage))
-            case let .botInlineMediaResult(flags, id, type, photo, document, title, description, sendMessage):
+            case let .botInlineMediaResult(_, id, type, photo, document, title, description, sendMessage):
                 var image: TelegramMediaImage?
                 var file: TelegramMediaFile?
                 if let photo = photo, let parsedImage = telegramMediaImageFromApiPhoto(photo) {

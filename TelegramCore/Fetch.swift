@@ -71,7 +71,7 @@ private func fetchLocalFileResource(path: String) -> Signal<MediaResourceDataFet
 
 func fetchResource(account: Account, resource: MediaResource, range: Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError> {
     if let _ = resource as? EmptyMediaResource {
-        return .single(MediaResourceDataFetchResult(data: Data(), complete: false))
+        return .never()
     } else if let secretFileResource = resource as? SecretFileMediaResource {
         return .single(MediaResourceDataFetchResult(data: Data(), complete: false)) |> then(fetchSecretFileResource(account: account, resource: secretFileResource, range: range))
     } else if let cloudResource = resource as? TelegramCloudMediaResource {

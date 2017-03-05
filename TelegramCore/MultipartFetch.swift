@@ -79,8 +79,14 @@ private final class MultipartFetchManager {
     init(size: Int?, range: Range<Int>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?, fetchPart: @escaping (Int, Int) -> Signal<Data, NoError>, partReady: @escaping (Data) -> Void, completed: @escaping () -> Void) {
         self.completeSize = size
         if let size = size {
-            self.range = range.lowerBound ..< min(range.upperBound, size)
-            self.parallelParts = 4
+            if size <= range.lowerBound {
+                //assertionFailure()
+                self.range = range
+                self.parallelParts = 0
+            } else {
+                self.range = range.lowerBound ..< min(range.upperBound, size)
+                self.parallelParts = 4
+            }
         } else {
             self.range = range
             self.parallelParts = 1

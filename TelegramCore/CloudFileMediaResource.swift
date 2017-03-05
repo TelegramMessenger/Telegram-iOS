@@ -494,7 +494,7 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource {
 
 public struct EmptyMediaResourceId: MediaResourceId {
     public var uniqueId: String {
-        return "empty"
+        return "empty-resource"
     }
     
     public var hashValue: Int {
