@@ -362,6 +362,18 @@ public final class Modifier {
             return 0
         }
     }
+    
+    public func getAccessChallengeData() -> PostboxAccessChallengeData {
+        if let postbox = self.postbox {
+            return postbox.metadataTable.accessChallengeData()
+        } else {
+            return .none
+        }
+    }
+    
+    public func setAccessChallengeData(_ data: PostboxAccessChallengeData) {
+        self.postbox?.metadataTable.setAccessChallengeData(data)
+    }
 }
 
 fileprivate class PipeNotifier: NSObject {

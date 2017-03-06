@@ -8,12 +8,12 @@ private enum MetadataKey: Int32 {
     case AccessChallenge = 5
 }
 
-enum PostboxAccessChallengeData: Coding {
+public enum PostboxAccessChallengeData: Coding {
     case none
     case numericalPassword(String)
     case plaintextPassword(String)
     
-    init(decoder: Decoder) {
+    public init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("r") as Int32 {
             case 0:
                 self = .none
@@ -27,7 +27,7 @@ enum PostboxAccessChallengeData: Coding {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: Encoder) {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "r")
