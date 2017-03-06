@@ -110,6 +110,8 @@ public class UnauthorizedAccount {
         return Int32(self.network.mtProto.datacenterId)
     }
     
+    public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
+    
     init(id: AccountRecordId, appGroupPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
         self.id = id
         self.appGroupPath = appGroupPath
@@ -117,7 +119,15 @@ public class UnauthorizedAccount {
         self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
-        network.shouldKeepConnection.set(.single(shouldKeepAutoConnection))
+        
+        network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get() |> map { mode -> Bool in
+            switch mode {
+                case .now, .always:
+                    return true
+                case .never:
+                    return false
+            }
+        })
     }
     
     public func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {
@@ -135,7 +145,9 @@ public class UnauthorizedAccount {
             
             return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
                 |> map { network in
-                    return UnauthorizedAccount(id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
+                    let updated = UnauthorizedAccount(id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
+                    updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
+                    return updated
                 }
         }
     }

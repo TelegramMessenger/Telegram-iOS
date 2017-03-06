@@ -5,6 +5,20 @@ import Foundation
     import Postbox
 #endif
 
+public struct UserInfoFlags: OptionSet {
+    public var rawValue: Int32
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let isVerified = UserInfoFlags(rawValue: (1 << 0))
+}
+
 public struct BotUserInfoFlags: OptionSet {
     public var rawValue: Int32
     
@@ -58,6 +72,7 @@ public final class TelegramUser: Peer {
     public let phone: String?
     public let photo: [TelegramMediaImageRepresentation]
     public let botInfo: BotUserInfo?
+    public let flags: UserInfoFlags
     
     public var name: String {
         if let firstName = self.firstName {
@@ -80,7 +95,7 @@ public final class TelegramUser: Peer {
     public let associatedPeerIds: [PeerId]? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?) {
+    public init(id: PeerId, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, flags: UserInfoFlags) {
         self.id = id
         self.accessHash = accessHash
         self.firstName = firstName
@@ -89,6 +104,7 @@ public final class TelegramUser: Peer {
         self.phone = phone
         self.photo = photo
         self.botInfo = botInfo
+        self.flags = flags
     }
     
     public init(decoder: Decoder) {
@@ -114,6 +130,8 @@ public final class TelegramUser: Peer {
         } else {
             self.botInfo = nil
         }
+        
+        self.flags = UserInfoFlags(rawValue: decoder.decodeInt32ForKey("fl"))
     }
     
     public func encode(_ encoder: Encoder) {
@@ -144,6 +162,8 @@ public final class TelegramUser: Peer {
         } else {
             encoder.encodeNil(forKey: "bi")
         }
+        
+        encoder.encodeInt32(self.flags.rawValue, forKey: "fl")
     }
     
     public func isEqual(_ other: Peer) -> Bool {
@@ -175,6 +195,10 @@ public final class TelegramUser: Peer {
                 return false
             }
             
+            if self.flags != other.flags {
+                return false
+            }
+            
             return true
         } else {
             return false
@@ -182,16 +206,19 @@ public final class TelegramUser: Peer {
     }
     
     func withUpdatedUsername(_ username:String?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: username, phone: self.phone, photo: self.photo, botInfo: self.botInfo)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, flags: self.flags)
     }
-    func withUpdatedNames(firstName:String?, lastName:String?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: firstName, lastName: lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo)
+    
+    func withUpdatedNames(firstName: String?, lastName: String?) -> TelegramUser {
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: firstName, lastName: lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, flags: self.flags)
     }
-    func withUpdatedPhone(_ phone:String) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo)
+    
+    func withUpdatedPhone(_ phone: String) -> TelegramUser {
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, flags: self.flags)
     }
-    func withUpdatedPhoto(_ representations:[TelegramMediaImageRepresentation]) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: representations, botInfo: self.botInfo)
+    
+    func withUpdatedPhoto(_ representations: [TelegramMediaImageRepresentation]) -> TelegramUser {
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: representations, botInfo: self.botInfo, flags: self.flags)
     }
 }
 
@@ -211,6 +238,12 @@ public extension TelegramUser {
                             break
                     }
                 }
+                
+                var userFlags: UserInfoFlags = []
+                if (flags & (1 << 17)) != 0 {
+                    userFlags.insert(.isVerified)
+                }
+                
                 var botInfo: BotUserInfo?
                 if (flags & (1 << 14)) != 0 {
                     var botFlags = BotUserInfoFlags()
@@ -225,9 +258,9 @@ public extension TelegramUser {
                     }
                     botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
                 }
-                self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: accessHash, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: telegramPhoto, botInfo: botInfo)
+                self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: accessHash, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: telegramPhoto, botInfo: botInfo, flags: userFlags)
             case let .userEmpty(id):
-                self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil)
+                self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, flags: [])
         }
     }
     
@@ -250,6 +283,11 @@ public extension TelegramUser {
                         }
                     }
                     if let lhs = lhs {
+                        var userFlags: UserInfoFlags = []
+                        if (flags & (1 << 17)) != 0 {
+                            userFlags.insert(.isVerified)
+                        }
+                        
                         var botInfo: BotUserInfo?
                         if (flags & (1 << 14)) != 0 {
                             var botFlags = BotUserInfoFlags()
@@ -265,7 +303,7 @@ public extension TelegramUser {
                             botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
                         }
                         
-                        return TelegramUser(id: lhs.id, accessHash: lhs.accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo)
+                        return TelegramUser(id: lhs.id, accessHash: lhs.accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, flags: userFlags)
                     } else {
                         return TelegramUser(user: rhs)
                     }

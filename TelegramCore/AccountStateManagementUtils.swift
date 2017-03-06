@@ -751,7 +751,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     if updatedState.peers[peerId] == nil {
                         updatedState.updatePeer(peerId, { peer in
                             if peer == nil {
-                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil))
+                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), flags: [.isVerified])
                             } else {
                                 return peer
                             }
@@ -954,6 +954,18 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: chatId), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
             case let .updateEncryptedChatTyping(chatId):
                 updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), peerId: nil, activity: .typingText)
+            case let .updateDialogPinned(flags, peer):
+                if (flags & (1 << 0)) != 0 {
+                    updatedState.addUpdatePinnedPeerIds(.pin(peer.peerId))
+                } else {
+                    updatedState.addUpdatePinnedPeerIds(.unpin(peer.peerId))
+                }
+            case let .updatePinnedDialogs(_, order):
+                if let order = order {
+                    updatedState.addUpdatePinnedPeerIds(.reorder(order.map { $0.peerId }))
+                } else {
+                    updatedState.addUpdatePinnedPeerIds(.sync)
+                }
             default:
                     break
         }
@@ -1287,7 +1299,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1425,6 +1437,36 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     }
                 } else if chatPeerId.namespace == Namespaces.Peer.SecretChat {
                     updatedSecretChatTypingActivities.insert(chatPeerId)
+                }
+            case let .UpdatePinnedPeerIds(pinnedOperation):
+                switch pinnedOperation {
+                    case let .pin(peerId):
+                        if modifier.getPeer(peerId) == nil || modifier.getPeerChatListInclusion(peerId) == .notSpecified {
+                            addSynchronizePinnedChatsOperation(modifier: modifier)
+                        } else {
+                            var currentPeerIds = modifier.getPinnedPeerIds()
+                            if !currentPeerIds.contains(peerId) {
+                                currentPeerIds.insert(peerId, at: 0)
+                                modifier.setPinnedPeerIds(currentPeerIds)
+                            }
+                        }
+                    case let .unpin(peerId):
+                        var currentPeerIds = modifier.getPinnedPeerIds()
+                        if let index = currentPeerIds.index(of: peerId) {
+                            currentPeerIds.remove(at: index)
+                            modifier.setPinnedPeerIds(currentPeerIds)
+                        } else {
+                            addSynchronizePinnedChatsOperation(modifier: modifier)
+                        }
+                    case let .reorder(peerIds):
+                        let currentPeerIds = modifier.getPinnedPeerIds()
+                        if Set(peerIds) == Set(currentPeerIds) {
+                            modifier.setPinnedPeerIds(peerIds)
+                        } else {
+                            addSynchronizePinnedChatsOperation(modifier: modifier)
+                        }
+                    case .sync:
+                        addSynchronizePinnedChatsOperation(modifier: modifier)
                 }
         }
     }
