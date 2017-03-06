@@ -23,6 +23,7 @@
 		D00C7CE91E379B820080C3D5 /* ChatSecretAutoremoveTimerActionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CE81E379B820080C3D5 /* ChatSecretAutoremoveTimerActionSheet.swift */; };
 		D00C7CF71E37BF680080C3D5 /* SecretChatKeyVisualization.h in Headers */ = {isa = PBXBuildFile; fileRef = D00C7CF51E37BF680080C3D5 /* SecretChatKeyVisualization.h */; };
 		D00C7CF81E37BF680080C3D5 /* SecretChatKeyVisualization.m in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CF61E37BF680080C3D5 /* SecretChatKeyVisualization.m */; };
+		D00D34371E6E14E30057B307 /* ChatMessageThrottledProcessingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00D34361E6E14E30057B307 /* ChatMessageThrottledProcessingManager.swift */; };
 		D00DBBDD1E65650800DB5485 /* ChatReportPeerTitlePanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00DBBDC1E65650800DB5485 /* ChatReportPeerTitlePanelNode.swift */; };
 		D00E15261DDBD4E700ACF65C /* LegacyCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */; };
 		D0105D5A1D80B957008755D8 /* ChatChannelSubscriberInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0105D591D80B957008755D8 /* ChatChannelSubscriberInputPanelNode.swift */; };
@@ -500,6 +501,7 @@
 		D00C7CE81E379B820080C3D5 /* ChatSecretAutoremoveTimerActionSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatSecretAutoremoveTimerActionSheet.swift; sourceTree = "<group>"; };
 		D00C7CF51E37BF680080C3D5 /* SecretChatKeyVisualization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecretChatKeyVisualization.h; sourceTree = "<group>"; };
 		D00C7CF61E37BF680080C3D5 /* SecretChatKeyVisualization.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SecretChatKeyVisualization.m; sourceTree = "<group>"; };
+		D00D34361E6E14E30057B307 /* ChatMessageThrottledProcessingManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageThrottledProcessingManager.swift; sourceTree = "<group>"; };
 		D00DBBDC1E65650800DB5485 /* ChatReportPeerTitlePanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatReportPeerTitlePanelNode.swift; sourceTree = "<group>"; };
 		D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyCamera.swift; sourceTree = "<group>"; };
 		D0105D591D80B957008755D8 /* ChatChannelSubscriberInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatChannelSubscriberInputPanelNode.swift; sourceTree = "<group>"; };
@@ -1754,6 +1756,7 @@
 				D0DE77261D932627002B8809 /* ChatHistoryNode.swift */,
 				D0E7A1BC1D8C246D00C37A6F /* ChatHistoryListNode.swift */,
 				D02BE0701D91814C000889C2 /* ChatHistoryGridNode.swift */,
+				D00D34361E6E14E30057B307 /* ChatMessageThrottledProcessingManager.swift */,
 				D0DE772C1D934DCB002B8809 /* List Items */,
 				D02BE0751D9190CD000889C2 /* Grid Items */,
 			);
@@ -2663,6 +2666,7 @@
 				D0528E631E65BECA00E2FEF5 /* UserInfoController.swift in Sources */,
 				D0F69E751D6B8C340046BCD6 /* ContactsPeerItem.swift in Sources */,
 				D01B27991E39144C0022A4C0 /* ItemListController.swift in Sources */,
+				D00D34371E6E14E30057B307 /* ChatMessageThrottledProcessingManager.swift in Sources */,
 				D0561DE11E57153000E6B9E9 /* ItemListActivityTextItem.swift in Sources */,
 				D0F69DD61D6B8A2D0046BCD6 /* AlertController.swift in Sources */,
 				D00370301DA43077004308D3 /* ItemListItem.swift in Sources */,

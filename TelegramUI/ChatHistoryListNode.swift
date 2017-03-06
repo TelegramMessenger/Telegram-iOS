@@ -210,6 +210,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
+    private let messageProcessingManager = ChatMessageThrottledProcessingManager()
+    
     public init(account: Account, peerId: PeerId, tagMask: MessageTags?, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode = .bubbles) {
         self.account = account
         self.peerId = peerId
@@ -222,6 +224,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         //self.stackFromBottom = true
         
         //self.debugInfo = true
+        
+        self.messageProcessingManager.process = { [weak account] messageIds in
+            account?.viewTracker.updatedViewCountMessageIds(messageIds: messageIds)
+        }
         
         self.preloadPages = false
         switch self.mode {
@@ -346,7 +352,25 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if let strongSelf = self {
                 if let historyView = (opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
                     if let visible = displayedRange.visibleRange {
-                        if let messageIndex = maxIncomingMessageIndexForEntries(historyView.filteredEntries, indexRange: (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)) {
+                        let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
+                        
+                        var messageIdsWithViewCount: [MessageId] = []
+                        for i in (indexRange.0 ... indexRange.1) {
+                            if case let .MessageEntry(message, _) = historyView.filteredEntries[i] {
+                                inner: for attribute in message.attributes {
+                                    if attribute is ViewCountMessageAttribute {
+                                        messageIdsWithViewCount.append(message.id)
+                                        break inner
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if !messageIdsWithViewCount.isEmpty {
+                            strongSelf.messageProcessingManager.add(messageIdsWithViewCount)
+                        }
+                        
+                        if let messageIndex = maxIncomingMessageIndexForEntries(historyView.filteredEntries, indexRange: indexRange) {
                             strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                         }
                     }
