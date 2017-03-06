@@ -141,11 +141,19 @@ public final class AccountViewTracker {
     private var pendingWebpageMessageIds: [MessageId: Int] = [:]
     private var webpageDisposables: [MessageId: Disposable] = [:]
     
+    private var updatedViewCountMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var nextUpdatedViewCountDisposableId: Int32 = 0
+    private var updatedViewCountDisposables = DisposableDict<Int32>()
+    
     private var cachedDataContexts: [PeerId: PeerCachedDataContext] = [:]
     private var cachedChannelParticipantsContexts: [PeerId: CachedChannelParticipantsContext] = [:]
     
     init(account: Account) {
         self.account = account
+    }
+    
+    deinit {
+        self.updatedViewCountDisposables.dispose()
     }
     
     private func updatePendingWebpages(viewId: Int32, messageIds: Set<MessageId>) {
@@ -202,6 +210,72 @@ public final class AccountViewTracker {
                         })
                     } else {
                         assertionFailure()
+                    }
+                }
+            }
+        }
+    }
+    
+    public func updatedViewCountMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.updatedViewCountMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil || messageTimestamp! < timestamp - 5 * 60 {
+                    self.updatedViewCountMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedViewCountDisposableId
+                    self.nextUpdatedViewCountDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = (account.postbox.modify { modifier -> Signal<Void, NoError> in
+                            if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                return account.network.request(Api.functions.messages.getMessagesViews(peer: inputPeer, id: messageIds.map { $0.id }, increment: .boolTrue))
+                                    |> map { Optional($0) }
+                                    |> `catch` { _ -> Signal<[Int32]?, NoError> in
+                                        return .single(nil)
+                                    }
+                                    |> mapToSignal { viewCounts -> Signal<Void, NoError> in
+                                        if let viewCounts = viewCounts {
+                                            return account.postbox.modify { modifier -> Void in
+                                                for i in 0 ..< messageIds.count {
+                                                    if i < viewCounts.count {
+                                                        modifier.updateMessage(messageIds[i], update: { currentMessage in
+                                                            var storeForwardInfo: StoreMessageForwardInfo?
+                                                            if let forwardInfo = currentMessage.forwardInfo {
+                                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                                                            }
+                                                            var attributes = currentMessage.attributes
+                                                            loop: for i in 0 ..< attributes.count {
+                                                                if let attribute = attributes[i] as? ViewCountMessageAttribute {
+                                                                    attributes[i] = ViewCountMessageAttribute(count: max(attribute.count, Int(viewCounts[i])))
+                                                                    break loop
+                                                                }
+                                                            }
+                                                            return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media)
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            return .complete()
+                                        }
+                                    }
+                            } else {
+                                return .complete()
+                            }
+                        } |> switchToLatest)
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedViewCountDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedViewCountDisposables.set(signal.start(), forKey: disposableId)
                     }
                 }
             }
