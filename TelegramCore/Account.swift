@@ -110,14 +110,14 @@ public class UnauthorizedAccount {
         return Int32(self.network.mtProto.datacenterId)
     }
     
-    init(id: AccountRecordId, appGroupPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network) {
+    init(id: AccountRecordId, appGroupPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
         self.id = id
         self.appGroupPath = appGroupPath
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
-        network.shouldKeepConnection.set(.single(true))
+        network.shouldKeepConnection.set(.single(shouldKeepAutoConnection))
     }
     
     public func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {
@@ -209,7 +209,7 @@ private func accountRecordIdPathName(_ id: AccountRecordId) -> String {
     return "account-\(UInt64(bitPattern: id.int64))"
 }
 
-public func accountWithId(_ id: AccountRecordId, appGroupPath: String, testingEnvironment: Bool) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
+public func accountWithId(_ id: AccountRecordId, appGroupPath: String, testingEnvironment: Bool, shouldKeepAutoConnection: Bool = true) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
     return Signal<(String, Postbox, Coding?), NoError> { subscriber in
         let _ = declaredEncodables
         
@@ -245,7 +245,7 @@ public func accountWithId(_ id: AccountRecordId, appGroupPath: String, testingEn
                 case let unauthorizedState as UnauthorizedAccountState:
                     return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
+                            .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                         }
                 case let authorizedState as AuthorizedAccountState:
                     return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
@@ -259,7 +259,7 @@ public func accountWithId(_ id: AccountRecordId, appGroupPath: String, testingEn
         
         return initializedNetwork(datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
             |> map { network -> Either<UnauthorizedAccount, Account> in
-                return .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network))
+                return .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
         }
     }
 }
