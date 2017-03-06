@@ -114,17 +114,17 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
 }
 
 private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, operation: SynchronizePinnedChatsOperation) -> Signal<Void, NoError> {
-    let rawPeerIds = modifier.getPinnedPeerIds()
-    let peerIds = rawPeerIds.filter {
+    let initialRemotePeerIds = operation.previousPeerIds
+    let initialRemotePeerIdsWithoutSecretChats = initialRemotePeerIds.filter {
+        $0.namespace != Namespaces.Peer.SecretChat
+    }
+    let localPeerIds = modifier.getPinnedPeerIds()
+    let localPeerIdsWithoutSecretChats = localPeerIds.filter {
         $0.namespace != Namespaces.Peer.SecretChat
     }
     
-    /*let peerIdsSet = Set(peerIds)
-    let previousCachedIds = Set(operation.previousPeerIds.filter { $0.namespace != Namespaces.Peer.SecretChat })
-    let removedIds = previousCachedIds.subtracting(peerIdsSet)
-    
     //messages.peerDialogs#3371c354 dialogs:Vector<Dialog> messages:Vector<Message> chats:Vector<Chat> users:Vector<User> state:updates.State = messages.PeerDialogs;
-    let s = network.request(Api.functions.messages.getPinnedDialogs())
+    return network.request(Api.functions.messages.getPinnedDialogs())
         |> retryRequest
         |> mapToSignal { dialogs -> Signal<Void, NoError> in
             let dialogsChats: [Api.Chat]
@@ -134,6 +134,8 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
             var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
             var chatStates: [PeerId: PeerChatState] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+            
+            var remotePeerIds: [PeerId] = []
             
             switch dialogs {
                 case let .peerDialogs(dialogs, messages, chats, users, _):
@@ -169,6 +171,8 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                         }
                         
+                        remotePeerIds.append(peerId)
+                        
                         if readStates[peerId] == nil {
                             readStates[peerId] = [:]
                         }
@@ -188,13 +192,11 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                     }
             }
             
-            var chatPeers: [Peer] = []
             var peers: [Peer] = []
             var peerPresences: [PeerId: PeerPresence] = [:]
             for chat in dialogsChats {
                 if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                     peers.append(groupOrChannel)
-                    chatPeers.append(groupOrChannel)
                 }
             }
             for user in dialogsUsers {
@@ -205,18 +207,59 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 }
             }
             
-            let currentPeersIds = chatPeers.map({ $0.id })
+            let locallyRemovedFromRemotePeerIds = Set(initialRemotePeerIdsWithoutSecretChats).subtracting(Set(localPeerIdsWithoutSecretChats))
+            let remotelyRemovedPeerIds = Set(initialRemotePeerIdsWithoutSecretChats).subtracting(Set(remotePeerIds))
             
-            let cleanedUpPeerIds = currentPeersIds.filter { !removedIds.contains($0) }
+            var resultingPeerIds = localPeerIds.filter { !remotelyRemovedPeerIds.contains($0) }
+            resultingPeerIds.append(contentsOf: remotePeerIds.filter { !locallyRemovedFromRemotePeerIds.contains($0) && !resultingPeerIds.contains($0) })
             
-            var finalPeerIds: [PeerId] = []
-            
-            
-            return .never()
-        }*/
+            return postbox.modify { modifier -> Signal<Void, NoError> in
+                updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                    return updated
+                })
+                modifier.updatePeerPresences(peerPresences)
+                
+                modifier.updatePeerNotificationSettings(notificationSettings)
+                
+                var allPeersWithMessages = Set<PeerId>()
+                for message in storeMessages {
+                    if !allPeersWithMessages.contains(message.id.peerId) {
+                        allPeersWithMessages.insert(message.id.peerId)
+                    }
+                }
+                let _ = modifier.addMessages(storeMessages, location: .UpperHistoryBlock)
+                
+                modifier.resetIncomingReadStates(readStates)
+                
+                for (peerId, chatState) in chatStates {
+                    modifier.setPeerChatState(peerId, state: chatState)
+                }
+                
+                if remotePeerIds == resultingPeerIds {
+                    return .complete()
+                } else {
+                    var inputPeers: [Api.InputPeer] = []
+                    for peerId in resultingPeerIds {
+                        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                            inputPeers.append(inputPeer)
+                        }
+                    }
+                    
+                    return network.request(Api.functions.messages.reorderPinnedDialogs(flags: 1 << 0, order: inputPeers))
+                        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                            return .single(Api.Bool.boolFalse)
+                        }
+                        |> mapToSignal { result -> Signal<Void, NoError> in
+                            return postbox.modify { modifier -> Void in
+                                modifier.setPinnedPeerIds(resultingPeerIds)
+                            }
+                        }
+                }
+            } |> switchToLatest
+        }
     
     
-    var inputPeers: [Api.InputPeer] = []
+    /*var inputPeers: [Api.InputPeer] = []
     for peerId in peerIds {
         if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             inputPeers.append(inputPeer)
@@ -229,5 +272,5 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
         }
         |> mapToSignal { result -> Signal<Void, NoError> in
             return .complete()
-        }
+        }*/
 }

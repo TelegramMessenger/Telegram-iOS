@@ -88,7 +88,7 @@ public func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             
             var channelFlags = TelegramChannelFlags()
             if (flags & Int32(1 << 7)) != 0 {
-                channelFlags.insert(.verified)
+                channelFlags.insert(.isVerified)
             }
             
             let restrictionInfo: PeerAccessRestrictionInfo?
@@ -115,21 +115,21 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
     switch rhs {
         case .chat, .chatEmpty, .chatForbidden, .channelForbidden:
             return parseTelegramGroupOrChannel(chat: rhs)
-        case let .channel(flags, id, accessHash, title, username, photo, date, version, restrictionReason):
+        case let .channel(flags, _, accessHash, title, username, photo, date, version, restrictionReason):
             if let _ = accessHash {
                 return parseTelegramGroupOrChannel(chat: rhs)
             } else if let lhs = lhs as? TelegramChannel {
                 var channelFlags = lhs.flags
                 if (flags & Int32(1 << 7)) != 0 {
-                    channelFlags.insert(.verified)
+                    channelFlags.insert(.isVerified)
                 } else {
-                    let _ = channelFlags.remove(.verified)
+                    let _ = channelFlags.remove(.isVerified)
                 }
                 var info = lhs.info
                 switch info {
                     case .broadcast:
                         break
-                    case let .group(groupInfo):
+                    case .group:
                         var infoFlags = TelegramChannelGroupFlags()
                         if (flags & Int32(1 << 10)) != 0 {
                             infoFlags.insert(.everyMemberCanInviteMembers)
