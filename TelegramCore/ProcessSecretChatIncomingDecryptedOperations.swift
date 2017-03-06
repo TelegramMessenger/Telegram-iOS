@@ -512,7 +512,16 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
                 attributes.append(ReplyMessageAttribute(messageId: replyMessageId))
             }
-            return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: tagsForStoreMessage(parsedMedia), forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia), resources)
+
+            var entitiesAttribute: TextEntitiesMessageAttribute?
+            for attribute in attributes {
+                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                    entitiesAttribute = attribute
+                    break
+                }
+            }
+
+            return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: tagsForStoreMessage(media: parsedMedia, textEntities: entitiesAttribute?.entities), forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia), resources)
         case let .decryptedMessageService(randomId, action):
             switch action {
                 case let .decryptedMessageActionDeleteMessages(randomIds):
