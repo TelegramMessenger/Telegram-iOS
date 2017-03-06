@@ -155,8 +155,16 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     if let media = media {
                         mediaList.append(media)
                     }
+                    
+                    var entitiesAttribute: TextEntitiesMessageAttribute?
+                    for attribute in attributes {
+                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                            entitiesAttribute = attribute
+                            break
+                        }
+                    }
                 
-                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(mediaList), forwardInfo: nil, authorId: account.peerId, text: text, attributes: attributes, media: mediaList))
+                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(media: mediaList, textEntities: entitiesAttribute?.entities), forwardInfo: nil, authorId: account.peerId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source):
                     if let sourceMessage = modifier.getMessage(source), let author = sourceMessage.author {
                         if let peer = peer as? TelegramSecretChat {
@@ -186,7 +194,16 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                             }
                             forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp)
                         }
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(sourceMessage.media), forwardInfo: forwardInfo, authorId: account.peerId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                        
+                        var entitiesAttribute: TextEntitiesMessageAttribute?
+                        for attribute in attributes {
+                            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                entitiesAttribute = attribute
+                                break
+                            }
+                        }
+                        
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(media: sourceMessage.media, textEntities: entitiesAttribute?.entities), forwardInfo: forwardInfo, authorId: account.peerId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                     }
             }
         }

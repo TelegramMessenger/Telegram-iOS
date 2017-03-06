@@ -5,12 +5,12 @@ import Foundation
     import Postbox
 #endif
 
-func tagsForStoreMessage(_ medias: [Media]) -> MessageTags {
+func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity]?) -> MessageTags {
     var tags = MessageTags()
-    for media in medias {
-        if let _ = media as? TelegramMediaImage {
+    for attachment in media {
+        if let _ = attachment as? TelegramMediaImage {
             let _ = tags.insert(.PhotoOrVideo)
-        } else if let file = media as? TelegramMediaFile {
+        } else if let file = attachment as? TelegramMediaFile {
             if file.isSticker || file.isAnimated {
             } else if file.isVideo {
                 let _ = tags.insert(.PhotoOrVideo)
@@ -21,8 +21,18 @@ func tagsForStoreMessage(_ medias: [Media]) -> MessageTags {
             } else {
                 let _ = tags.insert(.File)
             }
-        } else if let webpage = media as? TelegramMediaWebpage, case .Loaded = webpage.content {
+        } else if let webpage = attachment as? TelegramMediaWebpage, case .Loaded = webpage.content {
             tags.insert(.WebPage)
+        }
+    }
+    if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.WebPage) {
+        for entity in textEntities {
+            switch entity.type {
+                case .Url, .Email:
+                    tags.insert(.WebPage)
+                default:
+                    break
+            }
         }
     }
     return tags
@@ -351,8 +361,11 @@ extension StoreMessage {
                     attributes.append(EditedMessageAttribute(date: editDate))
                 }
                 
+                var entitiesAttribute: TextEntitiesMessageAttribute?
                 if let entities = entities, !entities.isEmpty {
-                    attributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
+                    let attribute = TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities))
+                    entitiesAttribute = attribute
+                    attributes.append(attribute)
                 }
                 
                 var storeFlags = StoreMessageFlags()
@@ -372,7 +385,7 @@ extension StoreMessage {
                     storeFlags.insert(.Personal)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(medias), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(media: medias, textEntities: entitiesAttribute?.entities), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
