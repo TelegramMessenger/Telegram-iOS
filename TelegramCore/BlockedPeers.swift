@@ -9,6 +9,33 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
+public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
+    return account.network.request(Api.functions.contacts.getBlocked(offset: 0, limit: 100))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[Peer], NoError> in
+            return account.postbox.modify { modifier -> [Peer] in
+                var peers: [Peer] = []
+                let apiUsers: [Api.User]
+                switch result {
+                    case let .blocked(_, users):
+                        apiUsers = users
+                    case let .blockedSlice(_, _, users):
+                        apiUsers = users
+                }
+                for user in apiUsers {
+                    let parsed = TelegramUser(user: user)
+                    peers.append(parsed)
+                }
+                
+                updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+                    return updated
+                })
+                
+                return peers
+            }
+        }
+}
+
 public func requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlocked: Bool) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
