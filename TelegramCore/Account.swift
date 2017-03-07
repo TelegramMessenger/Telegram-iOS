@@ -210,6 +210,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
+    declareEncodable(TelegramMediaGame.self, f: { TelegramMediaGame(decoder: $0) })
     
     return
 }()
