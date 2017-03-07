@@ -251,9 +251,9 @@ public final class AccountViewTracker {
                                                                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
                                                             }
                                                             var attributes = currentMessage.attributes
-                                                            loop: for i in 0 ..< attributes.count {
-                                                                if let attribute = attributes[i] as? ViewCountMessageAttribute {
-                                                                    attributes[i] = ViewCountMessageAttribute(count: max(attribute.count, Int(viewCounts[i])))
+                                                            loop: for j in 0 ..< attributes.count {
+                                                                if let attribute = attributes[j] as? ViewCountMessageAttribute {
+                                                                    attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(viewCounts[i])))
                                                                     break loop
                                                                 }
                                                             }
