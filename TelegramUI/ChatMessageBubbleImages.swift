@@ -2,11 +2,11 @@ import Foundation
 import Display
 
 private let incomingFillColor = UIColor(0xffffff)
-private let incomingFillHighlightedColor = UIColor(0xaaaaff)
+private let incomingFillHighlightedColor = UIColor(0xd9f4ff)
 private let incomingStrokeColor = UIColor(0x86A9C9, 0.5)
 
 private let outgoingFillColor = UIColor(0xE1FFC7)
-private let outgoingFillHighlightedColor = UIColor(0xaaffaa)
+private let outgoingFillHighlightedColor = UIColor(0xc8ffa6)
 private let outgoingStrokeColor = UIColor(0x86A9C9, 0.5)
 
 enum MessageBubbleImageNeighbors {

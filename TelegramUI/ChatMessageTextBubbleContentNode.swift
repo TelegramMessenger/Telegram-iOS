@@ -56,14 +56,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
-                if let viewCount = viewCount {
-                    dateText = "\(viewCount) " + dateText
-                }
-                if edited {
-                    dateText = "edited " + dateText
-                }
-                
-                //let dateText = "\(message.id.id)"
                 
                 let statusType: ChatMessageDateAndStatusType?
                 if case .None = position.bottom {
@@ -86,7 +78,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(edited, viewCount, dateText, statusType, textConstrainedSize)
                     statusSize = size
                     statusApply = apply
                 }
@@ -195,7 +187,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.addSubnode(strongSelf.statusNode)
                                 } else {
                                     if case let .System(duration) = animation {
-                                        let delta = CGPoint(x: previousStatusFrame.minX - adjustedStatusFrame.minX, y: previousStatusFrame.minY - adjustedStatusFrame.minY)
+                                        let delta = CGPoint(x: previousStatusFrame.maxX - adjustedStatusFrame.maxX, y: previousStatusFrame.minY - adjustedStatusFrame.minY)
                                         let statusPosition = strongSelf.statusNode.layer.position
                                         let previousPosition = CGPoint(x: statusPosition.x + delta.x, y: statusPosition.y + delta.y)
                                         strongSelf.statusNode.layer.animatePosition(from: previousPosition, to: statusPosition, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)

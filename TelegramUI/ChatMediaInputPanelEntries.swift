@@ -76,7 +76,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                         if lhsIndex == rhsIndex {
                             return lhsInfo.id.id < rhsInfo.id.id
                         } else {
-                            return lhsIndex < rhsIndex
+                            return lhsIndex <= rhsIndex
                         }
                 }
         }

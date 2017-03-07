@@ -6,16 +6,41 @@ func stringForTimestamp(day: Int32, month: Int32, year: Int32) -> String {
     return String(format: "%d.%02d.%02d", day, month, year - 100)
 }
 
+func stringForTimestamp(day: Int32, month: Int32) -> String {
+    return String(format: "%d.%02d", day, month)
+}
+
+func shortStringForDayOfWeek(_ day: Int32) -> String {
+    switch day {
+        case 0:
+            return "Sun"
+        case 1:
+            return "Mon"
+        case 2:
+            return "Tue"
+        case 3:
+            return "Wed"
+        case 4:
+            return "Thu"
+        case 5:
+            return "Fri"
+        case 6:
+            return "Sat"
+        default:
+            return ""
+    }
+}
+
 func stringForTime(hours: Int32, minutes: Int32) -> String {
     return String(format: "%d:%02d", hours, minutes)
 }
 
-enum UserPresenceDay {
+enum RelativeTimestampFormatDay {
     case today
     case yesterday
 }
 
-func stringForUserPresence(day: UserPresenceDay, hours: Int32, minutes: Int32) -> String {
+func stringForUserPresence(day: RelativeTimestampFormatDay, hours: Int32, minutes: Int32) -> String {
     let dayString: String
     switch day {
         case .today:
@@ -64,6 +89,31 @@ func relativeUserPresenceStatus(_ presence: TelegramUserPresence, relativeTo tim
     }
 }
 
+func stringForRelativeTimestamp(_ relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+    var t: time_t = time_t(relativeTimestamp)
+    var timeinfo: tm = tm()
+    localtime_r(&t, &timeinfo)
+    
+    var now: time_t = time_t(timestamp)
+    var timeinfoNow: tm = tm()
+    localtime_r(&now, &timeinfoNow)
+    
+    if timeinfo.tm_year != timeinfoNow.tm_year {
+        return stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year)
+    }
+    
+    let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+    if dayDifference > -7 {
+        if dayDifference == 0 {
+            return stringForTime(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
+        } else {
+            return shortStringForDayOfWeek(timeinfo.tm_wday)
+        }
+    } else {
+        return stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1)
+    }
+}
+
 func stringAndActivityForUserPresence(_ presence: TelegramUserPresence, relativeTo timestamp: Int32) -> (String, Bool) {
     switch presence.status {
         case .none:
@@ -97,7 +147,7 @@ func stringAndActivityForUserPresence(_ presence: TelegramUserPresence, relative
                     
                     let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
                     if dayDifference == 0 || dayDifference == -1 {
-                        let day: UserPresenceDay
+                        let day: RelativeTimestampFormatDay
                         if dayDifference == 0 {
                             day = .today
                         } else {

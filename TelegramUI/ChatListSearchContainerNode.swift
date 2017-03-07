@@ -76,15 +76,15 @@ enum ChatListRecentEntry: Comparable, Identifiable {
     
     static func <(lhs: ChatListRecentEntry, rhs: ChatListRecentEntry) -> Bool {
         switch lhs {
-        case .topPeers:
-            return true
-        case let .peer(lhsIndex, _):
-            switch rhs {
-                case .topPeers:
-                    return false
-                case let .peer(rhsIndex, _):
-                    return lhsIndex < rhsIndex
-            }
+            case .topPeers:
+                return true
+            case let .peer(lhsIndex, _):
+                switch rhs {
+                    case .topPeers:
+                        return false
+                    case let .peer(rhsIndex, _):
+                        return lhsIndex <= rhsIndex
+                }
         }
     }
     
@@ -193,7 +193,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         switch lhs {
             case let .localPeer(_, lhsIndex):
                 if case let .localPeer(_, rhsIndex) = rhs {
-                    return lhsIndex < rhsIndex
+                    return lhsIndex <= rhsIndex
                 } else {
                     return true
                 }
@@ -202,7 +202,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     case .localPeer:
                         return false
                     case let .globalPeer(_, rhsIndex):
-                        return lhsIndex < rhsIndex
+                        return lhsIndex <= rhsIndex
                     case .message:
                         return true
                 }

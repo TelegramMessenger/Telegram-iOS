@@ -96,19 +96,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var edited = false
             var viewCount: Int?
             for attribute in item.message.attributes {
-                if let attribute = attribute as? EditedMessageAttribute {
+                if let _ = attribute as? EditedMessageAttribute {
                     edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
                 }
             }
-            var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
-            if let viewCount = viewCount {
-                dateText = "\(viewCount) " + dateText
-            }
-            if edited {
-                dateText = "edited " + dateText
-            }
+            let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
             
             var textString: NSAttributedString?
             var inlineImageDimensions: CGSize?
@@ -188,7 +182,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if item.message.flags.isSending {
                         statusType = .BubbleOutgoing(.Sending)
                     } else {
-                        statusType = .BubbleOutgoing(.Sent(read: true))
+                        statusType = .BubbleOutgoing(.Sent(read: item.read))
                     }
                 }
                 
@@ -197,7 +191,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusSizeAndApply: (CGSize, (Bool) -> Void)?
                 
                 if refineContentImageLayout == nil && refineContentFileLayout == nil {
-                    statusSizeAndApply = statusLayout(dateText, statusType, textConstrainedSize)
+                    statusSizeAndApply = statusLayout(edited, viewCount, dateText, statusType, textConstrainedSize)
                 }
                 
                 let (textLayout, textApply) = textAsyncLayout(textString, nil, 12, .end, textConstrainedSize, textCutout)

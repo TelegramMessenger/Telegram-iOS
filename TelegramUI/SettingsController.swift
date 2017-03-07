@@ -203,7 +203,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case .privacyAndSecurity:
                 return ItemListDisclosureItem(title: "Privacy and Security", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.pushController(privacyAndSecurityController(account: arguments.account))
                 })
             case .dataAndStorage:
                 return ItemListDisclosureItem(title: "Data and Storage", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -392,6 +392,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }
     
     let controller = ItemListController(signal)
+    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
     controller.tabBarItem.title = "Settings"
     controller.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")?.precomposed()
     controller.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconSettingsSelected")?.precomposed()

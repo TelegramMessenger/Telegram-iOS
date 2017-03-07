@@ -192,6 +192,11 @@
 		D0568AAD1DF198130022E7DA /* AudioWaveformNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0568AAC1DF198130022E7DA /* AudioWaveformNode.swift */; };
 		D0568AAF1DF1B3920022E7DA /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0568AAE1DF1B3920022E7DA /* HapticFeedback.swift */; };
 		D05811941DD5F9380057C769 /* TelegramApplicationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */; };
+		D05A32DC1E6EFCC2002760B4 /* NumericFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */; };
+		D05A32DE1E6F0097002760B4 /* PrivacyAndSecurityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32DD1E6F0097002760B4 /* PrivacyAndSecurityController.swift */; };
+		D05A32EA1E6F143C002760B4 /* RecentSessionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E91E6F143C002760B4 /* RecentSessionsController.swift */; };
+		D05A32EC1E6F1462002760B4 /* BlockedPeersController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32EB1E6F1462002760B4 /* BlockedPeersController.swift */; };
+		D05A32EE1E6F25A0002760B4 /* ItemListRecentSessionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32ED1E6F25A0002760B4 /* ItemListRecentSessionItem.swift */; };
 		D0613FC81E5F8AB100202CDB /* ChannelInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FC71E5F8AB100202CDB /* ChannelInfoController.swift */; };
 		D0613FCD1E60482300202CDB /* ChannelMembersController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FCC1E60482300202CDB /* ChannelMembersController.swift */; };
 		D0613FD51E6064D200202CDB /* ConvertToSupergroupController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */; };
@@ -670,6 +675,11 @@
 		D0568AAC1DF198130022E7DA /* AudioWaveformNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AudioWaveformNode.swift; sourceTree = "<group>"; };
 		D0568AAE1DF1B3920022E7DA /* HapticFeedback.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
 		D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramApplicationContext.swift; sourceTree = "<group>"; };
+		D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NumericFormat.swift; sourceTree = "<group>"; };
+		D05A32DD1E6F0097002760B4 /* PrivacyAndSecurityController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrivacyAndSecurityController.swift; sourceTree = "<group>"; };
+		D05A32E91E6F143C002760B4 /* RecentSessionsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentSessionsController.swift; sourceTree = "<group>"; };
+		D05A32EB1E6F1462002760B4 /* BlockedPeersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlockedPeersController.swift; sourceTree = "<group>"; };
+		D05A32ED1E6F25A0002760B4 /* ItemListRecentSessionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListRecentSessionItem.swift; sourceTree = "<group>"; };
 		D0613FC71E5F8AB100202CDB /* ChannelInfoController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelInfoController.swift; sourceTree = "<group>"; };
 		D0613FCC1E60482300202CDB /* ChannelMembersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelMembersController.swift; sourceTree = "<group>"; };
 		D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertToSupergroupController.swift; sourceTree = "<group>"; };
@@ -1531,6 +1541,10 @@
 				D0CE1BD21E51BC6100404327 /* DebugController.swift */,
 				D03E5E081E55C49C0029569A /* DebugAccountsController.swift */,
 				D0528E671E65CB2C00E2FEF5 /* UsernameSetupController.swift */,
+				D05A32DD1E6F0097002760B4 /* PrivacyAndSecurityController.swift */,
+				D05A32ED1E6F25A0002760B4 /* ItemListRecentSessionItem.swift */,
+				D05A32E91E6F143C002760B4 /* RecentSessionsController.swift */,
+				D05A32EB1E6F1462002760B4 /* BlockedPeersController.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -1775,8 +1789,8 @@
 			isa = PBXGroup;
 			children = (
 				D0B843CE1DA922AD005F29E1 /* PeerInfoEntries.swift */,
-				D0B843D01DA922D7005F29E1 /* UserInfoEntries.swift */,
 				D0B843CC1DA903BB005F29E1 /* PeerInfoController.swift */,
+				D0B843D01DA922D7005F29E1 /* UserInfoEntries.swift */,
 				D0486F091E523C8500091F0C /* GroupInfoController.swift */,
 				D03E5E0E1E55F8B90029569A /* ChannelVisibilityController.swift */,
 				D0561DE71E574C3200E6B9E9 /* ChannelAdminsController.swift */,
@@ -2179,6 +2193,7 @@
 				D01D6BFB1E42AB3C006151C6 /* EmojiUtils.swift */,
 				D0DA44551E4E7F43005FDCA7 /* ShakeAnimation.swift */,
 				D0E305A41E5B2BFB00D7A3A2 /* ValidateAddressNameInteractive.swift */,
+				D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -2445,6 +2460,7 @@
 				D0D2689D1D79D33E00C422DA /* ShareRecipientsActionSheetController.swift in Sources */,
 				D0BC38811E40F1D80044D6FE /* ContactSelectionControllerNode.swift in Sources */,
 				D0F69E171D6B8ACF0046BCD6 /* ChatHistoryLocation.swift in Sources */,
+				D05A32EE1E6F25A0002760B4 /* ItemListRecentSessionItem.swift in Sources */,
 				D0F69E741D6B8C340046BCD6 /* ContactsControllerNode.swift in Sources */,
 				D07827C71E01CD5900071108 /* VerticalListContextResultsChatInputPanelButtonItem.swift in Sources */,
 				D021E0E51DB55D0A00C6B04F /* ChatMediaInputStickerPackItem.swift in Sources */,
@@ -2708,6 +2724,7 @@
 				D0E7A1BF1D8C24B900C37A6F /* ChatHistoryViewForLocation.swift in Sources */,
 				D0F69E891D6B8C850046BCD6 /* FastBlur.m in Sources */,
 				D07CFF761DCA224100761F81 /* PeerSelectionControllerNode.swift in Sources */,
+				D05A32EA1E6F143C002760B4 /* RecentSessionsController.swift in Sources */,
 				D0F69E7C1D6B8C470046BCD6 /* SettingsAccountInfoItem.swift in Sources */,
 				D00C7CDE1E37770A0080C3D5 /* SecretMediaPreviewControllerNode.swift in Sources */,
 				D01B27951E38F3BF0022A4C0 /* ItemListControllerNode.swift in Sources */,
@@ -2717,6 +2734,7 @@
 				D050F2161E48D9E000988324 /* AuthorizationSequenceCountrySelectionController.swift in Sources */,
 				D0561DDF1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift in Sources */,
 				D01749551E1082770057C89A /* StoredMessageFromSearchPeer.swift in Sources */,
+				D05A32DC1E6EFCC2002760B4 /* NumericFormat.swift in Sources */,
 				D04BB32C1E48797500650E93 /* animations.c in Sources */,
 				D049EAEE1E44BB3200A2CD3A /* ChatListRecentPeersListItem.swift in Sources */,
 				D04BB2BB1E44EA2400650E93 /* AuthorizationSequenceSplashControllerNode.swift in Sources */,
@@ -2747,6 +2765,7 @@
 				D0DE77231D932043002B8809 /* PeerMediaCollectionInterfaceState.swift in Sources */,
 				D0F69D781D6B87DF0046BCD6 /* MediaTrackFrameBuffer.swift in Sources */,
 				D01AC91F1DD5E09000E8160F /* EditAccessoryPanelNode.swift in Sources */,
+				D05A32EC1E6F1462002760B4 /* BlockedPeersController.swift in Sources */,
 				D023EBB21DDA800700BD496D /* LegacyMediaPickers.swift in Sources */,
 				D0F69DD01D6B8A0D0046BCD6 /* SearchBarPlaceholderNode.swift in Sources */,
 				D03120F61DA534C1006A2A60 /* ItemListActionItem.swift in Sources */,
@@ -2782,6 +2801,7 @@
 				D0215D3C1E041014001A0B1E /* InstantPageItem.swift in Sources */,
 				D0E35A071DE4803400BC6096 /* VerticalListContextResultsChatInputContextPanelNode.swift in Sources */,
 				D0D03AE51DECAE8900220C46 /* ManagedAudioRecorder.swift in Sources */,
+				D05A32DE1E6F0097002760B4 /* PrivacyAndSecurityController.swift in Sources */,
 				D0EE971A1D88BCA0006C18E1 /* ChatInfo.swift in Sources */,
 				D0F69DE31D6B8A420046BCD6 /* ListControllerItem.swift in Sources */,
 				D0736F211DF41CFD00F2C02A /* ManagedAudioPlaylistPlayer.swift in Sources */,

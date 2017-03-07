@@ -477,7 +477,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 var timeinfo = tm()
                 localtime_r(&t, &timeinfo)
                 
-                let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                let dateText = stringForRelativeTimestamp(item.index.messageIndex.timestamp, relativeTo: timestamp)
                 
                 dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: UIColor(0x8e8e93))
                 

@@ -75,12 +75,6 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
-                    if let viewCount = viewCount {
-                        dateText = "\(viewCount) " + dateText
-                    }
-                    if edited {
-                        dateText = "edited " + dateText
-                    }
                     
                     let statusType: ChatMessageDateAndStatusType?
                     if case .None = position.bottom {
@@ -105,7 +99,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     var statusApply: ((Bool) -> Void)?
                     
                     if let statusType = statusType {
-                        let (size, apply) = statusLayout(dateText, statusType, CGSize(width: imageLayoutSize.width, height: CGFloat.greatestFiniteMagnitude))
+                        let (size, apply) = statusLayout(edited, viewCount, dateText, statusType, CGSize(width: imageLayoutSize.width, height: CGFloat.greatestFiniteMagnitude))
                         statusSize = size
                         statusApply = apply
                     }

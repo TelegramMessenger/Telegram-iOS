@@ -143,14 +143,14 @@ final class ChatTitleView: UIView {
                 }
                 if onlineCount > 1 {
                     let string = NSMutableAttributedString()
-                    string.append(NSAttributedString(string: "\(group.participantCount) members, ", font: Font.regular(13.0), textColor: UIColor(0x787878)))
+                    string.append(NSAttributedString(string: "\(compactNumericCountString(group.participantCount)) members, ", font: Font.regular(13.0), textColor: UIColor(0x787878)))
                     string.append(NSAttributedString(string: "\(onlineCount) online", font: Font.regular(13.0), textColor: UIColor(0x007ee5)))
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                         self.infoNode.attributedText = string
                         shouldUpdateLayout = true
                     }
                 } else {
-                    let string = NSAttributedString(string: "\(group.participantCount) members", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                    let string = NSAttributedString(string: "\(compactNumericCountString(group.participantCount)) members", font: Font.regular(13.0), textColor: UIColor(0x787878))
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                         self.infoNode.attributedText = string
                         shouldUpdateLayout = true
@@ -158,7 +158,7 @@ final class ChatTitleView: UIView {
                 }
             } else if let channel = peer as? TelegramChannel {
                 if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                    let string = NSAttributedString(string: "\(memberCount) members", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                    let string = NSAttributedString(string: "\(compactNumericCountString(Int(memberCount))) members", font: Font.regular(13.0), textColor: UIColor(0x787878))
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                         self.infoNode.attributedText = string
                         shouldUpdateLayout = true

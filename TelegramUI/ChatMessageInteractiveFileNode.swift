@@ -162,21 +162,15 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     var edited = false
                     var viewCount: Int?
                     for attribute in message.attributes {
-                        if let attribute = attribute as? EditedMessageAttribute {
+                        if let _ = attribute as? EditedMessageAttribute {
                             edited = true
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
                         }
                     }
-                    var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
-                    if let viewCount = viewCount {
-                        dateText = "\(viewCount) " + dateText
-                    }
-                    if edited {
-                        dateText = "edited " + dateText
-                    }
+                    let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
                     
-                    let (size, apply) = statusLayout(dateText, statusType, constrainedSize)
+                    let (size, apply) = statusLayout(edited, viewCount, dateText, statusType, constrainedSize)
                     statusSize = size
                     statusApply = apply
                 }

@@ -77,6 +77,10 @@ private let clockBubbleMinImage = generateClockMinImage(color: UIColor(0x42b649)
 private let clockMediaFrameImage = generateClockFrameImage(color: .white)
 private let clockMediaMinImage = generateClockMinImage(color: .white)
 
+private let incomingImpressionIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ImpressionCount"), color: incomingDateColor)
+private let outgoingImpressionIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ImpressionCount"), color: outgoingDateColor)
+private let mediaImpressionIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ImpressionCount"), color: .white)
+
 enum ChatMessageDateAndStatusOutgoingType {
     case Sent(read: Bool)
     case Sending
@@ -97,6 +101,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
     private var clockFrameNode: ASImageNode?
     private var clockMinNode: ASImageNode?
     private let dateNode: TextNode
+    private var impressionIcon: ASImageNode?
     
     override init() {
         self.dateNode = TextNode()
@@ -108,7 +113,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -117,8 +122,9 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
         var clockMinNode = self.clockMinNode
         
         var currentBackgroundNode = self.backgroundNode
+        var currentImpressionIcon = self.impressionIcon
         
-        return { dateText, type, constrainedSize in
+        return { edited, impressionCount, dateText, type, constrainedSize in
             let dateColor: UIColor
             var backgroundImage: UIImage?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
@@ -128,6 +134,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
             let loadedCheckPartialImage: UIImage?
             let clockFrameImage: UIImage?
             let clockMinImage: UIImage?
+            var impressionImage: UIImage?
             
             switch type {
                 case .BubbleIncoming:
@@ -137,6 +144,9 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                     loadedCheckPartialImage = checkBubblePartialImage
                     clockFrameImage = clockBubbleFrameImage
                     clockMinImage = clockBubbleMinImage
+                    if impressionCount != nil {
+                        impressionImage = incomingImpressionIcon
+                    }
                 case let .BubbleOutgoing(status):
                     dateColor = outgoingDateColor
                     outgoingStatus = status
@@ -145,6 +155,9 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                     loadedCheckPartialImage = checkBubblePartialImage
                     clockFrameImage = clockBubbleFrameImage
                     clockMinImage = clockBubbleMinImage
+                    if impressionCount != nil {
+                        impressionImage = outgoingImpressionIcon
+                    }
                 case .ImageIncoming:
                     dateColor = .white
                     backgroundImage = imageBackground
@@ -153,6 +166,9 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                     loadedCheckPartialImage = checkMediaPartialImage
                     clockFrameImage = clockMediaFrameImage
                     clockMinImage = clockMediaMinImage
+                    if impressionCount != nil {
+                        impressionImage = mediaImpressionIcon
+                    }
                 case let .ImageOutgoing(status):
                     dateColor = .white
                     outgoingStatus = status
@@ -162,9 +178,21 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                     loadedCheckPartialImage = checkMediaPartialImage
                     clockFrameImage = clockMediaFrameImage
                     clockMinImage = clockMediaMinImage
+                    if impressionCount != nil {
+                        impressionImage = mediaImpressionIcon
+                    }
             }
             
-            let (date, dateApply) = dateLayout(NSAttributedString(string: dateText, font: dateFont, textColor: dateColor), nil, 1, .end, constrainedSize, nil)
+            var updatedDateText = dateText
+            if let impressionCount = impressionCount {
+                updatedDateText = compactNumericCountString(impressionCount) + " " + updatedDateText
+            }
+            
+            if edited {
+                updatedDateText = "edited " + updatedDateText
+            }
+            
+            let (date, dateApply) = dateLayout(NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), nil, 1, .end, constrainedSize, nil)
             
             let statusWidth: CGFloat
             
@@ -267,7 +295,23 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                 backgroundInsets = UIEdgeInsets(top: 2.0, left: 7.0, bottom: 2.0, right: 7.0)
             }
             
-            let layoutSize = CGSize(width: leftInset + date.size.width + statusWidth + backgroundInsets.left + backgroundInsets.right, height: date.size.height + backgroundInsets.top + backgroundInsets.bottom)
+            var impressionSize = CGSize()
+            var impressionWidth: CGFloat = 0.0
+            if let impressionImage = impressionImage {
+                if currentImpressionIcon == nil {
+                    let iconNode = ASImageNode()
+                    iconNode.isLayerBacked = true
+                    iconNode.displayWithoutProcessing = true
+                    iconNode.displaysAsynchronously = false
+                    currentImpressionIcon = iconNode
+                }
+                impressionSize = impressionImage.size
+                impressionWidth = impressionSize.width + 3.0
+            } else {
+                currentImpressionIcon = nil
+            }
+            
+            let layoutSize = CGSize(width: leftInset + impressionWidth + date.size.width + statusWidth + backgroundInsets.left + backgroundInsets.right, height: date.size.height + backgroundInsets.top + backgroundInsets.bottom)
             
             return (layoutSize, { [weak self] animated in
                 if let strongSelf = self {
@@ -288,7 +332,21 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                     
                     let _ = dateApply()
                     
-                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top), size: date.size)
+                    if let currentImpressionIcon = currentImpressionIcon {
+                        if currentImpressionIcon.image !== impressionImage {
+                            currentImpressionIcon.image = impressionImage
+                        }
+                        if currentImpressionIcon.supernode == nil {
+                            strongSelf.impressionIcon = currentImpressionIcon
+                            strongSelf.addSubnode(currentImpressionIcon)
+                        }
+                        currentImpressionIcon.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top + 3.0), size: impressionSize)
+                    } else if let impressionIcon = strongSelf.impressionIcon {
+                        impressionIcon.removeFromSupernode()
+                        strongSelf.impressionIcon = nil
+                    }
+                    
+                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left + impressionWidth, y: backgroundInsets.top), size: date.size)
                     
                     if let clockFrameNode = clockFrameNode {
                         if strongSelf.clockFrameNode == nil {
