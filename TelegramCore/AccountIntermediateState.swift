@@ -59,6 +59,7 @@ enum AccountStateMutationOperation {
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
     case AddPeerInputActivity(chatPeerId: PeerId, peerId: PeerId?, activity: PeerInputActivity?)
     case UpdatePinnedPeerIds(AccountStateUpdatePinnerPeerIdsOperation)
+    case ReadGlobalMessageContents([Int32])
 }
 
 struct AccountMutableState {
@@ -227,9 +228,13 @@ struct AccountMutableState {
         self.addOperation(.UpdatePinnedPeerIds(operation))
     }
     
+    mutating func addReadGlobalMessagesContents(_ globalIds: [Int32]) {
+        self.addOperation(.ReadGlobalMessageContents(globalIds))
+    }
+    
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {

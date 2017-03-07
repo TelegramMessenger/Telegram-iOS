@@ -75,30 +75,41 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, network:
 
 func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: MessageId) {
     if let message = modifier.getMessage(messageId) {
+        var updateMessage = false
+        var updatedAttributes = message.attributes
+        
+        for i in 0 ..< updatedAttributes.count {
+            if let attribute = updatedAttributes[i] as? ConsumableContentMessageAttribute {
+                if !attribute.consumed {
+                    updatedAttributes[i] = ConsumableContentMessageAttribute(consumed: true)
+                    updateMessage = true
+                }
+                break
+            }
+        }
+        
         if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            for attribute in message.attributes {
-                if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+            for i in 0 ..< updatedAttributes.count {
+                if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
                     if attribute.countdownBeginTime == nil && message.containsSecretMedia {
-                        modifier.updateMessage(message.id, update: { currentMessage in
-                            var storeForwardInfo: StoreMessageForwardInfo?
-                            if let forwardInfo = currentMessage.forwardInfo {
-                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
-                            }
-                            let updatedAttributes = currentMessage.attributes.map({ currentAttribute -> MessageAttribute in
-                                if let currentAttribute = currentAttribute as? AutoremoveTimeoutMessageAttribute {
-                                    return AutoremoveTimeoutMessageAttribute(timeout: currentAttribute.timeout, countdownBeginTime: timestamp)
-                                } else {
-                                    return currentAttribute
-                                }
-                            })
-                            return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media)
-                        })
+                        updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
+                        updateMessage = true
                         modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
                     }
                     break
                 }
             }
+        }
+        
+        if updateMessage {
+            modifier.updateMessage(message.id, update: { currentMessage in
+                var storeForwardInfo: StoreMessageForwardInfo?
+                if let forwardInfo = currentMessage.forwardInfo {
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                }
+                return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media)
+            })
         }
     }
 }
