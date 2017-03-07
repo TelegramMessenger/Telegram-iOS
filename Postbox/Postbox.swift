@@ -53,6 +53,13 @@ public final class Modifier {
     public func clearHistory(_ peerId: PeerId) {
         self.postbox?.clearHistory(peerId)
     }
+    public func messageIdsForGlobalIds(_ ids: [Int32]) -> [MessageId] {
+        if let postbox = self.postbox {
+            return postbox.messageIdsForGlobalIds(ids)
+        } else {
+            return []
+        }
+    }
     
     public func deleteMessagesWithGlobalIds(_ ids: [Int32]) {
         if let postbox = self.postbox {
