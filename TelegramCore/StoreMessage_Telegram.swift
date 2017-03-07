@@ -229,11 +229,11 @@ func textAndMediaFromApiMedia(_ media: Api.MessageMedia?) -> (String?, Media?) {
                     return (nil, mediaWebpage)
                 }
             case .messageMediaUnsupported:
-                break
+                return (nil, TelegramMediaUnsupported())
             case .messageMediaEmpty:
                 break
-            case .messageMediaGame:
-                break
+            case let .messageMediaGame(game):
+                return (nil, TelegramMediaGame(apiGame: game))
         }
     }
     
@@ -342,6 +342,14 @@ extension StoreMessage {
                     }
                     if let mediaValue = mediaValue {
                         medias.append(mediaValue)
+                    }
+                }
+                
+                if let file = media as? TelegramMediaFile {
+                    if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                        if file.isVoice {
+                            attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) != 0))
+                        }
                     }
                 }
                 

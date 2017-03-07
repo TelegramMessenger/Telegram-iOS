@@ -123,7 +123,6 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
         $0.namespace != Namespaces.Peer.SecretChat
     }
     
-    //messages.peerDialogs#3371c354 dialogs:Vector<Dialog> messages:Vector<Message> chats:Vector<Chat> users:Vector<User> state:updates.State = messages.PeerDialogs;
     return network.request(Api.functions.messages.getPinnedDialogs())
         |> retryRequest
         |> mapToSignal { dialogs -> Signal<Void, NoError> in
@@ -217,6 +216,9 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                     return updated
                 })
+                
+                modifier.setPinnedPeerIds(resultingPeerIds)
+                
                 modifier.updatePeerPresences(peerPresences)
                 
                 modifier.updatePeerNotificationSettings(notificationSettings)
@@ -251,26 +253,9 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                         }
                         |> mapToSignal { result -> Signal<Void, NoError> in
                             return postbox.modify { modifier -> Void in
-                                modifier.setPinnedPeerIds(resultingPeerIds)
                             }
                         }
                 }
             } |> switchToLatest
         }
-    
-    
-    /*var inputPeers: [Api.InputPeer] = []
-    for peerId in peerIds {
-        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            inputPeers.append(inputPeer)
-        }
-    }
-    
-    return network.request(Api.functions.messages.reorderPinnedDialogs(flags: 1 << 0, order: inputPeers))
-        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-            return .single(Api.Bool.boolFalse)
-        }
-        |> mapToSignal { result -> Signal<Void, NoError> in
-            return .complete()
-        }*/
 }
