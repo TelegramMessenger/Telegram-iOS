@@ -966,6 +966,8 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 } else {
                     updatedState.addUpdatePinnedPeerIds(.sync)
                 }
+            case let .updateReadMessagesContents(messages, pts, ptsCount):
+                updatedState.addReadGlobalMessagesContents(messages)
             default:
                     break
         }
@@ -1299,7 +1301,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1467,6 +1469,10 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                         }
                     case .sync:
                         addSynchronizePinnedChatsOperation(modifier: modifier)
+                }
+            case let .ReadGlobalMessageContents(globalIds):
+                for messageId in modifier.messageIdsForGlobalIds(globalIds) {
+                    markMessageContentAsConsumedRemotely(modifier: modifier, messageId: messageId)
                 }
         }
     }
