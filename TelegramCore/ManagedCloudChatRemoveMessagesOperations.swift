@@ -139,7 +139,13 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
                 |> `catch` { _ in
                     return .single(nil)
                 }
-                |> mapToSignal { _ in
+                |> mapToSignal { result in
+                    if let result = result {
+                        switch result {
+                            case let .affectedMessages(pts, ptsCount):
+                                stateManager.addUpdateGroups([.updateChannelPts(channelId: peer.id.id, pts: pts, ptsCount: ptsCount)])
+                        }
+                    }
                     return .complete()
                 }
         } else {

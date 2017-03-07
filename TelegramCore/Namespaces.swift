@@ -24,6 +24,7 @@ public struct Namespaces {
         public static let LocalFile: Int32 = 8
         public static let CloudSecretImage: Int32 = 9
         public static let CloudSecretFile: Int32 = 10
+        public static let CloudGame: Int32 = 11
     }
     
     public struct Peer {
@@ -71,6 +72,7 @@ struct OperationLogTags {
     static let SynchronizePinnedCloudChats = PeerOperationLogTag(value: 4)
     static let AutoremoveMessages = PeerOperationLogTag(value: 5)
     static let SynchronizePinnedChats = PeerOperationLogTag(value: 6)
+    static let SynchronizeConsumeMessageContents = PeerOperationLogTag(value: 7)
 }
 
 private enum PreferencesKeyValues: Int32 {

@@ -5,6 +5,13 @@ import Foundation
     import Postbox
 #endif
 
+public enum PhoneCallDiscardReason: Int32 {
+    case missed = 0
+    case disconnect = 1
+    case hangup = 2
+    case busy = 3
+}
+
 public enum TelegramMediaActionType: Coding, Equatable {
     case unknown
     case groupCreated(title: String)
@@ -19,6 +26,8 @@ public enum TelegramMediaActionType: Coding, Equatable {
     case historyCleared
     case historyScreenshot
     case messageAutoremoveTimeoutUpdated(Int32)
+    case gameScore(gameId: Int64, score: Int32)
+    case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
     
     public init(decoder: Decoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue")
@@ -47,6 +56,14 @@ public enum TelegramMediaActionType: Coding, Equatable {
                 self = .historyScreenshot
             case 12:
                 self = .messageAutoremoveTimeoutUpdated(decoder.decodeInt32ForKey("t"))
+            case 13:
+                self = .gameScore(gameId: decoder.decodeInt64ForKey("i"), score: decoder.decodeInt32ForKey("s"))
+            case 14:
+                var discardReason: PhoneCallDiscardReason?
+                if let value = (decoder.decodeInt32ForKey("dr") as Int32?) {
+                    discardReason = PhoneCallDiscardReason(rawValue: value)
+                }
+                self = .phoneCall(callId: decoder.decodeInt64ForKey("i"), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d"))
             default:
                 self = .unknown
         }
@@ -96,6 +113,23 @@ public enum TelegramMediaActionType: Coding, Equatable {
             case let .messageAutoremoveTimeoutUpdated(timeout):
                 encoder.encodeInt32(12, forKey: "_rawValue")
                 encoder.encodeInt32(timeout, forKey: "t")
+            case let .gameScore(gameId, score):
+                encoder.encodeInt32(13, forKey: "_rawValue")
+                encoder.encodeInt64(gameId, forKey: "i")
+                encoder.encodeInt32(score, forKey: "s")
+            case let .phoneCall(callId, discardReason, duration):
+                encoder.encodeInt32(14, forKey: "_rawValue")
+                encoder.encodeInt64(callId, forKey: "i")
+                if let discardReason = discardReason {
+                    encoder.encodeInt32(discardReason.rawValue, forKey: "dr")
+                } else {
+                    encoder.encodeNil(forKey: "dr")
+                }
+                if let duration = duration {
+                    encoder.encodeInt32(duration, forKey: "d")
+                } else {
+                    encoder.encodeNil(forKey: "d")
+                }
         }
     }
     
@@ -197,6 +231,18 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             } else {
                 return false
             }
+        case let .gameScore(gameId, score):
+            if case .gameScore(gameId, score) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .phoneCall(lhsCallId, lhsDiscardReason, lhsDuration):
+            if case let .phoneCall(rhsCallId, rhsDiscardReason, rhsDuration) = rhs, lhsCallId == rhsCallId && lhsDiscardReason == rhsDiscardReason && lhsDuration == rhsDuration {
+                return true
+            } else {
+                return false
+            }
     }
     return false
 }
@@ -255,7 +301,30 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .historyCleared)
         case .messageActionPinMessage:
             return TelegramMediaAction(action: .pinnedMessageUpdated)
-        default:
+        case let .messageActionGameScore(gameId, score):
+            return TelegramMediaAction(action: .gameScore(gameId: gameId, score: score))
+        case let .messageActionPhoneCall(_, callId, reason, duration):
+            var discardReason: PhoneCallDiscardReason?
+            if let reason = reason {
+                discardReason = PhoneCallDiscardReason(apiReason: reason)
+            }
+            return TelegramMediaAction(action: .phoneCall(callId: callId, discardReason: discardReason, duration: duration))
+        case .messageActionEmpty:
             return nil
+    }
+}
+
+extension PhoneCallDiscardReason {
+    init(apiReason: Api.PhoneCallDiscardReason) {
+        switch apiReason {
+            case .phoneCallDiscardReasonBusy:
+                self = .busy
+            case .phoneCallDiscardReasonDisconnect:
+                self = .disconnect
+            case .phoneCallDiscardReasonHangup:
+                self = .hangup
+            case .phoneCallDiscardReasonMissed:
+                self = .missed
+        }
     }
 }

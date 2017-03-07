@@ -1,12 +1,13 @@
 import Foundation
 
-enum UpdateGroup: CustomStringConvertible {
+enum UpdateGroup {
     case withPts(updates: [Api.Update], users: [Api.User], chats: [Api.Chat])
     case withQts(updates: [Api.Update], users: [Api.User], chats: [Api.Chat])
     case withSeq(updates: [Api.Update], seqRange: (Int32, Int32), date: Int32, users: [Api.User], chats: [Api.Chat])
     case withDate(updates: [Api.Update], date: Int32, users: [Api.User], chats: [Api.Chat])
     case reset
     case updatePts(pts: Int32, ptsCount: Int32)
+    case updateChannelPts(channelId: Int32, pts: Int32, ptsCount: Int32)
     
     var updates: [Api.Update] {
         switch self {
@@ -18,7 +19,7 @@ enum UpdateGroup: CustomStringConvertible {
                 return updates
             case let .withSeq(updates, _, _, _, _):
                 return updates
-            case .reset, .updatePts:
+            case .reset, .updatePts, .updateChannelPts:
                 return []
         }
     }
@@ -33,7 +34,7 @@ enum UpdateGroup: CustomStringConvertible {
                 return users
             case let .withSeq(_, _, _, users, _):
                 return users
-            case .reset, .updatePts:
+            case .reset, .updatePts, .updateChannelPts:
                 return []
         }
     }
@@ -48,70 +49,9 @@ enum UpdateGroup: CustomStringConvertible {
                 return chats
             case let .withSeq(_, _, _, _, chats):
                 return chats
-            case .reset, .updatePts:
+            case .reset, .updatePts, .updateChannelPts:
                 return []
         }
-    }
-    
-    var description: String {
-        var string = ""
-        
-        switch self {
-        case let .withPts(updates, _, _):
-            string += "withPts("
-            var first = true
-            for update in updates {
-                if first {
-                    first = false
-                } else {
-                    string += ", "
-                }
-                string += "\(update)"
-            }
-            string += ")"
-        case let .withQts(updates, _, _):
-            string += "withQts("
-            var first = true
-            for update in updates {
-                if first {
-                    first = false
-                } else {
-                    string += ", "
-                }
-                string += "\(update)"
-            }
-            string += ")"
-        case let .withSeq(updates, seqRange, date, _, _):
-            string += "withSeq(seq \(seqRange.0)..\(seqRange.1), date \(date), "
-            var first = true
-            for update in updates {
-                if first {
-                    first = false
-                } else {
-                    string += ", "
-                }
-                string += "\(update)"
-            }
-            string += ")"
-        case let .withDate(updates, date, _, _):
-            string += "withDate(date \(date), "
-            var first = true
-            for update in updates {
-                if first {
-                    first = false
-                } else {
-                    string += ", "
-                }
-                string += "\(update)"
-            }
-            string += ")"
-        case .reset:
-            string += "reset"
-        case .updatePts:
-            string += "updatePts"
-        }
-        
-        return string
     }
 }
 
@@ -142,10 +82,10 @@ extension Api.Update {
     var qtsRange: (Int32, Int32)? {
         get {
             switch self {
-            case let .updateNewEncryptedMessage(_, qts):
-                return (qts, 1)
-            case _:
-                return nil
+                case let .updateNewEncryptedMessage(_, qts):
+                    return (qts, 1)
+                case _:
+                    return nil
             }
         }
     }
