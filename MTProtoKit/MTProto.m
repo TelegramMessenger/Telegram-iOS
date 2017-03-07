@@ -1214,7 +1214,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                 [strongSelf requestTransportTransaction];
                             }
                         }];
-                    }]]);
+                    } needsQuickAck:false expectsDataInResponse:true]]);
                 }
                 else
                     transactionReady(nil);
