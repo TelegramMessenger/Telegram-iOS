@@ -29,3 +29,11 @@ public func terminateAccountSession(account: Account, hash: Int64) -> Signal<Voi
             return .complete()
         }
 }
+
+public func terminateOtherAccountSessions(account: Account) -> Signal<Void, NoError> {
+    return account.network.request(Api.functions.auth.resetAuthorizations())
+        |> retryRequest
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
+}
