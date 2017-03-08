@@ -296,24 +296,28 @@ struct AccountReplayedFinalState {
     let state: AccountFinalState
     let addedSecretMessageIds: [MessageId]
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
+    let updatedWebpages: [MediaId: TelegramMediaWebpage]
 }
 
 struct AccountFinalStateEvents {
     let addedIncomingMessageIds: [MessageId]
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
+    let updatedWebpages: [MediaId: TelegramMediaWebpage]
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty
+        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty
     }
     
     init() {
         self.addedIncomingMessageIds = []
         self.updatedTypingActivities = [:]
+        self.updatedWebpages = [:]
     }
     
-    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]) {
+    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage]) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = updatedTypingActivities
+        self.updatedWebpages = updatedWebpages
     }
     
     init(state: AccountReplayedFinalState) {
@@ -335,10 +339,10 @@ struct AccountFinalStateEvents {
         addedIncomingMessageIds.append(contentsOf: state.addedSecretMessageIds)
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = state.updatedTypingActivities
+        self.updatedWebpages = state.updatedWebpages
     }
     
-    
     func union(with other: AccountFinalStateEvents) -> AccountFinalStateEvents {
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities)
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages)
     }
 }

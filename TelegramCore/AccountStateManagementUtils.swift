@@ -1347,11 +1347,12 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     
     var updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:]
     var updatedSecretChatTypingActivities = Set<PeerId>()
+    var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
-                modifier.addMessages(messages, location: location)
+                let _ = modifier.addMessages(messages, location: location)
                 if case .UpperHistoryBlock = location {
                     for message in messages {
                         let chatPeerId = message.id.peerId
@@ -1373,6 +1374,9 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 modifier.updateMessage(id, update: { _ in message })
             case let .UpdateMedia(id, media):
                 modifier.updateMedia(id, update: media)
+                if let media = media as? TelegramMediaWebpage {
+                    updatedWebpages[id] = media
+                }
             case let .ReadInbox(messageId):
                 modifier.applyIncomingReadMaxId(messageId)
             case let .ReadOutbox(messageId):
@@ -1526,5 +1530,5 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
         }
     }
     
-    return AccountReplayedFinalState(state: finalState, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities)
+    return AccountReplayedFinalState(state: finalState, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages)
 }

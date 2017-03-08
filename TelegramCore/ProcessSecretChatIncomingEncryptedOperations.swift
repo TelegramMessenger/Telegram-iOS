@@ -60,7 +60,11 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                         
                                         sequenceInfo = SecretChatOperationSequenceInfo(topReceivedOperationIndex: seqInValue / 2, operationIndex: seqOutValue / 2)
                                         
-                                        parsedLayer = layerValue
+                                        if layerValue == 17 {
+                                            parsedLayer = 8
+                                        } else {
+                                            parsedLayer = layerValue
+                                        }
                                     } else {
                                         parsedLayer = 8
                                         sequenceInfo = nil
@@ -88,7 +92,7 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                                 modifier.setPeerChatState(peerId, state: updatedState)
                                                 entryTagLocalIndex = .manual(sequenceBasedLayerState.baseIncomingOperationIndex + sequenceInfo.operationIndex)
                                             } else {
-                                                if parsedLayer != 8 {
+                                                if parsedLayer != 8 && parsedLayer != 17 {
                                                     throw MessagePreParsingError.protocolViolation
                                                 }
                                                 entryTagLocalIndex = .automatic

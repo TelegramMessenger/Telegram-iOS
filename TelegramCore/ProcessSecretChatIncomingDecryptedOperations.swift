@@ -85,7 +85,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                             for index in fromOperationIndex ... toOperationIndex {
                                 var notFound = false
                                 modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: index, { entry in
-                                    if let entry = entry {                                                        return PeerOperationLogEntryUpdate(mergedIndex: .newAutomatic, contents: .none)
+                                    if let _ = entry {                                                        return PeerOperationLogEntryUpdate(mergedIndex: .newAutomatic, contents: .none)
                                     } else {
                                         notFound = true
                                         return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -156,11 +156,27 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                             if canonicalIncomingIndex <= topProcessedCanonicalIncomingOperationIndex {
                                                 throw MessageParsingError.alreadyProcessedMessageInSequenceBasedLayer
                                             } else {
+                                                if let layer = SecretChatSequenceBasedLayer(rawValue: parsedLayer.rawValue) {
+                                                    let role = updatedState.role
+                                                    let fromSeqNo: Int32 = (sequenceState.topProcessedCanonicalIncomingOperationIndex + 1) * 2 + (role == .creator ? 1 : 1)
+                                                    let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 1 : 0)
+                                                    updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
+                                                } else {
+                                                    assertionFailure()
+                                                }
                                                 throw MessageParsingError.holesInSequenceBasedLayer
                                             }
                                         }
                                     } else {
-                                        if canonicalIncomingIndex != 0 {
+                                        if canonicalIncomingIndex != 0 && canonicalIncomingIndex != 1 {
+                                            if let layer = SecretChatSequenceBasedLayer(rawValue: parsedLayer.rawValue) {
+                                                let role = updatedState.role
+                                                let fromSeqNo: Int32 = 0 * 2 + (role == .creator ? 1 : 1)
+                                                let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 1 : 0)
+                                                updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
+                                            } else {
+                                                assertionFailure()
+                                            }
                                             throw MessageParsingError.holesInSequenceBasedLayer
                                         }
                                     }

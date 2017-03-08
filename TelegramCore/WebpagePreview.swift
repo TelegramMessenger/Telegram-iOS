@@ -14,12 +14,20 @@ public func webpagePreview(account: Account, url: String) -> Signal<TelegramMedi
         |> `catch` { _ -> Signal<Api.MessageMedia, NoError> in
             return .single(.messageMediaEmpty)
         }
-        |> map { result -> TelegramMediaWebpage? in
+        |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
             switch result {
                 case let .messageMediaWebPage(webpage):
-                    return telegramMediaWebpageFromApiWebpage(webpage)
+                    if let media = telegramMediaWebpageFromApiWebpage(webpage) {
+                        if case .Loaded = media.content {
+                            return .single(media)
+                        } else {
+                            return .single(media) |> then(account.stateManager.updatedWebpage(media.webpageId) |> map { Optional($0) })
+                        }
+                    } else {
+                        return .single(nil)
+                    }
                 default:
-                    return nil
+                    return .single(nil)
             }
         }
 }

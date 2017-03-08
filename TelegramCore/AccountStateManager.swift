@@ -30,6 +30,10 @@ private enum CustomOperationEvent<T, E> {
     case Completion
 }
 
+private final class UpdatedWebpageSubscriberContext {
+    let subscribers = Bag<(TelegramMediaWebpage) -> Void>()
+}
+
 public final class AccountStateManager {
     private let queue = Queue()
     private let account: Account
@@ -73,6 +77,8 @@ public final class AccountStateManager {
     public var notificationMessages: Signal<[Message], NoError> {
         return self.notificationMessagesPipe.signal()
     }
+    
+    private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
     
     init(account: Account, peerInputActivityManager: PeerInputActivityManager) {
         self.account = account
@@ -392,6 +398,9 @@ public final class AccountStateManager {
                                     }
                                 }
                             }
+                            if !events.updatedWebpages.isEmpty {
+                                strongSelf.notifyUpdatedWebpages(events.updatedWebpages)
+                            }
                             strongSelf.operations.removeFirst()
                             var pollCount = 0
                             for i in 0 ..< strongSelf.operations.count {
@@ -553,6 +562,50 @@ public final class AccountStateManager {
                 }
             }
             return disposable
+        }
+    }
+    
+    public func updatedWebpage(_ webpageId: MediaId) -> Signal<TelegramMediaWebpage, NoError> {
+        let queue = self.queue
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+            queue.async {
+                if let strongSelf = self {
+                    let context: UpdatedWebpageSubscriberContext
+                    if let current = strongSelf.updatedWebpageContexts[webpageId] {
+                        context = current
+                    } else {
+                        context = UpdatedWebpageSubscriberContext()
+                        strongSelf.updatedWebpageContexts[webpageId] = context
+                    }
+                    
+                    let index = context.subscribers.add({ media in
+                        subscriber.putNext(media)
+                    })
+                    
+                    disposable.set(ActionDisposable {
+                        if let strongSelf = self {
+                            if let context = strongSelf.updatedWebpageContexts[webpageId] {
+                                context.subscribers.remove(index)
+                                if context.subscribers.isEmpty {
+                                    strongSelf.updatedWebpageContexts.removeValue(forKey: webpageId)
+                                }
+                            }
+                        }
+                    })
+                }
+            }
+            return disposable
+        }
+    }
+    
+    private func notifyUpdatedWebpages(_ updatedWebpages: [MediaId: TelegramMediaWebpage]) {
+        for (id, context) in self.updatedWebpageContexts {
+            if let media = updatedWebpages[id] {
+                for subscriber in context.subscribers.copyItems() {
+                    subscriber(media)
+                }
+            }
         }
     }
 }
