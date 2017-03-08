@@ -152,6 +152,9 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T]) -> ([I
                 } else if left < right {
                     removeIndices.append(i)
                     i += 1
+                } else if !(left > right) {
+                    removeIndices.append(i)
+                    i += 1
                 } else {
                     j += 1
                 }
