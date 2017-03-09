@@ -100,7 +100,17 @@ public final class SqliteInterface {
         self.database = Database(databasePath)
     }
     
-    func select(_ query: String, _ f: (SqliteStatementCursor) -> Bool) {
+    public func unlock(password: String) -> Bool {
+        self.database.execute("PRAGMA key=\"\(password)\"")
+        var result = false
+        self.select("count(*) FROM sqlite_master", { _ in
+            result = true
+            return false
+        })
+        return result
+    }
+    
+    public func select(_ query: String, _ f: (SqliteStatementCursor) -> Bool) {
         var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, query, -1, &statement, nil)
         let preparedStatement = SqliteInterfaceStatement(statement: statement)
