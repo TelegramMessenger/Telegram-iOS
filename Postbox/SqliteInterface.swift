@@ -100,14 +100,10 @@ public final class SqliteInterface {
         self.database = Database(databasePath)
     }
     
-    public func unlock(password: String) -> Bool {
-        self.database.execute("PRAGMA key=\"\(password)\"")
-        var result = false
-        self.select("count(*) FROM sqlite_master", { _ in
-            result = true
-            return false
-        })
-        return result
+    public func unlock(password: Data) -> Bool {
+        return password.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Bool in
+            return sqlite3_key(self.database.handle, bytes, Int32(password.count)) == SQLITE_OK
+        }
     }
     
     public func select(_ query: String, _ f: (SqliteStatementCursor) -> Bool) {

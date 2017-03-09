@@ -1245,7 +1245,6 @@
 					"-DSQLITE_TEMP_STORE=2",
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_ENABLE_FTS3",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
@@ -1281,7 +1280,6 @@
 					"-DSQLITE_TEMP_STORE=2",
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_ENABLE_FTS3",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1316,7 +1314,6 @@
 					"-DSQLITE_TEMP_STORE=2",
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_ENABLE_FTS3",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
