@@ -34,6 +34,14 @@
 #define _SQLITE3_H_
 #include <stdarg.h>     /* Needed for the definition of va_list */
 
+#ifndef SQLITE_HAS_CODEC
+#   define SQLITE_HAS_CODEC 1
+#endif
+
+#ifndef DSQLCIPHER_CRYPTO_CC
+#   define DSQLCIPHER_CRYPTO_CC 1
+#endif
+
 /*
 ** Make sure we can call this stuff from C++.
 */
