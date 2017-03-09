@@ -96,7 +96,7 @@ public final class SqliteStatementCursor {
 public final class SqliteInterface {
     private let database: Database
     
-    init(databasePath: String) {
+    public init(databasePath: String) {
         self.database = Database(databasePath)
     }
     
