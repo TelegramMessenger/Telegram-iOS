@@ -10,17 +10,17 @@ private enum MetadataKey: Int32 {
 
 public enum PostboxAccessChallengeData: Coding {
     case none
-    case numericalPassword(String)
-    case plaintextPassword(String)
+    case numericalPassword(String, Int32?)
+    case plaintextPassword(String, Int32?)
     
     public init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("r") as Int32 {
             case 0:
                 self = .none
             case 1:
-                self = .numericalPassword(decoder.decodeStringForKey("t"))
+                self = .numericalPassword(decoder.decodeStringForKey("t"), decoder.decodeInt32ForKey("a"))
             case 2:
-                self = .plaintextPassword(decoder.decodeStringForKey("t"))
+                self = .plaintextPassword(decoder.decodeStringForKey("t"), decoder.decodeInt32ForKey("a"))
             default:
                 assertionFailure()
                 self = .none
@@ -31,12 +31,22 @@ public enum PostboxAccessChallengeData: Coding {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "r")
-            case let .numericalPassword(text):
+            case let .numericalPassword(text, timeout):
                 encoder.encodeInt32(1, forKey: "r")
                 encoder.encodeString(text, forKey: "t")
-            case let .plaintextPassword(text):
+                if let timeout = timeout {
+                    encoder.encodeInt32(timeout, forKey: "a")
+                } else {
+                    encoder.encodeNil(forKey: "a")
+                }
+            case let .plaintextPassword(text, timeout):
                 encoder.encodeInt32(2, forKey: "r")
                 encoder.encodeString(text, forKey: "t")
+                if let timeout = timeout {
+                    encoder.encodeInt32(timeout, forKey: "a")
+                } else {
+                    encoder.encodeNil(forKey: "a")
+                }
         }
     }
 }
