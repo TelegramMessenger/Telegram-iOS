@@ -32,6 +32,28 @@ public enum SelectivePrivacySettings: Equatable {
             }
         }
     }
+    
+    func withEnabledPeerIds(_ peerIds: Set<PeerId>) -> SelectivePrivacySettings {
+        switch self {
+            case let .disableEveryone(enableFor):
+                return .disableEveryone(enableFor: enableFor.union(peerIds))
+            case let .enableContacts(enableFor, disableFor):
+                return .enableContacts(enableFor: enableFor.union(peerIds), disableFor: disableFor)
+            case .enableEveryone:
+                return self
+        }
+    }
+    
+    func withDisabledPeerIds(_ peerIds: Set<PeerId>) -> SelectivePrivacySettings {
+        switch self {
+            case .disableEveryone:
+                return self
+            case let .enableContacts(enableFor, disableFor):
+                return .enableContacts(enableFor: enableFor, disableFor: disableFor.union(peerIds))
+            case let .enableEveryone(disableFor):
+                return .enableEveryone(disableFor: disableFor.union(peerIds))
+        }
+    }
 }
 
 public struct AccountPrivacySettings: Equatable {
@@ -40,6 +62,13 @@ public struct AccountPrivacySettings: Equatable {
     public let voiceCalls: SelectivePrivacySettings
     
     public let accountRemovalTimeout: Int32
+    
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, accountRemovalTimeout: Int32) {
+        self.presence = presence
+        self.groupInvitations = groupInvitations
+        self.voiceCalls = voiceCalls
+        self.accountRemovalTimeout = accountRemovalTimeout
+    }
     
     public static func ==(lhs: AccountPrivacySettings, rhs: AccountPrivacySettings) -> Bool {
         if lhs.presence != rhs.presence {
@@ -57,5 +86,33 @@ public struct AccountPrivacySettings: Equatable {
         }
         
         return true
+    }
+}
+
+extension SelectivePrivacySettings {
+    init(apiRules: [Api.PrivacyRule]) {
+        var current: SelectivePrivacySettings = .disableEveryone(enableFor: Set())
+        
+        var disableFor = Set<PeerId>()
+        var enableFor = Set<PeerId>()
+        
+        for rule in apiRules {
+            switch rule {
+                case .privacyValueAllowAll:
+                    current = .enableEveryone(disableFor: Set())
+                case .privacyValueAllowContacts:
+                    current = .enableContacts(enableFor: Set(), disableFor: Set())
+                case let .privacyValueAllowUsers(users):
+                    enableFor = Set(users.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) })
+                case .privacyValueDisallowAll:
+                    current = .disableEveryone(enableFor: Set())
+                case .privacyValueDisallowContacts:
+                    break
+                case let .privacyValueDisallowUsers(users):
+                    disableFor = Set(users.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) })
+            }
+        }
+        
+        self = current.withEnabledPeerIds(enableFor).withDisabledPeerIds(disableFor)
     }
 }

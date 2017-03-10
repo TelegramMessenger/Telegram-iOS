@@ -57,7 +57,6 @@ public extension Message {
     }
 }
 
-
 func messagesIdsGroupedByPeerId(_ ids: Set<MessageId>) -> [PeerId: [MessageId]] {
     var dict: [PeerId: [MessageId]] = [:]
     
@@ -73,6 +72,20 @@ func messagesIdsGroupedByPeerId(_ ids: Set<MessageId>) -> [PeerId: [MessageId]] 
     return dict
 }
 
+func messagesIdsGroupedByPeerId(_ ids: [MessageId]) -> [PeerId: [MessageId]] {
+    var dict: [PeerId: [MessageId]] = [:]
+    
+    for id in ids {
+        let peerId = id.peerId
+        if dict[peerId] == nil {
+            dict[peerId] = [id]
+        } else {
+            dict[peerId]!.append(id)
+        }
+    }
+    
+    return dict
+}
 
 func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Message? {
     guard case let .Id(id) = message.id else {
