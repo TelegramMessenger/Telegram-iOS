@@ -91,6 +91,10 @@ public final class SqliteStatementCursor {
             return ""
         }
     }
+    
+    public func getData(at index: Int) -> Data {
+        return self.statement.valueAt(index).makeData()
+    }
 }
 
 public final class SqliteInterface {
@@ -110,6 +114,23 @@ public final class SqliteInterface {
         var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, query, -1, &statement, nil)
         let preparedStatement = SqliteInterfaceStatement(statement: statement)
+        let cursor = SqliteStatementCursor(statement: preparedStatement)
+        while preparedStatement.step() {
+            if !f(cursor) {
+                break
+            }
+        }
+        preparedStatement.reset()
+        preparedStatement.destroy()
+    }
+    
+    public func selectWithKey(_ query: String, index: Int, key: Data, _ f: (SqliteStatementCursor) -> Bool) {
+        var statement: OpaquePointer? = nil
+        sqlite3_prepare_v2(database.handle, query, -1, &statement, nil)
+        let preparedStatement = SqliteInterfaceStatement(statement: statement)
+        key.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+            preparedStatement.bind(index, data: bytes, length: key.count)
+        }
         let cursor = SqliteStatementCursor(statement: preparedStatement)
         while preparedStatement.step() {
             if !f(cursor) {
