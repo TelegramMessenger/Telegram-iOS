@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity]?) -> MessageTags {
+public func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity]?) -> MessageTags {
     var tags = MessageTags()
     for attachment in media {
         if let _ = attachment as? TelegramMediaImage {

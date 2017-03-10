@@ -289,14 +289,14 @@ public final class AccountViewTracker {
             if let existingContext = self.cachedDataContexts[peerId] {
                 context = existingContext
                 context.referenceData = referenceData
-                if context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 60.0 {
+                if context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 5 {
                     dataUpdated = true
                 }
             } else {
                 context = PeerCachedDataContext()
                 context.referenceData = referenceData
                 self.cachedDataContexts[peerId] = context
-                if context.referenceData == nil || context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 60.0 {
+                if context.referenceData == nil || context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 5 {
                     context.timestamp = CFAbsoluteTimeGetCurrent()
                     dataUpdated = true
                 }

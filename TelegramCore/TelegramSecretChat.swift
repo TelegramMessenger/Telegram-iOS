@@ -20,7 +20,7 @@ public final class TelegramSecretChat: Peer {
     public let associatedPeerIds: [PeerId]?
     public let notificationSettingsPeerId: PeerId?
     
-    init(id: PeerId, creationDate: Int32, regularPeerId: PeerId, accessHash: Int64, embeddedState: SecretChatEmbeddedPeerState, messageAutoremoveTimeout: Int32?) {
+    public init(id: PeerId, creationDate: Int32, regularPeerId: PeerId, accessHash: Int64, embeddedState: SecretChatEmbeddedPeerState, messageAutoremoveTimeout: Int32?) {
         self.id = id
         self.regularPeerId = regularPeerId
         self.accessHash = accessHash
