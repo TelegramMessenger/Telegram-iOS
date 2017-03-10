@@ -115,6 +115,31 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
     }
 }
 
+public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Void in
+        var removeMessageIds: [MessageId] = []
+        for (peerId, ids) in messagesIdsGroupedByPeerId(messageIds) {
+            var messages: [EnqueueMessage] = []
+            for id in ids {
+                if let message = modifier.getMessage(id), !message.flags.contains(.Incoming) {
+                    removeMessageIds.append(id)
+                    
+                    var replyToMessageId: MessageId?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ReplyMessageAttribute {
+                            replyToMessageId = attribute.messageId
+                        }
+                    }
+                    
+                    messages.append(.message(text: message.text, attributes: message.attributes, media: message.media.first, replyToMessageId: replyToMessageId))
+                }
+            }
+            let _ = enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages.map { (false, $0) })
+        }
+        modifier.deleteMessages(removeMessageIds)
+    }
+}
+
 func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
     if let peer = modifier.getPeer(peerId) {
         var storeMessages: [StoreMessage] = []

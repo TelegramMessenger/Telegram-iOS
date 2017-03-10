@@ -158,7 +158,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                             } else {
                                                 if let layer = SecretChatSequenceBasedLayer(rawValue: parsedLayer.rawValue) {
                                                     let role = updatedState.role
-                                                    let fromSeqNo: Int32 = (sequenceState.topProcessedCanonicalIncomingOperationIndex + 1) * 2 + (role == .creator ? 1 : 1)
+                                                    let fromSeqNo: Int32 = (topProcessedCanonicalIncomingOperationIndex + 1) * 2 + (role == .creator ? 1 : 1)
                                                     let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 1 : 0)
                                                     updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
                                                 } else {
@@ -544,11 +544,11 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                     return nil
                 case .decryptedMessageActionFlushHistory:
                     return nil
-                case let .decryptedMessageActionNotifyLayer(layer):
+                case .decryptedMessageActionNotifyLayer:
                     return nil
-                case let .decryptedMessageActionReadMessages(randomIds):
+                case .decryptedMessageActionReadMessages:
                     return nil
-                case let .decryptedMessageActionScreenshotMessages(randomIds):
+                case .decryptedMessageActionScreenshotMessages:
                     return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .historyScreenshot)]), [])
                 case let .decryptedMessageActionSetMessageTTL(ttlSeconds):
                     return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(ttlSeconds))]), [])
