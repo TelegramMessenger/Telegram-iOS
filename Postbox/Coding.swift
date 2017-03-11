@@ -294,10 +294,14 @@ public final class Encoder {
         self.encodeKey(key)
         var type: Int8 = ValueType.String.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
-        let data = value.data(using: .utf8, allowLossyConversion: true)!
-        var length: Int32 = Int32(data.count)
-        self.buffer.write(&length, offset: 0, length: 4)
-        self.buffer.write(data)
+        if let data = value.data(using: .utf8, allowLossyConversion: true) {
+            var length: Int32 = Int32(data.count)
+            self.buffer.write(&length, offset: 0, length: 4)
+            self.buffer.write(data)
+        } else {
+            var length: Int32 = 0
+            self.buffer.write(&length, offset: 0, length: 4)
+        }
     }
     
     public func encodeRootObject(_ value: Coding) {
