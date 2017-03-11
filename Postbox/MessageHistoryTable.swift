@@ -589,10 +589,14 @@ final class MessageHistoryTable: Table {
             sharedBuffer.write(&hasAuthor, offset: 0, length: 1)
         }
 
-        let data = message.text.data(using: .utf8, allowLossyConversion: true)!
-        var length: Int32 = Int32(data.count)
-        sharedBuffer.write(&length, offset: 0, length: 4)
-        sharedBuffer.write(data)
+        if let data = message.text.data(using: .utf8, allowLossyConversion: true) {
+            var length: Int32 = Int32(data.count)
+            sharedBuffer.write(&length, offset: 0, length: 4)
+            sharedBuffer.write(data)
+        } else {
+            var length: Int32 = 0
+            sharedBuffer.write(&length, offset: 0, length: 4)
+        }
 
         let attributesBuffer = WriteBuffer()
         
