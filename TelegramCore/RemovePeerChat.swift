@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func removePeerChat(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+public func removePeerChat(postbox: Postbox, peerId: PeerId, reportChatSpam: Bool) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
@@ -24,7 +24,7 @@ public func removePeerChat(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoE
             modifier.clearHistory(peerId)
             modifier.updatePeerChatListInclusion(peerId, inclusion: .never)
         } else {
-            cloudChatAddRemoveChatOperation(modifier: modifier, peerId: peerId)
+            cloudChatAddRemoveChatOperation(modifier: modifier, peerId: peerId, reportChatSpam: reportChatSpam)
             if peerId.namespace == Namespaces.Peer.CloudUser  {
                 modifier.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessages)
                 modifier.clearHistory(peerId)

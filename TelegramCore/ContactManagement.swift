@@ -90,3 +90,26 @@ func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError>
     
     return appliedUpdatedPeers
 }
+
+public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+        if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
+            account.network.request(Api.functions.contacts.deleteContact(id: inputUser))
+                |> map { Optional($0) }
+                |> `catch` { _ -> Signal<Api.contacts.Link?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return account.postbox.modify { modifier -> Void in
+                        var peerIds = modifier.getContactPeerIds()
+                        if peerIds.contains(peerId) {
+                            peerIds.remove(peerId)
+                            modifier.repaceContactPeerIds(peerIds)
+                        }
+                    }
+                }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
