@@ -379,8 +379,8 @@ final class MessageHistoryTable: Table {
             }
         }
         
-        let (combinedState, invalidated) = self.readStateTable.applyIncomingMaxReadId(messageId, incomingStatsInRange: { fromId, toId in
-            return self.messageHistoryIndexTable.incomingMessageCountInRange(messageId.peerId, namespace: messageId.namespace, minId: fromId, maxId: toId)
+        let (combinedState, invalidated) = self.readStateTable.applyIncomingMaxReadId(messageId, incomingStatsInRange: { namespace, fromId, toId in
+            return self.messageHistoryIndexTable.incomingMessageCountInRange(messageId.peerId, namespace: namespace, minId: fromId, maxId: toId)
         }, topMessageId: topMessageId)
         
         if let combinedState = combinedState {
@@ -442,11 +442,17 @@ final class MessageHistoryTable: Table {
             }
         }
         
-        let (combinedState, result, messageIds) = self.readStateTable.applyInteractiveMaxReadIndex(messageIndex, incomingStatsInRange: { fromId, toId in
-            return self.messageHistoryIndexTable.incomingMessageCountInRange(messageIndex.id.peerId, namespace: messageIndex.id.namespace, minId: fromId, maxId: toId)
+        let (combinedState, result, messageIds) = self.readStateTable.applyInteractiveMaxReadIndex(messageIndex, incomingStatsInRange: { namespace, fromId, toId in
+            return self.messageHistoryIndexTable.incomingMessageCountInRange(messageIndex.id.peerId, namespace: namespace, minId: fromId, maxId: toId)
         }, incomingIndexStatsInRange: { fromIndex, toIndex in
             return self.incomingMessageCountInRange(messageIndex.id.peerId, namespace: messageIndex.id.namespace, fromIndex: fromIndex, toIndex: toIndex)
-        }, topMessageId: topMessageId)
+        }, topMessageId: topMessageId, topMessageIndexByNamespace: { namespace in
+            if let topEntry = self.messageHistoryIndexTable.top(messageIndex.id.peerId, namespace: namespace), case let .Message(index) = topEntry {
+                return index
+            } else {
+                return nil
+            }
+        })
         
         if let combinedState = combinedState {
             if operationsByPeerId[messageIndex.id.peerId] == nil {
