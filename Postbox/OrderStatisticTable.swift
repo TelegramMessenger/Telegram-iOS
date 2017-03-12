@@ -1,6 +1,6 @@
 import Foundation
 
-private struct MessageOrderKey: Comparable {
+struct MessageOrderKey: Hashable, Comparable {
     let timestamp: Int32
     let namespace: MessageId.Namespace
     let id: MessageId.Id
@@ -20,14 +20,18 @@ private struct MessageOrderKey: Comparable {
         
         return lhs.id < rhs.id
     }
+    
+    var hashValue: Int {
+        return self.timestamp.hashValue
+    }
 }
 
-private enum BTreeNodePosition {
+enum BTreeNodePosition {
     case left
     case right
 }
 
-private final class BTreeNode {
+final class BTreeNode {
     let reference: Int32
     let keys: [MessageOrderKey]
     let values: [Int32]
@@ -103,19 +107,106 @@ private final class BTreeNode {
 }
 
 
-private final class BTreeAccess {
-    let order: Int = 2
+final class BTreeAccess {
+    let order: Int
+    
+    var memory: [Int32: BTreeNode] = [:]
+    
+    var rootNodeReference: Int32!
+    var nextReference: Int32 = 0
     
     func getNode(_ reference: Int32) -> BTreeNode? {
-        return nil
+        return self.memory[reference]
     }
     
-    func replaceNode(_ reference: Int32, with: BTreeNode) {
+    func replaceNode(_ reference: Int32, with node: BTreeNode) {
+        self.memory[reference] = node
     }
     
     func allocateNodeReference() -> Int32 {
-        return 0
+        let value = self.nextReference
+        self.nextReference += 1
+        return value
     }
+    
+    init(order: Int) {
+        self.order = order
+        let reference = self.allocateNodeReference()
+        self.rootNodeReference = reference
+        self.replaceNode(reference, with: BTreeNode(reference: reference))
+    }
+    
+    func value(for key: MessageOrderKey) -> Int32? {
+        if let rootNode = self.getNode(self.rootNodeReference) {
+            if rootNode.numberOfKeys > 0 {
+                return value(node: rootNode, key: key)
+            } else {
+                return nil
+            }
+        } else {
+            assertionFailure()
+            return nil
+        }
+    }
+    
+    public func insert(_ value: Int32, for key: MessageOrderKey) {
+        if let rootNode = self.getNode(self.rootNodeReference) {
+            let updatedNode = self.insert(node: rootNode, value: value, key: key)
+            if updatedNode.numberOfKeys > self.order * 1 {
+                self.splitRoot()
+            }
+        } else {
+            assertionFailure()
+        }
+    }
+    
+    private func splitRoot() {
+        var updatedRootNode = self.getNode(self.rootNodeReference)!
+        let middleIndexOfOldRoot = updatedRootNode.numberOfKeys / 2
+        
+        var newRoot = BTreeNode(reference: self.allocateNodeReference(), keys: [updatedRootNode.keys[middleIndexOfOldRoot]], values: [updatedRootNode.values[middleIndexOfOldRoot]], childrenReferences: [updatedRootNode.reference])
+        
+        updatedRootNode = updatedRootNode.removingKeyValueAt(middleIndexOfOldRoot)
+        //rootNode.keys.remove(at: middleIndexOfOldRoot)
+        //rootNode.values.remove(at: middleIndexOfOldRoot)
+        
+        var newRightChild = BTreeNode(reference: self.allocateNodeReference(), keys: Array(updatedRootNode.keys[updatedRootNode.keys.indices.suffix(from: middleIndexOfOldRoot)]), values: Array(updatedRootNode.values[updatedRootNode.values.indices.suffix(from: middleIndexOfOldRoot)]))
+        updatedRootNode = updatedRootNode.removingKeyValueInRange(updatedRootNode.keys.indices.suffix(from: middleIndexOfOldRoot))
+        //rootNode.keys.removeSubrange(rootNode.keys.indices.suffix(from: middleIndexOfOldRoot))
+        //rootNode.values.removeSubrange(rootNode.values.indices.suffix(from: middleIndexOfOldRoot))
+        
+        if updatedRootNode.childrenReferences != nil {
+            newRightChild = newRightChild.replacingChildrenReferences(Array(
+                updatedRootNode.childrenReferences![updatedRootNode.childrenReferences!.indices.suffix(from: (middleIndexOfOldRoot + 1))]
+            ))
+            updatedRootNode = updatedRootNode.removingChildrenReferencesInRange(updatedRootNode.childrenReferences!.indices.suffix(from: middleIndexOfOldRoot + 1))
+            //rootNode.children!.removeSubrange(
+            //    rootNode.children!.indices.suffix(from: (middleIndexOfOldRoot + 1))
+            //)
+        }
+        
+        newRoot = newRoot.insertingChildAt(newRoot.childrenReferences!.count, reference: newRightChild.reference)
+        //newRoot.children!.append(newRightChild)
+        
+        self.replaceNode(newRoot.reference, with: newRoot)
+        self.replaceNode(newRightChild.reference, with: newRightChild)
+        self.replaceNode(updatedRootNode.reference, with: updatedRootNode)
+        
+        self.rootNodeReference = newRoot.reference
+        //rootNode = newRoot
+    }
+    
+    /*public func remove(_ key: MessageOrderKey) {
+     guard rootNode.numberOfKeys > 0 else {
+     return
+     }
+     
+     rootNode.remove(key)
+     
+     if rootNode.numberOfKeys == 0 && !rootNode.isLeaf {
+     rootNode = rootNode.children!.first!
+     }
+     }*/
 
     func value(node: BTreeNode, key: MessageOrderKey) -> Int32? {
         var index = node.keys.startIndex
@@ -139,17 +230,22 @@ private final class BTreeAccess {
             }
             //return children?[index].value(for: key)
         } else {
-            if let child = self.getNode(index + 1) {
-                return self.value(node: child, key: key)
+            if let childrenReferences = node.childrenReferences {
+                if let child = self.getNode(childrenReferences[index + 1]) {
+                    return self.value(node: child, key: key)
+                } else {
+                    assertionFailure()
+                    return nil
+                }
             } else {
-                assertionFailure()
                 return nil
             }
+
             //return children?[(index + 1)].value(for: key)
         }
     }
 
-    func insert(node: BTreeNode, value: Int32, key: MessageOrderKey) {
+    func insert(node: BTreeNode, value: Int32, key: MessageOrderKey) -> BTreeNode {
         var index = node.keys.startIndex
         
         while index < node.keys.endIndex && node.keys[index] < key {
@@ -157,32 +253,39 @@ private final class BTreeAccess {
         }
         
         if index < node.keys.endIndex && node.keys[index] == key {
-            self.replaceNode(node.reference, with: node.replacingValueAt(index, with: value))
+            let updatedNode = node.replacingValueAt(index, with: value)
+            self.replaceNode(node.reference, with: updatedNode)
             //values[index] = value
-            return
-        }
-        
-        if node.isLeaf {
-            self.replaceNode(node.reference, with: node.insertingKeyValueAt(index, key: key, value: value))
-            //keys.insert(key, at: index)
-            //values.insert(value, at: index)
+            return updatedNode
         } else {
-            if let child = self.getNode(node.childrenReferences![index]) {
-                self.insert(node: child, value: value, key: key)
-                if child.numberOfKeys > self.order * 2 {
-                    self.split(node: node, child: child, atIndex: index)
-                }
+            if node.isLeaf {
+                let updatedNode = node.insertingKeyValueAt(index, key: key, value: value)
+                self.replaceNode(node.reference, with: updatedNode)
+                //keys.insert(key, at: index)
+                //values.insert(value, at: index)
+                return updatedNode
             } else {
-                assertionFailure()
+                if let child = self.getNode(node.childrenReferences![index]) {
+                    let updatedChild = self.insert(node: child, value: value, key: key)
+                    
+                    if updatedChild.numberOfKeys > self.order * 2 {
+                        return self.split(node: node, child: updatedChild, atIndex: index)
+                    } else {
+                        return node
+                    }
+                } else {
+                    assertionFailure()
+                    return node
+                }
+                //children![index].insert(value, for: key)
+                //if children![index].numberOfKeys > self.order * 2 {
+                //    split(child: children![index], atIndex: index)
+                //}
             }
-            //children![index].insert(value, for: key)
-            //if children![index].numberOfKeys > self.order * 2 {
-            //    split(child: children![index], atIndex: index)
-            //}
         }
     }
 
-    private func split(node: BTreeNode, child: BTreeNode, atIndex index: Int) {
+    private func split(node: BTreeNode, child: BTreeNode, atIndex index: Int) -> BTreeNode {
         let middleIndex = child.numberOfKeys / 2
         
         var updatedNode = node.insertingKeyValueAt(index, key: child.keys[middleIndex], value: child.values[middleIndex])
@@ -193,7 +296,7 @@ private final class BTreeAccess {
         //child.keys.remove(at: middleIndex)
         //child.values.remove(at: middleIndex)
         
-        var rightSibling = BTreeNode(reference: self.allocateNodeReference(), keys: Array(child.keys[updatedChild.keys.indices.suffix(from: middleIndex)]), values: Array(child.values[updatedChild.values.indices.suffix(from: middleIndex)]))
+        var rightSibling = BTreeNode(reference: self.allocateNodeReference(), keys: Array(updatedChild.keys[updatedChild.keys.indices.suffix(from: middleIndex)]), values: Array(updatedChild.values[updatedChild.values.indices.suffix(from: middleIndex)]))
         
         updatedChild = updatedChild.removingKeyValueInRange(updatedChild.keys.indices.suffix(from: middleIndex))
         //child.keys.removeSubrange(child.keys.indices.suffix(from: middleIndex))
@@ -211,6 +314,16 @@ private final class BTreeAccess {
         
         self.replaceNode(child.reference, with: updatedChild)
         self.replaceNode(rightSibling.reference, with: rightSibling)
+        
+        return updatedNode
+    }
+    
+    private func inorderPredecessor(node: BTreeNode) -> BTreeNode {
+        if node.isLeaf {
+            return node
+        } else {
+            return self.inorderPredecessor(node: self.getNode(node.childrenReferences!.last!)!)
+        }
     }
 
     /*private var inorderPredecessor: BTreeNode {
@@ -344,82 +457,6 @@ private final class BTreeAccess {
         children!.remove(at: index)
     }*/
 }
-
-/*private class BTree {
-    public let order: Int
-
-    var rootNode: BTreeNode!
-    
-    public init?(order: Int) {
-        guard order > 0 else {
-            assertionFailure()
-            return nil
-        }
-        self.order = order
-        rootNode = BTreeNode(order: self.order)
-    }
-
-    public func value(for key: MessageOrderKey) -> Int32? {
-        guard rootNode.numberOfKeys > 0 else {
-            return nil
-        }
-        
-        return rootNode.value(for: key)
-    }
-
-    public func insert(_ value: Int32, for key: MessageOrderKey) {
-        rootNode.insert(value, for: key)
-        
-        if rootNode.numberOfKeys > order * 2 {
-            splitRoot()
-        }
-    }
-
-    private func splitRoot() {
-        let middleIndexOfOldRoot = rootNode.numberOfKeys / 2
-        
-        let newRoot = BTreeNode(
-            order: self.order,
-            keys: [rootNode.keys[middleIndexOfOldRoot]],
-            values: [rootNode.values[middleIndexOfOldRoot]],
-            children: [rootNode]
-        )
-        rootNode.keys.remove(at: middleIndexOfOldRoot)
-        rootNode.values.remove(at: middleIndexOfOldRoot)
-        
-        let newRightChild = BTreeNode(
-            order: self.order,
-            keys: Array(rootNode.keys[rootNode.keys.indices.suffix(from: middleIndexOfOldRoot)]),
-            values: Array(rootNode.values[rootNode.values.indices.suffix(from: middleIndexOfOldRoot)])
-        )
-        rootNode.keys.removeSubrange(rootNode.keys.indices.suffix(from: middleIndexOfOldRoot))
-        rootNode.values.removeSubrange(rootNode.values.indices.suffix(from: middleIndexOfOldRoot))
-        
-        if rootNode.children != nil {
-            newRightChild.children = Array(
-                rootNode.children![rootNode.children!.indices.suffix(from: (middleIndexOfOldRoot + 1))]
-            )
-            rootNode.children!.removeSubrange(
-                rootNode.children!.indices.suffix(from: (middleIndexOfOldRoot + 1))
-            )
-        }
-        
-        newRoot.children!.append(newRightChild)
-        rootNode = newRoot
-    }
-
-    public func remove(_ key: MessageOrderKey) {
-        guard rootNode.numberOfKeys > 0 else {
-            return
-        }
-        
-        rootNode.remove(key)
-        
-        if rootNode.numberOfKeys == 0 && !rootNode.isLeaf {
-            rootNode = rootNode.children!.first!
-        }
-    }
-}*/
 
 class MessageOrderStatisticTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
