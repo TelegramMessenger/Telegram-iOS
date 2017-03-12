@@ -123,6 +123,20 @@ final class MutablePeerView {
             updated = true
         }
         
+        if let replaceContactPeerIds = replaceContactPeerIds {
+            if self.peerIsContact {
+                if !replaceContactPeerIds.contains(self.peerId) {
+                    self.peerIsContact = false
+                    updated = true
+                }
+            } else {
+                if replaceContactPeerIds.contains(self.peerId) {
+                    self.peerIsContact = true
+                    updated = true
+                }
+            }
+        }
+        
         return updated
     }
 }
