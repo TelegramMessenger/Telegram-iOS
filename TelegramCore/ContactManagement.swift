@@ -91,10 +91,44 @@ func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError>
     return appliedUpdatedPeers
 }
 
+public func addContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+        if let peer = modifier.getPeer(peerId) as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
+            return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: peer.firstName ?? "", lastName: peer.lastName ?? "")], replace: .boolFalse))
+                |> map { Optional($0) }
+                |> `catch` { _ -> Signal<Api.contacts.ImportedContacts?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    return account.postbox.modify { modifier -> Void in
+                        if let result = result {
+                            switch result {
+                                case let .importedContacts(_, _, users):
+                                    if let first = users.first {
+                                        let user = TelegramUser(user: first)
+                                        updatePeers(modifier: modifier, peers: [user], update: { _, updated in
+                                            return updated
+                                        })
+                                        var peerIds = modifier.getContactPeerIds()
+                                        if !peerIds.contains(peerId) {
+                                            peerIds.insert(peerId)
+                                            modifier.replaceContactPeerIds(peerIds)
+                                        }
+                                    }
+                            }
+                        }
+                    }
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
 public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
-            account.network.request(Api.functions.contacts.deleteContact(id: inputUser))
+            return account.network.request(Api.functions.contacts.deleteContact(id: inputUser))
                 |> map { Optional($0) }
                 |> `catch` { _ -> Signal<Api.contacts.Link?, NoError> in
                     return .single(nil)
@@ -104,7 +138,7 @@ public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> 
                         var peerIds = modifier.getContactPeerIds()
                         if peerIds.contains(peerId) {
                             peerIds.remove(peerId)
-                            modifier.repaceContactPeerIds(peerIds)
+                            modifier.replaceContactPeerIds(peerIds)
                         }
                     }
                 }
