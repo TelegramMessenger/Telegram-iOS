@@ -187,14 +187,24 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
             } else {
                 signal = network.request(Api.functions.channels.leaveChannel(channel: inputChannel))
             }
-            return signal
+            let reportSignal: Signal<Api.Bool, NoError>
+            if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
+                reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))
+                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                        return .single(.boolFalse)
+                    }
+            } else {
+                reportSignal = .single(.boolTrue)
+            }
+            
+            return combineLatest(signal
                 |> map { result -> Api.Updates? in
                     return result
                 }
                 |> `catch` { _ in
                     return .single(nil)
-                }
-                |> mapToSignal { updates in
+                }, reportSignal)
+                |> mapToSignal { updates, _ in
                     if let updates = updates {
                         stateManager.addUpdates(updates)
                     }
@@ -217,18 +227,42 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
                 }
                 return .complete()
             }
+        let reportSignal: Signal<Void, NoError>
+        if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
+            reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))
+                |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+                    return .complete()
+                }
+                |> `catch` { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+        } else {
+            reportSignal = .complete()
+        }
         let deleteMessages: Signal<Void, NoError>
         if let inputPeer = apiInputPeer(peer), let topMessageId = modifier.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
             deleteMessages = requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: topMessageId.id, justClear: false)
         } else {
             deleteMessages = .complete()
         }
-        return deleteMessages |> then(deleteUser) |> then(postbox.modify { modifier -> Void in
+        return deleteMessages |> then(deleteUser) |> then(reportSignal) |> then(postbox.modify { modifier -> Void in
             modifier.clearHistory(peer.id)
         })
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer), let topMessageId = modifier.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
-            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: topMessageId.id, justClear: false) |> then(postbox.modify { modifier -> Void in
+            let reportSignal: Signal<Void, NoError>
+            if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
+                reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))
+                    |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+                        return .complete()
+                    }
+                    |> `catch` { _ -> Signal<Void, NoError> in
+                        return .complete()
+                    }
+            } else {
+                reportSignal = .complete()
+            }
+            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: topMessageId.id, justClear: false) |> then(reportSignal) |> then(postbox.modify { modifier -> Void in
                 modifier.clearHistory(peer.id)
             })
         } else {
