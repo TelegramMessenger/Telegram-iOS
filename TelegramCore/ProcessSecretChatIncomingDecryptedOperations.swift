@@ -204,7 +204,11 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                                 throw MessageParsingError.contentParsingError
                                             }
                                         case let .sequenceBasedLayer(sequenceState):
-                                            break
+                                            if sequenceState.layerNegotiationState.remotelyRequestedLayer != layerSupport {
+                                                let updatedNegotiationState = sequenceState.layerNegotiationState.withUpdatedRemotelyRequestedLayer(layerSupport)
+                                                updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedLayerNegotiationState(updatedNegotiationState)))
+                                                updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: .layer46, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
+                                            }
                                     }
                                 case let .setMessageAutoremoveTimeout(timeout):
                                     updatedPeer = updatedPeer.withUpdatedMessageAutoremoveTimeout(timeout == 0 ? nil : timeout)
@@ -250,16 +254,8 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                             for (resource, data) in resources {
                                 mediaBox.storeResourceData(resource.id, data: data)
                             }
-                            modifier.addMessages([message], location: .Random)
+                            let _ = modifier.addMessages([message], location: .Random)
                             addedMessages.append(message)
-                        }
-                        if let serviceAction = serviceAction {
-                            switch serviceAction {
-                                case let .deleteMessages(globallyUniqueIds):
-                                    break
-                                default:
-                                    break
-                            }
                         }
                     } catch let error {
                         if let error = error as? MessageParsingError {

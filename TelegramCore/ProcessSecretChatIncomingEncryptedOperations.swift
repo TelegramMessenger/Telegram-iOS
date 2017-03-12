@@ -61,7 +61,7 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                         sequenceInfo = SecretChatOperationSequenceInfo(topReceivedOperationIndex: seqInValue / 2, operationIndex: seqOutValue / 2)
                                         
                                         if layerValue == 17 {
-                                            parsedLayer = 8
+                                            parsedLayer = 46
                                         } else {
                                             parsedLayer = layerValue
                                         }
@@ -87,7 +87,7 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                                 guard let sequenceInfo = sequenceInfo else {
                                                     throw MessagePreParsingError.protocolViolation
                                                 }
-                                                let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: parsedLayer, locallyRequestedLayer: parsedLayer, remotelyRequestedLayer: parsedLayer), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: sequenceInfo.operationIndex)
+                                                let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: parsedLayer, locallyRequestedLayer: nil, remotelyRequestedLayer: nil), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
                                                 let updatedState = state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceBasedLayerState))
                                                 modifier.setPeerChatState(peerId, state: updatedState)
                                                 entryTagLocalIndex = .manual(sequenceBasedLayerState.baseIncomingOperationIndex + sequenceInfo.operationIndex)
