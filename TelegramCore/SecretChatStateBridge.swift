@@ -19,4 +19,11 @@ public struct SecretChatStateBridge {
     public var state: PeerChatState {
         return SecretChatState(role: SecretChatRole(rawValue: role.rawValue)!, embeddedState: .terminated, keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
     }
+    
+
+}
+
+
+public func terminateLegacySecretChat(modifier: Modifier, peerId: PeerId, state: SecretChatStateBridge) -> PeerChatState {
+    return addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate, state: state.state as! SecretChatState).withUpdatedEmbeddedState(.terminated)
 }
