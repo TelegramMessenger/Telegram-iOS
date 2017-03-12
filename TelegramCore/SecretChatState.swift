@@ -120,10 +120,10 @@ enum SecretChatHandshakeState: Coding, Equatable {
 
 struct SecretChatLayerNegotiationState: Coding, Equatable {
     let activeLayer: Int32
-    let locallyRequestedLayer: Int32
-    let remotelyRequestedLayer: Int32
+    let locallyRequestedLayer: Int32?
+    let remotelyRequestedLayer: Int32?
     
-    init(activeLayer: Int32, locallyRequestedLayer: Int32, remotelyRequestedLayer: Int32) {
+    init(activeLayer: Int32, locallyRequestedLayer: Int32?, remotelyRequestedLayer: Int32?) {
         self.activeLayer = activeLayer
         self.locallyRequestedLayer = locallyRequestedLayer
         self.remotelyRequestedLayer = remotelyRequestedLayer
@@ -137,8 +137,16 @@ struct SecretChatLayerNegotiationState: Coding, Equatable {
     
     func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.activeLayer, forKey: "a")
-        encoder.encodeInt32(self.locallyRequestedLayer, forKey: "lr")
-        encoder.encodeInt32(self.remotelyRequestedLayer, forKey: "rr")
+        if let locallyRequestedLayer = self.locallyRequestedLayer {
+            encoder.encodeInt32(locallyRequestedLayer, forKey: "lr")
+        } else {
+            encoder.encodeNil(forKey: "lr")
+        }
+        if let remotelyRequestedLayer = self.remotelyRequestedLayer {
+            encoder.encodeInt32(remotelyRequestedLayer, forKey: "rr")
+        } else {
+            encoder.encodeNil(forKey: "rr")
+        }
     }
     
     static func ==(lhs: SecretChatLayerNegotiationState, rhs: SecretChatLayerNegotiationState) -> Bool {
@@ -152,6 +160,10 @@ struct SecretChatLayerNegotiationState: Coding, Equatable {
             return false
         }
         return true
+    }
+    
+    func withUpdatedRemotelyRequestedLayer(_ remotelyRequestedLayer: Int32?) -> SecretChatLayerNegotiationState {
+        return SecretChatLayerNegotiationState(activeLayer: self.activeLayer, locallyRequestedLayer: self.locallyRequestedLayer, remotelyRequestedLayer: remotelyRequestedLayer)
     }
 }
 
