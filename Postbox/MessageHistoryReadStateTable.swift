@@ -241,7 +241,7 @@ final class MessageHistoryReadStateTable: Table {
         }
     }
     
-    func applyIncomingMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: (MessageId.Id, Bool)?) -> (CombinedPeerReadState?, Bool) {
+    func applyIncomingMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Namespace, MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: (MessageId.Id, Bool)?) -> (CombinedPeerReadState?, Bool) {
         if let states = self.get(messageId.peerId), let state = states.namespaces[messageId.namespace] {
             if traceReadStates {
                 print("[ReadStateTable] applyMaxReadId peerId: \(messageId.peerId), maxReadId: \(messageId) (before: \(states.namespaces))")
@@ -250,7 +250,7 @@ final class MessageHistoryReadStateTable: Table {
             switch state {
                 case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
                     if maxIncomingReadId < messageId.id || (topMessageId != nil && (messageId.id == topMessageId!.0 || topMessageId!.1) && state.count != 0) {
-                        var (deltaCount, holes) = incomingStatsInRange(maxIncomingReadId + 1, messageId.id)
+                        var (deltaCount, holes) = incomingStatsInRange(messageId.namespace, maxIncomingReadId + 1, messageId.id)
                         
                         if traceReadStates {
                             print("[ReadStateTable] applyMaxReadId after deltaCount: \(deltaCount), holes: \(holes)")
@@ -351,25 +351,51 @@ final class MessageHistoryReadStateTable: Table {
         return (nil, false, [])
     }
     
-    func applyInteractiveMaxReadIndex(_ messageIndex: MessageIndex, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), incomingIndexStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMesageIds: [MessageId]), topMessageId: (MessageId.Id, Bool)?) -> (combinedState: CombinedPeerReadState?, ApplyInteractiveMaxReadIdResult, readMesageIds: [MessageId]) {
-        if let states = self.get(messageIndex.id.peerId), let state = states.namespaces[messageIndex.id.namespace] {
-            switch state {
-                case .idBased:
-                    let (combinedState, holes) = self.applyIncomingMaxReadId(messageIndex.id, incomingStatsInRange: incomingStatsInRange, topMessageId: topMessageId)
-                    
-                    if let combinedState = combinedState {
-                        return (combinedState, .Push(thenSync: holes), [])
+    func applyInteractiveMaxReadIndex(_ messageIndex: MessageIndex, incomingStatsInRange: (MessageId.Namespace, MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), incomingIndexStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMesageIds: [MessageId]), topMessageId: (MessageId.Id, Bool)?, topMessageIndexByNamespace: (MessageId.Namespace) -> MessageIndex?) -> (combinedState: CombinedPeerReadState?, ApplyInteractiveMaxReadIdResult, readMesageIds: [MessageId]) {
+        if let states = self.get(messageIndex.id.peerId) {
+            if let state = states.namespaces[messageIndex.id.namespace] {
+                switch state {
+                    case .idBased:
+                        let (combinedState, holes) = self.applyIncomingMaxReadId(messageIndex.id, incomingStatsInRange: incomingStatsInRange, topMessageId: topMessageId)
+                        
+                        if let combinedState = combinedState {
+                            return (combinedState, .Push(thenSync: holes), [])
+                        }
+                        
+                        return (combinedState, holes ? .Push(thenSync: true) : .None, [])
+                    case .indexBased:
+                        let (combinedState, holes, messageIds) = self.applyIncomingMaxReadIndex(messageIndex, incomingStatsInRange: incomingIndexStatsInRange)
+                        
+                        if let combinedState = combinedState {
+                            return (combinedState, .Push(thenSync: holes), messageIds)
+                        }
+                        
+                        return (combinedState, holes ? .Push(thenSync: true) : .None, messageIds)
+                }
+            } else {
+                for (namespace, state) in states.namespaces {
+                    if let topIndex = topMessageIndexByNamespace(namespace), topIndex <= messageIndex {
+                        switch state {
+                            case .idBased:
+                                let (combinedState, holes) = self.applyIncomingMaxReadId(topIndex.id, incomingStatsInRange: incomingStatsInRange, topMessageId: nil)
+                                
+                                if let combinedState = combinedState {
+                                    return (combinedState, .Push(thenSync: holes), [])
+                                }
+                                
+                                return (combinedState, holes ? .Push(thenSync: true) : .None, [])
+                            case .indexBased:
+                                let (combinedState, holes, messageIds) = self.applyIncomingMaxReadIndex(topIndex, incomingStatsInRange: incomingIndexStatsInRange)
+                                
+                                if let combinedState = combinedState {
+                                    return (combinedState, .Push(thenSync: holes), messageIds)
+                                }
+                                
+                                return (combinedState, holes ? .Push(thenSync: true) : .None, messageIds)
+                        }
                     }
-                    
-                    return (combinedState, holes ? .Push(thenSync: true) : .None, [])
-                case .indexBased:
-                    let (combinedState, holes, messageIds) = self.applyIncomingMaxReadIndex(messageIndex, incomingStatsInRange: incomingIndexStatsInRange)
-                    
-                    if let combinedState = combinedState {
-                        return (combinedState, .Push(thenSync: holes), messageIds)
-                    }
-                    
-                    return (combinedState, holes ? .Push(thenSync: true) : .None, messageIds)
+                }
+                return (nil, .Push(thenSync: true), [])
             }
         } else {
             return (nil, .Push(thenSync: true), [])
