@@ -179,6 +179,14 @@ public final class Modifier {
         self.postbox?.updatePeerPresences(peerPresences)
     }
     
+    public func getContactPeerIds() -> Set<PeerId> {
+        if let postbox = self.postbox {
+            return postbox.contactsTable.get()
+        } else {
+            return Set()
+        }
+    }
+    
     public func replaceContactPeerIds(_ peerIds: Set<PeerId>) {
         self.postbox?.replaceContactPeerIds(peerIds)
     }

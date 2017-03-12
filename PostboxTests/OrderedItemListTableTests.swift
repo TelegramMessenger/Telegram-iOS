@@ -65,20 +65,22 @@ class OrderedItemListTableTests: XCTestCase {
     }
     
     private func setIds(_ ids: [Int32]) {
+        var operations: [Int32 : [OrderedItemListOperation]] = [:]
         self.itemListTable!.replaceItems(collectionId: 0, items: ids.map { id -> OrderedItemListEntry in
             var idValue: Int32 = id
             let buffer = MemoryBuffer(memory: malloc(4)!, capacity: 4, length: 4, freeWhenDone: true)
             memcpy(buffer.memory, &idValue, 4)
             return OrderedItemListEntry(id: buffer, contents: TestListItem())
-        })
+        }, operations: &operations)
         XCTAssert(self.itemListTable!.testIntegrity(collectionId: 0), "Index integrity violated")
     }
     
     private func addOrMoveId(_ id: Int32, _ maxCount: Int? = nil) {
+        var operations: [Int32 : [OrderedItemListOperation]] = [:]
         var idValue: Int32 = id
         let buffer = MemoryBuffer(memory: malloc(4)!, capacity: 4, length: 4, freeWhenDone: true)
         memcpy(buffer.memory, &idValue, 4)
-        self.itemListTable!.addItemOrMoveToFirstPosition(collectionId: 0, item: OrderedItemListEntry(id: buffer, contents: TestListItem()), removeTailIfCountExceeds: maxCount)
+        self.itemListTable!.addItemOrMoveToFirstPosition(collectionId: 0, item: OrderedItemListEntry(id: buffer, contents: TestListItem()), removeTailIfCountExceeds: maxCount, operations: &operations)
         XCTAssert(self.itemListTable!.testIntegrity(collectionId: 0), "Index integrity violated")
     }
     

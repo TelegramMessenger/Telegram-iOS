@@ -116,11 +116,21 @@ class OrderStatisticTreeTests: XCTestCase {
     }
     
     func testOST() {
-        /*let tree = RBTree(rootData: 0)
-        for _ in 0 ..< 1000 {
-            let key = Int(arc4random_uniform(UInt32(Int32.max - 1)))
-            tree.insert(key)
+        let access = BTreeAccess(order: 100)
+        var entries: [MessageOrderKey: Int32] = [:]
+        for i in 0 ..< 1000 {
+            let k = Int32(bitPattern: arc4random())
+            let key = MessageOrderKey(timestamp: k, namespace: 0, id: 0)
+            let value = Int32(bitPattern: arc4random())
+            access.insert(value, for: key)
+            entries[key] = value
         }
-        print("OST height: \(tree.depth())")*/
+        for (key, value) in entries {
+            if let result = access.value(for: key) {
+                XCTAssert(result == value)
+            } else {
+                XCTAssert(false)
+            }
+        }
     }
 }
