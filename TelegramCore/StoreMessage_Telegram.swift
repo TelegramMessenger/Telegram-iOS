@@ -345,10 +345,11 @@ extension StoreMessage {
                     }
                 }
                 
-                if let file = media as? TelegramMediaFile {
+                for case let file as TelegramMediaFile in medias {
                     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
                         if file.isVoice {
-                            attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) != 0))
+                            attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) == 0))
+                            break
                         }
                     }
                 }

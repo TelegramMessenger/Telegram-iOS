@@ -204,6 +204,7 @@ private var declaredEncodables: Void = {
     declareEncodable(GlobalNotificationSettings.self, f: { GlobalNotificationSettings(decoder: $0) })
     declareEncodable(CloudChatRemoveChatOperation.self, f: { CloudChatRemoveChatOperation(decoder: $0) })
     declareEncodable(SynchronizePinnedChatsOperation.self, f: { SynchronizePinnedChatsOperation(decoder: $0) })
+    declareEncodable(SynchronizeConsumeMessageContentsOperation.self, f: { SynchronizeConsumeMessageContentsOperation(decoder: $0) })
     declareEncodable(RecentMediaItem.self, f: { RecentMediaItem(decoder: $0) })
     declareEncodable(RecentPeerItem.self, f: { RecentPeerItem(decoder: $0) })
     declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
@@ -529,6 +530,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedRecentGifs(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager : self.stateManager).start())
+
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged
