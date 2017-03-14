@@ -12,6 +12,7 @@ import Foundation
 public enum AuthorizationCodeRequestError {
     case invalidPhoneNumber
     case limitExceeded
+    case unregistred
     case generic
 }
 
@@ -50,14 +51,25 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
     
     return codeAndAccount
         |> mapToSignal { (sentCode, account) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
+            
+            switch sentCode {
+            case let .sentCode(flags, type, phoneCodeHash, nextType, timeout):
+                if (flags & (1 << 0)) == 0 {
+                    return .fail(.unregistred)
+                }
+            }
+            
             return account.postbox.modify { modifier -> UnauthorizedAccount in
                 switch sentCode {
-                    case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+                    case let .sentCode(flags, type, phoneCodeHash, nextType, timeout):
                         var parsedNextType: AuthorizationCodeNextType?
                         if let nextType = nextType {
                             parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                         }
+                    
                         modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)))
+
+                    
                 }
                 return account
             } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
@@ -84,11 +96,14 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
                                 return account.postbox.modify { modifier -> Void in
                                     switch sentCode {
                                         case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
-                                            var parsedNextType: AuthorizationCodeNextType?
-                                            if let nextType = nextType {
-                                                parsedNextType = AuthorizationCodeNextType(apiType: nextType)
-                                            }
-                                            modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)))
+                                            
+                                                var parsedNextType: AuthorizationCodeNextType?
+                                                if let nextType = nextType {
+                                                    parsedNextType = AuthorizationCodeNextType(apiType: nextType)
+                                                }
+                                                
+                                                modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)))
+                                        
                                     }
                                 } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
                             }

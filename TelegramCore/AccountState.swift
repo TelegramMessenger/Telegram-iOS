@@ -99,7 +99,6 @@ public enum UnauthorizedAccountStateContents: Coding, Equatable {
     case phoneEntry(countryCode: Int32, number: String)
     case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?)
     case passwordEntry(hint: String)
-    
     public init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("v") as Int32 {
             case UnauthorizedAccountStateContentsValue.empty.rawValue:
