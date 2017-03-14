@@ -447,6 +447,8 @@ public final class Postbox {
     private var currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation] = []
     private var currentPreferencesOperations: [PreferencesOperation] = []
     private var currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]] = [:]
+    private var currentItemCollectionItemsOperations: [ItemCollectionId: [ItemCollectionItemsOperation]] = [:]
+    private var currentItemCollectionInfosOperations: [ItemCollectionInfosOperation] = []
     
     private var currentReplaceChatListHoles: [(MessageIndex, ChatListHole?)] = []
     private var currentReplacedContactPeerIds: Set<PeerId>?
@@ -1077,11 +1079,11 @@ public final class Postbox {
             return self.peerTable.get(peerId)
         }, updatedTotalUnreadCount: &self.currentUpdatedTotalUnreadCount)
         
-        let transaction = PostboxTransaction(currentUpdatedState: self.currentUpdatedState, currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, currentPreferencesOperations: self.currentPreferencesOperations, currentOrderedItemListOperations: self.currentOrderedItemListOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
+        let transaction = PostboxTransaction(currentUpdatedState: self.currentUpdatedState, currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadCount: self.currentUpdatedTotalUnreadCount, peerIdsWithUpdatedUnreadCounts: Set(transactionUnreadCountDeltas.keys), currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, currentPreferencesOperations: self.currentPreferencesOperations, currentOrderedItemListOperations: self.currentOrderedItemListOperations, currentItemCollectionItemsOperations: self.currentItemCollectionItemsOperations, currentItemCollectionInfosOperations: self.currentItemCollectionInfosOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
-            self.viewTracker.updateViews(transaction: transaction)
+            self.viewTracker.updateViews(postbox: self, transaction: transaction)
             self.transactionStateVersion = self.metadataTable.incrementTransactionStateVersion()
             updatedTransactionState = self.transactionStateVersion
             
@@ -1112,6 +1114,8 @@ public final class Postbox {
         self.currentTimestampBasedMessageAttributesOperations.removeAll()
         self.currentPreferencesOperations.removeAll()
         self.currentOrderedItemListOperations.removeAll()
+        self.currentItemCollectionItemsOperations.removeAll()
+        self.currentItemCollectionInfosOperations.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
@@ -1239,8 +1243,13 @@ public final class Postbox {
         for (id, info, items) in itemCollections {
             infos.append(id, info)
             self.itemCollectionItemTable.replaceItems(collectionId: id, items: items)
+            if self.currentItemCollectionItemsOperations[id] == nil {
+                self.currentItemCollectionItemsOperations[id] = []
+            }
+            self.currentItemCollectionItemsOperations[id]!.append(.replaceItems)
         }
         self.itemCollectionInfoTable.replaceInfos(namespace: namespace, infos: infos)
+        self.currentItemCollectionInfosOperations.append(.replaceInfos(namespace))
     }
     
     fileprivate func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
@@ -1886,6 +1895,27 @@ public final class Postbox {
                     if let strongSelf = self {
                         strongSelf.queue.async {
                             strongSelf.viewTracker.removePreferencesView(index)
+                        }
+                    }
+            }
+        } |> switchToLatest
+    }
+    
+    public func combinedView(keys: [PostboxViewKey]) -> Signal<CombinedView, NoError> {
+        return self.modify { modifier -> Signal<CombinedView, NoError> in
+            var views: [PostboxViewKey: MutablePostboxView] = [:]
+            for key in keys {
+                views[key] = postboxViewForKey(postbox: self, key: key)
+            }
+            let view = CombinedMutableView(views: views)
+            let (index, signal) = self.viewTracker.addCombinedView(view)
+            
+            return (.single(view.immutableView())
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeCombinedView(index)
                         }
                     }
             }

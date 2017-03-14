@@ -1,8 +1,7 @@
 import Foundation
 
-enum ItemCollectionOperation {
-    case insertItem(ItemCollectionId, ItemCollectionItem)
-    case removeItem(ItemCollectionId, ItemCollectionItemIndex.Id)
+enum ItemCollectionItemsOperation {
+    case replaceItems
 }
 
 struct ItemCollectionItemReverseIndexReference: ReverseIndexReference {
@@ -159,7 +158,7 @@ final class ItemCollectionItemTable: Table {
     func collectionItems(collectionId: ItemCollectionId) -> [ItemCollectionItem] {
         var items: [ItemCollectionItem] = []
         self.valueBox.range(self.table, start: self.lowerBound(collectionId: collectionId), end: self.upperBound(collectionId: collectionId), values: { key, value in
-            let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
+            //let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
             if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                 items.append(item)
             } else {

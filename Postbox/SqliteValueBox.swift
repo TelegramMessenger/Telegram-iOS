@@ -119,6 +119,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     deinit {
+        assert(self.queue.isCurrent())
         self.clearStatements()
         checkpoints.dispose()
     }
@@ -137,7 +138,7 @@ final class SqliteValueBox: ValueBox {
         database.execute("PRAGMA synchronous=NORMAL")
         database.execute("PRAGMA journal_mode=WAL")
         database.execute("PRAGMA temp_store=MEMORY")
-        //database.execute("PRAGMA wal_autocheckpoint=200")
+        database.execute("PRAGMA wal_autocheckpoint=400")
         database.execute("PRAGMA journal_size_limit=1536")
         
         /*var statement: OpaquePointer? = nil
@@ -167,17 +168,18 @@ final class SqliteValueBox: ValueBox {
         }
         lock.unlock()
         
-        checkpoints.set((Signal<Void, NoError>.single(Void()) |> delay(10.0, queue: self.queue) |> restart).start(next: { [weak self] _ in
+        /*checkpoints.set((Signal<Void, NoError>.single(Void()) |> delay(10.0, queue: self.queue) |> restart).start(next: { [weak self] _ in
             if let strongSelf = self, strongSelf.database != nil {
                 assert(strongSelf.queue.isCurrent())
                 strongSelf.lock.lock()
                 var nLog: Int32 = 0
                 var nFrames: Int32 = 0
-                sqlite3_wal_checkpoint_v2(strongSelf.database.handle, nil, SQLITE_CHECKPOINT_PASSIVE, &nLog, &nFrames)
+                let result = sqlite3_wal_checkpoint_v2(strongSelf.database.handle, nil, SQLITE_CHECKPOINT_PASSIVE, &nLog, &nFrames)
+                assert(result == SQLITE_OK)
                 strongSelf.lock.unlock()
                 //print("(SQLite WAL size \(nLog) removed \(nFrames))")
             }
-        }))
+        }))*/
         return database
     }
     
@@ -337,6 +339,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     private func rangeKeyDescStatementLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         checkTableKey(table, start)
         checkTableKey(table, end)

@@ -55,6 +55,8 @@ final class ViewTracker {
     private let getTimestampBasedMessageAttributesHead: (UInt16) -> TimestampBasedMessageAttributesEntry?
     private var timestampBasedMessageAttributesViews = Bag<(MutableTimestampBasedMessageAttributesView, ValuePipe<TimestampBasedMessageAttributesView>)>()
     
+    private var combinedViews = Bag<(CombinedMutableView, ValuePipe<CombinedView>)>()
+    
     private var postboxStateViews = Bag<(MutablePostboxStateView, ValuePipe<PostboxStateView>)>()
     private var messageViews = Bag<(MutableMessageView, ValuePipe<MessageView>)>()
     private var preferencesViews = Bag<(MutablePreferencesView, ValuePipe<PreferencesView>)>()
@@ -288,6 +290,17 @@ final class ViewTracker {
         self.itemCollectionsViews.remove(index)
     }
     
+    func addCombinedView(_ view: CombinedMutableView) -> (Bag<(CombinedMutableView, ValuePipe<CombinedView>)>.Index, Signal<CombinedView, NoError>) {
+        let record = (view, ValuePipe<CombinedView>())
+        let index = self.combinedViews.add(record)
+        
+        return (index, record.1.signal())
+    }
+    
+    func removeCombinedView(_ index: Bag<(CombinedMutableView, ValuePipe<CombinedView>)>.Index) {
+        self.combinedViews.remove(index)
+    }
+    
     func refreshViewsDueToExternalTransaction(fetchAroundChatEntries: (_ index: ChatListIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?), fetchAroundHistoryEntries: (_ index: MessageIndex, _ count: Int, _ tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?), fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
         var updateTrackedHolesPeerIds: [PeerId] = []
         
@@ -360,7 +373,7 @@ final class ViewTracker {
         }
     }
     
-    func updateViews(transaction: PostboxTransaction) {
+    func updateViews(postbox: Postbox, transaction: PostboxTransaction) {
         var updateTrackedHolesPeerIds: [PeerId] = []
         
         if let currentUpdatedState = transaction.currentUpdatedState {
@@ -520,6 +533,12 @@ final class ViewTracker {
         for (mutableView, pipe) in self.itemCollectionsViews.copyItems() {
             if mutableView.replay(orderedItemListOperations: transaction.currentOrderedItemListOperations) {
                 pipe.putNext(ItemCollectionsView(mutableView))
+            }
+        }
+        
+        for (mutableView, pipe) in self.combinedViews.copyItems() {
+            if mutableView.replay(postbox: postbox, transaction: transaction) {
+                pipe.putNext(mutableView.immutableView())
             }
         }
     }

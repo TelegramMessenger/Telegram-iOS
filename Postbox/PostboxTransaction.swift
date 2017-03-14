@@ -17,6 +17,8 @@ final class PostboxTransaction {
     let currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation]
     let currentPreferencesOperations: [PreferencesOperation]
     let currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]]
+    let currentItemCollectionItemsOperations: [ItemCollectionId: [ItemCollectionItemsOperation]]
+    let currentItemCollectionInfosOperations: [ItemCollectionInfosOperation]
     
     let unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation]
     let updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]
@@ -88,10 +90,16 @@ final class PostboxTransaction {
         if !currentOrderedItemListOperations.isEmpty {
             return false
         }
+        if !currentItemCollectionItemsOperations.isEmpty {
+            return false
+        }
+        if !currentItemCollectionInfosOperations.isEmpty {
+            return false
+        }
         return true
     }
     
-    init(currentUpdatedState: Coding?, currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]], removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]], chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], currentUpdatedCachedPeerData: [PeerId: CachedPeerData], currentUpdatedPeerPresences: [PeerId: PeerPresence], currentUpdatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?], currentUpdatedTotalUnreadCount: Int32?, peerIdsWithUpdatedUnreadCounts: Set<PeerId>, currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation], currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], currentPreferencesOperations: [PreferencesOperation], currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]], updatedMedia: [MediaId: Media?], replaceContactPeerIds: Set<PeerId>?, currentUpdatedMasterClientId: Int64?) {
+    init(currentUpdatedState: Coding?, currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]], removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]], chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], currentUpdatedCachedPeerData: [PeerId: CachedPeerData], currentUpdatedPeerPresences: [PeerId: PeerPresence], currentUpdatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?], currentUpdatedTotalUnreadCount: Int32?, peerIdsWithUpdatedUnreadCounts: Set<PeerId>, currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation], currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], currentPreferencesOperations: [PreferencesOperation], currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]], currentItemCollectionItemsOperations: [ItemCollectionId: [ItemCollectionItemsOperation]], currentItemCollectionInfosOperations: [ItemCollectionInfosOperation], updatedMedia: [MediaId: Media?], replaceContactPeerIds: Set<PeerId>?, currentUpdatedMasterClientId: Int64?) {
         self.currentUpdatedState = currentUpdatedState
         self.currentOperationsByPeerId = currentOperationsByPeerId
         self.peerIdsWithFilledHoles = peerIdsWithFilledHoles
@@ -110,6 +118,8 @@ final class PostboxTransaction {
         self.updatedSynchronizePeerReadStateOperations = updatedSynchronizePeerReadStateOperations
         self.currentPreferencesOperations = currentPreferencesOperations
         self.currentOrderedItemListOperations = currentOrderedItemListOperations
+        self.currentItemCollectionItemsOperations = currentItemCollectionItemsOperations
+        self.currentItemCollectionInfosOperations = currentItemCollectionInfosOperations
         self.updatedMedia = updatedMedia
         self.replaceContactPeerIds = replaceContactPeerIds
         self.currentUpdatedMasterClientId = currentUpdatedMasterClientId

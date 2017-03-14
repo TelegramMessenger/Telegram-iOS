@@ -251,6 +251,12 @@
 		D0F9E8711C5A0E9B00037222 /* PeerTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8701C5A0E9B00037222 /* PeerTable.swift */; };
 		D0F9E8731C5A1EE500037222 /* GlobalMessageIdsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8721C5A1EE500037222 /* GlobalMessageIdsTable.swift */; };
 		D0F9E8751C5A334100037222 /* SimpleDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8741C5A334100037222 /* SimpleDictionary.swift */; };
+		D0FA0AC71E77F0A2005BB9B7 /* ItemCollectionInfosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0AC61E77F0A2005BB9B7 /* ItemCollectionInfosView.swift */; };
+		D0FA0AC81E77F0A2005BB9B7 /* ItemCollectionInfosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0AC61E77F0A2005BB9B7 /* ItemCollectionInfosView.swift */; };
+		D0FA0ACA1E780A26005BB9B7 /* PostboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0AC91E780A26005BB9B7 /* PostboxView.swift */; };
+		D0FA0ACB1E780A26005BB9B7 /* PostboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0AC91E780A26005BB9B7 /* PostboxView.swift */; };
+		D0FA0ACD1E781067005BB9B7 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0ACC1E781067005BB9B7 /* Views.swift */; };
+		D0FA0ACE1E781067005BB9B7 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0ACC1E781067005BB9B7 /* Views.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -399,6 +405,9 @@
 		D0F9E8701C5A0E9B00037222 /* PeerTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerTable.swift; sourceTree = "<group>"; };
 		D0F9E8721C5A1EE500037222 /* GlobalMessageIdsTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalMessageIdsTable.swift; sourceTree = "<group>"; };
 		D0F9E8741C5A334100037222 /* SimpleDictionary.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleDictionary.swift; sourceTree = "<group>"; };
+		D0FA0AC61E77F0A2005BB9B7 /* ItemCollectionInfosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCollectionInfosView.swift; sourceTree = "<group>"; };
+		D0FA0AC91E780A26005BB9B7 /* PostboxView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxView.swift; sourceTree = "<group>"; };
+		D0FA0ACC1E781067005BB9B7 /* Views.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -619,6 +628,7 @@
 				D0AB0B8F1D65D4AB002C78E7 /* UnsentMessageIndicesView.swift */,
 				D0DF0C8E1D81A350008AEB01 /* PeerView.swift */,
 				D021E0DB1DB5237C00C6B04F /* ItemCollectionsView.swift */,
+				D0FA0AC61E77F0A2005BB9B7 /* ItemCollectionInfosView.swift */,
 				D0A18D661E16874D004C6734 /* UnreadMessageCountsView.swift */,
 				D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */,
 				D0AAD1B41E32673C00D5B9DE /* TimestampBasedMessageAttributesView.swift */,
@@ -626,6 +636,8 @@
 				D08775051E3E3F2100A97350 /* PreferencesView.swift */,
 				D0BC386B1E3FCEE50044D6FE /* MultiplePeersView.swift */,
 				D087C20B1E43C11C00D686F8 /* OrderedItemListView.swift */,
+				D0FA0AC91E780A26005BB9B7 /* PostboxView.swift */,
+				D0FA0ACC1E781067005BB9B7 /* Views.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -909,6 +921,7 @@
 				D0F7B1C91E045C6A007EB8A5 /* MessageHistoryTagsTable.swift in Sources */,
 				D0F7B1CE1E045C6A007EB8A5 /* MediaCleanupTable.swift in Sources */,
 				D0B418271D7DFE0C004562A4 /* IpcPipe.swift in Sources */,
+				D0FA0ACB1E780A26005BB9B7 /* PostboxView.swift in Sources */,
 				D0B4184D1D7DFE20004562A4 /* ContactPeersView.swift in Sources */,
 				D00C7CE41E37861C0080C3D5 /* MessageView.swift in Sources */,
 				D08775011E3E3D9F00A97350 /* PreferencesTable.swift in Sources */,
@@ -925,6 +938,7 @@
 				D0F7B1C31E045C6A007EB8A5 /* Table.swift in Sources */,
 				D0F82D101E43A024007E499C /* OrderedItemListIndexTable.swift in Sources */,
 				D0F7B1CF1E045C6A007EB8A5 /* MetadataTable.swift in Sources */,
+				D0FA0ACE1E781067005BB9B7 /* Views.swift in Sources */,
 				D0B418501D7DFE20004562A4 /* UnsentMessageIndicesView.swift in Sources */,
 				D0BEAF641E54B2FA00BD963D /* AccountManager.swift in Sources */,
 				D073CE7F1DCBF3B4007511FD /* ItemCollection.swift in Sources */,
@@ -939,6 +953,7 @@
 				D0F7B1DB1E045C6A007EB8A5 /* ItemCollectionInfoTable.swift in Sources */,
 				D0F7B1D41E045C6A007EB8A5 /* PeerPresenceTable.swift in Sources */,
 				D073CE761DCBF3B4007511FD /* IntermediateMessage.swift in Sources */,
+				D0FA0AC81E77F0A2005BB9B7 /* ItemCollectionInfosView.swift in Sources */,
 				D0B4185A1D7DFE29004562A4 /* ViewTracker.swift in Sources */,
 				D0F7B1E21E045C6A007EB8A5 /* PeerNameIndexTable.swift in Sources */,
 				D073CE7C1DCBF3B4007511FD /* CachedPeerData.swift in Sources */,
@@ -1025,6 +1040,7 @@
 				D0E1DE151C5E1C6900C7826E /* ViewTracker.swift in Sources */,
 				D0F9E8751C5A334100037222 /* SimpleDictionary.swift in Sources */,
 				D08C713E1C512EA500779C0F /* MessageHistoryTable.swift in Sources */,
+				D0FA0ACA1E780A26005BB9B7 /* PostboxView.swift in Sources */,
 				D0079F5A1D592E8B00A27A2C /* ContactTable.swift in Sources */,
 				D0F82CFD1E4345D7007E499C /* OrderedItemListTable.swift in Sources */,
 				D0AB0B8C1D65D488002C78E7 /* MessageHistoryHolesView.swift in Sources */,
@@ -1041,6 +1057,7 @@
 				D09ADF0C1D2EB83500C8208D /* OrderStatisticTable.swift in Sources */,
 				D0CE63F61CA1CCB2002BC462 /* MediaResource.swift in Sources */,
 				D0F82D0F1E43A024007E499C /* OrderedItemListIndexTable.swift in Sources */,
+				D0FA0ACD1E781067005BB9B7 /* Views.swift in Sources */,
 				D03121001DA579A0006A2A60 /* PeerNotificationSettingsTable.swift in Sources */,
 				D0BEAF631E54B2FA00BD963D /* AccountManager.swift in Sources */,
 				D0AD23271E194D1C00A7089A /* PeerOperationLogTable.swift in Sources */,
@@ -1055,6 +1072,7 @@
 				D03120FA1DA540F0006A2A60 /* CachedPeerData.swift in Sources */,
 				D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */,
 				D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */,
+				D0FA0AC71E77F0A2005BB9B7 /* ItemCollectionInfosView.swift in Sources */,
 				D0F019FD1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift in Sources */,
 				D0F9E8651C58CB7F00037222 /* ChatListTable.swift in Sources */,
 				D0F9E8711C5A0E9B00037222 /* PeerTable.swift in Sources */,

@@ -343,7 +343,7 @@ final class PeerOperationLogTable: Table {
                 assertionFailure()
             }
         } else {
-            f(nil)
+            let _ = f(nil)
         }
     }
 }

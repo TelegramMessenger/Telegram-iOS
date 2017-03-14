@@ -1,5 +1,9 @@
 import Foundation
 
+enum ItemCollectionInfosOperation {
+    case replaceInfos(ItemCollectionId.Namespace)
+}
+
 final class ItemCollectionInfoTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .binary)
