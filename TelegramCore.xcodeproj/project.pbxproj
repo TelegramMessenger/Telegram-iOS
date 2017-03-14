@@ -423,6 +423,7 @@
 		D0F7B1EA1E045C87007EB8A5 /* ChangePeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843961DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift */; };
 		D0F7B1EB1E045C87007EB8A5 /* ResolvePeerByName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */; };
 		D0F7B1EC1E045C87007EB8A5 /* SearchPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827BA1E00451F00071108 /* SearchPeers.swift */; };
+		D0FA0ABD1E76C908005BB9B7 /* TwoStepVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */; };
 		D0FA8B981E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8B971E1E955C001E855B /* SecretChatOutgoingOperation.swift */; };
 		D0FA8B991E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8B971E1E955C001E855B /* SecretChatOutgoingOperation.swift */; };
 		D0FA8B9E1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA8B9D1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift */; };
@@ -690,6 +691,7 @@
 		D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolvePeerByName.swift; sourceTree = "<group>"; };
 		D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditedMessageAttribute.swift; sourceTree = "<group>"; };
 		D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReplyMarkupMessageAttribute.swift; sourceTree = "<group>"; };
+		D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerification.swift; sourceTree = "<group>"; };
 		D0FA8B971E1E955C001E855B /* SecretChatOutgoingOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatOutgoingOperation.swift; sourceTree = "<group>"; };
 		D0FA8B9D1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatIncomingEncryptedOperation.swift; sourceTree = "<group>"; };
 		D0FA8BA01E1F99E1001E855B /* SecretChatFileReference.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatFileReference.swift; sourceTree = "<group>"; };
@@ -1055,6 +1057,7 @@
 			children = (
 				D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */,
 				D05A32E31E6F0B2E002760B4 /* RecentAccountSessions.swift */,
+				D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -1457,6 +1460,7 @@
 				D0B843C91DA7FF30005F29E1 /* NBPhoneNumberDesc.m in Sources */,
 				D03B0CE61D6224A700955575 /* ReplyMessageAttribute.swift in Sources */,
 				D0BEAF601E54ACF900BD963D /* AccountManager.swift in Sources */,
+				D0FA0ABD1E76C908005BB9B7 /* TwoStepVerification.swift in Sources */,
 				D02ABC7E1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */,
 				D0448CA51E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
 				D03C53771DAFF20F004C17B3 /* MultipartUpload.swift in Sources */,

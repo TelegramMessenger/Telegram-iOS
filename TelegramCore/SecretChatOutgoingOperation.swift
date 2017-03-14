@@ -263,7 +263,7 @@ final class SecretChatOutgoingOperation: Coding {
     func encode(_ encoder: Encoder) {
         encoder.encodeObject(self.contents, forKey: "c")
         encoder.encodeInt32(self.mutable ? 1 : 0, forKey: "m")
-        encoder.encodeInt32(self.delivered ? 1 : 0, forKey: "r")
+        encoder.encodeInt32(self.delivered ? 1 : 0, forKey: "d")
     }
     
     func withUpdatedDelivered(_ delivered: Bool) -> SecretChatOutgoingOperation {

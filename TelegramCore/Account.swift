@@ -298,7 +298,7 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
     }
 }
 
-private func sha256(_ data : Data) -> Data {
+func sha256Digest(_ data : Data) -> Data {
     var res = Data()
     res.count = Int(CC_SHA256_DIGEST_LENGTH)
     res.withUnsafeMutableBytes { mutableBytes -> Void in
@@ -316,7 +316,7 @@ public func verifyPassword(_ account: UnauthorizedAccount, password: String) -> 
         data.append(authData.currentSalt!)
         data.append(password.data(using: .utf8, allowLossyConversion: true)!)
         data.append(authData.currentSalt!)
-        let currentPasswordHash = sha256(data)
+        let currentPasswordHash = sha256Digest(data)
         
         return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
     }

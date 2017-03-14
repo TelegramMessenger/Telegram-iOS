@@ -68,13 +68,11 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                 switch updatedState.role {
                     case .creator:
                         if fromSeq < 0 || toSeq < 0 || (fromSeq & 1) == 0 || (toSeq & 1) == 0 {
-                            couldNotResendRequestedMessages = true
-                            return false
+                            return true
                         }
                     case .participant:
                         if fromSeq < 0 || toSeq < 0 || (fromSeq & 1) != 0 || (toSeq & 1) != 0 {
-                            couldNotResendRequestedMessages = true
-                            return false
+                            return true
                         }
                 }
                 switch updatedState.embeddedState {
@@ -158,8 +156,8 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                             } else {
                                                 if let layer = SecretChatSequenceBasedLayer(rawValue: parsedLayer.rawValue) {
                                                     let role = updatedState.role
-                                                    let fromSeqNo: Int32 = (topProcessedCanonicalIncomingOperationIndex + 1) * 2 + (role == .creator ? 1 : 1)
-                                                    let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 1 : 0)
+                                                    let fromSeqNo: Int32 = (topProcessedCanonicalIncomingOperationIndex + 1) * 2 + (role == .creator ? 0 : 1)
+                                                    let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 0 : 1)
                                                     updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
                                                 } else {
                                                     assertionFailure()
@@ -168,11 +166,12 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                             }
                                         }
                                     } else {
+                                        
                                         if canonicalIncomingIndex != 0 && canonicalIncomingIndex != 1 {
                                             if let layer = SecretChatSequenceBasedLayer(rawValue: parsedLayer.rawValue) {
                                                 let role = updatedState.role
-                                                let fromSeqNo: Int32 = 0 * 2 + (role == .creator ? 1 : 1)
-                                                let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 1 : 0)
+                                                let fromSeqNo: Int32 = 0 * 2 + (role == .creator ? 0 : 1)
+                                                let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 0 : 1)
                                                 updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
                                             } else {
                                                 assertionFailure()

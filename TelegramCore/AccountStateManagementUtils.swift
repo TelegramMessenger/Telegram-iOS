@@ -966,7 +966,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 } else {
                     updatedState.addUpdatePinnedPeerIds(.sync)
                 }
-            case let .updateReadMessagesContents(messages, pts, ptsCount):
+            case let .updateReadMessagesContents(messages, _, _):
                 updatedState.addReadGlobalMessagesContents(messages)
             default:
                     break
@@ -1264,7 +1264,7 @@ private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableS
             previousStateMatches = true
         }
         if !previousStateMatches {
-            Logger.shared.log("State", ".UpdateChannelState for \(peerId), previous state \(previousState) doesn't match current state \(String(describing: currentState))")
+            Logger.shared.log("State", ".UpdateChannelState for \(peerId), previous state \(String(describing: previousState)) doesn't match current state \(String(describing: currentState))")
             failed = true
         }
     }

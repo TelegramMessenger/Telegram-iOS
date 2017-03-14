@@ -49,11 +49,11 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                         
                                         switch state.role {
                                             case .creator:
-                                                if seqInValue < 0 || seqOutValue < 0 || (seqInValue & 1) == 0 || (seqOutValue & 1) != 0 {
+                                                if seqOutValue < 0 || (seqInValue >= 0 && (seqInValue & 1) == 0) || (seqOutValue & 1) != 0 {
                                                     throw MessagePreParsingError.protocolViolation
                                                 }
                                             case .participant:
-                                                if seqInValue < 0 || seqOutValue < 0 || (seqInValue & 1) != 0 || (seqOutValue & 1) == 0 {
+                                                if seqOutValue < 0 || (seqInValue >= 0 && (seqInValue & 1) != 0) || (seqOutValue & 1) == 0 {
                                                     throw MessagePreParsingError.protocolViolation
                                                 }
                                         }

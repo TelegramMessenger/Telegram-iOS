@@ -209,7 +209,19 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                         let removed = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
                         assert(removed)
                         if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
-                            let updatedState = state.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer)
+                            var updatedState = state.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer)
+                            var layer: SecretChatLayer?
+                            switch updatedState.embeddedState {
+                                case .terminated, .handshake:
+                                    break
+                                case .basicLayer:
+                                    layer = .layer8
+                                case let .sequenceBasedLayer(sequenceState):
+                                    layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                            }
+                            if let layer = layer {
+                                updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
+                            }
                             modifier.setPeerChatState(peerId, state: updatedState)
                             if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
                                 updatePeers(modifier: modifier, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
@@ -634,7 +646,7 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
         if let state = modifier.getPeerChatState(messageId.peerId) as? SecretChatState, let peer = modifier.getPeer(messageId.peerId) as? TelegramSecretChat {
             if let message = modifier.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
                 let decryptedMessage = boxedDecryptedMessage(message: message, globallyUniqueId: globallyUniqueId, uploadedFile: file, layer: layer)
-                return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: false, wasDelivered: wasDelivered)
+                return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: wasDelivered, wasDelivered: wasDelivered)
                     |> mapToSignal { result in
                         return postbox.modify { modifier -> Void in
                             markOutgoingOperationAsCompleted(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex)
@@ -743,7 +755,13 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
     let inputPeer = Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)
     
     if asService {
-        sendMessage = network.request(Api.functions.messages.sendEncryptedService(peer: inputPeer, randomId: globallyUniqueId, data: Buffer(data: encryptedPayload)))
+        let actionRandomId: Int64
+        if wasDelivered {
+            actionRandomId = arc4random64()
+        } else {
+            actionRandomId = globallyUniqueId
+        }
+        sendMessage = network.request(Api.functions.messages.sendEncryptedService(peer: inputPeer, randomId: actionRandomId, data: Buffer(data: encryptedPayload)))
     } else {
         if let file = file {
             sendMessage = network.request(Api.functions.messages.sendEncryptedFile(peer: inputPeer, randomId: globallyUniqueId, data: Buffer(data: encryptedPayload), file: file.reference.apiInputFile))

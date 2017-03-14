@@ -43,7 +43,20 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
                         memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
                     }
                     
-                    let updatedState = currentState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer)
+                    var updatedState = currentState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer)
+                    
+                    var layer: SecretChatLayer?
+                    switch updatedState.embeddedState {
+                        case .terminated, .handshake:
+                            break
+                        case .basicLayer:
+                            layer = .layer8
+                        case let .sequenceBasedLayer(sequenceState):
+                            layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                    }
+                    if let layer = layer {
+                        updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: currentPeer.id, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
+                    }
                     modifier.setPeerChatState(currentPeer.id, state: updatedState)
                     updatePeers(modifier: modifier, peers: [currentPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                         return updated
