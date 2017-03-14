@@ -15,7 +15,7 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
     
     public var associatedMessageIds: [MessageId] = []
     
-    init(timeout: Int32, countdownBeginTime: Int32?) {
+    public init(timeout: Int32, countdownBeginTime: Int32?) {
         self.timeout = timeout
         self.countdownBeginTime = countdownBeginTime
     }

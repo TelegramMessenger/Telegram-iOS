@@ -189,9 +189,16 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         }
                     }
                 
-                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(media: mediaList, textEntities: entitiesAttribute?.entities), forwardInfo: nil, authorId: account.peerId, text: text, attributes: attributes, media: mediaList))
+                    let authorId:PeerId?
+                    if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info, !info.flags.contains(.messagesShouldHaveSignatures) {
+                        authorId = nil
+                    }  else {
+                        authorId = account.peerId
+                    }
+                    
+                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(media: mediaList, textEntities: entitiesAttribute?.entities), forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source):
-                    if let sourceMessage = modifier.getMessage(source), let author = sourceMessage.author {
+                    if let sourceMessage = modifier.getMessage(source), let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {
                             var isAction = false
                             for media in sourceMessage.media {

@@ -22,6 +22,9 @@
 		C251D7431E65E50500283EDE /* StickerSetInstallation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C251D7421E65E50500283EDE /* StickerSetInstallation.swift */; };
 		C251D7441E65E50500283EDE /* StickerSetInstallation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C251D7421E65E50500283EDE /* StickerSetInstallation.swift */; };
 		C26A37EF1E5E0C41006977AC /* ChannelParticipants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BB7C591E5C8074001527C3 /* ChannelParticipants.swift */; };
+		C27982511E72C97800262BFD /* MacosLegacy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982501E72C97800262BFD /* MacosLegacy.swift */; };
+		C27982531E73077800262BFD /* SecretChatStateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982521E73077800262BFD /* SecretChatStateBridge.swift */; };
+		C27982541E73078400262BFD /* SecretChatStateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982521E73077800262BFD /* SecretChatStateBridge.swift */; };
 		C2A315C01E2E776A00D89000 /* RequestStartBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749581E1092BC0057C89A /* RequestStartBot.swift */; };
 		C2FD33E11E680E9E008D13D4 /* RequestUserPhotos.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FD33E01E680E9E008D13D4 /* RequestUserPhotos.swift */; };
 		C2FD33E21E680E9E008D13D4 /* RequestUserPhotos.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FD33E01E680E9E008D13D4 /* RequestUserPhotos.swift */; };
@@ -466,6 +469,8 @@
 		C239BE961E62EE1E00C2C453 /* LoadMessagesIfNecessary.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadMessagesIfNecessary.swift; sourceTree = "<group>"; };
 		C239BE9B1E630CA700C2C453 /* UpdatePinnedMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatePinnedMessage.swift; sourceTree = "<group>"; };
 		C251D7421E65E50500283EDE /* StickerSetInstallation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerSetInstallation.swift; sourceTree = "<group>"; };
+		C27982501E72C97800262BFD /* MacosLegacy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacosLegacy.swift; sourceTree = "<group>"; };
+		C27982521E73077800262BFD /* SecretChatStateBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatStateBridge.swift; sourceTree = "<group>"; };
 		C2FD33E01E680E9E008D13D4 /* RequestUserPhotos.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestUserPhotos.swift; sourceTree = "<group>"; };
 		C2FD33E31E687BF1008D13D4 /* PeerPhotoUpdater.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerPhotoUpdater.swift; sourceTree = "<group>"; };
 		C2FD33EA1E696C78008D13D4 /* GroupsInCommon.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupsInCommon.swift; sourceTree = "<group>"; };
@@ -737,6 +742,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		C279824F1E72C96B00262BFD /* legacy */ = {
+			isa = PBXGroup;
+			children = (
+				C27982501E72C97800262BFD /* MacosLegacy.swift */,
+			);
+			name = legacy;
+			sourceTree = "<group>";
+		};
 		D01B27A01E394D7B0022A4C0 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -1113,6 +1126,7 @@
 		D09D8C031D4FAB1D0081DBEC /* TelegramCore */ = {
 			isa = PBXGroup;
 			children = (
+				C279824F1E72C96B00262BFD /* legacy */,
 				D03B0C791D62153400955575 /* third-party */,
 				D03B0CB71D62232000955575 /* Utils */,
 				D03B0CCF1D62242200955575 /* Objects */,
@@ -1208,6 +1222,7 @@
 				D0FA8BA91E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift */,
 				D019B1CB1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift */,
 				D00C7CEA1E37A8540080C3D5 /* SetSecretChatMessageAutoremoveTimeoutInteractively.swift */,
+				C27982521E73077800262BFD /* SecretChatStateBridge.swift */,
 			);
 			name = "Secret Chats";
 			sourceTree = "<group>";
@@ -1565,6 +1580,7 @@
 				D0BC38701E40853E0044D6FE /* UpdatePeers.swift in Sources */,
 				D03B0CE21D62249B00955575 /* InlineBotMessageAttribute.swift in Sources */,
 				D0AB0B9A1D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift in Sources */,
+				C27982531E73077800262BFD /* SecretChatStateBridge.swift in Sources */,
 				D03B0D5B1D631A6900955575 /* Buffer.swift in Sources */,
 				D0B843891DA7AB96005F29E1 /* ExportedInvitation.swift in Sources */,
 				D03B0E441D631E6600955575 /* NetworkLogging.m in Sources */,
@@ -1609,6 +1625,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C27982541E73078400262BFD /* SecretChatStateBridge.swift in Sources */,
 				D00DBBD81E64E41100DB5485 /* CreateSecretChat.swift in Sources */,
 				C2FD33EC1E696C79008D13D4 /* GroupsInCommon.swift in Sources */,
 				C239BE9D1E630CB300C2C453 /* UpdatePinnedMessage.swift in Sources */,
@@ -1765,6 +1782,7 @@
 				D0B8442C1DAB91E0005F29E1 /* NBMetadataCoreMapper.m in Sources */,
 				D0FA8BB71E223C16001E855B /* SecretApiLayer8.swift in Sources */,
 				D073CE6A1DCBCF17007511FD /* ViewCountMessageAttribute.swift in Sources */,
+				C27982511E72C97800262BFD /* MacosLegacy.swift in Sources */,
 				D0B418AB1D7E0597004562A4 /* MultipartFetch.swift in Sources */,
 				D0B418B71D7E05A6004562A4 /* Phonebook.swift in Sources */,
 				D03C53741DAD5CA9004C17B3 /* CachedChannelData.swift in Sources */,

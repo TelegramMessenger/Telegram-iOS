@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity]?) -> MessageTags {
+public func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity]?) -> MessageTags {
     var tags = MessageTags()
     for attachment in media {
         if let _ = attachment as? TelegramMediaImage {
@@ -348,7 +348,7 @@ extension StoreMessage {
                 for case let file as TelegramMediaFile in medias {
                     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
                         if file.isVoice {
-                            attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) != 0))
+                            attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) == 0))
                             break
                         }
                     }
