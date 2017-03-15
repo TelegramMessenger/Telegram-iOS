@@ -102,7 +102,9 @@ extension Api.Message {
                 if let media = media {
                     switch media {
                         case let .messageMediaContact(_, _, _, userId):
-                            result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
+                            if userId != 0 {
+                                result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
+                            }
                         default:
                             break
                     }

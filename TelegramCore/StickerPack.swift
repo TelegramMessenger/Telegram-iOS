@@ -42,14 +42,16 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     public let title: String
     public let shortName: String
     public let hash: Int32
+    public let count: Int32
     
-    public init(id: ItemCollectionId, flags: StickerPackCollectionInfoFlags, accessHash: Int64, title: String, shortName: String, hash: Int32) {
+    public init(id: ItemCollectionId, flags: StickerPackCollectionInfoFlags, accessHash: Int64, title: String, shortName: String, hash: Int32, count: Int32) {
         self.id = id
         self.flags = flags
         self.accessHash = accessHash
         self.title = title
         self.shortName = shortName
         self.hash = hash
+        self.count = count
     }
     
     public init(decoder: Decoder) {
@@ -59,20 +61,46 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         self.shortName = decoder.decodeStringForKey("s")
         self.hash = decoder.decodeInt32ForKey("h")
         self.flags = StickerPackCollectionInfoFlags(rawValue: decoder.decodeInt32ForKey("f"))
+        self.count = decoder.decodeInt32ForKey("n")
     }
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.id.namespace, forKey: "i.n")
-        encoder.encodeInt64(self.accessHash, forKey: "a")
         encoder.encodeInt64(self.id.id, forKey: "i.i")
+        encoder.encodeInt64(self.accessHash, forKey: "a")
         encoder.encodeString(self.title, forKey: "t")
         encoder.encodeString(self.shortName, forKey: "s")
         encoder.encodeInt32(self.hash, forKey: "h")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
+        encoder.encodeInt32(self.count, forKey: "n")
     }
     
     public static func ==(lhs: StickerPackCollectionInfo, rhs: StickerPackCollectionInfo) -> Bool {
-        return lhs.id == rhs.id && lhs.title == rhs.title && lhs.shortName == rhs.shortName && lhs.hash == rhs.hash
+        if lhs.id != rhs.id {
+            return false
+        }
+        
+        if lhs.title != rhs.title {
+            return false
+        }
+        
+        if lhs.shortName != rhs.shortName {
+            return false
+        }
+        
+        if lhs.hash != rhs.hash {
+            return false
+        }
+        
+        if lhs.flags != rhs.flags {
+            return false
+        }
+        
+        if lhs.count != rhs.count {
+            return false
+        }
+        
+        return true
     }
 }
 
@@ -102,5 +130,21 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
     
     public static func ==(lhs: StickerPackItem, rhs: StickerPackItem) -> Bool {
         return lhs.index == rhs.index && lhs.file == rhs.file && lhs.indexKeys == rhs.indexKeys
+    }
+}
+
+extension StickerPackCollectionInfo {
+    convenience init(apiSet: Api.StickerSet) {
+        switch apiSet {
+            case let .stickerSet(flags, id, accessHash, title, shortName, count, nHash):
+                var setFlags: StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
+                if (flags & (1 << 2)) != 0 {
+                    setFlags.insert(.official)
+                }
+                if (flags & (1 << 3)) != 0 {
+                    setFlags.insert(.masks)
+                }
+                self.init(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, hash: nHash, count: count)
+        }
     }
 }

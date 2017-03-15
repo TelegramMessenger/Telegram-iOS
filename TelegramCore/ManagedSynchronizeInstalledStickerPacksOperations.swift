@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-private final class ManagedSynchronizeCloudPinnedChatsOperationsHelper {
+private final class ManagedSynchronizeInstalledStickerPacksOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
     
     func update(_ entries: [PeerMergedOperationLogEntry]) -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) {
@@ -53,11 +53,11 @@ private final class ManagedSynchronizeCloudPinnedChatsOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: tagLocalIndex, { entry in
-            if let entry = entry, let _ = entry.mergedIndex, let operation = entry.contents as? CloudChatRemoveMessagesOperation {
+        modifier.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+            if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeInstalledStickerPacksOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
             } else {
@@ -69,11 +69,19 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex:
         } |> switchToLatest
 }
 
-func managedSynchronizeCloudPinnedChatsOperations(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network, stateManager: AccountStateManager, namespace: SynchronizeInstalledStickerPacksOperationNamespace) -> Signal<Void, NoError> {
     return Signal { _ in
-        let helper = Atomic(value: ManagedSynchronizeCloudPinnedChatsOperationsHelper())
+        let tag: PeerOperationLogTag
+        switch namespace {
+            case .stickers:
+                tag = OperationLogTags.SynchronizeInstalledStickerPacks
+            case .masks:
+                tag = OperationLogTags.SynchronizeInstalledMasks
+        }
         
-        let disposable = postbox.mergedOperationLogView(tag: OperationLogTags.CloudChatRemoveMessages, limit: 10).start(next: { view in
+        let helper = Atomic<ManagedSynchronizeInstalledStickerPacksOperationsHelper>(value: ManagedSynchronizeInstalledStickerPacksOperationsHelper())
+        
+        let disposable = postbox.mergedOperationLogView(tag: tag, limit: 10).start(next: { view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
                 return helper.update(view.entries)
             }
@@ -83,14 +91,10 @@ func managedSynchronizeCloudPinnedChatsOperations(postbox: Postbox, network: Net
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
                     if let entry = entry {
-                        if let operation = entry.contents as? CloudChatRemoveMessagesOperation {
-                            if let peer = modifier.getPeer(entry.peerId) {
-                                return removeMessages(postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
-                            } else {
-                                return .complete()
-                            }
+                        if let operation = entry.contents as? SynchronizeInstalledStickerPacksOperation {
+                            return synchronizeInstalledStickerPacks(modifier: modifier, postbox: postbox, network: network, stateManager: stateManager, namespace: namespace, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -98,7 +102,7 @@ func managedSynchronizeCloudPinnedChatsOperations(postbox: Postbox, network: Net
                     return .complete()
                 })
                     |> then(postbox.modify { modifier -> Void in
-                        modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: entry.tagLocalIndex)
+                        let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
                     })
                 
                 disposable.set(signal.start())
@@ -112,49 +116,11 @@ func managedSynchronizeCloudPinnedChatsOperations(postbox: Postbox, network: Net
             for disposable in disposables {
                 disposable.dispose()
             }
+            disposable.dispose()
         }
     }
 }
 
-private func removeMessages(postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveMessagesOperation) -> Signal<Void, NoError> {
-    if peer.id.namespace == Namespaces.Peer.CloudChannel {
-        if let inputChannel = apiInputChannel(peer) {
-            return network.request(Api.functions.channels.deleteMessages(channel: inputChannel, id: operation.messageIds.map { $0.id }))
-                |> map { result -> Api.messages.AffectedMessages? in
-                    return result
-                }
-                |> `catch` { _ in
-                    return .single(nil)
-                }
-                |> mapToSignal { _ in
-                    return .complete()
-            }
-        } else {
-            return .complete()
-        }
-    } else {
-        var flags:Int32
-        switch operation.type {
-        case .forEveryone:
-            flags = (1 << 0)
-        default:
-            flags = 0
-        }
-        return network.request(Api.functions.messages.deleteMessages(flags: flags, id: operation.messageIds.map { $0.id }))
-            |> map { result -> Api.messages.AffectedMessages? in
-                return result
-            }
-            |> `catch` { _ in
-                return .single(nil)
-            }
-            |> mapToSignal { result in
-                if let result = result {
-                    switch result {
-                    case let .affectedMessages(pts, ptsCount):
-                        stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
-                    }
-                }
-                return .complete()
-        }
-    }
+private func synchronizeInstalledStickerPacks(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, namespace: SynchronizeInstalledStickerPacksOperationNamespace, operation: SynchronizeInstalledStickerPacksOperation) -> Signal<Void, NoError> {
+    return .complete()
 }

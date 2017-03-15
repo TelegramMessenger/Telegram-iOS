@@ -73,6 +73,8 @@ struct OperationLogTags {
     static let AutoremoveMessages = PeerOperationLogTag(value: 5)
     static let SynchronizePinnedChats = PeerOperationLogTag(value: 6)
     static let SynchronizeConsumeMessageContents = PeerOperationLogTag(value: 7)
+    static let SynchronizeInstalledStickerPacks = PeerOperationLogTag(value: 8)
+    static let SynchronizeInstalledMasks = PeerOperationLogTag(value: 9)
 }
 
 private enum PreferencesKeyValues: Int32 {

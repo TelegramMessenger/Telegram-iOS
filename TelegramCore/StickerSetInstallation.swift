@@ -13,24 +13,6 @@ public enum RequestStickerSetError {
     case invalid
 }
 
-fileprivate extension Api.StickerSet {
-    var info:StickerPackCollectionInfo {
-        switch self {
-        case let .stickerSet(data):
-            
-            var flags:StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
-            if (data.flags & (1 << 2)) != 0 {
-                flags.insert(.official)
-            }
-            if (data.flags & (1 << 3)) != 0 {
-                flags.insert(.masks)
-            }
-            
-            return StickerPackCollectionInfo(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: data.id), flags: flags, accessHash: data.accessHash, title: data.title, shortName: data.shortName, hash: data.hash)
-        }
-    }
-}
-
 public enum RequestStickerSetResult {
     case local(info: ItemCollectionInfo, items: [ItemCollectionItem])
     case remote(info: ItemCollectionInfo, items: [ItemCollectionItem], installed: Bool)
@@ -67,7 +49,7 @@ public func requestStickerSet(account:Account, reference: StickerPackReference) 
             switch result {
             case let .stickerSet(set, packs, documents):
 
-                info = set.info
+                info = StickerPackCollectionInfo(apiSet: set)
                 
                 switch set {
                 case let .stickerSet(data):
@@ -168,7 +150,7 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
                         apiDocuments = covers
                     }
                     
-                    let info:StickerPackCollectionInfo = apiSet.info
+                    let info = StickerPackCollectionInfo(apiSet: apiSet)
                     
                     var items:[StickerPackItem] = []
                     for apiDocument in apiDocuments {
