@@ -191,7 +191,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                 
                     let authorId:PeerId?
                     if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info, !info.flags.contains(.messagesShouldHaveSignatures) {
-                        authorId = nil
+                        authorId = peer.id
                     }  else {
                         authorId = account.peerId
                     }
