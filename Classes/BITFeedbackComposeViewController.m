@@ -499,6 +499,7 @@
   pickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
   pickerController.delegate = self;
   pickerController.editing = NO;
+  pickerController.navigationBar.barStyle = self.manager.barStyle;
   [self presentViewController:pickerController animated:YES completion:nil];
 }
 
