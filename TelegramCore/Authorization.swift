@@ -12,7 +12,6 @@ import Foundation
 public enum AuthorizationCodeRequestError {
     case invalidPhoneNumber
     case limitExceeded
-    case unregistred
     case generic
 }
 
@@ -51,25 +50,15 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
     
     return codeAndAccount
         |> mapToSignal { (sentCode, account) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
-            
-            switch sentCode {
-            case let .sentCode(flags, type, phoneCodeHash, nextType, timeout):
-                if (flags & (1 << 0)) == 0 {
-                    return .fail(.unregistred)
-                }
-            }
-            
             return account.postbox.modify { modifier -> UnauthorizedAccount in
                 switch sentCode {
-                    case let .sentCode(flags, type, phoneCodeHash, nextType, timeout):
+                    case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
                         var parsedNextType: AuthorizationCodeNextType?
                         if let nextType = nextType {
                             parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                         }
                     
-                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)))
-
-                    
+                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)))                    
                 }
                 return account
             } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
@@ -132,6 +121,7 @@ public enum AuthorizationCodeVerificationError {
 private enum AuthorizationCodeResult {
     case Authorization(Api.auth.Authorization)
     case Password(String)
+    case SignUp
 }
 
 public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Signal<Void, AuthorizationCodeVerificationError> {
@@ -165,6 +155,8 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                                         return .fail(.limitExceeded)
                                     } else if errorDescription == "PHONE_CODE_INVALID" {
                                         return .fail(.invalidCode)
+                                    } else if errorDescription == "PHONE_NUMBER_UNOCCUPIED" {
+                                        return .single(.SignUp)
                                     } else {
                                         return .fail(.generic)
                                     }
@@ -173,6 +165,8 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                         |> mapToSignal { result -> Signal<Void, AuthorizationCodeVerificationError> in
                             return account.postbox.modify { modifier -> Void in
                                 switch result {
+                                    case .SignUp:
+                                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .signUp(number: number, codeHash: hash, code: code, firstName: "", lastName: "")))
                                     case let .Password(hint):
                                         modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint)))
                                     case let .Authorization(authorization):
@@ -230,6 +224,47 @@ public func authorizeWithPassword(account: UnauthorizedAccount, password: String
                 return .generic
             }
         }
+}
+
+public enum SignUpError {
+    case generic
+    case limitExceeded
+    case codeExpired
+    case invalidFirstName
+    case invalidLastName
+}
+
+public func signUpWithName(account: UnauthorizedAccount, firstName: String, lastName: String) -> Signal<Void, SignUpError> {
+    return account.postbox.modify { modifier -> Signal<Void, SignUpError> in
+        if let state = modifier.getState() as? UnauthorizedAccountState, case let .signUp(number, codeHash, code, _, _) = state.contents {
+            return account.network.request(Api.functions.auth.signUp(phoneNumber: number, phoneCodeHash: codeHash, phoneCode: code, firstName: firstName, lastName: lastName))
+                |> mapError { error -> SignUpError in
+                    if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                        return .limitExceeded
+                    } else if error.errorDescription == "PHONE_CODE_EXPIRED" {
+                        return .codeExpired
+                    } else if error.errorDescription == "FIRSTNAME_INVALID" {
+                        return .invalidFirstName
+                    } else if error.errorDescription == "LASTNAME_INVALID" {
+                        return .invalidLastName
+                    } else {
+                        return .generic
+                    }
+                }
+                |> mapToSignal { result -> Signal<Void, SignUpError> in
+                    return account.postbox.modify { modifier -> Void in
+                        switch result {
+                            case let .authorization(_, _, user):
+                                let user = TelegramUser(user: user)
+                                let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                                modifier.setState(state)
+                        }
+                    } |> mapError { _ -> SignUpError in return .generic }
+                }
+        } else {
+            return .fail(.generic)
+        }
+    } |> mapError { _ -> SignUpError in return .generic } |> switchToLatest
 }
 
 public enum AuthorizationStateReset {

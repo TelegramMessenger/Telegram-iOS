@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-enum SecretChatRole: Int32 {
+public enum SecretChatRole: Int32 {
     case creator
     case participant
 }
