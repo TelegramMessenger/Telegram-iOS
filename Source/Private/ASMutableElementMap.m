@@ -13,7 +13,7 @@
 #import <AsyncDisplayKit/ASCollectionElement.h>
 #import <AsyncDisplayKit/ASDataController.h>
 #import <AsyncDisplayKit/ASElementMap.h>
-#import <AsyncDisplayKit/ASMultidimensionalArrayUtils.h>
+#import <AsyncDisplayKit/ASTwoDimensionalArrayUtils.h>
 #import <AsyncDisplayKit/NSIndexSet+ASHelpers.h>
 
 typedef NSMutableArray<NSMutableArray<ASCollectionElement *> *> ASMutableCollectionElementTwoDimensionalArray;
@@ -53,8 +53,7 @@ typedef NSMutableDictionary<NSString *, NSMutableDictionary<NSIndexPath *, ASCol
 
 - (void)removeItemsAtIndexPaths:(NSArray<NSIndexPath *> *)indexPaths
 {
-  indexPaths = [indexPaths sortedArrayUsingSelector:@selector(compare:)];
-  ASDeleteElementsInMultidimensionalArrayAtIndexPaths(_sectionsOfItems, indexPaths);
+  ASDeleteElementsInTwoDimensionalArrayAtIndexPaths(_sectionsOfItems, indexPaths);
 }
 
 - (void)removeSectionContextsAtIndexes:(NSIndexSet *)indexes

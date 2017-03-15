@@ -109,9 +109,9 @@ AS_SUBCLASSING_RESTRICTED
 /**
  * @param rangeController Sender.
  *
- * @return an array of index paths corresponding to the nodes currently visible onscreen (i.e., the visible range).
+ * @return an array of elements corresponding to the data currently visible onscreen (i.e., the visible range).
  */
-- (NSArray<NSIndexPath *> *)visibleNodeIndexPathsForRangeController:(ASRangeController *)rangeController;
+- (NSArray<ASCollectionElement *> *)visibleElementsForRangeController:(ASRangeController *)rangeController;
 
 /**
  * @param rangeController Sender.
@@ -119,13 +119,6 @@ AS_SUBCLASSING_RESTRICTED
  * @return the current scroll direction of the view using this range controller.
  */
 - (ASScrollDirection)scrollDirectionForRangeController:(ASRangeController *)rangeController;
-
-/**
- * @param rangeController Sender.
- *
- * @return the receiver's viewport size (i.e., the screen space occupied by the visible range).
- */
-- (CGSize)viewportSizeForRangeController:(ASRangeController *)rangeController;
 
 /**
  * @param rangeController Sender.

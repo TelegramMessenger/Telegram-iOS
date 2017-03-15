@@ -137,8 +137,6 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
   ASBatchContext *_batchContext;
 
-  NSIndexPath *_pendingVisibleIndexPath;
-
   // When we update our data controller in response to an interactive move,
   // we don't want to tell the table view about the change (it knows!)
   BOOL _updatingInResponseToInteractiveMove;
@@ -565,7 +563,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
     return indexPath;
   } else {
     NSIndexPath *viewIndexPath = [_dataController.visibleMap convertIndexPath:indexPath fromMap:_dataController.pendingMap];
-    if (viewIndexPath == nil) {
+    if (viewIndexPath == nil && wait) {
       [self waitUntilAllUpdatesAreCommitted];
       return [self convertIndexPathFromTableNode:indexPath waitingIfNeeded:NO];
     }
@@ -652,18 +650,8 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (NSArray<ASCellNode *> *)visibleNodes
 {
-  NSArray *indexPaths = [self visibleNodeIndexPathsForRangeController:_rangeController];
-  
-  NSMutableArray<ASCellNode *> *visibleNodes = [NSMutableArray array];
-  for (NSIndexPath *indexPath in indexPaths) {
-    ASCellNode *node = [self nodeForRowAtIndexPath:indexPath];
-    if (node) {
-      // It is possible for UITableView to return indexPaths before the node is completed.
-      [visibleNodes addObject:node];
-    }
-  }
-  
-  return visibleNodes;
+  NSArray<ASCollectionElement *> *elements = [self visibleElementsForRangeController:_rangeController];
+  return ASArrayByFlatMapping(elements, ASCollectionElement *e, e.node);
 }
 
 - (void)beginUpdates
@@ -950,8 +938,6 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (void)tableView:(UITableView *)tableView willDisplayCell:(_ASTableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
 {
-  _pendingVisibleIndexPath = indexPath;
-  
   ASCellNode *cellNode = [cell node];
   cellNode.scrollView = tableView;
 
@@ -978,10 +964,6 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (void)tableView:(UITableView *)tableView didEndDisplayingCell:(_ASTableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
 {
-  if (ASObjectIsEqual(_pendingVisibleIndexPath, indexPath)) {
-    _pendingVisibleIndexPath = nil;
-  }
-  
   ASCellNode *cellNode = [cell node];
 
   [_rangeController setNeedsUpdate];
@@ -1367,7 +1349,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
     return _rangeController;
 }
 
-- (NSArray *)visibleNodeIndexPathsForRangeController:(ASRangeController *)rangeController
+- (NSArray<ASCollectionElement *> *)visibleElementsForRangeController:(ASRangeController *)rangeController
 {
   ASDisplayNodeAssertMainThread();
   
@@ -1378,9 +1360,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
     return @[];
   }
 
-  NSMutableArray *visibleIndexPaths = [self.indexPathsForVisibleRows mutableCopy];
-
-  [visibleIndexPaths sortUsingSelector:@selector(compare:)];
+  NSArray *visibleIndexPaths = self.indexPathsForVisibleRows;
 
   // In some cases (grouped-style tables with particular geometry) indexPathsForVisibleRows will return extra index paths.
   // This is a very serious issue because we rely on the fact that any node that is marked Visible is hosted inside of a cell,
@@ -1389,41 +1369,18 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   // It would be possible to cache this NSPredicate as an ivar, but that would require unsafeifying self and calling @c bounds
   // for each item. Since the performance cost is pretty small, prefer simplicity.
   if (self.style == UITableViewStyleGrouped && visibleIndexPaths.count != self.visibleCells.count) {
-    [visibleIndexPaths filterUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSIndexPath *indexPath, NSDictionary<NSString *,id> * _Nullable bindings) {
+    visibleIndexPaths = [visibleIndexPaths filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSIndexPath *indexPath, NSDictionary<NSString *,id> * _Nullable bindings) {
       return CGRectIntersectsRect(bounds, [self rectForRowAtIndexPath:indexPath]);
     }]];
   }
 
-  NSIndexPath *pendingVisibleIndexPath = _pendingVisibleIndexPath;
-  if (pendingVisibleIndexPath == nil) {
-    return visibleIndexPaths;
-  }
-
-  BOOL isPendingIndexPathVisible = (NSNotFound != [visibleIndexPaths indexOfObject:pendingVisibleIndexPath inSortedRange:NSMakeRange(0, visibleIndexPaths.count) options:kNilOptions usingComparator:^(id  _Nonnull obj1, id  _Nonnull obj2) {
-    return [obj1 compare:obj2];
-  }]);
-  
-  if (isPendingIndexPathVisible) {
-    _pendingVisibleIndexPath = nil; // once it has shown up in visibleIndexPaths, we can stop tracking it
-  } else if ([self isIndexPath:visibleIndexPaths.firstObject immediateSuccessorOfIndexPath:pendingVisibleIndexPath]) {
-    [visibleIndexPaths insertObject:pendingVisibleIndexPath atIndex:0];
-  } else if ([self isIndexPath:pendingVisibleIndexPath immediateSuccessorOfIndexPath:visibleIndexPaths.lastObject]) {
-    [visibleIndexPaths addObject:pendingVisibleIndexPath];
-  } else {
-    _pendingVisibleIndexPath = nil; // not contiguous, ignore.
-  }
-  return visibleIndexPaths;
+  ASElementMap *map = _dataController.visibleMap;
+  return ASArrayByFlatMapping(visibleIndexPaths, NSIndexPath *indexPath, [map elementForItemAtIndexPath:indexPath]);
 }
 
 - (ASScrollDirection)scrollDirectionForRangeController:(ASRangeController *)rangeController
 {
   return self.scrollDirection;
-}
-
-- (CGSize)viewportSizeForRangeController:(ASRangeController *)rangeController
-{
-  ASDisplayNodeAssertMainThread();
-  return self.bounds.size;
 }
 
 - (ASInterfaceState)interfaceStateForRangeController:(ASRangeController *)rangeController
@@ -1702,6 +1659,22 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   }
 }
 
+- (BOOL)dataController:(ASDataController *)dataController presentedSizeForElement:(ASCollectionElement *)element matchesSize:(CGSize)size
+{
+  NSIndexPath *indexPath = [self indexPathForNode:element.node];
+  CGRect rect = [self rectForRowAtIndexPath:indexPath];
+  
+  /**
+   * Weirdly enough, Apple expects the return value in tableView:heightForRowAtIndexPath: to _include_ the height
+   * of the separator, if there is one! So if rectForRow would return 44.0 we need to use 43.5.
+   */
+  if (self.separatorStyle != UITableViewCellSeparatorStyleNone) {
+    rect.size.height -= 1.0 / ASScreenScale();
+  }
+
+  return (fabs(rect.size.height - size.height) < FLT_EPSILON);
+}
+
 #pragma mark - ASDataControllerEnvironmentDelegate
 
 - (id<ASTraitEnvironment>)dataControllerEnvironment
@@ -1824,31 +1797,6 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
     }
   }
   return 0;
-}
-
-/// @note This should be a UIKit index path.
-- (BOOL)isIndexPath:(NSIndexPath *)indexPath immediateSuccessorOfIndexPath:(NSIndexPath *)anchor
-{
-  if (!anchor || !indexPath) {
-    return NO;
-  }
-  if (indexPath.section == anchor.section) {
-    return (indexPath.row == anchor.row+1); // assumes that indexes are valid
-    
-  } else if (indexPath.section > anchor.section && indexPath.row == 0) {
-    if (anchor.row != [self numberOfRowsInSection:anchor.section] -1) {
-      return NO;  // anchor is not at the end of the section
-    }
-    
-    NSInteger nextSection = anchor.section+1;
-    while([self numberOfRowsInSection:nextSection] == 0) {
-      ++nextSection;
-    }
-    
-    return indexPath.section == nextSection;
-  }
-  
-  return NO;
 }
 
 #pragma mark - _ASDisplayView behavior substitutions

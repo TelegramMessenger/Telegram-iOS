@@ -17,7 +17,7 @@
 #import <AsyncDisplayKit/ASCellNode.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASMainSerialQueue.h>
-#import <AsyncDisplayKit/ASMultidimensionalArrayUtils.h>
+#import <AsyncDisplayKit/ASTwoDimensionalArrayUtils.h>
 #import <AsyncDisplayKit/ASSection.h>
 #import <AsyncDisplayKit/ASThread.h>
 #import <AsyncDisplayKit/ASCollectionElement.h>
@@ -642,10 +642,9 @@ typedef void (^ASDataControllerCompletionBlock)(NSArray<ASCollectionElement *> *
     NSString *kind = node.collectionElement.supplementaryElementKind ?: ASDataControllerRowNodeKind;
     NSIndexPath *indexPath = [_pendingMap indexPathForElement:node.collectionElement];
     ASSizeRange constrainedSize = [self constrainedSizeForNodeOfKind:kind atIndexPath:indexPath];
-    
-    CGSize oldSize = node.bounds.size;
     [self _layoutNode:node withConstrainedSize:constrainedSize];
-    if (! CGSizeEqualToSize(node.frame.size, oldSize)) {
+    BOOL matchesSize = [_dataSource dataController:self presentedSizeForElement:node.collectionElement matchesSize:node.frame.size];
+    if (! matchesSize) {
       [nodesSizesChanged addObject:node];
     }
   }
@@ -673,7 +672,8 @@ typedef void (^ASDataControllerCompletionBlock)(NSArray<ASCollectionElement *> *
 - (void)_relayoutAllNodes
 {
   ASDisplayNodeAssertMainThread();
-  [_visibleMap enumerateUsingBlock:^(NSIndexPath * _Nonnull indexPath, ASCollectionElement * _Nonnull element, BOOL * _Nonnull stop) {
+  for (ASCollectionElement *element in _visibleMap) {
+    NSIndexPath *indexPath = [_visibleMap indexPathForElement:element];
     NSString *kind = element.supplementaryElementKind ?: ASDataControllerRowNodeKind;
     ASSizeRange constrainedSize = [self constrainedSizeForNodeOfKind:kind atIndexPath:indexPath];
     if (ASSizeRangeHasSignificantArea(constrainedSize)) {
@@ -686,17 +686,17 @@ typedef void (^ASDataControllerCompletionBlock)(NSArray<ASCollectionElement *> *
         [self _layoutNode:node withConstrainedSize:constrainedSize];
       }
     }
-  }];
+  }
 }
 
 + (NSArray<ASCollectionElement *> *)unmeasuredElementsFromMap:(ASElementMap *)map
 {
   NSMutableArray<ASCollectionElement *> *unloadedContexts = [NSMutableArray array];
-  [map enumerateUsingBlock:^(NSIndexPath * _Nonnull indexPath, ASCollectionElement * _Nonnull element, BOOL * _Nonnull stop) {
+  for (ASCollectionElement *element in map) {
     if (element.nodeIfAllocated.calculatedLayout == nil) {
       [unloadedContexts addObject:element];
     }
-  }];
+  }
   return unloadedContexts;
 }
 

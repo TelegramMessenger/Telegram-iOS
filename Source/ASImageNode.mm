@@ -209,22 +209,34 @@ struct ASImageNodeDrawParameters {
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  __instanceLock__.lock();
+  UIImage *image = _image;
+  __instanceLock__.unlock();
 
-  if (_image == nil) {
+  if (image == nil) {
     return [super calculateSizeThatFits:constrainedSize];
   }
 
-  return _image.size;
+  return image.size;
 }
 
 #pragma mark - Setter / Getter
 
 - (void)setImage:(UIImage *)image
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  if (!ASObjectIsEqual(_image, image)) {
+  {
+    ASDN::MutexLocker l(__instanceLock__);
+    if (ASObjectIsEqual(_image, image)) {
+      return;
+    }
+
     _image = image;
+  }
+  
+  [self setNeedsLayout];
+
+  if (image) {
+    [self setNeedsDisplay];
     
     if (_displayWithoutProcessing && ASDisplayNodeThreadIsMain()) {
       BOOL stretchable = !UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero);
@@ -551,9 +563,11 @@ static ASDN::Mutex cacheLock;
   }
 
   // Stash the block and call-site queue. We'll invoke it in -displayDidFinish.
-  ASDN::MutexLocker l(__instanceLock__);
-  if (_displayCompletionBlock != displayCompletionBlock) {
-    _displayCompletionBlock = displayCompletionBlock;
+  {
+    ASDN::MutexLocker l(__instanceLock__);
+    if (_displayCompletionBlock != displayCompletionBlock) {
+      _displayCompletionBlock = displayCompletionBlock;
+    }
   }
 
   [self setNeedsDisplay];
@@ -585,16 +599,20 @@ static ASDN::Mutex cacheLock;
 
 - (void)setCropEnabled:(BOOL)cropEnabled recropImmediately:(BOOL)recropImmediately inBounds:(CGRect)cropBounds
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  if (_cropEnabled == cropEnabled)
+  __instanceLock__.lock();
+  if (_cropEnabled == cropEnabled) {
+    __instanceLock__.unlock();
     return;
+  }
 
   _cropEnabled = cropEnabled;
   _cropDisplayBounds = cropBounds;
+  
+  UIImage *image = _image;
+  __instanceLock__.unlock();
 
   // If we have an image to display, display it, respecting our recrop flag.
-  if (self.image)
-  {
+  if (image != nil) {
     ASPerformBlockOnMainThread(^{
       if (recropImmediately)
         [self displayImmediately];
@@ -612,11 +630,14 @@ static ASDN::Mutex cacheLock;
 
 - (void)setCropRect:(CGRect)cropRect
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  if (CGRectEqualToRect(_cropRect, cropRect))
-    return;
+  {
+    ASDN::MutexLocker l(__instanceLock__);
+    if (CGRectEqualToRect(_cropRect, cropRect)) {
+      return;
+    }
 
-  _cropRect = cropRect;
+    _cropRect = cropRect;
+  }
 
   // TODO: this logic needs to be updated to respect cropRect.
   CGSize boundsSize = self.bounds.size;
