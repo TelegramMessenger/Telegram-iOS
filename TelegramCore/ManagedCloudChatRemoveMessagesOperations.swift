@@ -249,7 +249,7 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
             modifier.clearHistory(peer.id)
         })
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
-        if let inputPeer = apiInputPeer(peer), let topMessageId = modifier.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
+        if let inputPeer = apiInputPeer(peer) {
             let reportSignal: Signal<Void, NoError>
             if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
                 reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))
@@ -262,7 +262,7 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
             } else {
                 reportSignal = .complete()
             }
-            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: topMessageId.id, justClear: false) |> then(reportSignal) |> then(postbox.modify { modifier -> Void in
+            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false) |> then(reportSignal) |> then(postbox.modify { modifier -> Void in
                 modifier.clearHistory(peer.id)
             })
         } else {

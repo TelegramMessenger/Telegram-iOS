@@ -46,20 +46,36 @@ final class CloudChatRemoveMessagesOperation: Coding {
 final class CloudChatRemoveChatOperation: Coding {
     let peerId: PeerId
     let reportChatSpam: Bool
+    let topMessageId: MessageId?
     
-    init(peerId: PeerId, reportChatSpam: Bool) {
+    init(peerId: PeerId, reportChatSpam: Bool, topMessageId: MessageId?) {
         self.peerId = peerId
         self.reportChatSpam = reportChatSpam
+        self.topMessageId = topMessageId
     }
     
     init(decoder: Decoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p"))
         self.reportChatSpam = (decoder.decodeInt32ForKey("r") as Int32) != 0
+        if let messageIdPeerId = (decoder.decodeInt64ForKey("m.p") as Int64?), let messageIdNamespace = (decoder.decodeInt32ForKey("m.n") as Int32?), let messageIdId = (decoder.decodeInt32ForKey("m.i") as Int32?) {
+            self.topMessageId = MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId)
+        } else {
+            self.topMessageId = nil
+        }
     }
     
     func encode(_ encoder: Encoder) {
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
         encoder.encodeInt32(self.reportChatSpam ? 1 : 0, forKey: "r")
+        if let topMessageId = self.topMessageId {
+            encoder.encodeInt64(topMessageId.peerId.toInt64(), forKey: "m.p")
+            encoder.encodeInt32(topMessageId.namespace, forKey: "m.n")
+            encoder.encodeInt32(topMessageId.id, forKey: "m.i")
+        } else {
+            encoder.encodeNil(forKey: "m.p")
+            encoder.encodeNil(forKey: "m.n")
+            encoder.encodeNil(forKey: "m.i")
+        }
     }
 }
 
@@ -90,7 +106,7 @@ func cloudChatAddRemoveMessagesOperation(modifier: Modifier, peerId: PeerId, mes
 }
 
 func cloudChatAddRemoveChatOperation(modifier: Modifier, peerId: PeerId, reportChatSpam: Bool) {
-    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId, reportChatSpam: reportChatSpam))
+    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId, reportChatSpam: reportChatSpam, topMessageId: modifier.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)))
 }
 
 func cloudChatAddClearHistoryOperation(modifier: Modifier, peerId: PeerId) {
