@@ -414,6 +414,8 @@
 		D0F3CC7A1DDE2859008148FA /* RequestMessageActionCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */; };
 		D0F3CC7B1DDE2859008148FA /* RequestEditMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */; };
 		D0F3CC7D1DDE289E008148FA /* ResolvePeerByName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */; };
+		D0F53BE91E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */; };
+		D0F53BEA1E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */; };
 		D0F7AB2C1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */; };
 		D0F7AB2D1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */; };
 		D0F7AB2F1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */; };
@@ -694,6 +696,7 @@
 		D0E35A111DE4A25E00BC6096 /* OutgoingChatContextResultMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OutgoingChatContextResultMessageAttribute.swift; sourceTree = "<group>"; };
 		D0E6521E1E3A364A004EEA91 /* UpdateAccountPeerName.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdateAccountPeerName.swift; sourceTree = "<group>"; };
 		D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolvePeerByName.swift; sourceTree = "<group>"; };
+		D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangeAccountPhoneNumber.swift; sourceTree = "<group>"; };
 		D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditedMessageAttribute.swift; sourceTree = "<group>"; };
 		D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReplyMarkupMessageAttribute.swift; sourceTree = "<group>"; };
 		D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerification.swift; sourceTree = "<group>"; };
@@ -1071,6 +1074,7 @@
 				D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */,
 				D05A32E31E6F0B2E002760B4 /* RecentAccountSessions.swift */,
 				D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */,
+				D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -1452,6 +1456,7 @@
 				D03B0D441D6319F900955575 /* CloudFileMediaResource.swift in Sources */,
 				D018D3371E648ACF00C5E089 /* CreateChannel.swift in Sources */,
 				D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */,
+				D0F53BE91E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */,
 				D0E35A0E1DE4953E00BC6096 /* FetchHttpResource.swift in Sources */,
 				D01AC91D1DD5DA5E00E8160F /* RequestMessageActionCallback.swift in Sources */,
 				D00C7CEB1E37A8540080C3D5 /* SetSecretChatMessageAutoremoveTimeoutInteractively.swift in Sources */,
@@ -1668,6 +1673,7 @@
 				D001F3F21E128A1C007A8C60 /* UpdateGroup.swift in Sources */,
 				D0F7B1EB1E045C87007EB8A5 /* ResolvePeerByName.swift in Sources */,
 				D018D3381E648ACF00C5E089 /* CreateChannel.swift in Sources */,
+				D0F53BEA1E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */,
 				D001F3EE1E128A1C007A8C60 /* AccountStateManager.swift in Sources */,
 				D0B844351DAB91E0005F29E1 /* NBPhoneNumberDesc.m in Sources */,
 				D0448CA31E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,

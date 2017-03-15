@@ -43,7 +43,7 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
                         memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
                     }
                     
-                    var updatedState = currentState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer)
+                    var updatedState = currentState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer).withUpdatedKeyFingerprint(SecretChatKeyFingerprint(digest: sha256Digest(key)))
                     
                     var layer: SecretChatLayer?
                     switch updatedState.embeddedState {

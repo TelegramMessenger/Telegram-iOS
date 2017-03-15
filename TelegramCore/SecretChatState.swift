@@ -21,6 +21,24 @@ public struct SecretChatKeyFingerprint: Coding, Equatable {
     public let k2: Int64
     public let k3: Int64
     
+    init(digest: Data) {
+        assert(digest.count == 32)
+        var k0: Int64 = 0
+        var k1: Int64 = 0
+        var k2: Int64 = 0
+        var k3: Int64 = 0
+        digest.withUnsafeBytes { (bytes: UnsafePointer<Int64>) -> Void in
+            k0 = bytes.pointee
+            k1 = bytes.advanced(by: 1).pointee
+            k2 = bytes.advanced(by: 2).pointee
+            k3 = bytes.advanced(by: 3).pointee
+        }
+        self.k0 = k0
+        self.k1 = k1
+        self.k2 = k2
+        self.k3 = k3
+    }
+    
     public init(k0: Int64, k1: Int64, k2: Int64, k3: Int64) {
         self.k0 = k0
         self.k1 = k1
@@ -36,10 +54,10 @@ public struct SecretChatKeyFingerprint: Coding, Equatable {
     }
     
     public func encode(_ encoder: Encoder) {
-        encoder.encodeInt64(self.k0, forKey: "")
-        encoder.encodeInt64(self.k1, forKey: "")
-        encoder.encodeInt64(self.k2, forKey: "")
-        encoder.encodeInt64(self.k3, forKey: "")
+        encoder.encodeInt64(self.k0, forKey: "k0")
+        encoder.encodeInt64(self.k1, forKey: "k1")
+        encoder.encodeInt64(self.k2, forKey: "k2")
+        encoder.encodeInt64(self.k3, forKey: "k3")
     }
     
     public static func ==(lhs: SecretChatKeyFingerprint, rhs: SecretChatKeyFingerprint) -> Bool {
@@ -434,7 +452,11 @@ enum SecretChatEmbeddedState: Coding, Equatable {
     }
 }
 
-final class SecretChatState: PeerChatState, Equatable {
+public protocol SecretChatKeyState {
+    var keyFingerprint: SecretChatKeyFingerprint? { get }
+}
+
+final class SecretChatState: PeerChatState, SecretChatKeyState, Equatable {
     let role: SecretChatRole
     let embeddedState: SecretChatEmbeddedState
     let keychain: SecretChatKeychain
