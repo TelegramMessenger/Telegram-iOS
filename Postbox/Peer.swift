@@ -18,8 +18,6 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
     }
     
     public func toInt64() -> Int64 {
-        
-        
         return (Int64(self.namespace) << 32) | unsafeBitCast(UInt64(unsafeBitCast(self.id, to: UInt32.self)), to: Int64.self)
     }
     

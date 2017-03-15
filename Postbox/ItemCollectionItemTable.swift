@@ -123,6 +123,16 @@ final class ItemCollectionItemTable: Table {
         return items
     }
     
+    func itemCount(collectionId: ItemCollectionId) -> Int32 {
+        var count: Int32 = 0
+        self.valueBox.range(self.table, start: self.upperBound(collectionId: collectionId), end: self.lowerBound(collectionId: collectionId), keys: { key in
+            let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
+            count = itemIndex.index + 1
+            return true
+        }, limit: 1)
+        return count
+    }
+    
     func higherItems(collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
         var items: [ItemCollectionItem] = []
         self.valueBox.range(self.table, start: self.key(collectionId: collectionId, index: itemIndex), end: self.upperBound(collectionId: collectionId), values: { _, value in

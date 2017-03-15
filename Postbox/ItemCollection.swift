@@ -27,6 +27,35 @@ public struct ItemCollectionId: Comparable, Hashable {
     public var hashValue: Int {
         return self.id.hashValue
     }
+    
+    public static func encodeArrayToBuffer(_ array: [ItemCollectionId], buffer: WriteBuffer) {
+        var length: Int32 = Int32(array.count)
+        buffer.write(&length, offset: 0, length: 4)
+        for id in array {
+            var idNamespace = id.namespace
+            buffer.write(&idNamespace, offset: 0, length: 4)
+            var idId = id.id
+            buffer.write(&idId, offset: 0, length: 8)
+        }
+    }
+    
+    public static func decodeArrayFromBuffer(_ buffer: ReadBuffer) -> [ItemCollectionId] {
+        var length: Int32 = 0
+        memcpy(&length, buffer.memory, 4)
+        buffer.offset += 4
+        var i = 0
+        var array: [ItemCollectionId] = []
+        array.reserveCapacity(Int(length))
+        while i < Int(length) {
+            var idNamespace: Int32 = 0
+            buffer.read(&idNamespace, offset: 0, length: 4)
+            var idId: Int64 = 0
+            buffer.read(&idId, offset: 0, length: 8)
+            array.append(ItemCollectionId(namespace: idNamespace, id: idId))
+            i += 1
+        }
+        return array
+    }
 }
 
 public protocol ItemCollectionInfo: Coding {

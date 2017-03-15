@@ -3,11 +3,13 @@ import Foundation
 public final class ItemCollectionInfoEntry {
     public let id: ItemCollectionId
     public let info: ItemCollectionInfo
+    public let count: Int32
     public let firstItem: ItemCollectionItem?
     
-    init(id: ItemCollectionId, info: ItemCollectionInfo, firstItem: ItemCollectionItem?) {
+    init(id: ItemCollectionId, info: ItemCollectionInfo, count: Int32, firstItem: ItemCollectionItem?) {
         self.id = id
         self.info = info
+        self.count = count
         self.firstItem = firstItem
     }
 }
@@ -25,7 +27,7 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
             var entries: [ItemCollectionInfoEntry] = []
             for (_, id, info) in infos {
                 let firstItem = postbox.itemCollectionItemTable.higherItems(collectionId: id, itemIndex: ItemCollectionItemIndex.lowerBound, count: 1).first
-                entries.append(ItemCollectionInfoEntry(id: id, info: info, firstItem: firstItem))
+                entries.append(ItemCollectionInfoEntry(id: id, info: info, count: postbox.itemCollectionItemTable.itemCount(collectionId: id), firstItem: firstItem))
             }
             entriesByNamespace[namespace] = entries
         }
@@ -64,7 +66,7 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
                 var entries: [ItemCollectionInfoEntry] = []
                 for (_, id, info) in infos {
                     let firstItem = postbox.itemCollectionItemTable.higherItems(collectionId: id, itemIndex: ItemCollectionItemIndex.lowerBound, count: 1).first
-                    entries.append(ItemCollectionInfoEntry(id: id, info: info, firstItem: firstItem))
+                    entries.append(ItemCollectionInfoEntry(id: id, info: info, count: postbox.itemCollectionItemTable.itemCount(collectionId: id), firstItem: firstItem))
                 }
                 entriesByNamespace[namespace] = entries
             }
@@ -75,7 +77,7 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
                     if reloadTopItemCollectionIds.contains(entries[i].id) {
                         updated = true
                         let firstItem = postbox.itemCollectionItemTable.higherItems(collectionId: entries[i].id, itemIndex: ItemCollectionItemIndex.lowerBound, count: 1).first
-                        self.entriesByNamespace[namespace]![i] = ItemCollectionInfoEntry(id: entries[i].id, info: entries[i].info, firstItem: firstItem)
+                        self.entriesByNamespace[namespace]![i] = ItemCollectionInfoEntry(id: entries[i].id, info: entries[i].info, count: postbox.itemCollectionItemTable.itemCount(collectionId: entries[i].id), firstItem: firstItem)
                     }
                 }
             }
