@@ -198,6 +198,8 @@
 		D0F019FD1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */; };
 		D0F3CC721DDE1CDC008148FA /* ItemCacheTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC711DDE1CDC008148FA /* ItemCacheTable.swift */; };
 		D0F3CC741DDE1EB9008148FA /* ItemCacheMetaTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC731DDE1EB9008148FA /* ItemCacheMetaTable.swift */; };
+		D0F53BF31E794C6700117362 /* PeerChatStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F53BF21E794C6700117362 /* PeerChatStateView.swift */; };
+		D0F53BF41E794C6700117362 /* PeerChatStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F53BF21E794C6700117362 /* PeerChatStateView.swift */; };
 		D0F7AB321DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB311DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift */; };
 		D0F7B1C01E045C62007EB8A5 /* StringIndexTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827C01E0079CB00071108 /* StringIndexTokens.swift */; };
 		D0F7B1C31E045C6A007EB8A5 /* Table.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCF71C73561C0097A291 /* Table.swift */; };
@@ -388,6 +390,7 @@
 		D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMergedOperationLogView.swift; sourceTree = "<group>"; };
 		D0F3CC711DDE1CDC008148FA /* ItemCacheTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCacheTable.swift; sourceTree = "<group>"; };
 		D0F3CC731DDE1EB9008148FA /* ItemCacheMetaTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCacheMetaTable.swift; sourceTree = "<group>"; };
+		D0F53BF21E794C6700117362 /* PeerChatStateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatStateView.swift; sourceTree = "<group>"; };
 		D0F7AB311DCFAB18009AD9A1 /* PeerChatTopIndexableMessageIds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatTopIndexableMessageIds.swift; sourceTree = "<group>"; };
 		D0F82CFC1E4345D7007E499C /* OrderedItemListTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OrderedItemListTable.swift; sourceTree = "<group>"; };
 		D0F82D0B1E439FCC007E499C /* OrderedItemListEntry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OrderedItemListEntry.swift; sourceTree = "<group>"; };
@@ -638,6 +641,7 @@
 				D087C20B1E43C11C00D686F8 /* OrderedItemListView.swift */,
 				D0FA0AC91E780A26005BB9B7 /* PostboxView.swift */,
 				D0FA0ACC1E781067005BB9B7 /* Views.swift */,
+				D0F53BF21E794C6700117362 /* PeerChatStateView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -913,6 +917,7 @@
 				D0B418261D7DFE0C004562A4 /* MappedFile.swift in Sources */,
 				D073CE771DCBF3B4007511FD /* Media.swift in Sources */,
 				D073CE791DCBF3B4007511FD /* ChatListHole.swift in Sources */,
+				D0F53BF41E794C6700117362 /* PeerChatStateView.swift in Sources */,
 				D0B4181C1D7DFDF1004562A4 /* SQLite-Bridging.m in Sources */,
 				D0F82D0D1E439FCC007E499C /* OrderedItemListEntry.swift in Sources */,
 				D0B418591D7DFE29004562A4 /* PostboxTransaction.swift in Sources */,
@@ -1032,6 +1037,7 @@
 				D07CFF811DCA765D00761F81 /* PeerChatInterfaceState.swift in Sources */,
 				D00C7CE31E37861C0080C3D5 /* MessageView.swift in Sources */,
 				D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */,
+				D0F53BF31E794C6700117362 /* PeerChatStateView.swift in Sources */,
 				D021E0D81DB4FD1300C6B04F /* ItemCollectionItemTable.swift in Sources */,
 				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
 				D049EAF01E44D9B900A2CD3A /* PostboxStateView.swift in Sources */,

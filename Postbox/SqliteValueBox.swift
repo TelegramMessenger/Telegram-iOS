@@ -138,7 +138,7 @@ final class SqliteValueBox: ValueBox {
         database.execute("PRAGMA synchronous=NORMAL")
         database.execute("PRAGMA journal_mode=WAL")
         database.execute("PRAGMA temp_store=MEMORY")
-        database.execute("PRAGMA wal_autocheckpoint=400")
+        database.execute("PRAGMA wal_autocheckpoint=500")
         database.execute("PRAGMA journal_size_limit=1536")
         
         /*var statement: OpaquePointer? = nil
