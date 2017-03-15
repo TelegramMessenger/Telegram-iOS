@@ -15,7 +15,59 @@ enum SecretChatLayer: Int32 {
     case layer46 = 46
 }
 
-public struct SecretChatKeyFingerprint: Coding, Equatable {
+public struct SecretChatKeySha1Fingerprint: Coding, Equatable {
+    public let k0: Int64
+    public let k1: Int64
+    
+    init(digest: Data) {
+        assert(digest.count == 16)
+        var k0: Int64 = 0
+        var k1: Int64 = 0
+        digest.withUnsafeBytes { (bytes: UnsafePointer<Int64>) -> Void in
+            k0 = bytes.pointee
+            k1 = bytes.advanced(by: 1).pointee
+        }
+        self.k0 = k0
+        self.k1 = k1
+    }
+    
+    public init(k0: Int64, k1: Int64) {
+        self.k0 = k0
+        self.k1 = k1
+    }
+    
+    public init(decoder: Decoder) {
+        self.k0 = decoder.decodeInt64ForKey("k0")
+        self.k1 = decoder.decodeInt64ForKey("k1")
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeInt64(self.k0, forKey: "k0")
+        encoder.encodeInt64(self.k1, forKey: "k1")
+    }
+    
+    public func data() -> Data {
+        var data = Data()
+        data.count = 16
+        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int64>) -> Void in
+            bytes.pointee = self.k0
+            bytes.advanced(by: 1).pointee = self.k1
+        }
+        return data
+    }
+    
+    public static func ==(lhs: SecretChatKeySha1Fingerprint, rhs: SecretChatKeySha1Fingerprint) -> Bool {
+        if lhs.k0 != rhs.k0 {
+            return false
+        }
+        if lhs.k1 != rhs.k1 {
+            return false
+        }
+        return true
+    }
+}
+
+public struct SecretChatKeySha256Fingerprint: Coding, Equatable {
     public let k0: Int64
     public let k1: Int64
     public let k2: Int64
@@ -60,7 +112,19 @@ public struct SecretChatKeyFingerprint: Coding, Equatable {
         encoder.encodeInt64(self.k3, forKey: "k3")
     }
     
-    public static func ==(lhs: SecretChatKeyFingerprint, rhs: SecretChatKeyFingerprint) -> Bool {
+    public func data() -> Data {
+        var data = Data()
+        data.count = 32
+        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int64>) -> Void in
+            bytes.pointee = self.k0
+            bytes.advanced(by: 1).pointee = self.k1
+            bytes.advanced(by: 2).pointee = self.k2
+            bytes.advanced(by: 3).pointee = self.k3
+        }
+        return data
+    }
+    
+    public static func ==(lhs: SecretChatKeySha256Fingerprint, rhs: SecretChatKeySha256Fingerprint) -> Bool {
         if lhs.k0 != rhs.k0 {
             return false
         }
@@ -74,6 +138,30 @@ public struct SecretChatKeyFingerprint: Coding, Equatable {
             return false
         }
         return true
+    }
+}
+
+public struct SecretChatKeyFingerprint: Coding, Equatable {
+    public let sha1: SecretChatKeySha1Fingerprint
+    public let sha256: SecretChatKeySha256Fingerprint
+    
+    init(sha1: SecretChatKeySha1Fingerprint, sha256: SecretChatKeySha256Fingerprint) {
+        self.sha1 = sha1
+        self.sha256 = sha256
+    }
+    
+    public init(decoder: Decoder) {
+        self.sha1 = decoder.decodeObjectForKey("1", decoder: { SecretChatKeySha1Fingerprint(decoder: $0) }) as! SecretChatKeySha1Fingerprint
+        self.sha256 = decoder.decodeObjectForKey("2", decoder: { SecretChatKeySha256Fingerprint(decoder: $0) }) as! SecretChatKeySha256Fingerprint
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeObject(self.sha1, forKey: "1")
+        encoder.encodeObject(self.sha256, forKey: "2")
+    }
+    
+    public static func ==(lhs: SecretChatKeyFingerprint, rhs: SecretChatKeyFingerprint) -> Bool {
+        return lhs.sha1 == rhs.sha1 && lhs.sha256 == rhs.sha256
     }
 }
 

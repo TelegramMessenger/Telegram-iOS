@@ -299,6 +299,17 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
     }
 }
 
+func sha1Digest(_ data : Data) -> Data {
+    var res = Data()
+    res.count = Int(CC_SHA1_DIGEST_LENGTH)
+    res.withUnsafeMutableBytes { mutableBytes -> Void in
+        data.withUnsafeBytes { bytes -> Void in
+            CC_SHA1(bytes, CC_LONG(data.count), mutableBytes)
+        }
+    }
+    return res
+}
+
 func sha256Digest(_ data : Data) -> Data {
     var res = Data()
     res.count = Int(CC_SHA256_DIGEST_LENGTH)
