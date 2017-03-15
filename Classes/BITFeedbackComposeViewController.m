@@ -662,7 +662,7 @@
     BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
     BITImageAnnotationViewController *annotationEditor = [[BITImageAnnotationViewController alloc ] init];
     annotationEditor.delegate = self;
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:annotationEditor];
+    UINavigationController *navController = [self.manager customNavigationControllerWithRootViewController:annotationEditor presentationStyle:UIModalPresentationFullScreen];
     annotationEditor.image = attachment.imageRepresentation;
     [self presentViewController:navController animated:YES completion:nil];
   }
