@@ -219,7 +219,10 @@ final class MessageHistoryTable: Table {
                         outputOperations.append(.InsertMessage(message))
                         
                         if message.flags.contains(.Incoming) {
-                            accumulatedAddedIncomingMessageIndices.insert(MessageIndex(message))
+                            if index != MessageIndex(message) {
+                                accumulatedRemoveIndices.append(index)
+                                accumulatedAddedIncomingMessageIndices.insert(MessageIndex(message))
+                            }
                         }
                     }
                 case let .UpdateTimestamp(index, timestamp):
