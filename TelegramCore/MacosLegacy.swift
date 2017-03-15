@@ -4,7 +4,7 @@ fileprivate final class FunctionDescription: CustomStringConvertible {
     init(_ generator: @escaping () -> String) {
         self.generator = generator
     }
-    
+
     var description: String {
         return self.generator()
     }
@@ -49,6 +49,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1739392570] = { return MacosLegacy.DocumentAttribute.parse_documentAttributeAudio($0) }
     dict[358154344] = { return MacosLegacy.DocumentAttribute.parse_documentAttributeFilename($0) }
     dict[-1744710921] = { return MacosLegacy.DocumentAttribute.parse_documentAttributeHasStickers($0) }
+    dict[-23] = { return MacosLegacy.DocumentAttribute.parse_documentAttributeLocalFile($0) }
     dict[-4838507] = { return MacosLegacy.InputStickerSet.parse_inputStickerSetEmpty($0) }
     dict[537022650] = { return MacosLegacy.User.parse_userEmpty($0) }
     dict[-787638374] = { return MacosLegacy.User.parse_user($0) }
@@ -73,17 +74,17 @@ public struct MacosLegacy {
         return nil
     }
     
-    fileprivate static func parse(_ reader: BufferReader, signature: Int32) -> Any? {
-        if let parser = parsers[signature] {
-            return parser(reader)
+        fileprivate static func parse(_ reader: BufferReader, signature: Int32) -> Any? {
+            if let parser = parsers[signature] {
+                return parser(reader)
+            }
+            else {
+                print("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                return nil
+            }
         }
-        else {
-            print("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
-            return nil
-        }
-    }
-    
-    fileprivate static func parseVector<T>(_ reader: BufferReader, elementSignature: Int32, elementType: T.Type) -> [T]? {
+        
+        fileprivate static func parseVector<T>(_ reader: BufferReader, elementSignature: Int32, elementType: T.Type) -> [T]? {
         if let count = reader.readInt32() {
             var array = [T]()
             var i: Int32 = 0
@@ -112,74 +113,74 @@ public struct MacosLegacy {
     
     public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) -> Swift.Bool {
         switch object {
-        case let _1 as MacosLegacy.Photo:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.Peer:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.UserStatus:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.PhotoSize:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.FileLocation:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.WebPage:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.MessageMedia:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.DocumentAttribute:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.InputStickerSet:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.User:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.Message:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.GeoPoint:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.MaskCoords:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.UserProfilePhoto:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.EncryptedChat:
-            return _1.serialize(buffer, boxed)
-        case let _1 as MacosLegacy.Document:
-            return _1.serialize(buffer, boxed)
-        default:
-            break
+            case let _1 as MacosLegacy.Photo:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.Peer:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.UserStatus:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.PhotoSize:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.FileLocation:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.WebPage:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.MessageMedia:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.DocumentAttribute:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.InputStickerSet:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.User:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.Message:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.GeoPoint:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.MaskCoords:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.UserProfilePhoto:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.EncryptedChat:
+                return _1.serialize(buffer, boxed)
+            case let _1 as MacosLegacy.Document:
+                return _1.serialize(buffer, boxed)
+            default:
+                break
         }
         return false
     }
-    
+
     public enum Photo: CustomStringConvertible {
         case photoEmpty(id: Int64)
         case photo(flags: Int32, id: Int64, accessHash: Int64, date: Int32, sizes: [MacosLegacy.PhotoSize])
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .photoEmpty(let id):
-                if boxed {
-                    buffer.appendInt32(590459437)
-                }
-                serializeInt64(id, buffer: buffer, boxed: false)
-                break
-            case .photo(let flags, let id, let accessHash, let date, let sizes):
-                if boxed {
-                    buffer.appendInt32(-1836524247)
-                }
-                serializeInt32(flags, buffer: buffer, boxed: false)
-                serializeInt64(id, buffer: buffer, boxed: false)
-                serializeInt64(accessHash, buffer: buffer, boxed: false)
-                serializeInt32(date, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(sizes.count))
-                for item in sizes {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .photoEmpty(let id):
+                    if boxed {
+                        buffer.appendInt32(590459437)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    break
+                case .photo(let flags, let id, let accessHash, let date, let sizes):
+                    if boxed {
+                        buffer.appendInt32(-1836524247)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sizes.count))
+                    for item in sizes {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_photoEmpty(_ reader: BufferReader) -> Photo? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -216,41 +217,41 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .photoEmpty(let id):
-                    return "(photoEmpty id: \(id))"
-                case .photo(let flags, let id, let accessHash, let date, let sizes):
-                    return "(photo flags: \(flags), id: \(id), accessHash: \(accessHash), date: \(date), sizes: \(sizes))"
+                    case .photoEmpty(let id):
+                        return "(photoEmpty id: \(id))"
+                    case .photo(let flags, let id, let accessHash, let date, let sizes):
+                        return "(photo flags: \(flags), id: \(id), accessHash: \(accessHash), date: \(date), sizes: \(sizes))"
                 }
             }
         }
     }
-    
+
     public enum Peer: CustomStringConvertible {
         case peerChat(chatId: Int32)
         case peerSecret(chatId: Int32)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .peerChat(let chatId):
-                if boxed {
-                    buffer.appendInt32(-1160714821)
-                }
-                serializeInt32(chatId, buffer: buffer, boxed: false)
-                break
-            case .peerSecret(let chatId):
-                if boxed {
-                    buffer.appendInt32(2)
-                }
-                serializeInt32(chatId, buffer: buffer, boxed: false)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .peerChat(let chatId):
+                    if boxed {
+                        buffer.appendInt32(-1160714821)
+                    }
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
+                    break
+                case .peerSecret(let chatId):
+                    if boxed {
+                        buffer.appendInt32(2)
+                    }
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_peerChat(_ reader: BufferReader) -> Peer? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -273,19 +274,19 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .peerChat(let chatId):
-                    return "(peerChat chatId: \(chatId))"
-                case .peerSecret(let chatId):
-                    return "(peerSecret chatId: \(chatId))"
+                    case .peerChat(let chatId):
+                        return "(peerChat chatId: \(chatId))"
+                    case .peerSecret(let chatId):
+                        return "(peerSecret chatId: \(chatId))"
                 }
             }
         }
     }
-    
+
     public enum UserStatus: CustomStringConvertible {
         case userStatusEmpty
         case userStatusOnline(expires: Int32)
@@ -293,49 +294,49 @@ public struct MacosLegacy {
         case userStatusRecently
         case userStatusLastWeek
         case userStatusLastMonth
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .userStatusEmpty:
-                if boxed {
-                    buffer.appendInt32(164646985)
-                }
-                
-                break
-            case .userStatusOnline(let expires):
-                if boxed {
-                    buffer.appendInt32(-306628279)
-                }
-                serializeInt32(expires, buffer: buffer, boxed: false)
-                break
-            case .userStatusOffline(let wasOnline):
-                if boxed {
-                    buffer.appendInt32(9203775)
-                }
-                serializeInt32(wasOnline, buffer: buffer, boxed: false)
-                break
-            case .userStatusRecently:
-                if boxed {
-                    buffer.appendInt32(-496024847)
-                }
-                
-                break
-            case .userStatusLastWeek:
-                if boxed {
-                    buffer.appendInt32(129960444)
-                }
-                
-                break
-            case .userStatusLastMonth:
-                if boxed {
-                    buffer.appendInt32(2011940674)
-                }
-                
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .userStatusEmpty:
+                    if boxed {
+                        buffer.appendInt32(164646985)
+                    }
+                    
+                    break
+                case .userStatusOnline(let expires):
+                    if boxed {
+                        buffer.appendInt32(-306628279)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    break
+                case .userStatusOffline(let wasOnline):
+                    if boxed {
+                        buffer.appendInt32(9203775)
+                    }
+                    serializeInt32(wasOnline, buffer: buffer, boxed: false)
+                    break
+                case .userStatusRecently:
+                    if boxed {
+                        buffer.appendInt32(-496024847)
+                    }
+                    
+                    break
+                case .userStatusLastWeek:
+                    if boxed {
+                        buffer.appendInt32(129960444)
+                    }
+                    
+                    break
+                case .userStatusLastMonth:
+                    if boxed {
+                        buffer.appendInt32(2011940674)
+                    }
+                    
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_userStatusEmpty(_ reader: BufferReader) -> UserStatus? {
             return MacosLegacy.UserStatus.userStatusEmpty
         }
@@ -370,64 +371,64 @@ public struct MacosLegacy {
         fileprivate static func parse_userStatusLastMonth(_ reader: BufferReader) -> UserStatus? {
             return MacosLegacy.UserStatus.userStatusLastMonth
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .userStatusEmpty:
-                    return "(userStatusEmpty)"
-                case .userStatusOnline(let expires):
-                    return "(userStatusOnline expires: \(expires))"
-                case .userStatusOffline(let wasOnline):
-                    return "(userStatusOffline wasOnline: \(wasOnline))"
-                case .userStatusRecently:
-                    return "(userStatusRecently)"
-                case .userStatusLastWeek:
-                    return "(userStatusLastWeek)"
-                case .userStatusLastMonth:
-                    return "(userStatusLastMonth)"
+                    case .userStatusEmpty:
+                        return "(userStatusEmpty)"
+                    case .userStatusOnline(let expires):
+                        return "(userStatusOnline expires: \(expires))"
+                    case .userStatusOffline(let wasOnline):
+                        return "(userStatusOffline wasOnline: \(wasOnline))"
+                    case .userStatusRecently:
+                        return "(userStatusRecently)"
+                    case .userStatusLastWeek:
+                        return "(userStatusLastWeek)"
+                    case .userStatusLastMonth:
+                        return "(userStatusLastMonth)"
                 }
             }
         }
     }
-    
+
     public enum PhotoSize: CustomStringConvertible {
         case photoSizeEmpty(type: String)
         case photoSize(type: String, location: MacosLegacy.FileLocation, w: Int32, h: Int32, size: Int32)
         case photoCachedSize(type: String, location: MacosLegacy.FileLocation, w: Int32, h: Int32, bytes: Buffer)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .photoSizeEmpty(let type):
-                if boxed {
-                    buffer.appendInt32(236446268)
-                }
-                serializeString(type, buffer: buffer, boxed: false)
-                break
-            case .photoSize(let type, let location, let w, let h, let size):
-                if boxed {
-                    buffer.appendInt32(2009052699)
-                }
-                serializeString(type, buffer: buffer, boxed: false)
-                location.serialize(buffer, true)
-                serializeInt32(w, buffer: buffer, boxed: false)
-                serializeInt32(h, buffer: buffer, boxed: false)
-                serializeInt32(size, buffer: buffer, boxed: false)
-                break
-            case .photoCachedSize(let type, let location, let w, let h, let bytes):
-                if boxed {
-                    buffer.appendInt32(-374917894)
-                }
-                serializeString(type, buffer: buffer, boxed: false)
-                location.serialize(buffer, true)
-                serializeInt32(w, buffer: buffer, boxed: false)
-                serializeInt32(h, buffer: buffer, boxed: false)
-                serializeBytes(bytes, buffer: buffer, boxed: false)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .photoSizeEmpty(let type):
+                    if boxed {
+                        buffer.appendInt32(236446268)
+                    }
+                    serializeString(type, buffer: buffer, boxed: false)
+                    break
+                case .photoSize(let type, let location, let w, let h, let size):
+                    if boxed {
+                        buffer.appendInt32(2009052699)
+                    }
+                    serializeString(type, buffer: buffer, boxed: false)
+                    location.serialize(buffer, true)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    serializeInt32(size, buffer: buffer, boxed: false)
+                    break
+                case .photoCachedSize(let type, let location, let w, let h, let bytes):
+                    if boxed {
+                        buffer.appendInt32(-374917894)
+                    }
+                    serializeString(type, buffer: buffer, boxed: false)
+                    location.serialize(buffer, true)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    serializeBytes(bytes, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_photoSizeEmpty(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
@@ -489,48 +490,48 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .photoSizeEmpty(let type):
-                    return "(photoSizeEmpty type: \(type))"
-                case .photoSize(let type, let location, let w, let h, let size):
-                    return "(photoSize type: \(type), location: \(location), w: \(w), h: \(h), size: \(size))"
-                case .photoCachedSize(let type, let location, let w, let h, let bytes):
-                    return "(photoCachedSize type: \(type), location: \(location), w: \(w), h: \(h), bytes: \(bytes))"
+                    case .photoSizeEmpty(let type):
+                        return "(photoSizeEmpty type: \(type))"
+                    case .photoSize(let type, let location, let w, let h, let size):
+                        return "(photoSize type: \(type), location: \(location), w: \(w), h: \(h), size: \(size))"
+                    case .photoCachedSize(let type, let location, let w, let h, let bytes):
+                        return "(photoCachedSize type: \(type), location: \(location), w: \(w), h: \(h), bytes: \(bytes))"
                 }
             }
         }
     }
-    
+
     public enum FileLocation: CustomStringConvertible {
         case fileLocationUnavailable(volumeId: Int64, localId: Int32, secret: Int64)
         case fileLocation(dcId: Int32, volumeId: Int64, localId: Int32, secret: Int64)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .fileLocationUnavailable(let volumeId, let localId, let secret):
-                if boxed {
-                    buffer.appendInt32(2086234950)
-                }
-                serializeInt64(volumeId, buffer: buffer, boxed: false)
-                serializeInt32(localId, buffer: buffer, boxed: false)
-                serializeInt64(secret, buffer: buffer, boxed: false)
-                break
-            case .fileLocation(let dcId, let volumeId, let localId, let secret):
-                if boxed {
-                    buffer.appendInt32(1406570614)
-                }
-                serializeInt32(dcId, buffer: buffer, boxed: false)
-                serializeInt64(volumeId, buffer: buffer, boxed: false)
-                serializeInt32(localId, buffer: buffer, boxed: false)
-                serializeInt64(secret, buffer: buffer, boxed: false)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .fileLocationUnavailable(let volumeId, let localId, let secret):
+                    if boxed {
+                        buffer.appendInt32(2086234950)
+                    }
+                    serializeInt64(volumeId, buffer: buffer, boxed: false)
+                    serializeInt32(localId, buffer: buffer, boxed: false)
+                    serializeInt64(secret, buffer: buffer, boxed: false)
+                    break
+                case .fileLocation(let dcId, let volumeId, let localId, let secret):
+                    if boxed {
+                        buffer.appendInt32(1406570614)
+                    }
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    serializeInt64(volumeId, buffer: buffer, boxed: false)
+                    serializeInt32(localId, buffer: buffer, boxed: false)
+                    serializeInt64(secret, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_fileLocationUnavailable(_ reader: BufferReader) -> FileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -568,72 +569,72 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .fileLocationUnavailable(let volumeId, let localId, let secret):
-                    return "(fileLocationUnavailable volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
-                case .fileLocation(let dcId, let volumeId, let localId, let secret):
-                    return "(fileLocation dcId: \(dcId), volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
+                    case .fileLocationUnavailable(let volumeId, let localId, let secret):
+                        return "(fileLocationUnavailable volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
+                    case .fileLocation(let dcId, let volumeId, let localId, let secret):
+                        return "(fileLocation dcId: \(dcId), volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
                 }
             }
         }
     }
-    
+
     public enum WebPage: CustomStringConvertible {
         case webPageEmpty(id: Int64)
         case webPagePending(id: Int64, date: Int32)
         case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: MacosLegacy.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: MacosLegacy.Document?)
         case webPageNotModified
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .webPageEmpty(let id):
-                if boxed {
-                    buffer.appendInt32(-350980120)
-                }
-                serializeInt64(id, buffer: buffer, boxed: false)
-                break
-            case .webPagePending(let id, let date):
-                if boxed {
-                    buffer.appendInt32(-981018084)
-                }
-                serializeInt64(id, buffer: buffer, boxed: false)
-                serializeInt32(date, buffer: buffer, boxed: false)
-                break
-            case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document):
-                if boxed {
-                    buffer.appendInt32(1594340540)
-                }
-                serializeInt32(flags, buffer: buffer, boxed: false)
-                serializeInt64(id, buffer: buffer, boxed: false)
-                serializeString(url, buffer: buffer, boxed: false)
-                serializeString(displayUrl, buffer: buffer, boxed: false)
-                serializeInt32(hash, buffer: buffer, boxed: false)
-                if Int(flags) & Int(1 << 0) != 0 {serializeString(type!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 1) != 0 {serializeString(siteName!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 2) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 3) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 4) != 0 {photo!.serialize(buffer, true)}
-                if Int(flags) & Int(1 << 5) != 0 {serializeString(embedUrl!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 5) != 0 {serializeString(embedType!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 6) != 0 {serializeInt32(embedWidth!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 6) != 0 {serializeInt32(embedHeight!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 7) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 8) != 0 {serializeString(author!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 9) != 0 {document!.serialize(buffer, true)}
-                break
-            case .webPageNotModified:
-                if boxed {
-                    buffer.appendInt32(-2054908813)
-                }
-                
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .webPageEmpty(let id):
+                    if boxed {
+                        buffer.appendInt32(-350980120)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    break
+                case .webPagePending(let id, let date):
+                    if boxed {
+                        buffer.appendInt32(-981018084)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document):
+                    if boxed {
+                        buffer.appendInt32(1594340540)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(displayUrl, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(type!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(siteName!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {photo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(embedUrl!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(embedType!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeInt32(embedWidth!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeInt32(embedHeight!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 7) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeString(author!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 9) != 0 {document!.serialize(buffer, true)}
+                    break
+                case .webPageNotModified:
+                    if boxed {
+                        buffer.appendInt32(-2054908813)
+                    }
+                    
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_webPageEmpty(_ reader: BufferReader) -> WebPage? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -681,7 +682,7 @@ public struct MacosLegacy {
             var _10: MacosLegacy.Photo?
             if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
                 _10 = MacosLegacy.parse(reader, signature: signature) as? MacosLegacy.Photo
-                } }
+            } }
             var _11: String?
             if Int(_1!) & Int(1 << 5) != 0 {_11 = parseString(reader) }
             var _12: String?
@@ -697,7 +698,7 @@ public struct MacosLegacy {
             var _17: MacosLegacy.Document?
             if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
                 _17 = MacosLegacy.parse(reader, signature: signature) as? MacosLegacy.Document
-                } }
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -725,23 +726,23 @@ public struct MacosLegacy {
         fileprivate static func parse_webPageNotModified(_ reader: BufferReader) -> WebPage? {
             return MacosLegacy.WebPage.webPageNotModified
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .webPageEmpty(let id):
-                    return "(webPageEmpty id: \(id))"
-                case .webPagePending(let id, let date):
-                    return "(webPagePending id: \(id), date: \(date))"
-                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document):
-                    return "(webPage flags: \(flags), id: \(id), url: \(url), displayUrl: \(displayUrl), hash: \(hash), type: \(type), siteName: \(siteName), title: \(title), description: \(description), photo: \(photo), embedUrl: \(embedUrl), embedType: \(embedType), embedWidth: \(embedWidth), embedHeight: \(embedHeight), duration: \(duration), author: \(author), document: \(document))"
-                case .webPageNotModified:
-                    return "(webPageNotModified)"
+                    case .webPageEmpty(let id):
+                        return "(webPageEmpty id: \(id))"
+                    case .webPagePending(let id, let date):
+                        return "(webPagePending id: \(id), date: \(date))"
+                    case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document):
+                        return "(webPage flags: \(flags), id: \(id), url: \(url), displayUrl: \(displayUrl), hash: \(hash), type: \(type), siteName: \(siteName), title: \(title), description: \(description), photo: \(photo), embedUrl: \(embedUrl), embedType: \(embedType), embedWidth: \(embedWidth), embedHeight: \(embedHeight), duration: \(duration), author: \(author), document: \(document))"
+                    case .webPageNotModified:
+                        return "(webPageNotModified)"
                 }
             }
         }
     }
-    
+
     public enum MessageMedia: CustomStringConvertible {
         case messageMediaEmpty
         case messageMediaPhoto(photo: MacosLegacy.Photo, caption: String)
@@ -750,60 +751,60 @@ public struct MacosLegacy {
         case messageMediaUnsupported
         case messageMediaDocument(document: MacosLegacy.Document, caption: String)
         case messageMediaWebPage(webpage: MacosLegacy.WebPage)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .messageMediaEmpty:
-                if boxed {
-                    buffer.appendInt32(1038967584)
-                }
-                
-                break
-            case .messageMediaPhoto(let photo, let caption):
-                if boxed {
-                    buffer.appendInt32(1032643901)
-                }
-                photo.serialize(buffer, true)
-                serializeString(caption, buffer: buffer, boxed: false)
-                break
-            case .messageMediaGeo(let geo):
-                if boxed {
-                    buffer.appendInt32(1457575028)
-                }
-                geo.serialize(buffer, true)
-                break
-            case .messageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
-                if boxed {
-                    buffer.appendInt32(1585262393)
-                }
-                serializeString(phoneNumber, buffer: buffer, boxed: false)
-                serializeString(firstName, buffer: buffer, boxed: false)
-                serializeString(lastName, buffer: buffer, boxed: false)
-                serializeInt32(userId, buffer: buffer, boxed: false)
-                break
-            case .messageMediaUnsupported:
-                if boxed {
-                    buffer.appendInt32(-1618676578)
-                }
-                
-                break
-            case .messageMediaDocument(let document, let caption):
-                if boxed {
-                    buffer.appendInt32(-203411800)
-                }
-                document.serialize(buffer, true)
-                serializeString(caption, buffer: buffer, boxed: false)
-                break
-            case .messageMediaWebPage(let webpage):
-                if boxed {
-                    buffer.appendInt32(-1557277184)
-                }
-                webpage.serialize(buffer, true)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .messageMediaEmpty:
+                    if boxed {
+                        buffer.appendInt32(1038967584)
+                    }
+                    
+                    break
+                case .messageMediaPhoto(let photo, let caption):
+                    if boxed {
+                        buffer.appendInt32(1032643901)
+                    }
+                    photo.serialize(buffer, true)
+                    serializeString(caption, buffer: buffer, boxed: false)
+                    break
+                case .messageMediaGeo(let geo):
+                    if boxed {
+                        buffer.appendInt32(1457575028)
+                    }
+                    geo.serialize(buffer, true)
+                    break
+                case .messageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
+                    if boxed {
+                        buffer.appendInt32(1585262393)
+                    }
+                    serializeString(phoneNumber, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    break
+                case .messageMediaUnsupported:
+                    if boxed {
+                        buffer.appendInt32(-1618676578)
+                    }
+                    
+                    break
+                case .messageMediaDocument(let document, let caption):
+                    if boxed {
+                        buffer.appendInt32(-203411800)
+                    }
+                    document.serialize(buffer, true)
+                    serializeString(caption, buffer: buffer, boxed: false)
+                    break
+                case .messageMediaWebPage(let webpage):
+                    if boxed {
+                        buffer.appendInt32(-1557277184)
+                    }
+                    webpage.serialize(buffer, true)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_messageMediaEmpty(_ reader: BufferReader) -> MessageMedia? {
             return MacosLegacy.MessageMedia.messageMediaEmpty
         }
@@ -888,29 +889,29 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .messageMediaEmpty:
-                    return "(messageMediaEmpty)"
-                case .messageMediaPhoto(let photo, let caption):
-                    return "(messageMediaPhoto photo: \(photo), caption: \(caption))"
-                case .messageMediaGeo(let geo):
-                    return "(messageMediaGeo geo: \(geo))"
-                case .messageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
-                    return "(messageMediaContact phoneNumber: \(phoneNumber), firstName: \(firstName), lastName: \(lastName), userId: \(userId))"
-                case .messageMediaUnsupported:
-                    return "(messageMediaUnsupported)"
-                case .messageMediaDocument(let document, let caption):
-                    return "(messageMediaDocument document: \(document), caption: \(caption))"
-                case .messageMediaWebPage(let webpage):
-                    return "(messageMediaWebPage webpage: \(webpage))"
+                    case .messageMediaEmpty:
+                        return "(messageMediaEmpty)"
+                    case .messageMediaPhoto(let photo, let caption):
+                        return "(messageMediaPhoto photo: \(photo), caption: \(caption))"
+                    case .messageMediaGeo(let geo):
+                        return "(messageMediaGeo geo: \(geo))"
+                    case .messageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
+                        return "(messageMediaContact phoneNumber: \(phoneNumber), firstName: \(firstName), lastName: \(lastName), userId: \(userId))"
+                    case .messageMediaUnsupported:
+                        return "(messageMediaUnsupported)"
+                    case .messageMediaDocument(let document, let caption):
+                        return "(messageMediaDocument document: \(document), caption: \(caption))"
+                    case .messageMediaWebPage(let webpage):
+                        return "(messageMediaWebPage webpage: \(webpage))"
                 }
             }
         }
     }
-    
+
     public enum DocumentAttribute: CustomStringConvertible {
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeAnimated
@@ -919,65 +920,72 @@ public struct MacosLegacy {
         case documentAttributeAudio(flags: Int32, duration: Int32, title: String?, performer: String?, waveform: Buffer?)
         case documentAttributeFilename(fileName: String)
         case documentAttributeHasStickers
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .documentAttributeImageSize(let w, let h):
-                if boxed {
-                    buffer.appendInt32(1815593308)
-                }
-                serializeInt32(w, buffer: buffer, boxed: false)
-                serializeInt32(h, buffer: buffer, boxed: false)
-                break
-            case .documentAttributeAnimated:
-                if boxed {
-                    buffer.appendInt32(297109817)
-                }
-                
-                break
-            case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
-                if boxed {
-                    buffer.appendInt32(1662637586)
-                }
-                serializeInt32(flags, buffer: buffer, boxed: false)
-                serializeString(alt, buffer: buffer, boxed: false)
-                stickerset.serialize(buffer, true)
-                if Int(flags) & Int(1 << 0) != 0 {maskCoords!.serialize(buffer, true)}
-                break
-            case .documentAttributeVideo(let duration, let w, let h):
-                if boxed {
-                    buffer.appendInt32(1494273227)
-                }
-                serializeInt32(duration, buffer: buffer, boxed: false)
-                serializeInt32(w, buffer: buffer, boxed: false)
-                serializeInt32(h, buffer: buffer, boxed: false)
-                break
-            case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
-                if boxed {
-                    buffer.appendInt32(-1739392570)
-                }
-                serializeInt32(flags, buffer: buffer, boxed: false)
-                serializeInt32(duration, buffer: buffer, boxed: false)
-                if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 1) != 0 {serializeString(performer!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 2) != 0 {serializeBytes(waveform!, buffer: buffer, boxed: false)}
-                break
-            case .documentAttributeFilename(let fileName):
-                if boxed {
-                    buffer.appendInt32(358154344)
-                }
-                serializeString(fileName, buffer: buffer, boxed: false)
-                break
-            case .documentAttributeHasStickers:
-                if boxed {
-                    buffer.appendInt32(-1744710921)
-                }
-                
-                break
-            }
-            return true
-        }
-        
+        case documentAttributeLocalFile(filePath: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .documentAttributeImageSize(let w, let h):
+                    if boxed {
+                        buffer.appendInt32(1815593308)
+                    }
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    break
+                case .documentAttributeAnimated:
+                    if boxed {
+                        buffer.appendInt32(297109817)
+                    }
+                    
+                    break
+                case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
+                    if boxed {
+                        buffer.appendInt32(1662637586)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(alt, buffer: buffer, boxed: false)
+                    stickerset.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {maskCoords!.serialize(buffer, true)}
+                    break
+                case .documentAttributeVideo(let duration, let w, let h):
+                    if boxed {
+                        buffer.appendInt32(1494273227)
+                    }
+                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    break
+                case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
+                    if boxed {
+                        buffer.appendInt32(-1739392570)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(performer!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeBytes(waveform!, buffer: buffer, boxed: false)}
+                    break
+                case .documentAttributeFilename(let fileName):
+                    if boxed {
+                        buffer.appendInt32(358154344)
+                    }
+                    serializeString(fileName, buffer: buffer, boxed: false)
+                    break
+                case .documentAttributeHasStickers:
+                    if boxed {
+                        buffer.appendInt32(-1744710921)
+                    }
+                    
+                    break
+                case .documentAttributeLocalFile(let filePath):
+                    if boxed {
+                        buffer.appendInt32(-35)
+                    }
+                    serializeString(filePath, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1007,7 +1015,7 @@ public struct MacosLegacy {
             var _4: MacosLegacy.MaskCoords?
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
                 _4 = MacosLegacy.parse(reader, signature: signature) as? MacosLegacy.MaskCoords
-                } }
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -1073,91 +1081,104 @@ public struct MacosLegacy {
         fileprivate static func parse_documentAttributeHasStickers(_ reader: BufferReader) -> DocumentAttribute? {
             return MacosLegacy.DocumentAttribute.documentAttributeHasStickers
         }
-        
+        fileprivate static func parse_documentAttributeLocalFile(_ reader: BufferReader) -> DocumentAttribute? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return MacosLegacy.DocumentAttribute.documentAttributeLocalFile(filePath: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
         public var description: String {
             get {
                 switch self {
-                case .documentAttributeImageSize(let w, let h):
-                    return "(documentAttributeImageSize w: \(w), h: \(h))"
-                case .documentAttributeAnimated:
-                    return "(documentAttributeAnimated)"
-                case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
-                    return "(documentAttributeSticker flags: \(flags), alt: \(alt), stickerset: \(stickerset), maskCoords: \(maskCoords))"
-                case .documentAttributeVideo(let duration, let w, let h):
-                    return "(documentAttributeVideo duration: \(duration), w: \(w), h: \(h))"
-                case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
-                    return "(documentAttributeAudio flags: \(flags), duration: \(duration), title: \(title), performer: \(performer), waveform: \(waveform))"
-                case .documentAttributeFilename(let fileName):
-                    return "(documentAttributeFilename fileName: \(fileName))"
-                case .documentAttributeHasStickers:
-                    return "(documentAttributeHasStickers)"
+                    case .documentAttributeImageSize(let w, let h):
+                        return "(documentAttributeImageSize w: \(w), h: \(h))"
+                    case .documentAttributeAnimated:
+                        return "(documentAttributeAnimated)"
+                    case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
+                        return "(documentAttributeSticker flags: \(flags), alt: \(alt), stickerset: \(stickerset), maskCoords: \(maskCoords))"
+                    case .documentAttributeVideo(let duration, let w, let h):
+                        return "(documentAttributeVideo duration: \(duration), w: \(w), h: \(h))"
+                    case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
+                        return "(documentAttributeAudio flags: \(flags), duration: \(duration), title: \(title), performer: \(performer), waveform: \(waveform))"
+                    case .documentAttributeFilename(let fileName):
+                        return "(documentAttributeFilename fileName: \(fileName))"
+                    case .documentAttributeHasStickers:
+                        return "(documentAttributeHasStickers)"
+                    case .documentAttributeLocalFile(let filePath):
+                        return "(documentAttributeLocalFile filePath: \(filePath))"
                 }
             }
         }
     }
-    
+
     public enum InputStickerSet: CustomStringConvertible {
         case inputStickerSetEmpty
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .inputStickerSetEmpty:
-                if boxed {
-                    buffer.appendInt32(-4838507)
-                }
-                
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .inputStickerSetEmpty:
+                    if boxed {
+                        buffer.appendInt32(-4838507)
+                    }
+                    
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
             return MacosLegacy.InputStickerSet.inputStickerSetEmpty
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .inputStickerSetEmpty:
-                    return "(inputStickerSetEmpty)"
+                    case .inputStickerSetEmpty:
+                        return "(inputStickerSetEmpty)"
                 }
             }
         }
     }
-    
+
     public enum User: CustomStringConvertible {
         case userEmpty(id: Int32)
         case user(flags: Int32, id: Int32, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: MacosLegacy.UserProfilePhoto?, status: MacosLegacy.UserStatus?, botInfoVersion: Int32?, restrictionReason: String?, botInlinePlaceholder: String?)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .userEmpty(let id):
-                if boxed {
-                    buffer.appendInt32(537022650)
-                }
-                serializeInt32(id, buffer: buffer, boxed: false)
-                break
-            case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder):
-                if boxed {
-                    buffer.appendInt32(-787638374)
-                }
-                serializeInt32(flags, buffer: buffer, boxed: false)
-                serializeInt32(id, buffer: buffer, boxed: false)
-                if Int(flags) & Int(1 << 0) != 0 {serializeInt64(accessHash!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 1) != 0 {serializeString(firstName!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 2) != 0 {serializeString(lastName!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 3) != 0 {serializeString(username!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 4) != 0 {serializeString(phone!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 5) != 0 {photo!.serialize(buffer, true)}
-                if Int(flags) & Int(1 << 6) != 0 {status!.serialize(buffer, true)}
-                if Int(flags) & Int(1 << 14) != 0 {serializeInt32(botInfoVersion!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 18) != 0 {serializeString(restrictionReason!, buffer: buffer, boxed: false)}
-                if Int(flags) & Int(1 << 19) != 0 {serializeString(botInlinePlaceholder!, buffer: buffer, boxed: false)}
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .userEmpty(let id):
+                    if boxed {
+                        buffer.appendInt32(537022650)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    break
+                case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder):
+                    if boxed {
+                        buffer.appendInt32(-787638374)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(accessHash!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(firstName!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(lastName!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(username!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(phone!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {photo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {status!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 14) != 0 {serializeInt32(botInfoVersion!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 18) != 0 {serializeString(restrictionReason!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 19) != 0 {serializeString(botInlinePlaceholder!, buffer: buffer, boxed: false)}
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_userEmpty(_ reader: BufferReader) -> User? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1187,11 +1208,11 @@ public struct MacosLegacy {
             var _8: MacosLegacy.UserProfilePhoto?
             if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
                 _8 = MacosLegacy.parse(reader, signature: signature) as? MacosLegacy.UserProfilePhoto
-                } }
+            } }
             var _9: MacosLegacy.UserStatus?
             if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
                 _9 = MacosLegacy.parse(reader, signature: signature) as? MacosLegacy.UserStatus
-                } }
+            } }
             var _10: Int32?
             if Int(_1!) & Int(1 << 14) != 0 {_10 = reader.readInt32() }
             var _11: String?
@@ -1217,46 +1238,46 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .userEmpty(let id):
-                    return "(userEmpty id: \(id))"
-                case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder):
-                    return "(user flags: \(flags), id: \(id), accessHash: \(accessHash), firstName: \(firstName), lastName: \(lastName), username: \(username), phone: \(phone), photo: \(photo), status: \(status), botInfoVersion: \(botInfoVersion), restrictionReason: \(restrictionReason), botInlinePlaceholder: \(botInlinePlaceholder))"
+                    case .userEmpty(let id):
+                        return "(userEmpty id: \(id))"
+                    case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder):
+                        return "(user flags: \(flags), id: \(id), accessHash: \(accessHash), firstName: \(firstName), lastName: \(lastName), username: \(username), phone: \(phone), photo: \(photo), status: \(status), botInfoVersion: \(botInfoVersion), restrictionReason: \(restrictionReason), botInlinePlaceholder: \(botInlinePlaceholder))"
                 }
             }
         }
     }
-    
+
     public enum Message: CustomStringConvertible {
         case destructMessage(flags: Int32, id: Int32, fromId: Int32, toId: MacosLegacy.Peer, date: Int32, message: String, media: MacosLegacy.MessageMedia, destructionTime: Int32, random: Int64, fakeId: Int32, ttlSeconds: Int32, outSeqNo: Int32, dstate: Int32)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .destructMessage(let flags, let id, let fromId, let toId, let date, let message, let media, let destructionTime, let random, let fakeId, let ttlSeconds, let outSeqNo, let dstate):
-                if boxed {
-                    buffer.appendInt32(4)
-                }
-                serializeInt32(flags, buffer: buffer, boxed: false)
-                serializeInt32(id, buffer: buffer, boxed: false)
-                serializeInt32(fromId, buffer: buffer, boxed: false)
-                toId.serialize(buffer, true)
-                serializeInt32(date, buffer: buffer, boxed: false)
-                serializeString(message, buffer: buffer, boxed: false)
-                media.serialize(buffer, true)
-                serializeInt32(destructionTime, buffer: buffer, boxed: false)
-                serializeInt64(random, buffer: buffer, boxed: false)
-                serializeInt32(fakeId, buffer: buffer, boxed: false)
-                serializeInt32(ttlSeconds, buffer: buffer, boxed: false)
-                serializeInt32(outSeqNo, buffer: buffer, boxed: false)
-                serializeInt32(dstate, buffer: buffer, boxed: false)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .destructMessage(let flags, let id, let fromId, let toId, let date, let message, let media, let destructionTime, let random, let fakeId, let ttlSeconds, let outSeqNo, let dstate):
+                    if boxed {
+                        buffer.appendInt32(4)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt32(fromId, buffer: buffer, boxed: false)
+                    toId.serialize(buffer, true)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    media.serialize(buffer, true)
+                    serializeInt32(destructionTime, buffer: buffer, boxed: false)
+                    serializeInt64(random, buffer: buffer, boxed: false)
+                    serializeInt32(fakeId, buffer: buffer, boxed: false)
+                    serializeInt32(ttlSeconds, buffer: buffer, boxed: false)
+                    serializeInt32(outSeqNo, buffer: buffer, boxed: false)
+                    serializeInt32(dstate, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_destructMessage(_ reader: BufferReader) -> Message? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1308,40 +1329,40 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .destructMessage(let flags, let id, let fromId, let toId, let date, let message, let media, let destructionTime, let random, let fakeId, let ttlSeconds, let outSeqNo, let dstate):
-                    return "(destructMessage flags: \(flags), id: \(id), fromId: \(fromId), toId: \(toId), date: \(date), message: \(message), media: \(media), destructionTime: \(destructionTime), random: \(random), fakeId: \(fakeId), ttlSeconds: \(ttlSeconds), outSeqNo: \(outSeqNo), dstate: \(dstate))"
+                    case .destructMessage(let flags, let id, let fromId, let toId, let date, let message, let media, let destructionTime, let random, let fakeId, let ttlSeconds, let outSeqNo, let dstate):
+                        return "(destructMessage flags: \(flags), id: \(id), fromId: \(fromId), toId: \(toId), date: \(date), message: \(message), media: \(media), destructionTime: \(destructionTime), random: \(random), fakeId: \(fakeId), ttlSeconds: \(ttlSeconds), outSeqNo: \(outSeqNo), dstate: \(dstate))"
                 }
             }
         }
     }
-    
+
     public enum GeoPoint: CustomStringConvertible {
         case geoPointEmpty
         case geoPoint(long: Double, lat: Double)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .geoPointEmpty:
-                if boxed {
-                    buffer.appendInt32(286776671)
-                }
-                
-                break
-            case .geoPoint(let long, let lat):
-                if boxed {
-                    buffer.appendInt32(541710092)
-                }
-                serializeDouble(long, buffer: buffer, boxed: false)
-                serializeDouble(lat, buffer: buffer, boxed: false)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .geoPointEmpty:
+                    if boxed {
+                        buffer.appendInt32(286776671)
+                    }
+                    
+                    break
+                case .geoPoint(let long, let lat):
+                    if boxed {
+                        buffer.appendInt32(541710092)
+                    }
+                    serializeDouble(long, buffer: buffer, boxed: false)
+                    serializeDouble(lat, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_geoPointEmpty(_ reader: BufferReader) -> GeoPoint? {
             return MacosLegacy.GeoPoint.geoPointEmpty
         }
@@ -1359,37 +1380,37 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .geoPointEmpty:
-                    return "(geoPointEmpty)"
-                case .geoPoint(let long, let lat):
-                    return "(geoPoint long: \(long), lat: \(lat))"
+                    case .geoPointEmpty:
+                        return "(geoPointEmpty)"
+                    case .geoPoint(let long, let lat):
+                        return "(geoPoint long: \(long), lat: \(lat))"
                 }
             }
         }
     }
-    
+
     public enum MaskCoords: CustomStringConvertible {
         case maskCoords(n: Int32, x: Double, y: Double, zoom: Double)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .maskCoords(let n, let x, let y, let zoom):
-                if boxed {
-                    buffer.appendInt32(-1361650766)
-                }
-                serializeInt32(n, buffer: buffer, boxed: false)
-                serializeDouble(x, buffer: buffer, boxed: false)
-                serializeDouble(y, buffer: buffer, boxed: false)
-                serializeDouble(zoom, buffer: buffer, boxed: false)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .maskCoords(let n, let x, let y, let zoom):
+                    if boxed {
+                        buffer.appendInt32(-1361650766)
+                    }
+                    serializeInt32(n, buffer: buffer, boxed: false)
+                    serializeDouble(x, buffer: buffer, boxed: false)
+                    serializeDouble(y, buffer: buffer, boxed: false)
+                    serializeDouble(zoom, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_maskCoords(_ reader: BufferReader) -> MaskCoords? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1410,41 +1431,41 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .maskCoords(let n, let x, let y, let zoom):
-                    return "(maskCoords n: \(n), x: \(x), y: \(y), zoom: \(zoom))"
+                    case .maskCoords(let n, let x, let y, let zoom):
+                        return "(maskCoords n: \(n), x: \(x), y: \(y), zoom: \(zoom))"
                 }
             }
         }
     }
-    
+
     public enum UserProfilePhoto: CustomStringConvertible {
         case userProfilePhotoEmpty
         case userProfilePhoto(photoId: Int64, photoSmall: MacosLegacy.FileLocation, photoBig: MacosLegacy.FileLocation)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .userProfilePhotoEmpty:
-                if boxed {
-                    buffer.appendInt32(1326562017)
-                }
-                
-                break
-            case .userProfilePhoto(let photoId, let photoSmall, let photoBig):
-                if boxed {
-                    buffer.appendInt32(-715532088)
-                }
-                serializeInt64(photoId, buffer: buffer, boxed: false)
-                photoSmall.serialize(buffer, true)
-                photoBig.serialize(buffer, true)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .userProfilePhotoEmpty:
+                    if boxed {
+                        buffer.appendInt32(1326562017)
+                    }
+                    
+                    break
+                case .userProfilePhoto(let photoId, let photoSmall, let photoBig):
+                    if boxed {
+                        buffer.appendInt32(-715532088)
+                    }
+                    serializeInt64(photoId, buffer: buffer, boxed: false)
+                    photoSmall.serialize(buffer, true)
+                    photoBig.serialize(buffer, true)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_userProfilePhotoEmpty(_ reader: BufferReader) -> UserProfilePhoto? {
             return MacosLegacy.UserProfilePhoto.userProfilePhotoEmpty
         }
@@ -1469,40 +1490,40 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .userProfilePhotoEmpty:
-                    return "(userProfilePhotoEmpty)"
-                case .userProfilePhoto(let photoId, let photoSmall, let photoBig):
-                    return "(userProfilePhoto photoId: \(photoId), photoSmall: \(photoSmall), photoBig: \(photoBig))"
+                    case .userProfilePhotoEmpty:
+                        return "(userProfilePhotoEmpty)"
+                    case .userProfilePhoto(let photoId, let photoSmall, let photoBig):
+                        return "(userProfilePhoto photoId: \(photoId), photoSmall: \(photoSmall), photoBig: \(photoBig))"
                 }
             }
         }
     }
-    
+
     public enum EncryptedChat: CustomStringConvertible {
         case encryptedChat(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAOrB: Buffer, keyFingerprint: Int64)
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
-                if boxed {
-                    buffer.appendInt32(-94974410)
-                }
-                serializeInt32(id, buffer: buffer, boxed: false)
-                serializeInt64(accessHash, buffer: buffer, boxed: false)
-                serializeInt32(date, buffer: buffer, boxed: false)
-                serializeInt32(adminId, buffer: buffer, boxed: false)
-                serializeInt32(participantId, buffer: buffer, boxed: false)
-                serializeBytes(gAOrB, buffer: buffer, boxed: false)
-                serializeInt64(keyFingerprint, buffer: buffer, boxed: false)
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
+                    if boxed {
+                        buffer.appendInt32(-94974410)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(adminId, buffer: buffer, boxed: false)
+                    serializeInt32(participantId, buffer: buffer, boxed: false)
+                    serializeBytes(gAOrB, buffer: buffer, boxed: false)
+                    serializeInt64(keyFingerprint, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_encryptedChat(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1532,51 +1553,51 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
-                    return "(encryptedChat id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gAOrB: \(gAOrB), keyFingerprint: \(keyFingerprint))"
+                    case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
+                        return "(encryptedChat id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gAOrB: \(gAOrB), keyFingerprint: \(keyFingerprint))"
                 }
             }
         }
     }
-    
+
     public enum Document: CustomStringConvertible {
         case documentEmpty(id: Int64)
         case document(id: Int64, accessHash: Int64, date: Int32, mimeType: String, size: Int32, thumb: MacosLegacy.PhotoSize, dcId: Int32, version: Int32, attributes: [MacosLegacy.DocumentAttribute])
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-            switch self {
-            case .documentEmpty(let id):
-                if boxed {
-                    buffer.appendInt32(922273905)
-                }
-                serializeInt64(id, buffer: buffer, boxed: false)
-                break
-            case .document(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let version, let attributes):
-                if boxed {
-                    buffer.appendInt32(-2027738169)
-                }
-                serializeInt64(id, buffer: buffer, boxed: false)
-                serializeInt64(accessHash, buffer: buffer, boxed: false)
-                serializeInt32(date, buffer: buffer, boxed: false)
-                serializeString(mimeType, buffer: buffer, boxed: false)
-                serializeInt32(size, buffer: buffer, boxed: false)
-                thumb.serialize(buffer, true)
-                serializeInt32(dcId, buffer: buffer, boxed: false)
-                serializeInt32(version, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(attributes.count))
-                for item in attributes {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-            return true
-        }
-        
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .documentEmpty(let id):
+                    if boxed {
+                        buffer.appendInt32(922273905)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    break
+                case .document(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let version, let attributes):
+                    if boxed {
+                        buffer.appendInt32(-2027738169)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeString(mimeType, buffer: buffer, boxed: false)
+                    serializeInt32(size, buffer: buffer, boxed: false)
+                    thumb.serialize(buffer, true)
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    serializeInt32(version, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(attributes.count))
+                    for item in attributes {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    return true
+    }
+    
         fileprivate static func parse_documentEmpty(_ reader: BufferReader) -> Document? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -1627,21 +1648,21 @@ public struct MacosLegacy {
                 return nil
             }
         }
-        
+    
         public var description: String {
             get {
                 switch self {
-                case .documentEmpty(let id):
-                    return "(documentEmpty id: \(id))"
-                case .document(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let version, let attributes):
-                    return "(document id: \(id), accessHash: \(accessHash), date: \(date), mimeType: \(mimeType), size: \(size), thumb: \(thumb), dcId: \(dcId), version: \(version), attributes: \(attributes))"
+                    case .documentEmpty(let id):
+                        return "(documentEmpty id: \(id))"
+                    case .document(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let version, let attributes):
+                        return "(document id: \(id), accessHash: \(accessHash), date: \(date), mimeType: \(mimeType), size: \(size), thumb: \(thumb), dcId: \(dcId), version: \(version), attributes: \(attributes))"
                 }
             }
         }
     }
-    
+
     public struct functions {
         
     }
-    
+
 }
