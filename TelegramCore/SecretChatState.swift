@@ -18,40 +18,52 @@ enum SecretChatLayer: Int32 {
 public struct SecretChatKeySha1Fingerprint: Coding, Equatable {
     public let k0: Int64
     public let k1: Int64
+    public let k2: Int32
     
     init(digest: Data) {
-        assert(digest.count == 16)
+        assert(digest.count == 20)
         var k0: Int64 = 0
         var k1: Int64 = 0
+        var k2: Int32 = 0
         digest.withUnsafeBytes { (bytes: UnsafePointer<Int64>) -> Void in
             k0 = bytes.pointee
             k1 = bytes.advanced(by: 1).pointee
         }
+        digest.withUnsafeBytes { (bytes: UnsafePointer<Int32>) -> Void in
+            k2 = bytes.advanced(by: 4).pointee
+        }
         self.k0 = k0
         self.k1 = k1
+        self.k2 = k2
     }
     
-    public init(k0: Int64, k1: Int64) {
+    public init(k0: Int64, k1: Int64, k2: Int32) {
         self.k0 = k0
         self.k1 = k1
+        self.k2 = k2
     }
     
     public init(decoder: Decoder) {
         self.k0 = decoder.decodeInt64ForKey("k0")
         self.k1 = decoder.decodeInt64ForKey("k1")
+        self.k2 = decoder.decodeInt32ForKey("k2")
     }
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeInt64(self.k0, forKey: "k0")
         encoder.encodeInt64(self.k1, forKey: "k1")
+        encoder.encodeInt32(self.k2, forKey: "k2")
     }
     
     public func data() -> Data {
         var data = Data()
-        data.count = 16
+        data.count = 20
         data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int64>) -> Void in
             bytes.pointee = self.k0
             bytes.advanced(by: 1).pointee = self.k1
+        }
+        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int32>) -> Void in
+            bytes.advanced(by: 4).pointee = self.k2
         }
         return data
     }
@@ -61,6 +73,9 @@ public struct SecretChatKeySha1Fingerprint: Coding, Equatable {
             return false
         }
         if lhs.k1 != rhs.k1 {
+            return false
+        }
+        if lhs.k2 != rhs.k2 {
             return false
         }
         return true
