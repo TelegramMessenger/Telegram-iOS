@@ -43,7 +43,7 @@ public final class AccountManager {
     
     public func modify<T>(_ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
-            self.queue.async {
+            self.queue.justDispatch {
                 self.valueBox.begin()
                 
                 let modifier = AccountManagerModifier(getRecords: {
