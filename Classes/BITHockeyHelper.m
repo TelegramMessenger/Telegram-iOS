@@ -210,27 +210,8 @@ NSString *bit_appName(NSString *placeHolderString) {
   return appName;
 }
 
-NSString *bit_UUIDPreiOS6(void) {
-  // Create a new UUID
-  CFUUIDRef uuidObj = CFUUIDCreate(nil);
-  
-  // Get the string representation of the UUID
-  NSString *resultUUID = (NSString*)CFBridgingRelease(CFUUIDCreateString(nil, uuidObj));
-  CFRelease(uuidObj);
-  
-  return resultUUID;
-}
-
 NSString *bit_UUID(void) {
-  NSString *resultUUID = nil;
-  
-  if ([NSUUID class]) {
-    resultUUID = [[NSUUID UUID] UUIDString];
-  } else {
-    resultUUID = bit_UUIDPreiOS6();
-  }
-  
-  return resultUUID;
+  return [[NSUUID UUID] UUIDString];
 }
 
 NSString *bit_appAnonID(BOOL forceNewAnonID) {
@@ -282,26 +263,6 @@ NSString *bit_appAnonID(BOOL forceNewAnonID) {
 }
 
 #pragma mark Environment detection
-
-BOOL bit_isPreiOS7Environment(void) {
-  static BOOL isPreiOS7Environment = YES;
-  static dispatch_once_t checkOS;
-  
-  dispatch_once(&checkOS, ^{
-    // NSFoundationVersionNumber_iOS_6_1 = 993.00
-    // We hardcode this, so compiling with iOS 6 is possible while still being able to detect the correct environment
-    
-    // runtime check according to
-    // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
-    if (floor(NSFoundationVersionNumber) <= 993.00) {
-      isPreiOS7Environment = YES;
-    } else {
-      isPreiOS7Environment = NO;
-    }
-  });
-  
-  return isPreiOS7Environment;
-}
 
 BOOL bit_isPreiOS8Environment(void) {
   static BOOL isPreiOS8Environment = YES;
@@ -372,11 +333,6 @@ BITEnvironment bit_currentAppEnvironment(void) {
   // MobilePovision profiles are a clear indicator for Ad-Hoc distribution
   if (bit_hasEmbeddedMobileProvision()) {
     return BITEnvironmentOther;
-  }
-  
-  // TestFlight is only supported from iOS 8 onwards, so at this point we have to be in the AppStore
-  if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
-    return BITEnvironmentAppStore;
   }
   
   if (bit_isAppStoreReceiptSandbox()) {
@@ -462,26 +418,7 @@ NSString *bit_base64String(NSData * data, unsigned long length) {
 // Return ISO 8601 string representation of the date
 NSString *bit_utcDateString(NSDate *date){
   static NSDateFormatter *dateFormatter;
-  
-  // NSDateFormatter is not thread-safe prior to iOS 7
-  if (bit_isPreiOS7Environment()) {
-    NSMutableDictionary *threadDictionary = [NSThread currentThread].threadDictionary;
-    dateFormatter = threadDictionary[kBITUtcDateFormatter];
-    
-    if (!dateFormatter) {
-      dateFormatter = [NSDateFormatter new];
-      NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
-      dateFormatter.locale = enUSPOSIXLocale;
-      dateFormatter.dateFormat = @"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
-      dateFormatter.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
-      threadDictionary[kBITUtcDateFormatter] = dateFormatter;
-    }
-    
-    NSString *dateString = [dateFormatter stringFromDate:date];
-    
-    return dateString;
-  }
-  
+
   static dispatch_once_t dateFormatterToken;
   dispatch_once(&dateFormatterToken, ^{
     NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
@@ -623,13 +560,9 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
   NSString *currentBestMatch = nil;
   float currentBestMatchHeight = 0;
   float bestMatchHeight = 0;
-  
-  if (bit_isPreiOS7Environment()) {
-    bestMatchHeight = useiPadIcon ? (useHighResIcon ? 144 : 72) : (useHighResIcon ? 114 : 57);
-  } else {
-    bestMatchHeight = useiPadIcon ? (useHighResIcon ? 152 : 76) : 120;
-  }
-  
+
+  bestMatchHeight = useiPadIcon ? (useHighResIcon ? 152 : 76) : 120;
+
   for(NSString *icon in icons) {
     // Don't use imageNamed, otherwise unit tests won't find the fixture icon
     // and using imageWithContentsOfFile doesn't load @2x files with absolut paths (required in tests)

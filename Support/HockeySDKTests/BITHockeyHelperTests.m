@@ -73,12 +73,6 @@
   assertThatBool([resultString isEqualToString:@"Placeholder"], isTrue());
 }
 
-- (void)testUUIDPreiOS6 {
-  NSString *resultString = bit_UUIDPreiOS6();
-  assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
-}
-
 - (void)testUUID {
   NSString *resultString = bit_UUID();
   assertThat(resultString, notNilValue());
