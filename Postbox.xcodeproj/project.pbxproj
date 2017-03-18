@@ -157,6 +157,8 @@
 		D0BC386C1E3FCEE50044D6FE /* MultiplePeersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386B1E3FCEE50044D6FE /* MultiplePeersView.swift */; };
 		D0BC38721E409E670044D6FE /* RenderedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC38711E409E670044D6FE /* RenderedPeer.swift */; };
 		D0BC38731E409E670044D6FE /* RenderedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC38711E409E670044D6FE /* RenderedPeer.swift */; };
+		D0BE38391E7C1FD4000079AF /* ItemCollectionInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE38381E7C1FD4000079AF /* ItemCollectionInfoView.swift */; };
+		D0BE383A1E7C1FD4000079AF /* ItemCollectionInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE38381E7C1FD4000079AF /* ItemCollectionInfoView.swift */; };
 		D0BEAF631E54B2FA00BD963D /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF621E54B2FA00BD963D /* AccountManager.swift */; };
 		D0BEAF641E54B2FA00BD963D /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF621E54B2FA00BD963D /* AccountManager.swift */; };
 		D0BEAF671E54B33900BD963D /* AccountRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF661E54B33900BD963D /* AccountRecord.swift */; };
@@ -353,6 +355,7 @@
 		D0B844501DAC04FE005F29E1 /* PeerPresence.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerPresence.swift; sourceTree = "<group>"; };
 		D0BC386B1E3FCEE50044D6FE /* MultiplePeersView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplePeersView.swift; sourceTree = "<group>"; };
 		D0BC38711E409E670044D6FE /* RenderedPeer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RenderedPeer.swift; sourceTree = "<group>"; };
+		D0BE38381E7C1FD4000079AF /* ItemCollectionInfoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCollectionInfoView.swift; sourceTree = "<group>"; };
 		D0BEAF621E54B2FA00BD963D /* AccountManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountManager.swift; sourceTree = "<group>"; };
 		D0BEAF661E54B33900BD963D /* AccountRecord.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountRecord.swift; sourceTree = "<group>"; };
 		D0BEAF691E54B5FB00BD963D /* AccountManagerMetadataTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountManagerMetadataTable.swift; sourceTree = "<group>"; };
@@ -632,6 +635,7 @@
 				D0DF0C8E1D81A350008AEB01 /* PeerView.swift */,
 				D021E0DB1DB5237C00C6B04F /* ItemCollectionsView.swift */,
 				D0FA0AC61E77F0A2005BB9B7 /* ItemCollectionInfosView.swift */,
+				D0BE38381E7C1FD4000079AF /* ItemCollectionInfoView.swift */,
 				D0A18D661E16874D004C6734 /* UnreadMessageCountsView.swift */,
 				D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */,
 				D0AAD1B41E32673C00D5B9DE /* TimestampBasedMessageAttributesView.swift */,
@@ -949,6 +953,7 @@
 				D073CE7F1DCBF3B4007511FD /* ItemCollection.swift in Sources */,
 				D0F7B1D91E045C6A007EB8A5 /* OrderStatisticTable.swift in Sources */,
 				D073CEA01DCBF3C1007511FD /* ItemCollectionsView.swift in Sources */,
+				D0BE383A1E7C1FD4000079AF /* ItemCollectionInfoView.swift in Sources */,
 				D0B418491D7DFE20004562A4 /* ChatListView.swift in Sources */,
 				D0F7B1D61E045C6A007EB8A5 /* ContactTable.swift in Sources */,
 				D0F7B1D11E045C6A007EB8A5 /* PeerTable.swift in Sources */,
@@ -1069,6 +1074,7 @@
 				D0AD23271E194D1C00A7089A /* PeerOperationLogTable.swift in Sources */,
 				D021E0D41DB4FAE100C6B04F /* ItemCollection.swift in Sources */,
 				D0D510F91D63BCC200A97B8A /* IntermediateMessage.swift in Sources */,
+				D0BE38391E7C1FD4000079AF /* ItemCollectionInfoView.swift in Sources */,
 				D0F9E86B1C59719800037222 /* ChatListView.swift in Sources */,
 				D0D949F51D35353900740E02 /* MappedFile.swift in Sources */,
 				D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */,
