@@ -49,7 +49,7 @@ public func requestStickerSet(account:Account, reference: StickerPackReference) 
             switch result {
             case let .stickerSet(set, packs, documents):
 
-                info = StickerPackCollectionInfo(apiSet: set)
+                info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                 
                 switch set {
                 case let .stickerSet(data):
@@ -150,7 +150,7 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
                         apiDocuments = covers
                     }
                     
-                    let info = StickerPackCollectionInfo(apiSet: apiSet)
+                    let info = StickerPackCollectionInfo(apiSet: apiSet, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                     
                     var items:[StickerPackItem] = []
                     for apiDocument in apiDocuments {

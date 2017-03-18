@@ -134,7 +134,7 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
 }
 
 extension StickerPackCollectionInfo {
-    convenience init(apiSet: Api.StickerSet) {
+    convenience init(apiSet: Api.StickerSet, namespace: ItemCollectionId.Namespace) {
         switch apiSet {
             case let .stickerSet(flags, id, accessHash, title, shortName, count, nHash):
                 var setFlags: StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
@@ -144,7 +144,7 @@ extension StickerPackCollectionInfo {
                 if (flags & (1 << 3)) != 0 {
                     setFlags.insert(.masks)
                 }
-                self.init(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, hash: nHash, count: count)
+                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, hash: nHash, count: count)
         }
     }
 }

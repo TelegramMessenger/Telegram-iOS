@@ -31,17 +31,24 @@ final class SynchronizeInstalledStickerPacksOperation: Coding {
 func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, namespace: SynchronizeInstalledStickerPacksOperationNamespace) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag
+    let itemCollectionNamespace: ItemCollectionId.Namespace
     switch namespace {
         case .stickers:
             tag = OperationLogTags.SynchronizeInstalledStickerPacks
+            itemCollectionNamespace = Namespaces.ItemCollection.CloudStickerPacks
         case .masks:
             tag = OperationLogTags.SynchronizeInstalledMasks
+            itemCollectionNamespace = Namespaces.ItemCollection.CloudMaskPacks
     }
+    var previousSrickerPackIds: [ItemCollectionId]?
     modifier.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: tag, { entry in
         updateLocalIndex = entry.tagLocalIndex
+        if let operation = entry.contents as? SynchronizeInstalledStickerPacksOperation {
+            previousSrickerPackIds = operation.previousPacks
+        }
         return false
     })
-    let operationContents = SynchronizePinnedChatsOperation(previousPeerIds: modifier.getPinnedPeerIds())
+    let operationContents = SynchronizeInstalledStickerPacksOperation(previousPacks: previousSrickerPackIds ?? modifier.getItemCollectionsInfos(namespace: itemCollectionNamespace).map { $0.0 })
     if let updateLocalIndex = updateLocalIndex {
         let _ = modifier.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
     }

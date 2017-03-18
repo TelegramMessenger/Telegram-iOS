@@ -968,6 +968,20 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 }
             case let .updateReadMessagesContents(messages, _, _):
                 updatedState.addReadGlobalMessagesContents(messages)
+            case let .updateChannelMessageViews(channelId, id, views):
+                updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: id), count: views)
+            case let .updateNewStickerSet(stickerset):
+                updatedState.addUpdateInstalledStickerPacks(.add(stickerset))
+            case let .updateStickerSetsOrder(flags, order):
+                let namespace: SynchronizeInstalledStickerPacksOperationNamespace
+                if (flags & (1 << 0)) != 0 {
+                    namespace = .masks
+                } else {
+                    namespace = .stickers
+                }
+                updatedState.addUpdateInstalledStickerPacks(.reorder(namespace, order))
+            case .updateStickerSets:
+                updatedState.addUpdateInstalledStickerPacks(.sync)
             default:
                     break
         }
@@ -1301,7 +1315,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1348,6 +1362,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     var updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:]
     var updatedSecretChatTypingActivities = Set<PeerId>()
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
+    
+    var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
     
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
@@ -1478,6 +1494,144 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 for messageId in modifier.messageIdsForGlobalIds(globalIds) {
                     markMessageContentAsConsumedRemotely(modifier: modifier, messageId: messageId)
                 }
+            case let .UpdateMessageImpressionCount(id, count):
+                modifier.updateMessage(id, update: { currentMessage in
+                    var storeForwardInfo: StoreMessageForwardInfo?
+                    if let forwardInfo = currentMessage.forwardInfo {
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                    }
+                    var attributes = currentMessage.attributes
+                    loop: for j in 0 ..< attributes.count {
+                        if let attribute = attributes[j] as? ViewCountMessageAttribute {
+                            attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(count)))
+                            break loop
+                        }
+                    }
+                    return StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media)
+                })
+            case let .UpdateInstalledStickerPacks(operation):
+                stickerPackOperations.append(operation)
+        }
+    }
+    
+    if !stickerPackOperations.isEmpty {
+        if stickerPackOperations.contains(where: {
+            if case .sync = $0 {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
+            addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
+        } else {
+            var syncStickers = false
+            var syncMasks = false
+            loop: for operation in stickerPackOperations {
+                switch operation {
+                    case let .add(apiSet):
+                        let namespace: ItemCollectionId.Namespace
+                        var items: [ItemCollectionItem] = []
+                        let info: StickerPackCollectionInfo
+                        switch apiSet {
+                            case let .stickerSet(set, packs, documents):
+                                var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
+                                for pack in packs {
+                                    switch pack {
+                                    case let .stickerPack(text, fileIds):
+                                        let key = ValueBoxKey(text).toMemoryBuffer()
+                                        for fileId in fileIds {
+                                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                            if indexKeysByFile[mediaId] == nil {
+                                                indexKeysByFile[mediaId] = [key]
+                                            } else {
+                                                indexKeysByFile[mediaId]!.append(key)
+                                            }
+                                        }
+                                        break
+                                    }
+                                }
+                                
+                                for apiDocument in documents {
+                                    if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
+                                        let fileIndexKeys: [MemoryBuffer]
+                                        if let indexKeys = indexKeysByFile[id] {
+                                            fileIndexKeys = indexKeys
+                                        } else {
+                                            fileIndexKeys = []
+                                        }
+                                        items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
+                                    }
+                                }
+                                
+                                switch set {
+                                    case let .stickerSet(flags, _, _, _, _, _, _):
+                                        if (flags & (1 << 3)) != 0 {
+                                            namespace = Namespaces.ItemCollection.CloudMaskPacks
+                                        } else {
+                                            namespace = Namespaces.ItemCollection.CloudStickerPacks
+                                        }
+                                }
+                            
+                                info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
+                        }
+                        
+                        if namespace == Namespaces.ItemCollection.CloudMaskPacks && syncMasks {
+                            continue loop
+                        } else if namespace == Namespaces.ItemCollection.CloudStickerPacks && syncStickers {
+                            continue loop
+                        }
+                        
+                        var updatedInfos = modifier.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
+                        if let index = updatedInfos.index(where: { $0.id == info.id }) {
+                            let currentInfo = updatedInfos[index]
+                            updatedInfos.remove(at: index)
+                            updatedInfos.insert(currentInfo, at: 0)
+                        } else {
+                            updatedInfos.insert(info, at: 0)
+                            modifier.replaceItemCollectionItems(collectionId: info.id, items: items)
+                        }
+                        modifier.replaceItemCollectionInfos(namespace: info.id.namespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
+                    case let .reorder(namespace, ids):
+                        let collectionNamespace: ItemCollectionId.Namespace
+                        switch namespace {
+                            case .stickers:
+                                collectionNamespace = Namespaces.ItemCollection.CloudStickerPacks
+                            case .masks:
+                                collectionNamespace = Namespaces.ItemCollection.CloudMaskPacks
+                        }
+                        let currentInfos = modifier.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+                        if Set(currentInfos.map { $0.id.id }) != Set(ids) {
+                            switch namespace {
+                                case .stickers:
+                                    syncStickers = true
+                                case .masks:
+                                    syncMasks = true
+                            }
+                        } else {
+                            var currentDict: [ItemCollectionId: StickerPackCollectionInfo] = [:]
+                            for info in currentInfos {
+                                currentDict[info.id] = info
+                            }
+                            var updatedInfos: [StickerPackCollectionInfo] = []
+                            for id in ids {
+                                let currentInfo = currentDict[ItemCollectionId(namespace: collectionNamespace, id: id)]!
+                                updatedInfos.append(currentInfo)
+                            }
+                            modifier.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
+                        }
+                    case .sync:
+                        syncStickers = true
+                        syncMasks = true
+                        break loop
+                }
+            }
+            if syncStickers {
+                addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
+            }
+            if syncMasks {
+                addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
+            }
         }
     }
     

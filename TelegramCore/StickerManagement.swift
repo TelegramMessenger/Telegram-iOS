@@ -19,6 +19,11 @@ private func hashForInfos(_ infos: [StickerPackCollectionInfo]) -> Int32 {
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Void in
+        addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
+        addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
+    }
+    
     let currentHash = postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 1)
         |> take(1)
         |> map { view -> Int32 in
@@ -38,7 +43,7 @@ func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoEr
                     switch result {
                         case let .allStickers(_, sets):
                             for apiSet in sets {
-                                stickerPackInfos.append(StickerPackCollectionInfo(apiSet: apiSet))
+                                stickerPackInfos.append(StickerPackCollectionInfo(apiSet: apiSet, namespace: Namespaces.ItemCollection.CloudStickerPacks))
                             }
                         case .allStickersNotModified:
                             break
@@ -53,7 +58,6 @@ func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoEr
                                 switch result {
                                     case let .stickerSet(_, packs, documents):
                                         var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
-                                        //stickerPack#12b299d4 emoticon:string documents:Vector<long> = StickerPack;
                                         for pack in packs {
                                             switch pack {
                                                 case let .stickerPack(text, fileIds):

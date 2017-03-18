@@ -36,6 +36,12 @@ enum AccountStateUpdatePinnerPeerIdsOperation {
     case sync
 }
 
+enum AccountStateUpdateStickerPacksOperation {
+    case add(Api.messages.StickerSet)
+    case reorder(SynchronizeInstalledStickerPacksOperationNamespace, [Int64])
+    case sync
+}
+
 enum AccountStateMutationOperation {
     case AddMessages([StoreMessage], AddMessagesLocation)
     case DeleteMessagesWithGlobalIds([Int32])
@@ -60,6 +66,8 @@ enum AccountStateMutationOperation {
     case AddPeerInputActivity(chatPeerId: PeerId, peerId: PeerId?, activity: PeerInputActivity?)
     case UpdatePinnedPeerIds(AccountStateUpdatePinnerPeerIdsOperation)
     case ReadGlobalMessageContents([Int32])
+    case UpdateMessageImpressionCount(MessageId, Int32)
+    case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
 }
 
 struct AccountMutableState {
@@ -232,9 +240,17 @@ struct AccountMutableState {
         self.addOperation(.ReadGlobalMessageContents(globalIds))
     }
     
+    mutating func addUpdateMessageImpressionCount(id: MessageId, count: Int32) {
+        self.addOperation(.UpdateMessageImpressionCount(id, count))
+    }
+    
+    mutating func addUpdateInstalledStickerPacks(_ operation: AccountStateUpdateStickerPacksOperation) {
+        self.addOperation(.UpdateInstalledStickerPacks(operation))
+    }
+    
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {

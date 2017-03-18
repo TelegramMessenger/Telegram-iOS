@@ -99,6 +99,7 @@ public func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.St
 }
 
 public class UnauthorizedAccount {
+    public let apiId: Int32
     public let id: AccountRecordId
     public let appGroupPath: String
     public let basePath: String
@@ -112,7 +113,8 @@ public class UnauthorizedAccount {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     
-    init(id: AccountRecordId, appGroupPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
+    init(apiId: Int32, id: AccountRecordId, appGroupPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
+        self.apiId = apiId
         self.id = id
         self.appGroupPath = appGroupPath
         self.basePath = basePath
@@ -143,9 +145,9 @@ public class UnauthorizedAccount {
                 postbox.removeKeychainEntryForKey(key)
             })
             
-            return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
+            return initializedNetwork(apiId: self.apiId, datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
                 |> map { network in
-                    let updated = UnauthorizedAccount(id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
+                    let updated = UnauthorizedAccount(apiId: self.apiId, id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                     updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
                     return updated
                 }
@@ -212,6 +214,7 @@ private var declaredEncodables: Void = {
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaGame.self, f: { TelegramMediaGame(decoder: $0) })
+    declareEncodable(SynchronizeInstalledStickerPacksOperation.self, f: { SynchronizeInstalledStickerPacksOperation(decoder: $0) })
     
     return
 }()
@@ -224,7 +227,7 @@ private func accountRecordIdPathName(_ id: AccountRecordId) -> String {
     return "account-\(UInt64(bitPattern: id.int64))"
 }
 
-public func accountWithId(_ id: AccountRecordId, appGroupPath: String, testingEnvironment: Bool, shouldKeepAutoConnection: Bool = true) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
+public func accountWithId(apiId: Int32, id: AccountRecordId, appGroupPath: String, testingEnvironment: Bool, shouldKeepAutoConnection: Bool = true) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
     return Signal<(String, Postbox, Coding?), NoError> { subscriber in
         let _ = declaredEncodables
         
@@ -258,12 +261,12 @@ public func accountWithId(_ id: AccountRecordId, appGroupPath: String, testingEn
         if let accountState = accountState {
             switch accountState {
                 case let unauthorizedState as UnauthorizedAccountState:
-                    return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
+                    return initializedNetwork(apiId: apiId, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                            .left(value: UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                         }
                 case let authorizedState as AuthorizedAccountState:
-                    return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
+                    return initializedNetwork(apiId: apiId, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
                             return .right(value: Account(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId))
                         }
@@ -272,9 +275,9 @@ public func accountWithId(_ id: AccountRecordId, appGroupPath: String, testingEn
             }
         }
         
-        return initializedNetwork(datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
+        return initializedNetwork(apiId: apiId, datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
             |> map { network -> Either<UnauthorizedAccount, Account> in
-                return .left(value: UnauthorizedAccount(id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                return .left(value: UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
         }
     }
 }
@@ -457,7 +460,7 @@ public class Account {
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhone Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhone", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -490,7 +493,7 @@ public class Account {
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, deviceModel: "iPhone Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
+                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, deviceModel: "iPhone", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -537,6 +540,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .stickers).start())
+        self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .masks).start())
         self.managedOperationsDisposable.add(managedRecentStickers(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentGifs(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())

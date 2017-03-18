@@ -94,7 +94,7 @@ private var registeredLoggingFunctions: Void = {
     registerLoggingFunctions()
 }()
 
-func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoPath: String?, testingEnvironment: Bool) -> Signal<Network, NoError> {
+func initializedNetwork(apiId: Int32, datacenterId: Int, keychain: Keychain, networkUsageInfoPath: String?, testingEnvironment: Bool) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -103,7 +103,7 @@ func initializedNetwork(datacenterId: Int, keychain: Keychain, networkUsageInfoP
             
             let apiEnvironment = MTApiEnvironment()
             
-            apiEnvironment.apiId = 1
+            apiEnvironment.apiId = apiId
             apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
