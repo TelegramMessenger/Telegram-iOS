@@ -155,6 +155,10 @@ public final class Modifier {
         return self.postbox?.messageHistoryIndexTable.top(peerId, namespace: namespace)?.index.id
     }
     
+    public func getTopPeerMessageIndex(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex? {
+        return self.postbox?.messageHistoryIndexTable.top(peerId, namespace: namespace)?.index
+    }
+    
     public func updatePeerChatListInclusion(_ id: PeerId, inclusion: PeerChatListInclusion) {
         self.postbox?.updatePeerChatListInclusion(id, inclusion: inclusion)
     }
