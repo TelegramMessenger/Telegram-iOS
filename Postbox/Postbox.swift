@@ -211,6 +211,30 @@ public final class Modifier {
         self.postbox?.replaceItemCollections(namespace: namespace, itemCollections: itemCollections)
     }
     
+    public func replaceItemCollectionInfos(namespace: ItemCollectionId.Namespace, itemCollectionInfos: [(ItemCollectionId, ItemCollectionInfo)]) {
+        self.postbox?.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: itemCollectionInfos)
+    }
+    
+    public func replaceItemCollectionItems(collectionId: ItemCollectionId, items: [ItemCollectionItem]) {
+        self.postbox?.replaceItemCollectionItems(collectionId: collectionId, items: items)
+    }
+    
+    public func removeItemCollection(collectionId: ItemCollectionId) {
+        self.postbox?.removeItemCollection(collectionId: collectionId)
+    }
+    
+    public func getItemCollectionsInfos(namespace: ItemCollectionId.Namespace) -> [(ItemCollectionId, ItemCollectionInfo)] {
+        if let postbox = self.postbox {
+            return postbox.itemCollectionInfoTable.getInfos(namespace: namespace).map { ($0.1, $0.2) }
+        } else {
+            return []
+        }
+    }
+    
+    public func getItemCollectionInfo(collectionId: ItemCollectionId) -> ItemCollectionInfo? {
+        return self.postbox?.itemCollectionInfoTable.getInfo(id: collectionId)
+    }
+    
     public func getItemCollectionItems(collectionId: ItemCollectionId) -> [ItemCollectionItem] {
         if let postbox = self.postbox {
             return postbox.itemCollectionItemTable.collectionItems(collectionId: collectionId)
@@ -1257,6 +1281,27 @@ public final class Postbox {
         }
         self.itemCollectionInfoTable.replaceInfos(namespace: namespace, infos: infos)
         self.currentItemCollectionInfosOperations.append(.replaceInfos(namespace))
+    }
+    
+    fileprivate func replaceItemCollectionInfos(namespace: ItemCollectionId.Namespace, itemCollectionInfos: [(ItemCollectionId, ItemCollectionInfo)]) {
+        self.itemCollectionInfoTable.replaceInfos(namespace: namespace, infos: itemCollectionInfos)
+        self.currentItemCollectionInfosOperations.append(.replaceInfos(namespace))
+    }
+    
+    fileprivate func replaceItemCollectionItems(collectionId: ItemCollectionId, items: [ItemCollectionItem]) {
+        self.itemCollectionItemTable.replaceItems(collectionId: collectionId, items: items)
+        if self.currentItemCollectionItemsOperations[collectionId] == nil {
+            self.currentItemCollectionItemsOperations[collectionId] = []
+        }
+        self.currentItemCollectionItemsOperations[collectionId]!.append(.replaceItems)
+    }
+    
+    fileprivate func removeItemCollection(collectionId: ItemCollectionId) {
+        var infos = self.itemCollectionInfoTable.getInfos(namespace: collectionId.namespace)
+        if let index = infos.index(where: { $0.1 == collectionId }) {
+            infos.remove(at: index)
+            self.replaceItemCollectionInfos(namespace: collectionId.namespace, itemCollectionInfos: infos.map { ($0.1, $0.2) })
+        }
     }
     
     fileprivate func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {

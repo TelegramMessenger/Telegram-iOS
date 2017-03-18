@@ -49,6 +49,23 @@ final class ItemCollectionInfoTable: Table {
         }
     }
     
+    func getInfo(id: ItemCollectionId) -> ItemCollectionInfo? {
+        var infoKey: ValueBoxKey?
+        self.valueBox.range(self.table, start: self.lowerBound(namespace: id.namespace), end: self.upperBound(namespace: id.namespace), keys: { key in
+            let keyId = ItemCollectionId(namespace: id.namespace, id: key.getInt64(4 + 4))
+            if keyId == id {
+                infoKey = key
+                return false
+            }
+            return true
+        }, limit: 0)
+        if let infoKey = infoKey, let value = self.valueBox.get(self.table, key: infoKey), let info = Decoder(buffer: value).decodeRootObject() as? ItemCollectionInfo  {
+            return info
+        } else {
+            return nil
+        }
+    }
+    
     func lowerCollectionId(namespaceList: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, index: Int32) -> (ItemCollectionId, Int32)? {
         var currentNamespace = collectionId.namespace
         var currentKey = self.key(collectionId: collectionId, index: index)
