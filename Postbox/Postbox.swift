@@ -15,6 +15,11 @@ public protocol PeerChatState: Coding {
     func equals(_ other: PeerChatState) -> Bool
 }
 
+public enum PostboxUpdateMessage {
+    case update(StoreMessage)
+    case skip
+}
+
 public final class Modifier {
     private weak var postbox: Postbox?
     
@@ -199,7 +204,7 @@ public final class Modifier {
         self.postbox?.replaceRecentPeerIds(peerIds)
     }
     
-    public func updateMessage(_ id: MessageId, update: (Message) -> StoreMessage) {
+    public func updateMessage(_ id: MessageId, update: (Message) -> PostboxUpdateMessage) {
         self.postbox?.updateMessage(id, update: update)
     }
     
@@ -1258,10 +1263,12 @@ public final class Postbox {
         self.peerRatingTable.replace(items: peerIds)
     }
     
-    fileprivate func updateMessage(_ id: MessageId, update: (Message) -> StoreMessage) {
+    fileprivate func updateMessage(_ id: MessageId, update: (Message) -> PostboxUpdateMessage) {
         if let indexEntry = self.messageHistoryIndexTable.get(id), let intermediateMessage = self.messageHistoryTable.getMessage(indexEntry.index) {
             let message = self.renderIntermediateMessage(intermediateMessage)
-            self.messageHistoryTable.updateMessage(id, message: update(message), operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+            if case let .update(updatedMessage) = update(message) {
+                self.messageHistoryTable.updateMessage(id, message: updatedMessage, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+            }
         }
     }
     
@@ -1799,17 +1806,7 @@ public final class Postbox {
                 })
             }
             
-            let mutableView = MutableItemCollectionsView(orderedItemListsViews: itemListViews, namespaces: namespaces, aroundIndex: aroundIndex, count: count, getInfos: { namespace in
-                return self.itemCollectionInfoTable.getInfos(namespace: namespace)
-            }, lowerCollectionId: { namespaceList, collectionId, collectionIndex in
-                return self.itemCollectionInfoTable.lowerCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
-            }, lowerItems: { collectionId, itemIndex, count in
-                return self.itemCollectionItemTable.lowerItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
-            }, higherCollectionId: { namespaceList, collectionId, collectionIndex in
-                return self.itemCollectionInfoTable.higherCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
-            }, higherItems: { collectionId, itemIndex, count in
-                return self.itemCollectionItemTable.higherItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
-            })
+            let mutableView = MutableItemCollectionsView(postbox: self, orderedItemListsViews: itemListViews, namespaces: namespaces, aroundIndex: aroundIndex, count: count)
             
             let (index, signal) = self.viewTracker.addItemCollectionView(mutableView)
             

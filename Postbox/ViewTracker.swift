@@ -531,7 +531,7 @@ final class ViewTracker {
         }
         
         for (mutableView, pipe) in self.itemCollectionsViews.copyItems() {
-            if mutableView.replay(orderedItemListOperations: transaction.currentOrderedItemListOperations) {
+            if mutableView.replay(postbox: postbox, transaction: transaction) {
                 pipe.putNext(ItemCollectionsView(mutableView))
             }
         }

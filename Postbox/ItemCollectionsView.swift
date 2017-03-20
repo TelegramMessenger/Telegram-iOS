@@ -156,13 +156,85 @@ private func aroundEntries(namespaces: [ItemCollectionId.Namespace],
 final class MutableItemCollectionsView {
     let orderedItemListsViews: [MutableOrderedItemListView]
     let namespaces: [ItemCollectionId.Namespace]
+    let requestedAroundIndex: ItemCollectionViewEntryIndex?
+    let requestedCount: Int
     
     var collectionInfos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?)]
     var entries: [ItemCollectionViewEntry]
     var lower: ItemCollectionViewEntry?
     var higher: ItemCollectionViewEntry?
     
-    init(orderedItemListsViews: [MutableOrderedItemListView], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int, getInfos: (_ namespace: ItemCollectionId.Namespace) -> [(Int, ItemCollectionId, ItemCollectionInfo)], lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, lowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem], higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, higherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) {
+    init(postbox: Postbox, orderedItemListsViews: [MutableOrderedItemListView], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) {
+        self.orderedItemListsViews = orderedItemListsViews
+        self.namespaces = namespaces
+        self.requestedAroundIndex = aroundIndex
+        self.requestedCount = count
+        
+        self.collectionInfos = []
+        self.entries = []
+        self.lower = nil
+        self.higher = nil
+        
+        self.reload(postbox: postbox, aroundIndex: aroundIndex, count: count)
+    }
+    
+    private func lowerItems(postbox: Postbox, collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
+        return postbox.itemCollectionItemTable.lowerItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
+    }
+    
+    private func higherItems(postbox: Postbox, collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
+        return postbox.itemCollectionItemTable.higherItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
+    }
+    
+    private func lowerCollectionId(postbox: Postbox, namespaceList: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32) -> (ItemCollectionId, Int32)? {
+        return postbox.itemCollectionInfoTable.lowerCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
+    }
+    
+    private func higherCollectionId(postbox: Postbox, namespaceList: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32) -> (ItemCollectionId, Int32)? {
+        return postbox.itemCollectionInfoTable.higherCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
+    }
+    
+    private func reload(postbox: Postbox, aroundIndex: ItemCollectionViewEntryIndex?, count: Int) {
+        self.collectionInfos = []
+        for namespace in namespaces {
+            for (_, id, info) in postbox.itemCollectionInfoTable.getInfos(namespace: namespace) {
+                let item = self.higherItems(postbox: postbox, collectionId: id, itemIndex: ItemCollectionItemIndex.lowerBound, count: 1).first
+                self.collectionInfos.append((id, info, item))
+            }
+        }
+        
+        let selectedAroundIndex: ItemCollectionViewEntryIndex
+        if let aroundIndex = aroundIndex {
+            selectedAroundIndex = aroundIndex
+        } else {
+            selectedAroundIndex = ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: ItemCollectionId(namespace: namespaces[0], id: 0), itemIndex: ItemCollectionItemIndex.lowerBound)
+        }
+        
+        let (entries, lower, higher) = aroundEntries(namespaces: namespaces,
+                                                     collectionId: selectedAroundIndex.collectionId,
+                                                     collectionIndex: selectedAroundIndex.collectionIndex,
+                                                     itemIndex: selectedAroundIndex.itemIndex,
+                                                     count: count,
+                                                     lowerCollectionId: { namespaceList, collectionId, collectionIndex in
+                                                        return self.lowerCollectionId(postbox: postbox, namespaceList: namespaceList, collectionId: collectionId, collectionIndex: collectionIndex)
+        },
+                                                     fetchLowerItems: { collectionId, itemIndex, count in
+                                                        return self.lowerItems(postbox: postbox, collectionId: collectionId, itemIndex: itemIndex, count: count)
+        },
+                                                     higherCollectionId: { namespaceList, collectionId, collectionIndex in
+                                                        return self.higherCollectionId(postbox: postbox, namespaceList: namespaceList, collectionId: collectionId, collectionIndex: collectionIndex)
+        },
+                                                     fetchHigherItems: {
+                                                        collectionId, itemIndex, count in
+                                                        return self.higherItems(postbox: postbox, collectionId: collectionId, itemIndex: itemIndex, count: count)
+        })
+        
+        self.entries = entries
+        self.lower = lower
+        self.higher = higher
+    }
+    
+    /*init(orderedItemListsViews: [MutableOrderedItemListView], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int, getInfos: (_ namespace: ItemCollectionId.Namespace) -> [(Int, ItemCollectionId, ItemCollectionInfo)], lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, lowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem], higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, higherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) {
         self.orderedItemListsViews = orderedItemListsViews
         self.namespaces = namespaces
         
@@ -194,15 +266,52 @@ final class MutableItemCollectionsView {
         self.entries = entries
         self.lower = lower
         self.higher = higher
-    }
+    }*/
     
-    func replay(orderedItemListOperations: [Int32: [OrderedItemListOperation]]) -> Bool {
+    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         var updated = false
-        for view in self.orderedItemListsViews {
-            if view.replay(operations: orderedItemListOperations) {
-                updated = true
+        
+        if !transaction.currentOrderedItemListOperations.isEmpty {
+            for view in self.orderedItemListsViews {
+                if view.replay(operations: transaction.currentOrderedItemListOperations) {
+                    updated = true
+                }
             }
         }
+        
+        
+        var reloadNamespaces = Set<ItemCollectionId.Namespace>()
+        for operation in transaction.currentItemCollectionInfosOperations {
+            switch operation {
+                case let .replaceInfos(namespace):
+                    reloadNamespaces.insert(namespace)
+            }
+        }
+        
+        for (id, operations) in transaction.currentItemCollectionItemsOperations {
+            for operation in operations {
+                switch operation {
+                    case .replaceItems:
+                        reloadNamespaces.insert(id.namespace)
+                }
+            }
+        }
+        
+        var shouldReloadEntries = false
+        if !reloadNamespaces.isEmpty {
+            for namespace in self.namespaces {
+                if reloadNamespaces.contains(namespace) {
+                    shouldReloadEntries = true
+                    break
+                }
+            }
+        }
+        
+        if shouldReloadEntries {
+            self.reload(postbox: postbox, aroundIndex: self.requestedAroundIndex, count: self.requestedCount)
+            updated = true
+        }
+        
         return updated
     }
 }
