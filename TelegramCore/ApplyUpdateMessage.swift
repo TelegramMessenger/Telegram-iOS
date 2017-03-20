@@ -115,7 +115,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 }
             }
             
-            return StoreMessage(id: updatedId, globallyUniqueId: nil, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tagsForStoreMessage(media: media, textEntities: entitiesAttribute?.entities), forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+            return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tagsForStoreMessage(media: media, textEntities: entitiesAttribute?.entities), forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
         })
         if let updatedTimestamp = updatedTimestamp {
             modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)

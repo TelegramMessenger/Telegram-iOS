@@ -16,6 +16,7 @@ private enum AccountStateManagerOperation {
     case custom(Int32, Signal<Void, NoError>)
     case pollCompletion(Int32, [MessageId], [(Int32, ([MessageId]) -> Void)])
     case processEvents(Int32, AccountFinalStateEvents)
+    case replayAsynchronouslyBuiltFinalState(AccountFinalState, () -> Void)
 }
 
 #if os(macOS)
@@ -117,7 +118,7 @@ public final class AccountStateManager {
         self.queue.async {
             if let last = self.operations.last {
                 switch last {
-                    case .pollDifference, .processUpdateGroups, .custom, .pollCompletion, .processEvents:
+                    case .pollDifference, .processUpdateGroups, .custom, .pollCompletion, .processEvents, .replayAsynchronouslyBuiltFinalState:
                         self.operations.append(.collectUpdateGroups(groups, 0.0))
                     case let .collectUpdateGroups(currentGroups, timestamp):
                         if timestamp.isEqual(to: 0.0) {
@@ -131,6 +132,22 @@ public final class AccountStateManager {
                 self.operations.append(.collectUpdateGroups(groups, 0.0))
                 self.startFirstOperation()
             }
+        }
+    }
+    
+    func addReplayAsynchronouslyBuiltFinalState(_ finalState: AccountFinalState) -> Signal<Bool, NoError> {
+        return Signal { subscriber in
+            self.queue.async {
+                let begin = self.operations.isEmpty
+                self.operations.append(.replayAsynchronouslyBuiltFinalState(finalState, {
+                    subscriber.putNext(true)
+                    subscriber.putCompletion()
+                }))
+                if begin {
+                    self.startFirstOperation()
+                }
+            }
+            return EmptyDisposable
         }
     }
     
@@ -169,13 +186,17 @@ public final class AccountStateManager {
     private func replaceOperations(with operation: AccountStateManagerOperation) {
         var collectedMessageIds: [MessageId] = []
         var collectedPollCompletionSubscribers: [(Int32, ([MessageId]) -> Void)] = []
+        var collectedReplayAsynchronouslyBuiltFinalState: [(AccountFinalState, () -> Void)] = []
         
-        if !self.operations.isEmpty {
-            for operation in self.operations {
-                if case let .pollCompletion(_, messageIds, subscribers) = operation {
+        for operation in self.operations {
+            switch operation {
+                case let .pollCompletion(_, messageIds, subscribers):
                     collectedMessageIds.append(contentsOf: messageIds)
                     collectedPollCompletionSubscribers.append(contentsOf: subscribers)
-                }
+                case let .replayAsynchronouslyBuiltFinalState(finalState, completion):
+                    collectedReplayAsynchronouslyBuiltFinalState.append((finalState, completion))
+                default:
+                    break
             }
         }
         
@@ -184,6 +205,10 @@ public final class AccountStateManager {
         
         if !collectedPollCompletionSubscribers.isEmpty || !collectedMessageIds.isEmpty {
             self.operations.append(.pollCompletion(self.getNextId(), collectedMessageIds, collectedPollCompletionSubscribers))
+        }
+        
+        for (finalState, completion) in collectedReplayAsynchronouslyBuiltFinalState {
+            self.operations.append(.replayAsynchronouslyBuiltFinalState(finalState, completion))
         }
     }
     
@@ -477,6 +502,41 @@ public final class AccountStateManager {
                         completed()
                     })
                 }
+            case let .replayAsynchronouslyBuiltFinalState(finalState, completion):
+                if !finalState.state.preCachedResources.isEmpty {
+                    for (resource, data) in finalState.state.preCachedResources {
+                        self.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    }
+                }
+                
+                let accountPeerId = self.account.peerId
+                let mediaBox = self.account.postbox.mediaBox
+                let signal = self.account.postbox.modify { modifier -> AccountReplayedFinalState? in
+                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, finalState: finalState)
+                    }
+                    |> map({ ($0, finalState) })
+                    |> deliverOn(self.queue)
+                
+                let _ = signal.start(next: { [weak self] replayedState, finalState in
+                    if let strongSelf = self {
+                        if case .replayAsynchronouslyBuiltFinalState = strongSelf.operations.removeFirst() {
+                            if let replayedState = replayedState {
+                                let events = AccountFinalStateEvents(state: replayedState)
+                                if !events.isEmpty {
+                                    strongSelf.insertProcessEvents(events)
+                                }
+                            }
+                            strongSelf.startFirstOperation()
+                        } else {
+                            assertionFailure()
+                        }
+                        completion()
+                    }
+                }, error: { _ in
+                    assertionFailure()
+                    Logger.shared.log("AccountStateManager", "processUpdateGroups signal completed with error")
+                    completion()
+                })
         }
     }
     
