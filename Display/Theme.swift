@@ -1,9 +1,9 @@
 import Foundation
 
 public class Theme {
-    public let tintColor: UIColor
+    public let accentColor: UIColor
     
-    public init(tintColor: UIColor) {
-        self.tintColor = tintColor
+    public init(accentColor: UIColor) {
+        self.accentColor = accentColor
     }
 }

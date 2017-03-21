@@ -24,7 +24,7 @@ private func mappedSurface(_ surface: StatusBarSurface) -> MappedStatusBarSurfac
 private func optimizeMappedSurface(statusBarSize: CGSize, surface: MappedStatusBarSurface) -> MappedStatusBarSurface {
     if surface.statusBars.count > 1 {
         for i in 1 ..< surface.statusBars.count {
-            if surface.statusBars[i].style != surface.statusBars[i - 1].style || abs(surface.statusBars[i].frame.origin.y - surface.statusBars[i - 1].frame.origin.y) > CGFloat(FLT_EPSILON) {
+            if surface.statusBars[i].style != surface.statusBars[i - 1].style || abs(surface.statusBars[i].frame.origin.y - surface.statusBars[i - 1].frame.origin.y) > CGFloat.ulpOfOne {
                 return surface
             }
             if let lhsStatusBar = surface.statusBars[i - 1].statusBar, let rhsStatusBar = surface.statusBars[i].statusBar , !lhsStatusBar.alpha.isEqual(to: rhsStatusBar.alpha) {

@@ -177,7 +177,7 @@ static bool notyfyingShiftState = false;
         return controller;
     }
     
-    UIView *result = [self associatedObjectForKey:UIViewControllerPresentingProxyControllerKey];
+    UIViewController *result = [self associatedObjectForKey:UIViewControllerPresentingProxyControllerKey];
     if (result != nil) {
         return result;
     }

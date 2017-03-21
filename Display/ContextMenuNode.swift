@@ -27,7 +27,7 @@ final class ContextMenuNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.containerNode)
-        let dismissNode = { [weak self] in
+        let dismissNode = {
             dismiss()
         }
         for actionNode in self.actionNodes {

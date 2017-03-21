@@ -23,6 +23,7 @@ private struct WindowLayout: Equatable {
     public let size: CGSize
     public let statusBarHeight: CGFloat?
     public let inputHeight: CGFloat?
+    public let inputMinimized: Bool
 }
 
 private func ==(lhs: WindowLayout, rhs: WindowLayout) -> Bool {
@@ -54,6 +55,10 @@ private func ==(lhs: WindowLayout, rhs: WindowLayout) -> Bool {
         return false
     }
     
+    if lhs.inputMinimized != rhs.inputMinimized {
+        return false
+    }
+    
     return true
 }
 
@@ -76,19 +81,25 @@ private struct UpdatingLayout {
     mutating func update(size: CGSize, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
         self.update(transition: transition, override: overrideTransition)
         
-        self.layout = WindowLayout(size: size, statusBarHeight: self.layout.statusBarHeight, inputHeight: self.layout.inputHeight)
+        self.layout = WindowLayout(size: size, statusBarHeight: self.layout.statusBarHeight, inputHeight: self.layout.inputHeight, inputMinimized: self.layout.inputMinimized)
     }
     
     mutating func update(statusBarHeight: CGFloat?, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
         self.update(transition: transition, override: overrideTransition)
         
-        self.layout = WindowLayout(size: self.layout.size, statusBarHeight: statusBarHeight, inputHeight: self.layout.inputHeight)
+        self.layout = WindowLayout(size: self.layout.size, statusBarHeight: statusBarHeight, inputHeight: self.layout.inputHeight, inputMinimized: self.layout.inputMinimized)
     }
     
     mutating func update(inputHeight: CGFloat?, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
         self.update(transition: transition, override: overrideTransition)
         
-        self.layout = WindowLayout(size: self.layout.size, statusBarHeight: self.layout.statusBarHeight, inputHeight: inputHeight)
+        self.layout = WindowLayout(size: self.layout.size, statusBarHeight: self.layout.statusBarHeight, inputHeight: inputHeight, inputMinimized: self.layout.inputMinimized)
+    }
+    
+    mutating func update(inputMinimized: Bool, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
+        self.update(transition: transition, override: overrideTransition)
+        
+        self.layout = WindowLayout(size: self.layout.size, statusBarHeight: self.layout.statusBarHeight, inputHeight: self.layout.inputHeight, inputMinimized: inputMinimized)
     }
 }
 
@@ -96,12 +107,21 @@ private let orientationChangeDuration: Double = UIDevice.current.userInterfaceId
 private let statusBarHiddenInLandscape: Bool = UIDevice.current.userInterfaceIdiom == .phone
 
 private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> ContainerViewLayout {
-    return ContainerViewLayout(size: layout.size, intrinsicInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight)
+    var inputHeight: CGFloat? = layout.inputHeight
+    if let inputHeightValue = inputHeight, layout.inputMinimized {
+        inputHeight = floor(0.85 * inputHeightValue)
+    }
+    
+    return ContainerViewLayout(size: layout.size, intrinsicInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: inputHeight)
 }
 
 public class Window: UIWindow {
+    public static let statusBarTracingTag: Int32 = 0
+    public static let keyboardTracingTag: Int32 = 1
+    
     private let statusBarHost: StatusBarHost?
     private let statusBarManager: StatusBarManager?
+    private let keyboardManager: KeyboardManager?
     private var statusBarChangeObserver: AnyObject?
     private var keyboardFrameChangeObserver: AnyObject?
     
@@ -122,17 +142,35 @@ public class Window: UIWindow {
         if let statusBarHost = statusBarHost {
             self.statusBarManager = StatusBarManager(host: statusBarHost)
             statusBarHeight = statusBarHost.statusBarFrame.size.height
+            self.keyboardManager = KeyboardManager(host: statusBarHost)
         } else {
             self.statusBarManager = nil
+            self.keyboardManager = nil
             statusBarHeight = 20.0
         }
-        self.windowLayout = WindowLayout(size: frame.size, statusBarHeight: statusBarHeight, inputHeight: 0.0)
+        
+        let minimized: Bool
+        if let keyboardManager = self.keyboardManager {
+            minimized = keyboardManager.minimized
+        } else {
+            minimized = false
+        }
+        
+        self.windowLayout = WindowLayout(size: frame.size, statusBarHeight: statusBarHeight, inputHeight: 0.0, inputMinimized: minimized)
         self.presentationContext = PresentationContext()
         
         super.init(frame: frame)
         
         self.layer.setInvalidateTracingSublayers { [weak self] in
             self?.invalidateTracingStatusBars()
+        }
+        
+        self.keyboardManager?.minimizedUpdated = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.updateLayout { current in
+                    current.update(inputMinimized: strongSelf.keyboardManager!.minimized, transition: .immediate, overrideTransition: false)
+                }
+            }
         }
         
         self.presentationContext.view = self
@@ -170,7 +208,7 @@ public class Window: UIWindow {
                 if duration > DBL_EPSILON {
                     duration = 0.5
                 }
-                var curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
+                let curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
                 
                 let transitionCurve: ContainedViewLayoutTransitionCurve
                 if curve == 7 {
@@ -271,20 +309,19 @@ public class Window: UIWindow {
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        if self.tracingStatusBarsInvalidated, let statusBarManager = statusBarManager {
+        if self.tracingStatusBarsInvalidated, let statusBarManager = statusBarManager, let keyboardManager = keyboardManager {
             self.tracingStatusBarsInvalidated = false
             
             if self.statusBarHidden {
                 statusBarManager.surfaces = []
             } else {
                 var statusBarSurfaces: [StatusBarSurface] = []
-                for layers in self.layer.traceableLayerSurfaces() {
+                for layers in self.layer.traceableLayerSurfaces(withTag: Window.statusBarTracingTag) {
                     let surface = StatusBarSurface()
                     for layer in layers {
-                        if let weakInfo = layer.traceableInfo() as? NSWeakReference {
-                            if let statusBar = weakInfo.value as? StatusBar {
-                                surface.addStatusBar(statusBar)
-                            }
+                        let traceableInfo = layer.traceableInfo()
+                        if let statusBar = traceableInfo?.userData as? StatusBar {
+                            surface.addStatusBar(statusBar)
                         }
                     }
                     statusBarSurfaces.append(surface)
@@ -292,6 +329,16 @@ public class Window: UIWindow {
                 self.layer.adjustTraceableLayerTransforms(CGSize())
                 statusBarManager.surfaces = statusBarSurfaces
             }
+            
+            var keyboardSurfaces: [KeyboardSurface] = []
+            for layers in self.layer.traceableLayerSurfaces(withTag: Window.keyboardTracingTag) {
+                for layer in layers {
+                    if let view = layer.delegate as? UITracingLayerView {
+                        keyboardSurfaces.append(KeyboardSurface(host: view))
+                    }
+                }
+            }
+            keyboardManager.surfaces = keyboardSurfaces
         }
         
         if !Window.isDeviceRotating() {
@@ -331,7 +378,7 @@ public class Window: UIWindow {
         postUpdateToInterfaceOrientationBlocks.append(f)
     }
     
-    private func updateLayout(_ update: @noescape(inout UpdatingLayout) -> ()) {
+    private func updateLayout(_ update: (inout UpdatingLayout) -> ()) {
         if self.updatingLayout == nil {
             self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         }
@@ -349,7 +396,7 @@ public class Window: UIWindow {
                 } else {
                     statusBarHeight = 20.0
                 }
-                var statusBarWasHidden = self.statusBarHidden
+                let statusBarWasHidden = self.statusBarHidden
                 if statusBarHiddenInLandscape && updatingLayout.layout.size.width > updatingLayout.layout.size.height {
                     statusBarHeight = 0.0
                     self.statusBarHidden = true
@@ -360,7 +407,7 @@ public class Window: UIWindow {
                     self.tracingStatusBarsInvalidated = true
                     self.setNeedsLayout()
                 }
-                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, statusBarHeight: statusBarHeight, inputHeight: updatingLayout.layout.inputHeight)
+                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, statusBarHeight: statusBarHeight, inputHeight: updatingLayout.layout.inputHeight, inputMinimized: updatingLayout.layout.inputMinimized)
                 
                 self._rootController?.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)
                 self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)

@@ -48,6 +48,10 @@ public struct ContainerViewLayout: Equatable {
     public func addedInsets(insets: UIEdgeInsets) -> ContainerViewLayout {
         return ContainerViewLayout(size: self.size, intrinsicInsets: UIEdgeInsets(top: self.intrinsicInsets.top + insets.top, left: self.intrinsicInsets.left + insets.left, bottom: self.intrinsicInsets.bottom + insets.bottom, right: self.intrinsicInsets.right + insets.right), statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight)
     }
+    
+    public func withUpdatedInputHeight(_ inputHeight: CGFloat?) -> ContainerViewLayout {
+        return ContainerViewLayout(size: self.size, intrinsicInsets: self.intrinsicInsets, statusBarHeight: self.statusBarHeight, inputHeight: inputHeight)
+    }
 }
 
 public func ==(lhs: ContainerViewLayout, rhs: ContainerViewLayout) -> Bool {

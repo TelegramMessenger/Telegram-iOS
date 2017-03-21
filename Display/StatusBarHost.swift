@@ -6,5 +6,6 @@ public protocol StatusBarHost {
     var statusBarWindow: UIView? { get }
     var statusBarView: UIView? { get }
     
+    var keyboardWindow: UIWindow? { get }
     var keyboardView: UIView? { get }
 }

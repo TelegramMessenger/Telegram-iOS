@@ -408,7 +408,7 @@ open class ListViewItemNode: ASDisplayNode {
     public func modifyApparentHeightAnimation(_ value: CGFloat, beginAt: Double) {
         if let previousAnimation = self.animationForKey("apparentHeight") {
             var duration = previousAnimation.startTime + previousAnimation.duration - beginAt
-            if abs(self.apparentHeight - value) < CGFloat(FLT_EPSILON) {
+            if abs(self.apparentHeight - value) < CGFloat.ulpOfOne {
                 duration = 0.0
             }
             

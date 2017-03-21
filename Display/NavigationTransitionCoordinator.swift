@@ -204,7 +204,7 @@ class NavigationTransitionCoordinator {
             completion()
         }
         
-        if abs(velocity) < CGFloat(FLT_EPSILON) && abs(self.progress) < CGFloat(FLT_EPSILON) {
+        if abs(velocity) < CGFloat.ulpOfOne && abs(self.progress) < CGFloat.ulpOfOne {
             UIView.animate(withDuration: 0.5, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
                 self.progress = 1.0
             }, completion: { _ in

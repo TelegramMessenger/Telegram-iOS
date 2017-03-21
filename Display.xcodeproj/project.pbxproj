@@ -23,6 +23,7 @@
 		D02383861DE0E3B4004018B6 /* ListViewIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02383851DE0E3B4004018B6 /* ListViewIntermediateState.swift */; };
 		D02958001D6F096000360E5E /* ContextMenuContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */; };
 		D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */; };
+		D036574B1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D036574A1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift */; };
 		D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C01D6DF594007FC290 /* ContextMenuNode.swift */; };
 		D03725C31D6DF7A6007FC290 /* ContextMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */; };
 		D03725C51D6DF8B9007FC290 /* ContextMenuController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C41D6DF8B9007FC290 /* ContextMenuController.swift */; };
@@ -116,6 +117,7 @@
 		D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E49C871B83A3580099E553 /* ImageCache.swift */; };
 		D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */; };
 		D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */; };
+		D0FF9B301E7196F6000C66DB /* KeyboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FF9B2F1E7196F6000C66DB /* KeyboardManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -145,6 +147,7 @@
 		D02383851DE0E3B4004018B6 /* ListViewIntermediateState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewIntermediateState.swift; sourceTree = "<group>"; };
 		D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuContainerNode.swift; sourceTree = "<group>"; };
 		D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RuntimeUtils.swift; sourceTree = "<group>"; };
+		D036574A1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MinimizeKeyboardGestureRecognizer.swift; sourceTree = "<group>"; };
 		D03725C01D6DF594007FC290 /* ContextMenuNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuNode.swift; sourceTree = "<group>"; };
 		D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuAction.swift; sourceTree = "<group>"; };
 		D03725C41D6DF8B9007FC290 /* ContextMenuController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuController.swift; sourceTree = "<group>"; };
@@ -242,6 +245,7 @@
 		D0E49C871B83A3580099E553 /* ImageCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuActionNode.swift; sourceTree = "<group>"; };
 		D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewItemHeader.swift; sourceTree = "<group>"; };
+		D0FF9B2F1E7196F6000C66DB /* KeyboardManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyboardManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -397,6 +401,7 @@
 				D03BCCE91C72AE4B0097A291 /* Theme */,
 				D05CC3001B6955D500E235A3 /* Utils */,
 				D07921AA1B6FC911005C23D9 /* Status Bar */,
+				D0FF9B2E1E7196E2000C66DB /* Keyboard */,
 				D05CC3211B695AA600E235A3 /* Navigation */,
 				D0DC48521BF93D7C00F672FD /* Tabs */,
 				D02BDAEC1B6A7053008AFAD2 /* Nodes */,
@@ -582,6 +587,15 @@
 				D0E49C871B83A3580099E553 /* ImageCache.swift */,
 			);
 			name = "Image Cache";
+			sourceTree = "<group>";
+		};
+		D0FF9B2E1E7196E2000C66DB /* Keyboard */ = {
+			isa = PBXGroup;
+			children = (
+				D0FF9B2F1E7196F6000C66DB /* KeyboardManager.swift */,
+				D036574A1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift */,
+			);
+			name = Keyboard;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -770,6 +784,7 @@
 				D0DA44521E4DCC11005FDCA7 /* TextAlertController.swift in Sources */,
 				D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */,
 				D0C2DFC71CC4431D0044FF83 /* ListViewItemNode.swift in Sources */,
+				D0FF9B301E7196F6000C66DB /* KeyboardManager.swift in Sources */,
 				D01E2BE21D9049F60066BF65 /* GridItemNode.swift in Sources */,
 				D08E903A1D24159200533158 /* ActionSheetItem.swift in Sources */,
 				D0AE2CA61C94548900F2FD3C /* GenerateImage.swift in Sources */,
@@ -784,6 +799,7 @@
 				D05BE4AE1D217F6B002BD72C /* MergedLayoutEvents.swift in Sources */,
 				D0C0D2901C997110001D2851 /* FBAnimationPerformanceTracker.mm in Sources */,
 				D015F7521D1AE08D00E269B5 /* ContainableController.swift in Sources */,
+				D036574B1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift in Sources */,
 				D05CC2FE1B6955D000E235A3 /* UIWindow+OrientationChange.m in Sources */,
 				D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */,
 				D08E903E1D24187900533158 /* ActionSheetItemGroup.swift in Sources */,

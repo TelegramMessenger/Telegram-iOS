@@ -40,7 +40,7 @@ public class StatusBar: ASDisplayNode {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.layer.setTraceableInfo(NSWeakReference(value: self))
+        self.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: Window.statusBarTracingTag))
         
         self.clipsToBounds = true
         self.isUserInteractionEnabled = false

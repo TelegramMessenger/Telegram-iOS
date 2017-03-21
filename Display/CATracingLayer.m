@@ -4,7 +4,8 @@
 
 static void *CATracingLayerInvalidatedKey = &CATracingLayerInvalidatedKey;
 static void *CATracingLayerIsInvalidatedBlock = &CATracingLayerIsInvalidatedBlock;
-static void *CATracingLayerTraceablInfoKey = &CATracingLayerTraceablInfoKey;
+static void *CATracingLayerTraceableInfoKey = &CATracingLayerTraceableInfoKey;
+static void *CATracingLayerPositionAnimationMirrorTarget = &CATracingLayerPositionAnimationMirrorTarget;
 
 @implementation CALayer (Tracing)
 
@@ -17,25 +18,30 @@ static void *CATracingLayerTraceablInfoKey = &CATracingLayerTraceablInfoKey;
 }
 
 - (bool)isTraceable {
-    return [self associatedObjectForKey:CATracingLayerTraceablInfoKey] != nil || [self isKindOfClass:[CATracingLayer class]];
+    return [self associatedObjectForKey:CATracingLayerTraceableInfoKey] != nil || [self isKindOfClass:[CATracingLayer class]];
 }
 
-- (id _Nullable)traceableInfo {
-    return [self associatedObjectForKey:CATracingLayerTraceablInfoKey];
+- (CATracingLayerInfo * _Nullable)traceableInfo {
+    return [self associatedObjectForKey:CATracingLayerTraceableInfoKey];
 }
 
-- (void)setTraceableInfo:(id _Nullable)info {
-    [self setAssociatedObject:info forKey:CATracingLayerTraceablInfoKey];
+- (void)setTraceableInfo:(CATracingLayerInfo * _Nullable)info {
+    [self setAssociatedObject:info forKey:CATracingLayerTraceableInfoKey];
 }
 
 - (bool)hasPositionOrOpacityAnimations {
     return [self animationForKey:@"position"] != nil || [self animationForKey:@"bounds"] != nil || [self animationForKey:@"sublayerTransform"] != nil || [self animationForKey:@"opacity"] != nil;
 }
 
-static void traceLayerSurfaces(int depth, CALayer * _Nonnull layer, NSMutableDictionary<NSNumber *, NSMutableArray<CALayer *> *> *layersByDepth) {
+- (bool)hasPositionAnimations {
+    return [self animationForKey:@"position"] != nil || [self animationForKey:@"bounds"] != nil;
+}
+
+static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull layer, NSMutableDictionary<NSNumber *, NSMutableArray<CALayer *> *> *layersByDepth) {
     bool hadTraceableSublayers = false;
     for (CALayer *sublayer in layer.sublayers.reverseObjectEnumerator) {
-        if ([sublayer traceableInfo] != nil) {
+        CATracingLayerInfo *sublayerTraceableInfo = [sublayer traceableInfo];
+        if (sublayerTraceableInfo != nil && sublayerTraceableInfo.tracingTag == tracingTag) {
             NSMutableArray *array = layersByDepth[@(depth)];
             if (array == nil) {
                 array = [[NSMutableArray alloc] init];
@@ -49,16 +55,16 @@ static void traceLayerSurfaces(int depth, CALayer * _Nonnull layer, NSMutableDic
     if (!hadTraceableSublayers) {
         for (CALayer *sublayer in layer.sublayers.reverseObjectEnumerator) {
             if ([sublayer isKindOfClass:[CATracingLayer class]]) {
-                traceLayerSurfaces(depth + 1, sublayer, layersByDepth);
+                traceLayerSurfaces(tracingTag, depth + 1, sublayer, layersByDepth);
             }
         }
     }
 }
 
-- (NSArray<NSArray<CALayer *> *> *)traceableLayerSurfaces {
+- (NSArray<NSArray<CALayer *> *> * _Nonnull)traceableLayerSurfacesWithTag:(int32_t)tracingTag {
     NSMutableDictionary<NSNumber *, NSMutableArray<CALayer *> *> *layersByDepth = [[NSMutableDictionary alloc] init];
     
-    traceLayerSurfaces(0, self, layersByDepth);
+    traceLayerSurfaces(tracingTag, 0, self, layersByDepth);
     
     NSMutableArray<NSMutableArray<CALayer *> *> *result = [[NSMutableArray alloc] init];
     
@@ -73,12 +79,21 @@ static void traceLayerSurfaces(int depth, CALayer * _Nonnull layer, NSMutableDic
     CGRect frame = self.frame;
     CGSize sublayerOffset = CGSizeMake(frame.origin.x + offset.width, frame.origin.y + offset.height);
     for (CALayer *sublayer in self.sublayers) {
-        if ([sublayer traceableInfo] != nil) {
+        CATracingLayerInfo *sublayerTraceableInfo = [sublayer traceableInfo];
+        if (sublayerTraceableInfo != nil && sublayerTraceableInfo.shouldBeAdjustedToInverseTransform) {
             sublayer.sublayerTransform = CATransform3DMakeTranslation(-sublayerOffset.width, -sublayerOffset.height, 0.0f);
         } else if ([sublayer isKindOfClass:[CATracingLayer class]]) {
             [(CATracingLayer *)sublayer adjustTraceableLayerTransforms:sublayerOffset];
         }
     }
+}
+
+- (CALayer * _Nullable)animationMirrorTarget {
+    return [self associatedObjectForKey:CATracingLayerPositionAnimationMirrorTarget];
+}
+
+- (void)setPositionAnimationMirrorTarget:(CALayer * _Nullable)animationMirrorTarget {
+    [self setAssociatedObject:animationMirrorTarget forKey:CATracingLayerPositionAnimationMirrorTarget associationPolicy:NSObjectAssociationPolicyRetain];
 }
 
 - (void)invalidateUpTheTree {
@@ -235,9 +250,21 @@ static void traceLayerSurfaces(int depth, CALayer * _Nonnull layer, NSMutableDic
             
             [super addAnimation:anim forKey:key];
             
+            CABasicAnimation *positionAnimCopy = [animCopy copy];
+            positionAnimCopy.fromValue = [NSValue valueWithCATransform3D:CATransform3DMakeTranslation(-to.x + from.x, 0.0, 0.0f)];
+            positionAnimCopy.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+            positionAnimCopy.additive = true;
+            positionAnimCopy.delegate = [[CATracingLayerAnimationDelegate alloc] initWithDelegate:anim.delegate animationStopped:^{
+                __strong CATracingLayer *strongSelf = weakSelf;
+                if (strongSelf != nil) {
+                    [strongSelf invalidateUpTheTree];
+                }
+            }];
+            
             [self invalidateUpTheTree];
             
             [self mirrorAnimationDownTheTree:animCopy key:@"sublayerTransform"];
+            [self mirrorPositionAnimationDownTheTree:positionAnimCopy key:@"sublayerTransform"];
         } else if ([key isEqualToString:@"opacity"]) {
             __weak CATracingLayer *weakSelf = self;
             anim.delegate = [[CATracingLayerAnimationDelegate alloc] initWithDelegate:anim.delegate animationStopped:^{
@@ -258,14 +285,42 @@ static void traceLayerSurfaces(int depth, CALayer * _Nonnull layer, NSMutableDic
     }
 }
 
+- (void)mirrorPositionAnimationDownTheTree:(CAAnimation *)animation key:(NSString *)key {
+    if ([animation isKindOfClass:[CABasicAnimation class]]) {
+        if ([((CABasicAnimation *)animation).keyPath isEqualToString:@"sublayerTransform"]) {
+            CALayer *positionAnimationMirrorTarget = [self animationMirrorTarget];
+            if (positionAnimationMirrorTarget != nil) {
+                [positionAnimationMirrorTarget addAnimation:[animation copy] forKey:key];
+            }
+        }
+    }
+}
+
 - (void)mirrorAnimationDownTheTree:(CAAnimation *)animation key:(NSString *)key {
     for (CALayer *sublayer in self.sublayers) {
-        if ([sublayer traceableInfo] != nil) {
+        CATracingLayerInfo *traceableInfo = [sublayer traceableInfo];
+        if (traceableInfo != nil && traceableInfo.shouldBeAdjustedToInverseTransform) {
             [sublayer addAnimation:[animation copy] forKey:key];
-        } else if ([sublayer isKindOfClass:[CATracingLayer class]]) {
+        }
+        
+        if ([sublayer isKindOfClass:[CATracingLayer class]]) {
             [(CATracingLayer *)sublayer mirrorAnimationDownTheTree:animation key:key];
         }
     }
+}
+
+@end
+
+@implementation CATracingLayerInfo
+
+- (instancetype _Nonnull)initWithShouldBeAdjustedToInverseTransform:(bool)shouldBeAdjustedToInverseTransform userData:(id _Nullable)userData tracingTag:(int32_t)tracingTag {
+    self = [super init];
+    if (self != nil) {
+        _shouldBeAdjustedToInverseTransform = shouldBeAdjustedToInverseTransform;
+        _userData = userData;
+        _tracingTag = tracingTag;
+    }
+    return self;
 }
 
 @end

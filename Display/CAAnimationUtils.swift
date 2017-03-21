@@ -207,8 +207,8 @@ public extension CALayer {
         self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
-    public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut) {
-        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: timingFunction, duration: duration, additive: true)
+    public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
     }
     
     public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, mediaTimingFunction: CAMediaTimingFunction) {
@@ -250,5 +250,14 @@ public extension CALayer {
             completedBounds = true
             partialCompletion()
         })
+    }
+    
+    public func cancelAnimationsRecursive(key: String) {
+        self.removeAnimation(forKey: key)
+        if let sublayers = self.sublayers {
+            for layer in sublayers {
+                layer.cancelAnimationsRecursive(key: key)
+            }
+        }
     }
 }

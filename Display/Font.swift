@@ -16,7 +16,7 @@ public struct Font {
     
     public static func bold(_ size: CGFloat) -> UIFont {
         if #available(iOS 8.2, *) {
-            return UIFont.systemFont(ofSize: size, weight: UIFontWeightBold)
+            return UIFont.boldSystemFont(ofSize: size)
         } else {
             return CTFontCreateWithName("HelveticaNeue-Bold" as CFString, size, nil)
         }

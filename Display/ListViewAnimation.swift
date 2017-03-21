@@ -133,10 +133,10 @@ public final class ListViewAnimation {
     public func applyAt(_ timestamp: Double) {
         var t = CGFloat((timestamp - self.startTime) / self.duration)
         let ct: CGFloat
-        if t <= 0.0 + CGFloat(FLT_EPSILON) {
+        if t <= 0.0 + CGFloat.ulpOfOne {
             t = 0.0
             ct = 0.0
-        } else if t >= 1.0 - CGFloat(FLT_EPSILON) {
+        } else if t >= 1.0 - CGFloat.ulpOfOne {
             t = 1.0
             ct = 1.0
         } else {

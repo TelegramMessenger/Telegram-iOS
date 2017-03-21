@@ -45,7 +45,7 @@ open class AlertController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, transition: transition)
     }
     
-    public func dismiss() {
+    override open func dismiss() {
         self.presentingViewController?.dismiss(animated: false, completion: nil)
     }
     

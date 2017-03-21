@@ -118,6 +118,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     public final var stackFromBottomInsetItemFactor: CGFloat = 0.0
     public final var limitHitTestToNodes: Bool = false
     public final var keepBottomItemOverscrollBackground: Bool = false
+    public final var snapToBottomInsetUntilFirstInteraction: Bool = false
     
     private var bottomItemOverscrollBackground: ASDisplayNode?
     
@@ -358,6 +359,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.lastContentOffsetTimestamp = 0.0
         self.resetHeaderItemsFlashTimer(start: false)
         self.updateHeaderItemsFlashing(animated: true)
+        
+        if self.snapToBottomInsetUntilFirstInteraction {
+            self.snapToBottomInsetUntilFirstInteraction = false
+        }
         
         /*if usePerformanceTracker {
             self.performanceTracker.start()
@@ -640,7 +645,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         
-        if abs(offset) > CGFloat(FLT_EPSILON) {
+        if abs(offset) > CGFloat.ulpOfOne {
             for itemNode in self.itemNodes {
                 var frame = itemNode.frame
                 frame.origin.y += offset
@@ -914,7 +919,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         let widthUpdated: Bool
         if let updateSizeAndInsets = updateSizeAndInsets {
-            widthUpdated = abs(state.visibleSize.width - updateSizeAndInsets.size.width) > CGFloat(FLT_EPSILON)
+            widthUpdated = abs(state.visibleSize.width - updateSizeAndInsets.size.width) > CGFloat.ulpOfOne
             
             state.visibleSize = updateSizeAndInsets.size
             state.insets = updateSizeAndInsets.insets
@@ -1142,9 +1147,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             if options.contains(.PreferSynchronousResourceLoading) {
                                 var currentReadySignals: [Signal<Void, NoError>] = []
                                 for i in 0 ..< updatedOperations.count {
-                                    if case let .InsertNode(index, offsetDirection, node, layout, apply) = updatedOperations[i] {
+                                    if case let .InsertNode(index, offsetDirection, nodeAnimated, node, layout, apply) = updatedOperations[i] {
                                         let (ready, commitApply) = apply()
-                                        updatedOperations[i] = .InsertNode(index: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: {
+                                        updatedOperations[i] = .InsertNode(index: index, offsetDirection: offsetDirection, animated: nodeAnimated, node: node, layout: layout, apply: {
                                             return (nil, commitApply)
                                         })
                                         if let ready = ready {
@@ -1409,7 +1414,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             let nextNode = self.itemNodes[nodeIndex + 1]
             if nextNode.index == nil {
                 let nextHeight = nextNode.apparentHeight
-                if abs(nextHeight - previousApparentHeight) < CGFloat(FLT_EPSILON) {
+                if abs(nextHeight - previousApparentHeight) < CGFloat.ulpOfOne {
                     if let animation = nextNode.animationForKey("apparentHeight") {
                         node.apparentHeight = previousApparentHeight
                         
@@ -1424,7 +1429,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         
                         takenAnimation = true
                         
-                        if abs(layout.size.height - previousApparentHeight) > CGFloat(FLT_EPSILON) {
+                        if abs(layout.size.height - previousApparentHeight) > CGFloat.ulpOfOne {
                             node.addApparentHeightAnimation(layout.size.height, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
                                 if let node = node {
                                     node.animateFrameTransition(progress, currentValue)
@@ -1490,7 +1495,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         
-        if node.apparentHeight > CGFloat(FLT_EPSILON) {
+        if node.apparentHeight > CGFloat.ulpOfOne {
             switch offsetDirection {
             case .Up:
                 var i = nodeIndex - 1
@@ -1587,7 +1592,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         var takenPreviousNodes = Set<ListViewItemNode>()
         for operation in operations {
-            if case let .InsertNode(_, _, node, _, _) = operation {
+            if case let .InsertNode(_, _, _, node, _, _) = operation {
                 takenPreviousNodes.insert(node)
             }
         }
@@ -1596,7 +1601,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         for operation in operations {
             switch operation {
-                case let .InsertNode(index, offsetDirection, node, layout, apply):
+                case let .InsertNode(index, offsetDirection, nodeAnimated, node, layout, apply):
                     var previousFrame: CGRect?
                     for (previousNode, frame) in previousApparentFrames {
                         if previousNode === node {
@@ -1613,8 +1618,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         updatedPreviousFrame = nil
                     }
                     
-                    self.insertNodeAtIndex(animated: animated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp)
-                    if let updatedPreviousFrame = updatedPreviousFrame {
+                    self.insertNodeAtIndex(animated: nodeAnimated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp)
+                    if let _ = updatedPreviousFrame {
                         if let lowestHeaderNode = lowestHeaderNode {
                             self.insertSubnode(node, belowSubnode: lowestHeaderNode)
                         } else {
@@ -1706,7 +1711,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             node.addInsetsAnimationToValue(updatedInsets, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                         }
                         
-                        if abs(updatedApparentHeight - previousApparentHeight) > CGFloat(FLT_EPSILON) {
+                        if abs(updatedApparentHeight - previousApparentHeight) > CGFloat.ulpOfOne {
                             node.apparentHeight = previousApparentHeight
                             node.animateFrameTransition(0.0, previousApparentHeight)
                             node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
@@ -1779,7 +1784,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             offset = self.insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top
                         case let .Center(overflow):
                             let contentAreaHeight = self.visibleSize.height - self.insets.bottom - self.insets.top
-                            if itemNode.apparentFrame.size.height <= contentAreaHeight + CGFloat(FLT_EPSILON) {
+                            if itemNode.apparentFrame.size.height <= contentAreaHeight + CGFloat.ulpOfOne {
                                 offset = self.insets.top + floor(((self.visibleSize.height - self.insets.bottom - self.insets.top) - itemNode.frame.size.height) / 2.0) - itemNode.apparentFrame.minY
                             } else {
                                 switch overflow {
@@ -1807,7 +1812,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         if previousNode === itemNode {
                             let offset = previousFrame.minY - itemNode.frame.minY
                             
-                            if abs(offset) > CGFloat(FLT_EPSILON) {
+                            if abs(offset) > CGFloat.ulpOfOne {
                                 for itemNode in self.itemNodes {
                                     var frame = itemNode.frame
                                     frame.origin.y += offset
@@ -1835,7 +1840,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     let previousVisibleSize = self.visibleSize
                     self.visibleSize = updateSizeAndInsets.size
                     
-                    var offsetFix = updateSizeAndInsets.insets.top - self.insets.top
+                    var offsetFix: CGFloat
+                    if self.snapToBottomInsetUntilFirstInteraction {
+                        offsetFix = -updateSizeAndInsets.insets.bottom + self.insets.bottom
+                    } else {
+                        offsetFix = updateSizeAndInsets.insets.top - self.insets.top
+                    }
                     
                     self.insets = updateSizeAndInsets.insets
                     self.visibleSize = updateSizeAndInsets.size
@@ -2025,7 +2035,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     
                     self.updateItemHeaders(headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
                     
-                    if let offset = offset , abs(offset) > CGFloat(FLT_EPSILON) {
+                    if let offset = offset , abs(offset) > CGFloat.ulpOfOne {
                         let lowestHeaderNode = self.lowestHeaderNode()
                         for itemNode in temporaryPreviousNodes {
                             itemNode.frame = itemNode.frame.offsetBy(dx: 0.0, dy: offset)
@@ -2144,7 +2154,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         if self.debugInfo {
             var previousMaxY: CGFloat?
             for node in self.itemNodes {
-                if let previousMaxY = previousMaxY , abs(previousMaxY - node.apparentFrame.minY) > CGFloat(FLT_EPSILON) {
+                if let previousMaxY = previousMaxY , abs(previousMaxY - node.apparentFrame.minY) > CGFloat.ulpOfOne {
                     print("monotonity violated")
                     break
                 }
@@ -2454,7 +2464,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         var i = 0
         while i < self.itemNodes.count {
             let node = self.itemNodes[i]
-            if node.index == nil && node.apparentHeight <= CGFloat(FLT_EPSILON) {
+            if node.index == nil && node.apparentHeight <= CGFloat.ulpOfOne {
                 self.removeItemNodeAtIndex(i)
                 ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: node)
             } else {
@@ -2590,15 +2600,15 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
             let updatedApparentHeight = itemNode.apparentHeight
             let apparentHeightDelta = updatedApparentHeight - previousApparentHeight
-            if abs(apparentHeightDelta) > CGFloat(FLT_EPSILON) {
-                if itemNode.apparentFrame.maxY < self.insets.top + CGFloat(FLT_EPSILON) {
+            if abs(apparentHeightDelta) > CGFloat.ulpOfOne {
+                if itemNode.apparentFrame.maxY < self.insets.top + CGFloat.ulpOfOne {
                     offsetRanges.offset(IndexRange(first: 0, last: index), offset: -apparentHeightDelta)
                 } else {
                     offsetRanges.offset(IndexRange(first: index + 1, last: Int.max), offset: apparentHeightDelta)
                 }
             }
             
-            if itemNode.index == nil && updatedApparentHeight <= CGFloat(FLT_EPSILON) {
+            if itemNode.index == nil && updatedApparentHeight <= CGFloat.ulpOfOne {
                 requestUpdateVisibleItems = true
             }
             

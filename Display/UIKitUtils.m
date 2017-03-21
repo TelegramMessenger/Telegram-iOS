@@ -53,8 +53,8 @@ CABasicAnimation * _Nonnull makeSpringBounceAnimation(NSString * _Nonnull keyPat
     });
     if (canSetInitialVelocity) {
         springAnimation.initialVelocity = initialVelocity;
+        springAnimation.duration = springAnimation.settlingDuration;
     }
-    springAnimation.duration = springAnimation.settlingDuration;
     springAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
     return springAnimation;
 }

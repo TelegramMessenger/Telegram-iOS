@@ -114,6 +114,25 @@ public func generateFilledCircleImage(diameter: CGFloat, color: UIColor?, backgr
     })
 }
 
+public func generateCircleImage(diameter: CGFloat, lineWidth: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+        }
+        
+        if let color = color {
+            context.setStrokeColor(color.cgColor)
+        } else {
+            context.setStrokeColor(UIColor.clear.cgColor)
+            context.setBlendMode(.copy)
+        }
+        context.setLineWidth(lineWidth)
+        context.strokeEllipse(in: CGRect(origin: CGPoint(x: lineWidth / 2.0, y: lineWidth / 2.0), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
+    })
+}
+
 public func generateStretchableFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
     let intRadius = Int(radius)
     let cap = intRadius == 1 ? 2 : intRadius
@@ -283,7 +302,7 @@ public class DrawingContext {
     }
     
     public func blt(_ other: DrawingContext, at: CGPoint, mode: DrawingContextBltMode = .Alpha) {
-        if abs(other.scale - self.scale) < CGFloat(FLT_EPSILON) {
+        if abs(other.scale - self.scale) < CGFloat.ulpOfOne {
             let srcX = 0
             var srcY = 0
             let dstX = Int(at.x * self.scale)

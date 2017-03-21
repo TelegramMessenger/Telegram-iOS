@@ -168,6 +168,9 @@ open class ViewControllerPresentationArguments {
     }
     
     open func displayNodeDidLoad() {
+        if let layer = self.displayNode.layer as? CATracingLayer {
+            layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: false, userData: self.displayNode.layer, tracingTag: Window.keyboardTracingTag))
+        }
         self.updateScrollToTopView()
     }
     
@@ -242,5 +245,8 @@ open class ViewControllerPresentationArguments {
         self.activeInputView = nil
         
         super.viewDidAppear(animated)
+    }
+    
+    open func dismiss() {
     }
 }

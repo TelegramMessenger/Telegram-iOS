@@ -4,6 +4,16 @@
 
 @end
 
+@interface CATracingLayerInfo : NSObject
+
+@property (nonatomic, readonly) bool shouldBeAdjustedToInverseTransform;
+@property (nonatomic, weak, readonly) id _Nullable userData;
+@property (nonatomic, readonly) int32_t tracingTag;
+
+- (instancetype _Nonnull)initWithShouldBeAdjustedToInverseTransform:(bool)shouldBeAdjustedToInverseTransform userData:(id _Nullable)userData tracingTag:(int32_t)tracingTag;
+
+@end
+
 @interface UITracingLayerView : UIView
 
 - (void)scheduleWithLayout:(void (^_Nonnull)())block;
@@ -12,14 +22,17 @@
 
 @interface CALayer (Tracing)
 
-- (id _Nullable)traceableInfo;
-- (void)setTraceableInfo:(id _Nullable)info;
+- (CATracingLayerInfo * _Nullable)traceableInfo;
+- (void)setTraceableInfo:(CATracingLayerInfo * _Nullable)info;
 
 - (bool)hasPositionOrOpacityAnimations;
+- (bool)hasPositionAnimations;
 
 - (void)setInvalidateTracingSublayers:(void (^_Nullable)())block;
-- (NSArray<NSArray<CALayer *> *> * _Nonnull)traceableLayerSurfaces;
+- (NSArray<NSArray<CALayer *> *> * _Nonnull)traceableLayerSurfacesWithTag:(int32_t)tracingTag;
 - (void)adjustTraceableLayerTransforms:(CGSize)offset;
+
+- (void)setPositionAnimationMirrorTarget:(CALayer * _Nullable)animationMirrorTarget;
 
 - (void)invalidateUpTheTree;
 

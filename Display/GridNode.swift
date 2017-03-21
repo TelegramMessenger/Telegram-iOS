@@ -35,13 +35,15 @@ public struct GridNodeScrollToItem {
     public let transition: ContainedViewLayoutTransition
     public let directionHint: GridNodePreviousItemsTransitionDirectionHint
     public let adjustForSection: Bool
+    public let adjustForTopInset: Bool
     
-    public init(index: Int, position: GridNodeScrollToItemPosition, transition: ContainedViewLayoutTransition, directionHint: GridNodePreviousItemsTransitionDirectionHint, adjustForSection: Bool) {
+    public init(index: Int, position: GridNodeScrollToItemPosition, transition: ContainedViewLayoutTransition, directionHint: GridNodePreviousItemsTransitionDirectionHint, adjustForSection: Bool, adjustForTopInset: Bool = false) {
         self.index = index
         self.position = position
         self.transition = transition
         self.directionHint = directionHint
         self.adjustForSection = adjustForSection
+        self.adjustForTopInset = adjustForTopInset
     }
 }
 
@@ -156,6 +158,12 @@ private struct GridNodePresentationLayoutTransition {
     let transition: ContainedViewLayoutTransition
 }
 
+public struct GridNodeCurrentPresentationLayout {
+    public let layout: GridNodeLayout
+    public let contentOffset: CGPoint
+    public let contentSize: CGSize
+}
+
 private final class GridNodeItemLayout {
     let contentSize: CGSize
     let items: [GridNodePresentationItem]
@@ -225,6 +233,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     private var applyingContentOffset = false
     
     public var visibleItemsUpdated: ((GridNodeVisibleItems) -> Void)?
+    public var presentationLayoutUpdated: ((GridNodeCurrentPresentationLayout, ContainedViewLayoutTransition) -> Void)?
     
     public override init() {
         super.init()
@@ -241,6 +250,9 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public func transaction(_ transaction: GridNodeTransaction, completion: (GridNodeDisplayedItemRange) -> Void) {
         if transaction.deleteItems.isEmpty && transaction.insertItems.isEmpty && transaction.scrollToItem == nil && transaction.updateItems.isEmpty && (transaction.updateLayout == nil || transaction.updateLayout!.layout == self.gridLayout && (transaction.updateFirstIndexInSectionOffset == nil || transaction.updateFirstIndexInSectionOffset == self.firstIndexInSectionOffset)) {
+            if let presentationLayoutUpdated = self.presentationLayoutUpdated {
+                presentationLayoutUpdated(GridNodeCurrentPresentationLayout(layout: self.gridLayout, contentOffset: self.scrollView.contentOffset, contentSize: self.itemLayout.contentSize), .immediate)
+            }
             completion(self.displayedItemRange())
             return
         }
@@ -249,7 +261,9 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             self.firstIndexInSectionOffset = updateFirstIndexInSectionOffset
         }
         
+        var layoutTransactionOffset: CGFloat = 0.0
         if let updateLayout = transaction.updateLayout {
+            layoutTransactionOffset += updateLayout.layout.insets.top - self.gridLayout.insets.top
             self.gridLayout = updateLayout.layout
         }
         
@@ -316,7 +330,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             self.itemNodes = remappedInsertionItemNodes
         }
         
-        var previousLayoutWasEmpty = self.itemLayout.items.isEmpty
+        let previousLayoutWasEmpty = self.itemLayout.items.isEmpty
         
         self.itemLayout = self.generateItemLayout()
         
@@ -324,19 +338,19 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         if let scrollToItem = transaction.scrollToItem {
             generatedScrollToItem = scrollToItem
         } else if previousLayoutWasEmpty {
-            generatedScrollToItem = GridNodeScrollToItem(index: 0, position: .top, transition: .immediate, directionHint: .up, adjustForSection: true)
+            generatedScrollToItem = GridNodeScrollToItem(index: 0, position: .top, transition: .immediate, directionHint: .up, adjustForSection: true, adjustForTopInset: true)
         } else {
             generatedScrollToItem = nil
         }
         
-        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, scrollToItem: generatedScrollToItem), removedNodes: removedNodes)
+        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: transaction.updateLayout?.transition)
         
         completion(self.displayedItemRange())
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.applyingContentOffset {
-            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(), removedNodes: [])
+            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil)
         }
     }
     
@@ -427,7 +441,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
-    private func generatePresentationLayoutTransition(stationaryItems: GridNodeStationaryItems = .none, scrollToItem: GridNodeScrollToItem? = nil) -> GridNodePresentationLayoutTransition {
+    private func generatePresentationLayoutTransition(stationaryItems: GridNodeStationaryItems = .none, layoutTransactionOffset: CGFloat, scrollToItem: GridNodeScrollToItem? = nil) -> GridNodePresentationLayoutTransition {
         if CGFloat(0.0).isLess(than: gridLayout.size.width) && CGFloat(0.0).isLess(than: gridLayout.size.height) && !self.itemLayout.items.isEmpty {
             var transitionDirectionHint: GridNodePreviousItemsTransitionDirectionHint = .up
             var transition: ContainedViewLayoutTransition = .immediate
@@ -438,7 +452,9 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         let itemFrame = self.itemLayout.items[scrollToItem.index]
                         
                         var additionalOffset: CGFloat = 0.0
-                        if scrollToItem.adjustForSection {
+                        if scrollToItem.adjustForTopInset {
+                            additionalOffset = -gridLayout.insets.top
+                        } else if scrollToItem.adjustForSection {
                             var adjustForSection: GridSection?
                             if scrollToItem.index == 0 {
                                 if let itemSection = self.items[scrollToItem.index].section {
@@ -485,7 +501,18 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         
                         contentOffset = CGPoint(x: 0.0, y: verticalOffset)
                     } else {
-                        contentOffset = self.scrollView.contentOffset
+                        if !layoutTransactionOffset.isZero {
+                            var verticalOffset = self.scrollView.contentOffset.y - layoutTransactionOffset
+                            if verticalOffset > self.itemLayout.contentSize.height + self.gridLayout.insets.bottom - self.gridLayout.size.height {
+                                verticalOffset = self.itemLayout.contentSize.height + self.gridLayout.insets.bottom - self.gridLayout.size.height
+                            }
+                            if verticalOffset < -self.gridLayout.insets.top {
+                                verticalOffset = -self.gridLayout.insets.top
+                            }
+                            contentOffset = CGPoint(x: 0.0, y: verticalOffset)
+                        } else {
+                            contentOffset = self.scrollView.contentOffset
+                        }
                     }
                 case let .indices(stationaryItemIndices):
                     var selectedContentOffset: CGPoint?
@@ -548,7 +575,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
-    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode]) {
+    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?) {
         var previousItemFrames: ([WrappedGridItemNode: CGRect])?
         switch presentationLayoutTransition.transition {
             case .animated:
@@ -783,6 +810,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 visibleItemsUpdated(GridNodeVisibleItems(top: nil, bottom: nil, topVisible: nil, bottomVisible: nil, topSectionVisible: nil, count: self.items.count))
             }
         }
+        
+        if let presentationLayoutUpdated = self.presentationLayoutUpdated {
+            presentationLayoutUpdated(GridNodeCurrentPresentationLayout(layout: presentationLayoutTransition.layout.layout, contentOffset: presentationLayoutTransition.layout.contentOffset, contentSize: presentationLayoutTransition.layout.contentSize), updateLayoutTransition ?? presentationLayoutTransition.transition)
+        }
     }
     
     private func addItemNode(index: Int, itemNode: GridItemNode) {
@@ -817,9 +848,28 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
-    public func forEachItemNode(_ f: @noescape(ASDisplayNode) -> Void) {
+    public func forEachItemNode(_ f: (ASDisplayNode) -> Void) {
         for (_, node) in self.itemNodes {
             f(node)
+        }
+    }
+    
+    public func forEachRow(_ f: ([ASDisplayNode]) -> Void) {
+        var row: [ASDisplayNode] = []
+        var previousMinY: CGFloat?
+        for index in self.itemNodes.keys.sorted() {
+            let itemNode = self.itemNodes[index]!
+            if let previousMinY = previousMinY, !previousMinY.isEqual(to: itemNode.frame.minY) {
+                if !row.isEmpty {
+                    f(row)
+                    row.removeAll()
+                }
+            }
+            previousMinY = itemNode.frame.minY
+            row.append(itemNode)
+        }
+        if !row.isEmpty {
+            f(row)
         }
     }
 }

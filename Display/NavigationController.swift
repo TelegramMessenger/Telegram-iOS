@@ -210,9 +210,14 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
     }
     
     public func pushViewController(_ controller: ViewController) {
-        controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
+        self.view.endEditing(true)
+        let appliedLayout = self.containerLayout.withUpdatedInputHeight(nil)
+        controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: {[weak self] _ in
             if let strongSelf = self {
+                if strongSelf.containerLayout.withUpdatedInputHeight(nil) != appliedLayout {
+                    controller.containerLayoutUpdated(strongSelf.containerLayout.withUpdatedInputHeight(nil), transition: .immediate)
+                }
                 strongSelf.pushViewController(controller, animated: true)
             }
         }))
@@ -227,6 +232,7 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
     }
     
     public func replaceTopController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
+        self.view.endEditing(true)
         controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
@@ -240,6 +246,7 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
     }
     
     public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
+        self.view.endEditing(true)
         controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
@@ -260,6 +267,26 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
             controllers.removeLast()
         }
         self.setViewControllers(controllers, animated: animated)
+    }
+    
+    override open func popToViewController(_ viewController: UIViewController, animated: Bool) -> [UIViewController]? {
+        var poppedControllers: [UIViewController] = []
+        var found = false
+        var controllers = self.viewControllers
+        while !controllers.isEmpty {
+            if controllers[controllers.count - 1] === viewController {
+                found = true
+                break
+            }
+            poppedControllers.insert(controllers[controllers.count - 1], at: 0)
+            controllers.removeLast()
+        }
+        if found {
+            self.setViewControllers(controllers, animated: animated)
+            return poppedControllers
+        } else {
+            return nil
+        }
     }
     
     open override func popViewController(animated: Bool) -> UIViewController? {

@@ -145,7 +145,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         if !self.scrollView.contentSize.equalTo(scrollViewContentSize) {
             self.scrollView.contentSize = scrollViewContentSize
         }
-        var scrollViewContentInsets = UIEdgeInsets(top: max(0.0, self.calculatedSize.height - leadingVisibleNodeSize), left: 0.0, bottom: 0.0, right: 0.0)
+        let scrollViewContentInsets = UIEdgeInsets(top: max(0.0, self.calculatedSize.height - leadingVisibleNodeSize), left: 0.0, bottom: 0.0, right: 0.0)
         
         if !UIEdgeInsetsEqualToEdgeInsets(self.scrollView.contentInset, scrollViewContentInsets) {
             self.scrollView.contentInset = scrollViewContentInsets
