@@ -45,7 +45,7 @@ public final class TelegramMediaImage: Media, Equatable {
             for i in 0 ..< self.representations.count {
                 let representationDimensions = self.representations[i].dimensions
                 
-                if dimensions.width >= size.width - CGFloat(FLT_EPSILON) && dimensions.height >= size.height - CGFloat(FLT_EPSILON) {
+                if dimensions.width >= size.width - CGFloat.ulpOfOne && dimensions.height >= size.height - CGFloat.ulpOfOne {
                     if representationDimensions.width >= size.width && representationDimensions.height >= dimensions.height && representationDimensions.width < dimensions.width && representationDimensions.height < dimensions.height {
                         dimensions = representationDimensions
                         index = i

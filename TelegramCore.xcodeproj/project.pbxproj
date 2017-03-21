@@ -270,8 +270,6 @@
 		D07827CB1E02F5B200071108 /* RichText.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827CA1E02F5B200071108 /* RichText.swift */; };
 		D08774FC1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */; };
 		D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */; };
-		D08F4A631E79C7B800A2AA15 /* StickerViewTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A621E79C7B800A2AA15 /* StickerViewTracker.swift */; };
-		D08F4A641E79C7B800A2AA15 /* StickerViewTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A621E79C7B800A2AA15 /* StickerViewTracker.swift */; };
 		D08F4A661E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A671E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A691E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */; };
@@ -632,7 +630,6 @@
 		D07827CA1E02F5B200071108 /* RichText.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RichText.swift; sourceTree = "<group>"; };
 		D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedGlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalNotificationSettings.swift; sourceTree = "<group>"; };
-		D08F4A621E79C7B800A2AA15 /* StickerViewTracker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerViewTracker.swift; sourceTree = "<group>"; };
 		D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
 		D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
 		D099EA1B1DE72867001AF5A8 /* PeerCommands.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerCommands.swift; sourceTree = "<group>"; };
@@ -1044,7 +1041,6 @@
 				D049EAF41E44DF3300A2CD3A /* AccountState.swift */,
 				D03B0D621D631A8B00955575 /* AccountSettings.swift */,
 				D03B0D631D631A8B00955575 /* AccountViewTracker.swift */,
-				D08F4A621E79C7B800A2AA15 /* StickerViewTracker.swift */,
 				D03B0D641D631A8B00955575 /* RecentPeers.swift */,
 				D0AB0B911D65E9FA002C78E7 /* ManagedServiceViews.swift */,
 				D0AB0B931D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift */,
@@ -1640,7 +1636,6 @@
 				D0528E651E65C82400E2FEF5 /* UpdateContactName.swift in Sources */,
 				D03121021DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift in Sources */,
 				D0C48F391E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */,
-				D08F4A631E79C7B800A2AA15 /* StickerViewTracker.swift in Sources */,
 				D03B0CBB1D62233C00955575 /* MergeLists.swift in Sources */,
 				C239BE971E62EE1E00C2C453 /* LoadMessagesIfNecessary.swift in Sources */,
 				D03B0CC11D62235000955575 /* StringFormat.swift in Sources */,
@@ -1867,7 +1862,6 @@
 				D0528E661E65C82400E2FEF5 /* UpdateContactName.swift in Sources */,
 				D0F7B1E81E045C87007EB8A5 /* PeerParticipants.swift in Sources */,
 				D0C48F3A1E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */,
-				D08F4A641E79C7B800A2AA15 /* StickerViewTracker.swift in Sources */,
 				D049EAD61E43D98500A2CD3A /* RecentMediaItem.swift in Sources */,
 				D0B844331DAB91E0005F29E1 /* NBPhoneNumber.m in Sources */,
 				D001F3F51E128A1C007A8C60 /* PendingMessageManager.swift in Sources */,

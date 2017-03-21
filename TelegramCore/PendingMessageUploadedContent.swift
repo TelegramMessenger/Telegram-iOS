@@ -20,6 +20,54 @@ enum PendingMessageUploadedContentResult {
     case content(Message, PendingMessageUploadedContent)
 }
 
+enum PendingMessageUploadContent {
+    case ready(Message, PendingMessageUploadedContent)
+    case upload(Signal<PendingMessageUploadedContentResult, NoError>)
+}
+
+func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, message: Message) -> PendingMessageUploadContent {
+    var outgoingChatContextResultAttribute: OutgoingChatContextResultMessageAttribute?
+    for attribute in message.attributes {
+        if let attribute = attribute as? OutgoingChatContextResultMessageAttribute {
+            outgoingChatContextResultAttribute = attribute
+        }
+    }
+    
+    if let _ = message.forwardInfo {
+        var forwardSourceInfo: ForwardSourceInfoAttribute?
+        for attribute in message.attributes {
+            if let attribute = attribute as? ForwardSourceInfoAttribute {
+                forwardSourceInfo = attribute
+            }
+        }
+        if let forwardSourceInfo = forwardSourceInfo {
+            return .ready(message, .forward(forwardSourceInfo))
+        } else {
+            assertionFailure()
+            return .ready(message, .text(message.text))
+        }
+    } else if let outgoingChatContextResultAttribute = outgoingChatContextResultAttribute {
+        return .ready(message, .chatContextResult(outgoingChatContextResultAttribute))
+    } else if let media = message.media.first {
+        if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
+            return .upload(uploadedMediaImageContent(network: network, postbox: postbox, image: image, message: message))
+        } else if let file = media as? TelegramMediaFile {
+            if let resource = file.resource as? CloudDocumentMediaResource {
+                return .ready(message, .media(Api.InputMedia.inputMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), caption: message.text)))
+            } else {
+                return .upload(uploadedMediaFileContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, file: file, message: message))
+            }
+        } else if let contact = media as? TelegramMediaContact {
+            let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName)
+            return .ready(message, .media(input))
+        } else {
+            return .ready(message, .text(message.text))
+        }
+    } else {
+        return .ready(message, .text(message.text))
+    }
+}
+
 func uploadedMessageContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
     var outgoingChatContextResultAttribute: OutgoingChatContextResultMessageAttribute?
     for attribute in message.attributes {
