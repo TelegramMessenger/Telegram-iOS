@@ -33,21 +33,23 @@ public func loadedStickerPack(account: Account, reference: StickerPackReference)
         switch reference {
             case let .id(id, _):
                 if let info = modifier.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id)) as? StickerPackCollectionInfo {
+                    let items = modifier.getItemCollectionItems(collectionId: info.id)
                     return account.postbox.combinedView(keys: [PostboxViewKey.itemCollectionInfo(id: info.id)])
                         |> map { view in
                             if let view = view.views[PostboxViewKey.itemCollectionInfo(id: info.id)] as? ItemCollectionInfoView, let info = view.info as? StickerPackCollectionInfo {
-                                return .result(info: info, items: modifier.getItemCollectionItems(collectionId: info.id), installed: true)
+                                return .result(info: info, items: items, installed: true)
                             } else {
-                                return .result(info: info, items: modifier.getItemCollectionItems(collectionId: info.id), installed: false)
+                                return .result(info: info, items: items, installed: false)
                             }
                         }
                 } else if let info = modifier.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudMaskPacks, id: id)) as? StickerPackCollectionInfo {
+                    let items = modifier.getItemCollectionItems(collectionId: info.id)
                     return account.postbox.combinedView(keys: [PostboxViewKey.itemCollectionInfo(id: info.id)])
                         |> map { view in
                             if let view = view.views[PostboxViewKey.itemCollectionInfo(id: info.id)] as? ItemCollectionInfoView, let info = view.info as? StickerPackCollectionInfo {
-                                return .result(info: info, items: modifier.getItemCollectionItems(collectionId: info.id), installed: true)
+                                return .result(info: info, items: items, installed: true)
                             } else {
-                                return .result(info: info, items: modifier.getItemCollectionItems(collectionId: info.id), installed: false)
+                                return .result(info: info, items: items, installed: false)
                             }
                         }
                 }

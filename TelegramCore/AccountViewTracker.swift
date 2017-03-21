@@ -141,6 +141,16 @@ private final class ChannelPollingContext {
     }
 }
 
+private final class FeaturedStickerPacksContext {
+    var subscribers = Bag<Void>()
+    let disposable = MetaDisposable()
+    var timestamp: Double?
+    
+    deinit {
+        self.disposable.dispose()
+    }
+}
+
 public final class AccountViewTracker {
     weak var account: Account?
     private let queue = Queue()
@@ -158,6 +168,7 @@ public final class AccountViewTracker {
     private var cachedChannelParticipantsContexts: [PeerId: CachedChannelParticipantsContext] = [:]
     
     private var channelPollingContexts: [PeerId: ChannelPollingContext] = [:]
+    private var featuredStickerPacksContext: FeaturedStickerPacksContext?
     
     init(account: Account) {
         self.account = account
@@ -503,6 +514,58 @@ public final class AccountViewTracker {
                 }
             }
             return disposable
+        }
+    }
+    
+    public func featuredStickerPacks() -> Signal<[FeaturedStickerPackItem], NoError> {
+        return Signal { subscriber in
+            if let account = self.account {
+                let view = account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)]).start(next: { next in
+                    if let view = next.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)] as? OrderedItemListView {
+                        subscriber.putNext(view.items.map { $0.contents as! FeaturedStickerPackItem })
+                    } else {
+                        subscriber.putNext([])
+                    }
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                })
+                let disposable = MetaDisposable()
+                self.queue.async {
+                    let context: FeaturedStickerPacksContext
+                    if let current = self.featuredStickerPacksContext {
+                        context = current
+                    } else {
+                        context = FeaturedStickerPacksContext()
+                        self.featuredStickerPacksContext = context
+                    }
+                    
+                    let timestamp = CFAbsoluteTimeGetCurrent()
+                    if context.timestamp == nil || abs(context.timestamp! - timestamp) > 60.0 * 60.0 {
+                        context.timestamp = timestamp
+                        context.disposable.set(updatedFeaturedStickerPacks(network: account.network, postbox: account.postbox).start())
+                    }
+                    
+                    let index = context.subscribers.add(Void())
+                    
+                    disposable.set(ActionDisposable {
+                        self.queue.async {
+                            if let context = self.featuredStickerPacksContext {
+                                context.subscribers.remove(index)
+                            }
+                        }
+                    })
+                }
+                return ActionDisposable {
+                    view.dispose()
+                    disposable.dispose()
+                }
+            } else {
+                subscriber.putNext([])
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
         }
     }
 }

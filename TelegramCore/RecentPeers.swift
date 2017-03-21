@@ -95,15 +95,17 @@ public func addRecentlyUsedInlineBot(postbox: Postbox, peerId: PeerId) -> Signal
 }
 
 public func recentlyUsedInlineBots(postbox: Postbox) -> Signal<[Peer], NoError> {
-    return postbox.orderedItemListView(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots)
+    return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentInlineBots)])
         |> take(1)
         |> mapToSignal { view -> Signal<[Peer], NoError> in
             return postbox.modify { modifier -> [Peer] in
                 var peers: [Peer] = []
-                for item in view.items {
-                    let peerId = RecentPeerItemId(item.id).peerId
-                    if let peer = modifier.getPeer(peerId) {
-                        peers.append(peer)
+                if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentInlineBots)] as? OrderedItemListView {
+                    for item in view.items {
+                        let peerId = RecentPeerItemId(item.id).peerId
+                        if let peer = modifier.getPeer(peerId) {
+                            peers.append(peer)
+                        }
                     }
                 }
                 return peers

@@ -404,7 +404,12 @@ private func synchronizeInstalledStickerPacks(modifier: Modifier, postbox: Postb
                     return combineLatest(archivedIds, resolvedItems)
                         |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }
                         |> mapToSignal { archivedIds, replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-                            return (postbox.modify { modifier -> Void in
+                            return (postbox.modify { modifier -> Signal<Void, SynchronizeInstalledStickerPacksError> in
+                                let finalCheckLocalCollectionInfos = modifier.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+                                if finalCheckLocalCollectionInfos != localCollectionInfos {
+                                    return .fail(.restart)
+                                }
+                                
                                 modifier.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: resultingCollectionInfos.filter({ info in
                                     return !archivedIds.contains(info.id)
                                 }).map({ ($0.id, $0) }))
@@ -416,7 +421,9 @@ private func synchronizeInstalledStickerPacks(modifier: Modifier, postbox: Postb
                                 for id in localCollectionIds.subtracting(resultingCollectionIds).union(archivedIds) {
                                     modifier.replaceItemCollectionItems(collectionId: id, items: [])
                                 }
-                            } |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }) |> then(.fail(.done))
+                                
+                                return .complete()
+                            } |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }) |> switchToLatest |> then(.fail(.done))
                     }
                 }
             } |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart } |> switchToLatest

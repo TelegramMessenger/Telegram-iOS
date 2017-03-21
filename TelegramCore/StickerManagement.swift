@@ -8,111 +8,82 @@ import Foundation
 #endif
 import TelegramCorePrivateModule
 
-private func hashForInfos(_ infos: [StickerPackCollectionInfo]) -> Int32 {
+private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0
     
-    for info in infos {
-        acc = UInt32(bitPattern: Int32(bitPattern: acc &* UInt32(20261)) &+ info.hash)
+    for id in ids {
+        let low = UInt32(UInt64(bitPattern: id) & (0xffffffff as UInt64))
+        let high = UInt32((UInt64(bitPattern: id) >> 32) & (0xffffffff as UInt64))
+        
+        acc = (acc &* 20261) &+ high
+        acc = (acc &* 20261) &+ low
     }
-    
-    return Int32(bitPattern: acc % 0x7FFFFFFF)
+    return Int32(bitPattern: acc % UInt32(0x7FFFFFFF))
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
         addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
         addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
-    }
-    
-    let currentHash = postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 1)
-        |> take(1)
-        |> map { view -> Int32 in
-            return hashForInfos(view.collectionInfos.map({ $0.1 as! StickerPackCollectionInfo }))
+    } |> then(.complete() |> delay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue())) |> restart
+}
+
+func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Signal<Void, NoError> in
+        let initialPacks = modifier.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+        var initialPackMap: [Int64: FeaturedStickerPackItem] = [:]
+        for entry in initialPacks {
+            let item = entry.contents as! FeaturedStickerPackItem
+            initialPackMap[FeaturedStickerPackItemId(entry.id).packId] = item
         }
-    
-    let remoteStickerPacks = currentHash
-        |> mapToSignal { hash -> Signal<Void, NoError> in
-            if hash != 0 {
-                return .never()
-            }
-            
-            return network.request(Api.functions.messages.getAllStickers(hash: hash))
-                |> retryRequest
-                |> mapToSignal { result -> Signal<Void, NoError> in
-                    var stickerPackInfos: [StickerPackCollectionInfo] = []
+        
+        let initialPackIds = initialPacks.map {
+            return FeaturedStickerPackItemId($0.id).packId
+        }
+        let initialHash: Int32 = hashForIdsReverse(initialPackIds)
+        return network.request(Api.functions.messages.getFeaturedStickers(hash: initialHash))
+            |> retryRequest
+            |> mapToSignal { result -> Signal<Void, NoError> in
+                return postbox.modify { modifier -> Void in
                     switch result {
-                        case let .allStickers(_, sets):
-                            for apiSet in sets {
-                                stickerPackInfos.append(StickerPackCollectionInfo(apiSet: apiSet, namespace: Namespaces.ItemCollection.CloudStickerPacks))
-                            }
-                        case .allStickersNotModified:
+                        case .featuredStickersNotModified:
                             break
-                    }
-                    
-                    var stickerPackItemSignals: [Signal<(ItemCollectionId, [ItemCollectionItem]), NoError>] = []
-                    for info in stickerPackInfos {
-                        let signal = network.request(Api.functions.messages.getStickerSet(stickerset: Api.InputStickerSet.inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
-                            |> retryRequest
-                            |> map { result -> (ItemCollectionId, [ItemCollectionItem]) in
-                                var items: [ItemCollectionItem] = []
-                                switch result {
-                                    case let .stickerSet(_, packs, documents):
-                                        var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
-                                        for pack in packs {
-                                            switch pack {
-                                                case let .stickerPack(text, fileIds):
-                                                    let key = ValueBoxKey(text).toMemoryBuffer()
-                                                    for fileId in fileIds {
-                                                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                                        if indexKeysByFile[mediaId] == nil {
-                                                            indexKeysByFile[mediaId] = [key]
-                                                        } else {
-                                                            indexKeysByFile[mediaId]!.append(key)
-                                                        }
-                                                    }
-                                                    break
-                                            }
-                                        }
-                                        
-                                        for apiDocument in documents {
-                                            if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
-                                                let fileIndexKeys: [MemoryBuffer]
-                                                if let indexKeys = indexKeysByFile[id] {
-                                                    fileIndexKeys = indexKeys
-                                                } else {
-                                                    fileIndexKeys = []
-                                                }
-                                                items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
-                                            }
-                                        }
-                                        break
+                        case let .featuredStickers(_, sets, unread):
+                            let unreadIds = Set(unread)
+                            var updatedPacks: [FeaturedStickerPackItem] = []
+                            for set in sets {
+                                var (info, items) = parsePreviewStickerSet(set)
+                                if let previousPack = initialPackMap[info.id.id] {
+                                    if previousPack.info.hash == info.hash {
+                                        items = previousPack.topItems
+                                    }
                                 }
-                                return (info.id, items)
+                                updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
                             }
-                        stickerPackItemSignals.append(signal)
+                            modifier.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.map { OrderedItemListEntry(id: FeaturedStickerPackItemId($0.info.id.id).rawValue, contents: $0) })
                     }
-                    
-                    return combineLatest(stickerPackItemSignals)
-                        |> mapToSignal { results -> Signal<Void, NoError> in
-                            var itemsByCollectionId: [ItemCollectionId: [ItemCollectionItem]] = [:]
-                            for (collectionId, items) in results {
-                                itemsByCollectionId[collectionId] = items
-                            }
-                            
-                            var itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])] = []
-                            
-                            for info in stickerPackInfos {
-                                if let items = itemsByCollectionId[info.id] {
-                                    itemCollections.append((info.id, info, items))
-                                }
-                            }
-                            
-                            return postbox.modify { modifier -> Void in
-                                modifier.replaceItemCollections(namespace: Namespaces.ItemCollection.CloudStickerPacks, itemCollections: itemCollections)
-                            }
-                        }
                 }
-        }
-    
-    return remoteStickerPacks
+            }
+    } |> switchToLatest
+}
+
+func parsePreviewStickerSet(_ set: Api.StickerSetCovered) -> (StickerPackCollectionInfo, [StickerPackItem]) {
+    switch set {
+        case let .stickerSetCovered(set, cover):
+            let info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
+            var items: [StickerPackItem] = []
+            if let file = telegramMediaFileFromApiDocument(cover), let id = file.id {
+                items.append(StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: id.id), file: file, indexKeys: []))
+            }
+            return (info, items)
+        case let .stickerSetMultiCovered(set, covers):
+            let info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
+            var items: [StickerPackItem] = []
+            for cover in covers {
+                if let file = telegramMediaFileFromApiDocument(cover), let id = file.id {
+                    items.append(StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: id.id), file: file, indexKeys: []))
+                }
+            }
+            return (info, items)
+    }
 }

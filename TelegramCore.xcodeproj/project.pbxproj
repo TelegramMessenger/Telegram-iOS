@@ -234,8 +234,8 @@
 		D0528E661E65C82400E2FEF5 /* UpdateContactName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E641E65C82400E2FEF5 /* UpdateContactName.swift */; };
 		D0528E6A1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E691E65DD2100E2FEF5 /* WebpagePreview.swift */; };
 		D0528E6B1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E691E65DD2100E2FEF5 /* WebpagePreview.swift */; };
-		D05452071E7B5093006EEF19 /* LoadedStickerpack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05452061E7B5093006EEF19 /* LoadedStickerpack.swift */; };
-		D05452081E7B5093006EEF19 /* LoadedStickerpack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05452061E7B5093006EEF19 /* LoadedStickerpack.swift */; };
+		D05452071E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */; };
+		D05452081E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */; };
 		D0561DE31E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */; };
 		D0561DE41E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */; };
 		D0561DEA1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */; };
@@ -397,6 +397,10 @@
 		D0BEAF5E1E54941B00BD963D /* Authorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF5C1E54941B00BD963D /* Authorization.swift */; };
 		D0BEAF601E54ACF900BD963D /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF5F1E54ACF900BD963D /* AccountManager.swift */; };
 		D0BEAF611E54ACF900BD963D /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF5F1E54ACF900BD963D /* AccountManager.swift */; };
+		D0C48F391E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */; };
+		D0C48F3A1E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */; };
+		D0C48F3C1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */; };
+		D0C48F3D1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */; };
 		D0CAF2EA1D75EC600011F558 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */; };
 		D0D748021E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
 		D0D748031E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
@@ -408,6 +412,12 @@
 		D0DF0C911D81A857008AEB01 /* ImageRepresentationsUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C901D81A857008AEB01 /* ImageRepresentationsUtils.swift */; };
 		D0DF0C931D81AD09008AEB01 /* MessageUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C921D81AD09008AEB01 /* MessageUtils.swift */; };
 		D0DF0CA81D82BF32008AEB01 /* PeerParticipants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0CA71D82BF32008AEB01 /* PeerParticipants.swift */; };
+		D0E23DD51E8042F500B9B6D2 /* FeaturedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DD41E8042F500B9B6D2 /* FeaturedStickerPack.swift */; };
+		D0E23DD61E8042F500B9B6D2 /* FeaturedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DD41E8042F500B9B6D2 /* FeaturedStickerPack.swift */; };
+		D0E23DDA1E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DD91E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift */; };
+		D0E23DDB1E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DD91E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift */; };
+		D0E23DDF1E8082A400B9B6D2 /* ArchivedStickerPacks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DDE1E8082A400B9B6D2 /* ArchivedStickerPacks.swift */; };
+		D0E23DE01E8082A400B9B6D2 /* ArchivedStickerPacks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DDE1E8082A400B9B6D2 /* ArchivedStickerPacks.swift */; };
 		D0E305A71E5B5CBE00D7A3A2 /* PeerAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E305A61E5B5CBE00D7A3A2 /* PeerAdmins.swift */; };
 		D0E305A81E5B5CBE00D7A3A2 /* PeerAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E305A61E5B5CBE00D7A3A2 /* PeerAdmins.swift */; };
 		D0E305AA1E5BA02D00D7A3A2 /* ChannelBlacklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E305A91E5BA02D00D7A3A2 /* ChannelBlacklist.swift */; };
@@ -601,7 +611,7 @@
 		D0528E5F1E65B94E00E2FEF5 /* SingleMessageView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SingleMessageView.swift; sourceTree = "<group>"; };
 		D0528E641E65C82400E2FEF5 /* UpdateContactName.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdateContactName.swift; sourceTree = "<group>"; };
 		D0528E691E65DD2100E2FEF5 /* WebpagePreview.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebpagePreview.swift; sourceTree = "<group>"; };
-		D05452061E7B5093006EEF19 /* LoadedStickerpack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedStickerpack.swift; sourceTree = "<group>"; };
+		D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedStickerPack.swift; sourceTree = "<group>"; };
 		D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatePeerInfo.swift; sourceTree = "<group>"; };
 		D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdmins.swift; sourceTree = "<group>"; };
 		D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatedAccountPrivacySettings.swift; sourceTree = "<group>"; };
@@ -696,6 +706,8 @@
 		D0BE383D1E7C5995000079AF /* MediaPool.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaPool.swift; sourceTree = "<group>"; };
 		D0BEAF5C1E54941B00BD963D /* Authorization.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Authorization.swift; sourceTree = "<group>"; };
 		D0BEAF5F1E54ACF900BD963D /* AccountManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountManager.swift; sourceTree = "<group>"; };
+		D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacksInfo.swift; sourceTree = "<group>"; };
+		D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedPeerFromMessage.swift; sourceTree = "<group>"; };
 		D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MtProtoKitDynamic.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/MtProtoKitDynamic.framework"; sourceTree = "<group>"; };
 		D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPackInteractiveOperations.swift; sourceTree = "<group>"; };
 		D0DC354D1DE368F7000195EB /* RequestChatContextResults.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestChatContextResults.swift; sourceTree = "<group>"; };
@@ -704,6 +716,9 @@
 		D0DF0C901D81A857008AEB01 /* ImageRepresentationsUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageRepresentationsUtils.swift; sourceTree = "<group>"; };
 		D0DF0C921D81AD09008AEB01 /* MessageUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageUtils.swift; sourceTree = "<group>"; };
 		D0DF0CA71D82BF32008AEB01 /* PeerParticipants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerParticipants.swift; sourceTree = "<group>"; };
+		D0E23DD41E8042F500B9B6D2 /* FeaturedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FeaturedStickerPack.swift; sourceTree = "<group>"; };
+		D0E23DD91E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift; sourceTree = "<group>"; };
+		D0E23DDE1E8082A400B9B6D2 /* ArchivedStickerPacks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacks.swift; sourceTree = "<group>"; };
 		D0E305A61E5B5CBE00D7A3A2 /* PeerAdmins.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerAdmins.swift; sourceTree = "<group>"; };
 		D0E305A91E5BA02D00D7A3A2 /* ChannelBlacklist.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelBlacklist.swift; sourceTree = "<group>"; };
 		D0E35A0D1DE4953E00BC6096 /* FetchHttpResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchHttpResource.swift; sourceTree = "<group>"; };
@@ -784,6 +799,8 @@
 				D021E0DE1DB539FC00C6B04F /* StickerPack.swift */,
 				D049EAD41E43D98500A2CD3A /* RecentMediaItem.swift */,
 				D049EAE71E44B67100A2CD3A /* RecentPeerItem.swift */,
+				D0E23DD41E8042F500B9B6D2 /* FeaturedStickerPack.swift */,
+				D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */,
 			);
 			name = "Item Collections";
 			sourceTree = "<group>";
@@ -796,7 +813,8 @@
 				D049EAD71E43DAD200A2CD3A /* ManagedRecentStickers.swift */,
 				C251D7421E65E50500283EDE /* StickerSetInstallation.swift */,
 				D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */,
-				D05452061E7B5093006EEF19 /* LoadedStickerpack.swift */,
+				D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */,
+				D0E23DDE1E8082A400B9B6D2 /* ArchivedStickerPacks.swift */,
 			);
 			name = "Sticker Management";
 			sourceTree = "<group>";
@@ -977,6 +995,7 @@
 				D00D34411E6EDD2E0057B307 /* ManagedSynchronizeConsumeMessageContentsOperations.swift */,
 				D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */,
 				D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */,
+				D0E23DD91E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -1226,6 +1245,7 @@
 				C2FD33E01E680E9E008D13D4 /* RequestUserPhotos.swift */,
 				C2FD33E31E687BF1008D13D4 /* PeerPhotoUpdater.swift */,
 				C2FD33EA1E696C78008D13D4 /* GroupsInCommon.swift */,
+				D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -1460,6 +1480,7 @@
 				D03B0D0E1D62255C00955575 /* UpdateGroup.swift in Sources */,
 				D01AC9231DD5E9A200E8160F /* ApplyUpdateMessage.swift in Sources */,
 				D03B0CF71D62250800955575 /* TelegramMediaImage.swift in Sources */,
+				D0E23DDF1E8082A400B9B6D2 /* ArchivedStickerPacks.swift in Sources */,
 				D0BC386E1E3FDAB70044D6FE /* CreateGroup.swift in Sources */,
 				D0FA8BB31E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
 				D0E305AA1E5BA02D00D7A3A2 /* ChannelBlacklist.swift in Sources */,
@@ -1489,6 +1510,7 @@
 				D099EA1C1DE72867001AF5A8 /* PeerCommands.swift in Sources */,
 				D03B0CCE1D62239600955575 /* PhoneNumbers.swift in Sources */,
 				D00DBBDA1E64E67E00DB5485 /* UpdateSecretChat.swift in Sources */,
+				D0E23DD51E8042F500B9B6D2 /* FeaturedStickerPack.swift in Sources */,
 				D0FA8B981E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */,
 				D0DF0C911D81A857008AEB01 /* ImageRepresentationsUtils.swift in Sources */,
 				D0E6521F1E3A364A004EEA91 /* UpdateAccountPeerName.swift in Sources */,
@@ -1518,6 +1540,7 @@
 				D03B0CFB1D62250800955575 /* TelegramMediaWebpage.swift in Sources */,
 				D09A2FEB1D7CDC320018FB72 /* PeerAccessRestrictionInfo.swift in Sources */,
 				D0E35A101DE49E1C00BC6096 /* OutgoingMessageWithChatContextResult.swift in Sources */,
+				D0E23DDA1E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift in Sources */,
 				D049EAD81E43DAD200A2CD3A /* ManagedRecentStickers.swift in Sources */,
 				D0448C991E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */,
 				D0613FCF1E60520700202CDB /* ChannelMembers.swift in Sources */,
@@ -1527,6 +1550,7 @@
 				D03B0CF91D62250800955575 /* TelegramMediaMap.swift in Sources */,
 				D0BC38791E40BAF20044D6FE /* SynchronizePinnedChatsOperation.swift in Sources */,
 				D050F2101E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */,
+				D0C48F3C1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */,
 				D0BE383E1E7C5995000079AF /* MediaPool.swift in Sources */,
 				D03B0D671D631A8B00955575 /* AccountViewTracker.swift in Sources */,
 				D0B843BB1DA7FF30005F29E1 /* NBMetadataCoreTestMapper.m in Sources */,
@@ -1549,7 +1573,7 @@
 				D0FA8BB91E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */,
 				D0561DE31E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */,
 				D0DF0C8A1D819C7E008AEB01 /* JoinChannel.swift in Sources */,
-				D05452071E7B5093006EEF19 /* LoadedStickerpack.swift in Sources */,
+				D05452071E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */,
 				D0F7AB2F1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
 				D0B843971DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift in Sources */,
 				D0448CA21E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,
@@ -1615,6 +1639,7 @@
 				D03B0E441D631E6600955575 /* NetworkLogging.m in Sources */,
 				D0528E651E65C82400E2FEF5 /* UpdateContactName.swift in Sources */,
 				D03121021DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift in Sources */,
+				D0C48F391E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */,
 				D08F4A631E79C7B800A2AA15 /* StickerViewTracker.swift in Sources */,
 				D03B0CBB1D62233C00955575 /* MergeLists.swift in Sources */,
 				C239BE971E62EE1E00C2C453 /* LoadMessagesIfNecessary.swift in Sources */,
@@ -1682,6 +1707,7 @@
 				D050F2111E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */,
 				D050F2631E4A5AEB00988324 /* SynchronizePinnedChatsOperation.swift in Sources */,
 				D0B418B81D7E05A6004562A4 /* ContactManagement.swift in Sources */,
+				D0E23DE01E8082A400B9B6D2 /* ArchivedStickerPacks.swift in Sources */,
 				D050F2521E4A59C200988324 /* JoinLink.swift in Sources */,
 				D0F7B1E91E045C87007EB8A5 /* PeerCommands.swift in Sources */,
 				D00D97C81E32901700E5C2B6 /* PeerInputActivity.swift in Sources */,
@@ -1711,6 +1737,7 @@
 				D0B418951D7E0580004562A4 /* TelegramMediaContact.swift in Sources */,
 				D0F3CC7A1DDE2859008148FA /* RequestMessageActionCallback.swift in Sources */,
 				D073CEA11DCBF3D3007511FD /* StickerPack.swift in Sources */,
+				D0E23DD61E8042F500B9B6D2 /* FeaturedStickerPack.swift in Sources */,
 				D00DBBDB1E64E67E00DB5485 /* UpdateSecretChat.swift in Sources */,
 				D0448C921E251F96005A61A7 /* SecretChatEncryption.swift in Sources */,
 				D0E35A141DE4C69C00BC6096 /* FetchHttpResource.swift in Sources */,
@@ -1740,6 +1767,7 @@
 				D001F3EC1E128A1C007A8C60 /* Holes.swift in Sources */,
 				D0B4189B1D7E0580004562A4 /* TelegramMediaWebpage.swift in Sources */,
 				D00C7CE11E3785710080C3D5 /* MarkMessageContentAsConsumedInteractively.swift in Sources */,
+				D0E23DDB1E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift in Sources */,
 				D0B844341DAB91E0005F29E1 /* NBPhoneNumberDefines.m in Sources */,
 				D0B8442A1DAB91E0005F29E1 /* NBAsYouTypeFormatter.m in Sources */,
 				D0448C8F1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */,
@@ -1749,6 +1777,7 @@
 				D001F3E81E128A1C007A8C60 /* ChannelState.swift in Sources */,
 				C2366C8A1E4F40480097CCFF /* SupportPeerId.swift in Sources */,
 				D0B844451DAB91FD005F29E1 /* AccountViewTracker.swift in Sources */,
+				D0C48F3D1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */,
 				D0BE383F1E7C5995000079AF /* MediaPool.swift in Sources */,
 				D050F2601E4A5AD500988324 /* AutoremoveTimeoutMessageAttribute.swift in Sources */,
 				D049EAD91E43DAD200A2CD3A /* ManagedRecentStickers.swift in Sources */,
@@ -1771,7 +1800,7 @@
 				D0B8444B1DAB91FD005F29E1 /* ManagedSynchronizePeerReadStates.swift in Sources */,
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
 				D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */,
-				D05452081E7B5093006EEF19 /* LoadedStickerpack.swift in Sources */,
+				D05452081E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */,
 				D0561DE41E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */,
 				D0DC35521DE36908000195EB /* ChatContextResult.swift in Sources */,
 				D0F7AB301DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
@@ -1837,6 +1866,7 @@
 				D050F2641E4A5AEB00988324 /* ManagedSynchronizePinnedChatsOperations.swift in Sources */,
 				D0528E661E65C82400E2FEF5 /* UpdateContactName.swift in Sources */,
 				D0F7B1E81E045C87007EB8A5 /* PeerParticipants.swift in Sources */,
+				D0C48F3A1E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */,
 				D08F4A641E79C7B800A2AA15 /* StickerViewTracker.swift in Sources */,
 				D049EAD61E43D98500A2CD3A /* RecentMediaItem.swift in Sources */,
 				D0B844331DAB91E0005F29E1 /* NBPhoneNumber.m in Sources */,

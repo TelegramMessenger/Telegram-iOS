@@ -14,15 +14,17 @@ public func addRecentlySearchedPeer(postbox: Postbox, peerId: PeerId) -> Signal<
 }
 
 public func recentlySearchedPeers(postbox: Postbox) -> Signal<[Peer], NoError> {
-    return postbox.orderedItemListView(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds)
+    return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)])
         |> take(1)
         |> mapToSignal { view -> Signal<[Peer], NoError> in
             return postbox.modify { modifier -> [Peer] in
                 var peers: [Peer] = []
-                for item in view.items {
-                    let peerId = RecentPeerItemId(item.id).peerId
-                    if let peer = modifier.getPeer(peerId) {
-                        peers.append(peer)
+                if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)] as? OrderedItemListView {
+                    for item in view.items {
+                        let peerId = RecentPeerItemId(item.id).peerId
+                        if let peer = modifier.getPeer(peerId) {
+                            peers.append(peer)
+                        }
                     }
                 }
                 return peers
