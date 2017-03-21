@@ -299,20 +299,28 @@ public struct LocalFileReferenceMediaResourceId: MediaResourceId {
 public class LocalFileReferenceMediaResource: TelegramMediaResource {
     let localFilePath: String
     let randomId: Int64
+    let size: Int32?
     
-    public init(localFilePath: String, randomId: Int64) {
+    public init(localFilePath: String, randomId: Int64, size: Int32? = nil) {
         self.localFilePath = localFilePath
         self.randomId = randomId
+        self.size = size
     }
     
     public required init(decoder: Decoder) {
         self.localFilePath = decoder.decodeStringForKey("p")
         self.randomId = decoder.decodeInt64ForKey("r")
+        self.size = decoder.decodeInt32ForKey("s")
     }
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeString(self.localFilePath, forKey: "p")
         encoder.encodeInt64(self.randomId, forKey: "r")
+        if let size = self.size {
+            encoder.encodeInt32(size, forKey: "s")
+        } else {
+            encoder.encodeNil(forKey: "s")
+        }
     }
     
     public var id: MediaResourceId {
@@ -321,7 +329,7 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? LocalFileReferenceMediaResource {
-            return self.localFilePath == to.localFilePath && self.randomId == to.randomId
+            return self.localFilePath == to.localFilePath && self.randomId == to.randomId && self.size == size
         } else {
             return false
         }

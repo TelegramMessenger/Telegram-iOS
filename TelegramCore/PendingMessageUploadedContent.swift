@@ -202,7 +202,13 @@ private func uploadedThumbnail(network: Network, postbox: Postbox, image: Telegr
 }
 
 private func uploadedMediaFileContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, file: TelegramMediaFile, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
-    let upload = multipartUpload(network: network, postbox: postbox, resource: file.resource, encrypt: message.id.peerId.namespace == Namespaces.Peer.SecretChat, hintFileSize: file.size)
+    var hintSize: Int?
+    if let size = file.size {
+        hintSize = size
+    } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
+        hintSize = Int(size)
+    }
+    let upload = multipartUpload(network: network, postbox: postbox, resource: file.resource, encrypt: message.id.peerId.namespace == Namespaces.Peer.SecretChat, hintFileSize: hintSize)
         /*|> map { next -> UploadedMediaFileContent in
             switch next {
                 case let .progress(progress):
