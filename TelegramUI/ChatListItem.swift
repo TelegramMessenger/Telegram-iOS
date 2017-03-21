@@ -450,7 +450,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
                     let mutableAttributedText = NSMutableAttributedString()
                     mutableAttributedText.append(NSAttributedString(string: "Draft: ", font: textFont, textColor: UIColor(0xdd4b39)))
-                    mutableAttributedText.append(NSAttributedString(string: embeddedState.text, font: textFont, textColor: UIColor.black))
+                    mutableAttributedText.append(NSAttributedString(string: embeddedState.text, font: textFont, textColor: UIColor(0x8e8e93)))
                     attributedText = mutableAttributedText;
                 } else if let message = message, let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
                     if let peer = peer as? TelegramChannel, case .broadcast = peer.info {

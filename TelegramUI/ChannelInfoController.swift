@@ -313,7 +313,7 @@ private func channelInfoEntries(account: Account, view: PeerView, state: Channel
                 break
         }
         
-        let infoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingState?.editingName, updatingName: nil)
+        let infoState = ItemListAvatarAndNameInfoItemState(editingName: canManageChannel ? state.editingState?.editingName : nil, updatingName: nil)
         entries.append(.info(peer: peer, cachedData: view.cachedData, state: infoState))
         
         if let cachedChannelData = view.cachedData as? CachedChannelData {
@@ -399,10 +399,9 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    
-    
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var popToRootControllerImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -491,7 +490,21 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }, reportChannel: {
         
     }, leaveChannel: {
-        
+        let controller = ActionSheetController()
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: "Leave Channel", action: {
+                    let _ = removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false).start()
+                    dismissAction()
+                    popToRootControllerImpl?()
+                }),
+            ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, deleteChannel: {
         
     })
@@ -499,8 +512,21 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     let signal = combineLatest(statePromise.get(), account.viewTracker.peerView(peerId))
         |> map { state, view -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
+            
+            var canManageChannel = false
+            if let peer = peer as? TelegramChannel {
+                switch peer.role {
+                case .creator:
+                    canManageChannel = true
+                case .moderator:
+                    break
+                case .editor, .member:
+                    break
+                }
+            }
+            
             var leftNavigationButton: ItemListNavigationButton?
-            let rightNavigationButton: ItemListNavigationButton
+            var rightNavigationButton: ItemListNavigationButton?
             if let editingState = state.editingState {
                 leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
                     updateState {
@@ -561,7 +587,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                         }))
                     })
                 }
-            } else {
+            } else if canManageChannel {
                 rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         var text = ""
@@ -590,6 +616,9 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window, with: presentationArguments)
+    }
+    popToRootControllerImpl = { [weak controller] in
+        (controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
     }
     return controller
 }

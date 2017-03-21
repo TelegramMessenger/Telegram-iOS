@@ -126,7 +126,7 @@ public class PeerMediaCollectionController: ViewController {
                     }
                 }
             }
-            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { [weak self] id, navigation in
+            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { [weak self] id, navigation, _ in
                 if let strongSelf = self {
                     if let id = id {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))

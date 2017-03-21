@@ -133,7 +133,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                     arguments.addMember()
                 })
             case .addMemberInfo:
-                return ItemListTextItem(text: "Only channel admins can see this list.", sectionId: self.section)
+                return ItemListTextItem(text: .plain("Only channel admins can see this list."), sectionId: self.section)
             case let .peerItem(_, participant, editing, enabled):
                 return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)

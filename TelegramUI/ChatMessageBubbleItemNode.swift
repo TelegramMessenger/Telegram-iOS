@@ -130,10 +130,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.tapActionAtPoint = { [weak self] point in
             if let strongSelf = self {
+                if let avatarNode = strongSelf.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
+                    return .waitForSingleTap
+                }
+                
                 if let nameNode = strongSelf.nameNode, nameNode.frame.contains(point) {
                     if let item = strongSelf.item {
                         for attribute in item.message.attributes {
-                            if let attribute = attribute as? InlineBotMessageAttribute {
+                            if let _ = attribute as? InlineBotMessageAttribute {
                                 return .waitForSingleTap
                             }
                         }
@@ -291,7 +295,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
                 
                 if authorNameString != nil || inlineBotNameString != nil {
-                    if headerSize.height < CGFloat(FLT_EPSILON) {
+                    if headerSize.height < CGFloat.ulpOfOne {
                         headerSize.height += 4.0
                     }
                     
@@ -322,7 +326,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
                 
                 if let forwardInfo = message.forwardInfo {
-                    if headerSize.height < CGFloat(FLT_EPSILON) {
+                    if headerSize.height < CGFloat.ulpOfOne {
                         headerSize.height += 4.0
                     }
                     let sizeAndApply = forwardInfoLayout(incoming, forwardInfo.source == nil ? forwardInfo.author : forwardInfo.source!, forwardInfo.source == nil ? nil : forwardInfo.author, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude))
@@ -334,12 +338,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
                 
                 if let replyMessage = replyMessage {
-                    if headerSize.height < CGFloat(FLT_EPSILON) {
+                    if headerSize.height < CGFloat.ulpOfOne {
                         headerSize.height += 6.0
                     } else {
                         headerSize.height += 2.0
                     }
-                    let sizeAndApply = replyInfoLayout(incoming, replyMessage, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = replyInfoLayout(item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude))
                     replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     replyInfoOriginY = headerSize.height
@@ -347,7 +351,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     headerSize.height += replyInfoSizeApply.0.height + 2.0
                 }
                 
-                if headerSize.height > CGFloat(FLT_EPSILON) {
+                if headerSize.height > CGFloat.ulpOfOne {
                     headerSize.height -= 3.0
                 }
             }
@@ -377,6 +381,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize))
             }
             
+            var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
+            if let replyMarkup = replyMarkup {
+                let (minWidth, buttonsLayout) = actionButtonsLayout(replyMarkup, maximumNodeWidth)
+                maxContentWidth = max(maxContentWidth, minWidth)
+                actionButtonsFinalize = buttonsLayout
+            }
+            
             var contentSize = CGSize(width: maxContentWidth, height: 0.0)
             index = 0
             var contentNodeSizesPropertiesAndApply: [(CGSize, ChatMessageBubbleContentProperties, (ListViewItemUpdateAnimation) -> Void)] = []
@@ -386,16 +397,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 
                 contentSize.height += size.height
                 
-                if index == 0 && headerSize.height > CGFloat(FLT_EPSILON) {
+                if index == 0 && headerSize.height > CGFloat.ulpOfOne {
                     contentSize.height += properties.headerSpacing
                 }
                 
                 index += 1
             }
             
-            var actionButtonsSizeApply: (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)?
-            if let replyMarkup = replyMarkup {
-                actionButtonsSizeApply = actionButtonsLayout(replyMarkup, maxContentWidth)
+            var actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?
+            if let actionButtonsFinalize = actionButtonsFinalize {
+                actionButtonsSizeAndApply = actionButtonsFinalize(maxContentWidth)
             }
             
             let layoutBubbleSize = CGSize(width: max(contentSize.width, headerSize.width) + layoutConstants.bubble.contentInsets.left + layoutConstants.bubble.contentInsets.right, height: max(layoutConstants.bubble.minimumSize.height, headerSize.height + contentSize.height + layoutConstants.bubble.contentInsets.top + layoutConstants.bubble.contentInsets.bottom))
@@ -405,8 +416,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
 
             var layoutSize = CGSize(width: width, height: layoutBubbleSize.height)
-            if let actionButtonsSizeApply = actionButtonsSizeApply {
-                layoutSize.height += actionButtonsSizeApply.0.height
+            if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                layoutSize.height += actionButtonsSizeAndApply.0.height
             }
             
             var layoutInsets = UIEdgeInsets(top: mergedTop ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
@@ -509,7 +520,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     var contentNodeIndex = 0
                     for (size, properties, apply) in contentNodeSizesPropertiesAndApply {
                         apply(animation)
-                        if contentNodeIndex == 0 && headerSize.height > CGFloat(FLT_EPSILON) {
+                        if contentNodeIndex == 0 && headerSize.height > CGFloat.ulpOfOne {
                             contentNodeOrigin.y += properties.headerSpacing
                         }
                         let contentNode = strongSelf.contentNodes[contentNodeIndex]
@@ -559,16 +570,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     let offset: CGFloat = incoming ? 42.0 : 0.0
                     strongSelf.selectionNode?.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: width, height: layout.size.height))
                     
-                    if let actionButtonsSizeApply = actionButtonsSizeApply {
+                    if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                         var animated = false
                         if let _ = strongSelf.actionButtonsNode {
                             if case .System = animation {
                                 animated = true
                             }
                         }
-                        let actionButtonsNode = actionButtonsSizeApply.1(animated)
+                        let actionButtonsNode = actionButtonsSizeAndApply.1(animated)
                         let previousFrame = actionButtonsNode.frame
-                        let actionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.maxY), size: actionButtonsSizeApply.0)
+                        let actionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.maxY), size: actionButtonsSizeAndApply.0)
                         actionButtonsNode.frame = actionButtonsFrame
                         if actionButtonsNode !== strongSelf.actionButtonsNode {
                             strongSelf.actionButtonsNode = actionButtonsNode
@@ -660,7 +671,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 transitionClippingNode.frame = fixedBackgroundFrame
                 transitionClippingNode.bounds = CGRect(origin: CGPoint(x: fixedBackgroundFrame.origin.x, y: fixedBackgroundFrame.origin.y), size: fixedBackgroundFrame.size)
                 
-                if progress >= 1.0 - CGFloat(FLT_EPSILON) {
+                if progress >= 1.0 - CGFloat.ulpOfOne {
                     self.disableTransitionClippingNode()
                 }
             }
@@ -683,6 +694,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
+                            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
+                                if let item = self.item, let author = item.message.author {
+                                    self.controllerInteraction?.openPeer(author.id, .info, item.message.id)
+                                }
+                                return
+                            }
+                            
                             if let nameNode = self.nameNode, nameNode.frame.contains(location) {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
@@ -709,7 +727,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     if let sourceMessageId = forwardInfo.sourceMessageId {
                                         self.controllerInteraction?.navigateToMessage(item.message.id, sourceMessageId)
                                     } else {
-                                        self.controllerInteraction?.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil))
+                                        self.controllerInteraction?.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil), nil)
                                     }
                                     return
                                 }
@@ -729,7 +747,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     case let .peerMention(peerId):
                                         foundTapAction = true
                                         if let controllerInteraction = self.controllerInteraction {
-                                            controllerInteraction.openPeer(peerId, .chat(textInputState: nil))
+                                            controllerInteraction.openPeer(peerId, .chat(textInputState: nil), nil)
                                         }
                                         break loop
                                     case let .textMention(name):
@@ -784,6 +802,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
+            return self.view
+        }
+        
         if let selectionNode = self.selectionNode {
             if selectionNode.frame.offsetBy(dx: 42.0, dy: 0.0).contains(point) {
                 return selectionNode.view
@@ -946,7 +968,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         peerId = item.message.id.peerId
                     }
                     if let botPeer = botPeer, let addressName = botPeer.addressName {
-                        controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: "@\(addressName) \(query)")))
+                        controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: "@\(addressName) \(query)")), nil)
                     }
             }
         }

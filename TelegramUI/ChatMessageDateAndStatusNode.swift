@@ -55,7 +55,7 @@ private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
     basicAnimation.duration = duration
     basicAnimation.fromValue = NSNumber(value: Float(0.0))
-    basicAnimation.toValue = NSNumber(value: Float(M_PI * 2.0))
+    basicAnimation.toValue = NSNumber(value: Float(Double.pi * 2.0))
     basicAnimation.repeatCount = Float.infinity
     basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
     layer.add(basicAnimation, forKey: "clockFrameAnimation")
@@ -239,31 +239,40 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                         }
                         clockPosition = CGPoint(x: leftInset + date.size.width + 8.5, y: 7.5)
                     case let .Sent(read):
-                        statusWidth = 13.0
-                        
-                        if checkReadNode == nil {
-                            checkReadNode = ASImageNode()
-                            checkReadNode?.isLayerBacked = true
-                            checkReadNode?.displaysAsynchronously = false
-                            checkReadNode?.displayWithoutProcessing = true
+                        if impressionCount != nil {
+                            statusWidth = 0.0
+                            
+                            checkReadNode = nil
+                            checkSentNode = nil
+                            clockFrameNode = nil
+                            clockMinNode = nil
+                        } else {
+                            statusWidth = 13.0
+                            
+                            if checkReadNode == nil {
+                                checkReadNode = ASImageNode()
+                                checkReadNode?.isLayerBacked = true
+                                checkReadNode?.displaysAsynchronously = false
+                                checkReadNode?.displayWithoutProcessing = true
+                            }
+                            
+                            if checkSentNode == nil {
+                                checkSentNode = ASImageNode()
+                                checkSentNode?.isLayerBacked = true
+                                checkSentNode?.displaysAsynchronously = false
+                                checkSentNode?.displayWithoutProcessing = true
+                            }
+                            
+                            clockFrameNode = nil
+                            clockMinNode = nil
+                            
+                            let checkSize = loadedCheckFullImage!.size
+                            
+                            if read {
+                                checkReadFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0), size: checkSize)
+                            }
+                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0), size: checkSize)
                         }
-                        
-                        if checkSentNode == nil {
-                            checkSentNode = ASImageNode()
-                            checkSentNode?.isLayerBacked = true
-                            checkSentNode?.displaysAsynchronously = false
-                            checkSentNode?.displayWithoutProcessing = true
-                        }
-                        
-                        clockFrameNode = nil
-                        clockMinNode = nil
-                        
-                        let checkSize = loadedCheckFullImage!.size
-                        
-                        if read {
-                            checkReadFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0), size: checkSize)
-                        }
-                        checkSentFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0), size: checkSize)
                     case .Failed:
                         statusWidth = 0.0
                         

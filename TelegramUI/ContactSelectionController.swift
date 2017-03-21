@@ -177,7 +177,7 @@ public class ContactSelectionController: ViewController {
         }))
     }
     
-    public func dismiss() {
+    override open func dismiss() {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
             switch presentationArguments.presentationAnimation {
                 case .modalSheet:

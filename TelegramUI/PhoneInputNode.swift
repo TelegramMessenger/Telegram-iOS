@@ -107,15 +107,19 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     
     private let phoneFormatter = InteractivePhoneFormatter()
     
-    override init() {
+    private let fontSize: CGFloat
+    
+    init(fontSize: CGFloat = 20.0) {
+        self.fontSize = fontSize
+        
         self.countryCodeField = TextFieldNode()
-        self.countryCodeField.textField.font = Font.regular(20.0)
+        self.countryCodeField.textField.font = Font.regular(fontSize)
         self.countryCodeField.textField.textAlignment = .center
         self.countryCodeField.textField.keyboardType = .numberPad
         self.countryCodeField.textField.returnKeyType = .next
         
         self.numberField = TextFieldNode()
-        self.numberField.textField.font = Font.regular(20.0)
+        self.numberField.textField.font = Font.regular(fontSize)
         self.numberField.textField.keyboardType = .numberPad
         
         super.init()

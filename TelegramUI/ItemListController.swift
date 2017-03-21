@@ -47,10 +47,25 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     private var didPlayPresentationAnimation = false
     
+    private let _ready = Promise<Bool>()
+    override var ready: Promise<Bool> {
+        return self._ready
+    }
+    
+    var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)? {
+        didSet {
+            (self.displayNode as! ItemListNode<Entry>).visibleEntriesUpdated = self.visibleEntriesUpdated
+        }
+    }
+    
     init(_ state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
         self.state = state
         
         super.init()
+        
+        self.scrollToTop = { [weak self] in
+            (self?.displayNode as! ItemListNode<Entry>).scrollToTop()
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -109,6 +124,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         }
         self.displayNode = displayNode
         super.displayNodeDidLoad()
+        self._ready.set((self.displayNode as! ItemListNode<Entry>).ready)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -138,7 +154,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         }
     }
     
-    func dismiss() {
+    override func dismiss() {
         (self.displayNode as! ItemListNode<Entry>).animateOut()
     }
     

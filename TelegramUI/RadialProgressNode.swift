@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
+import TelegramLegacyComponents
 
 private class RadialProgressParameters: NSObject {
     let theme: RadialProgressTheme
@@ -34,8 +35,40 @@ private class RadialProgressOverlayParameters: NSObject {
 private class RadialProgressOverlayNode: ASDisplayNode {
     let theme: RadialProgressTheme
     
+    var previousProgress: Float?
+    var effectiveProgress: Float = 0.0 {
+        didSet {
+            if oldValue != self.effectiveProgress {
+                self.setNeedsDisplay()
+            }
+        }
+    }
+    
+    var progressAnimationCompleted: (() -> Void)?
+    
     var state: RadialProgressState = .None {
         didSet {
+            if case let .Fetching(progress) = oldValue {
+                let animation = POPBasicAnimation()
+                animation.property = POPAnimatableProperty.property(withName: "progress", initializer: { property in
+                    property?.readBlock = { node, values in
+                        values?.pointee = CGFloat((node as! RadialProgressOverlayNode).effectiveProgress)
+                    }
+                    property?.writeBlock = { node, values in
+                        (node as! RadialProgressOverlayNode).effectiveProgress = Float(values!.pointee)
+                    }
+                    property?.threshold = 0.01
+                }) as! POPAnimatableProperty
+                animation.fromValue = CGFloat(effectiveProgress) as NSNumber
+                animation.toValue = CGFloat(progress) as NSNumber
+                animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                animation.duration = 0.2
+                animation.completionBlock = { [weak self] _ in
+                    self?.progressAnimationCompleted?()
+                }
+                self.pop_removeAnimation(forKey: "progress")
+                self.pop_add(animation, forKey: "progress")
+            }
             self.setNeedsDisplay()
         }
     }
@@ -46,10 +79,15 @@ private class RadialProgressOverlayNode: ASDisplayNode {
         super.init()
         
         self.isOpaque = false
+        self.displaysAsynchronously = true
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return RadialProgressOverlayParameters(theme: self.theme, diameter: self.frame.size.width, state: self.state)
+        var updatedState = self.state
+        if case let .Fetching = updatedState {
+            updatedState = .Fetching(progress: self.effectiveProgress)
+        }
+        return RadialProgressOverlayParameters(theme: self.theme, diameter: self.frame.size.width, state: updatedState)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -71,7 +109,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
                     break
                 case let .Fetching(progress):
                     let startAngle = -CGFloat(M_PI_2)
-                    let endAngle = 2.0 * (CGFloat(M_PI)) * CGFloat(progress) - CGFloat(M_PI_2)
+                    let endAngle = 2.0 * CGFloat(M_PI) * CGFloat(progress) - CGFloat(M_PI_2)
                     
                     let pathDiameter = parameters.diameter - 2.25 - 2.5 * 2.0
                     
@@ -133,7 +171,15 @@ class RadialProgressNode: ASControlNode {
                 }
             } else {
                 if self.overlay.supernode != nil {
-                    self.overlay.removeFromSupernode()
+                    /*if case let .Fetching(progress) = oldValue {
+                        let overlay = self.overlay
+                        overlay.state = .Fetching(progress: 1.0)
+                        overlay.progressAnimationCompleted = { [weak overlay] in
+                            overlay?.removeFromSupernode()
+                        }
+                    } else {*/
+                        self.overlay.removeFromSupernode()
+                    //}
                 }
             }
             switch oldValue {

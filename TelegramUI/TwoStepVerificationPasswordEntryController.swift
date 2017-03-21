@@ -1,0 +1,437 @@
+import Foundation
+import Display
+import SwiftSignalKit
+import Postbox
+import TelegramCore
+
+private final class TwoStepVerificationPasswordEntryControllerArguments {
+    let updateEntryText: (String) -> Void
+    let next: () -> Void
+    
+    init(updateEntryText: @escaping (String) -> Void, next: @escaping () -> Void) {
+        self.updateEntryText = updateEntryText
+        self.next = next
+    }
+}
+
+private enum TwoStepVerificationPasswordEntrySection: Int32 {
+    case password
+}
+
+private enum TwoStepVerificationPasswordEntryTag: ItemListItemTag {
+    case input
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? TwoStepVerificationPasswordEntryTag {
+            switch self {
+                case .input:
+                    if case .input = other {
+                        return true
+                    } else {
+                        return false
+                    }
+            }
+        } else {
+            return false
+        }
+    }
+}
+
+private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
+    case passwordEntryTitle(String)
+    case passwordEntry(String)
+    
+    case hintTitle(String)
+    case hintEntry(String)
+    
+    case emailEntry(String)
+    case emailInfo(String)
+    
+    var section: ItemListSectionId {
+        return TwoStepVerificationPasswordEntrySection.password.rawValue
+    }
+    
+    var stableId: Int32 {
+        switch self {
+            case .passwordEntryTitle:
+                return 0
+            case .passwordEntry:
+                return 1
+            case .hintTitle:
+                return 2
+            case .hintEntry:
+                return 3
+            case .emailEntry:
+                return 5
+            case .emailInfo:
+                return 6
+        }
+    }
+    
+    static func ==(lhs: TwoStepVerificationPasswordEntryEntry, rhs: TwoStepVerificationPasswordEntryEntry) -> Bool {
+        switch lhs {
+            case let .passwordEntryTitle(text):
+                if case .passwordEntryTitle(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .passwordEntry(text):
+                if case .passwordEntry(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .hintTitle(text):
+                if case .hintTitle(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .hintEntry(text):
+                if case .hintEntry(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .emailEntry(text):
+                if case .emailEntry(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .emailInfo(text):
+                if case .emailInfo(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    static func <(lhs: TwoStepVerificationPasswordEntryEntry, rhs: TwoStepVerificationPasswordEntryEntry) -> Bool {
+        return lhs.stableId < rhs.stableId
+    }
+    
+    func item(_ arguments: TwoStepVerificationPasswordEntryControllerArguments) -> ListViewItem {
+        switch self {
+            case let .passwordEntryTitle(text):
+                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
+            case let .passwordEntry(text):
+                return ItemListSingleLineInputItem(title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+                    arguments.updateEntryText(updatedText)
+                }, action: {
+                    arguments.next()
+                })
+            case let .hintTitle(text):
+                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
+            case let .hintEntry(text):
+                return ItemListSingleLineInputItem(title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+                    arguments.updateEntryText(updatedText)
+                }, action: {
+                    arguments.next()
+                })
+            case let .emailEntry(text):
+                return ItemListSingleLineInputItem(title: NSAttributedString(string: "E-Mail", textColor: .black), text: text, placeholder: "", type: .email, spacing: 10.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+                    arguments.updateEntryText(updatedText)
+                }, action: {
+                    arguments.next()
+                })
+            case let .emailInfo(text):
+                return ItemListTextItem(text: .plain(text), sectionId: self.section)
+        }
+    }
+}
+
+private enum PasswordEntryStage: Equatable {
+    case entry(text: String)
+    case reentry(first: String, text: String)
+    case hint(password: String, text: String)
+    case email(password: String, hint: String, text: String)
+    
+    func updateCurrentText(_ text: String) -> PasswordEntryStage {
+        switch self {
+            case .entry:
+                return .entry(text: text)
+            case let .reentry(first, _):
+                return .reentry(first: first, text: text)
+            case let .hint(password, _):
+                return .hint(password: password, text: text)
+            case let .email(password, hint, _):
+                return .email(password: password, hint: hint, text: text)
+        }
+    }
+    
+    static func ==(lhs: PasswordEntryStage, rhs: PasswordEntryStage) -> Bool {
+        switch lhs {
+            case let .entry(text):
+                if case .entry(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .reentry(first, text):
+                if case .reentry(first, text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .hint(password, text):
+                if case .hint(password, text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .email(password, hint, text):
+                if case .email(password, hint, text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
+private struct TwoStepVerificationPasswordEntryControllerState: Equatable {
+    let stage: PasswordEntryStage
+    let updating: Bool
+    
+    init(stage: PasswordEntryStage, updating: Bool) {
+        self.stage = stage
+        self.updating = updating
+    }
+    
+    static func ==(lhs: TwoStepVerificationPasswordEntryControllerState, rhs: TwoStepVerificationPasswordEntryControllerState) -> Bool {
+        if lhs.stage != rhs.stage {
+            return false
+        }
+        if lhs.updating != rhs.updating {
+            return false
+        }
+        
+        return true
+    }
+    
+    func withUpdatedStage(_ stage: PasswordEntryStage) -> TwoStepVerificationPasswordEntryControllerState {
+        return TwoStepVerificationPasswordEntryControllerState(stage: stage, updating: self.updating)
+    }
+    
+    func withUpdatedUpdating(_ updating: Bool) -> TwoStepVerificationPasswordEntryControllerState {
+        return TwoStepVerificationPasswordEntryControllerState(stage: self.stage, updating: updating)
+    }
+}
+
+private func twoStepVerificationPasswordEntryControllerEntries(state: TwoStepVerificationPasswordEntryControllerState, mode: TwoStepVerificationPasswordEntryMode) -> [TwoStepVerificationPasswordEntryEntry] {
+    var entries: [TwoStepVerificationPasswordEntryEntry] = []
+    
+    switch state.stage {
+        case let .entry(text):
+            entries.append(.passwordEntryTitle("Enter a password"))
+            entries.append(.passwordEntry(text))
+        case let .reentry(_, text):
+            entries.append(.passwordEntryTitle("Please re-enter your password"))
+            entries.append(.passwordEntry(text))
+        case let .hint(_, text):
+            entries.append(.hintTitle("Please create a hint for your password"))
+            entries.append(.hintEntry(text))
+        case let .email(_, _, text):
+            entries.append(.emailEntry(text))
+            entries.append(.emailInfo("Please add your valid e-mail. It is the only way to recover a forgotten password."))
+    }
+    
+    return entries
+}
+
+enum TwoStepVerificationPasswordEntryMode {
+    case setup
+    case change(current: String)
+    case setupEmail(password: String)
+}
+
+struct TwoStepVerificationPasswordEntryResult {
+    let password: String
+    let pendingEmailPattern: String?
+}
+
+func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepVerificationPasswordEntryMode, result: Promise<TwoStepVerificationPasswordEntryResult?>) -> ViewController {
+    let initialStage: PasswordEntryStage
+    switch mode {
+        case .setup, .change:
+            initialStage = .entry(text: "")
+        case .setupEmail:
+            initialStage = .email(password: "", hint: "", text: "")
+    }
+    let initialState = TwoStepVerificationPasswordEntryControllerState(stage: initialStage, updating: false)
+    
+    let statePromise = ValuePromise(initialState, ignoreRepeated: true)
+    let stateValue = Atomic(value: initialState)
+    let updateState: ((TwoStepVerificationPasswordEntryControllerState) -> TwoStepVerificationPasswordEntryControllerState) -> Void = { f in
+        statePromise.set(stateValue.modify { f($0) })
+    }
+    
+    var dismissImpl: (() -> Void)?
+    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    
+    let actionsDisposable = DisposableSet()
+    
+    let updatePasswordDisposable = MetaDisposable()
+    actionsDisposable.add(updatePasswordDisposable)
+    
+    let checkPassword: () -> Void = {
+        var passwordHintEmail: (String, String, String)?
+        var invalidReentry = false
+        updateState { state in
+            if state.updating {
+                return state
+            } else {
+                switch state.stage {
+                    case let .entry(text):
+                        if text.isEmpty {
+                            return state
+                        } else {
+                            return state.withUpdatedStage(.reentry(first: text, text: ""))
+                        }
+                    case let .reentry(first, text):
+                        if text.isEmpty {
+                            return state
+                        } else if text != first {
+                            invalidReentry = true
+                            return state.withUpdatedStage(.entry(text: ""))
+                        } else {
+                            return state.withUpdatedStage(.hint(password: text, text: ""))
+                        }
+                    case let .hint(password, text):
+                        switch mode {
+                            case .setup:
+                                return state.withUpdatedStage(.email(password: password, hint: text, text: ""))
+                            case .change:
+                                passwordHintEmail = (password, text, "")
+                                return state.withUpdatedUpdating(true)
+                            case .setupEmail:
+                                preconditionFailure()
+                        }
+                    case let .email(password, hint, text):
+                        passwordHintEmail = (password, hint, text)
+                        return state.withUpdatedUpdating(true)
+                }
+            }
+        }
+        if let (password, hint, email) = passwordHintEmail {
+            switch mode {
+                case .setup, .change:
+                    var currentPassword: String?
+                    if case let .change(current) = mode {
+                        currentPassword = current
+                    }
+                    updatePasswordDisposable.set((updateTwoStepVerificationPassword(account: account, currentPassword: currentPassword, updatedPassword: .password(password: password, hint: hint, email: email)) |> deliverOnMainQueue).start(next: { update in
+                        updateState {
+                            $0.withUpdatedUpdating(false)
+                        }
+                        switch update {
+                            case let .password(password, pendingEmailPattern):
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmailPattern: pendingEmailPattern)))
+                            case .none:
+                                break
+                        }
+                    }, error: { error in
+                        updateState {
+                            $0.withUpdatedUpdating(false)
+                        }
+                        let alertText: String
+                        switch error {
+                            case .generic:
+                                alertText = "An error occurred."
+                            case .invalidEmail:
+                                alertText = "Please enter valid e-mail address."
+                        }
+                        presentControllerImpl?(standardTextAlertController(title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }))
+                case let .setupEmail(password):
+                    updatePasswordDisposable.set((updateTwoStepVerificationEmail(account: account, currentPassword: password, updatedEmail: email) |> deliverOnMainQueue).start(next: { update in
+                        updateState {
+                            $0.withUpdatedUpdating(false)
+                        }
+                        switch update {
+                            case let .password(password, pendingEmailPattern):
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmailPattern: pendingEmailPattern)))
+                            case .none:
+                                break
+                        }
+                    }, error: { error in
+                        updateState {
+                            $0.withUpdatedUpdating(false)
+                        }
+                        let alertText: String
+                        switch error {
+                            case .generic:
+                                alertText = "An error occurred."
+                            case .invalidEmail:
+                                alertText = "Please enter valid e-mail address."
+                        }
+                        presentControllerImpl?(standardTextAlertController(title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }))
+            }
+        } else if invalidReentry {
+            presentControllerImpl?(standardTextAlertController(title: nil, text: "Passwords don't match.\nPlease try again.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }
+    }
+    
+    let arguments = TwoStepVerificationPasswordEntryControllerArguments(updateEntryText: { updatedText in
+        updateState {
+            $0.withUpdatedStage($0.stage.updateCurrentText(updatedText))
+        }
+    }, next: {
+        checkPassword()
+    })
+    
+    let signal = statePromise.get() |> deliverOnMainQueue
+        |> map { state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationPasswordEntryEntry>, TwoStepVerificationPasswordEntryEntry.ItemGenerationArguments)) in
+            
+            let leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
+                dismissImpl?()
+            })
+            
+            var rightNavigationButton: ItemListNavigationButton?
+            if state.updating {
+                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+            } else {
+                var nextEnabled = true
+                switch state.stage {
+                    case let .entry(text):
+                        if text.isEmpty {
+                            nextEnabled = false
+                        }
+                    case let.reentry(_, text):
+                        if text.isEmpty {
+                            nextEnabled = false
+                        }
+                    case .hint, .email:
+                        break
+                }
+                rightNavigationButton = ItemListNavigationButton(title: "Next", style: .bold, enabled: nextEnabled, action: {
+                    checkPassword()
+                })
+            }
+            
+            let controllerState = ItemListControllerState(title: "Password", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let listState = ItemListNodeState(entries: twoStepVerificationPasswordEntryControllerEntries(state: state, mode: mode), style: .blocks, focusItemTag: TwoStepVerificationPasswordEntryTag.input, emptyStateItem: nil, animateChanges: false)
+            
+            return (controllerState, (listState, arguments))
+        } |> afterDisposed {
+            actionsDisposable.dispose()
+    }
+    
+    let controller = ItemListController(signal)
+    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    
+    presentControllerImpl = { [weak controller] c, p in
+        if let controller = controller {
+            controller.present(c, in: .window, with: p)
+        }
+    }
+    dismissImpl = { [weak controller] in
+        controller?.dismiss()
+    }
+    
+    return controller
+}

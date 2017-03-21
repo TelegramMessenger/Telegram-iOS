@@ -60,8 +60,9 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         let titleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         
         return { button, constrainedWidth, position in
-            let sideInset: CGFloat = 5.0
-            let (titleSize, titleApply) = titleLayout(NSAttributedString(string: button.title, font: titleFont, textColor: .white), nil, 1, .end, CGSize(width: max(1.0, constrainedWidth - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude), nil)
+            let sideInset: CGFloat = 8.0
+            let minimumSideInset: CGFloat = 4.0
+            let (titleSize, titleApply) = titleLayout(NSAttributedString(string: button.title, font: titleFont, textColor: .white), nil, 1, .end, CGSize(width: max(1.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), nil)
             
             let backgroundImage: UIImage
             switch position {
@@ -122,21 +123,23 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ replyMarkup: ReplyMarkupMessageAttribute, _ constrainedWidth: CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode) {
+    //(_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (maxWidth: CGFloat, layout: (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void)))
+    
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ replyMarkup: ReplyMarkupMessageAttribute, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)) {
         let currentButtonLayouts = maybeNode?.buttonNodes.map { ChatMessageActionButtonNode.asyncLayout($0) } ?? []
         
         return { replyMarkup, constrainedWidth in
-            var buttonFramesAndApply: [(CGRect, () -> ChatMessageActionButtonNode)] = []
-            var verticalRowOffset: CGFloat = 0.0
             let buttonHeight: CGFloat = 42.0
             let buttonSpacing: CGFloat = 4.0
             
-            verticalRowOffset += buttonSpacing
+            var overallMinimumRowWidth: CGFloat = 0.0
+            
+            var finalizeRowLayouts: [[((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))]] = []
             
             var rowIndex = 0
             var buttonIndex = 0
             for row in replyMarkup.rows {
-                var minimumRowWidth: CGFloat = 0.0
+                var maximumRowButtonWidth: CGFloat = 0.0
                 let maximumButtonWidth: CGFloat = max(1.0, floor((constrainedWidth - CGFloat(max(0, row.buttons.count - 1)) * buttonSpacing) / CGFloat(row.buttons.count)))
                 var finalizeRowButtonLayouts: [((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))] = []
                 var rowButtonIndex = 0
@@ -163,77 +166,92 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                         prepareButtonLayout = ChatMessageActionButtonNode.asyncLayout(nil)(button, maximumButtonWidth, buttonPosition)
                     }
                     
-                    minimumRowWidth += prepareButtonLayout.minimumWidth
+                    maximumRowButtonWidth = max(maximumRowButtonWidth, prepareButtonLayout.minimumWidth)
                     finalizeRowButtonLayouts.append(prepareButtonLayout.layout)
                     
                     buttonIndex += 1
                     rowButtonIndex += 1
                 }
                 
-                let actualButtonWidth: CGFloat = max(1.0, floor((constrainedWidth - CGFloat(max(0, row.buttons.count - 1)) * buttonSpacing) / CGFloat(row.buttons.count)))
-                var horizontalButtonOffset: CGFloat = 0.0
-                for finalizeButtonLayout in finalizeRowButtonLayouts {
-                    let (buttonSize, buttonApply) = finalizeButtonLayout(actualButtonWidth)
-                    let buttonFrame = CGRect(origin: CGPoint(x: horizontalButtonOffset, y: verticalRowOffset), size: buttonSize)
-                    buttonFramesAndApply.append((buttonFrame, buttonApply))
-                    horizontalButtonOffset += buttonSize.width + buttonSpacing
-                }
+                overallMinimumRowWidth = max(overallMinimumRowWidth, maximumRowButtonWidth * CGFloat(row.buttons.count) + buttonSpacing * max(0.0, CGFloat(row.buttons.count - 1)))
+                finalizeRowLayouts.append(finalizeRowButtonLayouts)
                 
-                verticalRowOffset += buttonHeight + buttonSpacing
                 rowIndex += 1
             }
-            if verticalRowOffset > 0.0 {
-                verticalRowOffset = max(0.0, verticalRowOffset - buttonSpacing)
-            }
             
-            return (CGSize(width: constrainedWidth, height: verticalRowOffset), { animated in
-                let node: ChatMessageActionButtonsNode
-                if let maybeNode = maybeNode {
-                    node = maybeNode
-                } else {
-                    node = ChatMessageActionButtonsNode()
-                }
+            return (min(constrainedWidth, overallMinimumRowWidth), { constrainedWidth in
+                var buttonFramesAndApply: [(CGRect, () -> ChatMessageActionButtonNode)] = []
                 
-                var updatedButtons: [ChatMessageActionButtonNode] = []
-                var index = 0
-                for (buttonFrame, buttonApply) in buttonFramesAndApply {
-                    let buttonNode = buttonApply()
-                    buttonNode.frame = buttonFrame
-                    updatedButtons.append(buttonNode)
-                    if buttonNode.supernode == nil {
-                        node.addSubnode(buttonNode)
-                        buttonNode.pressed = node.buttonPressedWrapper
+                var verticalRowOffset: CGFloat = 0.0
+                verticalRowOffset += buttonSpacing
+                
+                var rowIndex = 0
+                for finalizeRowButtonLayouts in finalizeRowLayouts {
+                    let actualButtonWidth: CGFloat = max(1.0, floor((constrainedWidth - CGFloat(max(0, finalizeRowButtonLayouts.count - 1)) * buttonSpacing) / CGFloat(finalizeRowButtonLayouts.count)))
+                    var horizontalButtonOffset: CGFloat = 0.0
+                    for finalizeButtonLayout in finalizeRowButtonLayouts {
+                        let (buttonSize, buttonApply) = finalizeButtonLayout(actualButtonWidth)
+                        let buttonFrame = CGRect(origin: CGPoint(x: horizontalButtonOffset, y: verticalRowOffset), size: buttonSize)
+                        buttonFramesAndApply.append((buttonFrame, buttonApply))
+                        horizontalButtonOffset += buttonSize.width + buttonSpacing
                     }
-                    index += 1
+                    
+                    verticalRowOffset += buttonHeight + buttonSpacing
+                    rowIndex += 1
+                }
+                if verticalRowOffset > 0.0 {
+                    verticalRowOffset = max(0.0, verticalRowOffset - buttonSpacing)
                 }
                 
-                var buttonsUpdated = false
-                if node.buttonNodes.count != updatedButtons.count {
-                    buttonsUpdated = true
-                } else {
-                    for i in 0 ..< updatedButtons.count {
-                        if updatedButtons[i] !== node.buttonNodes[i] {
-                            buttonsUpdated = true
-                            break
+                return (CGSize(width: constrainedWidth, height: verticalRowOffset), { animated in
+                    let node: ChatMessageActionButtonsNode
+                    if let maybeNode = maybeNode {
+                        node = maybeNode
+                    } else {
+                        node = ChatMessageActionButtonsNode()
+                    }
+                    
+                    var updatedButtons: [ChatMessageActionButtonNode] = []
+                    var index = 0
+                    for (buttonFrame, buttonApply) in buttonFramesAndApply {
+                        let buttonNode = buttonApply()
+                        buttonNode.frame = buttonFrame
+                        updatedButtons.append(buttonNode)
+                        if buttonNode.supernode == nil {
+                            node.addSubnode(buttonNode)
+                            buttonNode.pressed = node.buttonPressedWrapper
+                        }
+                        index += 1
+                    }
+                    
+                    var buttonsUpdated = false
+                    if node.buttonNodes.count != updatedButtons.count {
+                        buttonsUpdated = true
+                    } else {
+                        for i in 0 ..< updatedButtons.count {
+                            if updatedButtons[i] !== node.buttonNodes[i] {
+                                buttonsUpdated = true
+                                break
+                            }
                         }
                     }
-                }
-                if buttonsUpdated {
-                    for currentButton in node.buttonNodes {
-                        if !updatedButtons.contains(currentButton) {
-                            currentButton.removeFromSupernode()
+                    if buttonsUpdated {
+                        for currentButton in node.buttonNodes {
+                            if !updatedButtons.contains(currentButton) {
+                                currentButton.removeFromSupernode()
+                            }
                         }
                     }
-                }
-                node.buttonNodes = updatedButtons
-                
-                if animated {
-                    /*UIView.transition(with: node.view, duration: 0.2, options: [.transitionCrossDissolve], animations: {
-                        
-                    }, completion: nil)*/
-                }
-                
-                return node
+                    node.buttonNodes = updatedButtons
+                    
+                    if animated {
+                        /*UIView.transition(with: node.view, duration: 0.2, options: [.transitionCrossDissolve], animations: {
+                            
+                        }, completion: nil)*/
+                    }
+                    
+                    return node
+                })
             })
         }
     }

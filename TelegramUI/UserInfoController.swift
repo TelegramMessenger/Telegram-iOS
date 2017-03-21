@@ -7,15 +7,17 @@ import TelegramCore
 private final class UserInfoControllerArguments {
     let account: Account
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
+    let openChat: () -> Void
     let changeNotificationMuteSettings: () -> Void
     let openSharedMedia: () -> Void
     let openGroupsInCommon: () -> Void
     let updatePeerBlocked: (Bool) -> Void
     let deleteContact: () -> Void
     
-    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void) {
+    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void) {
         self.account = account
         self.updateEditingName = updateEditingName
+        self.openChat = openChat
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.openSharedMedia = openSharedMedia
         self.openGroupsInCommon = openGroupsInCommon
@@ -240,7 +242,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return ItemListTextWithLabelItem(label: "username", text: "@\(value)", multiline: false, sectionId: self.section)
             case .sendMessage:
                 return ItemListActionItem(title: "Send Message", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
-                    
+                    arguments.openChat()
                 })
             case .shareContact:
                 return ItemListActionItem(title: "Share Contact", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
@@ -350,7 +352,7 @@ private struct UserInfoState: Equatable {
     }
 }
 
-private func userInfoEntries(account: Account, view: PeerView, state: UserInfoState) -> [UserInfoEntry] {
+private func userInfoEntries(account: Account, view: PeerView, state: UserInfoState, peerChatState: Coding?) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {
@@ -398,8 +400,8 @@ private func userInfoEntries(account: Account, view: PeerView, state: UserInfoSt
         entries.append(UserInfoEntry.groupsInCommon(groupsInCommon))
     }
     
-    if let _ = peer as? TelegramSecretChat {
-        entries.append(UserInfoEntry.secretEncryptionKey(SecretChatKeyFingerprint(k0: 0, k1: 0, k2: 0, k3: 0)))
+    if peer is TelegramSecretChat, let peerChatState = peerChatState as? SecretChatKeyState, let keyFingerprint = peerChatState.keyFingerprint {
+        entries.append(UserInfoEntry.secretEncryptionKey(keyFingerprint))
     }
     
     if isEditing {
@@ -429,6 +431,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var openChatImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -447,12 +450,14 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     
     let arguments = UserInfoControllerArguments(account: account, updateEditingName: { editingName in
         updateState { state in
-            if let editingState = state.editingState {
+            if let _ = state.editingState {
                 return state.withUpdatedEditingState(UserInfoEditingState(editingName: editingName))
             } else {
                 return state
             }
         }
+    }, openChat: {
+        openChatImpl?()
     }, changeNotificationMuteSettings: {
         let controller = ActionSheetController()
         let dismissAction: () -> Void = { [weak controller] in
@@ -507,8 +512,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         
     })
     
-    let signal = combineLatest(statePromise.get(), account.viewTracker.peerView(peerId))
-        |> map { state, view -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [.peerChatState(peerId: peerId)]))
+        |> map { state, view, chatState -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             var leftNavigationButton: ItemListNavigationButton?
             let rightNavigationButton: ItemListNavigationButton
@@ -568,7 +573,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             }
             
             let controllerState = ItemListControllerState(title: "Info", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
-            let listState = ItemListNodeState(entries: userInfoEntries(account: account, view: view, state: state), style: .plain)
+            let listState = ItemListNodeState(entries: userInfoEntries(account: account, view: view, state: state, peerChatState: (chatState.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState), style: .plain)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
@@ -582,6 +587,11 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window, with: presentationArguments)
+    }
+    openChatImpl = { [weak controller] in
+        if let navigationController = (controller?.navigationController as? NavigationController) {
+            navigateToChatController(navigationController: navigationController, account: account, peerId: peerId)
+        }
     }
     return controller
 }

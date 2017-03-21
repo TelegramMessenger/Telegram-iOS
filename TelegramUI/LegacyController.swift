@@ -162,7 +162,7 @@ class LegacyController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    public func dismiss() {
+    override open func dismiss() {
         switch self.presentation {
             case .modal:
                 self.controllerNode.animateModalOut { [weak self] in

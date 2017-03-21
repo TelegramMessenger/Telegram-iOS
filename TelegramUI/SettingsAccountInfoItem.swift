@@ -112,7 +112,7 @@ class SettingsAccountInfoItemNode: ListControllerGroupableItemNode {
                 if let strongSelf = self {
                     strongSelf.avatarNode.setPeer(account, peer: peer)
                     let width = strongSelf.bounds.size.width
-                    if width > CGFloat(FLT_EPSILON) {
+                    if width > CGFloat.ulpOfOne {
                         strongSelf.layoutContentForWidth(width)
                         strongSelf.nameNode.setNeedsDisplay()
                     }
@@ -124,7 +124,7 @@ class SettingsAccountInfoItemNode: ListControllerGroupableItemNode {
         
                     //strongSelf.statusNode.attributedString = NSAttributedString(string: statusText, font: statusFont, textColor: statusColor)
                     let width = strongSelf.bounds.size.width
-                    if width > CGFloat(FLT_EPSILON) {
+                    if width > CGFloat.ulpOfOne {
                         strongSelf.layoutContentForWidth(width)
                         strongSelf.statusNode.setNeedsDisplay()
                     }

@@ -27,7 +27,7 @@ public final class ChatControllerInteraction {
     let openMessage: (MessageId) -> Void
     let openSecretMessagePreview: (MessageId) -> Void
     let closeSecretMessagePreview: () -> Void
-    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void
+    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageId?) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (MessageId, ASDisplayNode, CGRect) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
@@ -47,7 +47,7 @@ public final class ChatControllerInteraction {
     let openHashtag: (String?, String) -> Void
     let updateInputState: ((ChatTextInputState) -> ChatTextInputState) -> Void
     
-    public init(openMessage: @escaping (MessageId) -> Void, openSecretMessagePreview: @escaping (MessageId) -> Void, closeSecretMessagePreview: @escaping () -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (MessageId) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void) {
+    public init(openMessage: @escaping (MessageId) -> Void, openSecretMessagePreview: @escaping (MessageId) -> Void, closeSecretMessagePreview: @escaping () -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageId?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (MessageId) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void) {
         self.openMessage = openMessage
         self.openSecretMessagePreview = openSecretMessagePreview
         self.closeSecretMessagePreview = closeSecretMessagePreview

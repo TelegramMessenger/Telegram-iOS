@@ -139,7 +139,7 @@ public final class PeerSelectionController: ViewController {
         }
     }
     
-    public func dismiss() {
+    override open func dismiss() {
         self.peerSelectionNode.animateOut()
     }
 }

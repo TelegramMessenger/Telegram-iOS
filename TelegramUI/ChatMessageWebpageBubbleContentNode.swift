@@ -94,13 +94,19 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             localtime_r(&t, &timeinfo)
             
             var edited = false
+            var sentViaBot = false
             var viewCount: Int?
             for attribute in item.message.attributes {
                 if let _ = attribute as? EditedMessageAttribute {
                     edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
+                } else if let _ = attribute as? InlineBotMessageAttribute {
+                    sentViaBot = true
                 }
+            }
+            if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                sentViaBot = true
             }
             let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
             
@@ -174,7 +180,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             
             return (initialWidth, { constrainedSize in
                 let statusType: ChatMessageDateAndStatusType
-                if item.message.flags.contains(.Incoming) {
+                if item.message.effectivelyIncoming {
                     statusType = .BubbleIncoming
                 } else {
                     if item.message.flags.contains(.Failed) {
@@ -191,7 +197,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusSizeAndApply: (CGSize, (Bool) -> Void)?
                 
                 if refineContentImageLayout == nil && refineContentFileLayout == nil {
-                    statusSizeAndApply = statusLayout(edited, viewCount, dateText, statusType, textConstrainedSize)
+                    statusSizeAndApply = statusLayout(edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                 }
                 
                 let (textLayout, textApply) = textAsyncLayout(textString, nil, 12, .end, textConstrainedSize, textCutout)
@@ -281,7 +287,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         contentImageSizeAndApply = (size, apply)
                         
                         var imageHeigthAddition = size.height
-                        if textFrame.size.height > CGFloat(FLT_EPSILON) {
+                        if textFrame.size.height > CGFloat.ulpOfOne {
                             imageHeigthAddition += 2.0
                         }
                         
@@ -295,7 +301,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         contentFileSizeAndApply = (size, apply)
                         
                         var imageHeigthAddition = size.height
-                        if textFrame.size.height > CGFloat(FLT_EPSILON) {
+                        if textFrame.size.height > CGFloat.ulpOfOne {
                             imageHeigthAddition += 2.0
                         }
                         
@@ -369,7 +375,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                     }
                                 }
                                 let _ = contentImageApply()
-                                contentImageNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat(FLT_EPSILON) ? 4.0 : 0.0)), size: contentImageSize)
+                                contentImageNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 4.0 : 0.0)), size: contentImageSize)
                             } else if let contentImageNode = strongSelf.contentImageNode {
                                 contentImageNode.removeFromSupernode()
                                 strongSelf.contentImageNode = nil
@@ -387,7 +393,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                     }
                                 }
                                 let _ = contentFileApply()
-                                contentFileNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat(FLT_EPSILON) ? 4.0 : 0.0)), size: contentFileSize)
+                                contentFileNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 4.0 : 0.0)), size: contentFileSize)
                             } else if let contentFileNode = strongSelf.contentFileNode {
                                 contentFileNode.removeFromSupernode()
                                 strongSelf.contentFileNode = nil

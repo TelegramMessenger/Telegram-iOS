@@ -83,13 +83,19 @@ struct ChatHistoryListViewTransition {
     let cachedData: CachedPeerData?
 }
 
-private func maxIncomingMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> MessageIndex? {
+private func maxMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> (incoming: MessageIndex?, overall: MessageIndex?) {
+    var overall: MessageIndex?
     for i in (indexRange.0 ... indexRange.1).reversed() {
-        if case let .MessageEntry(message, _) = entries[i], message.flags.contains(.Incoming) {
-            return MessageIndex(message)
+        if case let .MessageEntry(message, _) = entries[i] {
+            if overall == nil {
+                overall = MessageIndex(message)
+            }
+            if message.flags.contains(.Incoming) {
+                return (MessageIndex(message), overall)
+            }
         }
     }
-    return nil
+    return (nil, overall)
 }
 
 private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, entries: [ChatHistoryViewTransitionInsertEntry]) -> [ListViewInsertItem] {
@@ -212,6 +218,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
     
+    private var maxVisibleMessageIndexReported: MessageIndex?
+    var maxVisibleMessageIndexUpdated: ((MessageIndex) -> Void)?
+    
     public init(account: Account, peerId: PeerId, tagMask: MessageTags?, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode = .bubbles) {
         self.account = account
         self.peerId = peerId
@@ -226,16 +235,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         //self.debugInfo = true
         
         self.messageProcessingManager.process = { [weak account] messageIds in
-            account?.viewTracker.updatedViewCountMessageIds(messageIds: messageIds)
+            account?.viewTracker.updateViewCountForMessageIds(messageIds: messageIds)
         }
         
         self.preloadPages = false
         switch self.mode {
             case .bubbles:
-                self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
+                self.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
             case .list:
                 break
         }
+        //self.snapToBottomInsetUntilFirstInteraction = true
         
         let messageViewQueue = self.messageViewQueue
         
@@ -370,8 +380,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             strongSelf.messageProcessingManager.add(messageIdsWithViewCount)
                         }
                         
-                        if let messageIndex = maxIncomingMessageIndexForEntries(historyView.filteredEntries, indexRange: indexRange) {
-                            strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
+                        let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView.filteredEntries, indexRange: indexRange)
+                        
+                        if let maxIncomingIndex = maxIncomingIndex {
+                            strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxIncomingIndex)
+                        }
+                        
+                        if let maxOverallIndex = maxOverallIndex, maxOverallIndex != strongSelf.maxVisibleMessageIndexReported {
+                            strongSelf.maxVisibleMessageIndexReported = maxOverallIndex
+                            strongSelf.maxVisibleMessageIndexUpdated?(maxOverallIndex)
                         }
                     }
                     
@@ -483,7 +500,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         strongSelf.account.postbox.updateMessageHistoryViewVisibleRange(transition.historyView.originalView.id, earliestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.lastIndex].index, latestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.firstIndex].index)
                         
                         if let visible = visibleRange.visibleRange {
-                            if let messageIndex = maxIncomingMessageIndexForEntries(transition.historyView.filteredEntries, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visible.firstIndex)) {
+                            let (messageIndex, _) = maxMessageIndexForEntries(transition.historyView.filteredEntries, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visible.firstIndex))
+                            if let messageIndex = messageIndex {
                                 strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                             }
                         }

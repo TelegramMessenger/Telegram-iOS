@@ -54,7 +54,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
             } else if let channel = peer as? TelegramChannel {
                 switch channel.participationStatus {
-                    case .kicked, .left:
+                    case .kicked:
                         if let currentPanel = currentPanel as? DeleteChatInputPanelNode {
                             return currentPanel
                         } else {
@@ -63,7 +63,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                             panel.interfaceInteraction = interfaceInteraction
                             return panel
                         }
-                    case .member:
+                    case .member, .left:
                         break
                 }
                 switch channel.info {

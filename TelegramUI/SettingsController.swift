@@ -8,10 +8,13 @@ private struct SettingsItemArguments {
     let account: Account
     let accountManager: AccountManager
     
+    let openPrivacyAndSecurity: () -> Void
     let pushController: (ViewController) -> Void
     let presentController: (ViewController) -> Void
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let saveEditingState: () -> Void
+    let openSupport: () -> Void
+    let openFaq: () -> Void
     let logout: () -> Void
 }
 
@@ -33,7 +36,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case stickers
     case phoneNumber(String)
     case username(String)
-    case askAQuestion
+    case askAQuestion(Bool)
     case faq
     case debug
     case logOut
@@ -149,8 +152,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case .askAQuestion:
-                if case .askAQuestion = rhs {
+            case let .askAQuestion(loading):
+                if case .askAQuestion(loading) = rhs {
                     return true
                 } else {
                     return false
@@ -188,14 +191,6 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case .setProfilePhoto:
                 return ItemListActionItem(title: "Set Profile Photo", kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.presentController(standardTextAlertController(title: "Verification Failed", text: "Your Apple ID or password is incorrect.", actions: [
-                        TextAlertAction(type: .genericAction, title: "Cancel", action: {
-                            
-                        }),
-                        TextAlertAction(type: .defaultAction, title: "OK", action: {
-                            
-                        })
-                    ]))
                 })
             case .notificationsAndSounds:
                 return ItemListDisclosureItem(title: "Notifications and Sounds", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -203,7 +198,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case .privacyAndSecurity:
                 return ItemListDisclosureItem(title: "Privacy and Security", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.pushController(privacyAndSecurityController(account: arguments.account))
+                    arguments.openPrivacyAndSecurity()
                 })
             case .dataAndStorage:
                 return ItemListDisclosureItem(title: "Data and Storage", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -211,23 +206,23 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case .stickers:
                 return ItemListDisclosureItem(title: "Stickers", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.pushController(installedStickerPacksController(account: arguments.account, mode: .general))
                 })
             case let .phoneNumber(number):
                 return ItemListDisclosureItem(title: "Phone Number", label: number, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.pushController(ChangePhoneNumberIntroController(account: arguments.account, phoneNumber: number))
                 })
             case let .username(address):
                 return ItemListDisclosureItem(title: "Username", label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.presentController(usernameSetupController(account: arguments.account))
                 })
-            case .askAQuestion:
+            case let .askAQuestion(askAQuestion):
                 return ItemListDisclosureItem(title: "Ask a Question", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.openSupport()
                 })
             case .faq:
                 return ItemListDisclosureItem(title: "Telegram FAQ", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.openFaq()
                 })
             case .debug:
                 return ItemListDisclosureItem(title: "Debug", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -256,13 +251,18 @@ private struct SettingsEditingState: Equatable {
 private struct SettingsState: Equatable {
     let editingState: SettingsEditingState?
     let updatingName: ItemListAvatarAndNameInfoItemName?
+    let loadingSupportPeer: Bool
     
     func withUpdatedEditingState(_ editingState: SettingsEditingState?) -> SettingsState {
-        return SettingsState(editingState: editingState, updatingName: self.updatingName)
+        return SettingsState(editingState: editingState, updatingName: self.updatingName, loadingSupportPeer: self.loadingSupportPeer)
     }
     
     func withUpdatedUpdatingName(_ updatingName: ItemListAvatarAndNameInfoItemName?) -> SettingsState {
-        return SettingsState(editingState: self.editingState, updatingName: updatingName)
+        return SettingsState(editingState: self.editingState, updatingName: updatingName, loadingSupportPeer: self.loadingSupportPeer)
+    }
+    
+    func withUpdatedLoadingSupportPeer(_ loadingSupportPeer: Bool) -> SettingsState {
+        return SettingsState(editingState: self.editingState, updatingName: self.updatingName, loadingSupportPeer: loadingSupportPeer)
     }
     
     static func ==(lhs: SettingsState, rhs: SettingsState) -> Bool {
@@ -270,6 +270,9 @@ private struct SettingsState: Equatable {
             return false
         }
         if lhs.updatingName != rhs.updatingName {
+            return false
+        }
+        if lhs.loadingSupportPeer != rhs.loadingSupportPeer {
             return false
         }
         return true
@@ -294,7 +297,7 @@ private func settingsEntries(state: SettingsState, view: PeerView) -> [SettingsE
         }
         entries.append(.username(peer.addressName == nil ? "" : ("@" + peer.addressName!)))
         
-        entries.append(.askAQuestion)
+        entries.append(.askAQuestion(state.loadingSupportPeer))
         entries.append(.faq)
         entries.append(.debug)
         
@@ -307,8 +310,8 @@ private func settingsEntries(state: SettingsState, view: PeerView) -> [SettingsE
 }
 
 public func settingsController(account: Account, accountManager: AccountManager) -> ViewController {
-    let statePromise = ValuePromise(SettingsState(editingState: nil, updatingName: nil), ignoreRepeated: true)
-    let stateValue = Atomic(value: SettingsState(editingState: nil, updatingName: nil))
+    let statePromise = ValuePromise(SettingsState(editingState: nil, updatingName: nil, loadingSupportPeer: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: SettingsState(editingState: nil, updatingName: nil, loadingSupportPeer: false))
     let updateState: ((SettingsState) -> SettingsState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -321,7 +324,15 @@ public func settingsController(account: Account, accountManager: AccountManager)
     let updatePeerNameDisposable = MetaDisposable()
     actionsDisposable.add(updatePeerNameDisposable)
     
-    let arguments = SettingsItemArguments(account: account, accountManager: accountManager, pushController: { controller in
+    let supportPeerDisposable = MetaDisposable()
+    actionsDisposable.add(supportPeerDisposable)
+    
+    //let privacySettings = Promise<AccountPrivacySettings?>()
+    //privacySettings.set(.single(nil) |> then(requestAccountPrivacySettings(account: account) |> map { Optional($0) }))
+    
+    let arguments = SettingsItemArguments(account: account, accountManager: accountManager, openPrivacyAndSecurity: {
+        pushControllerImpl?(privacyAndSecurityController(account: account, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: account) |> map { Optional($0) })))
+    }, pushController: { controller in
         pushControllerImpl?(controller)
     }, presentController: { controller in
         presentControllerImpl?(controller)
@@ -352,6 +363,33 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 }
             }).start())
         }
+    }, openSupport: {
+        var load = false
+        updateState { state in
+            if !state.loadingSupportPeer {
+                load = true
+            }
+            return state.withUpdatedLoadingSupportPeer(true)
+        }
+        if load {
+            supportPeerDisposable.set((supportPeerId(account: account) |> deliverOnMainQueue).start(next: { peerId in
+                updateState { state in
+                    return state.withUpdatedLoadingSupportPeer(false)
+                }
+                if let peerId = peerId {
+                    pushControllerImpl?(ChatController(account: account, peerId: peerId))
+                }
+            }))
+        }
+    }, openFaq: {
+        var faqUrl = NSLocalizedString("Settings.FAQ_URL", comment: "")
+        if faqUrl == "Settings.FAQ_URL" {
+            faqUrl = "http://telegram.org/faq#general"
+        }
+        
+        if let applicationContext = account.applicationContext as? TelegramApplicationContext {
+            applicationContext.openUrl(faqUrl)
+        }
     }, logout: {
         let alertController = standardTextAlertController(title: NSLocalizedString("Settings.LogoutConfirmationTitle", comment: ""), text: NSLocalizedString("Settings.LogoutConfirmationText", comment: ""), actions: [
             TextAlertAction(type: .genericAction, title: "Cancel", action: {
@@ -359,7 +397,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
             TextAlertAction(type: .defaultAction, title: "OK", action: {
                 let _ = logoutFromAccount(id: account.id, accountManager: accountManager).start()
             })
-        ])
+            ])
         presentControllerImpl?(alertController)
     })
     

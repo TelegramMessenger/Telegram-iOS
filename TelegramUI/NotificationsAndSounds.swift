@@ -246,7 +246,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     }))
                 })
             case .messageNotice:
-                return ItemListTextItem(text: "You can set custom notifications for specific users on their info page.", sectionId: self.section)
+                return ItemListTextItem(text: .plain("You can set custom notifications for specific users on their info page."), sectionId: self.section)
             case .groupHeader:
                 return ItemListSectionHeaderItem(text: "GROUP NOTIFICATIONS", sectionId: self.section)
             case let .groupAlerts(value):
@@ -268,7 +268,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     }))
                 })
             case .groupNotice:
-                return ItemListTextItem(text: "You can set custom notifications for specific groups on their info page.", sectionId: self.section)
+                return ItemListTextItem(text: .plain("You can set custom notifications for specific groups on their info page."), sectionId: self.section)
             case .inAppHeader:
                 return ItemListSectionHeaderItem(text: "IN-APP NOTIFICATIONS", sectionId: self.section)
             case let .inAppSounds(value):
@@ -288,7 +288,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     arguments.resetNotifications()
                 })
             case .resetNotice:
-                return ItemListTextItem(text: "Undo all custom notification settings for all your contacts and groups.", sectionId: self.section)
+                return ItemListTextItem(text: .plain("Undo all custom notification settings for all your contacts and groups."), sectionId: self.section)
         }
     }
 }

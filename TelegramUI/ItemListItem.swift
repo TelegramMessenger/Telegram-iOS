@@ -1,7 +1,12 @@
 import Display
 
+protocol ItemListItemTag {
+    func isEqual(to other: ItemListItemTag) -> Bool
+}
+
 protocol ItemListItem {
     var sectionId: ItemListSectionId { get }
+    var tag: ItemListItemTag? { get }
     var isAlwaysPlain: Bool { get }
 }
 
@@ -9,6 +14,18 @@ extension ItemListItem {
     var isAlwaysPlain: Bool {
         return false
     }
+    
+    var tag: ItemListItemTag? {
+        return nil
+    }
+}
+
+protocol ItemListItemNode {
+    var tag: ItemListItemTag? { get }
+}
+
+protocol ItemListItemFocusableNode {
+    func focus()
 }
 
 enum ItemListNeighbor {

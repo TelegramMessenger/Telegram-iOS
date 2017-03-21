@@ -76,6 +76,8 @@ public class ChatController: TelegramController {
     private let typingActivityPromise = Promise<Bool>()
     private var typingActivityDisposable: Disposable?
     
+    private var historyNavigationStack = ChatHistoryNavigationStack()
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil) {
         self.account = account
         self.peerId = peerId
@@ -118,7 +120,16 @@ public class ChatController: TelegramController {
                 }
                 
                 if let galleryMedia = galleryMedia {
-                    if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice {
+                    if let file = galleryMedia as? TelegramMediaFile, file.isSticker {
+                        for attribute in file.attributes {
+                            if case let .Sticker(_, reference) = attribute {
+                                if let reference = reference {
+                                    strongSelf.present(StickerPackPreviewController(account: strongSelf.account, stickerPack: reference), in: .window)
+                                }
+                                break
+                            }
+                        }
+                    } else if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice {
                         if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
                             let player = ManagedAudioPlaylistPlayer(postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
                             applicationContext.mediaManager.setPlaylistPlayer(player)
@@ -185,9 +196,9 @@ public class ChatController: TelegramController {
                 strongSelf.secretMediaPreviewController?.dismiss()
                 strongSelf.secretMediaPreviewController = nil
             }
-        }, openPeer: { [weak self] id, navigation in
+        }, openPeer: { [weak self] id, navigation, fromMessageId in
             if let strongSelf = self {
-                strongSelf.openPeer(id, navigation)
+                strongSelf.openPeer(peerId: id, navigation: navigation, fromMessageId: fromMessageId)
             }
         }, openPeerMention: { [weak self] name in
             if let strongSelf = self {
@@ -735,6 +746,12 @@ public class ChatController: TelegramController {
             }
         }
         
+        self.chatDisplayNode.historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
+            if let strongSelf = self, !strongSelf.historyNavigationStack.isEmpty {
+                strongSelf.historyNavigationStack.filterOutIndicesLessThan(index)
+            }
+        }
+        
         self.chatDisplayNode.requestLayout = { [weak self] transition in
             self?.requestLayout(transition: transition)
         }
@@ -902,7 +919,11 @@ public class ChatController: TelegramController {
         
         self.chatDisplayNode.navigateToLatestButton.tapped = { [weak self] in
             if let strongSelf = self, strongSelf.isNodeLoaded {
-                strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                if let messageId = strongSelf.historyNavigationStack.removeLast() {
+                    strongSelf.navigateToMessage(from: nil, to: messageId.id, rememberInStack: false)
+                } else {
+                    strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                }
             }
         }
         
@@ -1087,7 +1108,7 @@ public class ChatController: TelegramController {
             }
         }, botSwitchChatWithPayload: { [weak self] peerId, payload in
             if let strongSelf = self {
-                strongSelf.openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .automatic(returnToPeerId: strongSelf.peerId))))
+                strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .automatic(returnToPeerId: strongSelf.peerId))), fromMessageId: nil)
             }
         }, beginAudioRecording: { [weak self] in
             self?.requestAudioRecorder()
@@ -1185,7 +1206,7 @@ public class ChatController: TelegramController {
         }, dismissReportPeer: { [weak self] in
             self?.dismissReportPeer()
         }, deleteChat: { [weak self] in
-            self?.deleteChat()
+            self?.deleteChat(reportChatSpam: false)
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get()))
         
         self.chatUnreadCountDisposable = (self.account.postbox.unreadMessageCountsView(items: [.peer(self.peerId)]) |> deliverOnMainQueue).start(next: { [weak self] items in
@@ -1615,7 +1636,7 @@ public class ChatController: TelegramController {
         self.audioRecorder.set(.single(nil))
     }
     
-    private func navigateToMessage(from fromId: MessageId?, to toId: MessageId) {
+    private func navigateToMessage(from fromId: MessageId?, to toId: MessageId, rememberInStack: Bool = true) {
         if self.isNodeLoaded {
             if toId.peerId == self.peerId {
                 var fromIndex: MessageIndex?
@@ -1629,6 +1650,10 @@ public class ChatController: TelegramController {
                 }
                 
                 if let fromIndex = fromIndex {
+                    if let _ = fromId, rememberInStack {
+                        self.historyNavigationStack.add(fromIndex)
+                    }
+                    
                     if let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(toId) {
                         self.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: MessageIndex(message))
                     } else {
@@ -1645,7 +1670,7 @@ public class ChatController: TelegramController {
         }
     }
     
-    private func openPeer(_ peerId: PeerId?, _ navigation: ChatControllerInteractionNavigateToPeer) {
+    private func openPeer(peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer, fromMessageId: MessageId?) {
         if peerId == self.peerId {
             switch navigation {
                 case .info:
@@ -1669,7 +1694,19 @@ public class ChatController: TelegramController {
             if let peerId = peerId {
                 switch navigation {
                     case .info:
-                        break
+                        let peerSignal: Signal<Peer?, NoError>
+                        if let fromMessageId = fromMessageId {
+                            peerSignal = loadedPeerFromMessage(account: self.account, peerId: peerId, messageId: fromMessageId)
+                        } else {
+                            peerSignal = self.account.postbox.loadedPeerWithId(peerId) |> map { Optional($0) }
+                        }
+                        self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
+                            if let strongSelf = self, let peer = peer {
+                                if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                                }
+                            }
+                        }))
                     case let .chat(textInputState):
                         if let textInputState = textInputState {
                             let _ = (self.account.postbox.modify({ modifier -> Void in
@@ -1756,10 +1793,34 @@ public class ChatController: TelegramController {
     }
     
     private func reportPeer() {
-        self.editMessageDisposable.set((TelegramCore.reportPeer(account: self.account, peerId: self.peerId) |> afterDisposed({
-            Queue.mainQueue().async {
+        if let peer = self.presentationInterfaceState.peer {
+            let title: String
+            if let _ = peer as? TelegramGroup {
+                title = "Report spam and leave group"
+            } else if let peer = peer as? TelegramChannel {
+                if case .group = peer.info {
+                    title = "Report spam and leave group"
+                } else {
+                    title = "Report spam and leave channel"
+                }
+            } else {
+                title = "Report spam and delete chat"
             }
-        })).start())
+            let actionSheet = ActionSheetController()
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: title, color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    if let strongSelf = self {
+                        strongSelf.deleteChat(reportChatSpam: true)
+                    }
+                })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+            self.present(actionSheet, in: .window)
+        }
     }
     
     private func dismissReportPeer() {
@@ -1769,9 +1830,9 @@ public class ChatController: TelegramController {
         })).start())
     }
     
-    private func deleteChat() {
+    private func deleteChat(reportChatSpam: Bool) {
         self.chatDisplayNode.historyNode.disconnect()
-        let _ = removePeerChat(postbox: self.account.postbox, peerId: self.peerId).start()
+        let _ = removePeerChat(postbox: self.account.postbox, peerId: self.peerId, reportChatSpam: reportChatSpam).start()
         (self.navigationController as? NavigationController)?.popToRoot(animated: true)
     }
     
@@ -1803,9 +1864,9 @@ public class ChatController: TelegramController {
                             applicationContext.openUrl(url)
                         }
                     case let .peer(peerId):
-                        strongSelf.openPeer(peerId, .chat(textInputState: nil))
+                        strongSelf.openPeer(peerId: peerId, navigation: .chat(textInputState: nil), fromMessageId: nil)
                     case let .botStart(peerId, payload):
-                        strongSelf.openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
+                        strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)), fromMessageId: nil)
                     case let .groupBotStart(peerId, payload):
                         break
                     case let .channelMessage(peerId, messageId):

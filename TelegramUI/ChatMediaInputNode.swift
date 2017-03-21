@@ -107,7 +107,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, recentStickers
     }
     
     if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
-        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudRecentStickers, id: 0), flags: [], accessHash: 0, title: "FREQUENTLY USED", shortName: "", hash: 0)
+        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudRecentStickers, id: 0), flags: [], accessHash: 0, title: "FREQUENTLY USED", shortName: "", hash: 0, count: 0)
         for i in 0 ..< min(20, recentStickers.items.count) {
             if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
                 let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
@@ -211,7 +211,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.collectionListSeparator.backgroundColor = UIColor(0xBEC2C6)
         
         self.listView = ListView()
-        self.listView.transform = CATransform3DMakeRotation(-CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
+        self.listView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
         
         self.gridNode = GridNode()
         

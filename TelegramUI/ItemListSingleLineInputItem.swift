@@ -3,18 +3,31 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+enum ItemListSingleLineInputItemType {
+    case regular
+    case password
+    case email
+    case number
+}
+
 class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let title: NSAttributedString
     let text: String
     let placeholder: String
+    let type: ItemListSingleLineInputItemType
+    let spacing: CGFloat
     let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
+    let tag: ItemListItemTag?
     
-    init(title: NSAttributedString, text: String, placeholder: String, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+    init(title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular, spacing: CGFloat = 0.0, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
         self.title = title
         self.text = text
         self.placeholder = placeholder
+        self.type = type
+        self.spacing = spacing
+        self.tag = tag
         self.sectionId = sectionId
         self.textUpdated = textUpdated
         self.action = action
@@ -54,7 +67,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate {
+class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -63,6 +76,10 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate {
     private let textNode: TextFieldNode
     
     private var item: ItemListSingleLineInputItem?
+    
+    var tag: ItemListItemTag? {
+        return self.item?.tag
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -127,6 +144,39 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate {
                     let _ = titleApply()
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((layout.contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     
+                    let secureEntry: Bool
+                    let capitalizationType: UITextAutocapitalizationType
+                    let keyboardType: UIKeyboardType
+                    
+                    switch item.type {
+                        case .regular:
+                            secureEntry = false
+                            capitalizationType = .sentences
+                            keyboardType = UIKeyboardType.default
+                        case .email:
+                            secureEntry = false
+                            capitalizationType = .none
+                            keyboardType = UIKeyboardType.emailAddress
+                        case .password:
+                            secureEntry = true
+                            capitalizationType = .none
+                            keyboardType = UIKeyboardType.default
+                        case .number:
+                            secureEntry = true
+                            capitalizationType = .none
+                            keyboardType = UIKeyboardType.numberPad
+                    }
+                    
+                    if strongSelf.textNode.textField.isSecureTextEntry != secureEntry {
+                        strongSelf.textNode.textField.isSecureTextEntry = secureEntry
+                    }
+                    if strongSelf.textNode.textField.keyboardType != keyboardType {
+                        strongSelf.textNode.textField.keyboardType = keyboardType
+                    }
+                    if strongSelf.textNode.textField.autocapitalizationType != capitalizationType {
+                        strongSelf.textNode.textField.autocapitalizationType = capitalizationType
+                    }
+                    
                     if let currentText = strongSelf.textNode.textField.text {
                         if currentText != item.text {
                             strongSelf.textNode.textField.text = item.text
@@ -135,7 +185,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate {
                         strongSelf.textNode.textField.text = item.text
                     }
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width, y: floor((layout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - (leftInset + titleLayout.size.width)), height: 40.0))
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: floor((layout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - (leftInset + titleLayout.size.width + item.spacing)), height: 40.0))
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -186,6 +236,12 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate {
             } else {
                 item.textUpdated("")
             }
+        }
+    }
+    
+    func focus() {
+        if !self.textNode.textField.isFirstResponder {
+            self.textNode.textField.becomeFirstResponder()
         }
     }
 }

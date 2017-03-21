@@ -63,7 +63,6 @@ public class ChatMessageItemView: ListViewItemNode {
     
     public init(layerBacked: Bool) {
         super.init(layerBacked: layerBacked, dynamicBounce: true, rotated: true)
-        
         self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
     }
 

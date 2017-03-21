@@ -186,7 +186,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                     case let .peerMention(peerId):
                         foundTapAction = true
                         if let controllerInteraction = self.controllerInteraction {
-                            controllerInteraction.openPeer(peerId, .chat(textInputState: nil))
+                            controllerInteraction.openPeer(peerId, .chat(textInputState: nil), nil)
                         }
                     case let .textMention(name):
                         foundTapAction = true

@@ -148,7 +148,7 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
                 arguments.updateAllAreAdmins(updatedValue)
             })
         case let .allAdminsInfo(text):
-            return ItemListTextItem(text: text, sectionId: self.section)
+            return ItemListTextItem(text: .plain(text), sectionId: self.section)
         case let .peerItem(_, peer, presence, toggled, enabled):
             return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: nil, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: toggled, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _ in }, removePeer: { _ in }, toggleUpdated: { value in
                 arguments.updatePeerIsAdmin(peer.id, value)

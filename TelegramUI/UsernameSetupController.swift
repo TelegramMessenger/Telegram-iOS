@@ -78,7 +78,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                     
                 })
             case let .publicLinkInfo(text):
-                return ItemListTextItem(text: text, sectionId: self.section)
+                return ItemListTextItem(text: .plain(text), sectionId: self.section)
             case let .publicLinkStatus(addressName, status):
                 var displayActivity = false
                 let text: NSAttributedString

@@ -25,3 +25,23 @@ final class CachedStickerAJpegRepresentation: CachedMediaResourceRepresentation 
         }
     }
 }
+
+final class CachedScaledImageRepresentation: CachedMediaResourceRepresentation {
+    let size: CGSize
+    
+    var uniqueId: String {
+        return "scaled-image-\(Int(self.size.width))x\(Int(self.size.height))"
+    }
+    
+    init(size: CGSize) {
+        self.size = size
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? CachedScaledImageRepresentation {
+            return self.size == to.size
+        } else {
+            return false
+        }
+    }
+}

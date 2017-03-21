@@ -53,13 +53,13 @@ private enum ConvertToSupergroupEntry: ItemListNodeEntry {
     func item(_ arguments: ConvertToSupergroupArguments) -> ListViewItem {
         switch self {
             case .info:
-                return ItemListTextItem(text: "In supergroups:\n• New members can see the full message history\n• Deleted messages will disappear for all members\n• Admins can pin important messages\n• Creator can set a public link for the group", sectionId: self.section)
+                return ItemListTextItem(text: .plain("In supergroups:\n• New members can see the full message history\n• Deleted messages will disappear for all members\n• Admins can pin important messages\n• Creator can set a public link for the group"), sectionId: self.section)
             case .action:
                 return ItemListActionItem(title: "Convert to Supergroup", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.convert()
                 })
             case .actionInfo:
-                return ItemListTextItem(text: "Note: this action can't be undone", sectionId: self.section)
+                return ItemListTextItem(text: .plain("Note: this action can't be undone"), sectionId: self.section)
         }
     }
 }

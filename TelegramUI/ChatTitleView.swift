@@ -34,7 +34,7 @@ final class ChatTitleView: UIView {
                         case .recordingVoice:
                             stringValue = "recording audio"
                         default:
-                            stringValue = "typing..."
+                            stringValue = "typing"
                     }
                 } else {
                     for (peer, _) in inputActivities {

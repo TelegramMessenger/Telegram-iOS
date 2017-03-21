@@ -160,17 +160,23 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     localtime_r(&t, &timeinfo)
                     
                     var edited = false
+                    var sentViaBot = false
                     var viewCount: Int?
                     for attribute in message.attributes {
                         if let _ = attribute as? EditedMessageAttribute {
                             edited = true
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
+                        } else if let _ = attribute as? InlineBotMessageAttribute {
+                            sentViaBot = true
                         }
+                    }
+                    if let author = message.author as? TelegramUser, author.botInfo != nil {
+                        sentViaBot = true
                     }
                     let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
                     
-                    let (size, apply) = statusLayout(edited, viewCount, dateText, statusType, constrainedSize)
+                    let (size, apply) = statusLayout(edited && !sentViaBot, viewCount, dateText, statusType, constrainedSize)
                     statusSize = size
                     statusApply = apply
                 }

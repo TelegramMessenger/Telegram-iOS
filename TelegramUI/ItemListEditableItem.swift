@@ -129,6 +129,9 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
                     self.revealOptionsInteractivelyOpened()
                 }
                 self.updateRevealOffsetInternal(offset: translation.x, transition: .immediate)
+                if self.revealNode == nil {
+                    self.revealOptionsInteractivelyClosed()
+                }
             case .ended, .cancelled:
                 if let recognizer = self.recognizer, let revealNode = self.revealNode {
                     let velocity = recognizer.velocity(in: self.view)

@@ -22,7 +22,7 @@ private let closeButtonImage = generateImage(CGSize(width: 12.0, height: 12.0), 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()
     
-    private (set) var webpage: TelegramMediaWebpage
+    private(set) var webpage: TelegramMediaWebpage
     
     let closeButton: ASButtonNode
     let lineNode: ASImageNode
@@ -66,6 +66,13 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     
     deinit {
         self.webpageDisposable.dispose()
+    }
+    
+    func replaceWebpage(_ webpage: TelegramMediaWebpage) {
+        if !self.webpage.isEqual(webpage) {
+            self.webpage = webpage
+            self.updateWebpage()
+        }
     }
     
     private func updateWebpage() {

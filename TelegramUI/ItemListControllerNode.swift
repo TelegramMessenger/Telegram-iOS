@@ -34,13 +34,15 @@ enum ItemListStyle {
     case blocks
 }
 
-private struct ItemListNodeTransition {
+private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
     let entries: ItemListNodeEntryTransition
     let updateStyle: ItemListStyle?
     let emptyStateItem: ItemListControllerEmptyStateItem?
+    let focusItemTag: ItemListItemTag?
     let firstTime: Bool
     let animated: Bool
     let animateAlpha: Bool
+    let mergedEntries: [Entry]
 }
 
 struct ItemListNodeState<Entry: ItemListNodeEntry> {
@@ -48,12 +50,36 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let style: ItemListStyle
     let emptyStateItem: ItemListControllerEmptyStateItem?
     let animateChanges: Bool
+    let focusItemTag: ItemListItemTag?
     
-    init(entries: [Entry], style: ItemListStyle, emptyStateItem: ItemListControllerEmptyStateItem? = nil, animateChanges: Bool = true) {
+    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, animateChanges: Bool = true) {
         self.entries = entries
         self.style = style
         self.emptyStateItem = emptyStateItem
         self.animateChanges = animateChanges
+        self.focusItemTag = focusItemTag
+    }
+}
+
+private final class ItemListNodeOpaqueState<Entry: ItemListNodeEntry> {
+    let mergedEntries: [Entry]
+    
+    init(mergedEntries: [Entry]) {
+        self.mergedEntries = mergedEntries
+    }
+}
+
+final class ItemListNodeVisibleEntries<Entry: ItemListNodeEntry>: Sequence {
+    let iterate: () -> Entry?
+    
+    init(iterate: @escaping () -> Entry?) {
+        self.iterate = iterate
+    }
+    
+    func makeIterator() -> AnyIterator<Entry> {
+        return AnyIterator { () -> Entry? in
+            return self.iterate()
+        }
     }
 }
 
@@ -70,10 +96,12 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
     
     private let transitionDisposable = MetaDisposable()
     
-    private var enqueuedTransitions: [ItemListNodeTransition] = []
+    private var enqueuedTransitions: [ItemListNodeTransition<Entry>] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     var dismiss: (() -> Void)?
+    
+    var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)?
     
     init(state: Signal<(ItemListNodeState<Entry>, Entry.ItemGenerationArguments), NoError>) {
         self.listNode = ListView()
@@ -86,8 +114,27 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
         
         self.backgroundColor = UIColor(0xefeff4)
         
+        self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
+            if let strongSelf = self, let visibleEntriesUpdated = strongSelf.visibleEntriesUpdated, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState<Entry>)?.mergedEntries {
+                if let visible = displayedRange.visibleRange {
+                    let indexRange = (visible.firstIndex, visible.lastIndex)
+                    
+                    var index = indexRange.0
+                    let iterator = ItemListNodeVisibleEntries<Entry>(iterate: {
+                        var item: Entry?
+                        if index <= indexRange.1 {
+                            item = mergedEntries[index]
+                        }
+                        index += 1
+                        return item
+                    })
+                    visibleEntriesUpdated(iterator)
+                }
+            }
+        }
+        
         let previousState = Atomic<ItemListNodeState<Entry>?>(value: nil)
-        self.transitionDisposable.set(((state |> map { state, arguments -> ItemListNodeTransition in
+        self.transitionDisposable.set(((state |> map { state, arguments -> ItemListNodeTransition<Entry> in
             assert(state.entries == state.entries.sorted())
             let previous = previousState.swap(state)
             let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, arguments: arguments)
@@ -95,7 +142,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
             if previous?.style != state.style {
                 updatedStyle = state.style
             }
-            return ItemListNodeTransition(entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && !state.animateChanges)
+            return ItemListNodeTransition(entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, focusItemTag: state.focusItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && !state.animateChanges, mergedEntries: state.entries)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -161,7 +208,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
         }
     }
     
-    private func enqueueTransition(_ transition: ItemListNodeTransition) {
+    private func enqueueTransition(_ transition: ItemListNodeTransition<Entry>) {
         self.enqueuedTransitions.append(transition)
         if self.validLayout != nil {
             self.dequeueTransitions()
@@ -191,11 +238,22 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
                 options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateAlpha)
             }
-            self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
+            let focusItemTag = transition.focusItemTag
+            self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, updateOpaqueState: ItemListNodeOpaqueState(mergedEntries: transition.mergedEntries), completion: { [weak self] _ in
                 if let strongSelf = self {
                     if !strongSelf.didSetReady {
                         strongSelf.didSetReady = true
                         strongSelf._ready.set(true)
+                    }
+                    
+                    if let focusItemTag = focusItemTag {
+                        strongSelf.listNode.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? ItemListItemNode, let itemTag = itemNode.tag, itemTag.isEqual(to: focusItemTag) {
+                                if let focusableNode = itemNode as? ItemListItemFocusableNode {
+                                    focusableNode.focus()
+                                }
+                            }
+                        }
                     }
                 }
             })
@@ -225,5 +283,9 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
                 }
             }
         }
+    }
+    
+    func scrollToTop() {
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 }

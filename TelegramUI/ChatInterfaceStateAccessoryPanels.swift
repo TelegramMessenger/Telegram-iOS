@@ -37,6 +37,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
     } else if let urlPreview = chatPresentationInterfaceState.urlPreview, chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != urlPreview.0 {
         if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode, previewPanelNode.webpage.id == urlPreview.1.id {
             previewPanelNode.interfaceInteraction = interfaceInteraction
+            previewPanelNode.replaceWebpage(urlPreview.1)
             return previewPanelNode
         } else {
             let panelNode = WebpagePreviewAccessoryPanelNode(account: account, webpage: urlPreview.1)

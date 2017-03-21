@@ -9,11 +9,13 @@ private final class RecentSessionsControllerArguments {
     
     let setSessionIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let removeSession: (Int64) -> Void
+    let terminateOtherSessions: () -> Void
     
-    init(account: Account, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
+    init(account: Account, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void) {
         self.account = account
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
+        self.terminateOtherSessions = terminateOtherSessions
     }
 }
 
@@ -139,10 +141,10 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 })
             case .terminateOtherSessions:
                 return ItemListActionItem(title: "Terminate all other sessions", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    
+                    arguments.terminateOtherSessions()
                 })
             case .currentSessionInfo:
-                return ItemListTextItem(text: "Logs out all devices except for this one.", sectionId: self.section)
+                return ItemListTextItem(text: .plain("Logs out all devices except for this one."), sectionId: self.section)
             case .otherSessionsHeader:
                 return ItemListSectionHeaderItem(text: "ACTIVE SESSIONS", sectionId: self.section)
             case let .session(_, session, enabled, editing, revealed):
@@ -159,17 +161,20 @@ private struct RecentSessionsControllerState: Equatable {
     let editing: Bool
     let sessionIdWithRevealedOptions: Int64?
     let removingSessionId: Int64?
+    let terminatingOtherSessions: Bool
     
     init() {
         self.editing = false
         self.sessionIdWithRevealedOptions = nil
         self.removingSessionId = nil
+        self.terminatingOtherSessions = false
     }
     
-    init(editing: Bool, sessionIdWithRevealedOptions: Int64?, removingSessionId: Int64?) {
+    init(editing: Bool, sessionIdWithRevealedOptions: Int64?, removingSessionId: Int64?, terminatingOtherSessions: Bool) {
         self.editing = editing
         self.sessionIdWithRevealedOptions = sessionIdWithRevealedOptions
         self.removingSessionId = removingSessionId
+        self.terminatingOtherSessions = terminatingOtherSessions
     }
     
     static func ==(lhs: RecentSessionsControllerState, rhs: RecentSessionsControllerState) -> Bool {
@@ -182,20 +187,27 @@ private struct RecentSessionsControllerState: Equatable {
         if lhs.removingSessionId != rhs.removingSessionId {
             return false
         }
+        if lhs.terminatingOtherSessions != rhs.terminatingOtherSessions {
+            return false
+        }
         
         return true
     }
     
     func withUpdatedEditing(_ editing: Bool) -> RecentSessionsControllerState {
-        return RecentSessionsControllerState(editing: editing, sessionIdWithRevealedOptions: self.sessionIdWithRevealedOptions, removingSessionId: self.removingSessionId)
+        return RecentSessionsControllerState(editing: editing, sessionIdWithRevealedOptions: self.sessionIdWithRevealedOptions, removingSessionId: self.removingSessionId, terminatingOtherSessions: self.terminatingOtherSessions)
     }
     
     func withUpdatedSessionIdWithRevealedOptions(_ sessionIdWithRevealedOptions: Int64?) -> RecentSessionsControllerState {
-        return RecentSessionsControllerState(editing: self.editing, sessionIdWithRevealedOptions: sessionIdWithRevealedOptions, removingSessionId: self.removingSessionId)
+        return RecentSessionsControllerState(editing: self.editing, sessionIdWithRevealedOptions: sessionIdWithRevealedOptions, removingSessionId: self.removingSessionId, terminatingOtherSessions: self.terminatingOtherSessions)
     }
     
     func withUpdatedRemovingSessionId(_ removingSessionId: Int64?) -> RecentSessionsControllerState {
-        return RecentSessionsControllerState(editing: self.editing, sessionIdWithRevealedOptions: self.sessionIdWithRevealedOptions, removingSessionId: removingSessionId)
+        return RecentSessionsControllerState(editing: self.editing, sessionIdWithRevealedOptions: self.sessionIdWithRevealedOptions, removingSessionId: removingSessionId, terminatingOtherSessions: self.terminatingOtherSessions)
+    }
+    
+    func withUpdatedTerminatingOtherSessions(_ terminatingOtherSessions: Bool) -> RecentSessionsControllerState {
+        return RecentSessionsControllerState(editing: self.editing, sessionIdWithRevealedOptions: self.sessionIdWithRevealedOptions, removingSessionId: self.removingSessionId, terminatingOtherSessions: terminatingOtherSessions)
     }
 }
 
@@ -209,10 +221,11 @@ private func recentSessionsControllerEntries(state: RecentSessionsControllerStat
             existingSessionIds.insert(sessions[index].hash)
             entries.append(.currentSession(sessions[index]))
         }
-        entries.append(.terminateOtherSessions)
-        entries.append(.currentSessionInfo)
         
         if sessions.count > 1 {
+            entries.append(.terminateOtherSessions)
+            entries.append(.currentSessionInfo)
+        
             entries.append(.otherSessionsHeader)
             
             let filteredSessions: [RecentAccountSession] = sessions.sorted(by: { lhs, rhs in
@@ -222,7 +235,7 @@ private func recentSessionsControllerEntries(state: RecentSessionsControllerStat
             for i in 0 ..< filteredSessions.count {
                 if !existingSessionIds.contains(sessions[i].hash) {
                     existingSessionIds.insert(sessions[i].hash)
-                    entries.append(.session(index: Int32(i), session: sessions[i], enabled: state.removingSessionId != sessions[i].hash, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == sessions[i].hash))
+                    entries.append(.session(index: Int32(i), session: sessions[i], enabled: state.removingSessionId != sessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == sessions[i].hash))
                 }
             }
         }
@@ -244,6 +257,9 @@ public func recentSessionsController(account: Account) -> ViewController {
     
     let removeSessionDisposable = MetaDisposable()
     actionsDisposable.add(removeSessionDisposable)
+    
+    let terminateOtherSessionsDisposable = MetaDisposable()
+    actionsDisposable.add(terminateOtherSessionsDisposable)
     
     let sessionsPromise = Promise<[RecentAccountSession]?>(nil)
     
@@ -288,6 +304,47 @@ public func recentSessionsController(account: Account) -> ViewController {
                 return $0.withUpdatedRemovingSessionId(nil)
             }
         }))
+    }, terminateOtherSessions: {
+        let controller = ActionSheetController()
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: "Terminate all other sessions", color: .destructive, action: {
+                    dismissAction()
+                    
+                    updateState {
+                        return $0.withUpdatedTerminatingOtherSessions(true)
+                    }
+                    
+                    let applySessions: Signal<Void, NoError> = sessionsPromise.get()
+                        |> filter { $0 != nil }
+                        |> take(1)
+                        |> deliverOnMainQueue
+                        |> mapToSignal { sessions -> Signal<Void, NoError> in
+                            if let sessions = sessions {
+                                let updatedSessions = sessions.filter { $0.isCurrent }
+                                sessionsPromise.set(.single(updatedSessions))
+                            }
+                            
+                            return .complete()
+                    }
+                    
+                    terminateOtherSessionsDisposable.set((terminateOtherAccountSessions(account: account) |> then(applySessions)).start(error: { _ in
+                        updateState {
+                            return $0.withUpdatedTerminatingOtherSessions(false)
+                        }
+                    }, completed: {
+                        updateState {
+                            return $0.withUpdatedTerminatingOtherSessions(false)
+                        }
+                    }))
+                })
+            ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let sessionsSignal: Signal<[RecentAccountSession]?, NoError> = .single(nil) |> then(requestRecentAccountSessions(account: account) |> map { Optional($0) })
@@ -300,8 +357,10 @@ public func recentSessionsController(account: Account) -> ViewController {
         |> deliverOnMainQueue
         |> map { state, sessions -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
-            if let sessions = sessions, !sessions.isEmpty {
-                if state.editing {
+            if let sessions = sessions, sessions.count > 1 {
+                if state.terminatingOtherSessions {
+                    rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                } else if state.editing {
                     rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(false)

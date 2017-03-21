@@ -7,6 +7,7 @@ import TelegramCore
 
 public enum ContactMultiselectionControllerMode {
     case groupCreation
+    case peerSelection
 }
 
 public class ContactMultiselectionController: ViewController {
@@ -33,6 +34,8 @@ public class ContactMultiselectionController: ViewController {
     
     private var rightNavigationButton: UIBarButtonItem?
     
+    private var didPlayPresentationAnimation = false
+    
     public init(account: Account, mode: ContactMultiselectionControllerMode) {
         self.account = account
         self.mode = mode
@@ -46,6 +49,13 @@ public class ContactMultiselectionController: ViewController {
                 self.titleView.title = CounterContollerTitle(title: "New Group", counter: "0/5000")
                 let rightNavigationButton = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+                rightNavigationButton.isEnabled = false
+            case .peerSelection:
+                self.titleView.title = CounterContollerTitle(title: "Add Users", counter: "")
+                let rightNavigationButton = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(cancelPressed))
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
                 rightNavigationButton.isEnabled = false
         }
@@ -67,6 +77,10 @@ public class ContactMultiselectionController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ContactMultiselectionControllerNode(account: self.account)
         self._ready.set(self.contactsNode.contactListNode.ready)
+        
+        self.contactsNode.dismiss = { [weak self] in
+            self?.presentingViewController?.dismiss(animated: true, completion: nil)
+        }
         
         self.contactsNode.openPeer = { [weak self] peer in
             if let strongSelf = self {
@@ -98,7 +112,12 @@ public class ContactMultiselectionController: ViewController {
                 
                 if let updatedCount = updatedCount {
                     strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
-                    strongSelf.titleView.title = CounterContollerTitle(title: "New Group", counter: "\(updatedCount)/5000")
+                    switch strongSelf.mode {
+                        case .groupCreation:
+                            strongSelf.titleView.title = CounterContollerTitle(title: "New Group", counter: "\(updatedCount)/5000")
+                        case .peerSelection:
+                            break
+                    }
                 }
                 
                 if let addedToken = addedToken {
@@ -139,7 +158,12 @@ public class ContactMultiselectionController: ViewController {
                 
                 if let updatedCount = updatedCount {
                     strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
-                    strongSelf.titleView.title = CounterContollerTitle(title: "New Group", counter: "\(updatedCount)/5000")
+                    switch strongSelf.mode {
+                        case .groupCreation:
+                            strongSelf.titleView.title = CounterContollerTitle(title: "New Group", counter: "\(updatedCount)/5000")
+                        case .peerSelection:
+                            break
+                    }
                 }
                 
                 if let removedTokenId = removedTokenId {
@@ -160,6 +184,21 @@ public class ContactMultiselectionController: ViewController {
         self.contactsNode.contactListNode.enableUpdates = true
     }
     
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
+            self.didPlayPresentationAnimation = true
+            if case .modalSheet = presentationArguments.presentationAnimation {
+                self.contactsNode.animateIn()
+            }
+        }
+    }
+    
+    override open func dismiss() {
+        self.contactsNode.animateOut()
+    }
+    
     override public func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
@@ -170,6 +209,10 @@ public class ContactMultiselectionController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+    }
+    
+    @objc func cancelPressed() {
+        self._result.set(.single([]))
     }
     
     @objc func rightNavigationButtonPressed() {

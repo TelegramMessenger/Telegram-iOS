@@ -91,4 +91,19 @@ public class TransformImageNode: ASDisplayNode {
             }
         }
     }
+    
+    public class func asyncLayout(_ maybeNode: TransformImageNode?) -> (TransformImageArguments) -> (() -> TransformImageNode) {
+        return { arguments in
+            let node: TransformImageNode
+            if let maybeNode = maybeNode {
+                node = maybeNode
+            } else {
+                node = TransformImageNode()
+            }
+            return {
+                node.argumentsPromise.set(arguments)
+                return node
+            }
+        }
+    }
 }

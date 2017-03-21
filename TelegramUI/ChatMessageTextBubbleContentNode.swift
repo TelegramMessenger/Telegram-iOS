@@ -47,15 +47,21 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 localtime_r(&t, &timeinfo)
                 
                 var edited = false
+                var sentViaBot = false
                 var viewCount: Int?
-                for attribute in message.attributes {
+                for attribute in item.message.attributes {
                     if let _ = attribute as? EditedMessageAttribute {
                         edited = true
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
+                    } else if let _ = attribute as? InlineBotMessageAttribute {
+                        sentViaBot = true
                     }
                 }
-                var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                    sentViaBot = true
+                }
+                let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
                 
                 let statusType: ChatMessageDateAndStatusType?
                 if case .None = position.bottom {
@@ -78,7 +84,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(edited, viewCount, dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                     statusSize = size
                     statusApply = apply
                 }

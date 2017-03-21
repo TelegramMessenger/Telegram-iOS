@@ -4,7 +4,7 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 
-private func currentOptionText(_ type: SentAuthorizationCodeType) -> NSAttributedString {
+func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType) -> NSAttributedString {
     switch type {
         case .sms:
             return NSAttributedString(string: "We have sent you an SMS with a code to the number", font: Font.regular(16.0), textColor: UIColor.black, paragraphAlignment: .center)
@@ -22,7 +22,7 @@ private func currentOptionText(_ type: SentAuthorizationCodeType) -> NSAttribute
     }
 }
 
-private func nextOptionText(_ type: AuthorizationCodeNextType?, timeout: Int32?) -> NSAttributedString {
+func authorizationNextOptionText(_ type: AuthorizationCodeNextType?, timeout: Int32?) -> NSAttributedString {
     if let type = type, let timeout = timeout {
         let minutes = timeout / 60
         let seconds = timeout % 60
@@ -101,7 +101,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.nextOptionNode = ASTextNode()
         self.nextOptionNode.isLayerBacked = true
         self.nextOptionNode.displaysAsynchronously = false
-        self.nextOptionNode.attributedText = nextOptionText(AuthorizationCodeNextType.call, timeout: 60)
+        self.nextOptionNode.attributedText = authorizationNextOptionText(AuthorizationCodeNextType.call, timeout: 60)
         
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
@@ -140,14 +140,14 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeType = codeType
         self.phoneNumber = number
         
-        self.currentOptionNode.attributedText = currentOptionText(codeType)
+        self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType)
         if let timeout = timeout {
             self.currentTimeoutTime = timeout
             let disposable = ((Signal<Int, NoError>.single(1) |> delay(1.0, queue: Queue.mainQueue())) |> restart).start(next: { [weak self] _ in
                 if let strongSelf = self {
                     if let currentTimeoutTime = strongSelf.currentTimeoutTime, currentTimeoutTime > 0 {
                         strongSelf.currentTimeoutTime = currentTimeoutTime - 1
-                        strongSelf.nextOptionNode.attributedText = nextOptionText(nextType, timeout:strongSelf.currentTimeoutTime)
+                        strongSelf.nextOptionNode.attributedText = authorizationNextOptionText(nextType, timeout:strongSelf.currentTimeoutTime)
                         if let layoutArguments = strongSelf.layoutArguments {
                             strongSelf.containerLayoutUpdated(layoutArguments.0, navigationBarHeight: layoutArguments.1, transition: .immediate)
                         }
@@ -162,7 +162,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.currentTimeoutTime = nil
             self.countdownDisposable.set(nil)
         }
-        self.nextOptionNode.attributedText = nextOptionText(nextType, timeout: self.currentTimeoutTime)
+        self.nextOptionNode.attributedText = authorizationNextOptionText(nextType, timeout: self.currentTimeoutTime)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

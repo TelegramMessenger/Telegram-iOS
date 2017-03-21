@@ -200,7 +200,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                     arguments.updateCurrentAdministrationType()
                 })
             case let .administrationInfo(text):
-                return ItemListTextItem(text: text, sectionId: self.section)
+                return ItemListTextItem(text: .plain(text), sectionId: self.section)
             case let .adminsHeader(title):
                 return ItemListSectionHeaderItem(text: title, sectionId: self.section)
             case let .adminPeerItem(_, participant, editing, enabled):
@@ -221,7 +221,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                     arguments.addAdmin()
                 })
             case let .adminsInfo(text):
-                return ItemListTextItem(text: text, sectionId: self.section)
+                return ItemListTextItem(text: .plain(text), sectionId: self.section)
         }
     }
 }

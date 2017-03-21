@@ -196,7 +196,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     arguments.updateCurrentType(.privateChannel)
                 })
             case let .typeInfo(text):
-                return ItemListTextItem(text: text, sectionId: self.section)
+                return ItemListTextItem(text: .plain(text), sectionId: self.section)
             case let .publicLinkAvailability(value):
                 if value {
                     return ItemListActivityTextItem(displayActivity: true, text: NSAttributedString(string: "Checking", textColor: UIColor(0x6d6d72)), sectionId: self.section)
@@ -216,9 +216,9 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     
                 })
             case let .privateLinkInfo(text):
-                return ItemListTextItem(text: text, sectionId: self.section)
+                return ItemListTextItem(text: .plain(text), sectionId: self.section)
             case let .publicLinkInfo(text):
-                return ItemListTextItem(text: text, sectionId: self.section)
+                return ItemListTextItem(text: .plain(text), sectionId: self.section)
             case let .publicLinkStatus(addressName, status):
                 var displayActivity = false
                 let text: NSAttributedString
@@ -251,7 +251,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 }
                 return ItemListActivityTextItem(displayActivity: displayActivity, text: text, sectionId: self.section)
             case let .existingLinksInfo(text):
-                return ItemListTextItem(text: text, sectionId: self.section)
+                return ItemListTextItem(text: .plain(text), sectionId: self.section)
             case let .existingLinkPeerItem(_, peer, editing, enabled):
                 var label = ""
                 if let addressName = peer.addressName {

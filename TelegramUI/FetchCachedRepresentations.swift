@@ -10,6 +10,8 @@ import UIKit
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
         return fetchCachedStickerAJpegRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
+    } else if let representation = representation as? CachedScaledImageRepresentation {
+        return fetchCachedScaledImageRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
     }
     return .never()
 }
@@ -79,6 +81,42 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
                         
                         let _ = try? finalData.write(to: url, options: [.atomic])
                         
+                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putCompletion()
+                    }
+                }
+            }
+        }
+        return EmptyDisposable
+    }) |> runOn(account.graphicsThreadPool)
+}
+
+private func fetchCachedScaledImageRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedScaledImageRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal({ subscriber in
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
+            if let image = UIImage(data: data) {
+                var randomId: Int64 = 0
+                arc4random_buf(&randomId, 8)
+                let path = NSTemporaryDirectory() + "\(randomId)"
+                let url = URL(fileURLWithPath: path)
+
+                let size = representation.size
+                
+                let colorImage = generateImage(size, contextGenerator: { size, context in
+                    context.setBlendMode(.copy)
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                }, scale: 1.0)!
+                
+                if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                    CGImageDestinationSetProperties(colorDestination, nil)
+                    
+                    let colorQuality: Float = 0.5
+                    
+                    let options = NSMutableDictionary()
+                    options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                    
+                    CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
+                    if CGImageDestinationFinalize(colorDestination) {
                         subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
                         subscriber.putCompletion()
                     }

@@ -40,6 +40,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     
     private let searchResultsReadyDisposable = MetaDisposable()
     
+    var dismiss: (() -> Void)?
+    
     init(account: Account) {
         self.account = account
         self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: false, options: []), selectionState: ContactListNodeGroupSelectionState())
@@ -129,5 +131,17 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
             searchResultsNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         }
+    }
+    
+    func animateIn() {
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+    }
+    
+    func animateOut() {
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.dismiss?()
+            }
+        })
     }
 }

@@ -24,14 +24,14 @@ public func ==(lhs: ImageCorner, rhs: ImageCorner) -> Bool {
     switch lhs {
         case let .Corner(lhsRadius):
             switch rhs {
-                case let .Corner(rhsRadius) where abs(lhsRadius - rhsRadius) < CGFloat(FLT_EPSILON):
+                case let .Corner(rhsRadius) where abs(lhsRadius - rhsRadius) < CGFloat.ulpOfOne:
                     return true
                 default:
                     return false
             }
         case let .Tail(lhsRadius):
             switch rhs {
-                case let .Tail(rhsRadius) where abs(lhsRadius - rhsRadius) < CGFloat(FLT_EPSILON):
+                case let .Tail(rhsRadius) where abs(lhsRadius - rhsRadius) < CGFloat.ulpOfOne:
                     return true
                 default:
                     return false

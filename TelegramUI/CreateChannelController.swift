@@ -106,7 +106,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                     
                 })
             case .descriptionInfo:
-                return ItemListTextItem(text: "You can provide an optional description for your channel.", sectionId: self.section)
+                return ItemListTextItem(text: .plain("You can provide an optional description for your channel."), sectionId: self.section)
         }
     }
 }

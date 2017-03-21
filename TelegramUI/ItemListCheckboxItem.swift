@@ -3,16 +3,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-/*
- 
- <svg width="14px" height="12px" viewBox="-2 -2 14 12" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
- <!-- Generator: Sketch 42 (36781) - http://www.bohemiancoding.com/sketch -->
- <desc>Created with Sketch.</desc>
- <defs></defs>
- <polyline id="Line" stroke="#008DF2" stroke-width="2" stroke-linecap="square" fill="none" points="10 0 3.16482734 8 0 4.81145833"></polyline>
- </svg>
- */
-
 private let checkIcon = generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
     context.setStrokeColor(UIColor(0x007ee5).cgColor)

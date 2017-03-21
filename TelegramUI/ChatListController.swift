@@ -114,7 +114,7 @@ public class ChatListController: TelegramController {
                         actionSheet?.dismissAnimated()
                         
                         if let strongSelf = self {
-                            let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId).start()
+                            let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start()
                         }
                     })
                 ]), ActionSheetItemGroup(items: [
