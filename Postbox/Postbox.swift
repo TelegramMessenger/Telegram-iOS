@@ -1313,6 +1313,7 @@ public final class Postbox {
             infos.remove(at: index)
             self.replaceItemCollectionInfos(namespace: collectionId.namespace, itemCollectionInfos: infos.map { ($0.1, $0.2) })
         }
+        self.replaceItemCollectionItems(collectionId: collectionId, items: [])
     }
     
     fileprivate func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
