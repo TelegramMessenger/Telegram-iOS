@@ -21,6 +21,7 @@
 		C239BE9D1E630CB300C2C453 /* UpdatePinnedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C239BE9B1E630CA700C2C453 /* UpdatePinnedMessage.swift */; };
 		C251D7431E65E50500283EDE /* StickerSetInstallation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C251D7421E65E50500283EDE /* StickerSetInstallation.swift */; };
 		C251D7441E65E50500283EDE /* StickerSetInstallation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C251D7421E65E50500283EDE /* StickerSetInstallation.swift */; };
+		C25638021E79E7FC00311607 /* TwoStepVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */; };
 		C26A37EF1E5E0C41006977AC /* ChannelParticipants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BB7C591E5C8074001527C3 /* ChannelParticipants.swift */; };
 		C27982511E72C97800262BFD /* MacosLegacy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982501E72C97800262BFD /* MacosLegacy.swift */; };
 		C27982531E73077800262BFD /* SecretChatStateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982521E73077800262BFD /* SecretChatStateBridge.swift */; };
@@ -1675,6 +1676,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C25638021E79E7FC00311607 /* TwoStepVerification.swift in Sources */,
 				C27982541E73078400262BFD /* SecretChatStateBridge.swift in Sources */,
 				D00DBBD81E64E41100DB5485 /* CreateSecretChat.swift in Sources */,
 				C2FD33EC1E696C79008D13D4 /* GroupsInCommon.swift in Sources */,
