@@ -190,6 +190,8 @@
 		D0DA44491E4C7D1E005FDCA7 /* PostboxAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */; };
 		D0DF0C8F1D81A350008AEB01 /* PeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C8E1D81A350008AEB01 /* PeerView.swift */; };
 		D0E1DE151C5E1C6900C7826E /* ViewTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */; };
+		D0E23DE21E808A9400B9B6D2 /* ItemCollectionIdsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DE11E808A9400B9B6D2 /* ItemCollectionIdsView.swift */; };
+		D0E23DE31E808A9400B9B6D2 /* ItemCollectionIdsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DE11E808A9400B9B6D2 /* ItemCollectionIdsView.swift */; };
 		D0E3A7501B28A7E300A402D9 /* Postbox.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E3A74F1B28A7E300A402D9 /* Postbox.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0E3A7561B28A7E300A402D9 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E3A74A1B28A7E300A402D9 /* Postbox.framework */; };
 		D0E3A7821B28ADD000A402D9 /* Postbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7811B28ADD000A402D9 /* Postbox.swift */; };
@@ -380,6 +382,7 @@
 		D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxAccess.swift; sourceTree = "<group>"; };
 		D0DF0C8E1D81A350008AEB01 /* PeerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerView.swift; sourceTree = "<group>"; };
 		D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewTracker.swift; sourceTree = "<group>"; };
+		D0E23DE11E808A9400B9B6D2 /* ItemCollectionIdsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCollectionIdsView.swift; sourceTree = "<group>"; };
 		D0E3A74A1B28A7E300A402D9 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E3A74E1B28A7E300A402D9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0E3A74F1B28A7E300A402D9 /* Postbox.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Postbox.h; sourceTree = "<group>"; };
@@ -635,6 +638,7 @@
 				D0DF0C8E1D81A350008AEB01 /* PeerView.swift */,
 				D021E0DB1DB5237C00C6B04F /* ItemCollectionsView.swift */,
 				D0FA0AC61E77F0A2005BB9B7 /* ItemCollectionInfosView.swift */,
+				D0E23DE11E808A9400B9B6D2 /* ItemCollectionIdsView.swift */,
 				D0BE38381E7C1FD4000079AF /* ItemCollectionInfoView.swift */,
 				D0A18D661E16874D004C6734 /* UnreadMessageCountsView.swift */,
 				D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */,
@@ -926,6 +930,7 @@
 				D0F82D0D1E439FCC007E499C /* OrderedItemListEntry.swift in Sources */,
 				D0B418591D7DFE29004562A4 /* PostboxTransaction.swift in Sources */,
 				D0F7B1D21E045C6A007EB8A5 /* PeerNotificationSettingsTable.swift in Sources */,
+				D0E23DE31E808A9400B9B6D2 /* ItemCollectionIdsView.swift in Sources */,
 				D0B4181D1D7DFDF4004562A4 /* sqlite3.c in Sources */,
 				D0F7B1C91E045C6A007EB8A5 /* MessageHistoryTagsTable.swift in Sources */,
 				D0F7B1CE1E045C6A007EB8A5 /* MediaCleanupTable.swift in Sources */,
@@ -1047,6 +1052,7 @@
 				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
 				D049EAF01E44D9B900A2CD3A /* PostboxStateView.swift in Sources */,
 				D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */,
+				D0E23DE21E808A9400B9B6D2 /* ItemCollectionIdsView.swift in Sources */,
 				D0AD23291E196B6400A7089A /* PeerOperationLogMetadataTable.swift in Sources */,
 				D0E1DE151C5E1C6900C7826E /* ViewTracker.swift in Sources */,
 				D0F9E8751C5A334100037222 /* SimpleDictionary.swift in Sources */,

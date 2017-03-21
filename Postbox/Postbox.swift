@@ -22,12 +22,14 @@ public enum PostboxUpdateMessage {
 
 public final class Modifier {
     private weak var postbox: Postbox?
+    var disposed = false
     
     fileprivate init(postbox: Postbox) {
         self.postbox = postbox
     }
     
     public func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.addMessages(messages, location: location)
         } else {
@@ -36,29 +38,36 @@ public final class Modifier {
     }
     
     public func addHole(_ messageId: MessageId) {
+        assert(!self.disposed)
         self.postbox?.addHole(messageId)
     }
     
     public func fillHole(_ hole: MessageHistoryHole, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage]) {
+        assert(!self.disposed)
         self.postbox?.fillHole(hole, fillType: fillType, tagMask: tagMask, messages: messages)
     }
     
     public func fillMultipleHoles(_ hole: MessageHistoryHole, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage]) {
+        assert(!self.disposed)
         self.postbox?.fillMultipleHoles(hole, fillType: fillType, tagMask: tagMask, messages: messages)
     }
     
     public func replaceChatListHole(_ index: MessageIndex, hole: ChatListHole?) {
+        assert(!self.disposed)
         self.postbox?.replaceChatListHole(index, hole: hole)
     }
     
     public func deleteMessages(_ messageIds: [MessageId]) {
+        assert(!self.disposed)
         self.postbox?.deleteMessages(messageIds)
     }
     
     public func clearHistory(_ peerId: PeerId) {
+        assert(!self.disposed)
         self.postbox?.clearHistory(peerId)
     }
     public func messageIdsForGlobalIds(_ ids: [Int32]) -> [MessageId] {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.messageIdsForGlobalIds(ids)
         } else {
@@ -67,6 +76,7 @@ public final class Modifier {
     }
     
     public func deleteMessagesWithGlobalIds(_ ids: [Int32]) {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             let messageIds = postbox.messageIdsForGlobalIds(ids)
             postbox.deleteMessages(messageIds)
@@ -74,26 +84,32 @@ public final class Modifier {
     }
     
     public func messageIdForGloballyUniqueMessageId(peerId: PeerId, id: Int64) -> MessageId? {
+        assert(!self.disposed)
         return self.postbox?.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id)
     }
     
     public func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
+        assert(!self.disposed)
         self.postbox?.resetIncomingReadStates(states)
     }
     
     public func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
+        assert(!self.disposed)
         self.postbox?.confirmSynchronizedIncomingReadState(peerId)
     }
     
     public func applyIncomingReadMaxId(_ messageId: MessageId) {
+        assert(!self.disposed)
         self.postbox?.applyIncomingReadMaxId(messageId)
     }
     
     public func applyOutgoingReadMaxId(_ messageId: MessageId) {
+        assert(!self.disposed)
         self.postbox?.applyOutgoingReadMaxId(messageId)
     }
     
     public func applyInteractiveReadMaxIndex(_ messageIndex: MessageIndex) -> [MessageId] {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.applyInteractiveReadMaxIndex(messageIndex)
         } else {
@@ -102,6 +118,7 @@ public final class Modifier {
     }
     
     public func applyOutgoingReadMaxIndex(_ messageIndex: MessageIndex) -> [MessageId] {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.applyOutgoingReadMaxIndex(messageIndex)
         } else {
@@ -110,46 +127,57 @@ public final class Modifier {
     }
     
     public func getState() -> Coding? {
+        assert(!self.disposed)
         return self.postbox?.getState()
     }
     
     public func setState(_ state: Coding) {
+        assert(!self.disposed)
         self.postbox?.setState(state)
     }
     
     public func getPeerChatState(_ id: PeerId) -> PeerChatState? {
+        assert(!self.disposed)
         return self.postbox?.peerChatStateTable.get(id) as? PeerChatState
     }
     
     public func setPeerChatState(_ id: PeerId, state: PeerChatState) {
+        assert(!self.disposed)
         self.postbox?.setPeerChatState(id, state: state)
     }
     
     public func updatePeerChatInterfaceState(_ id: PeerId, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
+        assert(!self.disposed)
         self.postbox?.updatePeerChatInterfaceState(id, update: update)
     }
     
     public func getPeer(_ id: PeerId) -> Peer? {
+        assert(!self.disposed)
         return self.postbox?.peerTable.get(id)
     }
     
     public func getPeerReadStates(_ id: PeerId) -> [(MessageId.Namespace, PeerReadState)]? {
+        assert(!self.disposed)
         return self.postbox?.readStateTable.getCombinedState(id)?.states
     }
     
     public func getCombinedPeerReadState(_ id: PeerId) -> CombinedPeerReadState? {
+        assert(!self.disposed)
         return self.postbox?.readStateTable.getCombinedState(id)
     }
     
     public func getPeerNotificationSettings(_ id: PeerId) -> PeerNotificationSettings? {
+        assert(!self.disposed)
         return self.postbox?.peerNotificationSettingsTable.get(id)
     }
     
     public func updatePeersInternal(_ peers: [Peer], update: (Peer?, Peer) -> Peer?) {
+        assert(!self.disposed)
         self.postbox?.updatePeers(peers, update: update)
     }
     
     public func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.getPeerChatListInclusion(id)
         }
@@ -157,6 +185,7 @@ public final class Modifier {
     }
     
     public func getTopPeerMessageId(peerId: PeerId, namespace: MessageId.Namespace) -> MessageId? {
+        assert(!self.disposed)
         return self.postbox?.messageHistoryIndexTable.top(peerId, namespace: namespace)?.index.id
     }
     
@@ -165,30 +194,37 @@ public final class Modifier {
     }
     
     public func updatePeerChatListInclusion(_ id: PeerId, inclusion: PeerChatListInclusion) {
+        assert(!self.disposed)
         self.postbox?.updatePeerChatListInclusion(id, inclusion: inclusion)
     }
     
     public func updatePeerNotificationSettings(_ notificationSettings: [PeerId: PeerNotificationSettings]) {
+        assert(!self.disposed)
         self.postbox?.updatePeerNotificationSettings(notificationSettings)
     }
     
     public func resetAllPeerNotificationSettings(_ notificationSettings: PeerNotificationSettings) {
+        assert(!self.disposed)
         self.postbox?.resetAllPeerNotificationSettings(notificationSettings)
     }
     
     public func updatePeerCachedData(peerIds: Set<PeerId>, update: (PeerId, CachedPeerData?) -> CachedPeerData?) {
+        assert(!self.disposed)
         self.postbox?.updatePeerCachedData(peerIds: peerIds, update: update)
     }
     
     public func getPeerCachedData(peerId: PeerId) -> CachedPeerData? {
+        assert(!self.disposed)
         return self.postbox?.cachedPeerDataTable.get(peerId)
     }
     
     public func updatePeerPresences(_ peerPresences: [PeerId: PeerPresence]) {
+        assert(!self.disposed)
         self.postbox?.updatePeerPresences(peerPresences)
     }
     
     public func getContactPeerIds() -> Set<PeerId> {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.contactsTable.get()
         } else {
@@ -197,42 +233,52 @@ public final class Modifier {
     }
     
     public func replaceContactPeerIds(_ peerIds: Set<PeerId>) {
+        assert(!self.disposed)
         self.postbox?.replaceContactPeerIds(peerIds)
     }
     
     public func replaceRecentPeerIds(_ peerIds: [PeerId]) {
+        assert(!self.disposed)
         self.postbox?.replaceRecentPeerIds(peerIds)
     }
     
     public func updateMessage(_ id: MessageId, update: (Message) -> PostboxUpdateMessage) {
+        assert(!self.disposed)
         self.postbox?.updateMessage(id, update: update)
     }
     
     public func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32) {
+        assert(!self.disposed)
         self.postbox?.offsetPendingMessagesTimestamps(lowerBound: lowerBound, timestamp: timestamp)
     }
     
     public func updateMedia(_ id: MediaId, update: Media?) {
+        assert(!self.disposed)
         self.postbox?.updateMedia(id, update: update)
     }
     
     public func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
+        assert(!self.disposed)
         self.postbox?.replaceItemCollections(namespace: namespace, itemCollections: itemCollections)
     }
     
     public func replaceItemCollectionInfos(namespace: ItemCollectionId.Namespace, itemCollectionInfos: [(ItemCollectionId, ItemCollectionInfo)]) {
+        assert(!self.disposed)
         self.postbox?.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: itemCollectionInfos)
     }
     
     public func replaceItemCollectionItems(collectionId: ItemCollectionId, items: [ItemCollectionItem]) {
+        assert(!self.disposed)
         self.postbox?.replaceItemCollectionItems(collectionId: collectionId, items: items)
     }
     
     public func removeItemCollection(collectionId: ItemCollectionId) {
+        assert(!self.disposed)
         self.postbox?.removeItemCollection(collectionId: collectionId)
     }
     
     public func getItemCollectionsInfos(namespace: ItemCollectionId.Namespace) -> [(ItemCollectionId, ItemCollectionInfo)] {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.itemCollectionInfoTable.getInfos(namespace: namespace).map { ($0.1, $0.2) }
         } else {
@@ -241,10 +287,12 @@ public final class Modifier {
     }
     
     public func getItemCollectionInfo(collectionId: ItemCollectionId) -> ItemCollectionInfo? {
+        assert(!self.disposed)
         return self.postbox?.itemCollectionInfoTable.getInfo(id: collectionId)
     }
     
     public func getItemCollectionItems(collectionId: ItemCollectionId) -> [ItemCollectionItem] {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.itemCollectionItemTable.collectionItems(collectionId: collectionId)
         } else {
@@ -253,6 +301,7 @@ public final class Modifier {
     }
     
     public func getCollectionsItems(namespace: ItemCollectionId.Namespace) -> [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])] {
+        assert(!self.disposed)
         if let postbox = postbox {
             let infos = postbox.itemCollectionInfoTable.getInfos(namespace: namespace)
             var result: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])] = []
@@ -267,6 +316,7 @@ public final class Modifier {
     }
     
     public func getItemCollectionInfoItems(namespace: ItemCollectionId.Namespace, id:ItemCollectionId) -> (ItemCollectionInfo, [ItemCollectionItem])? {
+        assert(!self.disposed)
         if let postbox = postbox {
             let infos = postbox.itemCollectionInfoTable.getInfos(namespace: namespace)
             for info in infos {
@@ -280,6 +330,7 @@ public final class Modifier {
     }
     
     public func searchItemCollection(namespace: ItemCollectionId.Namespace, key: MemoryBuffer) -> [ItemCollectionItem] {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.itemCollectionItemTable.exactIndexedItems(namespace: namespace, key: ValueBoxKey(key))
         } else {
@@ -288,14 +339,17 @@ public final class Modifier {
     }
     
     public func replaceOrderedItemListItems(collectionId: Int32, items: [OrderedItemListEntry]) {
+        assert(!self.disposed)
         self.postbox?.replaceOrderedItemListItems(collectionId: collectionId, items: items)
     }
     
     public func addOrMoveToFirstPositionOrderedItemListItem(collectionId: Int32, item: OrderedItemListEntry, removeTailIfCountExceeds: Int?) {
+        assert(!self.disposed)
         self.postbox?.addOrMoveToFirstPositionOrderedItemListItem(collectionId: collectionId, item: item, removeTailIfCountExceeds: removeTailIfCountExceeds)
     }
     
     public func getOrderedListItemIds(collectionId: Int32) -> [MemoryBuffer] {
+        assert(!self.disposed)
         if let postbox = postbox {
             return postbox.getOrderedListItemIds(collectionId: collectionId)
         } else {
@@ -303,7 +357,17 @@ public final class Modifier {
         }
     }
     
+    public func getOrderedListItems(collectionId: Int32) -> [OrderedItemListEntry] {
+        assert(!self.disposed)
+        if let postbox = postbox {
+            return postbox.orderedItemListTable.getItems(collectionId: collectionId)
+        } else {
+            return []
+        }
+    }
+    
     public func getMessage(_ id: MessageId) -> Message? {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             if let entry = postbox.messageHistoryIndexTable.get(id) {
                 if case let .Message(index) = entry {
@@ -317,6 +381,7 @@ public final class Modifier {
     }
     
     public func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.filterStoredMessageIds(messageIds)
         }
@@ -324,18 +389,22 @@ public final class Modifier {
     }
     
     public func storedMessageId(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32) -> MessageId? {
+        assert(!self.disposed)
         return self.postbox?.storedMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp)
     }
     
     public func putItemCacheEntry(id: ItemCacheEntryId, entry: Coding, collectionSpec: ItemCacheCollectionSpec) {
+        assert(!self.disposed)
         self.postbox?.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
     }
     
     public func retrieveItemCacheEntry(id: ItemCacheEntryId) -> Coding? {
+        assert(!self.disposed)
         return self.postbox?.retrieveItemCacheEntry(id: id)
     }
     
     public func operationLogGetNextEntryLocalIndex(peerId: PeerId, tag: PeerOperationLogTag) -> Int32 {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: tag)
         } else {
@@ -344,10 +413,12 @@ public final class Modifier {
     }
     
     public func operationLogAddEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: StorePeerOperationLogEntryTagLocalIndex, tagMergedIndex: StorePeerOperationLogEntryTagMergedIndex, contents: Coding) {
+        assert(!self.disposed)
         self.postbox?.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, tagMergedIndex: tagMergedIndex, contents: contents)
     }
     
     public func operationLogRemoveEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32) -> Bool {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex)
         } else {
@@ -356,42 +427,52 @@ public final class Modifier {
     }
     
     public func operationLogRemoveAllEntries(peerId: PeerId, tag: PeerOperationLogTag) {
+        assert(!self.disposed)
         self.postbox?.operationLogRemoveAllEntries(peerId: peerId, tag: tag)
     }
     
     public func operationLogRemoveEntries(peerId: PeerId, tag: PeerOperationLogTag, withTagLocalIndicesEqualToOrLowerThan maxTagLocalIndex: Int32) {
+        assert(!self.disposed)
         self.postbox?.operationLogRemoveEntries(peerId: peerId, tag: tag, withTagLocalIndicesEqualToOrLowerThan: maxTagLocalIndex)
     }
     
     public func operationLogUpdateEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: (PeerOperationLogEntry?) -> PeerOperationLogEntryUpdate) {
+        assert(!self.disposed)
         self.postbox?.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, f)
     }
     
     public func operationLogEnumerateEntries(peerId: PeerId, tag: PeerOperationLogTag, _ f: (PeerOperationLogEntry) -> Bool) {
+        assert(!self.disposed)
         self.postbox?.operationLogEnumerateEntries(peerId: peerId, tag: tag, f)
     }
     
     public func addTimestampBasedMessageAttribute(tag: UInt16, timestamp: Int32, messageId: MessageId) {
+        assert(!self.disposed)
         self.postbox?.addTimestampBasedMessageAttribute(tag: tag, timestamp: timestamp, messageId: messageId)
     }
     
     public func removeTimestampBasedMessageAttribute(tag: UInt16, messageId: MessageId) {
+        assert(!self.disposed)
         self.postbox?.removeTimestampBasedMessageAttribute(tag: tag, messageId: messageId)
     }
     
     public func getPreferencesEntry(key: ValueBoxKey) -> PreferencesEntry? {
+        assert(!self.disposed)
         return self.postbox?.getPreferencesEntry(key: key)
     }
     
     public func setPreferencesEntry(key: ValueBoxKey, value: PreferencesEntry?) {
+        assert(!self.disposed)
         self.postbox?.setPreferencesEntry(key: key, value: value)
     }
     
     public func updatePreferencesEntry(key: ValueBoxKey, _ f: (PreferencesEntry?) -> PreferencesEntry?) {
+        assert(!self.disposed)
         self.postbox?.setPreferencesEntry(key: key, value: f(self.postbox?.getPreferencesEntry(key: key)))
     }
     
     public func getPinnedPeerIds() -> [PeerId] {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.chatListTable.getPinnedPeerIds()
         } else {
@@ -400,10 +481,12 @@ public final class Modifier {
     }
     
     public func setPinnedPeerIds(_ peerIds: [PeerId]) {
+        assert(!self.disposed)
         self.postbox?.setPinnedPeerIds(peerIds)
     }
     
     public func getTotalUnreadCount() -> Int32 {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.messageHistoryMetadataTable.getChatListTotalUnreadCount()
         } else {
@@ -412,6 +495,7 @@ public final class Modifier {
     }
     
     public func getAccessChallengeData() -> PostboxAccessChallengeData {
+        assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.metadataTable.accessChallengeData()
         } else {
@@ -420,6 +504,7 @@ public final class Modifier {
     }
     
     public func setAccessChallengeData(_ data: PostboxAccessChallengeData) {
+        assert(!self.disposed)
         self.postbox?.metadataTable.setAccessChallengeData(data)
     }
 }
@@ -1345,7 +1430,9 @@ public final class Postbox {
             let f: () -> Void = {
                 self.valueBox.begin()
                 self.afterBegin()
-                let result = f(Modifier(postbox: self))
+                let modifier = Modifier(postbox: self)
+                let result = f(modifier)
+                modifier.disposed = true
                 let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit()
                 self.valueBox.commit()
                 
@@ -1802,9 +1889,7 @@ public final class Postbox {
     public func itemCollectionsView(orderedItemListCollectionIds: [Int32], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) -> Signal<ItemCollectionsView, NoError> {
         return self.modify { modifier -> Signal<ItemCollectionsView, NoError> in
             let itemListViews = orderedItemListCollectionIds.map { collectionId -> MutableOrderedItemListView in
-                return MutableOrderedItemListView(collectionId: collectionId, getItems: { collectionId in
-                    return self.orderedItemListTable.getItems(collectionId: collectionId)
-                })
+                return MutableOrderedItemListView(postbox: self, collectionId: collectionId)
             }
             
             let mutableView = MutableItemCollectionsView(postbox: self, orderedItemListsViews: itemListViews, namespaces: namespaces, aroundIndex: aroundIndex, count: count)
@@ -1817,26 +1902,6 @@ public final class Postbox {
                     if let strongSelf = self {
                         strongSelf.queue.async {
                             strongSelf.viewTracker.removeItemCollectionView(index)
-                        }
-                    }
-            }
-        } |> switchToLatest
-    }
-    
-    public func orderedItemListView(collectionId: Int32) -> Signal<OrderedItemListView, NoError> {
-        return self.modify { modifier -> Signal<OrderedItemListView, NoError> in
-            let mutableView = MutableOrderedItemListView(collectionId: collectionId, getItems: { collectionId in
-                return self.orderedItemListTable.getItems(collectionId: collectionId)
-            })
-            
-            let (index, signal) = self.viewTracker.addOrderedItemListView(mutableView)
-            
-            return (.single(OrderedItemListView(mutableView))
-                |> then(signal))
-                |> afterDisposed { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.queue.async {
-                            strongSelf.viewTracker.removeOrderedItemListView(index)
                         }
                     }
             }

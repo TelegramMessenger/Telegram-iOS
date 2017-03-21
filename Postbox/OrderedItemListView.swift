@@ -1,18 +1,18 @@
 import Foundation
 
-final class MutableOrderedItemListView {
+final class MutableOrderedItemListView: MutablePostboxView {
     let collectionId: Int32
     var items: [OrderedItemListEntry]
     
-    init(collectionId: Int32, getItems: (Int32) -> [OrderedItemListEntry]) {
+    init(postbox: Postbox, collectionId: Int32) {
         self.collectionId = collectionId
-        self.items = getItems(collectionId)
+        self.items = postbox.orderedItemListTable.getItems(collectionId: collectionId)
     }
     
-    func replay(operations: [Int32: [OrderedItemListOperation]]) -> Bool {
+    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
-        if let operations = operations[self.collectionId] {
+        if let operations = transaction.currentOrderedItemListOperations[self.collectionId] {
             for operation in operations {
                 switch operation {
                     case let .replace(items):
@@ -35,9 +35,13 @@ final class MutableOrderedItemListView {
         
         return updated
     }
+    
+    func immutableView() -> PostboxView {
+        return OrderedItemListView(self)
+    }
 }
 
-public final class OrderedItemListView {
+public final class OrderedItemListView: PostboxView {
     public let collectionId: Int32
     public let items: [OrderedItemListEntry]
     

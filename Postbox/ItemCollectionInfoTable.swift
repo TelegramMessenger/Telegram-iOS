@@ -49,6 +49,32 @@ final class ItemCollectionInfoTable: Table {
         }
     }
     
+    func getIds(namespace: ItemCollectionId.Namespace) -> [ItemCollectionId] {
+        if let cachedInfo = self.cachedInfos[namespace] {
+            return cachedInfo.map { $0.1 }
+        } else {
+            var ids: [ItemCollectionId] = []
+            self.valueBox.range(self.table, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), keys: { key in
+                ids.append(ItemCollectionId(namespace: namespace, id: key.getInt64(4 + 4)))
+                return true
+            }, limit: 0)
+            return ids
+        }
+    }
+    
+    func getIndex(id: ItemCollectionId) -> Int32? {
+        var index: Int32?
+        self.valueBox.range(self.table, start: self.lowerBound(namespace: id.namespace), end: self.upperBound(namespace: id.namespace), keys: { key in
+            let keyId = ItemCollectionId(namespace: id.namespace, id: key.getInt64(4 + 4))
+            if keyId == id {
+                index = key.getInt32(4)
+                return false
+            }
+            return true
+        }, limit: 0)
+        return index
+    }
+    
     func getInfo(id: ItemCollectionId) -> ItemCollectionInfo? {
         var infoKey: ValueBoxKey?
         self.valueBox.range(self.table, start: self.lowerBound(namespace: id.namespace), end: self.upperBound(namespace: id.namespace), keys: { key in
