@@ -361,7 +361,7 @@ public final class PendingMessageManager {
                                         current.disposable.set((strongSelf.sendMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, message: message, content: content)
                                             |> map { next -> PendingMessageResult in
                                                 return .progress(1.0)
-                                            }).start(next: { next in
+                                            } |> deliverOn(strongSelf.queue)).start(next: { next in
                                                 if let strongSelf = self {
                                                     assert(strongSelf.queue.isCurrent())
                                                     

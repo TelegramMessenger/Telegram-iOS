@@ -143,7 +143,16 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
     if let peer = modifier.getPeer(peerId) {
         var storeMessages: [StoreMessage] = []
-        let timestamp = Int32(account.network.context.globalTime())
+        var timestamp = Int32(account.network.context.globalTime())
+        switch peerId.namespace {
+            case Namespaces.Peer.CloudChannel, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudUser:
+                if let topIndex = modifier.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+                    timestamp = max(timestamp, topIndex.timestamp)
+                }
+            default:
+                break
+        }
+        
         var globallyUniqueIds: [Int64] = []
         for (transformedMedia, message) in messages {
             var attributes: [MessageAttribute] = []
