@@ -104,10 +104,9 @@ private func fetchHigherEntries(namespaces: [ItemCollectionId.Namespace], collec
 }
 
 private func aroundEntries(namespaces: [ItemCollectionId.Namespace],
-                           collectionId: ItemCollectionId,
-                           collectionIndex: Int32,
-                           itemIndex: ItemCollectionItemIndex,
+                           aroundIndex: ItemCollectionViewEntryIndex?,
                            count: Int,
+                           collectionIndexById: (ItemCollectionId) -> Int32?,
                            lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?,
                            fetchLowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem],
                            higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?,
@@ -116,6 +115,17 @@ private func aroundEntries(namespaces: [ItemCollectionId.Namespace],
     var upperEntries: [ItemCollectionViewEntry] = []
     var lower: ItemCollectionViewEntry?
     var upper: ItemCollectionViewEntry?
+    
+    let selectedAroundIndex: ItemCollectionViewEntryIndex
+    if let aroundIndex = aroundIndex, let aroundCollectionIndex = collectionIndexById(aroundIndex.collectionId) {
+        selectedAroundIndex = ItemCollectionViewEntryIndex(collectionIndex: aroundCollectionIndex, collectionId: aroundIndex.collectionId, itemIndex: aroundIndex.itemIndex)
+    } else {
+        selectedAroundIndex = ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: ItemCollectionId(namespace: namespaces[0], id: 0), itemIndex: ItemCollectionItemIndex.lowerBound)
+    }
+    
+    let collectionId: ItemCollectionId = selectedAroundIndex.collectionId
+    let collectionIndex: Int32 = selectedAroundIndex.collectionIndex
+    let itemIndex: ItemCollectionItemIndex = selectedAroundIndex.itemIndex
     
     lowerEntries.append(contentsOf: fetchLowerEntries(namespaces: namespaces, collectionId: collectionId, collectionIndex: collectionIndex, itemIndex: itemIndex, count: count / 2 + 1, lowerCollectionId: lowerCollectionId, lowerItems: fetchLowerItems))
     
@@ -203,18 +213,11 @@ final class MutableItemCollectionsView {
             }
         }
         
-        let selectedAroundIndex: ItemCollectionViewEntryIndex
-        if let aroundIndex = aroundIndex {
-            selectedAroundIndex = aroundIndex
-        } else {
-            selectedAroundIndex = ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: ItemCollectionId(namespace: namespaces[0], id: 0), itemIndex: ItemCollectionItemIndex.lowerBound)
-        }
-        
         let (entries, lower, higher) = aroundEntries(namespaces: namespaces,
-                                                     collectionId: selectedAroundIndex.collectionId,
-                                                     collectionIndex: selectedAroundIndex.collectionIndex,
-                                                     itemIndex: selectedAroundIndex.itemIndex,
-                                                     count: count,
+                                                     aroundIndex: aroundIndex,
+                                                     count: count, collectionIndexById: { id in
+                                                        return postbox.itemCollectionInfoTable.getIndex(id: id)
+        },
                                                      lowerCollectionId: { namespaceList, collectionId, collectionIndex in
                                                         return self.lowerCollectionId(postbox: postbox, namespaceList: namespaceList, collectionId: collectionId, collectionIndex: collectionIndex)
         },
@@ -234,46 +237,12 @@ final class MutableItemCollectionsView {
         self.higher = higher
     }
     
-    /*init(orderedItemListsViews: [MutableOrderedItemListView], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int, getInfos: (_ namespace: ItemCollectionId.Namespace) -> [(Int, ItemCollectionId, ItemCollectionInfo)], lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, lowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem], higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, higherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) {
-        self.orderedItemListsViews = orderedItemListsViews
-        self.namespaces = namespaces
-        
-        self.collectionInfos = []
-        for namespace in namespaces {
-            for (_, id, info) in getInfos(namespace) {
-                let item = higherItems(id, ItemCollectionItemIndex.lowerBound, 1).first
-                self.collectionInfos.append((id, info, item))
-            }
-        }
-        
-        let selectedAroundIndex: ItemCollectionViewEntryIndex
-        if let aroundIndex = aroundIndex {
-            selectedAroundIndex = aroundIndex
-        } else {
-            selectedAroundIndex = ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: ItemCollectionId(namespace: namespaces[0], id: 0), itemIndex: ItemCollectionItemIndex.lowerBound)
-        }
-        
-        let (entries, lower, higher) = aroundEntries(namespaces: namespaces,
-            collectionId: selectedAroundIndex.collectionId,
-            collectionIndex: selectedAroundIndex.collectionIndex,
-            itemIndex: selectedAroundIndex.itemIndex,
-            count: count,
-            lowerCollectionId: lowerCollectionId,
-            fetchLowerItems: lowerItems,
-            higherCollectionId: higherCollectionId,
-            fetchHigherItems: higherItems)
-        
-        self.entries = entries
-        self.lower = lower
-        self.higher = higher
-    }*/
-    
     func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
         if !transaction.currentOrderedItemListOperations.isEmpty {
             for view in self.orderedItemListsViews {
-                if view.replay(operations: transaction.currentOrderedItemListOperations) {
+                if view.replay(postbox: postbox, transaction: transaction) {
                     updated = true
                 }
             }

@@ -62,7 +62,6 @@ final class ViewTracker {
     private var preferencesViews = Bag<(MutablePreferencesView, ValuePipe<PreferencesView>)>()
     private var multiplePeersViews = Bag<(MutableMultiplePeersView, ValuePipe<MultiplePeersView>)>()
     private var itemCollectionsViews = Bag<(MutableItemCollectionsView, ValuePipe<ItemCollectionsView>)>()
-    private var orderedItemListViews = Bag<(MutableOrderedItemListView, ValuePipe<OrderedItemListView>)>()
     
     init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (ChatListIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (ChatListIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadCount: @escaping () -> Int32, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
@@ -266,17 +265,6 @@ final class ViewTracker {
     
     func removeMultiplePeersView(_ index: Bag<(MutableMultiplePeersView, ValuePipe<MultiplePeersView>)>.Index) {
         self.multiplePeersViews.remove(index)
-    }
-    
-    func addOrderedItemListView(_ view: MutableOrderedItemListView) -> (Bag<(MutableOrderedItemListView, ValuePipe<OrderedItemListView>)>.Index, Signal<OrderedItemListView, NoError>) {
-        let record = (view, ValuePipe<OrderedItemListView>())
-        let index = self.orderedItemListViews.add(record)
-        
-        return (index, record.1.signal())
-    }
-    
-    func removeOrderedItemListView(_ index: Bag<(MutableOrderedItemListView, ValuePipe<OrderedItemListView>)>.Index) {
-        self.orderedItemListViews.remove(index)
     }
     
     func addItemCollectionView(_ view: MutableItemCollectionsView) -> (Bag<(MutableItemCollectionsView, ValuePipe<ItemCollectionsView>)>.Index, Signal<ItemCollectionsView, NoError>) {
@@ -521,12 +509,6 @@ final class ViewTracker {
         for (mutableView, pipe) in self.multiplePeersViews.copyItems() {
             if mutableView.replay(updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences) {
                 pipe.putNext(MultiplePeersView(mutableView))
-            }
-        }
-        
-        for (mutableView, pipe) in self.orderedItemListViews.copyItems() {
-            if mutableView.replay(operations: transaction.currentOrderedItemListOperations) {
-                pipe.putNext(OrderedItemListView(mutableView))
             }
         }
         
