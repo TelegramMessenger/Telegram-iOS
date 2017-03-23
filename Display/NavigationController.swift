@@ -4,8 +4,17 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 private class NavigationControllerView: UIView {
+    var inTransition = false
+    
     override class var layerClass: AnyClass {
         return CATracingLayer.self
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.bounds.contains(point) && self.inTransition {
+            return self
+        }
+        return super.hitTest(point, with: event)
     }
 }
 
@@ -67,14 +76,6 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
         self.view.frame = CGRect(origin: self.view.frame.origin, size: layout.size)
         
         let containedLayout = ContainerViewLayout(size: layout.size, intrinsicInsets: layout.intrinsicInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight)
-        
-        /*for controller in self.viewControllers {
-            if let controller = controller as? ContainableController {
-                controller.containerLayoutUpdated(containedLayout, transition: transition) 
-            } else {
-                controller.viewWillTransition(to: layout.size, with: SystemContainedControllerTransitionCoordinator())
-            }
-        }*/
         
         if let topViewController = self.topViewController {
             if let topViewController = topViewController as? ContainableController {
@@ -138,7 +139,9 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                     let velocity = recognizer.velocity(in: self.view).x
                     
                     if velocity > 1000 || navigationTransitionCoordinator.progress > 0.2 {
+                        (self.view as! NavigationControllerView).inTransition = true
                         navigationTransitionCoordinator.animateCompletion(velocity, completion: {
+                            (self.view as! NavigationControllerView).inTransition = false
                             self.navigationTransitionCoordinator = nil
                             
                             //self._navigationBar.endInteractivePopProgress()
@@ -167,7 +170,9 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                             bottomController.viewWillDisappear(true)
                         }
                         
+                        (self.view as! NavigationControllerView).inTransition = true
                         navigationTransitionCoordinator.animateCancel({
+                            (self.view as! NavigationControllerView).inTransition = false
                             self.navigationTransitionCoordinator = nil
                             
                             //self._navigationBar.endInteractivePopProgress()
@@ -192,7 +197,9 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                         bottomController.viewWillDisappear(true)
                     }
                     
+                    (self.view as! NavigationControllerView).inTransition = true
                     navigationTransitionCoordinator.animateCancel({
+                        (self.view as! NavigationControllerView).inTransition = false
                         self.navigationTransitionCoordinator = nil
                         
                         if self.viewControllers.count >= 2 && self.navigationTransitionCoordinator == nil {
@@ -336,8 +343,10 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                 let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.view, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar)
                 self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 
+                (self.view as! NavigationControllerView).inTransition = true
                 navigationTransitionCoordinator.animateCompletion(0.0, completion: { [weak self] in
                     if let strongSelf = self {
+                        (strongSelf.view as! NavigationControllerView).inTransition = false
                         strongSelf.navigationTransitionCoordinator = nil
                         
                         topController.setIgnoreAppearanceMethodInvocations(true)
@@ -370,8 +379,10 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                 
                 topView.isUserInteractionEnabled = false
                 
+                (self.view as! NavigationControllerView).inTransition = true
                 navigationTransitionCoordinator.animateCompletion(0.0, completion: { [weak self] in
                     if let strongSelf = self {
+                        (strongSelf.view as! NavigationControllerView).inTransition = false
                         strongSelf.navigationTransitionCoordinator = nil
                         
                         topController.setIgnoreAppearanceMethodInvocations(true)

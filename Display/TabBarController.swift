@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 
 open class TabBarController: ViewController {
     private var containerLayout = ContainerViewLayout()
@@ -41,6 +42,8 @@ open class TabBarController: ViewController {
     
     var currentController: ViewController?
     
+    private let pendingControllerDisposable = MetaDisposable()
+    
     override public init(navigationBar: NavigationBar = NavigationBar()) {
         super.init(navigationBar: navigationBar)
     }
@@ -49,10 +52,19 @@ open class TabBarController: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.pendingControllerDisposable.dispose()
+    }
+    
     override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(itemSelected: { [weak self] index in
             if let strongSelf = self {
-                strongSelf.selectedIndex = index
+                strongSelf.controllers[index].containerLayoutUpdated(strongSelf.containerLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
+                strongSelf.pendingControllerDisposable.set((strongSelf.controllers[index].ready.get() |> deliverOnMainQueue).start(next: { _ in
+                    if let strongSelf = self {
+                        strongSelf.selectedIndex = index
+                    }
+                }))
             }
         })
         

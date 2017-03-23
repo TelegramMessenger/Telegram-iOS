@@ -555,9 +555,11 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             topItemEdge = itemNodes[0].apparentFrame.origin.y
         }
         
+        var bottomItemNode: ListViewItemNode?
         for i in (0 ..< self.itemNodes.count).reversed() {
             if let index = itemNodes[i].index {
                 if index == self.items.count - 1 {
+                    bottomItemNode = itemNodes[i]
                     bottomItemFound = true
                 }
                 break
@@ -622,16 +624,16 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
             
             if visibleAreaHeight > completeHeight {
-                if let itemNode = self.itemNodes.last, itemNode.wantsTrailingItemSpaceUpdates {
+                if let itemNode = bottomItemNode, itemNode.wantsTrailingItemSpaceUpdates {
                     itemNode.updateTrailingItemSpace(visibleAreaHeight - completeHeight, transition: transition)
                 }
             } else {
-                if let itemNode = self.itemNodes.last, itemNode.wantsTrailingItemSpaceUpdates {
+                if let itemNode = bottomItemNode, itemNode.wantsTrailingItemSpaceUpdates {
                     itemNode.updateTrailingItemSpace(0.0, transition: transition)
                 }
             }
         } else {
-            if let itemNode = self.itemNodes.last, itemNode.wantsTrailingItemSpaceUpdates {
+            if let itemNode = bottomItemNode, itemNode.wantsTrailingItemSpaceUpdates {
                 itemNode.updateTrailingItemSpace(0.0, transition: transition)
             }
             if topItemFound {
