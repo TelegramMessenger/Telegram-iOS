@@ -299,23 +299,27 @@ public struct LocalFileReferenceMediaResourceId: MediaResourceId {
 public class LocalFileReferenceMediaResource: TelegramMediaResource {
     let localFilePath: String
     let randomId: Int64
+    let isUniquelyReferencedTemporaryFile: Bool
     let size: Int32?
     
-    public init(localFilePath: String, randomId: Int64, size: Int32? = nil) {
+    public init(localFilePath: String, randomId: Int64, isUniquelyReferencedTemporaryFile: Bool = false, size: Int32? = nil) {
         self.localFilePath = localFilePath
         self.randomId = randomId
+        self.isUniquelyReferencedTemporaryFile = isUniquelyReferencedTemporaryFile
         self.size = size
     }
     
     public required init(decoder: Decoder) {
         self.localFilePath = decoder.decodeStringForKey("p")
         self.randomId = decoder.decodeInt64ForKey("r")
+        self.isUniquelyReferencedTemporaryFile = (decoder.decodeInt32ForKey("t") as Int32) != 0
         self.size = decoder.decodeInt32ForKey("s")
     }
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeString(self.localFilePath, forKey: "p")
         encoder.encodeInt64(self.randomId, forKey: "r")
+        encoder.encodeInt32(self.isUniquelyReferencedTemporaryFile ? 1 : 0, forKey: "t")
         if let size = self.size {
             encoder.encodeInt32(size, forKey: "s")
         } else {
@@ -329,7 +333,7 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? LocalFileReferenceMediaResource {
-            return self.localFilePath == to.localFilePath && self.randomId == to.randomId && self.size == size
+            return self.localFilePath == to.localFilePath && self.randomId == to.randomId && self.size == to.size && self.isUniquelyReferencedTemporaryFile == to.isUniquelyReferencedTemporaryFile
         } else {
             return false
         }

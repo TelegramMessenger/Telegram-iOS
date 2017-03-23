@@ -218,6 +218,7 @@ private var declaredEncodables: Void = {
     declareEncodable(FeaturedStickerPackItem.self, f: { FeaturedStickerPackItem(decoder: $0) })
     declareEncodable(SynchronizeMarkFeaturedStickerPacksAsSeenOperation.self, f: { SynchronizeMarkFeaturedStickerPacksAsSeenOperation(decoder: $0) })
     declareEncodable(ArchivedStickerPacksInfo.self, f: { ArchivedStickerPacksInfo(decoder: $0) })
+    declareEncodable(SynchronizeChatInputStateOperation.self, f: { SynchronizeChatInputStateOperation(decoder: $0) })
     
     return
 }()
@@ -230,7 +231,7 @@ private func accountRecordIdPathName(_ id: AccountRecordId) -> String {
     return "account-\(UInt64(bitPattern: id.int64))"
 }
 
-public func accountWithId(apiId: Int32, id: AccountRecordId, appGroupPath: String, testingEnvironment: Bool, shouldKeepAutoConnection: Bool = true) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
+public func accountWithId(apiId: Int32, id: AccountRecordId, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
     return Signal<(String, Postbox, Coding?), NoError> { subscriber in
         let _ = declaredEncodables
         
@@ -271,7 +272,7 @@ public func accountWithId(apiId: Int32, id: AccountRecordId, appGroupPath: Strin
                 case let authorizedState as AuthorizedAccountState:
                     return initializedNetwork(apiId: apiId, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
-                            return .right(value: Account(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId))
+                            return .right(value: Account(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                         }
                 case _:
                     assertionFailure("Unexpected accountState \(accountState)")
@@ -353,6 +354,16 @@ public enum AccountNetworkState {
     case online
 }
 
+public final class AccountAuxiliaryMethods {
+    public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
+    public let fetchResource: (Account, MediaResource, Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError>?
+    
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError>?) {
+        self.updatePeerChatInputState = updatePeerChatInputState
+        self.fetchResource = fetchResource
+    }
+}
+
 public class Account {
     public let id: AccountRecordId
     public let basePath: String
@@ -360,6 +371,8 @@ public class Account {
     public let postbox: Postbox
     public let network: Network
     public let peerId: PeerId
+    
+    public let auxiliaryMethods: AccountAuxiliaryMethods
     
     private let serviceQueue = Queue()
     
@@ -401,7 +414,7 @@ public class Account {
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
-    public init(id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId) {
+    public init(id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods) {
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
@@ -409,8 +422,10 @@ public class Account {
         self.network = network
         self.peerId = peerId
         
+        self.auxiliaryMethods = auxiliaryMethods
+        
         self.peerInputActivityManager = PeerInputActivityManager()
-        self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager)
+        self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
         self.localInputActivityManager = PeerInputActivityManager()
         self.viewTracker = AccountViewTracker(account: self)
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)
@@ -550,7 +565,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedRecentGifs(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager : self.stateManager).start())
+        self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network).start())
 
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
@@ -634,7 +650,13 @@ public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network:
 public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
     account.postbox.mediaBox.fetchResource = { [weak account] resource, range -> Signal<MediaResourceDataFetchResult, NoError> in
         if let strongAccount = account {
-            return fetchResource(account: strongAccount, resource: resource, range: range)
+            if let result = fetchResource(account: strongAccount, resource: resource, range: range) {
+                return result
+            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, range) {
+                return result
+            } else {
+                return .never()
+            }
         } else {
             return .never()
         }

@@ -982,6 +982,19 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.addUpdateInstalledStickerPacks(.reorder(namespace, order))
             case .updateStickerSets:
                 updatedState.addUpdateInstalledStickerPacks(.sync)
+            case let .updateDraftMessage(peer, draft):
+                let inputState: SynchronizeableChatInputState?
+                switch draft {
+                    case .draftMessageEmpty:
+                        inputState = nil
+                    case let .draftMessage(_, replyToMsgId, message, entities, date):
+                        var replyToMessageId: MessageId?
+                        if let replyToMsgId = replyToMsgId {
+                            replyToMessageId = MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                        }
+                        inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, timestamp: date)
+                }
+                updatedState.addUpdateChatInputState(peerId: peer.peerId, state: inputState)
             default:
                     break
         }
@@ -1356,7 +1369,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1392,7 +1405,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     return result
 }
 
-func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modifier, finalState: AccountFinalState) -> AccountReplayedFinalState? {
+func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modifier, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(modifier, finalState: finalState.state)
     if !verified { 
         return nil
@@ -1552,6 +1565,10 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 })
             case let .UpdateInstalledStickerPacks(operation):
                 stickerPackOperations.append(operation)
+            case let .UpdateChatInputState(peerId, inputState):
+                modifier.updatePeerChatInterfaceState(peerId, update: { current in
+                    return auxiliaryMethods.updatePeerChatInputState(current, inputState)
+                })
         }
     }
     

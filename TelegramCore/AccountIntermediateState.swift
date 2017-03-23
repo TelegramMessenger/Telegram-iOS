@@ -68,6 +68,7 @@ enum AccountStateMutationOperation {
     case ReadGlobalMessageContents([Int32])
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
+    case UpdateChatInputState(PeerId, SynchronizeableChatInputState?)
 }
 
 struct AccountMutableState {
@@ -248,9 +249,13 @@ struct AccountMutableState {
         self.addOperation(.UpdateInstalledStickerPacks(operation))
     }
     
+    mutating func addUpdateChatInputState(peerId: PeerId, state: SynchronizeableChatInputState?) {
+        self.addOperation(.UpdateChatInputState(peerId, state))
+    }
+    
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {

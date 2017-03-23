@@ -39,6 +39,7 @@ public final class AccountStateManager {
     private let queue = Queue()
     private let account: Account
     private let peerInputActivityManager: PeerInputActivityManager
+    private let auxiliaryMethods: AccountAuxiliaryMethods
     
     private var updateService: UpdateMessageService?
     private let updateServiceDisposable = MetaDisposable()
@@ -81,9 +82,10 @@ public final class AccountStateManager {
     
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
     
-    init(account: Account, peerInputActivityManager: PeerInputActivityManager) {
+    init(account: Account, peerInputActivityManager: PeerInputActivityManager, auxiliaryMethods: AccountAuxiliaryMethods) {
         self.account = account
         self.peerInputActivityManager = peerInputActivityManager
+        self.auxiliaryMethods = auxiliaryMethods
     }
     
     deinit {
@@ -233,6 +235,7 @@ public final class AccountStateManager {
                 let account = self.account
                 let mediaBox = account.postbox.mediaBox
                 let accountPeerId = account.peerId
+                let auxiliaryMethods = self.auxiliaryMethods
                 let signal = account.postbox.stateView()
                     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
                         if let state = view.state as? AuthorizedAccountState {
@@ -261,7 +264,7 @@ public final class AccountStateManager {
                                                         }
                                                     }
                                                     return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
-                                                        if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, finalState: finalState) {
+                                                        if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, auxiliaryMethods: auxiliaryMethods, finalState: finalState) {
                                                             return (difference, replayedState)
                                                         } else {
                                                             return (nil, nil)
@@ -345,6 +348,7 @@ public final class AccountStateManager {
             case let .processUpdateGroups(groups):
                 self.operationTimer?.invalidate()
                 let account = self.account
+                let auxiliaryMethods = self.auxiliaryMethods
                 let accountPeerId = account.peerId
                 let mediaBox = account.postbox.mediaBox
                 let queue = self.queue
@@ -359,7 +363,7 @@ public final class AccountStateManager {
                                 }
                                 
                                 return account.postbox.modify { modifier -> AccountReplayedFinalState? in
-                                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, finalState: finalState)
+                                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
                                 }
                                 |> map({ ($0, finalState) })
                                 |> deliverOn(queue)
@@ -511,8 +515,9 @@ public final class AccountStateManager {
                 
                 let accountPeerId = self.account.peerId
                 let mediaBox = self.account.postbox.mediaBox
+                let auxiliaryMethods = self.auxiliaryMethods
                 let signal = self.account.postbox.modify { modifier -> AccountReplayedFinalState? in
-                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, finalState: finalState)
+                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
                     }
                     |> map({ ($0, finalState) })
                     |> deliverOn(self.queue)

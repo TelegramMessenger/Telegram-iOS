@@ -474,6 +474,8 @@ public final class PendingMessageManager {
                 
                 var flags: Int32 = 0
                 
+                flags |= (1 << 7)
+                
                 for attribute in message.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id

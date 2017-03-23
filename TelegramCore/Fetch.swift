@@ -36,7 +36,7 @@ private func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaR
                         UIGraphicsEndImageContext()
                         
                         if let scaledImage = scaledImage, let data = UIImageJPEGRepresentation(scaledImage, 0.6) {
-                            subscriber.putNext(MediaResourceDataFetchResult(data: data, complete: true))
+                            subscriber.putNext(.dataPart(data: data, range: 0 ..< data.count, complete: true))
                             subscriber.putCompletion()
                         } else {
                             subscriber.putCompletion()
@@ -57,39 +57,44 @@ private func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaR
 }
 #endif
 
-private func fetchLocalFileResource(path: String) -> Signal<MediaResourceDataFetchResult, NoError> {
+private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaResourceDataFetchResult, NoError> {
     return Signal { subscriber in
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-            subscriber.putNext(MediaResourceDataFetchResult(data: data, complete: true))
+        if move {
+            subscriber.putNext(.moveLocalFile(path: path))
             subscriber.putCompletion()
         } else {
-            subscriber.putNext(MediaResourceDataFetchResult(data: Data(), complete: false))
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                subscriber.putNext(.dataPart(data: data, range: 0 ..< data.count, complete: true))
+                subscriber.putCompletion()
+            } else {
+                subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: false))
+            }
         }
         return EmptyDisposable
     }
 }
 
-func fetchResource(account: Account, resource: MediaResource, range: Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError> {
+func fetchResource(account: Account, resource: MediaResource, range: Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError>? {
     if let _ = resource as? EmptyMediaResource {
         return .never()
     } else if let secretFileResource = resource as? SecretFileMediaResource {
-        return .single(MediaResourceDataFetchResult(data: Data(), complete: false)) |> then(fetchSecretFileResource(account: account, resource: secretFileResource, range: range))
+        return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchSecretFileResource(account: account, resource: secretFileResource, range: range))
     } else if let cloudResource = resource as? TelegramCloudMediaResource {
-        return .single(MediaResourceDataFetchResult(data: Data(), complete: false)) |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, size: resource.size, range: range))
+        return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, size: resource.size, range: range))
     } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
         #if os(iOS)
-            return .single(MediaResourceDataFetchResult(data: Data(), complete: false)) |> then(fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier))
+            return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier))
         #else
-            return .single(MediaResourceDataFetchResult(data: Data(), complete: false))
+            return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false))
         #endif
     } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
         if false {
-            //return .single(MediaResourceDataFetchResult(data: Data(), complete: false)) |> then(fetchLocalFileResource(path: localFileResource.localFilePath) |> delay(10.0, queue: Queue.concurrentDefaultQueue()))
+            //return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchLocalFileResource(path: localFileResource.localFilePath) |> delay(10.0, queue: Queue.concurrentDefaultQueue()))
         } else {
-            return fetchLocalFileResource(path: localFileResource.localFilePath)
+            return fetchLocalFileResource(path: localFileResource.localFilePath, move: localFileResource.isUniquelyReferencedTemporaryFile)
         }
     } else if let httpReference = resource as? HttpReferenceMediaResource {
-        return .single(MediaResourceDataFetchResult(data: Data(), complete: false)) |> then(fetchHttpResource(url: httpReference.url))
+        return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchHttpResource(url: httpReference.url))
     }
-    return .single(MediaResourceDataFetchResult(data: Data(), complete: false))
+    return nil
 }

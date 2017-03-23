@@ -200,9 +200,9 @@ func multipartFetch(account: Account, resource: TelegramCloudMediaResource, size
                 let manager = MultipartFetchManager(size: size, range: range, encryptionKey: encryptionKey, decryptedSize: decryptedSize, fetchPart: { offset, size in
                     return download.part(location: inputLocation, offset: offset, length: size)
                 }, partReady: { data in
-                    subscriber.putNext(MediaResourceDataFetchResult(data: data, complete: false))
+                    subscriber.putNext(.dataPart(data: data, range: 0 ..< data.count, complete: false))
                 }, completed: {
-                    subscriber.putNext(MediaResourceDataFetchResult(data: Data(), complete: true))
+                    subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
                     subscriber.putCompletion()
                 })
                 

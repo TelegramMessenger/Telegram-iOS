@@ -61,7 +61,6 @@ private func md5(_ data : Data) -> Data {
 private final class MultipartUploadState {
     let aesKey: Data
     var aesIv: Data
-    var md5Context = CC_MD5_CTX()
     var effectiveSize: Int = 0
     
     init(encryptionKey: SecretFileEncryptionKey?) {
@@ -72,7 +71,6 @@ private final class MultipartUploadState {
             self.aesKey = Data()
             self.aesIv = Data()
         }
-        CC_MD5_Init(&self.md5Context)
     }
     
     func transform(data: Data) -> Data {
@@ -92,34 +90,17 @@ private final class MultipartUploadState {
                 self.aesIv.withUnsafeMutableBytes { (iv: UnsafeMutablePointer<UInt8>) -> Void in
                     MTAesEncryptBytesInplaceAndModifyIv(bytes, encryptedData.count, self.aesKey, iv)
                 }
-                CC_MD5_Update(&self.md5Context, bytes, UInt32(encryptedData.count))
             }
             effectiveSize += encryptedData.count
             return encryptedData
         } else {
-            data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                CC_MD5_Update(&self.md5Context, bytes, UInt32(data.count))
-            }
             effectiveSize += data.count
             return data
         }
     }
     
-    func finalize() -> (md5Digest: String, effectiveSize: Int) {
-        var res = Data()
-        res.count = Int(CC_MD5_DIGEST_LENGTH)
-        res.withUnsafeMutableBytes { mutableBytes -> Void in
-            CC_MD5_Final(mutableBytes, &self.md5Context)
-        }
-        let hashString = res.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> String in
-            let hexString = NSMutableString()
-            for i in 0 ..< res.count {
-                let byteValue = UInt(bytes.advanced(by: i).pointee)
-                hexString.appendFormat("%02x", byteValue)
-            }
-            return hexString as String
-        }
-        return (hashString, self.effectiveSize)
+    func finalize() -> Int {
+        return self.effectiveSize
     }
 }
 
@@ -152,9 +133,11 @@ private final class MultipartUploadManager {
     let dataDisposable = MetaDisposable()
     var resourceData: MediaResourceData?
     
+    var headerPartReady: Bool
+    
     let state: MultipartUploadState
     
-    init(data: Signal<MediaResourceData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult) -> Void) {
+    init(resource: MediaResource, data: Signal<MediaResourceData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult) -> Void) {
         self.dataSignal = data
         
         var fileId: Int64 = 0
@@ -168,12 +151,28 @@ private final class MultipartUploadManager {
         self.progress = progress
         self.completed = completed
         
+        self.headerPartReady = resource.headerSize == 0
+        
         if let hintFileSize = hintFileSize, hintFileSize > 5 * 1024 * 1024 {
             self.defaultPartSize = 512 * 1024
             self.bigTotalParts = (hintFileSize / self.defaultPartSize) + (hintFileSize % self.defaultPartSize == 0 ? 0 : 1)
         } else {
-            self.defaultPartSize = 32 * 1024
-            self.bigTotalParts = nil
+            if self.headerPartReady {
+                self.defaultPartSize = 32 * 1024
+                self.bigTotalParts = nil
+            } else {
+                self.defaultPartSize = 32 * 1024
+                self.bigTotalParts = nil
+                //self.defaultPartSize = 128 * 1024
+                //self.bigTotalParts = -1
+            }
+        }
+        
+        if self.headerPartReady {
+            self.committedOffset = 0
+        } else {
+            self.committedOffset = self.defaultPartSize
+            self.state.effectiveSize = self.defaultPartSize
         }
     }
     
@@ -213,8 +212,29 @@ private final class MultipartUploadManager {
         }
         
         if let resourceData = self.resourceData, resourceData.complete, self.committedOffset >= resourceData.size {
-            let (md5Digest, effectiveSize) = self.state.finalize()
-            self.completed(MultipartIntermediateResult(id: self.fileId, partCount: Int32(effectiveSize / self.defaultPartSize + (effectiveSize % self.defaultPartSize == 0 ? 0 : 1)), md5Digest: md5Digest, size: Int32(resourceData.size), bigTotalParts: self.bigTotalParts))
+            if self.headerPartReady {
+                let effectiveSize = self.state.finalize()
+                self.completed(MultipartIntermediateResult(id: self.fileId, partCount: Int32(effectiveSize / self.defaultPartSize + (effectiveSize % self.defaultPartSize == 0 ? 0 : 1)), md5Digest: "", size: Int32(resourceData.size), bigTotalParts: self.bigTotalParts))
+            } else {
+                let partOffset = 0
+                let partSize = min(resourceData.size - partOffset, self.defaultPartSize)
+                let partIndex = partOffset / self.defaultPartSize
+                let fileData = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.alwaysMapped])
+                let partData = fileData!.subdata(in: partOffset ..< (partOffset + partSize))
+                var currentBigTotalParts = self.bigTotalParts
+                if let _ = self.bigTotalParts {
+                    currentBigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
+                }
+                let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts))
+                    |> deliverOn(self.queue)
+                self.uploadingParts[0] = (partSize, part.start(completed: { [weak self] in
+                    if let strongSelf = self {
+                        let _ = strongSelf.uploadingParts.removeValue(forKey: 0)
+                        strongSelf.headerPartReady = true
+                        strongSelf.checkState()
+                    }
+                }))
+            }
         } else {
             while uploadingParts.count < self.parallelParts {
                 var nextOffset = self.committedOffset
@@ -225,21 +245,30 @@ private final class MultipartUploadManager {
                     nextOffset = max(nextOffset, offset + partSize)
                 }
                 
-                if let resourceData = self.resourceData, nextOffset < resourceData.size, (resourceData.complete || nextOffset % 1024 == 0) {
+                if let resourceData = self.resourceData {
                     let partOffset = nextOffset
                     let partSize = min(resourceData.size - partOffset, self.defaultPartSize)
-                    let partIndex = partOffset / self.defaultPartSize
-                    let fileData = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.alwaysMapped])
-                    let partData = self.state.transform(data: fileData!.subdata(in: partOffset ..< (partOffset + partSize)))
-                    let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: self.bigTotalParts))
-                        |> deliverOn(self.queue)
-                    self.uploadingParts[nextOffset] = (partSize, part.start(completed: { [weak self] in
-                        if let strongSelf = self {
-                            let _ = strongSelf.uploadingParts.removeValue(forKey: nextOffset)
-                            strongSelf.uploadedParts[partOffset] = partSize
-                            strongSelf.checkState()
+                    
+                    if nextOffset < resourceData.size && partSize > 0 && (resourceData.complete || partSize == self.defaultPartSize) {
+                        let partIndex = partOffset / self.defaultPartSize
+                        let fileData = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.alwaysMapped])
+                        let partData = self.state.transform(data: fileData!.subdata(in: partOffset ..< (partOffset + partSize)))
+                        var currentBigTotalParts = self.bigTotalParts
+                        if let _ = self.bigTotalParts, resourceData.complete && partOffset + partSize == resourceData.size {
+                            currentBigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
                         }
-                    }))
+                        let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts))
+                            |> deliverOn(self.queue)
+                        self.uploadingParts[nextOffset] = (partSize, part.start(completed: { [weak self] in
+                            if let strongSelf = self {
+                                let _ = strongSelf.uploadingParts.removeValue(forKey: nextOffset)
+                                strongSelf.uploadedParts[partOffset] = partSize
+                                strongSelf.checkState()
+                            }
+                        }))
+                    } else {
+                        break
+                    }
                 } else {
                     break
                 }
@@ -275,7 +304,7 @@ func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource
                 
                 let resourceData = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: true))
                 
-                let manager = MultipartUploadManager(data: resourceData, encryptionKey: encryptionKey, hintFileSize: hintFileSize, uploadPart: { part in
+                let manager = MultipartUploadManager(resource: resource, data: resourceData, encryptionKey: encryptionKey, hintFileSize: hintFileSize, uploadPart: { part in
                     return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, bigTotalParts: part.bigTotalParts)
                 }, progress: { progress in
                     subscriber.putNext(.progress(progress))
