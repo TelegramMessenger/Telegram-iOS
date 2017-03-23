@@ -32,16 +32,20 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
         }
     }
     
-    if includeChatInfoEntry && view.earlierId == nil {
-        var cachedPeerData: CachedPeerData?
-        for entry in view.additionalData {
-            if case let .cachedPeerData(_, data) = entry {
-                cachedPeerData = data
-                break
+    if includeChatInfoEntry {
+        if view.earlierId == nil {
+            var cachedPeerData: CachedPeerData?
+            for entry in view.additionalData {
+                if case let .cachedPeerData(_, data) = entry {
+                    cachedPeerData = data
+                    break
+                }
             }
-        }
-        if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
-            entries.insert(.ChatInfoEntry(botInfo.description), at: 0)
+            if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
+                entries.insert(.ChatInfoEntry(botInfo.description), at: 0)
+            } else if view.entries.isEmpty {
+                entries.insert(.EmptyChatInfoEntry, at: 0)
+            }
         }
     }
     

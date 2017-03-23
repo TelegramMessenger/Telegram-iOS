@@ -1,11 +1,12 @@
 import Postbox
 import TelegramCore
 
-enum ChatHistoryEntry: Identifiable, Comparable, CustomStringConvertible {
+enum ChatHistoryEntry: Identifiable, Comparable {
     case HoleEntry(MessageHistoryHole)
     case MessageEntry(Message, Bool)
     case UnreadEntry(MessageIndex)
     case ChatInfoEntry(String)
+    case EmptyChatInfoEntry
     
     var stableId: UInt64 {
         switch self {
@@ -17,6 +18,8 @@ enum ChatHistoryEntry: Identifiable, Comparable, CustomStringConvertible {
                 return UInt64(3) << 40
             case .ChatInfoEntry:
                 return UInt64(4) << 40
+            case .EmptyChatInfoEntry:
+                return UInt64(5) << 40
         }
     }
     
@@ -30,19 +33,8 @@ enum ChatHistoryEntry: Identifiable, Comparable, CustomStringConvertible {
                 return index
             case .ChatInfoEntry:
                 return MessageIndex.absoluteLowerBound()
-        }
-    }
-    
-    var description: String {
-        switch self {
-            case let .HoleEntry(hole):
-                return "HoleEntry(\(hole))"
-            case let .MessageEntry(message, read):
-                return "MessageEntry(\(message), \(read))"
-            case let .UnreadEntry(index):
-                return "UnreadEntry(\(index))"
-            case .ChatInfoEntry:
-                return "ChatInfoEntry"
+            case .EmptyChatInfoEntry:
+                return MessageIndex.absoluteLowerBound()
         }
     }
 }
@@ -95,6 +87,12 @@ func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
             }
         case let .ChatInfoEntry(text):
             if case .ChatInfoEntry(text) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .EmptyChatInfoEntry:
+            if case .EmptyChatInfoEntry = rhs {
                 return true
             } else {
                 return false

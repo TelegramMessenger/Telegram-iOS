@@ -14,7 +14,7 @@ private let titleFont: UIFont = {
 }()
 private let textFont = Font.regular(14.0)
 
-private func textStringForMessage(_ message: Message) -> (String, Bool) {
+func textStringForReplyMessage(_ message: Message) -> (String, Bool) {
     if !message.text.isEmpty {
         return (message.text, false)
     } else {
@@ -110,7 +110,7 @@ class ChatMessageReplyInfoNode: ASTransformLayerNode {
         
         return { account, type, message, constrainedSize in
             let titleString = message.author?.displayTitle ?? ""
-            let (textString, textMedia) = textStringForMessage(message)
+            let (textString, textMedia) = textStringForReplyMessage(message)
             
             let titleColor: UIColor
             let lineColor: UIColor
@@ -174,8 +174,8 @@ class ChatMessageReplyInfoNode: ASTransformLayerNode {
             
             let contrainedTextSize = CGSize(width: maximumTextWidth, height: constrainedSize.height)
             
-            let (titleLayout, titleApply) = titleNodeLayout(NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), nil, 1, .end, contrainedTextSize, nil)
-            let (textLayout, textApply) = textNodeLayout(NSAttributedString(string: textString, font: textFont, textColor: textMedia ? titleColor : textColor), nil, 1, .end, contrainedTextSize, nil)
+            let (titleLayout, titleApply) = titleNodeLayout(NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), nil, 1, .end, contrainedTextSize, .natural, nil)
+            let (textLayout, textApply) = textNodeLayout(NSAttributedString(string: textString, font: textFont, textColor: textMedia ? titleColor : textColor), nil, 1, .end, contrainedTextSize, .natural, nil)
             
             let size = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + leftInset, height: titleLayout.size.height + textLayout.size.height)
             

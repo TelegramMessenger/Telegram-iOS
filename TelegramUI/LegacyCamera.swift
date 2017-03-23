@@ -80,6 +80,22 @@ func presentedLegacyCamera(cameraView: TGAttachmentCameraView?, menuController: 
     }
     
     controller.finishedWithVideo = { [weak menuController] videoURL, previewImage, duration, dimensions, adjustments, caption, stickers in
+        if let videoURL = videoURL {
+            let description = NSMutableDictionary()
+            description["type"] = "video"
+            description["url"] = videoURL.path
+            if let previewImage = previewImage {
+                description["previewImage"] = previewImage
+            }
+            if let adjustments = adjustments {
+                description["adjustments"] = adjustments
+            }
+            description["duration"] = duration as NSNumber
+            description["dimensions"] = NSValue(cgSize: dimensions)
+            if let item = legacyAssetPickerItemGenerator()(description, caption, nil) {
+                sendMessagesWithSignals([SSignal.single(item)])
+            }
+        }
         menuController?.dismiss(animated: false)
     }
     

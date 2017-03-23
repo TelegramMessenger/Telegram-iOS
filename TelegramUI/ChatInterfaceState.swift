@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 
 struct ChatInterfaceSelectionState: Coding, Equatable {
     let selectedIds: Set<MessageId>
@@ -215,7 +216,7 @@ struct ChatInterfaceMessageActionsState: Coding, Equatable {
     }
 }
 
-final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
+final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     let timestamp: Int32
     let composeInputState: ChatTextInputState
     let composeDisableUrlPreview: String?
@@ -231,6 +232,18 @@ final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
         } else {
             return nil
         }
+    }
+    
+    var synchronizeableInputState: SynchronizeableChatInputState? {
+        if self.composeInputState.inputText.isEmpty {
+            return nil
+        } else {
+            return SynchronizeableChatInputState(replyToMessageId: self.replyMessageId, text: self.composeInputState.inputText, timestamp: self.timestamp)
+        }
+    }
+    
+    func withUpdatedSynchronizeableInputState(_ state: SynchronizeableChatInputState?) -> SynchronizeableChatInterfaceState {
+        return self.withUpdatedComposeInputState(ChatTextInputState(inputText: state?.text ?? "")).withUpdatedReplyMessageId(state?.replyToMessageId)
     }
     
     var effectiveInputState: ChatTextInputState {

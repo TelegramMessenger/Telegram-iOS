@@ -117,7 +117,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
             }
             let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
             let attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: .black)
-            let (textLayout, textApply) = makeTextLayout(attributedMeasureText, nil, 0, .end, CGSize(width: width - 8 - leftInset, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (textLayout, textApply) = makeTextLayout(attributedMeasureText, nil, 0, .end, CGSize(width: width - 8 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let separatorHeight = UIScreenPixel
             

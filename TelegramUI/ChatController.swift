@@ -602,7 +602,7 @@ public class ChatController: TelegramController {
                         } else if let cachedData = combinedInitialData.cachedData as? CachedGroupData {
                             canReport = cachedData.reportStatus == .canReport
                         }
-                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ _ in return interfaceState }).updatedKeyboardButtonsMessage(combinedInitialData.buttonKeyboardMessage).updatedPinnedMessageId(pinnedMessageId).updatedPeerIsBlocked(peerIsBlocked).updatedCanReportPeer(canReport).updatedTitlePanelContext({ context in
+                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ _ in return interfaceState }).updatedKeyboardButtonsMessage(combinedInitialData.buttonKeyboardMessage).updatedPinnedMessageId(pinnedMessageId).updatedPeerIsBlocked(peerIsBlocked).updatedCanReportPeer(canReport).updatedTitlePanelContext({ context in
                                 if pinnedMessageId != nil {
                                     if !context.contains(where: {
                                         switch $0 {
@@ -1293,14 +1293,9 @@ public class ChatController: TelegramController {
         super.viewWillDisappear(animated)
         
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
-        let peerId = self.peerId
         let timestamp = Int32(Date().timeIntervalSince1970)
         let interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
-        let _ = self.account.postbox.modify({ modifier -> Void in
-            modifier.updatePeerChatInterfaceState(peerId, update: { _ in
-                return interfaceState
-            })
-        }).start()
+        let _ = updatePeerChatInterfaceState(account: account, peerId: self.peerId, state: interfaceState).start()
     }
     
     override public func viewDidDisappear(_ animated: Bool) {

@@ -524,9 +524,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 12.0), size: CGSize(width: width - 78.0 - 10.0 - 1.0 - editingOffset, height: 68.0 - 12.0 - 9.0))
             
-            let (dateLayout, dateApply) = dateLayout(dateAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (dateLayout, dateApply) = dateLayout(dateAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
-            let (badgeLayout, badgeApply) = badgeTextLayout(badgeAttributedString, nil, 1, .end, CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (badgeLayout, badgeApply) = badgeTextLayout(badgeAttributedString, nil, 1, .end, CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let badgeSize: CGFloat
             if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
@@ -535,10 +535,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 badgeSize = 0.0
             }
             
-            let (textLayout, textApply) = textLayout(textAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (textLayout, textApply) = textLayout(textAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let titleRect = CGRect(origin: rawContentRect.origin, size: CGSize(width: rawContentRect.width - dateLayout.size.width - 10.0 - statusWidth - muteWidth, height: rawContentRect.height))
-            let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 68.0), insets: insets)

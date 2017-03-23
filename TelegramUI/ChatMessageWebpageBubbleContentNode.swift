@@ -200,7 +200,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     statusSizeAndApply = statusLayout(edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                 }
                 
-                let (textLayout, textApply) = textAsyncLayout(textString, nil, 12, .end, textConstrainedSize, textCutout)
+                let (textLayout, textApply) = textAsyncLayout(textString, nil, 12, .end, textConstrainedSize, .natural, textCutout)
                 
                 var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
                 

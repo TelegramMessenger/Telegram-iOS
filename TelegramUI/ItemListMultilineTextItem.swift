@@ -98,7 +98,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                     leftInset = 16.0
             }
             
-            let (titleLayout, titleApply) = makeTextLayout(NSAttributedString(string: item.text, font: titleFont, textColor: textColor), nil, 0, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = makeTextLayout(NSAttributedString(string: item.text, font: titleFont, textColor: textColor), nil, 0, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let contentSize: CGSize
             let insets: UIEdgeInsets

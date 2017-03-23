@@ -24,7 +24,7 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
             case .UnreadEntry:
                 assertionFailure()
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
-            case .ChatInfoEntry:
+            case .ChatInfoEntry, .EmptyChatInfoEntry:
                 assertionFailure()
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
         }
@@ -41,7 +41,7 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
             case .UnreadEntry:
                 assertionFailure()
                 return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
-            case .ChatInfoEntry:
+            case .ChatInfoEntry, .EmptyChatInfoEntry:
                 assertionFailure()
                 return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
         }

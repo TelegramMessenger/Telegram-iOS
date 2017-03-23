@@ -62,7 +62,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         return { button, constrainedWidth, position in
             let sideInset: CGFloat = 8.0
             let minimumSideInset: CGFloat = 4.0
-            let (titleSize, titleApply) = titleLayout(NSAttributedString(string: button.title, font: titleFont, textColor: .white), nil, 1, .end, CGSize(width: max(1.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleSize, titleApply) = titleLayout(NSAttributedString(string: button.title, font: titleFont, textColor: .white), nil, 1, .end, CGSize(width: max(1.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let backgroundImage: UIImage
             switch position {

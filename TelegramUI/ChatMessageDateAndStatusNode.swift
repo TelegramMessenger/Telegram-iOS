@@ -192,7 +192,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                 updatedDateText = "edited " + updatedDateText
             }
             
-            let (date, dateApply) = dateLayout(NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), nil, 1, .end, constrainedSize, nil)
+            let (date, dateApply) = dateLayout(NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), nil, 1, .end, constrainedSize, .natural, nil)
             
             let statusWidth: CGFloat
             

@@ -205,7 +205,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                 displayTitle = .title(title: "")
             }
             
-            let (nameNodeLayout, nameNodeApply) = layoutNameNode(NSAttributedString(string: displayTitle.composedTitle, font: nameFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (nameNodeLayout, nameNodeApply) = layoutNameNode(NSAttributedString(string: displayTitle.composedTitle, font: nameFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let statusText: String
             let statusColor: UIColor
@@ -240,7 +240,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                 statusColor = UIColor.black
             }
             
-            let (statusNodeLayout, statusNodeApply) = layoutStatusNode(NSAttributedString(string: statusText, font: statusFont, textColor: statusColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (statusNodeLayout, statusNodeApply) = layoutStatusNode(NSAttributedString(string: statusText, font: statusFont, textColor: statusColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let separatorHeight = UIScreenPixel
             

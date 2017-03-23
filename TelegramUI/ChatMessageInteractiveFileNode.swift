@@ -251,8 +251,8 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 
                 let textConstrainedSize = CGSize(width: constrainedSize.width - 44.0 - 8.0, height: constrainedSize.height)
                 
-                let (titleLayout, titleApply) = titleAsyncLayout(titleString, nil, 1, .middle, textConstrainedSize, nil)
-                let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(descriptionString, nil, 1, .middle, textConstrainedSize, nil)
+                let (titleLayout, titleApply) = titleAsyncLayout(titleString, nil, 1, .middle, textConstrainedSize, .natural, nil)
+                let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(descriptionString, nil, 1, .middle, textConstrainedSize, .natural, nil)
                 
                 var voiceWidth: CGFloat = 0.0
                 let minVoiceWidth: CGFloat = 120.0

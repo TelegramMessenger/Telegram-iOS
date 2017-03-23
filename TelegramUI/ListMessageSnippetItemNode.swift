@@ -147,11 +147,11 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 }
             }
             
-            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(title, nil, 1, .middle, CGSize(width: width - leftInset - 8.0, height: CGFloat.infinity), nil)
+            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(title, nil, 1, .middle, CGSize(width: width - leftInset - 8.0, height: CGFloat.infinity), .natural, nil)
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(descriptionText, nil, 0, .end, CGSize(width: width - leftInset - 8.0 - 12.0, height: CGFloat.infinity), nil)
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(descriptionText, nil, 0, .end, CGSize(width: width - leftInset - 8.0 - 12.0, height: CGFloat.infinity), .natural, nil)
             
-            let (iconTextLayout, iconTextApply) = iconTextMakeLayout(iconText, nil, 1, .end, CGSize(width: 38.0, height: CGFloat.infinity), nil)
+            let (iconTextLayout, iconTextApply) = iconTextMakeLayout(iconText, nil, 1, .end, CGSize(width: 38.0, height: CGFloat.infinity), .natural, nil)
             
             var iconImageApply: (() -> Void)?
             if let iconImageRepresentation = iconImageRepresentation {

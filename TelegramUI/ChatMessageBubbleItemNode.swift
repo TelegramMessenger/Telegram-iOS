@@ -316,7 +316,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         attributedString = NSAttributedString(string: "", font: nameFont, textColor: UIColor.black)
                     }
                     
-                    let sizeAndApply = authorNameLayout(attributedString, nil, 1, .end, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude), nil)
+                    let sizeAndApply = authorNameLayout(attributedString, nil, 1, .end, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
                     nameNodeSizeApply = (sizeAndApply.0.size, {
                         return sizeAndApply.1()
                     })

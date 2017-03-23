@@ -115,7 +115,7 @@ class ItemListSwitchItemNode: ListViewItemNode {
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size

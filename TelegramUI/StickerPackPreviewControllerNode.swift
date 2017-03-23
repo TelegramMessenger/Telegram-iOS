@@ -424,13 +424,6 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
         return super.hitTest(point, with: event)
     }
     
-    /*func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let contentOffset = scrollView.contentOffset
-        let additionalTopHeight = -contentOffset.y
-        
-        scrollView.alwaysBounceVertical = additionalTopHeight >= 0.0
-    }*/
-    
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         let contentOffset = scrollView.contentOffset
         let additionalTopHeight = max(0.0, -contentOffset.y)

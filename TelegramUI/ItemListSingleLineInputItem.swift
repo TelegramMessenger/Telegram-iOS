@@ -125,7 +125,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
             titleString.removeAttribute(NSFontAttributeName, range: NSMakeRange(0, titleString.length))
             titleString.addAttributes([NSFontAttributeName: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 0, .end, CGSize(width: width - 32 - leftInset, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 0, .end, CGSize(width: width - 32 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let separatorHeight = UIScreenPixel
             

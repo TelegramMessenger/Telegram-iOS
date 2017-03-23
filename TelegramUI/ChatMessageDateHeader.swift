@@ -122,7 +122,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: UIColor.white)
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         
-        let (size, apply) = labelLayout(attributedString, nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), nil)
+        let (size, apply) = labelLayout(attributedString, nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
         apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
     }

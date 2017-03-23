@@ -257,7 +257,7 @@ public final class AuthorizationSequenceController: NavigationController {
                     self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName)], animated: !self.viewControllers.isEmpty)
             }
         } else if let _ = state as? AuthorizedAccountState {
-            self._authorizedAccount.set(accountWithId(apiId: self.account.apiId, id: self.account.id, appGroupPath: self.account.appGroupPath, testingEnvironment: self.account.testingEnvironment) |> mapToSignal { account -> Signal<Account, NoError> in
+            self._authorizedAccount.set(accountWithId(apiId: self.account.apiId, id: self.account.id, appGroupPath: self.account.appGroupPath, testingEnvironment: self.account.testingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods) |> mapToSignal { account -> Signal<Account, NoError> in
                 if case let .right(authorizedAccount) = account {
                     return .single(authorizedAccount)
                 } else {

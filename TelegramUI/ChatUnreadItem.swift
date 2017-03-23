@@ -100,7 +100,7 @@ class ChatUnreadItemNode: ListViewItemNode {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let layoutConstants = self.layoutConstants
         return { item, width, dateAtBottom in
-            let (size, apply) = labelLayout(NSAttributedString(string: "Unread", font: titleFont, textColor: UIColor(0x86868d)), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (size, apply) = labelLayout(NSAttributedString(string: "Unread", font: titleFont, textColor: UIColor(0x86868d)), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let backgroundSize = CGSize(width: width, height: 25.0)
             

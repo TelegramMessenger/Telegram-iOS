@@ -292,11 +292,11 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         let makeMaximizedTitleLayout = TextNode.asyncLayout(self.maximizedTitleNode)
         let makeMaximizedSubtitleLayout = TextNode.asyncLayout(self.maximizedSubtitleNode)
         
-        let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), nil)
-        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(subtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), nil)
+        let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil)
+        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(subtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil)
         
-        let (maximizedTitleLayout, maximizedTitleApply) = makeMaximizedTitleLayout(maximizedTitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), nil)
-        let (maximizedSubtitleLayout, maximizedSubtitleApply) = makeMaximizedSubtitleLayout(maximizedSubtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), nil)
+        let (maximizedTitleLayout, maximizedTitleApply) = makeMaximizedTitleLayout(maximizedTitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil)
+        let (maximizedSubtitleLayout, maximizedSubtitleApply) = makeMaximizedSubtitleLayout(maximizedSubtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil)
         
         titleApply()
         subtitleApply()

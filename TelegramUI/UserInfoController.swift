@@ -396,7 +396,7 @@ private func userInfoEntries(account: Account, view: PeerView, state: UserInfoSt
         entries.append(UserInfoEntry.sharedMedia)
     }
     entries.append(UserInfoEntry.notifications(settings: view.notificationSettings))
-    if let groupsInCommon = (view.cachedData as? CachedUserData)?.commonGroupCount, !isEditing {
+    if let groupsInCommon = (view.cachedData as? CachedUserData)?.commonGroupCount, groupsInCommon != 0 && !isEditing {
         entries.append(UserInfoEntry.groupsInCommon(groupsInCommon))
     }
     

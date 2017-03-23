@@ -123,6 +123,8 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
             case let .ChatInfoEntry(text):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
+            case .EmptyChatInfoEntry:
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(), directionHint: entry.directionHint)
         }
     }
 }
@@ -152,6 +154,8 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
             case let .ChatInfoEntry(text):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
+            case .EmptyChatInfoEntry:
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(), directionHint: entry.directionHint)
         }
     }
 }
@@ -462,6 +466,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     preconditionFailure()
                 }
                 
+                if !strongSelf.didSetInitialData {
+                    strongSelf.didSetInitialData = true
+                    strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData)))
+                }
+                
                 strongSelf.enqueuedHistoryViewTransition = (transition, {
                     subscriber.putCompletion()
                 })
@@ -469,10 +478,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if strongSelf.isNodeLoaded {
                     strongSelf.dequeueHistoryViewTransition()
                 } else {
-                    if !strongSelf.didSetInitialData {
+                    /*if !strongSelf.didSetInitialData {
                         strongSelf.didSetInitialData = true
                         strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData)))
-                    }
+                    }*/
                     strongSelf._cachedPeerData.set(.single(transition.cachedData))
                     let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
                     if strongSelf.currentHistoryState != historyState {

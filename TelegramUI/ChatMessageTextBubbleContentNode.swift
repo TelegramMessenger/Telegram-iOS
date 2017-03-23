@@ -118,7 +118,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: message.text, font: messageFont, textColor: UIColor.black)
                 }
                 
-                let (textLayout, textApply) = textLayout(attributedText, nil, 0, .end, textConstrainedSize, nil)
+                let (textLayout, textApply) = textLayout(attributedText, nil, 0, .end, textConstrainedSize, .natural, nil)
                 
                 var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
                 let textSize = textLayout.size

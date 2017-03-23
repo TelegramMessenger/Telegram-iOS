@@ -296,8 +296,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset - 10.0, height: CGFloat.greatestFiniteMagnitude), nil)
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset - 10.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
             let contentSize = CGSize(width: width, height: 59.0)
@@ -416,9 +416,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.installationActionImageNode.isHidden = false
                             strongSelf.installationActionNode.isHidden = false
                             strongSelf.installationActionNode.isUserInteractionEnabled = !installed
-                            strongSelf.installationActionNode.setImage(installationActionImage, for: [])
                             if let image = installationActionImage {
                                 let imageSize = image.size
+                                strongSelf.installationActionImageNode.image = image
                                 strongSelf.installationActionImageNode.frame = CGRect(origin: CGPoint(x: installationActionFrame.minX + floor((installationActionFrame.size.width - imageSize.width) / 2.0), y: installationActionFrame.minY + floor((installationActionFrame.size.height - imageSize.height) / 2.0)), size: imageSize)
                             }
                     }

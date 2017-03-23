@@ -334,7 +334,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.view.addSubview(self.textInputBackgroundView)
         
         let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
-        let (placeholderSize, placeholderApply) = placeholderLayout(NSAttributedString(string: "Message", font: Font.regular(17.0), textColor: UIColor(0xC8C8CE)), nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), nil)
+        let (placeholderSize, placeholderApply) = placeholderLayout(NSAttributedString(string: "Message", font: Font.regular(17.0), textColor: UIColor(0xC8C8CE)), nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
         self.textPlaceholderNode.frame = CGRect(origin: CGPoint(), size: placeholderSize.size)
         let _ = placeholderApply()
         self.addSubnode(self.textPlaceholderNode)
@@ -424,7 +424,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 if self.currentPlaceholder != placeholder {
                     self.currentPlaceholder = placeholder
                     let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
-                    let (placeholderSize, placeholderApply) = placeholderLayout(NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: UIColor(0xbebec0)), nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), nil)
+                    let (placeholderSize, placeholderApply) = placeholderLayout(NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: UIColor(0xbebec0)), nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize.size)
                     let _ = placeholderApply()
                 }
@@ -641,7 +641,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         if let contextPlaceholder = self.presentationInterfaceState.inputTextPanelState.contextPlaceholder {
             let placeholderLayout = TextNode.asyncLayout(self.contextPlaceholderNode)
-            let (placeholderSize, placeholderApply) = placeholderLayout(contextPlaceholder, nil, 1, .end, CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (placeholderSize, placeholderApply) = placeholderLayout(contextPlaceholder, nil, 1, .end, CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             let contextPlaceholderNode = placeholderApply()
             if let currentContextPlaceholderNode = self.contextPlaceholderNode, currentContextPlaceholderNode !== contextPlaceholderNode {
                 self.contextPlaceholderNode = nil

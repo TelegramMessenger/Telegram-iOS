@@ -69,7 +69,7 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         let currentForegroundColor = self.foregroundColor
         
         return { placeholderString, constrainedSize, foregroundColor in
-            let (labelLayoutResult, labelApply) = labelLayout(placeholderString, foregroundColor, 1, .end, constrainedSize, nil)
+            let (labelLayoutResult, labelApply) = labelLayout(placeholderString, foregroundColor, 1, .end, constrainedSize, .natural, nil)
             
             var updatedBackgroundImage: UIImage?
             if !currentForegroundColor.isEqual(foregroundColor) {

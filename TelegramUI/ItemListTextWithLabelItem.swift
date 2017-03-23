@@ -93,8 +93,8 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
             let insets = itemListNeighborsPlainInsets(neighbors)
             let leftInset: CGFloat = 35.0
             
-            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: labelFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), nil)
-            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: item.text, font: textFont, textColor: UIColor.black), nil, item.multiline ? 0 : 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: labelFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: item.text, font: textFont, textColor: UIColor.black), nil, item.multiline ? 0 : 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             let contentSize = CGSize(width: width, height: textLayout.size.height + 39.0)
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {

@@ -62,7 +62,7 @@ class SettingsAccountInfoItemNode: ListControllerGroupableItemNode {
         
         return { item, width in
             if let item = item as? SettingsAccountInfoItem {
-                let (nameNodeLayout, nameNodeApply) = layoutNameNode(NSAttributedString(string: item.peer?.displayTitle ?? "", font: nameFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+                let (nameNodeLayout, nameNodeApply) = layoutNameNode(NSAttributedString(string: item.peer?.displayTitle ?? "", font: nameFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
                 
                 let statusText: String
                 let statusColor: UIColor
@@ -81,7 +81,7 @@ class SettingsAccountInfoItemNode: ListControllerGroupableItemNode {
                         statusColor = UIColor(0x007ee5)
                 }
                 
-                let (statusNodeLayout, statusNodeApply) = layoutStatusNode(NSAttributedString(string: statusText, font: statusFont, textColor: statusColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+                let (statusNodeLayout, statusNodeApply) = layoutStatusNode(NSAttributedString(string: statusText, font: statusFont, textColor: statusColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
                 
                 return (CGSize(width: width, height: 97.0), { [weak self] in
                     if let strongSelf = self {

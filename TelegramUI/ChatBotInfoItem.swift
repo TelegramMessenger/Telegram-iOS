@@ -81,7 +81,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: true, rotated: true)
         
-        self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
+        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
         self.addSubnode(self.offsetContainer)
         self.offsetContainer.addSubnode(self.backgroundNode)
@@ -117,7 +117,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             let verticalItemInset: CGFloat = 10.0
             let verticalContentInset: CGFloat = 8.0
             
-            let (textLayout, textApply) = makeTextLayout(attributedText, nil, 0, .end, CGSize(width: width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (textLayout, textApply) = makeTextLayout(attributedText, nil, 0, .end, CGSize(width: width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
             
             let backgroundFrame = CGRect(origin: CGPoint(x: floor((width - textLayout.size.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textLayout.size.width + horizontalContentInset * 2.0, height: textLayout.size.height + verticalContentInset * 2.0))
             let textFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset), size: textLayout.size)
@@ -142,6 +142,10 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         } else {
             transition.updateBounds(node: self.offsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: floor(height) / 2.0), size: self.offsetContainer.bounds.size))
         }
+    }
+    
+    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
