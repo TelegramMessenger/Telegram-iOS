@@ -30,7 +30,9 @@ final class MutablePeerMergedOperationLogView {
                             }
                         } else {
                             updated = true
-                            assert(self.entries.isEmpty)
+                            if !self.entries.isEmpty {
+                                assertionFailure("self.entries.isEmpty == false for tag \(self.tag)")
+                            }
                             self.entries.append(entry)
                             self.tailIndex = entry.mergedIndex
                         }

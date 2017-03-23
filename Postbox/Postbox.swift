@@ -146,6 +146,11 @@ public final class Modifier {
         self.postbox?.setPeerChatState(id, state: state)
     }
     
+    public func getPeerChatInterfaceState(_ id: PeerId) -> PeerChatInterfaceState? {
+        assert(!self.disposed)
+        return self.postbox?.peerChatInterfaceStateTable.get(id)
+    }
+    
     public func updatePeerChatInterfaceState(_ id: PeerId, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
         assert(!self.disposed)
         self.postbox?.updatePeerChatInterfaceState(id, update: update)

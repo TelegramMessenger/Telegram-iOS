@@ -26,6 +26,7 @@ public protocol MediaResource {
     var id: MediaResourceId { get }
     var size: Int? { get }
     var streamable: Bool { get }
+    var headerSize: Int32 { get }
 }
 
 public extension MediaResource {
@@ -35,6 +36,10 @@ public extension MediaResource {
     
     var streamable: Bool {
         return false
+    }
+    
+    var headerSize: Int32 {
+        return 0
     }
 }
 
