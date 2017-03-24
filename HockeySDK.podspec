@@ -43,7 +43,7 @@ Pod::Spec.new do |s|
   s.subspec 'DefaultLib' do |ss|
     ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.lproj'] }
 
-    ss.frameworks = 'AssetsLibrary', 'CoreGraphics', 'CoreText', 'CoreTelephony', 'MobileCoreServices', 'QuartzCore', 'QuickLook', 'UIKit'
+    ss.frameworks = 'CoreGraphics', 'CoreText', 'CoreTelephony', 'MobileCoreServices', 'QuartzCore', 'QuickLook', 'UIKit'
     ss.libraries = 'z'
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework'
   end
