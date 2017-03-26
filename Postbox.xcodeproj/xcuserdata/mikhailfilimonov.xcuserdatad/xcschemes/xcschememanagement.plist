@@ -7,14 +7,14 @@
 		<key>Postbox.xcscheme</key>
 		<dict>
 			<key>isShown</key>
-			<false/>
+			<false />
 			<key>orderHint</key>
 			<integer>5</integer>
 		</dict>
 		<key>PostboxMac.xcscheme</key>
 		<dict>
 			<key>isShown</key>
-			<false/>
+			<false />
 			<key>orderHint</key>
 			<integer>6</integer>
 		</dict>
@@ -24,17 +24,17 @@
 		<key>D0B418121D7DFAF2004562A4</key>
 		<dict>
 			<key>primary</key>
-			<true/>
+			<true />
 		</dict>
 		<key>D0E3A7491B28A7E300A402D9</key>
 		<dict>
 			<key>primary</key>
-			<true/>
+			<true />
 		</dict>
 		<key>D0E3A7541B28A7E300A402D9</key>
 		<dict>
 			<key>primary</key>
-			<true/>
+			<true />
 		</dict>
 	</dict>
 </dict>
