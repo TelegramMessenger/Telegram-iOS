@@ -12,10 +12,14 @@ final class CachedResolvedByNamePeer: Coding {
     let timestamp: Int32
     
     static func key(name: String) -> ValueBoxKey {
-        let nameData = name.data(using: .utf8)!
-        let key = ValueBoxKey(length: nameData.count)
-        nameData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-            memcpy(key.memory, bytes, nameData.count)
+        let key: ValueBoxKey
+        if let nameData = name.data(using: .utf8) {
+            key = ValueBoxKey(length: nameData.count)
+            nameData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                memcpy(key.memory, bytes, nameData.count)
+            }
+        } else {
+            key = ValueBoxKey(length: 0)
         }
         return key
     }

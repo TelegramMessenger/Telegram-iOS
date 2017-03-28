@@ -243,6 +243,8 @@
 		D0561DE41E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */; };
 		D0561DEA1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */; };
 		D0561DEB1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */; };
+		D058E0D11E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D058E0D01E8AD65C00A442DE /* StandaloneSendMessage.swift */; };
+		D058E0D21E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D058E0D01E8AD65C00A442DE /* StandaloneSendMessage.swift */; };
 		D05A32E11E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */; };
 		D05A32E21E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */; };
 		D05A32E41E6F0B2E002760B4 /* RecentAccountSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E31E6F0B2E002760B4 /* RecentAccountSessions.swift */; };
@@ -624,6 +626,7 @@
 		D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedStickerPack.swift; sourceTree = "<group>"; };
 		D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatePeerInfo.swift; sourceTree = "<group>"; };
 		D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdmins.swift; sourceTree = "<group>"; };
+		D058E0D01E8AD65C00A442DE /* StandaloneSendMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StandaloneSendMessage.swift; sourceTree = "<group>"; };
 		D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatedAccountPrivacySettings.swift; sourceTree = "<group>"; };
 		D05A32E31E6F0B2E002760B4 /* RecentAccountSessions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentAccountSessions.swift; sourceTree = "<group>"; };
 		D05A32E61E6F0B5C002760B4 /* RecentAccountSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentAccountSession.swift; sourceTree = "<group>"; };
@@ -1013,6 +1016,7 @@
 				D0E23DD91E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift */,
 				D0F3A89E1E82C65400B4C64C /* SynchronizeChatInputStateOperation.swift */,
 				D0F3A8A11E82C65E00B4C64C /* ManagedSynchronizeChatInputStateOperations.swift */,
+				D058E0D01E8AD65C00A442DE /* StandaloneSendMessage.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -1642,6 +1646,7 @@
 				D0B843C71DA7FF30005F29E1 /* NBPhoneNumberDefines.m in Sources */,
 				D049EAF51E44DF3300A2CD3A /* AccountState.swift in Sources */,
 				D03B0D5D1D631A6900955575 /* MultipartFetch.swift in Sources */,
+				D058E0D11E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */,
 				D0BC38751E40A7F70044D6FE /* RemovePeerChat.swift in Sources */,
 				D0AB0B961D662F0B002C78E7 /* ManagedChatListHoles.swift in Sources */,
 				D05A32E41E6F0B2E002760B4 /* RecentAccountSessions.swift in Sources */,
@@ -1881,6 +1886,7 @@
 				D0F7B1E41E045C7B007EB8A5 /* InstantPage.swift in Sources */,
 				D03E5E0D1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */,
 				D0B418AD1D7E0597004562A4 /* Serialization.swift in Sources */,
+				D058E0D21E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */,
 				D03C536F1DAD5CA9004C17B3 /* BotInfo.swift in Sources */,
 				D0FA8BBA1E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */,
 				D033FEB41E61F3C000644997 /* ReportPeer.swift in Sources */,

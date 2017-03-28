@@ -145,7 +145,7 @@ public class UnauthorizedAccount {
                 postbox.removeKeychainEntryForKey(key)
             })
             
-            return initializedNetwork(apiId: self.apiId, datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
+            return initializedNetwork(apiId: self.apiId, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
                 |> map { network in
                     let updated = UnauthorizedAccount(apiId: self.apiId, id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                     updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
@@ -183,7 +183,6 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedChannelData.self, f: { CachedChannelData(decoder: $0) })
     declareEncodable(TelegramUserPresence.self, f: { TelegramUserPresence(decoder: $0) })
     declareEncodable(LocalFileMediaResource.self, f: { LocalFileMediaResource(decoder: $0) })
-    declareEncodable(PhotoLibraryMediaResource.self, f: { PhotoLibraryMediaResource(decoder: $0) })
     declareEncodable(StickerPackCollectionInfo.self, f: { StickerPackCollectionInfo(decoder: $0) })
     declareEncodable(StickerPackItem.self, f: { StickerPackItem(decoder: $0) })
     declareEncodable(LocalFileReferenceMediaResource.self, f: { LocalFileReferenceMediaResource(decoder: $0) })
@@ -231,7 +230,7 @@ private func accountRecordIdPathName(_ id: AccountRecordId) -> String {
     return "account-\(UInt64(bitPattern: id.int64))"
 }
 
-public func accountWithId(apiId: Int32, id: AccountRecordId, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
+public func accountWithId(apiId: Int32, id: AccountRecordId, supplementary: Bool, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
     return Signal<(String, Postbox, Coding?), NoError> { subscriber in
         let _ = declaredEncodables
         
@@ -265,12 +264,12 @@ public func accountWithId(apiId: Int32, id: AccountRecordId, appGroupPath: Strin
         if let accountState = accountState {
             switch accountState {
                 case let unauthorizedState as UnauthorizedAccountState:
-                    return initializedNetwork(apiId: apiId, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
+                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
                             .left(value: UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                         }
                 case let authorizedState as AuthorizedAccountState:
-                    return initializedNetwork(apiId: apiId, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
+                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
                         |> map { network -> Either<UnauthorizedAccount, Account> in
                             return .right(value: Account(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                         }
@@ -279,7 +278,7 @@ public func accountWithId(apiId: Int32, id: AccountRecordId, appGroupPath: Strin
             }
         }
         
-        return initializedNetwork(apiId: apiId, datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
+        return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
             |> map { network -> Either<UnauthorizedAccount, Account> in
                 return .left(value: UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
         }

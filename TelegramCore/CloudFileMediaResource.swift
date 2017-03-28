@@ -228,54 +228,6 @@ public class LocalFileMediaResource: TelegramMediaResource {
     }
 }
 
-public struct PhotoLibraryMediaResourceId: MediaResourceId {
-    public let localIdentifier: String
-    
-    public var uniqueId: String {
-        return "ph-\(self.localIdentifier.replacingOccurrences(of: "/", with: "_"))"
-    }
-    
-    public var hashValue: Int {
-        return self.localIdentifier.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? PhotoLibraryMediaResourceId {
-            return self.localIdentifier == to.localIdentifier
-        } else {
-            return false
-        }
-    }
-}
-
-public class PhotoLibraryMediaResource: TelegramMediaResource {
-    let localIdentifier: String
-    
-    public init(localIdentifier: String) {
-        self.localIdentifier = localIdentifier
-    }
-    
-    public required init(decoder: Decoder) {
-        self.localIdentifier = decoder.decodeStringForKey("i")
-    }
-    
-    public func encode(_ encoder: Encoder) {
-        encoder.encodeString(self.localIdentifier, forKey: "i")
-    }
-    
-    public var id: MediaResourceId {
-        return PhotoLibraryMediaResourceId(localIdentifier: self.localIdentifier)
-    }
-    
-    public func isEqual(to: TelegramMediaResource) -> Bool {
-        if let to = to as? PhotoLibraryMediaResource {
-            return self.localIdentifier == to.localIdentifier
-        } else {
-            return false
-        }
-    }
-}
-
 public struct LocalFileReferenceMediaResourceId: MediaResourceId {
     public let randomId: Int64
     

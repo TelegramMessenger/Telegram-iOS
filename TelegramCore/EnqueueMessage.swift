@@ -190,6 +190,12 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         mediaList.append(media)
                     }
                     
+                    if let file = media as? TelegramMediaFile, file.isVoice {
+                        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                            attributes.append(ConsumableContentMessageAttribute(consumed: false))
+                        }
+                    }
+                    
                     var entitiesAttribute: TextEntitiesMessageAttribute?
                     for attribute in attributes {
                         if let attribute = attribute as? TextEntitiesMessageAttribute {

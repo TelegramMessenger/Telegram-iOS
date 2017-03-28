@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func markMessageContentAsConsumedInteractively(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Void, NoError> {
+public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
         if let message = modifier.getMessage(messageId), message.flags.contains(.Incoming) {
             var updateMessage = false

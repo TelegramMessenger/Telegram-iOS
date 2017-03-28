@@ -94,7 +94,7 @@ private var registeredLoggingFunctions: Void = {
     registerLoggingFunctions()
 }()
 
-func initializedNetwork(apiId: Int32, datacenterId: Int, keychain: Keychain, networkUsageInfoPath: String?, testingEnvironment: Bool) -> Signal<Network, NoError> {
+func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, keychain: Keychain, networkUsageInfoPath: String?, testingEnvironment: Bool) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -105,6 +105,7 @@ func initializedNetwork(apiId: Int32, datacenterId: Int, keychain: Keychain, net
             
             apiEnvironment.apiId = apiId
             apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
+            apiEnvironment.disableUpdates = supplementary
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
             

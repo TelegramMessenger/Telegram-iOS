@@ -207,8 +207,8 @@ public final class PendingMessageManager {
                     let contentToUpload = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, message: message)
                     
                     switch contentToUpload {
-                        case let .ready(message, content):
-                            strongSelf.beginSendingMessage(messageContext: messageContext, message: message, content: content)
+                        case let .ready(content):
+                            strongSelf.beginSendingMessage(messageContext: messageContext, messageId: message.id, content: content)
                         case let .upload(uploadSignal):
                             if strongSelf.canBeginUploadingMessage(id: message.id) {
                                 strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, uploadSignal: uploadSignal)
@@ -216,75 +216,27 @@ public final class PendingMessageManager {
                                 messageContext.state = .waitingForUploadToStart(uploadSignal)
                             }
                     }
-                    
-                    /*let uploadedContent = uploadedMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, message: message)
-                    
-                    let sendMessage = uploadedContent
-                        |> mapToSignal { contentResult -> Signal<PendingMessageResult, NoError> in
-                            if let strongSelf = self {
-                                switch contentResult {
-                                    case let .progress(progress):
-                                        return .single(.progress(progress))
-                                    case let .content(message, content):
-                                        return strongSelf.sendMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, message: message, content: content)
-                                            |> map { next -> PendingMessageResult in
-                                                return .progress(1.0)
-                                            }
-                                }
-                            } else {
-                                return .complete()
-                            }
-                    }
-                    
-                    messageContext.disposable.set((sendMessage |> deliverOn(strongSelf.queue) |> afterDisposed {
-                        if let strongSelf = self {
-                            assert(strongSelf.queue.isCurrent())
-                            if let current = strongSelf.messageContexts[message.id] {
-                                for subscriber in current.statusSubscribers.copyItems() {
-                                    subscriber(nil)
-                                }
-                                if current.statusSubscribers.isEmpty {
-                                    strongSelf.messageContexts.removeValue(forKey: message.id)
-                                }
-                            }
-                        }
-                    }).start(next: { next in
-                        if let strongSelf = self {
-                            assert(strongSelf.queue.isCurrent())
-                            
-                            switch next {
-                                case let .progress(progress):
-                                    if let current = strongSelf.messageContexts[message.id] {
-                                        let status = PendingMessageStatus(progress: progress)
-                                        current.status = status
-                                        for subscriber in current.statusSubscribers.copyItems() {
-                                            subscriber(status)
-                                        }
-                                    }
-                            }
-                        }
-                    }))*/
                 }
             }
         }))
     }
     
-    private func beginSendingMessage(messageContext: PendingMessageContext, message: Message, content: PendingMessageUploadedContent) {
+    private func beginSendingMessage(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContent) {
         messageContext.state = .sending
-        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendMessageContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, message: message, content: content)
+        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendMessageContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, messageId: messageId, content: content)
             |> map { next -> PendingMessageResult in
                 return .progress(1.0)
             }
         messageContext.disposable.set((sendMessage |> deliverOn(self.queue) |> afterDisposed { [weak self] in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
-                if let current = strongSelf.messageContexts[message.id] {
+                if let current = strongSelf.messageContexts[messageId] {
                     current.status = .none
                     for subscriber in current.statusSubscribers.copyItems() {
                         subscriber(nil)
                     }
                     if current.statusSubscribers.isEmpty {
-                        strongSelf.messageContexts.removeValue(forKey: message.id)
+                        strongSelf.messageContexts.removeValue(forKey: messageId)
                     }
                 }
             }
@@ -294,7 +246,7 @@ public final class PendingMessageManager {
                 
                 switch next {
                 case let .progress(progress):
-                    if let current = strongSelf.messageContexts[message.id] {
+                    if let current = strongSelf.messageContexts[messageId] {
                         let status = PendingMessageStatus(progress: progress)
                         current.status = status
                         for subscriber in current.statusSubscribers.copyItems() {
@@ -322,9 +274,9 @@ public final class PendingMessageManager {
                                 subscriber(status)
                             }
                         }
-                    case let .content(message, content):
+                    case let .content(content):
                         if let current = strongSelf.messageContexts[id] {
-                            strongSelf.beginSendingMessage(messageContext: current, message: message, content: content)
+                            strongSelf.beginSendingMessage(messageContext: current, messageId: id, content: content)
                             strongSelf.updateWaitingUploads(peerId: id.peerId)
                         }
                 }
@@ -354,11 +306,11 @@ public final class PendingMessageManager {
                                             subscriber(status)
                                         }
                                     }
-                                case let .content(message, content):
-                                    if let current = strongSelf.messageContexts[message.id] {
+                                case let .content(content):
+                                    if let current = strongSelf.messageContexts[contextId] {
                                         current.state = .sending
                                         
-                                        current.disposable.set((strongSelf.sendMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, message: message, content: content)
+                                        current.disposable.set((strongSelf.sendMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, messageId: contextId, content: content)
                                             |> map { next -> PendingMessageResult in
                                                 return .progress(1.0)
                                             } |> deliverOn(strongSelf.queue)).start(next: { next in
@@ -367,7 +319,7 @@ public final class PendingMessageManager {
                                                     
                                                     switch next {
                                                         case let .progress(progress):
-                                                            if let current = strongSelf.messageContexts[message.id] {
+                                                            if let current = strongSelf.messageContexts[contextId] {
                                                                 let status = PendingMessageStatus(progress: progress)
                                                                 current.status = status
                                                                 for subscriber in current.statusSubscribers.copyItems() {
@@ -387,9 +339,13 @@ public final class PendingMessageManager {
         }
     }
     
-    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, message: Message, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
+    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, messageId: MessageId, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
         return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
-            if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+            guard let message = modifier.getMessage(messageId) else {
+                return .complete()
+            }
+            
+            if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
                 var secretFile: SecretChatOutgoingFile?
                 switch content {
                     case let .secretMedia(file, size, key):
@@ -401,7 +357,7 @@ public final class PendingMessageManager {
                 }
                 
                 var layer: SecretChatLayer?
-                let state = modifier.getPeerChatState(message.id.peerId) as? SecretChatState
+                let state = modifier.getPeerChatState(messageId.peerId) as? SecretChatState
                 if let state = state {
                     switch state.embeddedState {
                         case .terminated, .handshake:
@@ -440,11 +396,11 @@ public final class PendingMessageManager {
                     }
                     
                     if !sentAsAction {
-                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .sendMessage(layer: layer, id: message.id, file: secretFile), state: state)
+                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: messageId.peerId, operation: .sendMessage(layer: layer, id: messageId, file: secretFile), state: state)
                         if updatedState != state {
-                            modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                            modifier.setPeerChatState(messageId.peerId, state: updatedState)
                         }
-                        modifier.updateMessage(message.id, update: { currentMessage in
+                        modifier.updateMessage(messageId, update: { currentMessage in
                             var flags = StoreMessageFlags(message.flags)
                             if !flags.contains(.Failed) {
                                 flags.insert(.Sending)
@@ -457,7 +413,7 @@ public final class PendingMessageManager {
                         })
                     }
                 } else {
-                    modifier.updateMessage(message.id, update: { currentMessage in
+                    modifier.updateMessage(messageId, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
                             storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
@@ -466,7 +422,7 @@ public final class PendingMessageManager {
                     })
                 }
                 return .complete()
-            } else if let peer = modifier.getPeer(message.id.peerId), let inputPeer = apiInputPeer(peer) {
+            } else if let peer = modifier.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {
                 var uniqueId: Int64 = 0
                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
                 var messageEntities: [Api.MessageEntity]?
@@ -499,7 +455,7 @@ public final class PendingMessageManager {
                     flags |= Int32(1 << 3)
                 }
                 
-                let dependencyTag = PendingMessageRequestDependencyTag(messageId: message.id)
+                let dependencyTag = PendingMessageRequestDependencyTag(messageId: messageId)
                 
                 let sendMessageRequest: Signal<Api.Updates, NoError>
                 switch content {

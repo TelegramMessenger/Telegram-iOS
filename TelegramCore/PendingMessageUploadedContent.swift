@@ -17,115 +17,76 @@ enum PendingMessageUploadedContent {
 
 enum PendingMessageUploadedContentResult {
     case progress(Float)
-    case content(Message, PendingMessageUploadedContent)
+    case content(PendingMessageUploadedContent)
 }
 
 enum PendingMessageUploadContent {
-    case ready(Message, PendingMessageUploadedContent)
+    case ready(PendingMessageUploadedContent)
     case upload(Signal<PendingMessageUploadedContentResult, NoError>)
 }
 
 func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, message: Message) -> PendingMessageUploadContent {
-    var outgoingChatContextResultAttribute: OutgoingChatContextResultMessageAttribute?
-    for attribute in message.attributes {
+    return messageContentToUpload(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, peerId: message.id.peerId, messageId: message.id, attributes: message.attributes, text: message.text, media: message.media)
+}
+
+func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, peerId: PeerId, messageId: MessageId?, attributes: [MessageAttribute], text: String, media: [Media]) -> PendingMessageUploadContent {
+    var contextResult: OutgoingChatContextResultMessageAttribute?
+    for attribute in attributes {
         if let attribute = attribute as? OutgoingChatContextResultMessageAttribute {
-            outgoingChatContextResultAttribute = attribute
+            contextResult = attribute
         }
     }
     
-    if let _ = message.forwardInfo {
-        var forwardSourceInfo: ForwardSourceInfoAttribute?
-        for attribute in message.attributes {
-            if let attribute = attribute as? ForwardSourceInfoAttribute {
-                forwardSourceInfo = attribute
-            }
-        }
-        if let forwardSourceInfo = forwardSourceInfo {
-            return .ready(message, .forward(forwardSourceInfo))
-        } else {
-            assertionFailure()
-            return .ready(message, .text(message.text))
-        }
-    } else if let outgoingChatContextResultAttribute = outgoingChatContextResultAttribute {
-        return .ready(message, .chatContextResult(outgoingChatContextResultAttribute))
-    } else if let media = message.media.first {
-        if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
-            return .upload(uploadedMediaImageContent(network: network, postbox: postbox, image: image, message: message))
-        } else if let file = media as? TelegramMediaFile {
-            if let resource = file.resource as? CloudDocumentMediaResource {
-                return .ready(message, .media(Api.InputMedia.inputMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), caption: message.text)))
-            } else {
-                return .upload(uploadedMediaFileContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, file: file, message: message))
-            }
-        } else if let contact = media as? TelegramMediaContact {
-            let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName)
-            return .ready(message, .media(input))
-        } else {
-            return .ready(message, .text(message.text))
-        }
-    } else {
-        return .ready(message, .text(message.text))
-    }
-}
-
-func uploadedMessageContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
-    var outgoingChatContextResultAttribute: OutgoingChatContextResultMessageAttribute?
-    for attribute in message.attributes {
-        if let attribute = attribute as? OutgoingChatContextResultMessageAttribute {
-            outgoingChatContextResultAttribute = attribute
+    var forwardInfo: ForwardSourceInfoAttribute?
+    for attribute in attributes {
+        if let attribute = attribute as? ForwardSourceInfoAttribute {
+            forwardInfo = attribute
         }
     }
     
-    if let _ = message.forwardInfo {
-        var forwardSourceInfo: ForwardSourceInfoAttribute?
-        for attribute in message.attributes {
-            if let attribute = attribute as? ForwardSourceInfoAttribute {
-                forwardSourceInfo = attribute
-            }
-        }
-        if let forwardSourceInfo = forwardSourceInfo {
-            return .single(.content(message, .forward(forwardSourceInfo)))
-        } else {
-            assertionFailure()
-            return .never()
-        }
-    } else if let outgoingChatContextResultAttribute = outgoingChatContextResultAttribute {
-        return .single(.content(message, .chatContextResult(outgoingChatContextResultAttribute)))
-    } else if let media = message.media.first {
+    if let forwardInfo = forwardInfo {
+        return .ready(.forward(forwardInfo))
+    }
+    
+    if let forwardInfo = forwardInfo {
+        return .ready(.forward(forwardInfo))
+    } else if let contextResult = contextResult {
+        return .ready(.chatContextResult(contextResult))
+    } else if let media = media.first {
         if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
-            return uploadedMediaImageContent(network: network, postbox: postbox, image: image, message: message)
+            return .upload(uploadedMediaImageContent(network: network, postbox: postbox, peerId: peerId, image: image, text: text))
         } else if let file = media as? TelegramMediaFile {
             if let resource = file.resource as? CloudDocumentMediaResource {
-                return .single(.content(message, .media(Api.InputMedia.inputMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), caption: message.text))))
+                return .ready(.media(Api.InputMedia.inputMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), caption: text)))
             } else {
-                return uploadedMediaFileContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, file: file, message: message)
+                return .upload(uploadedMediaFileContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file))
             }
         } else if let contact = media as? TelegramMediaContact {
             let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName)
-            return .single(.content(message, .media(input)))
+            return .ready(.media(input))
         } else {
-            return .single(.content(message, .text(message.text)))
+            return .ready(.text(text))
         }
     } else {
-        return .single(.content(message, .text(message.text)))
+        return .ready(.text(text))
     }
 }
 
-private func uploadedMediaImageContent(network: Network, postbox: Postbox, image: TelegramMediaImage, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
+private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerId: PeerId, image: TelegramMediaImage, text: String) -> Signal<PendingMessageUploadedContentResult, NoError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
-        return multipartUpload(network: network, postbox: postbox, resource: largestRepresentation.resource, encrypt: message.id.peerId.namespace == Namespaces.Peer.SecretChat)
+        return multipartUpload(network: network, postbox: postbox, resource: largestRepresentation.resource, encrypt: peerId.namespace == Namespaces.Peer.SecretChat)
             |> map { next -> PendingMessageUploadedContentResult in
                 switch next {
                     case let .progress(progress):
                         return .progress(progress)
                     case let .inputFile(file):
-                        return .content(message, .media(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: file, caption: message.text, stickers: nil)))
+                        return .content(.media(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: file, caption: text, stickers: nil)))
                     case let .inputSecretFile(file, size, key):
-                        return .content(message, .secretMedia(file, size, key))
+                        return .content(.secretMedia(file, size, key))
                 }
             }
     } else {
-        return .single(.content(message, .text(message.text)))
+        return .single(.content(.text(text)))
     }
 }
 
@@ -201,14 +162,14 @@ private func uploadedThumbnail(network: Network, postbox: Postbox, image: Telegr
         }
 }
 
-private func uploadedMediaFileContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, file: TelegramMediaFile, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
+private func uploadedMediaFileContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, peerId: PeerId, messageId: MessageId?, text: String, attributes: [MessageAttribute], file: TelegramMediaFile) -> Signal<PendingMessageUploadedContentResult, NoError> {
     var hintSize: Int?
     if let size = file.size {
         hintSize = size
     } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
         hintSize = Int(size)
     }
-    let upload = multipartUpload(network: network, postbox: postbox, resource: file.resource, encrypt: message.id.peerId.namespace == Namespaces.Peer.SecretChat, hintFileSize: hintSize)
+    let upload = multipartUpload(network: network, postbox: postbox, resource: file.resource, encrypt: peerId.namespace == Namespaces.Peer.SecretChat, hintFileSize: hintSize)
         /*|> map { next -> UploadedMediaFileContent in
             switch next {
                 case let .progress(progress):
@@ -220,7 +181,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, transf
             }
         }*/
     var alreadyTransformed = false
-    for attribute in message.attributes {
+    for attribute in attributes {
         if let attribute = attribute as? OutgoingMessageInfoAttribute {
             if attribute.flags.contains(.transformedMedia) {
                 alreadyTransformed = true
@@ -230,14 +191,14 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, transf
     }
     
     let transform: Signal<UploadedMediaTransform, Void>
-    if let transformOutgoingMessageMedia = transformOutgoingMessageMedia, !alreadyTransformed {
+    if let transformOutgoingMessageMedia = transformOutgoingMessageMedia, let messageId = messageId, !alreadyTransformed {
         transform = .single(.pending) |> then(transformOutgoingMessageMedia(postbox, network, file, false)
             |> mapToSignal { media -> Signal<UploadedMediaTransform, NoError> in
                 return postbox.modify { modifier -> UploadedMediaTransform in
                     if let media = media {
                         if let id = media.id {
                             modifier.updateMedia(id, update: media)
-                            modifier.updateMessage(message.id, update: { currentMessage in
+                            modifier.updateMessage(messageId, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
@@ -288,17 +249,17 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, transf
                     if case let .done(thumbnail) = media {
                         let inputMedia: Api.InputMedia
                         if let thumbnail = thumbnail {
-                            inputMedia = Api.InputMedia.inputMediaUploadedThumbDocument(flags: 0, file: inputFile, thumb: thumbnail, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: message.text, stickers: nil)
+                            inputMedia = Api.InputMedia.inputMediaUploadedThumbDocument(flags: 0, file: inputFile, thumb: thumbnail, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: text, stickers: nil)
                         } else {
-                            inputMedia = Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: message.text, stickers: nil)
+                            inputMedia = Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: text, stickers: nil)
                         }
-                        return .single(.content(message, .media(inputMedia)))
+                        return .single(.content(.media(inputMedia)))
                     } else {
                         return .complete()
                     }
                 case let .inputSecretFile(file, size, key):
                     if case .done = media {
-                        return .single(.content(message, .secretMedia(file, size, key)))
+                        return .single(.content(.secretMedia(file, size, key)))
                     } else {
                         return .complete()
                     }
