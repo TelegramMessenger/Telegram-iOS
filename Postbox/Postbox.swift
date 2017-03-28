@@ -337,7 +337,26 @@ public final class Modifier {
     public func searchItemCollection(namespace: ItemCollectionId.Namespace, key: MemoryBuffer) -> [ItemCollectionItem] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.itemCollectionItemTable.exactIndexedItems(namespace: namespace, key: ValueBoxKey(key))
+            let itemsByCollectionId = postbox.itemCollectionItemTable.exactIndexedItems(namespace: namespace, key: ValueBoxKey(key))
+            let infoIds = postbox.itemCollectionInfoTable.getIds(namespace: namespace)
+            var infoIndices: [ItemCollectionId: Int] = [:]
+            for i in 0 ..< infoIds.count {
+                infoIndices[infoIds[i]] = i
+            }
+            let sortedKeys = itemsByCollectionId.keys.sorted(by: { lhs, rhs in
+                if let lhsIndex = infoIndices[lhs], let rhsIndex = infoIndices[rhs] {
+                    return lhsIndex < rhsIndex
+                } else if let _ = infoIndices[lhs] {
+                    return true
+                } else {
+                    return false
+                }
+            })
+            var result: [ItemCollectionItem] = []
+            for key in sortedKeys {
+                result.append(contentsOf: itemsByCollectionId[key]!)
+            }
+            return result
         } else {
             return []
         }

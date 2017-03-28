@@ -869,7 +869,7 @@ public final class MediaBox {
         }
     }
     
-    public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<MediaResourceData, NoError> {
+    public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, complete: Bool) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.concurrentQueue.async {
@@ -888,8 +888,10 @@ public final class MediaBox {
                             self.cachedRepresentationContexts[key] = context
                         }
                         
-                        let index = context.dataSubscribers.add({ [weak self] data in
-                            subscriber.putNext(data)
+                        let index = context.dataSubscribers.add({ data in
+                            if !complete || data.complete {
+                                subscriber.putNext(data)
+                            }
                             if data.complete {
                                 subscriber.putCompletion()
                             }
@@ -909,22 +911,35 @@ public final class MediaBox {
                         
                         if context.disposable == nil {
                             let signal = self.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-                                |> mapToSignal { resourceData in
-                                return self.wrappedFetchCachedResourceRepresentation.get()
-                                    |> take(1)
-                                    |> mapToSignal { fetch in
-                                        return fetch(resource, resourceData, representation)
+                                |> mapToSignal { resourceData -> Signal<CachedMediaResourceRepresentationResult?, NoError> in
+                                    if resourceData.complete {
+                                        return self.wrappedFetchCachedResourceRepresentation.get()
+                                            |> take(1)
+                                            |> mapToSignal { fetch in
+                                                return fetch(resource, resourceData, representation)
+                                                    |> map { Optional($0) }
+                                            }
+                                    } else {
+                                        return .single(nil)
                                     }
                                 }
                                 |> deliverOn(self.dataQueue)
                             context.disposable = signal.start(next: { [weak self] next in
-                                rename(next.temporaryPath, path)
-                                
-                                if let strongSelf = self, let context = strongSelf.cachedRepresentationContexts[key] {
-                                    strongSelf.cachedRepresentationContexts.removeValue(forKey: key)
-                                    if let size = fileSize(path) {
+                                if let next = next {
+                                    rename(next.temporaryPath, path)
+                                    
+                                    if let strongSelf = self, let context = strongSelf.cachedRepresentationContexts[key] {
+                                        strongSelf.cachedRepresentationContexts.removeValue(forKey: key)
+                                        if let size = fileSize(path) {
+                                            for subscriber in context.dataSubscribers.copyItems() {
+                                                subscriber(MediaResourceData(path: path, size: size, complete: true))
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if let strongSelf = self, let context = strongSelf.cachedRepresentationContexts[key] {
                                         for subscriber in context.dataSubscribers.copyItems() {
-                                            subscriber(MediaResourceData(path: path, size: size, complete: true))
+                                            subscriber(MediaResourceData(path: path, size: 0, complete: false))
                                         }
                                     }
                                 }

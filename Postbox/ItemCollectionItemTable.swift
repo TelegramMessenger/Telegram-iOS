@@ -228,17 +228,25 @@ final class ItemCollectionItemTable: Table {
         }
     }
     
-    func exactIndexedItems(namespace: ItemCollectionId.Namespace, key: ValueBoxKey) -> [ItemCollectionItem] {
+    func exactIndexedItems(namespace: ItemCollectionId.Namespace, key: ValueBoxKey) -> [ItemCollectionId: [ItemCollectionItem]] {
         let references = self.reverseIndexTable.exactReferences(namespace: ReverseIndexNamespace(namespace), token: key)
-        var result: [ItemCollectionItem] = []
+        var resultsByCollectionId: [ItemCollectionId: [(ItemCollectionItemIndex, ItemCollectionItem)]] = [:]
         for reference in references {
             if let value = self.valueBox.get(self.table, key: self.key(collectionId: reference.collectionId, index: reference.itemIndex)), let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
-                result.append(item)
+                if resultsByCollectionId[reference.collectionId] == nil {
+                    resultsByCollectionId[reference.collectionId] = [(reference.itemIndex, item)]
+                } else {
+                    resultsByCollectionId[reference.collectionId]!.append((reference.itemIndex, item))
+                }
             } else {
                 assertionFailure()
             }
         }
-        return result
+        var results: [ItemCollectionId: [ItemCollectionItem]] = [:]
+        for collectionId in resultsByCollectionId.keys {
+            results[collectionId] = resultsByCollectionId[collectionId]!.sorted(by: { $0.0 < $1.0 }).map({ $0.1 })
+        }
+        return results
     }
     
     override func clearMemoryCache() {
