@@ -35,7 +35,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return .complete()
         } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            var uniqueId: Int64 = 0
+            var uniqueId: Int64 = arc4random64()
             var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
             var messageEntities: [Api.MessageEntity]?
             var replyMessageId: Int32?

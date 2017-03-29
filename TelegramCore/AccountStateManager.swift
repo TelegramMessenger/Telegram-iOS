@@ -693,33 +693,30 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
         Logger.shared.log("AccountStateManager", "notification settings for \(id.peerId) are undefined")
     }
     
-    
-    if notify {
-        let message = modifier.getMessage(id)
-        if let message = message {
-            var foundReadState = false
-            var isUnread = true
-            if let readState = modifier.getCombinedPeerReadState(id.peerId) {
-                if readState.isIncomingMessageIndexRead(MessageIndex(message)) {
-                    isUnread = false
-                }
-                foundReadState = true
+    let message = modifier.getMessage(id)
+    if let message = message {
+        var foundReadState = false
+        var isUnread = true
+        if let readState = modifier.getCombinedPeerReadState(id.peerId) {
+            if readState.isIncomingMessageIndexRead(MessageIndex(message)) {
+                isUnread = false
             }
-            
-            if !foundReadState {
-                Logger.shared.log("AccountStateManager", "read state for \(id.peerId) is undefined")
-            }
-            
+            foundReadState = true
+        }
+        
+        if !foundReadState {
+            Logger.shared.log("AccountStateManager", "read state for \(id.peerId) is undefined")
+        }
+        
+        if notify || message.flags.contains(.Personal) {
             return (message, isUnread)
         } else {
-            Logger.shared.log("AccountStateManager", "notification message doesn't exist")
-            return (nil, false)
+            return (alwaysReturnMessage ? message : nil, false)
         }
+        
+        
     } else {
-        var message: Message?
-        if alwaysReturnMessage {
-            message = modifier.getMessage(id)
-        }
-        return (message, false)
+        Logger.shared.log("AccountStateManager", "notification message doesn't exist")
+        return (nil, false)
     }
 }
