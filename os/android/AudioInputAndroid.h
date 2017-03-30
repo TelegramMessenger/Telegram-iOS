@@ -9,6 +9,7 @@
 
 #include <jni.h>
 #include "../../audio/AudioInput.h"
+#include "../../threading.h"
 
 class CAudioInputAndroid : public CAudioInput{
 
@@ -28,6 +29,7 @@ public:
 private:
 	jobject javaObject;
 	bool running;
+	tgvoip_mutex_t mutex;
 
 };
 

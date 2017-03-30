@@ -10,7 +10,7 @@
 #include <exception>
 #include <stdexcept>
 
-CBufferInputStream::CBufferInputStream(char* data, size_t length){
+CBufferInputStream::CBufferInputStream(unsigned char* data, size_t length){
 	this->buffer=data;
 	this->length=length;
 	offset=0;
@@ -22,7 +22,9 @@ CBufferInputStream::~CBufferInputStream(){
 
 
 void CBufferInputStream::Seek(size_t offset){
-	assert(offset<=length);
+	if(offset>length){
+		throw std::out_of_range("Not enough bytes in buffer");
+	}
 	this->offset=offset;
 }
 
@@ -88,7 +90,7 @@ int32_t CBufferInputStream::ReadTlLength(){
 	return res;
 }
 
-void CBufferInputStream::ReadBytes(char *to, size_t count){
+void CBufferInputStream::ReadBytes(unsigned char *to, size_t count){
 	EnsureEnoughRemaining(count);
 	memcpy(to, buffer+offset, count);
 	offset+=count;

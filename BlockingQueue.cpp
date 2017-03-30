@@ -8,6 +8,7 @@
 
 CBlockingQueue::CBlockingQueue(size_t capacity){
 	this->capacity=capacity;
+	overflowCallback=NULL;
 	init_lock(lock);
 	init_mutex(mutex);
 }
@@ -29,7 +30,12 @@ void CBlockingQueue::Put(void *thing){
 	}
 	queue.push_back(thing);
 	while(queue.size()>capacity){
-		queue.pop_front();
+		if(overflowCallback){
+			overflowCallback(queue.front());
+			queue.pop_front();
+		}else{
+			abort();
+		}
 	}
 	unlock_mutex(mutex);
 }
@@ -72,3 +78,7 @@ void CBlockingQueue::PrepareDealloc(){
 	unlock_mutex(mutex);
 }
 
+
+void CBlockingQueue::SetOverflowCallback(void (*overflowCallback)(void *)){
+	this->overflowCallback=overflowCallback;
+}

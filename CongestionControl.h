@@ -55,8 +55,8 @@ private:
 	double stateTransitionTime;
 	int tmpRttCount;
 	char rttHistorySize;
-	char rttHistoryTop;
-	char inflightHistoryTop;
+	unsigned int rttHistoryTop;
+	unsigned int inflightHistoryTop;
 	uint32_t lastSentSeq;
 	uint32_t tickCount;
 	size_t inflightDataSize;

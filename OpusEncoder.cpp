@@ -7,8 +7,9 @@
 #include "OpusEncoder.h"
 #include <assert.h>
 #include "logging.h"
+#include "VoIPServerConfig.h"
 
-COpusEncoder::COpusEncoder(CMediaStreamItf *source):queue(10), bufferPool(960*2, 10){
+COpusEncoder::COpusEncoder(CMediaStreamItf *source):queue(11), bufferPool(960*2, 10){
 	this->source=source;
 	source->SetCallback(COpusEncoder::Callback, this);
 	enc=opus_encoder_create(48000, 1, OPUS_APPLICATION_VOIP, NULL);
@@ -16,13 +17,17 @@ COpusEncoder::COpusEncoder(CMediaStreamItf *source):queue(10), bufferPool(960*2,
 	opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC(15));
 	opus_encoder_ctl(enc, OPUS_SET_INBAND_FEC(1));
 	opus_encoder_ctl(enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
-	//opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
+	opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
 	requestedBitrate=32000;
 	currentBitrate=0;
 	running=false;
 	echoCanceller=NULL;
 	complexity=10;
 	frameDuration=20;
+	mediumCorrectionBitrate=CVoIPServerConfig::GetSharedInstance()->GetInt("audio_medium_fec_bitrate", 10000);
+	strongCorrectionBitrate=CVoIPServerConfig::GetSharedInstance()->GetInt("audio_strong_fec_bitrate", 8000);
+	mediumCorrectionMultiplier=CVoIPServerConfig::GetSharedInstance()->GetDouble("audio_medium_fec_multiplier", 1.5);
+	strongCorrectionMultiplier=CVoIPServerConfig::GetSharedInstance()->GetDouble("audio_strong_fec_multiplier", 2.0);
 }
 
 COpusEncoder::~COpusEncoder(){
@@ -140,5 +145,16 @@ void COpusEncoder::SetOutputFrameDuration(uint32_t duration){
 
 
 void COpusEncoder::SetPacketLoss(int percent){
-	opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC(percent));
+	packetLossPercent=percent;
+	double multiplier=1;
+	if(currentBitrate<=strongCorrectionBitrate)
+		multiplier=strongCorrectionMultiplier;
+	else if(currentBitrate<=mediumCorrectionBitrate)
+		multiplier=mediumCorrectionMultiplier;
+	opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC((int)(percent*multiplier)));
+	opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(percent>17 ? OPUS_AUTO : OPUS_BANDWIDTH_FULLBAND));
+}
+
+int COpusEncoder::GetPacketLoss(){
+	return packetLossPercent;
 }

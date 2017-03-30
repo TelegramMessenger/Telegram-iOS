@@ -22,6 +22,7 @@ public:
 	void* Get();
 	unsigned int Size();
 	void PrepareDealloc();
+	void SetOverflowCallback(void (*overflowCallback)(void*));
 
 private:
 	void* GetInternal();
@@ -29,6 +30,7 @@ private:
 	size_t capacity;
 	tgvoip_lock_t lock;
 	tgvoip_mutex_t mutex;
+	void (*overflowCallback)(void*);
 };
 
 

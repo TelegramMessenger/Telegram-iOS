@@ -11,9 +11,9 @@
 #include <TargetConditionals.h>
 #endif
 
-#if TARGET_OS_IPHONE
+/*#if TARGET_OS_IPHONE
 #define TGVOIP_NO_AEC
-#endif
+#endif*/
 
 #include "threading.h"
 #include "BufferPool.h"
@@ -23,12 +23,13 @@
 //#include "external/include/webrtc/echo_cancellation.h"
 #include "external/include/webrtc/splitting_filter_wrapper.h"
 #include "external/include/webrtc/noise_suppression_x.h"
+#include "external/include/webrtc/gain_control.h"
 #endif
 
 class CEchoCanceller{
 
 public:
-	CEchoCanceller();
+	CEchoCanceller(bool enableAEC, bool enableNS, bool enableAGC);
 	virtual ~CEchoCanceller();
 	virtual void Start();
 	virtual void Stop();
@@ -37,20 +38,24 @@ public:
 	void ProcessInput(unsigned char* data, unsigned char* out, size_t len);
 
 private:
-	bool isOn;
+	bool enableAEC;
+	bool enableAGC;
+	bool enableNS;
 #ifndef TGVOIP_NO_AEC
 	static void* StartBufferFarendThread(void* arg);
 	void RunBufferFarendThread();
 	bool didBufferFarend;
-	tgvoip_mutex_t mutex;
-	void* state;
-	splitting_filter_t* splittingFilter;
-	splitting_filter_t* splittingFilterFarend;
+	tgvoip_mutex_t aecMutex;
+	void* aec;
+	tgvoip_splitting_filter_t* splittingFilter;
+	tgvoip_splitting_filter_t* splittingFilterFarend;
 	tgvoip_thread_t bufferFarendThread;
 	CBlockingQueue* farendQueue;
 	CBufferPool* farendBufferPool;
 	bool running;
 	NsxHandle* ns;
+	void* agc;
+	int32_t agcMicLevel;
 #endif
 };
 

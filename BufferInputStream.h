@@ -13,7 +13,7 @@
 class CBufferInputStream{
 
 public:
-	CBufferInputStream(char* data, size_t length);
+	CBufferInputStream(unsigned char* data, size_t length);
 	~CBufferInputStream();
 	void Seek(size_t offset);
 	size_t GetLength();
@@ -24,11 +24,11 @@ public:
 	int32_t ReadInt32();
 	int16_t ReadInt16();
 	int32_t ReadTlLength();
-	void ReadBytes(char* to, size_t count);
+	void ReadBytes(unsigned char* to, size_t count);
 
 private:
 	void EnsureEnoughRemaining(size_t need);
-	char* buffer;
+	unsigned char* buffer;
 	size_t length;
 	size_t offset;
 };

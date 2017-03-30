@@ -14,6 +14,10 @@
 #error "Unsupported operating system"
 #endif
 
+CAudioInput::CAudioInput(){
+	failed=false;
+}
+
 CAudioInput *CAudioInput::Create(){
 #if defined(__ANDROID__)
 	return new CAudioInputAndroid();
@@ -29,3 +33,6 @@ CAudioInput::~CAudioInput(){
 #endif
 }
 
+bool CAudioInput::IsInitialized(){
+	return !failed;
+}

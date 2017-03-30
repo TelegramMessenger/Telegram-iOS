@@ -7,6 +7,7 @@
 #include "CongestionControl.h"
 #include "VoIPController.h"
 #include "logging.h"
+#include "VoIPServerConfig.h"
 #include <math.h>
 #include <assert.h>
 
@@ -26,7 +27,7 @@ CCongestionControl::CCongestionControl(){
 	stateTransitionTime=0;
 	inflightDataSize=0;
 	lossCount=0;
-	cwnd=1024;
+	cwnd=(size_t) CVoIPServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024);
 	init_mutex(mutex);
 }
 

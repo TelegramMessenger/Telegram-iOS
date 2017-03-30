@@ -5,6 +5,8 @@
 #include <netinet/in.h>
 #include <stdint.h>
 #include <vector>
+#include <string>
+#include <map>
 #include "audio/AudioInput.h"
 #include "BlockingQueue.h"
 #include "BufferOutputStream.h"
@@ -15,7 +17,11 @@
 #include "EchoCanceller.h"
 #include "CongestionControl.h"
 
-#define LIBTGVOIP_VERSION "0.2.4"
+#ifdef __APPLE__
+#import <Foundation/Foundation.h>
+#endif
+
+#define LIBTGVOIP_VERSION "0.3.1"
 
 #define PKT_INIT 1
 #define PKT_INIT_ACK 2
@@ -40,6 +46,7 @@
 #define ERROR_UNKNOWN 0
 #define ERROR_INCOMPATIBLE 1
 #define ERROR_TIMEOUT 2
+#define ERROR_AUDIO_IO 3
 
 #define NET_TYPE_UNKNOWN 0
 #define NET_TYPE_GPRS 1
@@ -59,6 +66,8 @@
 #define PROTOCOL_NAME 0x50567247 // "GrVP" in little endian (reversed here)
 #define PROTOCOL_VERSION 3
 #define MIN_PROTOCOL_VERSION 3
+#define MIN_UDP_PORT 16384
+#define MAX_UDP_PORT 32768
 
 #define STREAM_DATA_FLAG_LEN16 0x40
 #define STREAM_DATA_FLAG_HAS_MORE_FLAGS 0x80
@@ -91,6 +100,14 @@
 #define TLID_DECRYPTED_AUDIO_BLOCK 0xDBF948C1
 #define TLID_SIMPLE_AUDIO_BLOCK 0xCC0D0E76
 #define TLID_UDP_REFLECTOR_PEER_INFO 0x27D9371C
+#define PAD4(x) (4-(x+(x<=253 ? 1 : 0))%4)
+
+inline int pad4(int x){
+	int r=PAD4(x);
+	if(r==4)
+		return 0;
+	return r;
+}
 
 struct voip_endpoint_t{ // make this a class maybe?
 	int64_t id;
@@ -98,7 +115,7 @@ struct voip_endpoint_t{ // make this a class maybe?
 	in_addr address;
 	in6_addr address6;
 	char type;
-	char peerTag[16];
+	unsigned char peerTag[16];
 
 	double _lastPingTime;
 	uint32_t _lastPingSeq;
@@ -119,7 +136,7 @@ typedef struct voip_stream_t voip_stream_t;
 
 struct voip_queued_packet_t{
 	unsigned char type;
-	char* data;
+	unsigned char* data;
 	size_t length;
 	uint32_t seqs[16];
 	double firstSentTime;
@@ -133,10 +150,11 @@ struct voip_config_t{
 	double init_timeout;
 	double recv_timeout;
 	int data_saving;
-	int frame_size;
-#ifdef __ANDROID__
+	char logFilePath[256];
+
 	bool enableAEC;
-#endif
+	bool enableNS;
+	bool enableAGC;
 };
 typedef struct voip_config_t voip_config_t;
 
@@ -180,7 +198,7 @@ public:
 	static double GetCurrentTime();
 	void* implData;
 	void SetMicMute(bool mute);
-	void SetEncryptionKey(char* key);
+	void SetEncryptionKey(char* key, bool isOutgoing);
 	void SetConfig(voip_config_t* cfg);
     float GetOutputLevel();
 	void DebugCtl(int request, int param);
@@ -188,7 +206,14 @@ public:
 	int64_t GetPreferredRelayID();
 	int GetLastError();
 	static voip_crypto_functions_t crypto;
-	static char* GetVersion();
+	static const char* GetVersion();
+#ifdef TGVOIP_USE_AUDIO_SESSION
+    void SetAcquireAudioSession(void (^)(void (^)()));
+    void ReleaseAudioSession(void (^completion)());
+#endif
+	std::string GetDebugLog();
+	void GetDebugLog(char* buffer);
+	size_t GetDebugLogLength();
 
 private:
 	static void* StartRecvThread(void* arg);
@@ -197,7 +222,7 @@ private:
 	void RunRecvThread();
 	void RunSendThread();
 	void RunTickThread();
-	void SendPacket(char* data, size_t len, voip_endpoint_t* ep);
+	void SendPacket(unsigned char* data, size_t len, voip_endpoint_t* ep);
 	void HandleAudioInput(unsigned char* data, size_t len);
 	void UpdateAudioBitrate();
 	void SetState(int state);
@@ -206,14 +231,17 @@ private:
 	void SendInitAck();
 	void UpdateDataSavingState();
 	void SendP2pPing(int endpointType);
-	void KDF(unsigned char* msgKey, unsigned char* aesKey, unsigned char* aesIv);
+	void KDF(unsigned char* msgKey, size_t x, unsigned char* aesKey, unsigned char* aesIv);
 	void GetLocalNetworkItfInfo(in_addr *addr, char *outName);
+	uint16_t GenerateLocalUDPPort();
 	CBufferOutputStream* GetOutgoingPacketBuffer();
 	uint32_t WritePacketHeader(CBufferOutputStream* s, unsigned char type, uint32_t length);
 	static size_t AudioInputCallback(unsigned char* data, size_t length, void* param);
 	void SendPublicEndpointsRequest();
 	voip_endpoint_t* GetEndpointByType(int type);
-	char * SendPacketReliably(unsigned char type, char* data, size_t len, double retryInterval, double timeout);
+	void SendPacketReliably(unsigned char type, unsigned char* data, size_t len, double retryInterval, double timeout);
+	void LogDebugInfo();
+	sockaddr_in6 MakeInetAddress(in_addr addr, uint16_t port);
 	int state;
 	int udpSocket;
 	std::vector<voip_endpoint_t*> endpoints;
@@ -261,9 +289,9 @@ private:
 	void (*stateCallback)(CVoIPController*, int);
 	std::vector<voip_stream_t*> outgoingStreams;
 	std::vector<voip_stream_t*> incomingStreams;
-	char encryptionKey[256];
-	char keyFingerprint[8];
-	char callID[16];
+	unsigned char encryptionKey[256];
+	unsigned char keyFingerprint[8];
+	unsigned char callID[16];
 	double stateChangeTime;
 	bool needSendP2pPing;
 	bool waitingForRelayPeerInfo;
@@ -284,9 +312,38 @@ private:
 	int32_t peerVersion;
 	CCongestionControl* conctl;
 	voip_stats_t stats;
-	bool enableAEC;
+	bool receivedInit;
+	bool receivedInitAck;
+	std::vector<std::string> debugLogs;
+	bool isOutgoing;
+	
+	unsigned char nat64Prefix[12];
+	bool needUpdateNat64Prefix;
+	bool nat64Present;
+
+	/*** server config values ***/
+	uint32_t maxAudioBitrate;
+	uint32_t maxAudioBitrateEDGE;
+	uint32_t maxAudioBitrateGPRS;
+	uint32_t maxAudioBitrateSaving;
+	uint32_t initAudioBitrate;
+	uint32_t initAudioBitrateEDGE;
+	uint32_t initAudioBitrateGPRS;
+	uint32_t initAudioBitrateSaving;
+	uint32_t minAudioBitrate;
+	uint32_t audioBitrateStepIncr;
+	uint32_t audioBitrateStepDecr;
+	double relaySwitchThreshold;
+	double p2pToRelaySwitchThreshold;
+	double relayToP2pSwitchThreshold;
+
+#ifdef TGVOIP_USE_AUDIO_SESSION
+    void (^acquireAudioSession)(void (^)());
+	bool needNotifyAcquiredAudioSession;
+#endif
 
 #ifdef __APPLE__
+public:
 	static double machTimebase;
 	static uint64_t machTimestart;
 #endif

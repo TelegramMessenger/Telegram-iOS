@@ -39,4 +39,16 @@ typedef pthread_cond_t tgvoip_lock_t;
 #error "No threading implementation for your operating system"
 #endif
 
+class CMutexGuard{
+public:
+    CMutexGuard(tgvoip_mutex_t &mutex) : mutex(mutex) {
+		lock_mutex(mutex);
+	}
+	~CMutexGuard(){
+		unlock_mutex(mutex);
+	}
+private:
+	tgvoip_mutex_t &mutex;
+};
+
 #endif //__THREADING_H

@@ -27,6 +27,7 @@ public:
 	void SetEchoCanceller(CEchoCanceller* aec);
 	void SetOutputFrameDuration(uint32_t duration);
 	void SetPacketLoss(int percent);
+	int GetPacketLoss();
 	uint32_t GetBitrate();
 
 private:
@@ -46,6 +47,11 @@ private:
 	int complexity;
 	bool running;
 	uint32_t frameDuration;
+	int packetLossPercent;
+	uint32_t mediumCorrectionBitrate;
+	uint32_t strongCorrectionBitrate;
+	double mediumCorrectionMultiplier;
+	double strongCorrectionMultiplier;
 };
 
 

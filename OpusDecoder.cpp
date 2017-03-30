@@ -22,7 +22,7 @@ COpusDecoder::COpusDecoder(CMediaStreamItf *dst){
 	outputBufferSize=0;
 	packetsNeeded=0;
 	lastDecodedOffset=0;
-	decodedQueue=new CBlockingQueue(32);
+	decodedQueue=new CBlockingQueue(33);
 	bufferPool=new CBufferPool(PACKET_SIZE, 32);
 	echoCanceller=NULL;
 	frameDuration=20;

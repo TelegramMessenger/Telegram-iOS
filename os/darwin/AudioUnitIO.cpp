@@ -9,6 +9,7 @@
 #include "AudioInputAudioUnit.h"
 #include "AudioOutputAudioUnit.h"
 #include "../../logging.h"
+#include "../../VoIPController.h"
 
 #define CHECK_AU_ERROR(res, msg) if(res!=noErr){ LOGE(msg": OSStatus=%d", (int)res); return; }
 #define BUFFER_SIZE 960 // 20 ms
@@ -18,8 +19,34 @@
 
 int CAudioUnitIO::refCount=0;
 CAudioUnitIO* CAudioUnitIO::sharedInstance=NULL;
+bool CAudioUnitIO::haveAudioSession=false;
 
 CAudioUnitIO::CAudioUnitIO(){
+	input=NULL;
+	output=NULL;
+	configured=false;
+	inputEnabled=false;
+	outputEnabled=false;
+	inBufferList.mBuffers[0].mData=malloc(10240);
+	inBufferList.mBuffers[0].mDataByteSize=10240;
+	inBufferList.mNumberBuffers=1;
+	if(haveAudioSession)
+		ProcessAudioSessionAcquired();
+}
+
+CAudioUnitIO::~CAudioUnitIO(){
+	if(runFakeIO){
+		runFakeIO=false;
+		join_thread(fakeIOThread);
+	}
+	AudioOutputUnitStop(unit);
+	AudioUnitUninitialize(unit);
+	AudioComponentInstanceDispose(unit);
+	free(inBufferList.mBuffers[0].mData);
+	haveAudioSession=false;
+}
+
+void CAudioUnitIO::ProcessAudioSessionAcquired(){
 	OSStatus status;
 	AudioComponentDescription desc;
 	AudioComponent inputComponent;
@@ -36,21 +63,8 @@ CAudioUnitIO::CAudioUnitIO(){
 	inputComponent = AudioComponentFindNext(NULL, &desc);
 	status = AudioComponentInstanceNew(inputComponent, &unit);
 	
-	input=NULL;
-	output=NULL;
-	configured=false;
-	inputEnabled=false;
-	outputEnabled=false;
-	inBufferList.mBuffers[0].mData=malloc(10240);
-	inBufferList.mBuffers[0].mDataByteSize=10240;
-	inBufferList.mNumberBuffers=1;
-}
-
-CAudioUnitIO::~CAudioUnitIO(){
-	AudioOutputUnitStop(unit);
-	AudioUnitUninitialize(unit);
-	AudioComponentInstanceDispose(unit);
-	free(inBufferList.mBuffers[0].mData);
+	if(configured)
+		ActuallyConfigure(cfgSampleRate, cfgBitsPerSample, cfgChannels);
 }
 
 CAudioUnitIO* CAudioUnitIO::Get(){
@@ -71,26 +85,42 @@ void CAudioUnitIO::Release(){
 	}
 }
 
+void CAudioUnitIO::AudioSessionAcquired(){
+	haveAudioSession=true;
+	if(sharedInstance)
+		sharedInstance->ProcessAudioSessionAcquired();
+}
+
 void CAudioUnitIO::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
 	if(configured)
 		return;
+	
+	runFakeIO=true;
+	start_thread(fakeIOThread, CAudioUnitIO::StartFakeIOThread, this);
+	set_thread_priority(fakeIOThread, get_thread_max_priority());
+	
+	if(haveAudioSession){
+		ActuallyConfigure(sampleRate, bitsPerSample, channels);
+	}else{
+		cfgSampleRate=sampleRate;
+		cfgBitsPerSample=bitsPerSample;
+		cfgChannels=channels;
+	}
+	
+	configured=true;
+}
+
+void CAudioUnitIO::ActuallyConfigure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
 	UInt32 flag=1;
 	OSStatus status = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, kOutputBus, &flag, sizeof(flag));
 	CHECK_AU_ERROR(status, "Error enabling AudioUnit output");
 	status = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, kInputBus, &flag, sizeof(flag));
 	CHECK_AU_ERROR(status, "Error enabling AudioUnit input");
 	
-	flag=1;
+	flag=0;
 	status=AudioUnitSetProperty(unit, kAUVoiceIOProperty_VoiceProcessingEnableAGC, kAudioUnitScope_Global, kInputBus, &flag, sizeof(flag));
 	CHECK_AU_ERROR(status, "Error disabling AGC");
 	
-	/*AudioStreamBasicDescription nativeInFormat, nativeOutFormat;
-	UInt32 size=sizeof(AudioStreamBasicDescription);
-	AudioUnitGetProperty(unit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, kInputBus, &nativeInFormat, &size);
-	size=sizeof(AudioStreamBasicDescription);
-	AudioUnitGetProperty(unit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, kOutputBus, &nativeOutFormat, &size);
-	LOGI("native in format: %d hz, flags %08X, %d channels, %d bits", (int)nativeInFormat.mSampleRate, nativeInFormat.mFormatFlags, nativeInFormat.mChannelsPerFrame, nativeInFormat.mBitsPerChannel);
-	LOGI("native out format: %d hz, flags %08X, %d channels, %d bits", (int)nativeOutFormat.mSampleRate, nativeOutFormat.mFormatFlags, nativeOutFormat.mChannelsPerFrame, nativeOutFormat.mBitsPerChannel);*/
 	Float64 nativeSampleRate;
 	UInt32 size=sizeof(Float64);
 	status=AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareSampleRate, &size, &nativeSampleRate);
@@ -123,8 +153,6 @@ void CAudioUnitIO::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32
 	CHECK_AU_ERROR(status, "Error initializing AudioUnit");
 	status=AudioOutputUnitStart(unit);
 	CHECK_AU_ERROR(status, "Error starting AudioUnit");
-	
-	configured=true;
 }
 
 OSStatus CAudioUnitIO::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData){
@@ -133,6 +161,7 @@ OSStatus CAudioUnitIO::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags
 }
 
 void CAudioUnitIO::BufferCallback(AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 bus, UInt32 numFrames, AudioBufferList *ioData){
+	runFakeIO=false;
 	if(bus==kOutputBus){
 		if(output && outputEnabled){
 			output->HandleBufferCallback(ioData);
@@ -176,5 +205,36 @@ void CAudioUnitIO::EnableInput(bool enabled){
 
 void CAudioUnitIO::EnableOutput(bool enabled){
 	outputEnabled=enabled;
+}
+
+void* CAudioUnitIO::StartFakeIOThread(void *arg){
+	((CAudioUnitIO*)arg)->RunFakeIOThread();
+	return NULL;
+}
+
+void CAudioUnitIO::RunFakeIOThread(){
+	double neededDataDuration=0;
+	double prevTime=CVoIPController::GetCurrentTime();
+	while(runFakeIO){
+		double t=CVoIPController::GetCurrentTime();
+		neededDataDuration+=t-prevTime;
+		prevTime=t;
+		while(neededDataDuration>=0.020){
+			if(output && outputEnabled){
+				inBufferList.mBuffers[0].mDataByteSize=960*2;
+				output->HandleBufferCallback(&inBufferList);
+			}
+			if((output && outputEnabled) || (input && inputEnabled)){
+				memset(inBufferList.mBuffers[0].mData, 0, 960*2);
+			}
+			if(input && inputEnabled){
+				inBufferList.mBuffers[0].mDataByteSize=960*2;
+				input->HandleBufferCallback(&inBufferList);
+			}
+			neededDataDuration-=0.020;
+		}
+		usleep(5000);
+	}
+	LOGD("FakeIO thread exiting");
 }
 

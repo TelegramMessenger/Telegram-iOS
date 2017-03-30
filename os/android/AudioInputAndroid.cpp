@@ -10,11 +10,11 @@
 
 extern JavaVM* sharedJVM;
 
-jmethodID CAudioInputAndroid::initMethod;
-jmethodID CAudioInputAndroid::releaseMethod;
-jmethodID CAudioInputAndroid::startMethod;
-jmethodID CAudioInputAndroid::stopMethod;
-jclass CAudioInputAndroid::jniClass;
+jmethodID CAudioInputAndroid::initMethod=NULL;
+jmethodID CAudioInputAndroid::releaseMethod=NULL;
+jmethodID CAudioInputAndroid::startMethod=NULL;
+jmethodID CAudioInputAndroid::stopMethod=NULL;
+jclass CAudioInputAndroid::jniClass=NULL;
 
 CAudioInputAndroid::CAudioInputAndroid(){
 	JNIEnv* env=NULL;
@@ -33,27 +33,33 @@ CAudioInputAndroid::CAudioInputAndroid(){
 		sharedJVM->DetachCurrentThread();
 	}
 	running=false;
+	init_mutex(mutex);
 }
 
 CAudioInputAndroid::~CAudioInputAndroid(){
-	JNIEnv* env=NULL;
-	bool didAttach=false;
-	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
-	if(!env){
-		sharedJVM->AttachCurrentThread(&env, NULL);
-		didAttach=true;
-	}
+	{
+		CMutexGuard guard(mutex);
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
 
-	env->CallVoidMethod(javaObject, releaseMethod);
-	env->DeleteGlobalRef(javaObject);
-	javaObject=NULL;
+		env->CallVoidMethod(javaObject, releaseMethod);
+		env->DeleteGlobalRef(javaObject);
+		javaObject=NULL;
 
-	if(didAttach){
-		sharedJVM->DetachCurrentThread();
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
 	}
+	free_mutex(mutex);
 }
 
 void CAudioInputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
+	CMutexGuard guard(mutex);
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -70,6 +76,7 @@ void CAudioInputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, 
 }
 
 void CAudioInputAndroid::Start(){
+	CMutexGuard guard(mutex);
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -78,7 +85,7 @@ void CAudioInputAndroid::Start(){
 		didAttach=true;
 	}
 
-	env->CallVoidMethod(javaObject, startMethod);
+	failed=!env->CallBooleanMethod(javaObject, startMethod);
 
 	if(didAttach){
 		sharedJVM->DetachCurrentThread();
@@ -87,6 +94,7 @@ void CAudioInputAndroid::Start(){
 }
 
 void CAudioInputAndroid::Stop(){
+	CMutexGuard guard(mutex);
 	running=false;
 	JNIEnv* env=NULL;
 	bool didAttach=false;
