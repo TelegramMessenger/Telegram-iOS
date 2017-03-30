@@ -196,6 +196,7 @@
 		D0568AAD1DF198130022E7DA /* AudioWaveformNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0568AAC1DF198130022E7DA /* AudioWaveformNode.swift */; };
 		D0568AAF1DF1B3920022E7DA /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0568AAE1DF1B3920022E7DA /* HapticFeedback.swift */; };
 		D05811941DD5F9380057C769 /* TelegramApplicationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */; };
+		D058E0CF1E8AD57300A442DE /* VideoPlayerProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D058E0CE1E8AD57300A442DE /* VideoPlayerProxy.swift */; };
 		D05A32DC1E6EFCC2002760B4 /* NumericFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */; };
 		D05A32DE1E6F0097002760B4 /* PrivacyAndSecurityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32DD1E6F0097002760B4 /* PrivacyAndSecurityController.swift */; };
 		D05A32EA1E6F143C002760B4 /* RecentSessionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E91E6F143C002760B4 /* RecentSessionsController.swift */; };
@@ -208,6 +209,7 @@
 		D0613FD51E6064D200202CDB /* ConvertToSupergroupController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */; };
 		D06879551DB8F1FC00424BBD /* CachedResourceRepresentations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06879541DB8F1FC00424BBD /* CachedResourceRepresentations.swift */; };
 		D06879571DB8F22200424BBD /* FetchCachedRepresentations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06879561DB8F22200424BBD /* FetchCachedRepresentations.swift */; };
+		D06E4AC41E84806300627D1D /* FetchPhotoLibraryImageResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06E4AC31E84806300627D1D /* FetchPhotoLibraryImageResource.swift */; };
 		D0736F211DF41CFD00F2C02A /* ManagedAudioPlaylistPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0736F201DF41CFD00F2C02A /* ManagedAudioPlaylistPlayer.swift */; };
 		D0736F231DF496D000F2C02A /* PeerMediaAudioPlaylist.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0736F221DF496D000F2C02A /* PeerMediaAudioPlaylist.swift */; };
 		D0736F251DF4D0E500F2C02A /* TelegramController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0736F241DF4D0E500F2C02A /* TelegramController.swift */; };
@@ -706,6 +708,7 @@
 		D0568AAC1DF198130022E7DA /* AudioWaveformNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AudioWaveformNode.swift; sourceTree = "<group>"; };
 		D0568AAE1DF1B3920022E7DA /* HapticFeedback.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
 		D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramApplicationContext.swift; sourceTree = "<group>"; };
+		D058E0CE1E8AD57300A442DE /* VideoPlayerProxy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoPlayerProxy.swift; sourceTree = "<group>"; };
 		D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NumericFormat.swift; sourceTree = "<group>"; };
 		D05A32DD1E6F0097002760B4 /* PrivacyAndSecurityController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrivacyAndSecurityController.swift; sourceTree = "<group>"; };
 		D05A32E91E6F143C002760B4 /* RecentSessionsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentSessionsController.swift; sourceTree = "<group>"; };
@@ -718,6 +721,7 @@
 		D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertToSupergroupController.swift; sourceTree = "<group>"; };
 		D06879541DB8F1FC00424BBD /* CachedResourceRepresentations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedResourceRepresentations.swift; sourceTree = "<group>"; };
 		D06879561DB8F22200424BBD /* FetchCachedRepresentations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchCachedRepresentations.swift; sourceTree = "<group>"; };
+		D06E4AC31E84806300627D1D /* FetchPhotoLibraryImageResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchPhotoLibraryImageResource.swift; sourceTree = "<group>"; };
 		D0736F201DF41CFD00F2C02A /* ManagedAudioPlaylistPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedAudioPlaylistPlayer.swift; sourceTree = "<group>"; };
 		D0736F221DF496D000F2C02A /* PeerMediaAudioPlaylist.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMediaAudioPlaylist.swift; sourceTree = "<group>"; };
 		D0736F241DF4D0E500F2C02A /* TelegramController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramController.swift; sourceTree = "<group>"; };
@@ -1907,6 +1911,7 @@
 				D0F69D021D6B87D30046BCD6 /* MediaPlayer.swift */,
 				D0F69CD41D6B87D30046BCD6 /* MediaPlayerAudioRenderer.swift */,
 				D0F69CDC1D6B87D30046BCD6 /* MediaPlayerNode.swift */,
+				D058E0CE1E8AD57300A442DE /* VideoPlayerProxy.swift */,
 				D0F69D1D1D6B87D30046BCD6 /* MediaTrackDecodableFrame.swift */,
 				D0F69D711D6B87DE0046BCD6 /* MediaTrackFrame.swift */,
 				D0F69D701D6B87DE0046BCD6 /* MediaTrackFrameBuffer.swift */,
@@ -2293,6 +2298,7 @@
 				D0F3A8B51E83120A00B4C64C /* FetchResource.swift */,
 				D0F3A8B71E83125C00B4C64C /* MediaResources.swift */,
 				D0F3A8B91E831E6300B4C64C /* FetchVideoMediaResource.swift */,
+				D06E4AC31E84806300627D1D /* FetchPhotoLibraryImageResource.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -2606,6 +2612,7 @@
 				D01F66131DE8903300345CBE /* ChatTextInputAudioRecordingButton.swift in Sources */,
 				D0F69E341D6B8B030046BCD6 /* ChatMessageForwardInfoNode.swift in Sources */,
 				D00C7CF81E37BF680080C3D5 /* SecretChatKeyVisualization.m in Sources */,
+				D06E4AC41E84806300627D1D /* FetchPhotoLibraryImageResource.swift in Sources */,
 				D0736F251DF4D0E500F2C02A /* TelegramController.swift in Sources */,
 				D021E0AB1E3B9E2700AF709C /* ItemListRevealOptionsNode.swift in Sources */,
 				D0F69E561D6B8BDA0046BCD6 /* GalleryControllerNode.swift in Sources */,
@@ -2789,6 +2796,7 @@
 				D04BB2B51E44E58E00650E93 /* AuthorizationSequencePhoneEntryController.swift in Sources */,
 				D0E305AF1E5BA8E000D7A3A2 /* ItemListLoadingIndicatorEmptyStateItem.swift in Sources */,
 				D087750C1E3E7B7600A97350 /* PreferencesKeys.swift in Sources */,
+				D058E0CF1E8AD57300A442DE /* VideoPlayerProxy.swift in Sources */,
 				D0F69E381D6B8B030046BCD6 /* ChatMessageItemView.swift in Sources */,
 				D0D268671D78793B00C422DA /* ChatInterfaceStateNavigationButtons.swift in Sources */,
 				D039EB081DEC725600886EBC /* ChatTextInputAudioRecordingTimeNode.swift in Sources */,

@@ -11,14 +11,14 @@ enum MediaPlayerTimeTextNodeMode {
 }
 
 private struct MediaPlayerTimeTextNodeState: Equatable {
-    let hours: Int32
-    let minutes: Int32
-    let seconds: Int32
+    let hours: Int32?
+    let minutes: Int32?
+    let seconds: Int32?
     
     init() {
-        self.hours = 0
-        self.minutes = 0
-        self.seconds = 0
+        self.hours = nil
+        self.minutes = nil
+        self.seconds = nil
     }
     
     init(hours: Int32, minutes: Int32, seconds: Int32) {
@@ -39,11 +39,14 @@ private final class MediaPlayerTimeTextNodeParameters: NSObject {
     let state: MediaPlayerTimeTextNodeState
     let alignment: NSTextAlignment
     let mode: MediaPlayerTimeTextNodeMode
+    let textColor: UIColor
     
-    init(state: MediaPlayerTimeTextNodeState, alignment: NSTextAlignment, mode: MediaPlayerTimeTextNodeMode) {
+    init(state: MediaPlayerTimeTextNodeState, alignment: NSTextAlignment, mode: MediaPlayerTimeTextNodeMode, textColor: UIColor) {
         self.state = state
         self.alignment = alignment
         self.mode = mode
+        self.textColor = textColor
+        
         super.init()
     }
 }
@@ -51,6 +54,7 @@ private final class MediaPlayerTimeTextNodeParameters: NSObject {
 final class MediaPlayerTimeTextNode: ASDisplayNode {
     var alignment: NSTextAlignment = .left
     var mode: MediaPlayerTimeTextNodeMode = .normal
+    private let textColor: UIColor
     
     private var statusValue: MediaPlayerStatus? {
         didSet {
@@ -81,8 +85,11 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    init(textColor: UIColor) {
+        self.textColor = textColor
+        
         super.init()
+        
         self.isOpaque = false
         
         self.statusDisposable = (self.statusValuePromise.get()
@@ -113,7 +120,7 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return MediaPlayerTimeTextNodeParameters(state: self.state, alignment: self.alignment, mode: self.mode)
+        return MediaPlayerTimeTextNodeParameters(state: self.state, alignment: self.alignment, mode: self.mode, textColor: self.textColor)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -126,8 +133,13 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
         }
         
         if let parameters = parameters as? MediaPlayerTimeTextNodeParameters {
-            let text = String(format: "%d:%02d", parameters.state.minutes, parameters.state.seconds)
-            let string = NSAttributedString(string: text, font: textFont, textColor: UIColor(0x686669))
+            let text: String
+            if let minutes = parameters.state.minutes, let seconds = parameters.state.seconds {
+                text = String(format: "%d:%02d", minutes, seconds)
+            } else {
+                text = "-:--"
+            }
+            let string = NSAttributedString(string: text, font: textFont, textColor: parameters.textColor)
             let size = string.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: NSStringDrawingOptions.usesLineFragmentOrigin, context: nil).size
             
             if parameters.alignment == .left {

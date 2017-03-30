@@ -55,11 +55,16 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let videoNode: MediaPlayerNode
     private let scrubberView: ChatVideoGalleryItemScrubberView
     
+    private let progressButtonNode: HighlightableButtonNode
+    private let progressNode: RadialProgressNode
+    
     private var accountAndFile: (Account, TelegramMediaFile, Bool)?
     
     private var isCentral = false
     
-    private let videoStatusDisposable = MetaDisposable()
+    private let fetchStatusDisposable = MetaDisposable()
+    private let fetchDisposable = MetaDisposable()
+    private var resourceStatus: MediaResourceStatus?
     
     override init() {
         self.videoNode = MediaPlayerNode()
@@ -67,6 +72,9 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.snapshotNode.backgroundColor = UIColor.black
         self.videoNode.snapshotNode = snapshotNode
         self.scrubberView = ChatVideoGalleryItemScrubberView()
+        
+        self.progressButtonNode = HighlightableButtonNode()
+        self.progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(white: 0.0, alpha: 0.6), foregroundColor: UIColor.white, icon: nil))
         
         super.init()
         
@@ -78,10 +86,14 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.scrubberView.seek = { [weak self] timestamp in
             self?.player?.seek(timestamp: timestamp)
         }
+        
+        self.progressButtonNode.addSubnode(self.progressNode)
+        self.progressButtonNode.addTarget(self, action: #selector(progressButtonPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
-        self.videoStatusDisposable.dispose()
+        self.fetchStatusDisposable.dispose()
+        self.fetchDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -90,6 +102,11 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        
+        let progressDiameter: CGFloat = 50.0
+        let progressFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressDiameter) / 2.0), y: floor((layout.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
+        transition.updateFrame(node: self.progressButtonNode, frame: progressFrame)
+        transition.updateFrame(node: self.progressNode, frame: CGRect(origin: CGPoint(), size: progressFrame.size))
     }
     
     func setFile(account: Account, file: TelegramMediaFile, loopVideo: Bool) {
@@ -104,10 +121,32 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self._ready.set(.single(Void()))
             }
             
+            self.resourceStatus = nil
+            self.fetchStatusDisposable.set((account.postbox.mediaBox.resourceStatus(file.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let strongSelf = self {
+                    strongSelf.resourceStatus = status
+                    switch status {
+                        case let .Fetching(progress):
+                            strongSelf.progressNode.state = .Fetching(progress: progress)
+                            strongSelf.progressButtonNode.isHidden = false
+                        case .Local:
+                            strongSelf.progressNode.state = .Play
+                            strongSelf.progressButtonNode.isHidden = strongSelf.player != nil
+                        case .Remote:
+                            strongSelf.progressNode.state = .Remote
+                            strongSelf.progressButtonNode.isHidden = false
+                    }
+                }
+            }))
+            if self.progressButtonNode.supernode == nil {
+                self.addSubnode(self.progressButtonNode)
+            }
+            
             let shouldPlayVideo = self.accountAndFile?.1 != file
             self.accountAndFile = (account, file, loopVideo)
             if shouldPlayVideo && self.isCentral {
-                self.playVideo()
+                self.progressButtonPressed()
+                //self.playVideo()
             }
         }
     }
@@ -126,17 +165,14 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 /*let source = VideoPlayerSource(account: account, resource: CloudFileMediaResource(location: file.location, size: file.size))
                 self.videoNode.player = VideoPlayer(source: source)*/
                 
-                let player = MediaPlayer(postbox: account.postbox, resource: file.resource)
+                let player = MediaPlayer(audioSessionManager: (account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, postbox: account.postbox, resource: file.resource, streamable: false)
                 if loopVideo {
                     player.actionAtEnd = .loop
                 }
                 player.attachPlayerNode(self.videoNode)
+                self.progressButtonNode.isHidden = true
                 self.player = player
-                self.videoStatusDisposable.set((player.status |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self {
-                        strongSelf.scrubberView.setStatus(status)
-                    }
-                }))
+                self.scrubberView.setStatusSignal(player.status)
                 player.play()
                 
                 self.zoomableContent = (dimensions, self.videoNode)
@@ -146,6 +182,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private func stopVideo() {
         self.player = nil
+        self.progressButtonNode.isHidden = false
     }
     
     override func centralityUpdated(isCentral: Bool) {
@@ -211,6 +248,13 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         
+        self.progressNode.layer.animatePosition(from: self.progressNode.layer.position, to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            //positionCompleted = true
+            //intermediateCompletion()
+        })
+        self.progressNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        self.progressNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
+        
         self.videoNode.snapshotNode?.isHidden = true
         
         transformedFrame.origin = CGPoint()
@@ -229,5 +273,35 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func titleView() -> Signal<UIView?, NoError> {
         return self._titleView.get()
+    }
+    
+    private func activateVideo() {
+        if let (account, file, _) = self.accountAndFile {
+            if let resourceStatus = self.resourceStatus {
+                switch resourceStatus {
+                    case .Fetching:
+                        break
+                    case .Local:
+                        self.playVideo()
+                    case .Remote:
+                        self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
+                }
+            }
+        }
+    }
+    
+    @objc func progressButtonPressed() {
+        if let (account, file, _) = self.accountAndFile {
+            if let resourceStatus = self.resourceStatus {
+                switch resourceStatus {
+                    case .Fetching:
+                        account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
+                    case .Local:
+                        self.playVideo()
+                    case .Remote:
+                        self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
+                }
+            }
+        }
     }
 }

@@ -21,4 +21,8 @@ class SearchDisplayControllerContentNode: ASDisplayNode {
     func ready() -> Signal<Void, NoError> {
         return .single(Void())
     }
+    
+    func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, Any)? {
+        return nil
+    }
 }

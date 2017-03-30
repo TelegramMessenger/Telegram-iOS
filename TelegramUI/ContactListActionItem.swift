@@ -103,7 +103,7 @@ class ContactListActionItemNode: ListViewItemNode {
         return { item, width in
             let leftInset: CGFloat = 65.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - 10.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - 10.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let contentSize = CGSize(width: width, height: 48.0)
             let insets = UIEdgeInsets()

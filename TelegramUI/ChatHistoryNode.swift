@@ -33,4 +33,5 @@ public protocol ChatHistoryNode: class {
     func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets)
     func forEachItemNode(_ f: (ASDisplayNode) -> Void)
     func disconnect()
+    func scrollToEndOfHistory()
 }

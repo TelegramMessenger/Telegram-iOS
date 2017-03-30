@@ -54,4 +54,18 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         self.listView.position = CGPoint(x: bounds.size.width / 2.0, y: 92.0 / 2.0 + 29.0)
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: bounds.size.width), insets: UIEdgeInsets(), duration: 0.0, curve: .Default), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
+    
+    func viewAndPeerAtPoint(_ point: CGPoint) -> (UIView, PeerId)? {
+        let adjustedPoint = self.view.convert(point, to: self.listView.view)
+        var selectedItemNode: ASDisplayNode?
+        self.listView.forEachItemNode { itemNode in
+            if itemNode.frame.contains(adjustedPoint) {
+                selectedItemNode = itemNode
+            }
+        }
+        if let selectedItemNode = selectedItemNode as? HorizontalPeerItemNode, let peer = selectedItemNode.peer {
+            return (selectedItemNode.view, peer.id)
+        }
+        return nil
+    }
 }

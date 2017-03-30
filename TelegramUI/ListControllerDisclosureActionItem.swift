@@ -61,7 +61,7 @@ class ListControllerDisclosureActionItemNode: ListControllerGroupableItemNode {
         let layoutLabel = TextNode.asyncLayout(self.label)
         return { item, width in
             if let item = item as? ListControllerDisclosureActionItem {
-                let (labelLayout, labelApply) = layoutLabel(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+                let (labelLayout, labelApply) = layoutLabel(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
                 return (CGSize(width: width, height: 44.0), { [weak self] in
                     if let strongSelf = self {
                         let _ = labelApply()

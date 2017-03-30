@@ -178,6 +178,9 @@ class ContactsPeerItemNode: ListViewItemNode {
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (ContactsPeerItem, CGFloat, Bool, Bool, Bool)?
+    var peer: Peer? {
+        return self.layoutParams?.0.peer
+    }
     
     required init() {
         self.backgroundNode = ASDisplayNode()
@@ -323,9 +326,9 @@ class ContactsPeerItemNode: ListViewItemNode {
                 }
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
             
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), .natural, nil)
+            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 48.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             

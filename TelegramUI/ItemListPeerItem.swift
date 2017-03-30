@@ -276,10 +276,10 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - labelLayout.size.width - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0) - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - labelLayout.size.width - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0) - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
             let contentSize = CGSize(width: width, height: 48.0)

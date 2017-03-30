@@ -4,6 +4,7 @@ import Postbox
 import AVFoundation
 import MobileCoreServices
 import TelegramCore
+import MediaPlayer
 
 private struct WrappedAudioPlaylistItemId: Hashable, Equatable {
     let playlistId: AudioPlaylistId
@@ -77,7 +78,7 @@ private final class ActiveManagedVideoContext {
     }
 }
 
-final class MediaManager {
+final class MediaManager: NSObject {
     private let queue = Queue.mainQueue()
     
     let audioSession = ManagedAudioSession()
@@ -87,16 +88,120 @@ final class MediaManager {
     var playlistPlayerStateAndStatus: Signal<AudioPlaylistStateAndStatus?, NoError> {
         return self.playlistPlayerStateAndStatusValue.get()
     }
-    private var playlistPlayerStateValueDisposable: Disposable?
+    private let playlistPlayerStateValueDisposable = MetaDisposable()
     private let playlistPlayerStatusesContext = Atomic(value: ManagedAudioPlaylistPlayerStatusesContext())
+    
+    private let globalControlsStatus = Promise<MediaPlayerStatus?>(nil)
+    
+    private let globalControlsDisposable = MetaDisposable()
+    private let globalControlsStatusDisposable = MetaDisposable()
     
     private var managedVideoContexts: [WrappedManagedMediaId: ActiveManagedVideoContext] = [:]
     
-    init() {
+    override init() {
+        super.init()
+        
+        let commandCenter = MPRemoteCommandCenter.shared()
+        commandCenter.playCommand.addTarget(self, action: #selector(playCommandEvent(_:)))
+        commandCenter.pauseCommand.addTarget(self, action: #selector(pauseCommandEvent(_:)))
+        commandCenter.previousTrackCommand.addTarget(self, action: #selector(previousTrackCommandEvent(_:)))
+        commandCenter.nextTrackCommand.addTarget(self, action: #selector(nextTrackCommandEvent(_:)))
+        commandCenter.togglePlayPauseCommand.addTarget(self, action: #selector(togglePlayPauseCommandEvent(_:)))
+        if #available(iOSApplicationExtension 9.1, *) {
+            commandCenter.changePlaybackPositionCommand.addTarget(handler: { [weak self] event in
+                if let strongSelf = self, let event = event as? MPChangePlaybackPositionCommandEvent {
+                    strongSelf.playlistPlayerControl(.playback(.seek(event.positionTime)))
+                }
+                return .success
+            })
+        }
+        
+        var previousStateAndStatus: AudioPlaylistStateAndStatus?
+        let globalControlsStatus = self.globalControlsStatus
+        
+        var baseNowPlayingInfo: [String: Any]?
+        
+        self.globalControlsDisposable.set((self.playlistPlayerStateAndStatusValue.get() |> deliverOnMainQueue).start(next: { next in
+            if let next = next, let item = next.state.item, let info = item.info {
+                let commandCenter = MPRemoteCommandCenter.shared()
+                commandCenter.playCommand.isEnabled = true
+                commandCenter.pauseCommand.isEnabled = true
+                commandCenter.previousTrackCommand.isEnabled = true
+                commandCenter.nextTrackCommand.isEnabled = true
+                commandCenter.togglePlayPauseCommand.isEnabled = true
+                
+                var nowPlayingInfo: [String: Any] = [:]
+                
+                switch info.labelInfo {
+                    case let .music(title, performer):
+                        let titleText: String = title ?? "Unknown Track"
+                        let subtitleText: String = performer ?? "Unknown Artist"
+                        
+                        nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
+                        nowPlayingInfo[MPMediaItemPropertyArtist] = subtitleText
+                    case .voice:
+                        let titleText: String = "Voice Message"
+                        
+                        nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
+                }
+                
+                baseNowPlayingInfo = nowPlayingInfo
+                
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+                
+                if previousStateAndStatus != next {
+                    previousStateAndStatus = next
+                    if let status = next.status {
+                        globalControlsStatus.set(status |> map { Optional($0) })
+                    } else {
+                        globalControlsStatus.set(.single(nil))
+                    }
+                }
+            } else {
+                previousStateAndStatus = nil
+                baseNowPlayingInfo = nil
+                globalControlsStatus.set(.single(nil))
+                
+                let commandCenter = MPRemoteCommandCenter.shared()
+                commandCenter.playCommand.isEnabled = false
+                commandCenter.pauseCommand.isEnabled = false
+                commandCenter.previousTrackCommand.isEnabled = false
+                commandCenter.nextTrackCommand.isEnabled = false
+                commandCenter.togglePlayPauseCommand.isEnabled = false
+                
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            }
+        }))
+        
+        self.globalControlsStatusDisposable.set((self.globalControlsStatus.get() |> deliverOnMainQueue).start(next: { next in
+            if let next = next {
+                if var nowPlayingInfo = baseNowPlayingInfo {
+                    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = next.duration as NSNumber
+                    switch next.status {
+                        case .playing:
+                            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0 as NSNumber
+                        case .buffering, .paused:
+                            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0 as NSNumber
+                    }
+                    nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = next.timestamp as NSNumber
+                    
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+                }
+            }/* else {
+                if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
+                    nowPlayingInfo.removeValue(forKey: MPMediaItemPropertyPlaybackDuration)
+                    nowPlayingInfo.removeValue(forKey: MPNowPlayingInfoPropertyPlaybackRate)
+                    nowPlayingInfo.removeValue(forKey: MPNowPlayingInfoPropertyElapsedPlaybackTime)
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+                }
+            }*/
+        }))
     }
     
     deinit {
-        self.playlistPlayerStateValueDisposable?.dispose()
+        self.playlistPlayerStateValueDisposable.dispose()
+        self.globalControlsDisposable.dispose()
+        self.globalControlsStatusDisposable.dispose()
     }
     
     func videoContext(account: Account, id: ManagedMediaId, resource: MediaResource) -> Signal<ManagedVideoContext?, NoError> {
@@ -109,7 +214,7 @@ final class MediaManager {
                 if let currentActiveContext = self.managedVideoContexts[wrappedId] {
                     activeContext = currentActiveContext
                 } else {
-                    let mediaPlayer = MediaPlayer(postbox: account.postbox, resource: resource)
+                    let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, postbox: account.postbox, resource: resource, streamable: false)
                     let playerNode = MediaPlayerNode()
                     mediaPlayer.attachPlayerNode(playerNode)
                     activeContext = ActiveManagedVideoContext(context: ManagedVideoContext(mediaPlayer: mediaPlayer, playerNode: playerNode))
@@ -167,7 +272,7 @@ final class MediaManager {
     func setPlaylistPlayer(_ player: ManagedAudioPlaylistPlayer?) {
         var disposePlayer: ManagedAudioPlaylistPlayer?
         var updatedPlayer = false
-        self.playlistPlayer.modify { currentPlayer in
+        let _ = self.playlistPlayer.modify { currentPlayer in
             if currentPlayer !== player {
                 disposePlayer = currentPlayer
                 updatedPlayer = true
@@ -178,15 +283,31 @@ final class MediaManager {
         }
         
         if let disposePlayer = disposePlayer {
+            withExtendedLifetime(disposePlayer, {
+                
+            })
         }
         
         if updatedPlayer {
             if let player = player {
                 self.playlistPlayerStateAndStatusValue.set(player.stateAndStatus)
+                self.playlistPlayerStateValueDisposable.set(player.stateAndStatus.start(next: { [weak self] next in
+                    if let next = next {
+                        if next.state.item == nil {
+                            Queue.mainQueue().async {
+                                self?.setPlaylistPlayer(nil)
+                            }
+                        }
+                    }
+                }))
             } else {
                 self.playlistPlayerStateAndStatusValue.set(.single(nil))
             }
         }
+    }
+    
+    private func updatePlaylistPlayerStateValue() {
+        
     }
     
     func playlistPlayerControl(_ control: AudioPlaylistControl) {
@@ -226,5 +347,25 @@ final class MediaManager {
                 }
             }
         }*/
+    }
+    
+    @objc func playCommandEvent(_ command: AnyObject) {
+        self.playlistPlayerControl(.playback(.play))
+    }
+    
+    @objc func pauseCommandEvent(_ command: AnyObject) {
+        self.playlistPlayerControl(.playback(.pause))
+    }
+    
+    @objc func previousTrackCommandEvent(_ command: AnyObject) {
+        self.playlistPlayerControl(.navigation(.previous))
+    }
+    
+    @objc func nextTrackCommandEvent(_ command: AnyObject) {
+        self.playlistPlayerControl(.navigation(.next))
+    }
+    
+    @objc func togglePlayPauseCommandEvent(_ command: AnyObject) {
+        self.playlistPlayerControl(.playback(.togglePlayPause))
     }
 }

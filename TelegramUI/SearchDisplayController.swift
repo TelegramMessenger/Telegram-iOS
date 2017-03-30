@@ -74,4 +74,8 @@ final class SearchDisplayController {
             contentNode.removeFromSupernode()
         }
     }
+    
+    func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, Any)? {
+        return self.contentNode.previewViewAndActionAtLocation(location)
+    }
 }

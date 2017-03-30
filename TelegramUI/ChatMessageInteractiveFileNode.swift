@@ -21,6 +21,9 @@ private let outgoingDescriptionColor = UIColor(0x6fb26a)
 private let incomingDurationColor = UIColor(0x525252, 0.6)
 private let outgoingDurationColor = UIColor(0x008c09, 0.8)
 
+private let consumableContentIncomingIcon = generateFilledCircleImage(diameter: 4.0, color: UIColor(0x1581e2))
+private let consumableContentOutgoingIcon = generateFilledCircleImage(diameter: 4.0, color: UIColor(0x19c700))
+
 private let fileIconIncomingImage = UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming")?.precomposed()
 private let fileIconOutgoingImage = UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentOutgoing")?.precomposed()
 
@@ -29,6 +32,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
     private let descriptionNode: TextNode
     private let waveformNode: AudioWaveformNode
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
+    private let consumableContentNode: ASImageNode
     
     private var iconNode: TransformImageNode?
     private var progressNode: RadialProgressNode?
@@ -57,6 +61,8 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         self.waveformNode = AudioWaveformNode()
         
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
+        
+        self.consumableContentNode = ASImageNode()
         
         super.init(layerBacked: false)
         
@@ -111,7 +117,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ incoming: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    func asyncLayout() -> (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
@@ -119,7 +125,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         let currentMessage = self.message
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         
-        return { account, message, file, incoming, dateAndStatusType, constrainedSize in
+        return { account, message, file, automaticDownload, incoming, dateAndStatusType, constrainedSize in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 //var updateImageSignal: Signal<TransformImageArguments -> DrawingContext, NoError>?
                 var updatedStatusSignal: Signal<FileMediaResourceStatus, NoError>?
@@ -153,6 +159,20 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 
                 var statusSize: CGSize?
                 var statusApply: ((Bool) -> Void)?
+                
+                var consumableContentIcon: UIImage?
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ConsumableContentMessageAttribute {
+                        if !attribute.consumed {
+                            if incoming {
+                                consumableContentIcon = consumableContentIncomingIcon
+                            } else {
+                                consumableContentIcon = consumableContentOutgoingIcon
+                            }
+                        }
+                        break
+                    }
+                }
                 
                 if let statusType = dateAndStatusType {
                     var t = Int(message.timestamp)
@@ -251,10 +271,9 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 
                 let textConstrainedSize = CGSize(width: constrainedSize.width - 44.0 - 8.0, height: constrainedSize.height)
                 
-                let (titleLayout, titleApply) = titleAsyncLayout(titleString, nil, 1, .middle, textConstrainedSize, .natural, nil)
-                let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(descriptionString, nil, 1, .middle, textConstrainedSize, .natural, nil)
+                let (titleLayout, titleApply) = titleAsyncLayout(titleString, nil, 1, .middle, textConstrainedSize, .natural, nil, UIEdgeInsets())
+                let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(descriptionString, nil, 1, .middle, textConstrainedSize, .natural, nil, UIEdgeInsets())
                 
-                var voiceWidth: CGFloat = 0.0
                 let minVoiceWidth: CGFloat = 120.0
                 let maxVoiceWidth = constrainedSize.width
                 let maxVoiceLength: CGFloat = 30.0
@@ -309,12 +328,24 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                             strongSelf.titleNode.frame = titleFrame
                             strongSelf.descriptionNode.frame = descriptionFrame
                             
+                            if let consumableContentIcon = consumableContentIcon {
+                                if strongSelf.consumableContentNode.supernode == nil {
+                                    strongSelf.addSubnode(strongSelf.consumableContentNode)
+                                }
+                                if strongSelf.consumableContentNode.image !== consumableContentIcon {
+                                    strongSelf.consumableContentNode.image = consumableContentIcon
+                                }
+                                strongSelf.consumableContentNode.frame = CGRect(origin: CGPoint(x: descriptionFrame.maxX + 2.0, y: descriptionFrame.minY + 5.0), size: consumableContentIcon.size)
+                            } else if strongSelf.consumableContentNode.supernode != nil {
+                                strongSelf.consumableContentNode.removeFromSupernode()
+                            }
+                            
                             if let statusApply = statusApply, let statusSize = statusSize {
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                    strongSelf.addSubnode(strongSelf.dateAndStatusNode)
                                 }
                                 
-                                strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: fittedLayoutSize.width - statusSize.width, y: fittedLayoutSize.height - statusSize.height + 10.0), size: statusSize)
+                                strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width, y: fittedLayoutSize.height - statusSize.height + 10.0), size: statusSize)
                                 statusApply(false)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
@@ -324,7 +355,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                 if strongSelf.waveformNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.waveformNode)
                                 }
-                                strongSelf.waveformNode.frame = CGRect(origin: CGPoint(x: 43.0, y: -1.0), size: CGSize(width: fittedLayoutSize.width - 41.0, height: 12.0))
+                                strongSelf.waveformNode.frame = CGRect(origin: CGPoint(x: 43.0, y: -1.0), size: CGSize(width: boundingWidth - 41.0, height: 12.0))
                                 strongSelf.waveformNode.setup(color: UIColor(incoming ? 0x007ee5 : 0x3fc33b), waveform: audioWaveform)
                             } else if strongSelf.waveformNode.supernode != nil {
                                 strongSelf.waveformNode.removeFromSupernode()
@@ -382,6 +413,9 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                             
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
+                                if automaticDownload {
+                                    updatedFetchControls.fetch()
+                                }
                             }
                         }
                     })
@@ -390,12 +424,12 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ incoming: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { account, message, file, incoming, dateAndStatusType, constrainedSize in
+        return { account, message, file, automaticDownload, incoming, dateAndStatusType, constrainedSize in
             var fileNode: ChatMessageInteractiveFileNode
-            var fileLayout: (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ incoming: Bool, _ dateAnsStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
+            var fileLayout: (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAnsStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 fileNode = node
@@ -405,7 +439,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 fileLayout = fileNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = fileLayout(account, message, file, incoming, dateAndStatusType, constrainedSize)
+            let (initialWidth, continueLayout) = fileLayout(account, message, file, automaticDownload, incoming, dateAndStatusType, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)

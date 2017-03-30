@@ -56,7 +56,7 @@ private func removeAudioRecorderContext(_ id: Int32) {
 }
 
 private func addAudioUnitHolder(_ id: Int32, _ queue: Queue, _ audioUnit: Atomic<AudioUnit?>) {
-    audioUnitHolders.modify { dict in
+    let _ = audioUnitHolders.modify { dict in
         var dict = dict
         dict[id] = AudioUnitHolder(queue: queue, audioUnit: audioUnit)
         return dict
@@ -64,7 +64,7 @@ private func addAudioUnitHolder(_ id: Int32, _ queue: Queue, _ audioUnit: Atomic
 }
 
 private func removeAudioUnitHolder(_ id: Int32) {
-    audioUnitHolders.modify { dict in
+    let _ = audioUnitHolders.modify { dict in
         var dict = dict
         dict.removeValue(forKey: id)
         return dict
@@ -93,7 +93,7 @@ private func withAudioUnitHolder(_ id: Int32, _ f: (Atomic<AudioUnit?>, Queue) -
 }
 
 private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: UnsafeMutablePointer<AudioUnitRenderActionFlags>, inTimeStamp: UnsafePointer<AudioTimeStamp>, inBusNumber: UInt32, inNumberFrames: UInt32, ioData: UnsafeMutablePointer<AudioBufferList>?) -> OSStatus {
-    let id = Int32(unsafeBitCast(refCon, to: intptr_t.self))
+    let id = Int32(intptr_t(bitPattern: refCon))
     
     withAudioUnitHolder(id, { (holder, queue) in
         var buffer = AudioBuffer()
@@ -243,8 +243,6 @@ final class ManagedAudioRecorderContext {
             return
         }
         
-        var status = noErr
-        
         var one: UInt32 = 1
         guard AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, 1, &one, 4) == noErr else {
             AudioComponentInstanceDispose(audioUnit)
@@ -264,7 +262,7 @@ final class ManagedAudioRecorderContext {
         
         var callbackStruct = AURenderCallbackStruct()
         callbackStruct.inputProc = rendererInputProc
-        callbackStruct.inputProcRefCon = unsafeBitCast(intptr_t(self.id), to: UnsafeMutableRawPointer.self)
+        callbackStruct.inputProcRefCon = UnsafeMutableRawPointer(bitPattern: intptr_t(self.id))
         guard AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_SetInputCallback, kAudioUnitScope_Global, 0, &callbackStruct, UInt32(MemoryLayout<AURenderCallbackStruct>.size)) == noErr else {
             AudioComponentInstanceDispose(audioUnit)
             return
@@ -281,7 +279,7 @@ final class ManagedAudioRecorderContext {
             return
         }
         
-        self.audioUnit.swap(audioUnit)
+        let _ = self.audioUnit.swap(audioUnit)
         
         if self.audioSessionDisposable == nil {
             let queue = self.queue
@@ -495,7 +493,7 @@ final class ManagedAudioRecorderContext {
                 }
                 
                 for i in 0 ..< 100 {
-                    var sample: UInt16 = UInt16(Int64(scaledSamples[i]))
+                    let sample: UInt16 = UInt16(Int64(scaledSamples[i]))
                     if sample > calculatedPeak {
                         scaledSamples[i] = Int16(calculatedPeak)
                     }

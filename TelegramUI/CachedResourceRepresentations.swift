@@ -45,3 +45,17 @@ final class CachedScaledImageRepresentation: CachedMediaResourceRepresentation {
         }
     }
 }
+
+final class CachedVideoFirstFrameRepresentation: CachedMediaResourceRepresentation {
+    var uniqueId: String {
+        return "first-frame"
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if to is CachedVideoFirstFrameRepresentation {
+            return true
+        } else {
+            return false
+        }
+    }
+}

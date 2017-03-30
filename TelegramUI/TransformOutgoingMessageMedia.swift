@@ -61,6 +61,43 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                         return .complete()
                     }
                 }
+        case let image as TelegramMediaImage:
+            if let representation = largestImageRepresentation(image.representations) {
+                let signal = Signal<MediaResourceData, NoError> { subscriber in
+                    let fetch = postbox.mediaBox.fetchedResource(representation.resource).start()
+                    let data = postbox.mediaBox.resourceData(representation.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { next in
+                        subscriber.putNext(next)
+                        if next.complete {
+                            subscriber.putCompletion()
+                        }
+                    })
+                    
+                    return ActionDisposable {
+                        fetch.dispose()
+                        data.dispose()
+                    }
+                }
+                
+                let result: Signal<MediaResourceData, NoError>
+                if opportunistic {
+                    result = signal |> take(1)
+                } else {
+                    result = signal
+                }
+                
+                return result
+                    |> mapToSignal { data -> Signal<Media?, NoError> in
+                        if data.complete {
+                            return .single(nil)
+                        } else if opportunistic {
+                            return .single(nil)
+                        } else {
+                            return .complete()
+                        }
+                    }
+            } else {
+                return .single(nil)
+            }
         default:
             return .single(nil)
     }

@@ -1,93 +1,53 @@
 import Foundation
 import UIKit
+import SwiftSignalKit
 
 final class ChatVideoGalleryItemScrubberView: UIView {
-    private let backgroundView: UIView
-    private let foregroundView: UIView
-    private let handleView: UIView
-    
-    private var status: MediaPlayerStatus?
-    
-    private var scrubbing = false
-    private var scrubbingLocation: CGFloat = 0.0
-    private var initialScrubbingPosition: CGFloat = 0.0
-    private var scrubbingPosition: CGFloat = 0.0
+    private let leftTimestampNode: MediaPlayerTimeTextNode
+    private let rightTimestampNode: MediaPlayerTimeTextNode
+    private let scrubberNode: MediaPlayerScrubbingNode
     
     var seek: (Double) -> Void = { _ in }
     
     override init(frame: CGRect) {
-        self.backgroundView = UIView()
-        self.backgroundView.backgroundColor = UIColor.gray
-        self.backgroundView.clipsToBounds = true
-        self.foregroundView = UIView()
-        self.foregroundView.backgroundColor = UIColor.white
-        self.handleView = UIView()
-        self.handleView.backgroundColor = UIColor.white
+        self.scrubberNode = MediaPlayerScrubbingNode(lineHeight: 3.0, lineCap: .round, scrubberHandle: true, backgroundColor: .gray, foregroundColor: .white)
+        
+        self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
+        self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
+        self.leftTimestampNode.alignment = .right
+        self.rightTimestampNode.mode = .reversed
         
         super.init(frame: frame)
         
-        self.backgroundView.addSubview(self.foregroundView)
-        self.addSubview(self.backgroundView)
-        self.addSubview(self.handleView)
+        self.scrubberNode.seek = { [weak self] timestamp in
+            self?.seek(timestamp)
+        }
         
-        self.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        self.addSubnode(self.scrubberNode)
+        self.addSubnode(self.leftTimestampNode)
+        self.addSubnode(self.rightTimestampNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func setStatus(_ status: MediaPlayerStatus) {
-        self.status = status
-        self.layoutSubviews()
-        
-        if status.status == .playing {
-            
-        }
-    }
-    
-    @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
-        guard let status = self.status, status.duration > 0.0 else {
-            return
-        }
-        
-        switch recognizer.state {
-            case .began:
-                self.scrubbing = true
-                self.scrubbingLocation = recognizer.location(in: self).x
-                self.initialScrubbingPosition = CGFloat(status.timestamp / status.duration)
-                self.scrubbingPosition = 0.0
-            case .changed:
-                let distance = recognizer.location(in: self).x - self.scrubbingLocation
-                self.scrubbingPosition = self.initialScrubbingPosition + (distance / self.bounds.size.width)
-                self.layoutSubviews()
-            case .ended:
-                self.scrubbing = false
-                self.seek(Double(self.scrubbingPosition) * status.duration)
-            default:
-                break
-        }
+    func setStatusSignal(_ status: Signal<MediaPlayerStatus, NoError>?) {
+        self.scrubberNode.status = status
+        self.leftTimestampNode.status = status
+        self.rightTimestampNode.status = status
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
         
         let size = self.bounds.size
-        let barHeight: CGFloat = 2.0
-        let handleHeight: CGFloat = 14.0
         
-        self.backgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: floor(size.height - barHeight) / 2.0), size: CGSize(width: size.width, height: barHeight))
+        let scrubberHeight: CGFloat = 14.0
         
-        var position: CGFloat = 0.0
-        if self.scrubbing {
-            position = self.scrubbingPosition
-        } else {
-            if let status = self.status, status.duration > 0.0 {
-                position = CGFloat(status.timestamp / status.duration)
-            }
-        }
+        self.leftTimestampNode.frame = CGRect(origin: CGPoint(x: -10.0, y: 15.0), size: CGSize(width: 57.0 - 15.0, height: 20.0))
+        self.rightTimestampNode.frame = CGRect(origin: CGPoint(x: size.width - 57.0 + 30.0, y: 15.0), size: CGSize(width: 57.0 - 10.0, height: 20.0))
         
-        self.foregroundView.frame = CGRect(origin: CGPoint(x: -size.width + floor(position * size.width), y: 0.0), size: CGSize(width: size.width, height: barHeight))
-        self.handleView.frame = CGRect(origin: CGPoint(x: floor(position * size.width), y: floor(size.height - handleHeight) / 2.0), size: CGSize(width: 1.5, height: handleHeight))
+        self.scrubberNode.frame = CGRect(origin: CGPoint(x: 57.0 - 15.0, y: floor((size.height - scrubberHeight) / 2.0) + 1.0), size: CGSize(width: size.width - 57.0 * 2.0 + 35.0, height: scrubberHeight))
     }
 }

@@ -69,6 +69,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let queue: Queue
     private let postbox: Postbox
     private let resource: MediaResource
+    private let streamable: Bool
     
     private let taskQueue: ThreadTaskQueue
     private let thread: Thread
@@ -87,10 +88,11 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
    
-    init(queue: Queue, postbox: Postbox, resource: MediaResource) {
+    init(queue: Queue, postbox: Postbox, resource: MediaResource, streamable: Bool) {
         self.queue = queue
         self.postbox = postbox
         self.resource = resource
+        self.streamable = streamable
         
         self.taskQueue = ThreadTaskQueue()
         
@@ -139,8 +141,9 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         let postbox = self.postbox
         let resource = self.resource
         let queue = self.queue
+        let streamable = self.streamable
         self.performWithContext { [weak self] context in
-            context.initializeState(postbox: postbox, resource: resource)
+            context.initializeState(postbox: postbox, resource: resource, streamable: streamable)
             
             let (frames, endOfStream) = context.takeFrames(until: timestamp)
             
@@ -182,9 +185,10 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             let queue = self.queue
             let postbox = self.postbox
             let resource = self.resource
+            let streamable = self.streamable
             
             self.performWithContext { [weak self] context in
-                context.initializeState(postbox: postbox, resource: resource)
+                context.initializeState(postbox: postbox, resource: resource, streamable: streamable)
                 
                 context.seek(timestamp: timestamp, completed: { [weak self] streamDescriptions, timestamp in
                     queue.async { [weak self] in

@@ -174,8 +174,8 @@ class ChatMessageReplyInfoNode: ASTransformLayerNode {
             
             let contrainedTextSize = CGSize(width: maximumTextWidth, height: constrainedSize.height)
             
-            let (titleLayout, titleApply) = titleNodeLayout(NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), nil, 1, .end, contrainedTextSize, .natural, nil)
-            let (textLayout, textApply) = textNodeLayout(NSAttributedString(string: textString, font: textFont, textColor: textMedia ? titleColor : textColor), nil, 1, .end, contrainedTextSize, .natural, nil)
+            let (titleLayout, titleApply) = titleNodeLayout(NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), nil, 1, .end, contrainedTextSize, .natural, nil, UIEdgeInsets())
+            let (textLayout, textApply) = textNodeLayout(NSAttributedString(string: textString, font: textFont, textColor: textMedia ? titleColor : textColor), nil, 1, .end, contrainedTextSize, .natural, nil, UIEdgeInsets())
             
             let size = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + leftInset, height: titleLayout.size.height + textLayout.size.height)
             

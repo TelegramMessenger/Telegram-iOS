@@ -44,7 +44,7 @@ struct FFMpegMediaFrameSourceContextInfo {
 
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<FFMpegMediaFrameSourceContext>.fromOpaque(userData!).takeUnretainedValue()
-    guard let postbox = context.postbox, let resource = context.resource else {
+    guard let postbox = context.postbox, let resource = context.resource, let streamable = context.streamable else {
         return 0
     }
     
@@ -55,7 +55,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
     var fetchedData: Data?
     
-    if resource.streamable {
+    if streamable {
         let data: Signal<Data, NoError>
         data = postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
         let semaphore = DispatchSemaphore(value: 0)
@@ -75,8 +75,8 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [.mappedIfSafe]) {
                     fetchedData = data.subdata(in: Range(range))
                 }
+                semaphore.signal()
             }
-            semaphore.signal()
         })
         semaphore.wait()
     }
@@ -93,7 +93,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
 
 private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
     let context = Unmanaged<FFMpegMediaFrameSourceContext>.fromOpaque(userData!).takeUnretainedValue()
-    guard let postbox = context.postbox, let resource = context.resource else {
+    guard let postbox = context.postbox, let resource = context.resource, let streamable = context.streamable else {
         return 0
     }
     
@@ -113,7 +113,7 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 context.fetchedDataDisposable.set(nil)
                 context.requestedCompleteFetch = false
             } else {
-                if resource.streamable {
+                if streamable {
                     context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: context.readingOffset ..< resourceSize).start())
                 } else if !context.requestedCompleteFetch {
                     context.requestedCompleteFetch = true
@@ -133,6 +133,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     
     fileprivate var postbox: Postbox?
     fileprivate var resource: MediaResource?
+    fileprivate var streamable: Bool?
     
     private let ioBufferSize = 64 * 1024
     fileprivate var readingOffset = 0
@@ -156,7 +157,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         fetchedDataDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, resource: MediaResource) {
+    func initializeState(postbox: Postbox, resource: MediaResource, streamable: Bool) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -165,10 +166,11 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         self.postbox = postbox
         self.resource = resource
+        self.streamable = streamable
         
         let resourceSize: Int = resource.size ?? 0
         
-        if resource.streamable {
+        if streamable {
             self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: 0 ..< resourceSize).start())
         } else if !self.requestedCompleteFetch {
             self.requestedCompleteFetch = true
@@ -316,7 +318,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             if let packet = self.readPacket() {
                 if let videoStream = initializedState.videoStream, Int(packet.packet.stream_index) == videoStream.index {
                     let avNoPtsRawValue: UInt64 = 0x8000000000000000
-                    let avNoPtsValue = unsafeBitCast(avNoPtsRawValue, to: Int64.self)
+                    let avNoPtsValue = Int64(bitPattern: avNoPtsRawValue)
                     let packetPts = packet.packet.pts == avNoPtsValue ? packet.packet.dts : packet.packet.pts
                     
                     let pts = CMTimeMake(packetPts, videoStream.timebase.timescale)
@@ -339,7 +341,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                     }
                 } else if let audioStream = initializedState.audioStream, Int(packet.packet.stream_index) == audioStream.index {
                     let avNoPtsRawValue: UInt64 = 0x8000000000000000
-                    let avNoPtsValue = unsafeBitCast(avNoPtsRawValue, to: Int64.self)
+                    let avNoPtsValue = Int64(bitPattern: avNoPtsRawValue)
                     let packetPts = packet.packet.pts == avNoPtsValue ? packet.packet.dts : packet.packet.pts
                     
                     let pts = CMTimeMake(packetPts, audioStream.timebase.timescale)
@@ -411,18 +413,21 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                 videoDescription = FFMpegMediaFrameSourceDescription(duration: videoStream.duration, decoder: videoStream.decoder)
             }
             
-            let actualPts: CMTime
-            if let packet = self.readPacketInternal() {
-                self.packetQueue.append(packet)
-                if let videoStream = initializedState.videoStream, Int(packet.packet.stream_index) == videoStream.index {
-                    actualPts = CMTimeMake(packet.pts, videoStream.timebase.timescale)
-                } else if let audioStream = initializedState.audioStream, Int(packet.packet.stream_index) == audioStream.index {
-                    actualPts = CMTimeMake(packet.pts, audioStream.timebase.timescale)
+            var actualPts: CMTime = CMTimeMake(0, 1)
+            for _ in 0 ..< 24 {
+                if let packet = self.readPacketInternal() {
+                    if let videoStream = initializedState.videoStream, Int(packet.packet.stream_index) == videoStream.index {
+                        self.packetQueue.append(packet)
+                        actualPts = CMTimeMake(packet.pts, videoStream.timebase.timescale)
+                        break
+                    } else if let audioStream = initializedState.audioStream, Int(packet.packet.stream_index) == audioStream.index {
+                        self.packetQueue.append(packet)
+                        actualPts = CMTimeMake(packet.pts, audioStream.timebase.timescale)
+                        break
+                    }
                 } else {
-                    actualPts = CMTimeMake(0, 1)
+                    break
                 }
-            } else {
-                actualPts = CMTimeMake(0, 1)
             }
             
             completed(FFMpegMediaFrameSourceDescriptionSet(audio: audioDescription, video: videoDescription), actualPts)

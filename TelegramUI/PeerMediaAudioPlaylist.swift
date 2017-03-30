@@ -19,7 +19,7 @@ struct PeerMessageHistoryAudioPlaylistItemId: AudioPlaylistItemId {
     }
 }
 
-private final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
+final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
     let entry: MessageHistoryEntry
     
     var id: AudioPlaylistItemId {
@@ -28,7 +28,7 @@ private final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
     
     var resource: MediaResource? {
         switch self.entry {
-            case let .MessageEntry(message, _, _):
+            case let .MessageEntry(message, _, _, _):
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
                         return file.resource
@@ -40,13 +40,29 @@ private final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
         }
     }
     
+    var streamable: Bool {
+        switch self.entry {
+            case let .MessageEntry(message, _, _, _):
+                for media in message.media {
+                    if let file = media as? TelegramMediaFile {
+                        if file.isMusic {
+                            return true
+                        }
+                    }
+                }
+                return false
+            case .HoleEntry:
+                return false
+        }
+    }
+    
     var info: AudioPlaylistItemInfo? {
         switch self.entry {
-            case let .MessageEntry(message, _, _):
+            case let .MessageEntry(message, _, _, _):
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
                         for attribute in file.attributes {
-                            if case let .Audio(isVoice, duration, title, performer, waveform: nil) = attribute {
+                            if case let .Audio(isVoice, duration, title, performer, _) = attribute {
                                 if isVoice {
                                     return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .voice)
                                 } else {
@@ -99,40 +115,60 @@ func peerMessageAudioPlaylistAndItemIds(_ message: Message) -> (AudioPlaylistId,
 func peerMessageHistoryAudioPlaylist(account: Account, messageId: MessageId) -> AudioPlaylist {
     return AudioPlaylist(id: PeerMessageHistoryAudioPlaylistId(peerId: messageId.peerId), navigate: { item, navigation in
         if let item = item as? PeerMessageHistoryAudioPlaylistItem {
-            return account.postbox.aroundMessageHistoryViewForPeerId(item.entry.index.id.peerId, index: item.entry.index, count: 10, anchorIndex: item.entry.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: .Music)
-                |> take(1)
-                |> map { (view, _, _) -> AudioPlaylistItem? in
-                    var index = 0
-                    for entry in view.entries {
-                        if entry.index.id == item.entry.index.id {
-                            switch navigation {
-                                case .previous:
-                                    if index + 1 < view.entries.count {
-                                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries[index + 1])
-                                    } else {
-                                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries.last!)
-                                    }
-                                case .next:
-                                    if index != 0 {
-                                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries[index - 1])
-                                    } else {
-                                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries.first!)
-                                    }
+            var tagMask: MessageTags?
+            switch item.entry {
+                case let .MessageEntry(message, _, _, _):
+                    for media in message.media {
+                        if let file = media as? TelegramMediaFile {
+                            if file.isVoice {
+                                tagMask = .Voice
+                            } else {
+                                tagMask = .Music
                             }
+                            break
                         }
-                        index += 1
                     }
-                    if !view.entries.isEmpty {
-                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries.first!)
-                    } else {
-                        return nil
+                case .HoleEntry:
+                    break
+            }
+            if let tagMask = tagMask {
+                return account.postbox.aroundMessageHistoryViewForPeerId(item.entry.index.id.peerId, index: item.entry.index, count: 10, anchorIndex: item.entry.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                    |> take(1)
+                    |> map { (view, _, _) -> AudioPlaylistItem? in
+                        var index = 0
+                        for entry in view.entries {
+                            if entry.index.id == item.entry.index.id {
+                                switch navigation {
+                                    case .previous:
+                                        if index != 0 {
+                                            return PeerMessageHistoryAudioPlaylistItem(entry: view.entries[index - 1])
+                                        } else {
+                                            return PeerMessageHistoryAudioPlaylistItem(entry: view.entries.first!)
+                                        }
+                                    case .next:
+                                        if index + 1 < view.entries.count {
+                                            return PeerMessageHistoryAudioPlaylistItem(entry: view.entries[index + 1])
+                                        } else {
+                                            return nil//PeerMessageHistoryAudioPlaylistItem(entry: view.entries.last!)
+                                        }
+                                }
+                            }
+                            index += 1
+                        }
+                        if !view.entries.isEmpty {
+                            return PeerMessageHistoryAudioPlaylistItem(entry: view.entries.first!)
+                        } else {
+                            return nil
+                        }
                     }
-                }
+            } else {
+                return .single(nil)
+            }
         } else {
             return account.postbox.messageAtId(messageId)
                 |> map { message -> AudioPlaylistItem? in
                     if let message = message {
-                        return PeerMessageHistoryAudioPlaylistItem(entry: .MessageEntry(message, false, nil))
+                        return PeerMessageHistoryAudioPlaylistItem(entry: .MessageEntry(message, false, nil, nil))
                     } else {
                         return nil
                     }

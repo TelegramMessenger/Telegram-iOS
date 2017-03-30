@@ -10,7 +10,7 @@ class ChatListControllerNode: ASDisplayNode {
     let chatListNode: ChatListNode
     var navigationBar: NavigationBar?
     
-    private var searchDisplayController: SearchDisplayController?
+    private(set) var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     

@@ -32,6 +32,8 @@ public class PeerMediaCollectionController: ViewController {
     private var controllerInteraction: ChatControllerInteraction?
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
+    private let messageContextDisposable = MetaDisposable()
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
         self.peerId = peerId
@@ -51,7 +53,7 @@ public class PeerMediaCollectionController: ViewController {
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self, strongSelf.isNodeLoaded {
-                //strongSelf.chatDisplayNode.historyNode.scrollToStartOfHistory()
+                strongSelf.mediaCollectionDisplayNode.historyNode.scrollToEndOfHistory()
             }
         }
         
@@ -175,9 +177,7 @@ public class PeerMediaCollectionController: ViewController {
                 self?.view.endEditing(true)
             }, toggleMessageSelection: { [weak self] id in
                 if let strongSelf = self, strongSelf.isNodeLoaded {
-                    if let message = strongSelf.mediaCollectionDisplayNode.historyNode.messageInCurrentHistoryView(id) {
-                        strongSelf.updateInterfaceState(animated: true, { $0.withToggledSelectedMessage(id) })
-                    }
+                    strongSelf.updateInterfaceState(animated: true, { $0.withToggledSelectedMessage(id) })
                 }
             }, sendMessage: { _ in
             },sendSticker: { _ in
@@ -196,8 +196,93 @@ public class PeerMediaCollectionController: ViewController {
         self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in
         }, setupEditMessage: { _ in
         }, beginMessageSelection: { _ in
-        }, deleteSelectedMessages: {
-        }, forwardSelectedMessages: {
+        }, deleteSelectedMessages: { [weak self] in
+            if let strongSelf = self {
+                if let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
+                    strongSelf.messageContextDisposable.set((combineLatest(chatDeleteMessagesOptions(account: strongSelf.account, messageIds: messageIds), strongSelf.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { options, peer in
+                        if let strongSelf = self, let peer = peer, !options.isEmpty {
+                            let actionSheet = ActionSheetController()
+                            var items: [ActionSheetItem] = []
+                            var personalPeerName: String?
+                            var isChannel = false
+                            if let user = peer as? TelegramUser {
+                                personalPeerName = user.compactDisplayTitle
+                            } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                isChannel = true
+                            }
+                            
+                            if options.contains(.globally) {
+                                let globalTitle: String
+                                if isChannel {
+                                    globalTitle = "Delete"
+                                } else if let personalPeerName = personalPeerName {
+                                    globalTitle = "Delete for me and \(personalPeerName)"
+                                } else {
+                                    globalTitle = "Delete for everyone"
+                                }
+                                items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    if let strongSelf = self {
+                                        strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
+                                        let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                    }
+                                }))
+                            }
+                            if options.contains(.locally) {
+                                items.append(ActionSheetButtonItem(title: "Delete for me", color: .destructive, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    if let strongSelf = self {
+                                        strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
+                                        let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                    }
+                                }))
+                            }
+                            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                                ])])
+                            strongSelf.present(actionSheet, in: .window)
+                        }
+                    }))
+                }
+            }
+        }, forwardSelectedMessages: { [weak self] in
+            if let strongSelf = self {
+                if let forwardMessageIdsSet = strongSelf.interfaceState.selectionState?.selectedIds {
+                    let forwardMessageIds = Array(forwardMessageIdsSet).sorted()
+                    
+                    let controller = PeerSelectionController(account: strongSelf.account)
+                    controller.peerSelected = { [weak controller] peerId in
+                        if let strongSelf = self, let _ = controller {
+                            let _ = (strongSelf.account.postbox.modify({ modifier -> Void in
+                                modifier.updatePeerChatInterfaceState(peerId, update: { currentState in
+                                    if let currentState = currentState as? ChatInterfaceState {
+                                        return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
+                                    } else {
+                                        return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
+                                    }
+                                })
+                            }) |> deliverOnMainQueue).start(completed: {
+                                if let strongSelf = self {
+                                    strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
+                                    
+                                    let ready = ValuePromise<Bool>()
+                                    
+                                    strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                        if let strongController = controller {
+                                            strongController.dismiss()
+                                        }
+                                    }))
+                                    
+                                    (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, peerId: peerId), animated: false, ready: ready)
+                                }
+                            })
+                        }
+                    }
+                    strongSelf.present(controller, in: .window)
+                }
+            }
         }, updateTextInputState: { _ in
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
         }, editMessage: { _, _ in
@@ -245,6 +330,7 @@ public class PeerMediaCollectionController: ViewController {
         self.messageIndexDisposable.dispose()
         self.navigationActionDisposable.dispose()
         self.galleryHiddenMesageAndMediaDisposable.dispose()
+        self.messageContextDisposable.dispose()
     }
     
     var mediaCollectionDisplayNode: PeerMediaCollectionControllerNode {
@@ -254,7 +340,7 @@ public class PeerMediaCollectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerMediaCollectionControllerNode(account: self.account, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!)
+        self.displayNode = PeerMediaCollectionControllerNode(account: self.account, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, interfaceInteraction: self.interfaceInteraction!)
         
         self.ready.set(combineLatest(self.mediaCollectionDisplayNode.historyNode.historyState.get(), self._peerReady.get()) |> map { $1 })
         

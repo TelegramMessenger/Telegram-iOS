@@ -71,7 +71,7 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         return { item, width, neighbors in
             let leftInset: CGFloat = 15.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.text, font: titleFont, textColor: UIColor(0x6d6d72)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.text, font: titleFont, textColor: UIColor(0x6d6d72)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let contentSize: CGSize
             var insets = UIEdgeInsets()

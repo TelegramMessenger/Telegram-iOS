@@ -86,7 +86,7 @@ struct ChatHistoryListViewTransition {
 private func maxMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> (incoming: MessageIndex?, overall: MessageIndex?) {
     var overall: MessageIndex?
     for i in (indexRange.0 ... indexRange.1).reversed() {
-        if case let .MessageEntry(message, _) = entries[i] {
+        if case let .MessageEntry(message, _, _) = entries[i] {
             if overall == nil {
                 overall = MessageIndex(message)
             }
@@ -101,7 +101,7 @@ private func maxMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange
 private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, entries: [ChatHistoryViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
-            case let .MessageEntry(message, read):
+            case let .MessageEntry(message, read, _):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
@@ -132,7 +132,7 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
 private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, entries: [ChatHistoryViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
-            case let .MessageEntry(message, read):
+            case let .MessageEntry(message, read, _):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
@@ -370,7 +370,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         
                         var messageIdsWithViewCount: [MessageId] = []
                         for i in (indexRange.0 ... indexRange.1) {
-                            if case let .MessageEntry(message, _) = historyView.filteredEntries[i] {
+                            if case let .MessageEntry(message, _, _) = historyView.filteredEntries[i] {
                                 inner: for attribute in message.attributes {
                                     if attribute is ViewCountMessageAttribute {
                                         messageIdsWithViewCount.append(message.id)
@@ -431,7 +431,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 var index = 0
                 for entry in historyView.filteredEntries.reversed() {
                     if index >= visibleRange.firstIndex && index <= visibleRange.lastIndex {
-                        if case let .MessageEntry(message, _) = entry {
+                        if case let .MessageEntry(message, _, _) = entry {
                             return message
                         }
                     }
@@ -439,7 +439,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
             
-            for case let .MessageEntry(message, _) in historyView.filteredEntries {
+            for case let .MessageEntry(message, _, _) in historyView.filteredEntries {
                 return message
             }
         }
@@ -448,7 +448,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {
         if let historyView = self.historyView {
-            for case let .MessageEntry(message, _) in historyView.filteredEntries where message.id == id {
+            for case let .MessageEntry(message, _, _) in historyView.filteredEntries where message.id == id {
                 return message
             }
         }

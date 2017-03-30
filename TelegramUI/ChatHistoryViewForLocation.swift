@@ -4,16 +4,16 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
-func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Account, peerId: PeerId, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<ChatHistoryViewUpdate, NoError> {
+func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Account, peerId: PeerId, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData], orderStatistics: MessageHistoryViewOrderStatistics = []) -> Signal<ChatHistoryViewUpdate, NoError> {
     switch location {
         case let .Initial(count):
             var preloaded = false
             var fadeIn = false
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
             if let tagMask = tagMask {
-                signal = account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: MessageIndex.upperBound(peerId: peerId), count: count, anchorIndex: MessageIndex.upperBound(peerId: peerId), fixedCombinedReadState: nil, tagMask: tagMask)
+                signal = account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: MessageIndex.upperBound(peerId: peerId), count: count, anchorIndex: MessageIndex.upperBound(peerId: peerId), fixedCombinedReadState: nil, tagMask: tagMask, orderStatistics: orderStatistics)
             } else {
-                signal = account.viewTracker.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, tagMask: tagMask, additionalData: additionalData)
+                signal = account.viewTracker.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
             }
             return signal |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 var cachedData: CachedPeerData?
@@ -71,7 +71,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
         case let .InitialSearch(messageId, count):
             var preloaded = false
             var fadeIn = false
-            return account.viewTracker.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, tagMask: tagMask, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            return account.viewTracker.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 var cachedData: CachedPeerData?
                 for data in view.additionalData {
                     if case let .cachedPeerData(peerIdValue, value) = data, peerIdValue == peerId {
@@ -109,7 +109,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
             }
         case let .Navigation(index, anchorIndex):
             var first = true
-            return account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 140, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            return account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 140, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 var cachedData: CachedPeerData?
                 for data in view.additionalData {
                     if case let .cachedPeerData(peerIdValue, value) = data, peerIdValue == peerId {
@@ -131,7 +131,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             let chatScrollPosition = ChatHistoryViewScrollPosition.Index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 140, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            return account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 140, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 var cachedData: CachedPeerData?
                 for data in view.additionalData {
                     if case let .cachedPeerData(peerIdValue, value) = data, peerIdValue == peerId {

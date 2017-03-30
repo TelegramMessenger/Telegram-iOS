@@ -78,7 +78,7 @@ class ChatListHoleItemNode: ListViewItemNode {
         let labelNodeLayout = TextNode.asyncLayout(self.labelNode)
         
         return { width, first, last in
-            let (labelLayout, labelApply) = labelNodeLayout(NSAttributedString(string: "Loading", font: titleFont, textColor: UIColor(0xc8c7cc)), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (labelLayout, labelApply) = labelNodeLayout(NSAttributedString(string: "Loading", font: titleFont, textColor: UIColor(0xc8c7cc)), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: false)
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 68.0), insets: insets)

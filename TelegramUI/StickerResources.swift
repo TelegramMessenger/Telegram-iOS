@@ -36,7 +36,7 @@ private func imageFromAJpeg(data: Data) -> (UIImage, UIImage)? {
 
 private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, small: Bool) -> Signal<(Data?, Data?, Bool), NoError> {
     //let maybeFetched = account.postbox.mediaBox.resourceData(file.resource, complete: true)
-    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil))
+    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: false)
     
     return maybeFetched |> take(1) |> mapToSignal { maybeData in
         if maybeData.complete {
@@ -46,7 +46,7 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
         } else {
             //let fullSizeData = account.postbox.mediaBox.resourceData(file.resource, complete: true)
             
-            let fullSizeData = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil)) |> map { next in
+            let fullSizeData = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: false) |> map { next in
                 return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe), next.complete)
             }
             

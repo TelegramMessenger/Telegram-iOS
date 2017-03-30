@@ -10,7 +10,7 @@ private let composeButtonImage = generateImage(CGSize(width: 24.0, height: 24.0)
     try? drawSvgPath(context, path: "M0,4 L15,4 L14,5 L1,5 L1,22 L18,22 L18,9 L19,8 L19,23 L0,23 L0,4 Z M18.5944456,1.70209754 L19.5995507,2.70718758 L10.0510517,12.255543 L9.54849908,13.7631781 L11.0561568,13.2606331 L20.6046559,3.71227763 L21.6097611,4.71736767 L11.5587094,14.7682681 L7.53828874,15.7733582 L9.04594649,11.250453 L18.5944456,1.70209754 Z M19.0969982,1.19955251 L20.0773504,0.21921503 C20.3690844,-0.0725145755 20.8398084,-0.0729335627 21.1298838,0.217137419 L23.0947435,2.18196761 C23.3833646,2.47058439 23.3838887,2.94326675 23.0926659,3.23448517 L22.1123136,4.21482265 L19.0969982,1.19955251 Z ")
 })
 
-public class ChatListController: TelegramController {
+public class ChatListController: TelegramController, UIViewControllerPreviewingDelegate {
     private let account: Account
     
     let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
@@ -24,6 +24,8 @@ public class ChatListController: TelegramController {
     private var badgeDisposable: Disposable?
     
     private var dismissSearchOnDisappear = false
+    
+    private var didSetup3dTouch = false
     
     public override init(account: Account) {
         self.account = account
@@ -164,8 +166,15 @@ public class ChatListController: TelegramController {
         self.displayNodeDidLoad()
     }
     
-    override public func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if !self.didSetup3dTouch {
+            self.didSetup3dTouch = true
+            if #available(iOSApplicationExtension 9.0, *) {
+                self.registerForPreviewing(with: self, sourceView: self.view)
+            }
+        }
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -216,6 +225,68 @@ public class ChatListController: TelegramController {
     
     @objc func composePressed() {
         (self.navigationController as? NavigationController)?.pushViewController(ComposeController(account: self.account))
+    }
+    
+    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
+        if let searchController = self.chatListDisplayNode.searchDisplayController {
+            if let (view, action) = searchController.previewViewAndActionAtLocation(location) {
+                if let peerId = action as? PeerId {
+                    if #available(iOSApplicationExtension 9.0, *) {
+                        var sourceRect = view.superview!.convert(view.frame, to: self.view)
+                        sourceRect.size.height -= UIScreenPixel
+                        previewingContext.sourceRect = sourceRect
+                    }
+                    
+                    let chatController = ChatController(account: self.account, peerId: peerId)
+                    chatController.canReadHistory.set(false)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), intrinsicInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil), transition: .immediate)
+                    return chatController
+                } else if let messageId = action as? MessageId {
+                    if #available(iOSApplicationExtension 9.0, *) {
+                        var sourceRect = view.superview!.convert(view.frame, to: self.view)
+                        sourceRect.size.height -= UIScreenPixel
+                        previewingContext.sourceRect = sourceRect
+                    }
+                    
+                    let chatController = ChatController(account: self.account, peerId: messageId.peerId, messageId: messageId)
+                    chatController.canReadHistory.set(false)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), intrinsicInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil), transition: .immediate)
+                    return chatController
+                }
+            }
+            return nil
+        }
+        
+        let listLocation = self.view.convert(location, to: self.chatListDisplayNode.chatListNode.view)
+        
+        var selectedNode: ChatListItemNode?
+        self.chatListDisplayNode.chatListNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatListItemNode, itemNode.frame.contains(listLocation) {
+                selectedNode = itemNode
+            }
+        }
+        if let selectedNode = selectedNode, let item = selectedNode.item {
+            if #available(iOSApplicationExtension 9.0, *) {
+                var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: self.view)
+                sourceRect.size.height -= UIScreenPixel
+                previewingContext.sourceRect = sourceRect
+            }
+            let chatController = ChatController(account: self.account, peerId: item.peer.peerId)
+            chatController.canReadHistory.set(false)
+            chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), intrinsicInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil), transition: .immediate)
+            return chatController
+        } else {
+            return nil
+        }
+    }
+    
+    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
+        if let viewControllerToCommit = viewControllerToCommit as? ViewController {
+            if let chatController = viewControllerToCommit as? ChatController {
+                chatController.canReadHistory.set(true)
+            }
+            (self.navigationController as? NavigationController)?.pushViewController(viewControllerToCommit, animated: false)
+        }
     }
 }
 

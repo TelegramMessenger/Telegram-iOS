@@ -37,7 +37,7 @@ private func actionForPeer(peer: Peer, muteState: PeerMuteState) -> SubscriberAc
                     return .muteNotifications
                 } else {
                     return .unmuteNotifications
-            }
+                }
         }
     } else {
         return nil

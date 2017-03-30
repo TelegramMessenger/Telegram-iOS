@@ -3,7 +3,7 @@ import TelegramCore
 
 enum ChatHistoryEntry: Identifiable, Comparable {
     case HoleEntry(MessageHistoryHole)
-    case MessageEntry(Message, Bool)
+    case MessageEntry(Message, Bool, MessageHistoryEntryMonthLocation?)
     case UnreadEntry(MessageIndex)
     case ChatInfoEntry(String)
     case EmptyChatInfoEntry
@@ -12,7 +12,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         switch self {
             case let .HoleEntry(hole):
                 return UInt64(hole.stableId) | ((UInt64(1) << 40))
-            case let .MessageEntry(message, _):
+            case let .MessageEntry(message, _, _):
                 return UInt64(message.stableId) | ((UInt64(2) << 40))
             case .UnreadEntry:
                 return UInt64(3) << 40
@@ -27,7 +27,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         switch self {
             case let .HoleEntry(hole):
                 return hole.maxIndex
-            case let .MessageEntry(message, _):
+            case let .MessageEntry(message, _, _):
                 return MessageIndex(message)
             case let .UnreadEntry(index):
                 return index
@@ -48,9 +48,9 @@ func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
                 default:
                     return false
             }
-        case let .MessageEntry(lhsMessage, lhsRead):
+        case let .MessageEntry(lhsMessage, lhsRead, _):
             switch rhs {
-                case let .MessageEntry(rhsMessage, rhsRead) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
+                case let .MessageEntry(rhsMessage, rhsRead, _) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
                     if lhsMessage.stableVersion != rhsMessage.stableVersion {
                         return false
                     }

@@ -88,7 +88,7 @@ final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecog
             case .began:
                 self.draggingHeaderHeight = self.currentHeaderHeight
             case .changed:
-                if let draggingHeaderHeight = self.draggingHeaderHeight {
+                if let _ = self.draggingHeaderHeight {
                     let translation = recognizer.translation(in: self.view).y
                     self.draggingHeaderHeight = max(MediaNavigationAccessoryHeaderNode.minimizedHeight, self.currentHeaderHeight + translation)
                     self.updateLayout(size: self.bounds.size, transition: .immediate)

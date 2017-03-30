@@ -28,7 +28,7 @@ class ChatMessageForwardInfoNode: ASTransformLayerNode {
             let color = incoming ? UIColor(0x007bff) : UIColor(0x00a516)
             let string = NSMutableAttributedString(string: completeString as String, attributes: [NSForegroundColorAttributeName: color, NSFontAttributeName: prefixFont])
             string.addAttributes([NSFontAttributeName: peerFont], range: NSMakeRange(prefix.length, completeString.length - prefix.length))
-            let (textLayout, textApply) = textNodeLayout(string, nil, 2, .end, constrainedSize, .natural, nil)
+            let (textLayout, textApply) = textNodeLayout(string, nil, 2, .end, constrainedSize, .natural, nil, UIEdgeInsets())
             
             return (textLayout.size, {
                 let node: ChatMessageForwardInfoNode

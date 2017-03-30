@@ -116,8 +116,8 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.actionPlayNode.image = playIcon
         self.actionPlayNode.isHidden = true
         
-        self.maximizedLeftTimestampNode = MediaPlayerTimeTextNode()
-        self.maximizedRightTimestampNode = MediaPlayerTimeTextNode()
+        self.maximizedLeftTimestampNode = MediaPlayerTimeTextNode(textColor: UIColor(0x686669))
+        self.maximizedRightTimestampNode = MediaPlayerTimeTextNode(textColor: UIColor(0x686669))
         self.maximizedLeftTimestampNode.alignment = .right
         self.maximizedRightTimestampNode.mode = .reversed
         
@@ -292,31 +292,37 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         let makeMaximizedTitleLayout = TextNode.asyncLayout(self.maximizedTitleNode)
         let makeMaximizedSubtitleLayout = TextNode.asyncLayout(self.maximizedSubtitleNode)
         
-        let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil)
-        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(subtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil)
+        let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil, UIEdgeInsets())
+        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(subtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil, UIEdgeInsets())
         
-        let (maximizedTitleLayout, maximizedTitleApply) = makeMaximizedTitleLayout(maximizedTitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil)
-        let (maximizedSubtitleLayout, maximizedSubtitleApply) = makeMaximizedSubtitleLayout(maximizedSubtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil)
+        let (maximizedTitleLayout, maximizedTitleApply) = makeMaximizedTitleLayout(maximizedTitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil, UIEdgeInsets())
+        let (maximizedSubtitleLayout, maximizedSubtitleApply) = makeMaximizedSubtitleLayout(maximizedSubtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil, UIEdgeInsets())
         
-        titleApply()
-        subtitleApply()
-        maximizedTitleApply()
-        maximizedSubtitleApply()
+        let _ = titleApply()
+        let _ = subtitleApply()
+        let _ = maximizedTitleApply()
+        let _ = maximizedSubtitleApply()
         
-        let minimizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleLayout.size.width) / 2.0), y: 4.0), size: titleLayout.size)
+        let minimizedTitleOffset: CGFloat = subtitleString == nil ? 6.0 : 0.0
+        let maximizedTitleOffset: CGFloat = subtitleString == nil ? 12.0 : 0.0
+        
+        let minimizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleLayout.size.width) / 2.0), y: 4.0 + minimizedTitleOffset), size: titleLayout.size)
         let minimizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleLayout.size.width) / 2.0), y: 20.0), size: subtitleLayout.size)
         
-        let maximizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - maximizedTitleLayout.size.width) / 2.0), y: 57.0), size: maximizedTitleLayout.size)
+        let maximizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - maximizedTitleLayout.size.width) / 2.0), y: 57.0 + maximizedTitleOffset), size: maximizedTitleLayout.size)
         let maximizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - maximizedSubtitleLayout.size.width) / 2.0), y: 80.0), size: maximizedSubtitleLayout.size)
         
         let maximizedTitleDistance = maximizedTitleFrame.midY - minimizedTitleFrame.midY
         let maximizedSubtitleDistance = maximizedSubtitleFrame.midY - minimizedSubtitleFrame.midY
         
-        let updatedMinimizedTitleFrame = minimizedTitleFrame.offsetBy(dx: 0.0, dy: maximizedTitleDistance * maximizationFactor)
-        let updatedMaximizedTitleFrame = maximizedTitleFrame.offsetBy(dx: 0.0, dy: -maximizedTitleDistance * (1.0 - maximizationFactor))
+        var updatedMinimizedTitleFrame = minimizedTitleFrame.offsetBy(dx: 0.0, dy: maximizedTitleDistance * maximizationFactor)
+        var updatedMaximizedTitleFrame = maximizedTitleFrame.offsetBy(dx: 0.0, dy: -maximizedTitleDistance * (1.0 - maximizationFactor))
         
         transition.updateFrame(node: self.titleNode, frame: updatedMinimizedTitleFrame)
         transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame.offsetBy(dx: 0.0, dy: maximizedSubtitleDistance * maximizationFactor))
+        
+        updatedMinimizedTitleFrame.origin.y -= minimizedTitleOffset
+        updatedMaximizedTitleFrame.origin.y -= maximizedTitleOffset
         
         transition.updateFrame(node: self.maximizedTitleNode, frame: updatedMaximizedTitleFrame)
         transition.updateFrame(node: self.maximizedSubtitleNode, frame: maximizedSubtitleFrame.offsetBy(dx: 0.0, dy: -maximizedSubtitleDistance * (1.0 - maximizationFactor)))

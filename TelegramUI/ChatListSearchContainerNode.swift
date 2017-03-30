@@ -511,4 +511,33 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             }
         }
     }
+    
+    override func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, Any)? {
+        var selectedItemNode: ASDisplayNode?
+        if !self.recentListNode.isHidden {
+            let adjustedLocation = self.convert(location, to: self.recentListNode)
+            self.recentListNode.forEachItemNode { itemNode in
+                if itemNode.frame.contains(adjustedLocation) {
+                    selectedItemNode = itemNode
+                }
+            }
+        } else {
+            let adjustedLocation = self.convert(location, to: self.listNode)
+            self.listNode.forEachItemNode { itemNode in
+                if itemNode.frame.contains(adjustedLocation) {
+                    selectedItemNode = itemNode
+                }
+            }
+        }
+        if let selectedItemNode = selectedItemNode as? ChatListRecentPeersListItemNode {
+            if let result = selectedItemNode.viewAndPeerAtPoint(self.convert(location, to: selectedItemNode)) {
+                return (result.0, result.1)
+            }
+        } else if let selectedItemNode = selectedItemNode as? ContactsPeerItemNode, let peer = selectedItemNode.peer {
+            return (selectedItemNode.view, peer.id)
+        } else if let selectedItemNode = selectedItemNode as? ChatListItemNode, let peerId = selectedItemNode.item?.peer.peerId {
+            return (selectedItemNode.view, peerId)
+        }
+        return nil
+    }
 }

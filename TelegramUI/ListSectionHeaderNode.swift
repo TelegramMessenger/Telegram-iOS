@@ -28,7 +28,7 @@ final class ListSectionHeaderNode: ASDisplayNode {
         let size = self.bounds.size
         
         let makeLayout = TextNode.asyncLayout(self.label)
-        let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: self.title ?? "", font: Font.medium(12.0), textColor: UIColor(0x8e8e93)), self.backgroundColor, 1, .end, CGSize(width: max(0.0, size.width - 18.0), height: size.height), .natural, nil)
+        let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: self.title ?? "", font: Font.medium(12.0), textColor: UIColor(0x8e8e93)), self.backgroundColor, 1, .end, CGSize(width: max(0.0, size.width - 18.0), height: size.height), .natural, nil, UIEdgeInsets())
         let _ = labelApply()
         self.label.frame = CGRect(origin: CGPoint(x: 9.0, y: 6.0), size: labelLayout.size)
     }

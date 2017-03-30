@@ -2,16 +2,15 @@ import Foundation
 import Display
 import AsyncDisplayKit
 
-private let timezoneOffset: Int = {
+private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
     var now: time_t = time_t(nowTimestamp)
     var timeinfoNow: tm = tm()
     localtime_r(&now, &timeinfoNow)
-    return Int(timeinfoNow.tm_gmtoff)
+    return Int32(timeinfoNow.tm_gmtoff)
 }()
 
 private let granularity: Int32 = 60 * 60 * 24
-//private let granularity: Int32 = 60 * 60
 
 final class ChatMessageDateHeader: ListViewItemHeader {
     private let timestamp: Int32
@@ -122,7 +121,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: UIColor.white)
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         
-        let (size, apply) = labelLayout(attributedString, nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+        let (size, apply) = labelLayout(attributedString, nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
         apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
     }

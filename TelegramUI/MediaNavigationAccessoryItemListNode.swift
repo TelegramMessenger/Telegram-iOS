@@ -57,7 +57,7 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                                 if let galleryMedia = galleryMedia {
                                     if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice {
                                         if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
-                                            let player = ManagedAudioPlaylistPlayer(postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
+                                            let player = ManagedAudioPlaylistPlayer(audioSessionManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
                                             applicationContext.mediaManager.setPlaylistPlayer(player)
                                             player.control(.navigation(.next))
                                         }

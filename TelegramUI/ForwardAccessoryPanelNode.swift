@@ -19,6 +19,63 @@ private let closeButtonImage = generateImage(CGSize(width: 12.0, height: 12.0), 
     context.strokePath()
 })
 
+func textStringForForwardedMessage(_ message: Message) -> (String, Bool) {
+    if !message.text.isEmpty {
+        return (message.text, false)
+    } else {
+        for media in message.media {
+            switch media {
+            case _ as TelegramMediaImage:
+                return ("Forwarded photo", true)
+            case let file as TelegramMediaFile:
+                var fileName: String = "Forwarded file"
+                for attribute in file.attributes {
+                    switch attribute {
+                    case .Sticker:
+                        return ("Forwarded sticker", true)
+                    case let .FileName(name):
+                        fileName = name
+                    case let .Audio(isVoice, _, title, performer, _):
+                        if isVoice {
+                            return ("Forwarded voice Message", true)
+                        } else {
+                            if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+                                return (title + " — " + performer, true)
+                            } else if let title = title, !title.isEmpty {
+                                return (title, true)
+                            } else if let performer = performer, !performer.isEmpty {
+                                return (performer, true)
+                            } else {
+                                return ("Forwarded audio", true)
+                            }
+                        }
+                    case .Video:
+                        if file.isAnimated {
+                            return ("Forwarded gIF", true)
+                        } else {
+                            return ("Forwarded video", true)
+                        }
+                    default:
+                        break
+                    }
+                }
+                return (fileName, true)
+            case _ as TelegramMediaContact:
+                return ("Forwarded contact", true)
+            case let game as TelegramMediaGame:
+                return (game.title, true)
+            case _ as TelegramMediaMap:
+                return ("Forwarded map", true)
+            case let action as TelegramMediaAction:
+                return ("", true)
+            default:
+                break
+            }
+        }
+        return ("", false)
+    }
+}
+
 final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
     let messageIds: [MessageId]
@@ -76,7 +133,8 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                         }
                     }
                     if messages.count == 1 {
-                        text = messages[0].text
+                        let (string, _) = textStringForForwardedMessage(messages[0])
+                        text = string
                     } else {
                         text = "\(messages.count) messages"
                     }

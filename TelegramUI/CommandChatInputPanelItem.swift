@@ -164,7 +164,7 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
                 commandString.append(NSAttributedString(string: "  " + item.command.command.description, font: descriptionFont, textColor: descriptionColor))
             }
             
-            let (textLayout, textApply) = makeTextLayout(commandString, nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil)
+            let (textLayout, textApply) = makeTextLayout(commandString, nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: HashtagChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
             

@@ -80,7 +80,7 @@ class ChatHoleItemNode: ListViewItemNode {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let layoutConstants = self.layoutConstants
         return { item, width, dateAtBottom in
-            let (size, apply) = labelLayout(NSAttributedString(string: "Loading", font: titleFont, textColor: UIColor.white), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (size, apply) = labelLayout(NSAttributedString(string: "Loading", font: titleFont, textColor: UIColor.white), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let backgroundSize = CGSize(width: size.size.width + 8.0 + 8.0, height: 20.0)
             

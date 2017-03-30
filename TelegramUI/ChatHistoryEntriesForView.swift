@@ -9,8 +9,8 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
         switch entry {
             case let .HoleEntry(hole, _):
                 entries.append(.HoleEntry(hole))
-            case let .MessageEntry(message, read, _):
-                entries.append(.MessageEntry(message, read))
+            case let .MessageEntry(message, read, _, monthLocation):
+                entries.append(.MessageEntry(message, read, monthLocation))
         }
     }
     

@@ -524,9 +524,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 12.0), size: CGSize(width: width - 78.0 - 10.0 - 1.0 - editingOffset, height: 68.0 - 12.0 - 9.0))
             
-            let (dateLayout, dateApply) = dateLayout(dateAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (dateLayout, dateApply) = dateLayout(dateAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
-            let (badgeLayout, badgeApply) = badgeTextLayout(badgeAttributedString, nil, 1, .end, CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (badgeLayout, badgeApply) = badgeTextLayout(badgeAttributedString, nil, 1, .end, CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let badgeSize: CGFloat
             if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
@@ -535,10 +535,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 badgeSize = 0.0
             }
             
-            let (textLayout, textApply) = textLayout(textAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (textLayout, textApply) = textLayout(textAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
             
             let titleRect = CGRect(origin: rawContentRect.origin, size: CGSize(width: rawContentRect.width - dateLayout.size.width - 10.0 - statusWidth - muteWidth, height: rawContentRect.height))
-            let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 68.0), insets: insets)
@@ -635,7 +635,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let contentDeltaX = contentRect.origin.x - strongSelf.titleNode.frame.minX
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y), size: titleLayout.size)
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.maxY - textLayout.size.height - 1.0), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.maxY - textLayout.size.height - 1.0), size: textLayout.size)
                     
                     if !contentDeltaX.isZero {
                         let titlePosition = strongSelf.titleNode.position
@@ -734,7 +734,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: titleFrame.origin.y), size: titleFrame.size))
             
             let textFrame = self.textNode.frame
-            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: textFrame.origin.y), size: textFrame.size))
+            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: textFrame.origin.y), size: textFrame.size))
             
             let dateFrame = self.dateNode.frame
             transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width, y: contentRect.origin.y + 2.0), size: dateFrame.size))

@@ -31,7 +31,7 @@ func legacyAttachmentMenu(parentController: LegacyController, recentlyUsedInline
             sendMessagesWithSignals(signals)
         }
     };
-    carouselItem.allowCaptions = false
+    carouselItem.allowCaptions = true
     itemViews.append(carouselItem)
     
     let galleryItem = TGMenuSheetButtonItemView(title: "Photo or Video", type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in

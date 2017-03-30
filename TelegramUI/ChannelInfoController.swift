@@ -17,8 +17,9 @@ private final class ChannelInfoControllerArguments {
     let reportChannel: () -> Void
     let leaveChannel: () -> Void
     let deleteChannel: () -> Void
+    let displayAddressNameContextMenu: (String) -> Void
     
-    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void) {
+    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void) {
         self.account = account
         self.updateEditingName = updateEditingName
         self.updateEditingDescriptionText = updateEditingDescriptionText
@@ -31,6 +32,7 @@ private final class ChannelInfoControllerArguments {
         self.reportChannel = reportChannel
         self.leaveChannel = leaveChannel
         self.deleteChannel = deleteChannel
+        self.displayAddressNameContextMenu = displayAddressNameContextMenu
     }
 }
 
@@ -39,6 +41,10 @@ private enum ChannelInfoSection: ItemListSectionId {
     case sharedMediaAndNotifications
     case members
     case reportOrLeave
+}
+
+private enum ChannelInfoEntryTag {
+    case addressName
 }
 
 private enum ChannelInfoEntry: ItemListNodeEntry {
@@ -189,9 +195,11 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     arguments.updateEditingName(editingName)
                 })
             case let .about(text):
-                return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section)
+                return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section, action: nil)
             case let .addressName(value):
-                return ItemListTextWithLabelItem(label: "share link", text: "https://t.me/\(value)", multiline: false, sectionId: self.section)
+                return ItemListTextWithLabelItem(label: "share link", text: "https://t.me/\(value)", multiline: false, sectionId: self.section, action: {
+                    arguments.displayAddressNameContextMenu("https://t.me/\(value)")
+                }, tag: ChannelInfoEntryTag.addressName)
             case let .channelTypeSetup(isPublic):
                 return ItemListDisclosureItem(title: "Channel Type", label: isPublic ? "Public" : "Private", sectionId: self.section, style: .plain, action: {
                     arguments.openChannelTypeSetup()
@@ -402,6 +410,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
     var popToRootControllerImpl: (() -> Void)?
+    var displayAddressNameContextMenuImpl: ((String) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -507,6 +516,8 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, deleteChannel: {
         
+    }, displayAddressNameContextMenu: { text in
+        displayAddressNameContextMenuImpl?(text)
     })
     
     let signal = combineLatest(statePromise.get(), account.viewTracker.peerView(peerId))
@@ -619,6 +630,35 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }
     popToRootControllerImpl = { [weak controller] in
         (controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
+    }
+    displayAddressNameContextMenuImpl = { [weak controller] text in
+        if let strongController = controller {
+            var resultItemNode: ListViewItemNode?
+            let _ = strongController.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
+                    if let tag = itemNode.tag as? ChannelInfoEntryTag {
+                        if tag == .addressName {
+                            resultItemNode = itemNode
+                            return true
+                        }
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text("Copy"), action: {
+                    UIPasteboard.general.string = text
+                })])
+                strongController.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                    if let resultItemNode = resultItemNode {
+                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0))
+                    } else {
+                        return nil
+                    }
+                }))
+                
+            }
+        }
     }
     return controller
 }

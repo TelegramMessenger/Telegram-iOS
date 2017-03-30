@@ -126,7 +126,7 @@ final class VerticalListContextResultsChatInputPanelButtonItemNode: ListViewItem
         return { [weak self] item, width, mergedTop, mergedBottom in
             let titleString = NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x007ee5))
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .end, CGSize(width: width - 16.0, height: 100.0), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .end, CGSize(width: width - 16.0, height: 100.0), .natural, nil, UIEdgeInsets())
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight), insets: UIEdgeInsets())
             

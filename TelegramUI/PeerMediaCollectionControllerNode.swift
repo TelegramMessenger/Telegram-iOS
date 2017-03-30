@@ -28,6 +28,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     private let account: Account
     private let peerId: PeerId
     private let controllerInteraction: ChatControllerInteraction
+    private let interfaceInteraction: ChatPanelInterfaceInteraction
     
     private var historyNodeImpl: ASDisplayNode
     var historyNode: ChatHistoryNode {
@@ -47,10 +48,11 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     private var modeSelectionNode: PeerMediaCollectionModeSelectionNode?
     private var selectionPanel: ChatMessageSelectionInputPanelNode?
     
-    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction) {
+    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) {
         self.account = account
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
+        self.interfaceInteraction = interfaceInteraction
         
         self.historyNodeImpl = historyNodeImplForMode(self.mediaCollectionInterfaceState.mode, account: account, peerId: peerId, messageId: messageId, controllerInteraction: controllerInteraction)
         
@@ -82,6 +84,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
             } else {
                 let selectionPanel = ChatMessageSelectionInputPanelNode()
+                selectionPanel.interfaceInteraction = self.interfaceInteraction
                 selectionPanel.selectedMessageCount = selectionState.selectedIds.count
                 selectionPanel.backgroundColor = UIColor(0xfafafa)
                 let panelHeight = selectionPanel.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: interfaceState)

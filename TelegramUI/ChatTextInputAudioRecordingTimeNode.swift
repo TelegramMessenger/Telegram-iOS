@@ -57,7 +57,7 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self.textNode)
-        let (size, apply) = makeLayout(NSAttributedString(string: "00:00,00", font: Font.regular(15.0), textColor: .black), nil, 1, .end, CGSize(width: 200.0, height: 100.0), .natural, nil)
+        let (size, apply) = makeLayout(NSAttributedString(string: "00:00,00", font: Font.regular(15.0), textColor: .black), nil, 1, .end, CGSize(width: 200.0, height: 100.0), .natural, nil, UIEdgeInsets())
         apply()
         self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 1.0 + UIScreenPixel), size: size.size)
         return size.size

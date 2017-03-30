@@ -36,8 +36,10 @@ enum MediaPlayerActionAtEnd {
 
 private final class MediaPlayerContext {
     private let queue: Queue
+    private let audioSessionManager: ManagedAudioSession
     private let postbox: Postbox
     private let resource: MediaResource
+    private let streamable: Bool
     
     private var state: MediaPlayerState = .empty
     private var audioRenderer: MediaPlayerAudioRenderer?
@@ -71,13 +73,15 @@ private final class MediaPlayerContext {
         }
     }
     
-    init(queue: Queue, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
+        self.audioSessionManager = audioSessionManager
         self.playerStatus = playerStatus
         self.postbox = postbox
         self.resource = resource
+        self.streamable = streamable
     }
     
     deinit {
@@ -126,7 +130,7 @@ private final class MediaPlayerContext {
         self.tickTimer?.invalidate()
         if let loadedState = loadedState {
             if loadedState.controlTimebase.isAudio {
-                self.audioRenderer?.rate = 0.0
+                self.audioRenderer?.setRate(0.0)
             } else {
                 if !CMTimebaseGetRate(loadedState.controlTimebase.timebase).isEqual(to: 0.0) {
                     CMTimebaseSetRate(loadedState.controlTimebase.timebase, 0.0)
@@ -152,7 +156,7 @@ private final class MediaPlayerContext {
             self.playerStatus.set(status)
         }
         
-        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resource: resource)
+        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resource: self.resource, streamable: self.streamable)
         let disposable = MetaDisposable()
         self.state = .seeking(frameSource: frameSource, timestamp: timestamp, disposable: disposable, action: action)
         
@@ -189,8 +193,16 @@ private final class MediaPlayerContext {
             if let currentRenderer = self.audioRenderer {
                 renderer = currentRenderer
             } else {
-                renderer = MediaPlayerAudioRenderer()
+                let queue = self.queue
+                renderer = MediaPlayerAudioRenderer(audioSessionManager: self.audioSessionManager, audioPaused: { [weak self] in
+                    queue.async {
+                        if let strongSelf = self {
+                            strongSelf.pause()
+                        }
+                    }
+                })
                 self.audioRenderer = renderer
+                renderer.start()
             }
             
             controlTimebase = MediaPlayerControlTimebase(timebase: renderer.audioTimebase, isAudio: true)
@@ -447,7 +459,7 @@ private final class MediaPlayerContext {
         }
         
         if loadedState.controlTimebase.isAudio {
-            self.audioRenderer?.rate = rate
+            self.audioRenderer?.setRate(rate)
         } else {
             if !CMTimebaseGetRate(loadedState.controlTimebase.timebase).isEqual(to: rate) {
                 CMTimebaseSetRate(loadedState.controlTimebase.timebase, rate)
@@ -582,9 +594,9 @@ final class MediaPlayer {
         }
     }
     
-    init(postbox: Postbox, resource: MediaResource) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource, streamable: Bool) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, playerStatus: self.statusValue, postbox: postbox, resource: resource)
+            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

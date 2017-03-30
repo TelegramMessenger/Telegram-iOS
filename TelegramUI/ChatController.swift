@@ -78,6 +78,8 @@ public class ChatController: TelegramController {
     
     private var historyNavigationStack = ChatHistoryNavigationStack()
     
+    let canReadHistory = ValuePromise<Bool>(true, ignoreRepeated: true)
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil) {
         self.account = account
         self.peerId = peerId
@@ -131,7 +133,7 @@ public class ChatController: TelegramController {
                         }
                     } else if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice {
                         if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
-                            let player = ManagedAudioPlaylistPlayer(postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
+                            let player = ManagedAudioPlaylistPlayer(audioSessionManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
                             applicationContext.mediaManager.setPlaylistPlayer(player)
                             player.control(.navigation(.next))
                         }
@@ -1280,7 +1282,9 @@ public class ChatController: TelegramController {
         super.viewDidAppear(animated)
         
         self.chatDisplayNode.historyNode.preloadPages = true
-        self.chatDisplayNode.historyNode.canReadHistory.set((self.account.applicationContext as! TelegramApplicationContext).applicationInForeground)
+        self.chatDisplayNode.historyNode.canReadHistory.set(combineLatest((self.account.applicationContext as! TelegramApplicationContext).applicationInForeground, self.canReadHistory.get()) |> map { a, b in
+            return a && b
+        })
         
         self.chatDisplayNode.loadInputPanels()
         
@@ -1869,5 +1873,55 @@ public class ChatController: TelegramController {
                 }
             }
         }))
+    }
+    
+    @available(iOSApplicationExtension 9.0, *)
+    override public var previewActionItems: [UIPreviewActionItem] {
+        struct PreviewActionsData {
+            let notificationSettings: PeerNotificationSettings?
+            let peer: Peer?
+        }
+        let peerId = self.peerId
+        let data = Atomic<PreviewActionsData?>(value: nil)
+        let semaphore = DispatchSemaphore(value: 0)
+        let _ = self.account.postbox.modify({ modifier -> Void in
+            let _ = data.swap(PreviewActionsData(notificationSettings: modifier.getPeerNotificationSettings(peerId), peer: modifier.getPeer(peerId)))
+            semaphore.signal()
+        }).start()
+        semaphore.wait()
+        
+        return data.with { [weak self] data -> [UIPreviewActionItem] in
+            var items: [UIPreviewActionItem] = []
+            if let data = data {
+                if let _ = data.peer as? TelegramUser {
+                    items.append(UIPreviewAction(title: "👍", style: .default, handler: { _, _ in
+                        if let strongSelf = self {
+                            let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "👍", attributes: [], media: nil, replyToMessageId: nil)]).start()
+                        }
+                    }))
+                }
+                
+                if let notificationSettings = data.notificationSettings as? TelegramPeerNotificationSettings {
+                    if case .unmuted = notificationSettings.muteState {
+                        let muteItem = UIPreviewAction(title: "Mute", style: .default, handler: { _, _ in
+                            if let strongSelf = self {
+                                let muteState: PeerMuteState = .muted(until: Int32.max)
+                                let _ = changePeerNotificationSettings(account: strongSelf.account, peerId: strongSelf.peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start()
+                            }
+                        })
+                        items.append(muteItem)
+                    } else {
+                        let unmuteItem = UIPreviewAction(title: "Unmute", style: .default, handler: { _, _ in
+                            if let strongSelf = self {
+                                let muteState: PeerMuteState = .unmuted
+                                let _ = changePeerNotificationSettings(account: strongSelf.account, peerId: strongSelf.peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start()
+                            }
+                        })
+                        items.append(unmuteItem)
+                    }
+                }
+            }
+            return items
+        }
     }
 }

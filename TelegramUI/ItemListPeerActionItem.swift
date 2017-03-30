@@ -114,7 +114,7 @@ class ItemListPeerActionItemNode: ListViewItemNode {
             
             let editingOffset: CGFloat = (item.editing ? 38.0 : 0.0)
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let separatorHeight = UIScreenPixel
             

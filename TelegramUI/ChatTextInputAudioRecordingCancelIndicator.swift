@@ -24,7 +24,7 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
         self.addSubnode(self.labelNode)
         
         let makeLayout = TextNode.asyncLayout(self.labelNode)
-        let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: "Slide to cancel", font: Font.regular(14.0), textColor: UIColor(0xaaaab2)), nil, 1, .end, CGSize(width: 200.0, height: 100.0), .natural, nil)
+        let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: "Slide to cancel", font: Font.regular(14.0), textColor: UIColor(0xaaaab2)), nil, 1, .end, CGSize(width: 200.0, height: 100.0), .natural, nil, UIEdgeInsets())
         labelApply()
         
         let arrowSize = arrowImage?.size ?? CGSize()

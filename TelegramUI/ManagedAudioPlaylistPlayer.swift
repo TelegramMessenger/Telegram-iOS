@@ -49,6 +49,7 @@ protocol AudioPlaylistItem {
     var id: AudioPlaylistItemId { get }
     var resource: MediaResource? { get }
     var info: AudioPlaylistItemInfo? { get }
+    var streamable: Bool { get }
     
     func isEqual(to: AudioPlaylistItem) -> Bool
 }
@@ -126,6 +127,7 @@ private final class AudioPlaylistInternalState {
 }
 
 final class ManagedAudioPlaylistPlayer {
+    private let audioSessionManager: ManagedAudioSession
     private let postbox: Postbox
     let playlist: AudioPlaylist
     
@@ -136,7 +138,8 @@ final class ManagedAudioPlaylistPlayer {
         return self.currentStateAndStatusValue.get()
     }
     
-    init(postbox: Postbox, playlist: AudioPlaylist) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, playlist: AudioPlaylist) {
+        self.audioSessionManager = audioSessionManager
         self.postbox = postbox
         self.playlist = playlist
     }
@@ -175,8 +178,26 @@ final class ManagedAudioPlaylistPlayer {
                     if let strongSelf = self {
                         let updatedStateAndStatus = strongSelf.currentState.with { state -> AudioPlaylistStateAndStatus in
                             if let item = item {
+                                if let item = item as? PeerMessageHistoryAudioPlaylistItem {
+                                    switch item.entry {
+                                        case let .MessageEntry(message, _, _, _):
+                                            if message.flags.contains(.Incoming) {
+                                                for attribute in message.attributes {
+                                                    if let attribute = attribute as? ConsumableContentMessageAttribute {
+                                                        if !attribute.consumed {
+                                                            let _ = markMessageContentAsConsumedInteractively(postbox: strongSelf.postbox, messageId: message.id).start()
+                                                        }
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                        case .HoleEntry:
+                                            break
+                                    }
+                                }
+                                
                                 if let resource = item.resource {
-                                    let player = MediaPlayer(postbox: strongSelf.postbox, resource: resource)
+                                    let player = MediaPlayer(audioSessionManager: strongSelf.audioSessionManager, postbox: strongSelf.postbox, resource: resource, streamable: item.streamable)
                                     player.actionAtEnd = .action({
                                         if let strongSelf = self {
                                             strongSelf.control(.navigation(.next))

@@ -236,8 +236,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         animation.fromValue = from
         animation.toValue = to
         animation.duration = duration
-        animation.isRemovedOnCompletion = true
-        animation.fillMode = kCAFillModeBackwards
+        //animation.isRemovedOnCompletion = true
+        animation.fillMode = kCAFillModeBoth
         animation.speed = speed
         animation.timeOffset = offset
         animation.isAdditive = false

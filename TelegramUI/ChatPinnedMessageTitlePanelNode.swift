@@ -154,9 +154,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             let rightInset: CGFloat = 18.0
             let textRightInset: CGFloat = 25.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: "Pinned message", font: Font.medium(15.0), textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: "Pinned message", font: Font.medium(15.0), textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
-            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: message.text, font: Font.regular(15.0), textColor: .black), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: message.text, font: Font.regular(15.0), textColor: .black), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             Queue.mainQueue().async {
                 if let strongSelf = self {

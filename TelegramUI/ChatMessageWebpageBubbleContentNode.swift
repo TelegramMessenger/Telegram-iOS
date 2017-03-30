@@ -152,7 +152,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else {
-                        let (_, refineLayout) = contentFileLayout(item.account, item.message, file, item.message.effectivelyIncoming, nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
+                        var automaticDownload = false
+                        if file.isVoice {
+                            automaticDownload = true
+                        }
+                        let (_, refineLayout) = contentFileLayout(item.account, item.message, file, automaticDownload, item.message.effectivelyIncoming, nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = webpage.image {
@@ -200,7 +204,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     statusSizeAndApply = statusLayout(edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                 }
                 
-                let (textLayout, textApply) = textAsyncLayout(textString, nil, 12, .end, textConstrainedSize, .natural, textCutout)
+                let (textLayout, textApply) = textAsyncLayout(textString, nil, 12, .end, textConstrainedSize, .natural, textCutout, UIEdgeInsets())
                 
                 var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
                 

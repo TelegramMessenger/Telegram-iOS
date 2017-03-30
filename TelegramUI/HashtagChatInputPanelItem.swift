@@ -115,7 +115,7 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
             let leftInset: CGFloat = 15.0
             let rightInset: CGFloat = 10.0
             
-            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: item.text, font: textFont, textColor: .black), nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil)
+            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: item.text, font: textFont, textColor: .black), nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: HashtagChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
             

@@ -104,7 +104,7 @@ class ItemListTextItemNode: ListViewItemNode {
                         return (TextNode.UrlAttribute, contents)
                     }))
             }
-            let (titleLayout, titleApply) = makeTitleLayout(attributedText, nil, 0, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(attributedText, nil, 0, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let contentSize: CGSize
             

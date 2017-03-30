@@ -35,10 +35,10 @@ final class HorizontalPeerItem: ListViewItem {
     }
 }
 
-private final class HorizontalPeerItemNode: ListViewItemNode {
+final class HorizontalPeerItemNode: ListViewItemNode {
     private let avatarNode: AvatarNode
     private let titleNode: ASTextNode
-    private var peer: Peer?
+    private(set) var peer: Peer?
     fileprivate var action: ((Peer) -> Void)?
     
     init() {

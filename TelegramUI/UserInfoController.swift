@@ -13,8 +13,9 @@ private final class UserInfoControllerArguments {
     let openGroupsInCommon: () -> Void
     let updatePeerBlocked: (Bool) -> Void
     let deleteContact: () -> Void
+    let displayUsernameContextMenu: (String) -> Void
     
-    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void) {
+    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void) {
         self.account = account
         self.updateEditingName = updateEditingName
         self.openChat = openChat
@@ -23,6 +24,7 @@ private final class UserInfoControllerArguments {
         self.openGroupsInCommon = openGroupsInCommon
         self.updatePeerBlocked = updatePeerBlocked
         self.deleteContact = deleteContact
+        self.displayUsernameContextMenu = displayUsernameContextMenu
     }
 }
 
@@ -31,6 +33,10 @@ private enum UserInfoSection: ItemListSectionId {
     case actions
     case sharedMediaAndNotifications
     case block
+}
+
+private enum UserInfoEntryTag {
+    case username
 }
 
 private enum UserInfoEntry: ItemListNodeEntry {
@@ -235,11 +241,15 @@ private enum UserInfoEntry: ItemListNodeEntry {
                     arguments.updateEditingName(editingName)
                 })
             case let .about(text):
-                return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section)
+                return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section, action: nil)
             case let .phoneNumber(_, value):
-                return ItemListTextWithLabelItem(label: value.label, text: formatPhoneNumber(value.number), multiline: false, sectionId: self.section)
+                return ItemListTextWithLabelItem(label: value.label, text: formatPhoneNumber(value.number), multiline: false, sectionId: self.section, action: {
+                    
+                })
             case let .userName(value):
-                return ItemListTextWithLabelItem(label: "username", text: "@\(value)", multiline: false, sectionId: self.section)
+                return ItemListTextWithLabelItem(label: "username", text: "@\(value)", multiline: false, sectionId: self.section, action: {
+                    arguments.displayUsernameContextMenu("@" + value)
+                }, tag: UserInfoEntryTag.username)
             case .sendMessage:
                 return ItemListActionItem(title: "Send Message", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.openChat()
@@ -432,6 +442,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
     var openChatImpl: (() -> Void)?
+    var displayUsernameContextMenuImpl: ((String) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -510,6 +521,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: value).start())
     }, deleteContact: {
         
+    }, displayUsernameContextMenu: { text in
+        displayUsernameContextMenuImpl?(text)
     })
     
     let signal = combineLatest(statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [.peerChatState(peerId: peerId)]))
@@ -591,6 +604,35 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     openChatImpl = { [weak controller] in
         if let navigationController = (controller?.navigationController as? NavigationController) {
             navigateToChatController(navigationController: navigationController, account: account, peerId: peerId)
+        }
+    }
+    displayUsernameContextMenuImpl = { [weak controller] text in
+        if let strongController = controller {
+            var resultItemNode: ListViewItemNode?
+            let _ = strongController.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
+                    if let tag = itemNode.tag as? UserInfoEntryTag {
+                        if tag == .username {
+                            resultItemNode = itemNode
+                            return true
+                        }
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text("Copy"), action: {
+                    UIPasteboard.general.string = text
+                })])
+                strongController.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                    if let resultItemNode = resultItemNode {
+                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0))
+                    } else {
+                        return nil
+                    }
+                }))
+                
+            }
         }
     }
     return controller

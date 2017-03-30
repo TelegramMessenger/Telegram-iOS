@@ -12,6 +12,8 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
         return fetchCachedStickerAJpegRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
     } else if let representation = representation as? CachedScaledImageRepresentation {
         return fetchCachedScaledImageRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
+    } else if let representation = representation as? CachedVideoFirstFrameRepresentation {
+        return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
     }
     return .never()
 }
@@ -125,4 +127,51 @@ private func fetchCachedScaledImageRepresentation(account: Account, resource: Me
         }
         return EmptyDisposable
     }) |> runOn(account.graphicsThreadPool)
+}
+
+private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedVideoFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal { subscriber in
+        if resourceData.complete {
+            let tempFilePath = NSTemporaryDirectory() + "\(arc4random()).mov"
+            
+            _ = try? FileManager.default.removeItem(atPath: tempFilePath)
+            _ = try? FileManager.default.linkItem(atPath: resourceData.path, toPath: tempFilePath)
+            
+            var fullSizeImage: CGImage?
+            
+            let asset = AVAsset(url: URL(fileURLWithPath: tempFilePath))
+            let imageGenerator = AVAssetImageGenerator(asset: asset)
+            imageGenerator.maximumSize = CGSize(width: 800.0, height: 800.0)
+            imageGenerator.appliesPreferredTrackTransform = true
+            if let image = try? imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil) {
+                fullSizeImage = image
+            }
+            
+            if let fullSizeImage = fullSizeImage {
+                var randomId: Int64 = 0
+                arc4random_buf(&randomId, 8)
+                let path = NSTemporaryDirectory() + "\(randomId)"
+                let url = URL(fileURLWithPath: path)
+                
+                if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                    CGImageDestinationSetProperties(colorDestination, nil)
+                    
+                    let colorQuality: Float = 0.6
+                    
+                    let options = NSMutableDictionary()
+                    options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                    
+                    CGImageDestinationAddImage(colorDestination, fullSizeImage, options as CFDictionary)
+                    if CGImageDestinationFinalize(colorDestination) {
+                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putCompletion()
+                    }
+                }
+                
+                subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                subscriber.putCompletion()
+            }
+        }
+        return EmptyDisposable
+    } |> runOn(account.graphicsThreadPool)
 }

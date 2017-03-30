@@ -33,7 +33,6 @@ private final class VideoConversionWatcher: TGMediaVideoFileWatcher {
 func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, NoError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
-        print("request video")
         
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [resource.localIdentifier], options: nil)
         var requestId: PHImageRequestID?
@@ -116,10 +115,37 @@ func fetchLocalFileVideoMediaResource(resource: LocalFileVideoMediaResource) -> 
                 adjustments = TGVideoEditAdjustments(dictionary: dict)
             }
         }
-        let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: nil)!
+        let updatedSize = Atomic<Int>(value: 0)
+        let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+            var value = stat()
+            if stat(path, &value) == 0 {
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                    var range: Range<Int>?
+                    let _ = updatedSize.modify { updatedSize in
+                        range = updatedSize ..< Int(value.st_size)
+                        return Int(value.st_size)
+                    }
+                    //print("size = \(Int(value.st_size)), range: \(range!)")
+                    subscriber.putNext(.dataPart(data: data, range: range!, complete: false))
+                }
+            }
+        }))!
         let signalDisposable = signal.start(next: { next in
             if let result = next as? TGMediaVideoConversionResult {
-                subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
+                var value = stat()
+                if stat(result.fileURL.path, &value) == 0 {
+                    if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
+                        var range: Range<Int>?
+                        let _ = updatedSize.modify { updatedSize in
+                            range = updatedSize ..< Int(value.st_size)
+                            return Int(value.st_size)
+                        }
+                        //print("finish size = \(Int(value.st_size)), range: \(range!)")
+                        subscriber.putNext(.dataPart(data: data, range: range!, complete: false))
+                        subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                        subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
+                    }
+                }
                 subscriber.putCompletion()
             }
         }, error: { _ in

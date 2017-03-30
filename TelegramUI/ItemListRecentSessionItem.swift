@@ -220,10 +220,10 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset - labelLayout.size.width - 5.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
-            let (appLayout, appApply) = makeAppLayout(appAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
-            let (locationLayout, locationApply) = makeLocationLayout(locationAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil)
+            let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset - labelLayout.size.width - 5.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (appLayout, appApply) = makeAppLayout(appAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (locationLayout, locationApply) = makeLocationLayout(locationAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
             let contentSize = CGSize(width: width, height: 75.0)

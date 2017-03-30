@@ -68,7 +68,7 @@ public final class SecretMediaPreviewController: ViewController {
         if let messageView = self.messageView, let message = messageView.message {
             if self.currentNodeMessageId != message.id {
                 self.currentNodeMessageId = message.id
-                let item = galleryItemForEntry(account: account, entry: .MessageEntry(message, false, nil))
+                let item = galleryItemForEntry(account: account, entry: .MessageEntry(message, false, nil, nil))
                 let itemNode = item.node()
                 self.controllerNode.setItemNode(itemNode)
             
@@ -77,7 +77,7 @@ public final class SecretMediaPreviewController: ViewController {
                 }
                 self._ready.set(ready |> map { true })
                 
-                self.markMessageAsConsumedDisposable.set(markMessageContentAsConsumedInteractively(postbox: self.account.postbox, network: self.account.network, messageId: message.id).start())
+                self.markMessageAsConsumedDisposable.set(markMessageContentAsConsumedInteractively(postbox: self.account.postbox, messageId: message.id).start())
             }
         } else {
             if !self.didSetReady {

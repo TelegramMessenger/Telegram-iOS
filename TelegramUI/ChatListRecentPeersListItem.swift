@@ -131,4 +131,14 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
             return nil
         }
     }
+    
+    func viewAndPeerAtPoint(_ point: CGPoint) -> (UIView, PeerId)? {
+        if let peersNode = self.peersNode {
+            let adjustedLocation = self.convert(point, to: peersNode)
+            if let result = peersNode.viewAndPeerAtPoint(adjustedLocation) {
+                return result
+            }
+        }
+        return nil
+    }
 }

@@ -7,17 +7,18 @@ import TelegramCore
 
 struct ChatHistoryGridViewTransition {
     let historyView: ChatHistoryView
+    let topOffsetWithinMonth: Int
     let deleteItems: [Int]
     let insertItems: [GridNodeInsertItem]
     let updateItems: [GridNodeUpdateItem]
     let scrollToItem: GridNodeScrollToItem?
-    let stationaryItemRange: (Int, Int)?
+    let stationaryItems: GridNodeStationaryItems
 }
 
 private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionInsertEntry]) -> [GridNodeInsertItem] {
     return entries.map { entry -> GridNodeInsertItem in
         switch entry.entry {
-            case let .MessageEntry(message, _):
+            case let .MessageEntry(message, _, _):
                 return GridNodeInsertItem(index: entry.index, item: GridMessageItem(account: account, message: message, controllerInteraction: controllerInteraction), previousIndex: entry.previousIndex)
             case .HoleEntry:
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
@@ -34,7 +35,7 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
 private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionUpdateEntry]) -> [GridNodeUpdateItem] {
     return entries.map { entry -> GridNodeUpdateItem in
         switch entry.entry {
-            case let .MessageEntry(message, _):
+            case let .MessageEntry(message, _, _):
                 return GridNodeUpdateItem(index: entry.index, item: GridMessageItem(account: account, message: message, controllerInteraction: controllerInteraction))
             case .HoleEntry:
                 return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
@@ -48,7 +49,7 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
     }
 }
 
-private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, transition: ChatHistoryViewTransition) -> ChatHistoryGridViewTransition {
+private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, transition: ChatHistoryViewTransition, from: ChatHistoryView?) -> ChatHistoryGridViewTransition {
     var mappedScrollToItem: GridNodeScrollToItem?
     if let scrollToItem = transition.scrollToItem {
         let mappedPosition: GridNodeScrollToItemPosition
@@ -78,10 +79,57 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
             case .Down:
                 directionHint = .down
         }
-        mappedScrollToItem = GridNodeScrollToItem(index: scrollToItem.index, position: mappedPosition, transition: scrollTransition, directionHint: directionHint, adjustForSection: true)
+        mappedScrollToItem = GridNodeScrollToItem(index: scrollToItem.index, position: mappedPosition, transition: scrollTransition, directionHint: directionHint, adjustForSection: true, adjustForTopInset: true)
     }
     
-    return ChatHistoryGridViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems.map { $0.index }, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.updateEntries), scrollToItem: mappedScrollToItem, stationaryItemRange: transition.stationaryItemRange)
+    var stationaryItems: GridNodeStationaryItems = .none
+    if let previousView = from {
+        if let stationaryRange = transition.stationaryItemRange {
+            var fromStableIds = Set<UInt64>()
+            for i in 0 ..< previousView.filteredEntries.count {
+                if i >= stationaryRange.0 && i <= stationaryRange.1 {
+                    fromStableIds.insert(previousView.filteredEntries[i].stableId)
+                }
+            }
+            var index = 0
+            var indices = Set<Int>()
+            for entry in transition.historyView.filteredEntries {
+                if fromStableIds.contains(entry.stableId) {
+                    indices.insert(transition.historyView.filteredEntries.count - 1 - index)
+                }
+                index += 1
+            }
+            stationaryItems = .indices(indices)
+        } else {
+            var fromStableIds = Set<UInt64>()
+            for i in 0 ..< previousView.filteredEntries.count {
+                fromStableIds.insert(previousView.filteredEntries[i].stableId)
+            }
+            var index = 0
+            var indices = Set<Int>()
+            for entry in transition.historyView.filteredEntries {
+                if fromStableIds.contains(entry.stableId) {
+                    indices.insert(transition.historyView.filteredEntries.count - 1 - index)
+                }
+                index += 1
+            }
+            stationaryItems = .indices(indices)
+        }
+    }
+    
+    var topOffsetWithinMonth: Int = 0
+    if let lastEntry = transition.historyView.filteredEntries.last {
+        switch lastEntry {
+            case let .MessageEntry(_, _, monthLocation):
+                if let monthLocation = monthLocation {
+                    topOffsetWithinMonth = Int(monthLocation.indexInMonth)
+                }
+            default:
+                break
+        }
+    }
+    
+    return ChatHistoryGridViewTransition(historyView: transition.historyView, topOffsetWithinMonth: topOffsetWithinMonth, deleteItems: transition.deleteItems.map { $0.index }, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.updateEntries), scrollToItem: mappedScrollToItem, stationaryItems: stationaryItems)
 }
 
 private func itemSizeForContainerLayout(size: CGSize) -> CGSize {
@@ -116,7 +164,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         }
     }
     
-    private let _chatHistoryLocation = Promise<ChatHistoryLocation>()
+    private let _chatHistoryLocation = ValuePromise<ChatHistoryLocation>(ignoreRepeated: true)
     private var chatHistoryLocation: Signal<ChatHistoryLocation, NoError> {
         return self._chatHistoryLocation.get()
     }
@@ -131,6 +179,8 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         
         super.init()
         
+        self.floatingSections = true
+        
         //self.preloadPages = false
         
         let messageViewQueue = self.messageViewQueue
@@ -138,7 +188,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         let historyViewUpdate = self.chatHistoryLocation
             |> distinctUntilChanged
             |> mapToSignal { location in
-                return chatHistoryViewForLocation(location, account: account, peerId: peerId, fixedCombinedReadState: nil, tagMask: tagMask, additionalData: [])
+                return chatHistoryViewForLocation(location, account: account, peerId: peerId, fixedCombinedReadState: nil, tagMask: tagMask, additionalData: [], orderStatistics: [.locationWithinMonth])
         }
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)
@@ -179,7 +229,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: false, includeChatInfoEntry: false))
                     let previous = previousView.swap(processedView)
                     
-                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
+                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0, from: previous) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
             }
         }
         
@@ -193,9 +243,21 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         self.historyDisposable.set(appliedTransition.start())
         
         if let messageId = messageId {
-            self._chatHistoryLocation.set(.single(ChatHistoryLocation.InitialSearch(messageId: messageId, count: 100)))
+            self._chatHistoryLocation.set(ChatHistoryLocation.InitialSearch(messageId: messageId, count: 100))
         } else {
-            self._chatHistoryLocation.set(.single(ChatHistoryLocation.Initial(count: 100)))
+            self._chatHistoryLocation.set(ChatHistoryLocation.Initial(count: 100))
+        }
+        
+        self.visibleItemsUpdated = { [weak self] visibleItems in
+            if let strongSelf = self, let historyView = strongSelf.historyView, let top = visibleItems.top, let bottom = visibleItems.bottom {
+                if top.0 < 5 && historyView.originalView.laterId != nil {
+                    let lastEntry = historyView.filteredEntries[historyView.filteredEntries.count - 1 - top.0]
+                    strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: lastEntry.index, anchorIndex: historyView.originalView.anchorIndex))
+                } else if bottom.0 >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
+                    let firstEntry = historyView.filteredEntries[historyView.filteredEntries.count - 1 - bottom.0]
+                    strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: firstEntry.index, anchorIndex: historyView.originalView.anchorIndex))
+                }
+            }
         }
         
         /*self.displayedItemRangeChanged = { [weak self] displayedRange in
@@ -234,21 +296,20 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     }
     
     public func scrollToStartOfHistory() {
-        self._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: MessageIndex.lowerBound(peerId: self.peerId), anchorIndex: MessageIndex.lowerBound(peerId: self.peerId), sourceIndex: MessageIndex.upperBound(peerId: self.peerId), scrollPosition: .Bottom, animated: true)))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.lowerBound(peerId: self.peerId), anchorIndex: MessageIndex.lowerBound(peerId: self.peerId), sourceIndex: MessageIndex.upperBound(peerId: self.peerId), scrollPosition: .Bottom, animated: true))
     }
     
     public func scrollToEndOfHistory() {
-        self._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: MessageIndex.upperBound(peerId: self.peerId), anchorIndex: MessageIndex.upperBound(peerId: self.peerId), sourceIndex: MessageIndex.lowerBound(peerId: self.peerId), scrollPosition: .Top, animated: true)))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.upperBound(peerId: self.peerId), anchorIndex: MessageIndex.upperBound(peerId: self.peerId), sourceIndex: MessageIndex.lowerBound(peerId: self.peerId), scrollPosition: .Top, animated: true))
     }
     
     public func scrollToMessage(from fromIndex: MessageIndex, to toIndex: MessageIndex) {
-        self._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: toIndex, anchorIndex: toIndex, sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true)))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: toIndex, anchorIndex: toIndex, sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true))
     }
     
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {
         if let historyView = self.historyView {
-            var galleryMedia: Media?
-            for case let .MessageEntry(message, _) in historyView.filteredEntries where message.id == id {
+            for case let .MessageEntry(message, _, _) in historyView.filteredEntries where message.id == id {
                 return message
             }
         }
@@ -314,9 +375,9 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     updateLayout = GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, itemSize: CGSize(width: 200.0, height: 200.0)), transition: .immediate)
                 }
                 
-                self.transaction(GridNodeTransaction(deleteItems: mappedTransition.deleteItems, insertItems: mappedTransition.insertItems, updateItems: mappedTransition.updateItems, scrollToItem: mappedTransition.scrollToItem, updateLayout: updateLayout, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: completion)
+                self.transaction(GridNodeTransaction(deleteItems: mappedTransition.deleteItems, insertItems: mappedTransition.insertItems, updateItems: mappedTransition.updateItems, scrollToItem: mappedTransition.scrollToItem, updateLayout: updateLayout, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: mappedTransition.topOffsetWithinMonth), completion: completion)
             } else {
-                self.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: completion)
+                self.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.topOffsetWithinMonth), completion: completion)
             }
         }
     }

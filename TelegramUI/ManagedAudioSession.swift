@@ -24,14 +24,16 @@ private final class HolderRecord {
     let audioSessionType: ManagedAudioSessionType
     let activate: () -> Void
     let deactivate: () -> Signal<Void, NoError>
+    let once: Bool
     var active: Bool = false
     var deactivatingDisposable: Disposable? = nil
     
-    init(id: Int32, audioSessionType: ManagedAudioSessionType, activate: @escaping () -> Void, deactivate: @escaping () -> Signal<Void, NoError>) {
+    init(id: Int32, audioSessionType: ManagedAudioSessionType, activate: @escaping () -> Void, deactivate: @escaping () -> Signal<Void, NoError>, once: Bool) {
         self.id = id
         self.audioSessionType = audioSessionType
         self.activate = activate
         self.deactivate = deactivate
+        self.once = once
     }
 }
 
@@ -40,11 +42,16 @@ final class ManagedAudioSession {
     private let queue = Queue()
     private var holders: [HolderRecord] = []
     private var currentType: ManagedAudioSessionType = .none
+    private var deactivateTimer: SwiftSignalKit.Timer?
     
-    func push(audioSessionType: ManagedAudioSessionType, activate: @escaping () -> Void, deactivate: @escaping () -> Signal<Void, NoError>) -> Disposable {
+    deinit {
+        self.deactivateTimer?.invalidate()
+    }
+    
+    func push(audioSessionType: ManagedAudioSessionType, activate: @escaping () -> Void, deactivate: @escaping () -> Signal<Void, NoError>, once: Bool = false) -> Disposable {
         let id = OSAtomicIncrement32(&self.nextId)
         self.queue.async {
-            self.holders.append(HolderRecord(id: id, audioSessionType: audioSessionType, activate: activate, deactivate: deactivate))
+            self.holders.append(HolderRecord(id: id, audioSessionType: audioSessionType, activate: activate, deactivate: deactivate, once: once))
             self.updateHolders()
         }
         return ActionDisposable { [weak self] in
@@ -94,11 +101,16 @@ final class ManagedAudioSession {
                     let id = self.holders[activeIndex].id
                     self.holders[activeIndex].deactivatingDisposable = (self.holders[activeIndex].deactivate() |> deliverOn(self.queue)).start(completed: { [weak self] in
                         if let strongSelf = self {
+                            var index = 0
                             for currentRecord in strongSelf.holders {
                                 if currentRecord.id == id {
                                     currentRecord.deactivatingDisposable = nil
+                                    if currentRecord.once {
+                                        strongSelf.holders.remove(at: index)
+                                    }
                                     break
                                 }
+                                index += 1
                             }
                             strongSelf.updateHolders()
                         }
@@ -111,11 +123,27 @@ final class ManagedAudioSession {
                 }
             }
         } else {
-            self.applyType(.none)
+            self.applyTypeNoneDelayed()
         }
     }
     
+    private func applyTypeNoneDelayed() {
+        self.deactivateTimer?.invalidate()
+        let deactivateTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.applyType(.none)
+            }
+        }, queue: self.queue)
+        self.deactivateTimer = deactivateTimer
+        deactivateTimer.start()
+    }
+    
     private func applyType(_ type: ManagedAudioSessionType) {
+        if type != .none {
+            self.deactivateTimer?.invalidate()
+            self.deactivateTimer = nil
+        }
+        
         if self.currentType != type {
             self.currentType = type
             

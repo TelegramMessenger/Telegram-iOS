@@ -225,11 +225,11 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                 }
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil)
+            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
             
-            let (textLayout, textApply) = makeTextLayout(textString, nil, 2, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil)
+            let (textLayout, textApply) = makeTextLayout(textString, nil, 2, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
             
-            let (iconTextLayout, iconTextApply) = iconTextMakeLayout(iconText, nil, 1, .end, CGSize(width: 38.0, height: CGFloat.infinity), .natural, nil)
+            let (iconTextLayout, iconTextApply) = iconTextMakeLayout(iconText, nil, 1, .end, CGSize(width: 38.0, height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
             
             var titleFrame: CGRect?
             if let _ = titleString {
