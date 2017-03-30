@@ -135,4 +135,13 @@ class MessageHistoryTagsTable: Table {
         }, limit: count)
         return indices
     }
+    
+    func getMessageCountInRange(tagMask: MessageTags, peerId: PeerId, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int32 {
+        var count: Int32 = 0
+        self.valueBox.range(self.table, start: self.key(tagMask, index: lowerBound).predecessor, end: self.key(tagMask, index: upperBound.successor()), keys: { _ in
+            count += 1
+            return true
+        }, limit: 0)
+        return count
+    }
 }

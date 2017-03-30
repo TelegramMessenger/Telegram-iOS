@@ -63,7 +63,7 @@ public enum AddMessagesLocation {
 enum MessageHistoryIndexOperation {
     case InsertMessage(InternalStoreMessage)
     case InsertHole(MessageHistoryHole)
-    case Remove(MessageIndex)
+    case Remove(index: MessageIndex, isMessage: Bool)
     case Update(MessageIndex, InternalStoreMessage)
     case UpdateTimestamp(MessageIndex, Int32)
 }
@@ -171,7 +171,7 @@ final class MessageHistoryIndexTable: Table {
             switch lowerItem {
                 case let .Hole(lowerHole):
                     if lowerHole.tags != MessageTags.All.rawValue {
-                        self.justRemove(lowerHole.maxIndex, operations: &operations)
+                        self.justRemove(lowerHole.maxIndex, isMessage: false, operations: &operations)
                         self.justInsertHole(MessageHistoryHole(stableId: lowerHole.stableId, maxIndex: lowerHole.maxIndex, min: lowerHole.min, tags: MessageTags.All.rawValue), operations: &operations)
                     }
                 case let .Message(lowerMessage):
@@ -251,11 +251,11 @@ final class MessageHistoryIndexTable: Table {
                         }, limit: 0)
                         
                         for index in removeHoles {
-                            self.justRemove(index, operations: &operations)
+                            self.justRemove(index, isMessage: false, operations: &operations)
                         }
                         
                         if let modifyHole = modifyHole {
-                            self.justRemove(modifyHole.0, operations: &operations)
+                            self.justRemove(modifyHole.0, isMessage: false, operations: &operations)
                             self.justInsertHole(modifyHole.1, operations: &operations)
                         }
                     }
@@ -278,7 +278,7 @@ final class MessageHistoryIndexTable: Table {
             if let upperItem = upperItem {
                 switch upperItem {
                     case let .Hole(upperHole):
-                        self.justRemove(upperHole.maxIndex, operations: &operations)
+                        self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                         if upperHole.maxIndex.id.id > index.id.id + 1 {
                             self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: upperHole.maxIndex, min: index.id.id + 1, tags: upperHole.tags), operations: &operations)
                         }
@@ -301,8 +301,8 @@ final class MessageHistoryIndexTable: Table {
     func removeMessage(_ id: MessageId, operations: inout [MessageHistoryIndexOperation]) {
         self.ensureInitialized(id.peerId, operations: &operations)
         
-        if let existingEntry = self.get(id) {
-            self.justRemove(existingEntry.index, operations: &operations)
+        if let existingEntry = self.get(id), case .Message = existingEntry {
+            self.justRemove(existingEntry.index, isMessage: true, operations: &operations)
             
             let adjacent = self.adjacentItems(id)
             
@@ -311,7 +311,7 @@ final class MessageHistoryIndexTable: Table {
                     case let .Message(lowerMessage):
                         switch upperItem {
                             case let .Hole(upperHole):
-                                self.justRemove(upperHole.maxIndex, operations: &operations)
+                                self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                                 self.justInsertHole(MessageHistoryHole(stableId: upperHole.stableId, maxIndex: upperHole.maxIndex, min: lowerMessage.id.id + 1, tags: upperHole.tags), operations: &operations)
                             case .Message:
                                 break
@@ -319,18 +319,18 @@ final class MessageHistoryIndexTable: Table {
                     case let .Hole(lowerHole):
                         switch upperItem {
                             case let .Hole(upperHole):
-                                self.justRemove(lowerHole.maxIndex, operations: &operations)
-                                self.justRemove(upperHole.maxIndex, operations: &operations)
+                                self.justRemove(lowerHole.maxIndex, isMessage: false, operations: &operations)
+                                self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                                 self.justInsertHole(MessageHistoryHole(stableId: upperHole.stableId, maxIndex: upperHole.maxIndex, min: lowerHole.min, tags: upperHole.tags | lowerHole.tags), operations: &operations)
                             case let .Message(upperMessage):
-                                self.justRemove(lowerHole.maxIndex, operations: &operations)
+                                self.justRemove(lowerHole.maxIndex, isMessage: false, operations: &operations)
                                 self.justInsertHole(MessageHistoryHole(stableId: lowerHole.stableId, maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: upperMessage.id.id - 1), timestamp: upperMessage.timestamp), min: lowerHole.min, tags: lowerHole.tags), operations: &operations)
                         }
                 }
             } else if let lowerItem = adjacent.lower {
                 switch lowerItem {
                     case let .Hole(lowerHole):
-                        self.justRemove(lowerHole.maxIndex, operations: &operations)
+                        self.justRemove(lowerHole.maxIndex, isMessage: false, operations: &operations)
                         self.justInsertHole(MessageHistoryHole(stableId: lowerHole.stableId, maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: Int32.max), timestamp: Int32.max), min: lowerHole.min, tags: lowerHole.tags), operations: &operations)
                         break
                     case .Message:
@@ -339,7 +339,7 @@ final class MessageHistoryIndexTable: Table {
             } else if let upperItem = adjacent.upper {
                 switch upperItem {
                     case let .Hole(upperHole):
-                        self.justRemove(upperHole.maxIndex, operations: &operations)
+                        self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                         self.justInsertHole(MessageHistoryHole(stableId: upperHole.stableId, maxIndex: upperHole.maxIndex, min: 1, tags: upperHole.tags), operations: &operations)
                         break
                     case .Message:
@@ -358,7 +358,7 @@ final class MessageHistoryIndexTable: Table {
                 
                 for operation in intermediateOperations {
                     switch operation {
-                        case let .Remove(index) where index == previousIndex:
+                        case let .Remove(index, _) where index == previousIndex:
                             operations.append(.Update(previousIndex, message))
                         case let .InsertMessage(insertMessage) where MessageIndex(insertMessage) == MessageIndex(message):
                             break
@@ -589,10 +589,10 @@ final class MessageHistoryIndexTable: Table {
                         }
                         
                         if messagesInRange.isEmpty {
-                            self.justRemove(upperHole.maxIndex, operations: &operations)
+                            self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                             self.justInsertHole(MessageHistoryHole(stableId: upperHole.stableId, maxIndex: upperHole.maxIndex, min: upperHole.min, tags: upperHole.tags & ~tagMask.rawValue), operations: &operations)
                         } else {
-                            self.justRemove(upperHole.maxIndex, operations: &operations)
+                            self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                             
                             let clearedTags = upperHole.tags & ~tagMask.rawValue
                             
@@ -644,7 +644,7 @@ final class MessageHistoryIndexTable: Table {
                                     if (fillType.complete || fillType.direction == .UpperToLower) {
                                         if !removedHole {
                                             removedHole = true
-                                            self.justRemove(upperHole.maxIndex, operations: &operations)
+                                            self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                                         }
                                     }
                                 }
@@ -654,14 +654,14 @@ final class MessageHistoryIndexTable: Table {
                                     if (fillType.complete || fillType.direction == .LowerToUpper) {
                                         if !removedHole {
                                             removedHole = true
-                                            self.justRemove(upperHole.maxIndex, operations: &operations)
+                                            self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                                         }
                                     }
                                 }
                                 
                                 if message.id == upperHole.maxIndex.id {
                                     removedHole = true
-                                    self.justRemove(upperHole.maxIndex, operations: &operations)
+                                    self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                                 }
                                 
                                 self.justInsertMessage(message, operations: &operations)
@@ -673,7 +673,7 @@ final class MessageHistoryIndexTable: Table {
                         if fillType.complete {
                             if !removedHole {
                                 removedHole = true
-                                self.justRemove(upperHole.maxIndex, operations: &operations)
+                                self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                             }
                         } else if fillType.direction == .LowerToUpper {
                             if let maxMessageInRange = maxMessageInRange , maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
@@ -699,7 +699,7 @@ final class MessageHistoryIndexTable: Table {
                             }
                         } else if case let .AroundIndex(_, lowerComplete, upperComplete) = fillType.direction {
                             if !removedHole {
-                                self.justRemove(upperHole.maxIndex, operations: &operations)
+                                self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                                 removedHole = true
                             }
                             
@@ -764,10 +764,10 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    private func justRemove(_ index: MessageIndex, operations: inout [MessageHistoryIndexOperation]) {
+    private func justRemove(_ index: MessageIndex, isMessage: Bool, operations: inout [MessageHistoryIndexOperation]) {
         self.valueBox.remove(self.table, key: self.key(index.id))
         
-        operations.append(.Remove(index))
+        operations.append(.Remove(index: index, isMessage: isMessage))
         if index.id.namespace == self.globalMessageIdsNamespace {
             self.globalMessageIdsTable.remove(index.id.id)
         }
