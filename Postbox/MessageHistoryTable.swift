@@ -110,11 +110,10 @@ final class MessageHistoryTable: Table {
         return dict
     }
     
-    private func processIndexOperationsCommitAccumulatedRemoveIndices(remove: Bool, peerId: PeerId, accumulatedRemoveIndices: inout [MessageIndex], updatedCombinedState: inout CombinedPeerReadState?, invalidateReadState: inout Bool, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], outputOperations: inout [MessageHistoryOperation]) {
+    private func processIndexOperationsCommitAccumulatedRemoveIndices(remove: Bool, peerId: PeerId, accumulatedRemoveIndices: inout [(MessageIndex, Bool)], updatedCombinedState: inout CombinedPeerReadState?, invalidateReadState: inout Bool, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], outputOperations: inout [MessageHistoryOperation]) {
         if !accumulatedRemoveIndices.isEmpty {
-            outputOperations.append(.Remove(accumulatedRemoveIndices))
             
-            let (combinedState, invalidate) = self.readStateTable.deleteMessages(peerId, indices: accumulatedRemoveIndices, incomingStatsInIndices: { peerId, namespace, indices in
+            let (combinedState, invalidate) = self.readStateTable.deleteMessages(peerId, indices: accumulatedRemoveIndices.map { $0.0 }, incomingStatsInIndices: { peerId, namespace, indices in
                 return self.incomingMessageStatsInIndices(peerId, namespace: namespace, indices: indices)
             })
             if let combinedState = combinedState {
@@ -125,9 +124,30 @@ final class MessageHistoryTable: Table {
             }
             
             if remove {
-                for index in accumulatedRemoveIndices {
-                    self.justRemove(index, unsentMessageOperations: &unsentMessageOperations)
+                var indicesWithMetadata: [(MessageIndex, Bool, MessageTags)] = []
+                if accumulatedRemoveIndices.count == 1 && accumulatedRemoveIndices[0].0.timestamp == Int32.max {
+                    assert(true)
                 }
+                for index in accumulatedRemoveIndices {
+                    let tags = self.justRemove(index.0, unsentMessageOperations: &unsentMessageOperations)
+                    if let tags = tags {
+                        indicesWithMetadata.append((index.0, index.1, tags))
+                    } else {
+                        indicesWithMetadata.append((index.0, index.1, MessageTags()))
+                    }
+                }
+                assert(accumulatedRemoveIndices.count == indicesWithMetadata.count)
+                outputOperations.append(.Remove(indicesWithMetadata))
+            } else {
+                var indicesWithMetadata: [(MessageIndex, Bool, MessageTags)] = []
+                for index in accumulatedRemoveIndices {
+                    let tags = self.tagsForIndex(index.0)
+                    if let tags = tags {
+                        indicesWithMetadata.append((index.0, index.1, tags))
+                    }
+                }
+                assert(accumulatedRemoveIndices.count == indicesWithMetadata.count)
+                outputOperations.append(.Remove(indicesWithMetadata))
             }
             
             accumulatedRemoveIndices.removeAll()
@@ -140,7 +160,7 @@ final class MessageHistoryTable: Table {
         let sharedEncoder = Encoder()
         
         var outputOperations: [MessageHistoryOperation] = []
-        var accumulatedRemoveIndices: [MessageIndex] = []
+        var accumulatedRemoveIndices: [(MessageIndex, Bool)] = []
         var accumulatedAddedIncomingMessageIndices = Set<MessageIndex>()
         
         var updatedCombinedState: CombinedPeerReadState?
@@ -206,21 +226,21 @@ final class MessageHistoryTable: Table {
                     if message.flags.contains(.Incoming) {
                         accumulatedAddedIncomingMessageIndices.insert(MessageIndex(message))
                     }
-                case let .Remove(index):
+                case let .Remove(index, isMessage):
                     commitAccumulatedAddedIndices()
                     
-                    accumulatedRemoveIndices.append(index)
+                    accumulatedRemoveIndices.append((index, isMessage))
                 case let .Update(index, storeMessage):
                     commitAccumulatedAddedIndices()
                     processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
                     
-                    if let message = self.justUpdate(index, message: storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder, unsentMessageOperations: &unsentMessageOperations) {
-                        outputOperations.append(.Remove([index]))
+                    if let (message, previousTags) = self.justUpdate(index, message: storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder, unsentMessageOperations: &unsentMessageOperations) {
+                        outputOperations.append(.Remove([(index, true, previousTags)]))
                         outputOperations.append(.InsertMessage(message))
                         
                         if message.flags.contains(.Incoming) {
                             if index != MessageIndex(message) {
-                                accumulatedRemoveIndices.append(index)
+                                accumulatedRemoveIndices.append((index, true))
                                 accumulatedAddedIncomingMessageIndices.insert(MessageIndex(message))
                             }
                         }
@@ -679,9 +699,24 @@ final class MessageHistoryTable: Table {
         self.valueBox.set(self.table, key: self.key(hole.maxIndex), value: sharedBuffer.readBufferNoCopy())
     }
     
-    private func justRemove(_ index: MessageIndex, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) {
+    private func tagsForIndex(_ index: MessageIndex) -> MessageTags? {
         let key = self.key(index)
         if let value = self.valueBox.get(self.table, key: key) {
+            switch self.readIntermediateEntry(key, value: value) {
+                case let .Message(message):
+                    return message.tags
+                case let .Hole(hole):
+                    return MessageTags(rawValue: hole.tags)
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    private func justRemove(_ index: MessageIndex, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) -> MessageTags? {
+        let key = self.key(index)
+        if let value = self.valueBox.get(self.table, key: key) {
+            let resultTags: MessageTags
             switch self.readIntermediateEntry(key, value: value) {
                 case let .Message(message):
                     let embeddedMediaData = message.embeddedMediaData
@@ -724,6 +759,8 @@ final class MessageHistoryTable: Table {
                     for mediaId in message.referencedMedia {
                         let _ = self.messageMediaTable.removeReference(mediaId)
                     }
+                    
+                    resultTags = message.tags
                 case let .Hole(hole):
                     let tags = self.messageHistoryIndexTable.seedConfiguration.existingMessageTags.rawValue & hole.tags
                     if tags != 0 {
@@ -739,9 +776,13 @@ final class MessageHistoryTable: Table {
                             }
                         }
                     }
+                    resultTags = MessageTags(rawValue: hole.tags)
             }
             
             self.valueBox.remove(self.table, key: key)
+            return resultTags
+        } else {
+            return nil
         }
     }
     
@@ -839,7 +880,7 @@ final class MessageHistoryTable: Table {
         })
     }
     
-    private func justUpdate(_ index: MessageIndex, message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) -> IntermediateMessage? {
+    private func justUpdate(_ index: MessageIndex, message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) -> (IntermediateMessage, MessageTags)? {
         if let previousMessage = self.getMessage(index) {
             var previousEmbeddedMediaWithIds: [(MediaId, Media)] = []
             if previousMessage.embeddedMediaData.length > 4 {
@@ -1046,7 +1087,7 @@ final class MessageHistoryTable: Table {
             
             self.valueBox.set(self.table, key: self.key(MessageIndex(message), key: sharedKey), value: sharedBuffer)
             
-            return IntermediateMessage(stableId: stableId, stableVersion: stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, timestamp: message.timestamp, flags: flags, tags: tags, forwardInfo: intermediateForwardInfo, authorId: message.authorId, text: message.text, attributesData: attributesBuffer.makeReadBufferAndReset(), embeddedMediaData: embeddedMediaBuffer.makeReadBufferAndReset(), referencedMedia: referencedMedia)
+            return (IntermediateMessage(stableId: stableId, stableVersion: stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, timestamp: message.timestamp, flags: flags, tags: tags, forwardInfo: intermediateForwardInfo, authorId: message.authorId, text: message.text, attributesData: attributesBuffer.makeReadBufferAndReset(), embeddedMediaData: embeddedMediaBuffer.makeReadBufferAndReset(), referencedMedia: referencedMedia), previousMessage.tags)
         } else {
             return nil
         }
@@ -1712,6 +1753,10 @@ final class MessageHistoryTable: Table {
             return true
         }, limit: 0)
         return indices
+    }
+    
+    func getMessageCountInRange(peerId: PeerId, tagMask: MessageTags, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int32 {
+        return self.tagsTable.getMessageCountInRange(tagMask: tagMask, peerId: peerId, lowerBound: lowerBound, upperBound: upperBound)
     }
 
     func debugList(_ peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {

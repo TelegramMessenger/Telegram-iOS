@@ -1040,7 +1040,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, nil))
+                    entries.append(.IntermediateMessageEntry(message, nil, nil))
                 case let .Hole(index):
                     entries.append(.HoleEntry(index, nil))
             }
@@ -1064,7 +1064,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, nil))
+                    entries.append(.IntermediateMessageEntry(message, nil, nil))
                 case let .Hole(index):
                     entries.append(.HoleEntry(index, nil))
             }
@@ -1074,7 +1074,7 @@ public final class Postbox {
         if let intermediateLower = intermediateLower {
             switch intermediateLower {
                 case let .Message(message):
-                    lower = .IntermediateMessageEntry(message, nil)
+                    lower = .IntermediateMessageEntry(message, nil, nil)
                 case let .Hole(index):
                     lower = .HoleEntry(index, nil)
             }
@@ -1084,17 +1084,13 @@ public final class Postbox {
         if let intermediateUpper = intermediateUpper {
             switch intermediateUpper {
                 case let .Message(message):
-                    upper = .IntermediateMessageEntry(message, nil)
+                    upper = .IntermediateMessageEntry(message, nil, nil)
                 case let .Hole(index):
                     upper = .HoleEntry(index, nil)
             }
         }
         
-        if let tagMask = tagMask {
-            return addLocationsToMessageHistoryViewEntries(tagMask: tagMask, earlier: lower, later: upper, entries: entries)
-        } else {
-            return (entries: entries, lower: lower, upper: upper)
-        }
+        return (entries: entries, lower: lower, upper: upper)
     }
     
     private func fetchLaterHistoryEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, tagMask: MessageTags? = nil) -> [MutableMessageHistoryEntry] {
@@ -1108,7 +1104,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
             case let .Message(message):
-                entries.append(.IntermediateMessageEntry(message, nil))
+                entries.append(.IntermediateMessageEntry(message, nil, nil))
             case let .Hole(index):
                 entries.append(.HoleEntry(index, nil))
             }
@@ -1480,59 +1476,33 @@ public final class Postbox {
         }
     }
     
-    public func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags? = nil, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.modify(userInteractive: true, { modifier -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
             var index = MessageHistoryAnchorIndex(index: MessageIndex.upperBound(peerId: peerId), exact: true)
             if let maxReadIndex = self.messageHistoryTable.maxReadIndex(peerId) {
                 index = maxReadIndex
             }
-            return self.syncAroundMessageHistoryViewForPeerId(peerId, index: index.index, count: count, anchorIndex: index, unreadIndex: index.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, additionalData: additionalData)
+            return self.syncAroundMessageHistoryViewForPeerId(peerId, index: index.index, count: count, anchorIndex: index, unreadIndex: index.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
         }) |> switchToLatest
     }
     
-    public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags? = nil, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.modify { modifier -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
             var index = MessageHistoryAnchorIndex(index: MessageIndex.upperBound(peerId: peerId), exact: true)
             if let anchorIndex = self.messageHistoryTable.anchorIndex(messageId) {
                 index = anchorIndex
             }
-            return self.syncAroundMessageHistoryViewForPeerId(peerId, index: index.index, count: count, anchorIndex: index, unreadIndex: index.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, additionalData: additionalData)
+            return self.syncAroundMessageHistoryViewForPeerId(peerId, index: index.index, count: count, anchorIndex: index, unreadIndex: index.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
         } |> switchToLatest
     }
     
-    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags? = nil, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.modify { modifier -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
-            return self.syncAroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: MessageHistoryAnchorIndex(index: anchorIndex, exact: true), unreadIndex: nil, fixedCombinedReadState: fixedCombinedReadState, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, additionalData: additionalData)
+            return self.syncAroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: MessageHistoryAnchorIndex(index: anchorIndex, exact: true), unreadIndex: nil, fixedCombinedReadState: fixedCombinedReadState, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
         } |> switchToLatest
     }
     
-    private func addLocationsToMessageHistoryViewEntries(tagMask: MessageTags, earlier: MutableMessageHistoryEntry?, later: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry]) -> ([MutableMessageHistoryEntry], MutableMessageHistoryEntry?, MutableMessageHistoryEntry?) {
-        if let firstEntry = entries.first {
-            if let location = self.messageHistoryTagsTable.entryLocation(at: firstEntry.index, tagMask: tagMask) {
-                let mappedEarlier = earlier?.updatedLocation(location.predecessor)
-                var mappedEntries: [MutableMessageHistoryEntry] = []
-                var previousLocation: MessageHistoryEntryLocation?
-                for i in 0 ..< entries.count {
-                    if i == 0 {
-                        mappedEntries.append(entries[i].updatedLocation(location))
-                        previousLocation = location
-                    } else {
-                        previousLocation = previousLocation?.successor
-                        mappedEntries.append(entries[i].updatedLocation(previousLocation))
-                    }
-                }
-                previousLocation = previousLocation?.successor
-                let mappedLater = later?.updatedLocation(previousLocation)
-                return (mappedEntries, mappedEarlier, mappedLater)
-            } else {
-                return (entries, earlier, later)
-            }
-        } else {
-            return (entries, earlier, later)
-        }
-    }
-    
-    private func syncAroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageHistoryAnchorIndex, unreadIndex: MessageIndex?, fixedCombinedReadState: CombinedPeerReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    private func syncAroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageHistoryAnchorIndex, unreadIndex: MessageIndex?, fixedCombinedReadState: CombinedPeerReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         let startTime = CFAbsoluteTimeGetCurrent()
         let (entries, earlier, later) = self.fetchAroundHistoryEntries(index, count: count, tagMask: tagMask)
         print("aroundMessageHistoryViewForPeerId fetchAroundHistoryEntries \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
@@ -1563,7 +1533,13 @@ public final class Postbox {
             }
         }
         
-        let mutableView = MutableMessageHistoryView(id: MessageHistoryViewId(peerId: peerId, id: self.takeNextViewId()), anchorIndex: anchorIndex, combinedReadState: fixedCombinedReadState ?? self.readStateTable.getCombinedState(peerId), earlier: earlier, entries: entries, later: later, tagMask: tagMask, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries)
+        let mutableView = MutableMessageHistoryView(id: MessageHistoryViewId(peerId: peerId, id: self.takeNextViewId()), postbox: self, orderStatistics: orderStatistics, peerId: peerId, anchorIndex: anchorIndex, combinedReadState: fixedCombinedReadState ?? self.readStateTable.getCombinedState(peerId), earlier: earlier, entries: entries, later: later, tagMask: tagMask, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
+            if let tagMask = tagMask {
+                return self.messageHistoryTable.getMessageCountInRange(peerId: peerId, tagMask: tagMask, lowerBound: lowerBound, upperBound: upperBound)
+            } else {
+                return 0
+            }
+        })
         mutableView.render(self.renderIntermediateMessage)
         
         let initialUpdateType: ViewUpdateType
