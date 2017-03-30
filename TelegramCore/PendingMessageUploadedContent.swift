@@ -74,7 +74,7 @@ func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoin
 
 private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerId: PeerId, image: TelegramMediaImage, text: String) -> Signal<PendingMessageUploadedContentResult, NoError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
-        return multipartUpload(network: network, postbox: postbox, resource: largestRepresentation.resource, encrypt: peerId.namespace == Namespaces.Peer.SecretChat)
+        return multipartUpload(network: network, postbox: postbox, source: .resource(largestRepresentation.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat)
             |> map { next -> PendingMessageUploadedContentResult in
                 switch next {
                     case let .progress(progress):
@@ -90,9 +90,9 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerI
     }
 }
 
-private func inputDocumentAttributesFromFile(_ file: TelegramMediaFile) -> [Api.DocumentAttribute] {
+func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaFileAttribute]) -> [Api.DocumentAttribute] {
     var attributes: [Api.DocumentAttribute] = []
-    for attribute in file.attributes {
+    for attribute in fileAttributes {
         switch attribute {
             case .Animated:
                 attributes.append(.documentAttributeAnimated)
@@ -149,7 +149,7 @@ private enum UploadedMediaThumbnail {
 }
 
 private func uploadedThumbnail(network: Network, postbox: Postbox, image: TelegramMediaImageRepresentation) -> Signal<Api.InputFile?, NoError> {
-    return multipartUpload(network: network, postbox: postbox, resource: image.resource, encrypt: false)
+    return multipartUpload(network: network, postbox: postbox, source: .resource(image.resource), encrypt: false)
         |> mapToSignal { result -> Signal<Api.InputFile?, NoError> in
             switch result {
                 case .progress:
@@ -169,7 +169,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, transf
     } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
         hintSize = Int(size)
     }
-    let upload = multipartUpload(network: network, postbox: postbox, resource: file.resource, encrypt: peerId.namespace == Namespaces.Peer.SecretChat, hintFileSize: hintSize)
+    let upload = multipartUpload(network: network, postbox: postbox, source: .resource(file.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, hintFileSize: hintSize)
         /*|> map { next -> UploadedMediaFileContent in
             switch next {
                 case let .progress(progress):
@@ -249,9 +249,9 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, transf
                     if case let .done(thumbnail) = media {
                         let inputMedia: Api.InputMedia
                         if let thumbnail = thumbnail {
-                            inputMedia = Api.InputMedia.inputMediaUploadedThumbDocument(flags: 0, file: inputFile, thumb: thumbnail, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: text, stickers: nil)
+                            inputMedia = Api.InputMedia.inputMediaUploadedThumbDocument(flags: 0, file: inputFile, thumb: thumbnail, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), caption: text, stickers: nil)
                         } else {
-                            inputMedia = Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: text, stickers: nil)
+                            inputMedia = Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), caption: text, stickers: nil)
                         }
                         return .single(.content(.media(inputMedia)))
                     } else {

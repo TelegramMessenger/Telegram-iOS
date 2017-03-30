@@ -25,7 +25,7 @@ public func updateAccountPhoto(account:Account, resource:MediaResource) -> Signa
 
 public func updatePeerPhoto(account:Account, peerId:PeerId, resource:MediaResource) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
      return account.postbox.loadedPeerWithId(peerId) |> mapError {_ in return .generic} |> mapToSignal { peer in
-        return multipartUpload(network: account.network, postbox: account.postbox, resource: resource, encrypt: false)
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .resource(resource), encrypt: false)
             |> mapError {_ in return .generic}
             |> mapToSignal { result -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
                 switch result {

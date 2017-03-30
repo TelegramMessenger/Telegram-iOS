@@ -11,32 +11,46 @@ import Foundation
 
 public enum StandaloneMedia {
     case image(Data)
-    case file(Data)
+    case file(data: Data, mimeType: String, attributes: [TelegramMediaFileAttribute])
 }
 
-public func standaloneSendMessage(account: Account, peerId: PeerId, text: String, attributes: [MessageAttribute], replyToMessageId: MessageId?) -> Signal<Void, NoError> {
-    let contentToUpload = messageContentToUpload(network: account.network, postbox: account.postbox, transformOutgoingMessageMedia: nil, peerId: peerId, messageId: nil, attributes: attributes, text: text, media: [])
-    
-    switch contentToUpload {
-        case let .ready(content):
-            return sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: content)
-        case let .upload(uploadSignal):
-            return .complete()
-            /*if strongSelf.canBeginUploadingMessage(id: message.id) {
-                strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, uploadSignal: uploadSignal)
-            } else {
-                messageContext.state = .waitingForUploadToStart(uploadSignal)
-            }*/
+private enum StandaloneMessageContent {
+    case text(String)
+    case media(Api.InputMedia)
+}
+
+public func standaloneSendMessage(account: Account, peerId: PeerId, text: String, attributes: [MessageAttribute], media: StandaloneMedia?, replyToMessageId: MessageId?) -> Signal<Void, NoError> {
+    let content: Signal<StandaloneMessageContent, NoError>
+    if let media = media {
+        switch media {
+            case let .image(data):
+                content = uploadedImage(account: account, text: text, data: data)
+                    |> map { next -> StandaloneMessageContent in
+                        return .media(next)
+                    }
+            case let .file(data, mimeType, attributes):
+                content = uploadedFile(account: account, text: text, data: data, mimeType: mimeType, attributes: attributes)
+                    |> map { next -> StandaloneMessageContent in
+                        return .media(next)
+                    }
+        }
+    } else {
+        content = .single(.text(text))
     }
+    
+    return content
+        |> mapToSignal { content -> Signal<Void, NoError> in
+            return sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: content)
+        }
 }
 
-private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
+private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: StandaloneMessageContent) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return .complete()
         } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var uniqueId: Int64 = 0
-            var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
+            //var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
             var messageEntities: [Api.MessageEntity]?
             var replyMessageId: Int32?
             
@@ -49,8 +63,8 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                     replyMessageId = replyAttribute.messageId.id
                 } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
                     uniqueId = outgoingInfo.uniqueId
-                } else if let attribute = attribute as? ForwardSourceInfoAttribute {
-                    forwardSourceInfoAttribute = attribute
+                } else if let _ = attribute as? ForwardSourceInfoAttribute {
+                    //forwardSourceInfoAttribute = attribute
                 } else if let attribute = attribute as? TextEntitiesMessageAttribute {
                     messageEntities = apiTextAttributeEntities(attribute, associatedPeers: SimpleDictionary())
                 } else if let attribute = attribute as? OutgoingContentInfoMessageAttribute {
@@ -79,23 +93,6 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         |> mapError { _ -> NoError in
                             return NoError()
                     }
-                case let .forward(sourceInfo):
-                    if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = modifier.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                        sendMessageRequest = account.network.request(Api.functions.messages.forwardMessages(flags: 0, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer))
-                            |> mapError { _ -> NoError in
-                                return NoError()
-                        }
-                    } else {
-                        sendMessageRequest = .fail(NoError())
-                    }
-                case let .chatContextResult(chatContextResult):
-                    sendMessageRequest = account.network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id))
-                        |> mapError { _ -> NoError in
-                            return NoError()
-                    }
-                case .secretMedia:
-                    assertionFailure()
-                    sendMessageRequest = .fail(NoError())
             }
             
             return sendMessageRequest
@@ -114,4 +111,28 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             return .complete()
         }
     } |> switchToLatest
+}
+
+private func uploadedImage(account: Account, text: String, data: Data) -> Signal<Api.InputMedia, NoError> {
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false)
+        |> mapToSignal { next -> Signal<Api.InputMedia, NoError> in
+            switch next {
+                case let .inputFile(inputFile):
+                    return .single(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, caption: text, stickers: nil))
+                case .inputSecretFile, .progress:
+                    return .complete()
+            }
+        }
+}
+
+private func uploadedFile(account: Account, text: String, data: Data, mimeType: String, attributes: [TelegramMediaFileAttribute]) -> Signal<Api.InputMedia, NoError> {
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false)
+        |> mapToSignal { next -> Signal<Api.InputMedia, NoError> in
+            switch next {
+                case let .inputFile(inputFile):
+                    return .single(Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), caption: text, stickers: nil))
+                case .inputSecretFile, .progress:
+                    return .complete()
+            }
+    }
 }

@@ -112,6 +112,28 @@ private struct MultipartIntermediateResult {
     let bigTotalParts: Int?
 }
 
+private enum MultipartUploadData {
+    case resourceData(MediaResourceData)
+    case data(Data)
+    
+    var size: Int {
+        switch self {
+            case let .resourceData(data):
+                return data.size
+            case let .data(data):
+                return data.count
+        }
+    }
+    var complete: Bool {
+        switch self {
+            case let .resourceData(data):
+                return data.complete
+            case .data:
+                return true
+        }
+    }
+}
+
 private final class MultipartUploadManager {
     let parallelParts: Int = 3
     let defaultPartSize: Int
@@ -120,7 +142,7 @@ private final class MultipartUploadManager {
     let queue = Queue()
     let fileId: Int64
     
-    let dataSignal: Signal<MediaResourceData, NoError>
+    let dataSignal: Signal<MultipartUploadData, NoError>
     
     var committedOffset: Int
     let uploadPart: (UploadPart) -> Signal<Void, NoError>
@@ -131,13 +153,13 @@ private final class MultipartUploadManager {
     var uploadedParts: [Int: Int] = [:]
     
     let dataDisposable = MetaDisposable()
-    var resourceData: MediaResourceData?
+    var resourceData: MultipartUploadData?
     
     var headerPartReady: Bool
     
     let state: MultipartUploadState
     
-    init(resource: MediaResource, data: Signal<MediaResourceData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult) -> Void) {
+    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult) -> Void) {
         self.dataSignal = data
         
         var fileId: Int64 = 0
@@ -151,7 +173,7 @@ private final class MultipartUploadManager {
         self.progress = progress
         self.completed = completed
         
-        self.headerPartReady = resource.headerSize == 0
+        self.headerPartReady = headerSize == 0
         
         if let hintFileSize = hintFileSize, hintFileSize > 5 * 1024 * 1024 {
             self.defaultPartSize = 512 * 1024
@@ -219,7 +241,13 @@ private final class MultipartUploadManager {
                 let partOffset = 0
                 let partSize = min(resourceData.size - partOffset, self.defaultPartSize)
                 let partIndex = partOffset / self.defaultPartSize
-                let fileData = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.alwaysMapped])
+                let fileData: Data?
+                switch resourceData {
+                    case let .resourceData(data):
+                        fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.alwaysMapped])
+                    case let .data(data):
+                        fileData = data
+                }
                 let partData = fileData!.subdata(in: partOffset ..< (partOffset + partSize))
                 var currentBigTotalParts = self.bigTotalParts
                 if let _ = self.bigTotalParts {
@@ -251,7 +279,13 @@ private final class MultipartUploadManager {
                     
                     if nextOffset < resourceData.size && partSize > 0 && (resourceData.complete || partSize == self.defaultPartSize) {
                         let partIndex = partOffset / self.defaultPartSize
-                        let fileData = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.alwaysMapped])
+                        let fileData: Data?
+                        switch resourceData {
+                            case let .resourceData(data):
+                                fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.alwaysMapped])
+                            case let .data(data):
+                                fileData = data
+                        }
                         let partData = self.state.transform(data: fileData!.subdata(in: partOffset ..< (partOffset + partSize)))
                         var currentBigTotalParts = self.bigTotalParts
                         if let _ = self.bigTotalParts, resourceData.complete && partOffset + partSize == resourceData.size {
@@ -283,7 +317,12 @@ enum MultipartUploadResult {
     case inputSecretFile(Api.InputEncryptedFile, Int32, SecretFileEncryptionKey)
 }
 
-func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource, encrypt: Bool, hintFileSize: Int? = nil) -> Signal<MultipartUploadResult, NoError> {
+enum MultipartUploadSource {
+    case resource(MediaResource)
+    case data(Data)
+}
+
+func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, hintFileSize: Int? = nil) -> Signal<MultipartUploadResult, NoError> {
     return network.download(datacenterId: network.datacenterId)
         |> mapToSignal { download -> Signal<MultipartUploadResult, NoError> in
             return Signal { subscriber in
@@ -302,9 +341,21 @@ func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource
                     encryptionKey = SecretFileEncryptionKey(aesKey: aesKey, aesIv: aesIv)
                 }
                 
-                let resourceData = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: true))
+                let dataSignal: Signal<MultipartUploadData, NoError>
+                let headerSize: Int32
+                let fetchedResource: Signal<Void, NoError>
+                switch source {
+                    case let .resource(resource):
+                        dataSignal = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
+                        headerSize = resource.headerSize
+                        fetchedResource = postbox.mediaBox.fetchedResource(resource)
+                    case let .data(data):
+                        dataSignal = .single(.data(data))
+                        headerSize = 0
+                        fetchedResource = .complete()
+                }
                 
-                let manager = MultipartUploadManager(resource: resource, data: resourceData, encryptionKey: encryptionKey, hintFileSize: hintFileSize, uploadPart: { part in
+                let manager = MultipartUploadManager(headerSize: headerSize, data: dataSignal, encryptionKey: encryptionKey, hintFileSize: hintFileSize, uploadPart: { part in
                     return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, bigTotalParts: part.bigTotalParts)
                 }, progress: { progress in
                     subscriber.putNext(.progress(progress))
@@ -337,11 +388,11 @@ func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource
 
                 manager.start()
                 
-                let fetchedResource = postbox.mediaBox.fetchedResource(resource).start()
+                let fetchedResourceDisposable = fetchedResource.start()
                 
                 return ActionDisposable {
                     manager.cancel()
-                    fetchedResource.dispose()
+                    fetchedResourceDisposable.dispose()
                 }
             }
     }
