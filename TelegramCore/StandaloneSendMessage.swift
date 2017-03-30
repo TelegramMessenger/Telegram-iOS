@@ -19,28 +19,49 @@ private enum StandaloneMessageContent {
     case media(Api.InputMedia)
 }
 
-public func standaloneSendMessage(account: Account, peerId: PeerId, text: String, attributes: [MessageAttribute], media: StandaloneMedia?, replyToMessageId: MessageId?) -> Signal<Void, NoError> {
-    let content: Signal<StandaloneMessageContent, NoError>
+private enum StandaloneSendMessageEvent {
+    case result(StandaloneMessageContent)
+    case progress(Float)
+}
+
+public func standaloneSendMessage(account: Account, peerId: PeerId, text: String, attributes: [MessageAttribute], media: StandaloneMedia?, replyToMessageId: MessageId?) -> Signal<Float, NoError> {
+    let content: Signal<StandaloneSendMessageEvent, NoError>
     if let media = media {
         switch media {
             case let .image(data):
                 content = uploadedImage(account: account, text: text, data: data)
-                    |> map { next -> StandaloneMessageContent in
-                        return .media(next)
+                    |> map { next -> StandaloneSendMessageEvent in
+                        switch next {
+                            case let .progress(progress):
+                                return .progress(progress)
+                            case let .result(media):
+                                return .result(.media(media))
+                        }
                     }
             case let .file(data, mimeType, attributes):
                 content = uploadedFile(account: account, text: text, data: data, mimeType: mimeType, attributes: attributes)
-                    |> map { next -> StandaloneMessageContent in
-                        return .media(next)
+                    |> map { next -> StandaloneSendMessageEvent in
+                        switch next {
+                            case let .progress(progress):
+                                return .progress(progress)
+                            case let .result(media):
+                                return .result(.media(media))
+                        }
                     }
         }
     } else {
-        content = .single(.text(text))
+        content = .single(.result(.text(text)))
     }
     
     return content
-        |> mapToSignal { content -> Signal<Void, NoError> in
-            return sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: content)
+        |> mapToSignal { event -> Signal<Float, NoError> in
+            switch event {
+                case let .progress(progress):
+                    return .single(progress)
+                case let .result(result):
+                    return .single(1.0) |> then(sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: result) |> map({ _ -> Float in return 1.0 }))
+                
+            }
         }
 }
 
@@ -113,26 +134,35 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
     } |> switchToLatest
 }
 
-private func uploadedImage(account: Account, text: String, data: Data) -> Signal<Api.InputMedia, NoError> {
+private enum UploadMediaEvent {
+    case progress(Float)
+    case result(Api.InputMedia)
+}
+
+private func uploadedImage(account: Account, text: String, data: Data) -> Signal<UploadMediaEvent, NoError> {
     return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false)
-        |> mapToSignal { next -> Signal<Api.InputMedia, NoError> in
+        |> map { next -> UploadMediaEvent in
             switch next {
                 case let .inputFile(inputFile):
-                    return .single(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, caption: text, stickers: nil))
-                case .inputSecretFile, .progress:
-                    return .complete()
+                    return .result(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, caption: text, stickers: nil))
+                case .inputSecretFile:
+                        preconditionFailure()
+                case let .progress(progress):
+                    return .progress(progress)
             }
         }
 }
 
-private func uploadedFile(account: Account, text: String, data: Data, mimeType: String, attributes: [TelegramMediaFileAttribute]) -> Signal<Api.InputMedia, NoError> {
+private func uploadedFile(account: Account, text: String, data: Data, mimeType: String, attributes: [TelegramMediaFileAttribute]) -> Signal<UploadMediaEvent, NoError> {
     return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false)
-        |> mapToSignal { next -> Signal<Api.InputMedia, NoError> in
+        |> map { next -> UploadMediaEvent in
             switch next {
                 case let .inputFile(inputFile):
-                    return .single(Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), caption: text, stickers: nil))
-                case .inputSecretFile, .progress:
-                    return .complete()
+                    return .result(Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), caption: text, stickers: nil))
+                case .inputSecretFile:
+                    preconditionFailure()
+                case let .progress(progress):
+                    return .progress(progress)
             }
     }
 }
