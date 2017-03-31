@@ -190,7 +190,7 @@
       }
     }
   }
-  navController.modalPresentationStyle = self.modalPresentationStyle;
+  navController.modalPresentationStyle = modalPresentationStyle;
   
   return navController;
 }
