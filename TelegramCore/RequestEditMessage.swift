@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func requestEditMessage(account: Account, messageId: MessageId, text: String, entities:TextEntitiesMessageAttribute? = nil) -> Signal<Bool, NoError> {
+public func requestEditMessage(account: Account, messageId: MessageId, text: String, entities:TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false) -> Signal<Bool, NoError> {
     return account.postbox.modify { modifier -> (Peer?, SimpleDictionary<PeerId, Peer>) in
             var peers:SimpleDictionary<PeerId, Peer> = SimpleDictionary()
 
@@ -35,7 +35,9 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                     flags |= Int32(1 << 3)
                 }
                 
-                
+                if disableUrlPreview {
+                    flags |= Int32(1 << 1)
+                }
                 
                 return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, replyMarkup: nil, entities: apiEntities))
                     |> map { result -> Api.Updates? in
