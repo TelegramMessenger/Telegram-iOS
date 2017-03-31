@@ -135,6 +135,8 @@ CVoIPController::CVoIPController(){
 	
 	needUpdateNat64Prefix=true;
 	nat64Present=false;
+	switchToV6at=0;
+	isV4Available=false;
 
 	maxAudioBitrate=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("audio_max_bitrate", 20000);
 	maxAudioBitrateGPRS=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("audio_max_bitrate_gprs", 8000);
@@ -150,6 +152,7 @@ CVoIPController::CVoIPController(){
 	relaySwitchThreshold=CVoIPServerConfig::GetSharedInstance()->GetDouble("relay_switch_threshold", 0.8);
 	p2pToRelaySwitchThreshold=CVoIPServerConfig::GetSharedInstance()->GetDouble("p2p_to_relay_switch_threshold", 0.6);
 	relayToP2pSwitchThreshold=CVoIPServerConfig::GetSharedInstance()->GetDouble("relay_to_p2p_switch_threshold", 0.8);
+	ipv6Timeout=CVoIPServerConfig::GetSharedInstance()->GetDouble("nat64_fallback_timeout", 3);
 
 #ifdef __APPLE__
     machTimestart=0;
@@ -354,7 +357,11 @@ void CVoIPController::Start(){
 	localUdpPort=ntohs(addr.sin6_port);
 	LOGD("Bound to local UDP port %u", ntohs(addr.sin6_port));
 	
-    SendPacket(NULL, 0, currentEndpoint);
+	needUpdateNat64Prefix=true;
+	isV4Available=false;
+	switchToV6at=GetCurrentTime()+ipv6Timeout;
+
+	SendPacket(NULL, 0, currentEndpoint);
 
 	runReceiver=true;
 	start_thread(recvThread, StartRecvThread, this);
@@ -589,6 +596,10 @@ void CVoIPController::RunRecvThread(){
 		ssize_t len=recvfrom(udpSocket, buffer, 1024, 0, (sockaddr *) &srcAddr, (socklen_t *) &addrLen);
 		//LOGV("Received %d bytes from %s:%d at %.5lf", len, inet_ntoa(srcAddr.sin_addr), ntohs(srcAddr.sin_port), GetCurrentTime());
 		voip_endpoint_t* srcEndpoint=NULL;
+		if(!isV4Available && IN6_IS_ADDR_V4MAPPED(&srcAddr.sin6_addr)){
+			isV4Available=true;
+			LOGI("Detected IPv4 connectivity, will not try IPv6");
+		}
 		if(IN6_IS_ADDR_V4MAPPED(&srcAddr.sin6_addr) || (nat64Present && memcmp(nat64Prefix, srcAddr.sin6_addr.s6_addr, 12)==0)){
 			in_addr v4addr=*((in_addr*)&srcAddr.sin6_addr.s6_addr[12]);
 			int _i;
@@ -1503,6 +1514,10 @@ void CVoIPController::SendPacket(unsigned char *data, size_t len, voip_endpoint_
 	int res=sendto(udpSocket, out.GetBuffer(), out.GetLength(), 0, (const sockaddr *) &dst, sizeof(dst));
 	if(res<0){
 		LOGE("error sending: %d / %s", errno, strerror(errno));
+		if(errno==ENETUNREACH && !isV4Available && GetCurrentTime()<switchToV6at){
+			switchToV6at=GetCurrentTime();
+			LOGI("Network unreachable, trying NAT64");
+		}
 	}
 }
 
@@ -1515,6 +1530,8 @@ void CVoIPController::SetNetworkType(int type){
 	GetLocalNetworkItfInfo(NULL, itfName);
 	if(strcmp(itfName, activeNetItfName)!=0){
 		needUpdateNat64Prefix=true;
+		isV4Available=false;
+		switchToV6at=GetCurrentTime()+ipv6Timeout;
 		LOGI("Active network interface changed: %s -> %s", activeNetItfName, itfName);
 		bool isFirstChange=strlen(activeNetItfName)==0;
 		strcpy(activeNetItfName, itfName);
@@ -2069,7 +2086,7 @@ size_t CVoIPController::GetDebugLogLength(){
 
 sockaddr_in6 CVoIPController::MakeInetAddress(in_addr addr, uint16_t port){
 	// TODO: refactor the hell out of this by at least moving sockets to a separate class
-	if(needUpdateNat64Prefix){
+	if(needUpdateNat64Prefix && !isV4Available && GetCurrentTime()>switchToV6at && switchToV6at!=0){
 		LOGV("Updating NAT64 prefix");
 		nat64Present=false;
 		addrinfo* addr0;

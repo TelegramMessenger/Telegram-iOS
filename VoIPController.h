@@ -21,7 +21,7 @@
 #import <Foundation/Foundation.h>
 #endif
 
-#define LIBTGVOIP_VERSION "0.3.1"
+#define LIBTGVOIP_VERSION "0.3.2"
 
 #define PKT_INIT 1
 #define PKT_INIT_ACK 2
@@ -320,6 +320,8 @@ private:
 	unsigned char nat64Prefix[12];
 	bool needUpdateNat64Prefix;
 	bool nat64Present;
+	double switchToV6at;
+	bool isV4Available;
 
 	/*** server config values ***/
 	uint32_t maxAudioBitrate;
@@ -336,6 +338,7 @@ private:
 	double relaySwitchThreshold;
 	double p2pToRelaySwitchThreshold;
 	double relayToP2pSwitchThreshold;
+	double ipv6Timeout;
 
 #ifdef TGVOIP_USE_AUDIO_SESSION
     void (^acquireAudioSession)(void (^)());
