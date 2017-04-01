@@ -97,8 +97,8 @@ public final class Database {
     /// Executes a batch of SQL statements.
     ///
     /// - parameter SQL: A batch of zero or more semicolon-separated SQL statements.
-    public func execute(_ SQL: String) {
-        sqlite3_exec(self.handle, SQL, nil, nil, nil)
+    public func execute(_ SQL: String) -> Bool {
+        return sqlite3_exec(self.handle, SQL, nil, nil, nil) == SQLITE_OK
     }
 }
 
