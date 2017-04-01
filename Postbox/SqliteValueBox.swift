@@ -132,7 +132,14 @@ final class SqliteValueBox: ValueBox {
         
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         let path = basePath + "/db_sqlite"
-        let database = Database(path)
+        let database: Database
+        if let result = Database(path) {
+            database = result
+        } else {
+            assertionFailure()
+            let _ = try? FileManager.default.removeItem(atPath: path)
+            database = Database(path)!
+        }
         
         database.execute("PRAGMA cache_size=-2097152")
         database.execute("PRAGMA synchronous=NORMAL")

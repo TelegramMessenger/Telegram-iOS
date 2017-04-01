@@ -67,9 +67,12 @@ public final class Database {
     ///                  Default: `false`.
     ///
     /// - returns: A new database connection.
-    public init(_ location: Location = .InMemory, readonly: Bool = false) {
+    public init?(_ location: Location = .InMemory, readonly: Bool = false) {
         let flags = readonly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE
-        sqlite3_open_v2(location.description, &self.handle, flags | SQLITE_OPEN_FULLMUTEX, nil)
+        let res = sqlite3_open_v2(location.description, &self.handle, flags | SQLITE_OPEN_FULLMUTEX, nil)
+        if res != SQLITE_OK {
+            return nil
+        }
     }
 
     /// Initializes a new connection to a database.
@@ -83,7 +86,7 @@ public final class Database {
     ///                  Default: `false`.
     ///
     /// - returns: A new database connection.
-    public convenience init(_ filename: String, readonly: Bool = false) {
+    public convenience init?(_ filename: String, readonly: Bool = false) {
         self.init(.URI(filename), readonly: readonly)
     }
 

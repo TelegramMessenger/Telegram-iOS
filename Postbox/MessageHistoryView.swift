@@ -420,7 +420,12 @@ final class MutableMessageHistoryView {
                     
                     let monthIndex = MessageMonthIndex(timestamp: topMessageIndex.timestamp)
                     
-                    let laterCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tagMask: tagMask, peerId: peerId, lowerBound: topMessageIndex.successor(), upperBound: monthUpperBoundIndex(peerId: peerId, index: monthIndex))
+                    let laterCount: Int32
+                    if self.later == nil {
+                        laterCount = 0
+                    } else {
+                        laterCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tagMask: tagMask, peerId: peerId, lowerBound: topMessageIndex.successor(), upperBound: monthUpperBoundIndex(peerId: peerId, index: monthIndex))
+                    }
                     self.entries[topMessageEntryIndex] = self.entries[topMessageEntryIndex].updatedMonthLocation(MessageHistoryEntryMonthLocation(indexInMonth: laterCount))
                 }
             }
