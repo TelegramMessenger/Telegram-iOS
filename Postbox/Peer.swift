@@ -100,3 +100,11 @@ public protocol Peer: class, Coding {
     
     func isEqual(_ other: Peer) -> Bool
 }
+
+public func arePeersEqual(_ lhs: Peer?, _ rhs: Peer?) -> Bool {
+    if let lhs = lhs, let rhs = rhs {
+        return lhs.isEqual(rhs)
+    } else {
+        return (lhs != nil) == (rhs != nil)
+    }
+}

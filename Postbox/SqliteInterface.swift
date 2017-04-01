@@ -100,8 +100,12 @@ public final class SqliteStatementCursor {
 public final class SqliteInterface {
     private let database: Database
     
-    public init(databasePath: String) {
-        self.database = Database(databasePath)
+    public init?(databasePath: String) {
+        if let database = Database(databasePath) {
+            self.database = database
+        } else {
+            return nil
+        }
     }
     
     public func unlock(password: Data) -> Bool {
