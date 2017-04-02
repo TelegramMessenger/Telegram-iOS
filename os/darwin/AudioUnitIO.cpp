@@ -121,10 +121,6 @@ void CAudioUnitIO::ActuallyConfigure(uint32_t sampleRate, uint32_t bitsPerSample
 	status=AudioUnitSetProperty(unit, kAUVoiceIOProperty_VoiceProcessingEnableAGC, kAudioUnitScope_Global, kInputBus, &flag, sizeof(flag));
 	CHECK_AU_ERROR(status, "Error disabling AGC");
 	
-	Float64 nativeSampleRate;
-	UInt32 size=sizeof(Float64);
-	status=AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareSampleRate, &size, &nativeSampleRate);
-	
 	AudioStreamBasicDescription audioFormat;
 	audioFormat.mSampleRate			= sampleRate;
 	audioFormat.mFormatID			= kAudioFormatLinearPCM;
