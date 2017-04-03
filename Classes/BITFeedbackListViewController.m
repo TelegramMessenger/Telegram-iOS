@@ -139,9 +139,6 @@
   self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
   [self.tableView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
 
-  //[self.tableView setBackgroundColor:[UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1]];
-  //self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
-
   if ([UIRefreshControl class]) {
     self.refreshControl = [[UIRefreshControl alloc] init];
     [self.refreshControl addTarget:self action:@selector(reloadList) forControlEvents:UIControlEventValueChanged];
