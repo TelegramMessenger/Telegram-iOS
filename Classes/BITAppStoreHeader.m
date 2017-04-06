@@ -60,7 +60,6 @@
   if ((self = [super initWithFrame:frame])) {
     self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     self.backgroundColor = kWhiteBackgroundColorDefault;
-    self.style = BITAppStoreHeaderStyleDefault;
   }
   return self;
 }
@@ -70,25 +69,14 @@
 
 - (void)drawRect:(CGRect)rect {
   CGRect bounds = self.bounds;
-  CGContextRef context = UIGraphicsGetCurrentContext();
-  
-  if (self.style == BITAppStoreHeaderStyleDefault) {
-    // draw the gradient
-    NSArray *colors = [NSArray arrayWithObjects:(id)kDarkGrayColor.CGColor, (id)kLightGrayColor.CGColor, nil];
-    CGGradientRef gradient = CGGradientCreateWithColors(CGColorGetColorSpace((__bridge CGColorRef)[colors objectAtIndex:0]), (__bridge CFArrayRef)colors, (CGFloat[2]){0, 1});
-    CGPoint top = CGPointMake(CGRectGetMidX(bounds), bounds.size.height - 3);
-    CGPoint bottom = CGPointMake(CGRectGetMidX(bounds), CGRectGetMaxY(bounds));
-    CGContextDrawLinearGradient(context, gradient, top, bottom, 0);
-    CGGradientRelease(gradient);
-  } else {
-    // draw the line
-    CGContextRef ctx = UIGraphicsGetCurrentContext();
-    CGContextSetLineWidth(ctx, 1.0);
-    CGContextSetStrokeColorWithColor(ctx, kDarkGrayColor.CGColor);
-    CGContextMoveToPoint(ctx, 0, CGRectGetMaxY(bounds));
-    CGContextAddLineToPoint( ctx, CGRectGetMaxX(bounds), CGRectGetMaxY(bounds));
-    CGContextStrokePath(ctx);
-  }
+
+  // draw the line
+  CGContextRef ctx = UIGraphicsGetCurrentContext();
+  CGContextSetLineWidth(ctx, 1.0);
+  CGContextSetStrokeColorWithColor(ctx, kDarkGrayColor.CGColor);
+  CGContextMoveToPoint(ctx, 0, CGRectGetMaxY(bounds));
+  CGContextAddLineToPoint( ctx, CGRectGetMaxX(bounds), CGRectGetMaxY(bounds));
+  CGContextStrokePath(ctx);
   
   // icon
   [_iconImage drawAtPoint:CGPointMake(kImageLeftMargin, kImageTopMargin)];
@@ -98,8 +86,7 @@
 
 
 - (void)layoutSubviews {
-  if (self.style == BITAppStoreHeaderStyleOS7)
-    self.backgroundColor = kWhiteBackgroundColorOS7;
+  self.backgroundColor = kWhiteBackgroundColorOS7;
 
   [super layoutSubviews];
   
@@ -151,10 +138,7 @@
     
     // scale, make borders and reflection
     _iconImage = bit_imageToFitSize(anIconImage, CGSizeMake(kImageHeight, kImageHeight), YES);
-    CGFloat radius = kImageBorderRadius;
-    if (self.style == BITAppStoreHeaderStyleOS7)
-      radius = kImageBorderRadiusiOS7;
-    _iconImage = bit_roundedCornerImage(_iconImage, radius, 0.0);
+    _iconImage = bit_roundedCornerImage(_iconImage, kImageBorderRadiusiOS7, 0.0);
     
     [self setNeedsDisplay];
   }

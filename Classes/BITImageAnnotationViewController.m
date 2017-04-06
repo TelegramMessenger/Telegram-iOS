@@ -356,12 +356,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   if (self.navigationController.navigationBar.alpha == 0 || self.navigationController.navigationBarHidden ){
     
     [UIView animateWithDuration:0.35f animations:^{
-      
-      if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
-        [self.navigationController setNavigationBarHidden:NO animated:NO];
-      } else {
-        self.navigationController.navigationBar.alpha = 1.0;
-      }
+      [self.navigationController setNavigationBarHidden:NO animated:NO];
       
       if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
         [self setNeedsStatusBarAppearanceUpdate];
@@ -378,12 +373,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     }];
   } else {
     [UIView animateWithDuration:0.35f animations:^{
-      
-      if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
-        [self.navigationController setNavigationBarHidden:YES animated:NO];
-      } else {
-        self.navigationController.navigationBar.alpha = 0.0;
-      }
+      [self.navigationController setNavigationBarHidden:YES animated:NO];
       
       if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
         [self setNeedsStatusBarAppearanceUpdate];

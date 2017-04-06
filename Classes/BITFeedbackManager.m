@@ -209,11 +209,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (BITFeedbackListViewController *)feedbackListViewController:(BOOL)modal {
-  if ([self isPreiOS7Environment]) {
-    return [[BITFeedbackListViewController alloc] initWithModalStyle:modal];
-  } else {
-    return [[BITFeedbackListViewController alloc] initWithStyle:UITableViewStyleGrouped modal:modal];
-  }
+  return [[BITFeedbackListViewController alloc] initWithStyle:UITableViewStyleGrouped modal:modal];
 }
 
 - (void)showFeedbackListView {
@@ -1218,19 +1214,13 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)setObservationModeOnScreenshotEnabled:(BOOL)observationModeOnScreenshotEnabled {
-  if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
-    // Enable/disable screenshot notification
-    if (observationModeOnScreenshotEnabled) {
-      [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
-      BITHockeyLogVerbose(@"Added observer for UIApplocationUserDidTakeScreenshotNotification.");
-    } else {
-      [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
-      BITHockeyLogVerbose(@"Removed observer for UIApplocationUserDidTakeScreenshotNotification.");
-    }
+  // Enable/disable screenshot notification
+  if (observationModeOnScreenshotEnabled) {
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+    BITHockeyLogVerbose(@"Added observer for UIApplocationUserDidTakeScreenshotNotification.");
   } else {
-    if (observationModeOnScreenshotEnabled) {
-      BITHockeyLogWarning(@"BITFeedbackObservationModeOnScreenshot requires iOS 7 or later.");
-    }
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+    BITHockeyLogVerbose(@"Removed observer for UIApplocationUserDidTakeScreenshotNotification.");
   }
 
   _observationModeOnScreenshotEnabled = observationModeOnScreenshotEnabled;

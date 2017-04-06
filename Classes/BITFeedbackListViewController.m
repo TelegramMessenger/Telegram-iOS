@@ -138,19 +138,7 @@
   self.tableView.dataSource = self;
   self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
   [self.tableView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
-  if ([self.manager isPreiOS7Environment]) {
-    [self.tableView setBackgroundColor:[UIColor colorWithRed:0.82 green:0.84 blue:0.84 alpha:1]];
-    [self.tableView setSeparatorColor:[UIColor colorWithRed:0.79 green:0.79 blue:0.79 alpha:1]];
-  } else {
-    //    [self.tableView setBackgroundColor:[UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1]];
-  }
-  
-  if ([self.manager isPreiOS7Environment]) {
-    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
-  } else {
-    //    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
-  }
-  
+
   if ([UIRefreshControl class]) {
     self.refreshControl = [[UIRefreshControl alloc] init];
     [self.refreshControl addTarget:self action:@selector(reloadList) forControlEvents:UIControlEventValueChanged];
@@ -488,17 +476,14 @@
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
-  if (![self.manager isPreiOS7Environment]) {
-    if (section == 0) {
-      return 30;
-    }
+  if (section == 0) {
+    return 30;
   }
-  
   return [super tableView:tableView heightForHeaderInSection:section];
 }
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
-  if (![self.manager isPreiOS7Environment] && section == 0) {
+  if (section == 0) {
     UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 30.0f)];
     UILabel *textLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 5.0f, self.view.frame.size.width - 32.0f, 25.0f)];
     textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
@@ -520,7 +505,7 @@
   static NSString *ButtonBottomIdentifier = @"ButtonBottomCell";
   static NSString *ButtonDeleteIdentifier = @"ButtonDeleteCell";
   
-  if (indexPath.section == 0 && indexPath.row == 1 && ![self.manager isPreiOS7Environment]) {
+  if (indexPath.section == 0 && indexPath.row == 1) {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:LastUpdateIdentifier];
     
     if (!cell) {
@@ -537,8 +522,6 @@
     
     return cell;
   } else if (indexPath.section == 0 || indexPath.section >= 2) {
-    CGFloat topGap = 0.0f;
-    
     UITableViewCell *cell = nil;
     
     NSString *identifier = nil;
@@ -559,49 +542,24 @@
       cell.textLabel.font = [UIFont systemFontOfSize:14];
       cell.textLabel.numberOfLines = 0;
       cell.accessoryType = UITableViewCellAccessoryNone;
-      
-      if ([self.manager isPreiOS7Environment]) {
-        cell.selectionStyle = UITableViewCellSelectionStyleNone;
-      } else {
-        cell.selectionStyle = UITableViewCellSelectionStyleGray;
-      }
+      cell.selectionStyle = UITableViewCellSelectionStyleGray;
     }
     
     // button
     NSString *titleString = nil;
-    SEL actionSelector = nil;
     
     UIColor *titleColor = BIT_RGBCOLOR(35, 111, 251);
     if ([self.view respondsToSelector:@selector(tintColor)]){
       titleColor = self.view.tintColor;
     }
-    
-    UIButton *button = nil;
-    if ([self.manager isPreiOS7Environment]) {
-      button = [UIButton buttonWithType:UIButtonTypeCustom];
-      button.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-      UIImage *stretchableButton = [bit_imageNamed(@"buttonRoundedRegular.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
-      UIImage *stretchableHighlightedButton = [bit_imageNamed(@"buttonRoundedRegularHighlighted.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
-      [button setBackgroundImage:stretchableButton forState:UIControlStateNormal];
-      [button setBackgroundImage:stretchableHighlightedButton forState:UIControlStateHighlighted];
-      
-      [[button titleLabel] setShadowOffset:CGSizeMake(0, 1)];
-      [[button titleLabel] setFont:[UIFont boldSystemFontOfSize:14.0]];
-      
-      [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
-      [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
-    }
-    
+
     if (indexPath.section == 0) {
-      topGap = 22;
       if ([self.manager numberOfMessages] == 0) {
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonWriteFeedback");
       } else {
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonWriteResponse");
       }
-      actionSelector = @selector(newFeedbackAction:);
     } else if (indexPath.section == _userButtonSection) {
-      topGap = 6.0f;
       if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
           ([self.manager requireUserName] == BITFeedbackUserDataElementOptional && [self.manager userName] != nil)
           ) {
@@ -615,65 +573,14 @@
       } else {
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataSetEmail");
       }
-      actionSelector = @selector(setUserDataAction:);
     } else {
-      topGap = 0.0f;
-      if ([self.manager isPreiOS7Environment]) {
-        [[button titleLabel] setShadowOffset:CGSizeMake(0, -1)];
-        UIImage *stretchableDeleteButton = [bit_imageNamed(@"buttonRoundedDelete.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
-        UIImage *stretchableDeleteHighlightedButton = [bit_imageNamed(@"buttonRoundedDeleteHighlighted.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
-        [button setBackgroundImage:stretchableDeleteButton forState:UIControlStateNormal];
-        [button setBackgroundImage:stretchableDeleteHighlightedButton forState:UIControlStateHighlighted];
-        
-        [button setTitleColor:BUTTON_DELETE_TEXTCOLOR forState:UIControlStateNormal];
-        [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
-      }
-      
       titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages");
       titleColor = BIT_RGBCOLOR(251, 35, 35);
-      actionSelector = @selector(deleteAllMessagesAction:);
     }
-    
-    if ([self.manager isPreiOS7Environment]) {
-      if (titleString)
-        [button setTitle:titleString forState:UIControlStateNormal];
-      if (actionSelector)
-        [button addTarget:self action:actionSelector forControlEvents:UIControlEventTouchUpInside];
-      
-      [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, cell.frame.size.width - 20.0f, 42.0f)];
-      [cell addSubview:button];
-    } else {
-      cell.textLabel.text = titleString;
-      cell.textLabel.textColor = titleColor;
-    }
-    
-    if ([self.manager isPreiOS7Environment]) {
-      // status label or shadow lines
-      if (indexPath.section == 0) {
-        UILabel *statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 6, cell.frame.size.width, 28)];
-        
-        statusLabel.font = [UIFont systemFontOfSize:10];
-        statusLabel.textColor = DEFAULT_TEXTCOLOR;
-        statusLabel.textAlignment = NSTextAlignmentCenter;
-        if ([self.manager isPreiOS7Environment]) {
-          statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
-        } else {
-          statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
-        }
-        statusLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        
-        statusLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
-                            [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
-        
-        [cell addSubview:statusLabel];
-      } else if (indexPath.section == 2) {
-        UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
-        lineView1.backgroundColor = BORDER_COLOR;
-        lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        [cell addSubview:lineView1];
-      }
-    }
-    
+
+    cell.textLabel.text = titleString;
+    cell.textLabel.textColor = titleColor;
+
     return cell;
   } else {
     BITFeedbackListViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -689,13 +596,7 @@
     } else {
       cell.backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
     }
-    
-    if ([self.manager isPreiOS7Environment]) {
-      cell.style = BITFeedbackListViewCellPresentationStyleDefault;
-    } else {
-      cell.style = BITFeedbackListViewCellPresentationStyleOS7;
-    }
-    
+
     BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
     cell.message = message;
     cell.labelText.delegate = self;
@@ -733,10 +634,7 @@
       }
     }
     
-    if (
-        [self.manager isPreiOS7Environment] ||
-        (![self.manager isPreiOS7Environment] && indexPath.row != 0)
-        ) {
+    if (indexPath.row != 0) {
       UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
       lineView1.backgroundColor = BORDER_COLOR;
       lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
@@ -790,16 +688,10 @@
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 0 ) {
-    if ([self.manager isPreiOS7Environment])
-      return 87;
-    else
-      return 44;
+    return 44;
   }
   if (indexPath.section >= 2) {
-    if ([self.manager isPreiOS7Environment])
-      return 65;
-    else
-      return 44;
+    return 44;
   }
   
   BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
@@ -809,14 +701,12 @@
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-  if (![self.manager isPreiOS7Environment]) {
-    if (indexPath.section == 0) {
-      [self newFeedbackAction:self];
-    } else if (indexPath.section == _userButtonSection) {
-      [self setUserDataAction:self];
-    } else if (indexPath.section == _deleteButtonSection) {
-      [self deleteAllMessagesAction:self];
-    }
+  if (indexPath.section == 0) {
+    [self newFeedbackAction:self];
+  } else if (indexPath.section == _userButtonSection) {
+    [self setUserDataAction:self];
+  } else if (indexPath.section == _deleteButtonSection) {
+    [self deleteAllMessagesAction:self];
   }
 }
 

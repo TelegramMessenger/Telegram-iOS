@@ -66,11 +66,7 @@
 #pragma mark - Private
 
 - (UIColor *)backgroundColor {
-  if ([self.updateManager isPreiOS7Environment]) {
-    return BIT_RGBCOLOR(235, 235, 235);
-  } else {
-    return BIT_RGBCOLOR(255, 255, 255);
-  }
+  return BIT_RGBCOLOR(255, 255, 255);
 }
 
 - (void)restoreStoreButtonStateAnimated:(BOOL)animated {
@@ -119,10 +115,8 @@
     tableViewContentHeight += [self tableView:self.tableView heightForRowAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
   }
   tableViewContentHeight += self.tableView.tableHeaderView.frame.size.height;
-  if (![self.updateManager isPreiOS7Environment]) {
-    tableViewContentHeight += self.navigationController.navigationBar.frame.size.height;
-    tableViewContentHeight += [UIApplication sharedApplication].statusBarFrame.size.height;
-  }
+  tableViewContentHeight += self.navigationController.navigationBar.frame.size.height;
+  tableViewContentHeight += [UIApplication sharedApplication].statusBarFrame.size.height;
   
   NSUInteger footerViewSize = kMinPreviousVersionButtonHeight;
   NSUInteger frameHeight = self.view.frame.size.height;
@@ -235,11 +229,7 @@
     if ([appVersion.notes length] > 0) {
       cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, appVersion.notes];
     } else {
-      if ([self.updateManager isPreiOS7Environment]) {
-        cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:200px;vertical-align:middle;text-align:center;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
-      } else {
-        cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:130px;vertical-align:middle;text-align:center;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
-      }
+      cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:130px;vertical-align:middle;text-align:center;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
     }
   } else {
     cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, [appVersion notesOrEmptyString]];
@@ -312,35 +302,16 @@
   [self.tableView addSubview:topView];
   
   _appStoreHeader = [[BITAppStoreHeader alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kAppStoreViewHeight)];
-  if ([self.updateManager isPreiOS7Environment]) {
-    _appStoreHeader.style = BITAppStoreHeaderStyleDefault;
-  } else {
-    _appStoreHeader.style = BITAppStoreHeaderStyleOS7;
-  }
   [self updateAppStoreHeader];
   
   NSString *iconFilename = bit_validAppIconFilename([NSBundle mainBundle], [NSBundle mainBundle]);
   if (iconFilename) {
-    BOOL addGloss = YES;
-    NSNumber *prerendered = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIPrerenderedIcon"];
-    if (prerendered) {
-      addGloss = ![prerendered boolValue];
-    }
-    
-    if (addGloss && [self.updateManager isPreiOS7Environment]) {
-      _appStoreHeader.iconImage = [self addGlossToImage:[UIImage imageNamed:iconFilename]];
-    } else {
-      _appStoreHeader.iconImage = [UIImage imageNamed:iconFilename];
-    }
+    _appStoreHeader.iconImage = [UIImage imageNamed:iconFilename];
   }
   
   self.tableView.tableHeaderView = _appStoreHeader;
   
-  BITStoreButtonStyle buttonStyle = BITStoreButtonStyleDefault;
-  if (![self.updateManager isPreiOS7Environment]) {
-    buttonStyle = BITStoreButtonStyleOS7;
-  }
-  BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58) style:buttonStyle];
+  BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58) style:BITStoreButtonStyleOS7];
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
   storeButton.buttonDelegate = self;
   [self.tableView.tableHeaderView addSubview:storeButton];
