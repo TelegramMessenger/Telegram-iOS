@@ -9,6 +9,19 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+private func roundUp(_ value: Int, to multiple: Int) -> Int {
+    if multiple == 0 {
+        return value
+    }
+    
+    let remainder = value % multiple
+    if remainder == 0 {
+        return value
+    }
+    
+    return value + multiple - remainder
+}
+
 class Download: NSObject, MTRequestMessageServiceDelegate {
     let datacenterId: Int
     let context: MTContext
@@ -84,7 +97,12 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
             
-            let data = Api.functions.upload.getFile(location: location, offset: Int32(offset), limit: Int32(length))
+            var updatedLength = roundUp(length, to: 4096)
+            while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
+                updatedLength += 1
+            }
+            
+            let data = Api.functions.upload.getFile(location: location, offset: Int32(offset), limit: Int32(updatedLength))
             
             request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0, tag: nil), responseParser: { response in
                 if let result = data.2(Buffer(data: response)) {
@@ -103,6 +121,8 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                         switch result {
                             case let .file(_, _, bytes):
                                 subscriber.putNext(bytes.makeData())
+                            case let .fileCdnRedirect(dcId, fileToken, encryptionKey, encryptionIv):
+                                break
                         }
                         subscriber.putCompletion()
                     }

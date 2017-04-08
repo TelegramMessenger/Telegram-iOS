@@ -63,6 +63,8 @@ func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, namespace:
         updateLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeInstalledStickerPacksOperation {
             previousSrickerPackIds = operation.previousPacks
+        } else {
+            assertionFailure()
         }
         return false
     })
@@ -81,6 +83,8 @@ func addSynchronizeMarkFeaturedStickerPacksAsSeenOperation(modifier: Modifier, i
         updateLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeMarkFeaturedStickerPacksAsSeenOperation {
             previousIds = Set(operation.ids)
+        } else {
+            assertionFailure()
         }
         return false
     })

@@ -230,57 +230,66 @@ private func accountRecordIdPathName(_ id: AccountRecordId) -> String {
     return "account-\(UInt64(bitPattern: id.int64))"
 }
 
-public func accountWithId(apiId: Int32, id: AccountRecordId, supplementary: Bool, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
-    return Signal<(String, Postbox, Coding?), NoError> { subscriber in
-        let _ = declaredEncodables
-        
-        let path = "\(appGroupPath)/\(accountRecordIdPathName(id))"
-        
-        var initializeMessageNamespacesWithHoles: [(PeerId.Namespace, MessageId.Namespace)] = []
-        for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {
-            initializeMessageNamespacesWithHoles.append((peerNamespace, Namespaces.Message.Cloud))
-        }
-        
-        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: allMessageTags)
-        
-        let postbox = Postbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
-        
-        return (postbox.stateView() |> take(1) |> map { view -> (String, Postbox, Coding?) in
-            let accountState = view.state
-            return (path, postbox, accountState)
-        }).start(next: { args in
-            subscriber.putNext(args)
-            subscriber.putCompletion()
-        })
-    } |> mapToSignal { (basePath, postbox, accountState) -> Signal<Either<UnauthorizedAccount, Account>, NoError> in
-        let keychain = Keychain(get: { key in
-            return postbox.keychainEntryForKey(key)
-        }, set: { (key, data) in
-            postbox.setKeychainEntryForKey(key, value: data)
-        }, remove: { key in
-            postbox.removeKeychainEntryForKey(key)
-        })
-        
-        if let accountState = accountState {
-            switch accountState {
-                case let unauthorizedState as UnauthorizedAccountState:
-                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
-                        |> map { network -> Either<UnauthorizedAccount, Account> in
-                            .left(value: UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+public enum AccountResult {
+    case upgrading
+    case unauthorized(UnauthorizedAccount)
+    case authorized(Account)
+}
+
+public func accountWithId(apiId: Int32, id: AccountRecordId, supplementary: Bool, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+    let _ = declaredEncodables
+    
+    let path = "\(appGroupPath)/\(accountRecordIdPathName(id))"
+    
+    var initializeMessageNamespacesWithHoles: [(PeerId.Namespace, MessageId.Namespace)] = []
+    for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {
+        initializeMessageNamespacesWithHoles.append((peerNamespace, Namespaces.Message.Cloud))
+    }
+    
+    let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: allMessageTags)
+    
+    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
+    
+    return postbox |> mapToSignal { result -> Signal<AccountResult, NoError> in
+        switch result {
+            case .upgrading:
+                return .single(.upgrading)
+            case let .postbox(postbox):
+                return postbox.stateView()
+                    |> take(1)
+                    |> mapToSignal { view -> Signal<AccountResult, NoError> in
+                        let accountState = view.state
+                        
+                        let keychain = Keychain(get: { key in
+                            return postbox.keychainEntryForKey(key)
+                        }, set: { (key, data) in
+                            postbox.setKeychainEntryForKey(key, value: data)
+                        }, remove: { key in
+                            postbox.removeKeychainEntryForKey(key)
+                        })
+                        
+                        if let accountState = accountState {
+                            switch accountState {
+                                case let unauthorizedState as UnauthorizedAccountState:
+                                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: path), testingEnvironment: testingEnvironment)
+                                        |> map { network -> AccountResult in
+                                            return .unauthorized(UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                                        }
+                                case let authorizedState as AuthorizedAccountState:
+                                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: path), testingEnvironment: testingEnvironment)
+                                        |> map { network -> AccountResult in
+                                            return .authorized(Account(id: id, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
+                                    }
+                                case _:
+                                    assertionFailure("Unexpected accountState \(accountState)")
+                            }
                         }
-                case let authorizedState as AuthorizedAccountState:
-                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
-                        |> map { network -> Either<UnauthorizedAccount, Account> in
-                            return .right(value: Account(id: id, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
+                        
+                        return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: path), testingEnvironment: testingEnvironment)
+                            |> map { network -> AccountResult in
+                                return .unauthorized(UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                         }
-                case _:
-                    assertionFailure("Unexpected accountState \(accountState)")
-            }
-        }
-        
-        return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: basePath), testingEnvironment: testingEnvironment)
-            |> map { network -> Either<UnauthorizedAccount, Account> in
-                return .left(value: UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: basePath, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                    }
         }
     }
 }
@@ -566,7 +575,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network).start())
-
+        self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged

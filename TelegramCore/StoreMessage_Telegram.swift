@@ -161,6 +161,10 @@ extension Api.Message {
                         result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
                     case let .messageActionPhoneCall(flags, callId, reason, duration):
                         break
+                    case let .messageActionPaymentSent(currency, totalAmount):
+                        break
+                    case .messageActionPaymentSentMe:
+                        break
                 }
             
                 return result
@@ -236,6 +240,8 @@ func textAndMediaFromApiMedia(_ media: Api.MessageMedia?) -> (String?, Media?) {
                 break
             case let .messageMediaGame(game):
                 return (nil, TelegramMediaGame(apiGame: game))
+            case let .messageMediaInvoice(flags, title, description, photo, receiptMsgId, currency, totalAmount, startParam):
+                break
         }
     }
     

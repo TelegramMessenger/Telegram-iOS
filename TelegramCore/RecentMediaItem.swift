@@ -29,7 +29,7 @@ public struct RecentMediaItemId {
     }
 }
 
-public final class RecentMediaItem: OrderedItemListEntryContents {
+public final class RecentMediaItem: OrderedItemListEntryContents, Equatable {
     public let media: Media
     
     init(_ media: Media) {
@@ -42,5 +42,9 @@ public final class RecentMediaItem: OrderedItemListEntryContents {
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeObject(self.media, forKey: "m")
+    }
+    
+    public static func ==(lhs: RecentMediaItem, rhs: RecentMediaItem) -> Bool {
+        return lhs.media.isEqual(rhs.media)
     }
 }

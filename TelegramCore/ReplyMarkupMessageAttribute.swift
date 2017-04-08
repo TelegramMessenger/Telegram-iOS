@@ -13,6 +13,7 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
     case requestMap
     case switchInline(samePeer: Bool, query: String)
     case openWebApp
+    case payment
     
     public init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("v") as Int32 {
@@ -30,6 +31,8 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
                 self = .switchInline(samePeer: decoder.decodeInt32ForKey("s") != 0, query: decoder.decodeStringForKey("q"))
             case 6:
                 self = .openWebApp
+            case 7:
+                self = .payment
             default:
                 self = .text
         }
@@ -55,6 +58,8 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
                 encoder.encodeString(query, forKey: "q")
             case .openWebApp:
                 encoder.encodeInt32(6, forKey: "v")
+            case .payment:
+                encoder.encodeInt32(7, forKey: "v")
         }
     }
     
@@ -98,6 +103,12 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
                 }
             case .openWebApp:
                 if case .openWebApp = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .payment:
+                if case .payment = rhs {
                     return true
                 } else {
                     return false
@@ -212,6 +223,8 @@ extension ReplyMarkupButton {
                 self.init(title: text, action: .url(url))
             case let .keyboardButtonGame(text):
                 self.init(title: text, action: .openWebApp)
+            case let .keyboardButtonBuy(text):
+                self.init(title: text, action: .payment)
         }
     }
 }

@@ -115,7 +115,7 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
             case .HasLinkedStickers:
                 attributes.append(.documentAttributeHasStickers)
             case let .Video(duration, size):
-                attributes.append(.documentAttributeVideo(duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
+                attributes.append(.documentAttributeVideo(flags: 0, duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
             case let .Audio(isVoice, duration, title, performer, waveform):
                 var flags: Int32 = 0
                 if isVoice {

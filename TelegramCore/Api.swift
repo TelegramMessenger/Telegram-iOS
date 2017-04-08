@@ -19,6 +19,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1240849242] = { return Api.messages.StickerSet.parse_stickerSet($0) }
     dict[-457104426] = { return Api.InputGeoPoint.parse_inputGeoPointEmpty($0) }
     dict[-206066487] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
+    dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[771925524] = { return Api.ChatFull.parse_chatFull($0) }
     dict[-1009430225] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
@@ -28,6 +29,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[16030880] = { return Api.updates.Difference.parse_difference($0) }
     dict[-1459938943] = { return Api.updates.Difference.parse_differenceSlice($0) }
     dict[1258196845] = { return Api.updates.Difference.parse_differenceTooLong($0) }
+    dict[1462101002] = { return Api.CdnConfig.parse_cdnConfig($0) }
     dict[324435594] = { return Api.PageBlock.parse_pageBlockUnsupported($0) }
     dict[1890305021] = { return Api.PageBlock.parse_pageBlockTitle($0) }
     dict[-1879401953] = { return Api.PageBlock.parse_pageBlockSubtitle($0) }
@@ -49,6 +51,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[690781161] = { return Api.PageBlock.parse_pageBlockEmbedPost($0) }
     dict[145955919] = { return Api.PageBlock.parse_pageBlockCollage($0) }
     dict[319588707] = { return Api.PageBlock.parse_pageBlockSlideshow($0) }
+    dict[-614138572] = { return Api.account.TmpPassword.parse_tmpPassword($0) }
     dict[590459437] = { return Api.Photo.parse_photoEmpty($0) }
     dict[-1836524247] = { return Api.Photo.parse_photo($0) }
     dict[-1683826688] = { return Api.Chat.parse_chatEmpty($0) }
@@ -85,13 +88,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1776756363] = { return Api.ChannelParticipantRole.parse_channelRoleModerator($0) }
     dict[-2113143156] = { return Api.ChannelParticipantRole.parse_channelRoleEditor($0) }
     dict[-1432995067] = { return Api.storage.FileType.parse_fileUnknown($0) }
+    dict[1086091090] = { return Api.storage.FileType.parse_filePartial($0) }
     dict[8322574] = { return Api.storage.FileType.parse_fileJpeg($0) }
     dict[-891180321] = { return Api.storage.FileType.parse_fileGif($0) }
     dict[172975040] = { return Api.storage.FileType.parse_filePng($0) }
     dict[-1373745011] = { return Api.storage.FileType.parse_filePdf($0) }
     dict[1384777335] = { return Api.storage.FileType.parse_fileMp3($0) }
     dict[1258941372] = { return Api.storage.FileType.parse_fileMov($0) }
-    dict[1086091090] = { return Api.storage.FileType.parse_filePartial($0) }
     dict[-1278304028] = { return Api.storage.FileType.parse_fileMp4($0) }
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1338747336] = { return Api.messages.ArchivedStickers.parse_archivedStickers($0) }
@@ -108,6 +111,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1649296275] = { return Api.Peer.parse_peerUser($0) }
     dict[-1160714821] = { return Api.Peer.parse_peerChat($0) }
     dict[-1109531342] = { return Api.Peer.parse_peerChannel($0) }
+    dict[-1868808300] = { return Api.PaymentRequestedInfo.parse_paymentRequestedInfo($0) }
     dict[164646985] = { return Api.UserStatus.parse_userStatusEmpty($0) }
     dict[-306628279] = { return Api.UserStatus.parse_userStatusOnline($0) }
     dict[9203775] = { return Api.UserStatus.parse_userStatusOffline($0) }
@@ -115,8 +119,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[129960444] = { return Api.UserStatus.parse_userStatusLastWeek($0) }
     dict[2011940674] = { return Api.UserStatus.parse_userStatusLastMonth($0) }
     dict[1728035348] = { return Api.Dialog.parse_dialog($0) }
-    dict[-1350696044] = { return Api.help.AppChangelog.parse_appChangelogEmpty($0) }
-    dict[705920636] = { return Api.help.AppChangelog.parse_appChangelog($0) }
     dict[381645902] = { return Api.SendMessageAction.parse_sendMessageTypingAction($0) }
     dict[-44119819] = { return Api.SendMessageAction.parse_sendMessageCancelAction($0) }
     dict[-1584933265] = { return Api.SendMessageAction.parse_sendMessageRecordVideoAction($0) }
@@ -184,11 +186,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1574314746] = { return Api.Update.parse_updateConfig($0) }
     dict[861169551] = { return Api.Update.parse_updatePtsChanged($0) }
     dict[1081547008] = { return Api.Update.parse_updateChannelWebPage($0) }
-    dict[-1425052898] = { return Api.Update.parse_updatePhoneCall($0) }
     dict[-686710068] = { return Api.Update.parse_updateDialogPinned($0) }
     dict[-657787251] = { return Api.Update.parse_updatePinnedDialogs($0) }
     dict[-2095595325] = { return Api.Update.parse_updateBotWebhookJSON($0) }
     dict[-1684914010] = { return Api.Update.parse_updateBotWebhookJSONQuery($0) }
+    dict[-523384512] = { return Api.Update.parse_updateBotShippingQuery($0) }
+    dict[1563376297] = { return Api.Update.parse_updateBotPrecheckoutQuery($0) }
+    dict[-1425052898] = { return Api.Update.parse_updatePhoneCall($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
     dict[-1861910545] = { return Api.ChannelParticipant.parse_channelParticipantModerator($0) }
@@ -205,6 +209,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-59151553] = { return Api.KeyboardButton.parse_keyboardButtonRequestGeoLocation($0) }
     dict[90744648] = { return Api.KeyboardButton.parse_keyboardButtonSwitchInline($0) }
     dict[1358175439] = { return Api.KeyboardButton.parse_keyboardButtonGame($0) }
+    dict[-1344716869] = { return Api.KeyboardButton.parse_keyboardButtonBuy($0) }
     dict[-748155807] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[236446268] = { return Api.PhotoSize.parse_photoSizeEmpty($0) }
     dict[2009052699] = { return Api.PhotoSize.parse_photoSize($0) }
@@ -266,15 +271,19 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1252045032] = { return Api.InputMedia.parse_inputMediaPhotoExternal($0) }
     dict[-437690244] = { return Api.InputMedia.parse_inputMediaDocumentExternal($0) }
     dict[-750828557] = { return Api.InputMedia.parse_inputMediaGame($0) }
+    dict[-1844103547] = { return Api.InputMedia.parse_inputMediaInvoice($0) }
     dict[2134579434] = { return Api.InputPeer.parse_inputPeerEmpty($0) }
     dict[2107670217] = { return Api.InputPeer.parse_inputPeerSelf($0) }
     dict[396093539] = { return Api.InputPeer.parse_inputPeerChat($0) }
     dict[2072935910] = { return Api.InputPeer.parse_inputPeerUser($0) }
     dict[548253432] = { return Api.InputPeer.parse_inputPeerChannel($0) }
+    dict[568808380] = { return Api.upload.WebFile.parse_webFile($0) }
     dict[-116274796] = { return Api.Contact.parse_contact($0) }
     dict[-1679053127] = { return Api.BotInlineResult.parse_botInlineResult($0) }
     dict[400266251] = { return Api.BotInlineResult.parse_botInlineMediaResult($0) }
     dict[911761060] = { return Api.messages.BotCallbackAnswer.parse_botCallbackAnswer($0) }
+    dict[1314881805] = { return Api.payments.PaymentResult.parse_paymentResult($0) }
+    dict[1800845601] = { return Api.payments.PaymentResult.parse_paymentVerficationNeeded($0) }
     dict[1694474197] = { return Api.messages.Chats.parse_chats($0) }
     dict[-1663561404] = { return Api.messages.Chats.parse_chatsSlice($0) }
     dict[218751099] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowContacts($0) }
@@ -289,6 +298,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1269012015] = { return Api.messages.AffectedHistory.parse_affectedHistory($0) }
     dict[-2037289493] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
     dict[649453030] = { return Api.messages.MessageEditData.parse_messageEditData($0) }
+    dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
     dict[-236044656] = { return Api.help.TermsOfService.parse_termsOfService($0) }
     dict[1490799288] = { return Api.ReportReason.parse_inputReportReasonSpam($0) }
@@ -323,16 +333,18 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1913754556] = { return Api.Page.parse_pagePart($0) }
     dict[-677274263] = { return Api.Page.parse_pageFull($0) }
     dict[157948117] = { return Api.upload.File.parse_file($0) }
+    dict[352864346] = { return Api.upload.File.parse_fileCdnRedirect($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
-    dict[989264735] = { return Api.Config.parse_config($0) }
+    dict[-882895228] = { return Api.Config.parse_config($0) }
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
     dict[-2066640507] = { return Api.messages.AffectedMessages.parse_affectedMessages($0) }
     dict[-402498398] = { return Api.messages.SavedGifs.parse_savedGifsNotModified($0) }
     dict[772213157] = { return Api.messages.SavedGifs.parse_savedGifs($0) }
+    dict[-914167110] = { return Api.CdnPublicKey.parse_cdnPublicKey($0) }
     dict[53231223] = { return Api.InputGame.parse_inputGameID($0) }
     dict[-1020139510] = { return Api.InputGame.parse_inputGameShortName($0) }
     dict[-1564789301] = { return Api.PhoneCallProtocol.parse_phoneCallProtocol($0) }
@@ -341,11 +353,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
     dict[189033187] = { return Api.messages.Messages.parse_messagesSlice($0) }
     dict[-1725551049] = { return Api.messages.Messages.parse_channelMessages($0) }
+    dict[-1022713000] = { return Api.Invoice.parse_invoice($0) }
     dict[-2122045747] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[1577067778] = { return Api.auth.SentCode.parse_sentCode($0) }
     dict[480546647] = { return Api.InputChatPhoto.parse_inputChatPhotoEmpty($0) }
     dict[-1837345356] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
     dict[-1991004873] = { return Api.InputChatPhoto.parse_inputChatPhoto($0) }
+    dict[-368917890] = { return Api.PaymentCharge.parse_paymentCharge($0) }
     dict[-484987010] = { return Api.Updates.parse_updatesTooLong($0) }
     dict[-1857044719] = { return Api.Updates.parse_updateShortMessage($0) }
     dict[377562760] = { return Api.Updates.parse_updateShortChatMessage($0) }
@@ -362,6 +376,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1557277184] = { return Api.MessageMedia.parse_messageMediaWebPage($0) }
     dict[2031269663] = { return Api.MessageMedia.parse_messageMediaVenue($0) }
     dict[-38694904] = { return Api.MessageMedia.parse_messageMediaGame($0) }
+    dict[-2074799289] = { return Api.MessageMedia.parse_messageMediaInvoice($0) }
+    dict[-842892769] = { return Api.PaymentSavedCredentials.parse_paymentSavedCredentialsCard($0) }
     dict[1450380236] = { return Api.Null.parse_null($0) }
     dict[1923290508] = { return Api.auth.CodeType.parse_codeTypeSms($0) }
     dict[1948046307] = { return Api.auth.CodeType.parse_codeTypeCall($0) }
@@ -369,13 +385,15 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1815593308] = { return Api.DocumentAttribute.parse_documentAttributeImageSize($0) }
     dict[297109817] = { return Api.DocumentAttribute.parse_documentAttributeAnimated($0) }
     dict[1662637586] = { return Api.DocumentAttribute.parse_documentAttributeSticker($0) }
-    dict[1494273227] = { return Api.DocumentAttribute.parse_documentAttributeVideo($0) }
+    dict[250621158] = { return Api.DocumentAttribute.parse_documentAttributeVideo($0) }
     dict[-1739392570] = { return Api.DocumentAttribute.parse_documentAttributeAudio($0) }
     dict[358154344] = { return Api.DocumentAttribute.parse_documentAttributeFilename($0) }
     dict[-1744710921] = { return Api.DocumentAttribute.parse_documentAttributeHasStickers($0) }
     dict[307276766] = { return Api.account.Authorizations.parse_authorizations($0) }
     dict[935395612] = { return Api.ChatPhoto.parse_chatPhotoEmpty($0) }
     dict[1632839530] = { return Api.ChatPhoto.parse_chatPhoto($0) }
+    dict[1062645411] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
+    dict[1342771681] = { return Api.payments.PaymentReceipt.parse_paymentReceipt($0) }
     dict[863093588] = { return Api.messages.PeerDialogs.parse_peerDialogs($0) }
     dict[-4838507] = { return Api.InputStickerSet.parse_inputStickerSetEmpty($0) }
     dict[-1645763991] = { return Api.InputStickerSet.parse_inputStickerSetID($0) }
@@ -385,7 +403,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[372165663] = { return Api.FoundGif.parse_foundGif($0) }
     dict[-1670052855] = { return Api.FoundGif.parse_foundGifCached($0) }
     dict[537022650] = { return Api.User.parse_userEmpty($0) }
-    dict[-787638374] = { return Api.User.parse_user($0) }
+    dict[773059779] = { return Api.User.parse_user($0) }
     dict[-2082087340] = { return Api.Message.parse_messageEmpty($0) }
     dict[-1063525281] = { return Api.Message.parse_message($0) }
     dict[-1642487306] = { return Api.Message.parse_messageService($0) }
@@ -400,6 +418,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1551583367] = { return Api.ReceivedNotifyMessage.parse_receivedNotifyMessage($0) }
     dict[-57668565] = { return Api.ChatParticipants.parse_chatParticipantsForbidden($0) }
     dict[1061556205] = { return Api.ChatParticipants.parse_chatParticipants($0) }
+    dict[-1056001329] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsSaved($0) }
+    dict[873977640] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentials($0) }
+    dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
+    dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
     dict[1251549527] = { return Api.InputStickeredMedia.parse_inputStickeredMediaPhoto($0) }
     dict[70813275] = { return Api.InputStickeredMedia.parse_inputStickeredMediaDocument($0) }
@@ -413,9 +435,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1916114267] = { return Api.photos.Photos.parse_photos($0) }
     dict[352657236] = { return Api.photos.Photos.parse_photosSlice($0) }
     dict[-1387117803] = { return Api.contacts.ImportedContacts.parse_importedContacts($0) }
+    dict[-1678949555] = { return Api.InputWebDocument.parse_inputWebDocument($0) }
     dict[-326966976] = { return Api.phone.PhoneCall.parse_phoneCall($0) }
     dict[-1132882121] = { return Api.Bool.parse_boolFalse($0) }
     dict[-1720552011] = { return Api.Bool.parse_boolTrue($0) }
+    dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
     dict[-947462709] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
     dict[1474492012] = { return Api.MessagesFilter.parse_inputMessagesFilterEmpty($0) }
@@ -430,8 +454,12 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[928101534] = { return Api.MessagesFilter.parse_inputMessagesFilterMusic($0) }
     dict[975236280] = { return Api.MessagesFilter.parse_inputMessagesFilterChatPhotos($0) }
     dict[-2134272152] = { return Api.MessagesFilter.parse_inputMessagesFilterPhoneCalls($0) }
+    dict[2054952868] = { return Api.MessagesFilter.parse_inputMessagesFilterRoundVoice($0) }
+    dict[-1253451181] = { return Api.MessagesFilter.parse_inputMessagesFilterRoundVideo($0) }
     dict[364538944] = { return Api.messages.Dialogs.parse_dialogs($0) }
     dict[1910543603] = { return Api.messages.Dialogs.parse_dialogsSlice($0) }
+    dict[-290921362] = { return Api.upload.CdnFile.parse_cdnFileReuploadNeeded($0) }
+    dict[-1449145777] = { return Api.upload.CdnFile.parse_cdnFile($0) }
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
     dict[175419739] = { return Api.BotInlineMessage.parse_botInlineMessageMediaAuto($0) }
     dict[-1937807902] = { return Api.BotInlineMessage.parse_botInlineMessageText($0) }
@@ -474,10 +502,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1799538451] = { return Api.MessageAction.parse_messageActionPinMessage($0) }
     dict[-1615153660] = { return Api.MessageAction.parse_messageActionHistoryClear($0) }
     dict[-1834538890] = { return Api.MessageAction.parse_messageActionGameScore($0) }
+    dict[-1892568281] = { return Api.MessageAction.parse_messageActionPaymentSentMe($0) }
+    dict[1080663248] = { return Api.MessageAction.parse_messageActionPaymentSent($0) }
     dict[-2132731265] = { return Api.MessageAction.parse_messageActionPhoneCall($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[462375633] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
-    dict[1816431336] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
+    dict[-2089411356] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
+    dict[1828732223] = { return Api.PhoneCall.parse_phoneCallAccepted($0) }
     dict[-1660057] = { return Api.PhoneCall.parse_phoneCall($0) }
     dict[1355435489] = { return Api.PhoneCall.parse_phoneCallDiscarded($0) }
     dict[-1378534221] = { return Api.PeerNotifyEvents.parse_peerNotifyEventsEmpty($0) }
@@ -486,6 +517,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-17968211] = { return Api.ContactLink.parse_contactLinkNone($0) }
     dict[646922073] = { return Api.ContactLink.parse_contactLinkHasPhone($0) }
     dict[-721239344] = { return Api.ContactLink.parse_contactLinkContact($0) }
+    dict[-971322408] = { return Api.WebDocument.parse_webDocument($0) }
     dict[446822276] = { return Api.contacts.Found.parse_found($0) }
     dict[1889961234] = { return Api.PeerNotifySettings.parse_peerNotifySettingsEmpty($0) }
     dict[-1697798976] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
@@ -493,6 +525,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[313694676] = { return Api.StickerPack.parse_stickerPack($0) }
     dict[1326562017] = { return Api.UserProfilePhoto.parse_userProfilePhotoEmpty($0) }
     dict[-715532088] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
+    dict[-74456004] = { return Api.payments.SavedInfo.parse_savedInfo($0) }
     dict[1041346555] = { return Api.updates.ChannelDifference.parse_channelDifferenceEmpty($0) }
     dict[1091431943] = { return Api.updates.ChannelDifference.parse_channelDifferenceTooLong($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
@@ -582,13 +615,19 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.InputGeoPoint:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.ValidatedRequestedInfo:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.ChatFull:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.ChatParticipant:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.updates.Difference:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.CdnConfig:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.PageBlock:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.account.TmpPassword:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.Photo:
                 return _1.serialize(buffer, boxed)
@@ -634,11 +673,11 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.Peer:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.PaymentRequestedInfo:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.UserStatus:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.Dialog:
-                return _1.serialize(buffer, boxed)
-            case let _1 as Api.help.AppChangelog:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.SendMessageAction:
                 return _1.serialize(buffer, boxed)
@@ -702,11 +741,15 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.InputPeer:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.upload.WebFile:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.Contact:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.BotInlineResult:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.BotCallbackAnswer:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.PaymentResult:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Chats:
                 return _1.serialize(buffer, boxed)
@@ -721,6 +764,8 @@ public struct Api {
             case let _1 as Api.account.PasswordInputSettings:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.MessageEditData:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.LabeledPrice:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ChatFull:
                 return _1.serialize(buffer, boxed)
@@ -774,6 +819,8 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SavedGifs:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.CdnPublicKey:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.InputGame:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCallProtocol:
@@ -782,15 +829,21 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Messages:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.Invoice:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.PeerSettings:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.auth.SentCode:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.InputChatPhoto:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.PaymentCharge:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.Updates:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.MessageMedia:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.PaymentSavedCredentials:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.Null:
                 return _1.serialize(buffer, boxed)
@@ -801,6 +854,10 @@ public struct Api {
             case let _1 as Api.account.Authorizations:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.ChatPhoto:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.PaymentForm:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.PaymentReceipt:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.PeerDialogs:
                 return _1.serialize(buffer, boxed)
@@ -828,6 +885,12 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.ChatParticipants:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.InputPaymentCredentials:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.ShippingOption:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.PostAddress:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.DataJSON:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.InputStickeredMedia:
@@ -842,9 +905,13 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.ImportedContacts:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.InputWebDocument:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.phone.PhoneCall:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.Bool:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.InputWebFileLocation:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.MessageFwdHeader:
                 return _1.serialize(buffer, boxed)
@@ -853,6 +920,8 @@ public struct Api {
             case let _1 as Api.MessagesFilter:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Dialogs:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.upload.CdnFile:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.help.InviteText:
                 return _1.serialize(buffer, boxed)
@@ -888,6 +957,8 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.ContactLink:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.WebDocument:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Found:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.PeerNotifySettings:
@@ -897,6 +968,8 @@ public struct Api {
             case let _1 as Api.StickerPack:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.UserProfilePhoto:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.SavedInfo:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.updates.ChannelDifference:
                 return _1.serialize(buffer, boxed)
@@ -2680,6 +2753,49 @@ public struct Api {
                         return "(chatParticipantCreator userId: \(userId))"
                     case .chatParticipantAdmin(let userId, let inviterId, let date):
                         return "(chatParticipantAdmin userId: \(userId), inviterId: \(inviterId), date: \(date))"
+                }
+            }
+        }
+    }
+
+    public enum CdnConfig: CustomStringConvertible {
+        case cdnConfig(publicKeys: [Api.CdnPublicKey])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .cdnConfig(let publicKeys):
+                    if boxed {
+                        buffer.appendInt32(1462101002)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(publicKeys.count))
+                    for item in publicKeys {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_cdnConfig(_ reader: BufferReader) -> CdnConfig? {
+            var _1: [Api.CdnPublicKey]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.CdnPublicKey.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.CdnConfig.cdnConfig(publicKeys: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .cdnConfig(let publicKeys):
+                        return "(cdnConfig publicKeys: \(publicKeys))"
                 }
             }
         }
@@ -4512,6 +4628,61 @@ public struct Api {
         }
     }
 
+    public enum PaymentRequestedInfo: CustomStringConvertible {
+        case paymentRequestedInfo(flags: Int32, name: String?, phone: String?, email: String?, shippingAddress: Api.PostAddress?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
+                    if boxed {
+                        buffer.appendInt32(-1868808300)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(name!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(phone!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(email!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {shippingAddress!.serialize(buffer, true)}
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_paymentRequestedInfo(_ reader: BufferReader) -> PaymentRequestedInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
+            var _3: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = parseString(reader) }
+            var _5: Api.PostAddress?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.PostAddress
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.PaymentRequestedInfo.paymentRequestedInfo(flags: _1!, name: _2, phone: _3, email: _4, shippingAddress: _5)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
+                        return "(paymentRequestedInfo flags: \(flags), name: \(name), phone: \(phone), email: \(email), shippingAddress: \(shippingAddress))"
+                }
+            }
+        }
+    }
+
     public enum UserStatus: CustomStringConvertible {
         case userStatusEmpty
         case userStatusOnline(expires: Int32)
@@ -4980,11 +5151,13 @@ public struct Api {
         case updateConfig
         case updatePtsChanged
         case updateChannelWebPage(channelId: Int32, webpage: Api.WebPage, pts: Int32, ptsCount: Int32)
-        case updatePhoneCall(phoneCall: Api.PhoneCall)
         case updateDialogPinned(flags: Int32, peer: Api.Peer)
         case updatePinnedDialogs(flags: Int32, order: [Api.Peer]?)
         case updateBotWebhookJSON(data: Api.DataJSON)
         case updateBotWebhookJSONQuery(queryId: Int64, data: Api.DataJSON, timeout: Int32)
+        case updateBotShippingQuery(queryId: Int64, userId: Int32, payload: Buffer, shippingAddress: Api.PostAddress)
+        case updateBotPrecheckoutQuery(flags: Int32, queryId: Int64, userId: Int32, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, currency: String, totalAmount: Int64)
+        case updatePhoneCall(phoneCall: Api.PhoneCall)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -5430,12 +5603,6 @@ public struct Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
-                case .updatePhoneCall(let phoneCall):
-                    if boxed {
-                        buffer.appendInt32(-1425052898)
-                    }
-                    phoneCall.serialize(buffer, true)
-                    break
                 case .updateDialogPinned(let flags, let peer):
                     if boxed {
                         buffer.appendInt32(-686710068)
@@ -5467,6 +5634,34 @@ public struct Api {
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     data.serialize(buffer, true)
                     serializeInt32(timeout, buffer: buffer, boxed: false)
+                    break
+                case .updateBotShippingQuery(let queryId, let userId, let payload, let shippingAddress):
+                    if boxed {
+                        buffer.appendInt32(-523384512)
+                    }
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeBytes(payload, buffer: buffer, boxed: false)
+                    shippingAddress.serialize(buffer, true)
+                    break
+                case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
+                    if boxed {
+                        buffer.appendInt32(1563376297)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeBytes(payload, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {info!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(shippingOptionId!, buffer: buffer, boxed: false)}
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    break
+                case .updatePhoneCall(let phoneCall):
+                    if boxed {
+                        buffer.appendInt32(-1425052898)
+                    }
+                    phoneCall.serialize(buffer, true)
                     break
     }
     return true
@@ -6375,19 +6570,6 @@ public struct Api {
                 return nil
             }
         }
-        fileprivate static func parse_updatePhoneCall(_ reader: BufferReader) -> Update? {
-            var _1: Api.PhoneCall?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.PhoneCall
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.Update.updatePhoneCall(phoneCall: _1!)
-            }
-            else {
-                return nil
-            }
-        }
         fileprivate static func parse_updateDialogPinned(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -6447,6 +6629,75 @@ public struct Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateBotWebhookJSONQuery(queryId: _1!, data: _2!, timeout: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_updateBotShippingQuery(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            var _4: Api.PostAddress?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.PostAddress
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateBotShippingQuery(queryId: _1!, userId: _2!, payload: _3!, shippingAddress: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_updateBotPrecheckoutQuery(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            var _5: Api.PaymentRequestedInfo?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
+            } }
+            var _6: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_6 = parseString(reader) }
+            var _7: String?
+            _7 = parseString(reader)
+            var _8: Int64?
+            _8 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.Update.updateBotPrecheckoutQuery(flags: _1!, queryId: _2!, userId: _3!, payload: _4!, info: _5, shippingOptionId: _6, currency: _7!, totalAmount: _8!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_updatePhoneCall(_ reader: BufferReader) -> Update? {
+            var _1: Api.PhoneCall?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.PhoneCall
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updatePhoneCall(phoneCall: _1!)
             }
             else {
                 return nil
@@ -6562,8 +6813,6 @@ public struct Api {
                         return "(updatePtsChanged)"
                     case .updateChannelWebPage(let channelId, let webpage, let pts, let ptsCount):
                         return "(updateChannelWebPage channelId: \(channelId), webpage: \(webpage), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updatePhoneCall(let phoneCall):
-                        return "(updatePhoneCall phoneCall: \(phoneCall))"
                     case .updateDialogPinned(let flags, let peer):
                         return "(updateDialogPinned flags: \(flags), peer: \(peer))"
                     case .updatePinnedDialogs(let flags, let order):
@@ -6572,6 +6821,12 @@ public struct Api {
                         return "(updateBotWebhookJSON data: \(data))"
                     case .updateBotWebhookJSONQuery(let queryId, let data, let timeout):
                         return "(updateBotWebhookJSONQuery queryId: \(queryId), data: \(data), timeout: \(timeout))"
+                    case .updateBotShippingQuery(let queryId, let userId, let payload, let shippingAddress):
+                        return "(updateBotShippingQuery queryId: \(queryId), userId: \(userId), payload: \(payload), shippingAddress: \(shippingAddress))"
+                    case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
+                        return "(updateBotPrecheckoutQuery flags: \(flags), queryId: \(queryId), userId: \(userId), payload: \(payload), info: \(info), shippingOptionId: \(shippingOptionId), currency: \(currency), totalAmount: \(totalAmount))"
+                    case .updatePhoneCall(let phoneCall):
+                        return "(updatePhoneCall phoneCall: \(phoneCall))"
                 }
             }
         }
@@ -6799,6 +7054,7 @@ public struct Api {
         case keyboardButtonRequestGeoLocation(text: String)
         case keyboardButtonSwitchInline(flags: Int32, text: String, query: String)
         case keyboardButtonGame(text: String)
+        case keyboardButtonBuy(text: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -6845,6 +7101,12 @@ public struct Api {
                 case .keyboardButtonGame(let text):
                     if boxed {
                         buffer.appendInt32(1358175439)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .keyboardButtonBuy(let text):
+                    if boxed {
+                        buffer.appendInt32(-1344716869)
                     }
                     serializeString(text, buffer: buffer, boxed: false)
                     break
@@ -6941,6 +7203,17 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_keyboardButtonBuy(_ reader: BufferReader) -> KeyboardButton? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.KeyboardButton.keyboardButtonBuy(text: _1!)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -6959,6 +7232,8 @@ public struct Api {
                         return "(keyboardButtonSwitchInline flags: \(flags), text: \(text), query: \(query))"
                     case .keyboardButtonGame(let text):
                         return "(keyboardButtonGame text: \(text))"
+                    case .keyboardButtonBuy(let text):
+                        return "(keyboardButtonBuy text: \(text))"
                 }
             }
         }
@@ -8219,6 +8494,7 @@ public struct Api {
         case inputMediaPhotoExternal(url: String, caption: String)
         case inputMediaDocumentExternal(url: String, caption: String)
         case inputMediaGame(id: Api.InputGame)
+        case inputMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, startParam: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -8344,6 +8620,19 @@ public struct Api {
                         buffer.appendInt32(-750828557)
                     }
                     id.serialize(buffer, true)
+                    break
+                case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let startParam):
+                    if boxed {
+                        buffer.appendInt32(-1844103547)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {photo!.serialize(buffer, true)}
+                    invoice.serialize(buffer, true)
+                    serializeBytes(payload, buffer: buffer, boxed: false)
+                    serializeString(provider, buffer: buffer, boxed: false)
+                    serializeString(startParam, buffer: buffer, boxed: false)
                     break
     }
     return true
@@ -8587,6 +8876,42 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_inputMediaInvoice(_ reader: BufferReader) -> InputMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Api.InputWebDocument?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.InputWebDocument
+            } }
+            var _5: Api.Invoice?
+            if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.Invoice
+            }
+            var _6: Buffer?
+            _6 = parseBytes(reader)
+            var _7: String?
+            _7 = parseString(reader)
+            var _8: String?
+            _8 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7!, startParam: _8!)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -8617,6 +8942,8 @@ public struct Api {
                         return "(inputMediaDocumentExternal url: \(url), caption: \(caption))"
                     case .inputMediaGame(let id):
                         return "(inputMediaGame id: \(id))"
+                    case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let startParam):
+                        return "(inputMediaInvoice flags: \(flags), title: \(title), description: \(description), photo: \(photo), invoice: \(invoice), payload: \(payload), provider: \(provider), startParam: \(startParam))"
                 }
             }
         }
@@ -9027,6 +9354,47 @@ public struct Api {
                         return "(inputPrivacyValueDisallowAll)"
                     case .inputPrivacyValueDisallowUsers(let users):
                         return "(inputPrivacyValueDisallowUsers users: \(users))"
+                }
+            }
+        }
+    }
+
+    public enum LabeledPrice: CustomStringConvertible {
+        case labeledPrice(label: String, amount: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .labeledPrice(let label, let amount):
+                    if boxed {
+                        buffer.appendInt32(-886477832)
+                    }
+                    serializeString(label, buffer: buffer, boxed: false)
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_labeledPrice(_ reader: BufferReader) -> LabeledPrice? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.LabeledPrice.labeledPrice(label: _1!, amount: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .labeledPrice(let label, let amount):
+                        return "(labeledPrice label: \(label), amount: \(amount))"
                 }
             }
         }
@@ -9909,13 +10277,13 @@ public struct Api {
     }
 
     public enum Config: CustomStringConvertible {
-        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, disabledFeatures: [Api.DisabledFeature])
+        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, disabledFeatures: [Api.DisabledFeature])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let disabledFeatures):
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let disabledFeatures):
                     if boxed {
-                        buffer.appendInt32(989264735)
+                        buffer.appendInt32(-882895228)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -9949,6 +10317,7 @@ public struct Api {
                     serializeInt32(callRingTimeoutMs, buffer: buffer, boxed: false)
                     serializeInt32(callConnectTimeoutMs, buffer: buffer, boxed: false)
                     serializeInt32(callPacketTimeoutMs, buffer: buffer, boxed: false)
+                    serializeString(meUrlPrefix, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(disabledFeatures.count))
                     for item in disabledFeatures {
@@ -10020,9 +10389,11 @@ public struct Api {
             _27 = reader.readInt32()
             var _28: Int32?
             _28 = reader.readInt32()
-            var _29: [Api.DisabledFeature]?
+            var _29: String?
+            _29 = parseString(reader)
+            var _30: [Api.DisabledFeature]?
             if let _ = reader.readInt32() {
-                _29 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DisabledFeature.self)
+                _30 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DisabledFeature.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -10053,8 +10424,9 @@ public struct Api {
             let _c27 = _27 != nil
             let _c28 = _28 != nil
             let _c29 = _29 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 {
-                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, chatBigSize: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, ratingEDecay: _21!, stickersRecentLimit: _22!, tmpSessions: _23, pinnedDialogsCountMax: _24!, callReceiveTimeoutMs: _25!, callRingTimeoutMs: _26!, callConnectTimeoutMs: _27!, callPacketTimeoutMs: _28!, disabledFeatures: _29!)
+            let _c30 = _30 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 {
+                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, chatBigSize: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, ratingEDecay: _21!, stickersRecentLimit: _22!, tmpSessions: _23, pinnedDialogsCountMax: _24!, callReceiveTimeoutMs: _25!, callRingTimeoutMs: _26!, callConnectTimeoutMs: _27!, callPacketTimeoutMs: _28!, meUrlPrefix: _29!, disabledFeatures: _30!)
             }
             else {
                 return nil
@@ -10064,8 +10436,8 @@ public struct Api {
         public var description: String {
             get {
                 switch self {
-                    case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let disabledFeatures):
-                        return "(config flags: \(flags), date: \(date), expires: \(expires), testMode: \(testMode), thisDc: \(thisDc), dcOptions: \(dcOptions), chatSizeMax: \(chatSizeMax), megagroupSizeMax: \(megagroupSizeMax), forwardedCountMax: \(forwardedCountMax), onlineUpdatePeriodMs: \(onlineUpdatePeriodMs), offlineBlurTimeoutMs: \(offlineBlurTimeoutMs), offlineIdleTimeoutMs: \(offlineIdleTimeoutMs), onlineCloudTimeoutMs: \(onlineCloudTimeoutMs), notifyCloudDelayMs: \(notifyCloudDelayMs), notifyDefaultDelayMs: \(notifyDefaultDelayMs), chatBigSize: \(chatBigSize), pushChatPeriodMs: \(pushChatPeriodMs), pushChatLimit: \(pushChatLimit), savedGifsLimit: \(savedGifsLimit), editTimeLimit: \(editTimeLimit), ratingEDecay: \(ratingEDecay), stickersRecentLimit: \(stickersRecentLimit), tmpSessions: \(tmpSessions), pinnedDialogsCountMax: \(pinnedDialogsCountMax), callReceiveTimeoutMs: \(callReceiveTimeoutMs), callRingTimeoutMs: \(callRingTimeoutMs), callConnectTimeoutMs: \(callConnectTimeoutMs), callPacketTimeoutMs: \(callPacketTimeoutMs), disabledFeatures: \(disabledFeatures))"
+                    case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let disabledFeatures):
+                        return "(config flags: \(flags), date: \(date), expires: \(expires), testMode: \(testMode), thisDc: \(thisDc), dcOptions: \(dcOptions), chatSizeMax: \(chatSizeMax), megagroupSizeMax: \(megagroupSizeMax), forwardedCountMax: \(forwardedCountMax), onlineUpdatePeriodMs: \(onlineUpdatePeriodMs), offlineBlurTimeoutMs: \(offlineBlurTimeoutMs), offlineIdleTimeoutMs: \(offlineIdleTimeoutMs), onlineCloudTimeoutMs: \(onlineCloudTimeoutMs), notifyCloudDelayMs: \(notifyCloudDelayMs), notifyDefaultDelayMs: \(notifyDefaultDelayMs), chatBigSize: \(chatBigSize), pushChatPeriodMs: \(pushChatPeriodMs), pushChatLimit: \(pushChatLimit), savedGifsLimit: \(savedGifsLimit), editTimeLimit: \(editTimeLimit), ratingEDecay: \(ratingEDecay), stickersRecentLimit: \(stickersRecentLimit), tmpSessions: \(tmpSessions), pinnedDialogsCountMax: \(pinnedDialogsCountMax), callReceiveTimeoutMs: \(callReceiveTimeoutMs), callRingTimeoutMs: \(callRingTimeoutMs), callConnectTimeoutMs: \(callConnectTimeoutMs), callPacketTimeoutMs: \(callPacketTimeoutMs), meUrlPrefix: \(meUrlPrefix), disabledFeatures: \(disabledFeatures))"
                 }
             }
         }
@@ -10229,6 +10601,47 @@ public struct Api {
                 switch self {
                     case .botCommand(let command, let description):
                         return "(botCommand command: \(command), description: \(description))"
+                }
+            }
+        }
+    }
+
+    public enum CdnPublicKey: CustomStringConvertible {
+        case cdnPublicKey(dcId: Int32, publicKey: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .cdnPublicKey(let dcId, let publicKey):
+                    if boxed {
+                        buffer.appendInt32(-914167110)
+                    }
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    serializeString(publicKey, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_cdnPublicKey(_ reader: BufferReader) -> CdnPublicKey? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.CdnPublicKey.cdnPublicKey(dcId: _1!, publicKey: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .cdnPublicKey(let dcId, let publicKey):
+                        return "(cdnPublicKey dcId: \(dcId), publicKey: \(publicKey))"
                 }
             }
         }
@@ -10433,6 +10846,57 @@ public struct Api {
         }
     }
 
+    public enum Invoice: CustomStringConvertible {
+        case invoice(flags: Int32, currency: String, prices: [Api.LabeledPrice])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .invoice(let flags, let currency, let prices):
+                    if boxed {
+                        buffer.appendInt32(-1022713000)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(prices.count))
+                    for item in prices {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_invoice(_ reader: BufferReader) -> Invoice? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.LabeledPrice]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.LabeledPrice.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Invoice.invoice(flags: _1!, currency: _2!, prices: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .invoice(let flags, let currency, let prices):
+                        return "(invoice flags: \(flags), currency: \(currency), prices: \(prices))"
+                }
+            }
+        }
+    }
+
     public enum PeerSettings: CustomStringConvertible {
         case peerSettings(flags: Int32)
     
@@ -10538,6 +11002,47 @@ public struct Api {
                         return "(inputChatUploadedPhoto file: \(file))"
                     case .inputChatPhoto(let id):
                         return "(inputChatPhoto id: \(id))"
+                }
+            }
+        }
+    }
+
+    public enum PaymentCharge: CustomStringConvertible {
+        case paymentCharge(id: String, providerChargeId: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .paymentCharge(let id, let providerChargeId):
+                    if boxed {
+                        buffer.appendInt32(-368917890)
+                    }
+                    serializeString(id, buffer: buffer, boxed: false)
+                    serializeString(providerChargeId, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_paymentCharge(_ reader: BufferReader) -> PaymentCharge? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PaymentCharge.paymentCharge(id: _1!, providerChargeId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .paymentCharge(let id, let providerChargeId):
+                        return "(paymentCharge id: \(id), providerChargeId: \(providerChargeId))"
                 }
             }
         }
@@ -10912,6 +11417,7 @@ public struct Api {
         case messageMediaWebPage(webpage: Api.WebPage)
         case messageMediaVenue(geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String)
         case messageMediaGame(game: Api.Game)
+        case messageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.WebDocument?, receiptMsgId: Int32?, currency: String, totalAmount: Int64, startParam: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -10977,6 +11483,19 @@ public struct Api {
                         buffer.appendInt32(-38694904)
                     }
                     game.serialize(buffer, true)
+                    break
+                case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam):
+                    if boxed {
+                        buffer.appendInt32(-2074799289)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {photo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(receiptMsgId!, buffer: buffer, boxed: false)}
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    serializeString(startParam, buffer: buffer, boxed: false)
                     break
     }
     return true
@@ -11104,6 +11623,40 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_messageMediaInvoice(_ reader: BufferReader) -> MessageMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Api.WebDocument?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.WebDocument
+            } }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: Int64?
+            _7 = reader.readInt64()
+            var _8: String?
+            _8 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.MessageMedia.messageMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, receiptMsgId: _5, currency: _6!, totalAmount: _7!, startParam: _8!)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -11126,6 +11679,49 @@ public struct Api {
                         return "(messageMediaVenue geo: \(geo), title: \(title), address: \(address), provider: \(provider), venueId: \(venueId))"
                     case .messageMediaGame(let game):
                         return "(messageMediaGame game: \(game))"
+                    case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam):
+                        return "(messageMediaInvoice flags: \(flags), title: \(title), description: \(description), photo: \(photo), receiptMsgId: \(receiptMsgId), currency: \(currency), totalAmount: \(totalAmount), startParam: \(startParam))"
+                }
+            }
+        }
+    }
+
+    public enum PaymentSavedCredentials: CustomStringConvertible {
+        case paymentSavedCredentialsCard(id: String, title: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .paymentSavedCredentialsCard(let id, let title):
+                    if boxed {
+                        buffer.appendInt32(-842892769)
+                    }
+                    serializeString(id, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_paymentSavedCredentialsCard(_ reader: BufferReader) -> PaymentSavedCredentials? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PaymentSavedCredentials.paymentSavedCredentialsCard(id: _1!, title: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .paymentSavedCredentialsCard(let id, let title):
+                        return "(paymentSavedCredentialsCard id: \(id), title: \(title))"
                 }
             }
         }
@@ -11164,7 +11760,7 @@ public struct Api {
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeAnimated
         case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
-        case documentAttributeVideo(duration: Int32, w: Int32, h: Int32)
+        case documentAttributeVideo(flags: Int32, duration: Int32, w: Int32, h: Int32)
         case documentAttributeAudio(flags: Int32, duration: Int32, title: String?, performer: String?, waveform: Buffer?)
         case documentAttributeFilename(fileName: String)
         case documentAttributeHasStickers
@@ -11193,10 +11789,11 @@ public struct Api {
                     stickerset.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {maskCoords!.serialize(buffer, true)}
                     break
-                case .documentAttributeVideo(let duration, let w, let h):
+                case .documentAttributeVideo(let flags, let duration, let w, let h):
                     if boxed {
-                        buffer.appendInt32(1494273227)
+                        buffer.appendInt32(250621158)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(duration, buffer: buffer, boxed: false)
                     serializeInt32(w, buffer: buffer, boxed: false)
                     serializeInt32(h, buffer: buffer, boxed: false)
@@ -11275,11 +11872,14 @@ public struct Api {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.DocumentAttribute.documentAttributeVideo(duration: _1!, w: _2!, h: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!)
             }
             else {
                 return nil
@@ -11332,8 +11932,8 @@ public struct Api {
                         return "(documentAttributeAnimated)"
                     case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
                         return "(documentAttributeSticker flags: \(flags), alt: \(alt), stickerset: \(stickerset), maskCoords: \(maskCoords))"
-                    case .documentAttributeVideo(let duration, let w, let h):
-                        return "(documentAttributeVideo duration: \(duration), w: \(w), h: \(h))"
+                    case .documentAttributeVideo(let flags, let duration, let w, let h):
+                        return "(documentAttributeVideo flags: \(flags), duration: \(duration), w: \(w), h: \(h))"
                     case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
                         return "(documentAttributeAudio flags: \(flags), duration: \(duration), title: \(title), performer: \(performer), waveform: \(waveform))"
                     case .documentAttributeFilename(let fileName):
@@ -11617,7 +12217,7 @@ public struct Api {
 
     public enum User: CustomStringConvertible {
         case userEmpty(id: Int32)
-        case user(flags: Int32, id: Int32, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: String?, botInlinePlaceholder: String?)
+        case user(flags: Int32, id: Int32, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: String?, botInlinePlaceholder: String?, langCode: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -11627,9 +12227,9 @@ public struct Api {
                     }
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
-                case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder):
+                case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode):
                     if boxed {
-                        buffer.appendInt32(-787638374)
+                        buffer.appendInt32(773059779)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -11643,6 +12243,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 14) != 0 {serializeInt32(botInfoVersion!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 18) != 0 {serializeString(restrictionReason!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 19) != 0 {serializeString(botInlinePlaceholder!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 22) != 0 {serializeString(langCode!, buffer: buffer, boxed: false)}
                     break
     }
     return true
@@ -11688,6 +12289,8 @@ public struct Api {
             if Int(_1!) & Int(1 << 18) != 0 {_11 = parseString(reader) }
             var _12: String?
             if Int(_1!) & Int(1 << 19) != 0 {_12 = parseString(reader) }
+            var _13: String?
+            if Int(_1!) & Int(1 << 22) != 0 {_13 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
@@ -11700,8 +12303,9 @@ public struct Api {
             let _c10 = (Int(_1!) & Int(1 << 14) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 18) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 19) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.User.user(flags: _1!, id: _2!, accessHash: _3, firstName: _4, lastName: _5, username: _6, phone: _7, photo: _8, status: _9, botInfoVersion: _10, restrictionReason: _11, botInlinePlaceholder: _12)
+            let _c13 = (Int(_1!) & Int(1 << 22) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.User.user(flags: _1!, id: _2!, accessHash: _3, firstName: _4, lastName: _5, username: _6, phone: _7, photo: _8, status: _9, botInfoVersion: _10, restrictionReason: _11, botInlinePlaceholder: _12, langCode: _13)
             }
             else {
                 return nil
@@ -11713,8 +12317,8 @@ public struct Api {
                 switch self {
                     case .userEmpty(let id):
                         return "(userEmpty id: \(id))"
-                    case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder):
-                        return "(user flags: \(flags), id: \(id), accessHash: \(accessHash), firstName: \(firstName), lastName: \(lastName), username: \(username), phone: \(phone), photo: \(photo), status: \(status), botInfoVersion: \(botInfoVersion), restrictionReason: \(restrictionReason), botInlinePlaceholder: \(botInlinePlaceholder))"
+                    case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode):
+                        return "(user flags: \(flags), id: \(id), accessHash: \(accessHash), firstName: \(firstName), lastName: \(lastName), username: \(username), phone: \(phone), photo: \(photo), status: \(status), botInfoVersion: \(botInfoVersion), restrictionReason: \(restrictionReason), botInlinePlaceholder: \(botInlinePlaceholder), langCode: \(langCode))"
                 }
             }
         }
@@ -12204,6 +12808,181 @@ public struct Api {
         }
     }
 
+    public enum InputPaymentCredentials: CustomStringConvertible {
+        case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
+        case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .inputPaymentCredentialsSaved(let id, let tmpPassword):
+                    if boxed {
+                        buffer.appendInt32(-1056001329)
+                    }
+                    serializeString(id, buffer: buffer, boxed: false)
+                    serializeBytes(tmpPassword, buffer: buffer, boxed: false)
+                    break
+                case .inputPaymentCredentials(let flags, let data):
+                    if boxed {
+                        buffer.appendInt32(873977640)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    data.serialize(buffer, true)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_inputPaymentCredentialsSaved(_ reader: BufferReader) -> InputPaymentCredentials? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputPaymentCredentials.inputPaymentCredentialsSaved(id: _1!, tmpPassword: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_inputPaymentCredentials(_ reader: BufferReader) -> InputPaymentCredentials? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.DataJSON?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputPaymentCredentials.inputPaymentCredentials(flags: _1!, data: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .inputPaymentCredentialsSaved(let id, let tmpPassword):
+                        return "(inputPaymentCredentialsSaved id: \(id), tmpPassword: \(tmpPassword))"
+                    case .inputPaymentCredentials(let flags, let data):
+                        return "(inputPaymentCredentials flags: \(flags), data: \(data))"
+                }
+            }
+        }
+    }
+
+    public enum ShippingOption: CustomStringConvertible {
+        case shippingOption(id: String, title: String, prices: [Api.LabeledPrice])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .shippingOption(let id, let title, let prices):
+                    if boxed {
+                        buffer.appendInt32(-1239335713)
+                    }
+                    serializeString(id, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(prices.count))
+                    for item in prices {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_shippingOption(_ reader: BufferReader) -> ShippingOption? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.LabeledPrice]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.LabeledPrice.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ShippingOption.shippingOption(id: _1!, title: _2!, prices: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .shippingOption(let id, let title, let prices):
+                        return "(shippingOption id: \(id), title: \(title), prices: \(prices))"
+                }
+            }
+        }
+    }
+
+    public enum PostAddress: CustomStringConvertible {
+        case postAddress(streetLine1: String, streetLine2: String, city: String, state: String, countryIso2: String, postCode: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .postAddress(let streetLine1, let streetLine2, let city, let state, let countryIso2, let postCode):
+                    if boxed {
+                        buffer.appendInt32(512535275)
+                    }
+                    serializeString(streetLine1, buffer: buffer, boxed: false)
+                    serializeString(streetLine2, buffer: buffer, boxed: false)
+                    serializeString(city, buffer: buffer, boxed: false)
+                    serializeString(state, buffer: buffer, boxed: false)
+                    serializeString(countryIso2, buffer: buffer, boxed: false)
+                    serializeString(postCode, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_postAddress(_ reader: BufferReader) -> PostAddress? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.PostAddress.postAddress(streetLine1: _1!, streetLine2: _2!, city: _3!, state: _4!, countryIso2: _5!, postCode: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .postAddress(let streetLine1, let streetLine2, let city, let state, let countryIso2, let postCode):
+                        return "(postAddress streetLine1: \(streetLine1), streetLine2: \(streetLine2), city: \(city), state: \(state), countryIso2: \(countryIso2), postCode: \(postCode))"
+                }
+            }
+        }
+    }
+
     public enum DataJSON: CustomStringConvertible {
         case dataJSON(data: String)
     
@@ -12412,6 +13191,61 @@ public struct Api {
         }
     }
 
+    public enum InputWebDocument: CustomStringConvertible {
+        case inputWebDocument(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .inputWebDocument(let url, let size, let mimeType, let attributes):
+                    if boxed {
+                        buffer.appendInt32(-1678949555)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeInt32(size, buffer: buffer, boxed: false)
+                    serializeString(mimeType, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(attributes.count))
+                    for item in attributes {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_inputWebDocument(_ reader: BufferReader) -> InputWebDocument? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.DocumentAttribute]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputWebDocument.inputWebDocument(url: _1!, size: _2!, mimeType: _3!, attributes: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .inputWebDocument(let url, let size, let mimeType, let attributes):
+                        return "(inputWebDocument url: \(url), size: \(size), mimeType: \(mimeType), attributes: \(attributes))"
+                }
+            }
+        }
+    }
+
     public enum Bool: CustomStringConvertible {
         case boolFalse
         case boolTrue
@@ -12448,6 +13282,47 @@ public struct Api {
                         return "(boolFalse)"
                     case .boolTrue:
                         return "(boolTrue)"
+                }
+            }
+        }
+    }
+
+    public enum InputWebFileLocation: CustomStringConvertible {
+        case inputWebFileLocation(url: String, accessHash: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .inputWebFileLocation(let url, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(-1036396922)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_inputWebFileLocation(_ reader: BufferReader) -> InputWebFileLocation? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputWebFileLocation.inputWebFileLocation(url: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .inputWebFileLocation(let url, let accessHash):
+                        return "(inputWebFileLocation url: \(url), accessHash: \(accessHash))"
                 }
             }
         }
@@ -12519,6 +13394,8 @@ public struct Api {
         case inputMessagesFilterMusic
         case inputMessagesFilterChatPhotos
         case inputMessagesFilterPhoneCalls(flags: Int32)
+        case inputMessagesFilterRoundVoice
+        case inputMessagesFilterRoundVideo
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -12594,6 +13471,18 @@ public struct Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
+                case .inputMessagesFilterRoundVoice:
+                    if boxed {
+                        buffer.appendInt32(2054952868)
+                    }
+                    
+                    break
+                case .inputMessagesFilterRoundVideo:
+                    if boxed {
+                        buffer.appendInt32(-1253451181)
+                    }
+                    
+                    break
     }
     return true
     }
@@ -12642,6 +13531,12 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_inputMessagesFilterRoundVoice(_ reader: BufferReader) -> MessagesFilter? {
+            return Api.MessagesFilter.inputMessagesFilterRoundVoice
+        }
+        fileprivate static func parse_inputMessagesFilterRoundVideo(_ reader: BufferReader) -> MessagesFilter? {
+            return Api.MessagesFilter.inputMessagesFilterRoundVideo
+        }
     
         public var description: String {
             get {
@@ -12670,6 +13565,10 @@ public struct Api {
                         return "(inputMessagesFilterChatPhotos)"
                     case .inputMessagesFilterPhoneCalls(let flags):
                         return "(inputMessagesFilterPhoneCalls flags: \(flags))"
+                    case .inputMessagesFilterRoundVoice:
+                        return "(inputMessagesFilterRoundVoice)"
+                    case .inputMessagesFilterRoundVideo:
+                        return "(inputMessagesFilterRoundVideo)"
                 }
             }
         }
@@ -13531,6 +14430,8 @@ public struct Api {
         case messageActionPinMessage
         case messageActionHistoryClear
         case messageActionGameScore(gameId: Int64, score: Int32)
+        case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
+        case messageActionPaymentSent(currency: String, totalAmount: Int64)
         case messageActionPhoneCall(flags: Int32, callId: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
@@ -13629,6 +14530,25 @@ public struct Api {
                     }
                     serializeInt64(gameId, buffer: buffer, boxed: false)
                     serializeInt32(score, buffer: buffer, boxed: false)
+                    break
+                case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
+                    if boxed {
+                        buffer.appendInt32(-1892568281)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    serializeBytes(payload, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {info!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(shippingOptionId!, buffer: buffer, boxed: false)}
+                    charge.serialize(buffer, true)
+                    break
+                case .messageActionPaymentSent(let currency, let totalAmount):
+                    if boxed {
+                        buffer.appendInt32(1080663248)
+                    }
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(totalAmount, buffer: buffer, boxed: false)
                     break
                 case .messageActionPhoneCall(let flags, let callId, let reason, let duration):
                     if boxed {
@@ -13780,6 +14700,53 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_messageActionPaymentSentMe(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            var _5: Api.PaymentRequestedInfo?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
+            } }
+            var _6: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_6 = parseString(reader) }
+            var _7: Api.PaymentCharge?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.PaymentCharge
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.MessageAction.messageActionPaymentSentMe(flags: _1!, currency: _2!, totalAmount: _3!, payload: _4!, info: _5, shippingOptionId: _6, charge: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_messageActionPaymentSent(_ reader: BufferReader) -> MessageAction? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionPaymentSent(currency: _1!, totalAmount: _2!)
+            }
+            else {
+                return nil
+            }
+        }
         fileprivate static func parse_messageActionPhoneCall(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -13834,6 +14801,10 @@ public struct Api {
                         return "(messageActionHistoryClear)"
                     case .messageActionGameScore(let gameId, let score):
                         return "(messageActionGameScore gameId: \(gameId), score: \(score))"
+                    case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
+                        return "(messageActionPaymentSentMe flags: \(flags), currency: \(currency), totalAmount: \(totalAmount), payload: \(payload), info: \(info), shippingOptionId: \(shippingOptionId), charge: \(charge))"
+                    case .messageActionPaymentSent(let currency, let totalAmount):
+                        return "(messageActionPaymentSent currency: \(currency), totalAmount: \(totalAmount))"
                     case .messageActionPhoneCall(let flags, let callId, let reason, let duration):
                         return "(messageActionPhoneCall flags: \(flags), callId: \(callId), reason: \(reason), duration: \(duration))"
                 }
@@ -13844,7 +14815,8 @@ public struct Api {
     public enum PhoneCall: CustomStringConvertible {
         case phoneCallEmpty(id: Int64)
         case phoneCallWaiting(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, `protocol`: Api.PhoneCallProtocol, receiveDate: Int32?)
-        case phoneCallRequested(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gA: Buffer, `protocol`: Api.PhoneCallProtocol)
+        case phoneCallRequested(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAHash: Buffer, `protocol`: Api.PhoneCallProtocol)
+        case phoneCallAccepted(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gB: Buffer, `protocol`: Api.PhoneCallProtocol)
         case phoneCall(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAOrB: Buffer, keyFingerprint: Int64, `protocol`: Api.PhoneCallProtocol, connection: Api.PhoneConnection, alternativeConnections: [Api.PhoneConnection], startDate: Int32)
         case phoneCallDiscarded(flags: Int32, id: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
     
@@ -13869,16 +14841,28 @@ public struct Api {
                     `protocol`.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(receiveDate!, buffer: buffer, boxed: false)}
                     break
-                case .phoneCallRequested(let id, let accessHash, let date, let adminId, let participantId, let gA, let `protocol`):
+                case .phoneCallRequested(let id, let accessHash, let date, let adminId, let participantId, let gAHash, let `protocol`):
                     if boxed {
-                        buffer.appendInt32(1816431336)
+                        buffer.appendInt32(-2089411356)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeInt32(adminId, buffer: buffer, boxed: false)
                     serializeInt32(participantId, buffer: buffer, boxed: false)
-                    serializeBytes(gA, buffer: buffer, boxed: false)
+                    serializeBytes(gAHash, buffer: buffer, boxed: false)
+                    `protocol`.serialize(buffer, true)
+                    break
+                case .phoneCallAccepted(let id, let accessHash, let date, let adminId, let participantId, let gB, let `protocol`):
+                    if boxed {
+                        buffer.appendInt32(1828732223)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(adminId, buffer: buffer, boxed: false)
+                    serializeInt32(participantId, buffer: buffer, boxed: false)
+                    serializeBytes(gB, buffer: buffer, boxed: false)
                     `protocol`.serialize(buffer, true)
                     break
                 case .phoneCall(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint, let `protocol`, let connection, let alternativeConnections, let startDate):
@@ -13984,7 +14968,38 @@ public struct Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.PhoneCall.phoneCallRequested(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gA: _6!, `protocol`: _7!)
+                return Api.PhoneCall.phoneCallRequested(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gAHash: _6!, `protocol`: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_phoneCallAccepted(_ reader: BufferReader) -> PhoneCall? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Buffer?
+            _6 = parseBytes(reader)
+            var _7: Api.PhoneCallProtocol?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.PhoneCallProtocol
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.PhoneCall.phoneCallAccepted(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gB: _6!, `protocol`: _7!)
             }
             else {
                 return nil
@@ -14067,8 +15082,10 @@ public struct Api {
                         return "(phoneCallEmpty id: \(id))"
                     case .phoneCallWaiting(let flags, let id, let accessHash, let date, let adminId, let participantId, let `protocol`, let receiveDate):
                         return "(phoneCallWaiting flags: \(flags), id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), `protocol`: \(`protocol`), receiveDate: \(receiveDate))"
-                    case .phoneCallRequested(let id, let accessHash, let date, let adminId, let participantId, let gA, let `protocol`):
-                        return "(phoneCallRequested id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gA: \(gA), `protocol`: \(`protocol`))"
+                    case .phoneCallRequested(let id, let accessHash, let date, let adminId, let participantId, let gAHash, let `protocol`):
+                        return "(phoneCallRequested id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gAHash: \(gAHash), `protocol`: \(`protocol`))"
+                    case .phoneCallAccepted(let id, let accessHash, let date, let adminId, let participantId, let gB, let `protocol`):
+                        return "(phoneCallAccepted id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gB: \(gB), `protocol`: \(`protocol`))"
                     case .phoneCall(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint, let `protocol`, let connection, let alternativeConnections, let startDate):
                         return "(phoneCall id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gAOrB: \(gAOrB), keyFingerprint: \(keyFingerprint), `protocol`: \(`protocol`), connection: \(connection), alternativeConnections: \(alternativeConnections), startDate: \(startDate))"
                     case .phoneCallDiscarded(let flags, let id, let reason, let duration):
@@ -14179,6 +15196,69 @@ public struct Api {
                         return "(contactLinkHasPhone)"
                     case .contactLinkContact:
                         return "(contactLinkContact)"
+                }
+            }
+        }
+    }
+
+    public enum WebDocument: CustomStringConvertible {
+        case webDocument(url: String, accessHash: Int64, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute], dcId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .webDocument(let url, let accessHash, let size, let mimeType, let attributes, let dcId):
+                    if boxed {
+                        buffer.appendInt32(-971322408)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt32(size, buffer: buffer, boxed: false)
+                    serializeString(mimeType, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(attributes.count))
+                    for item in attributes {
+                        item.serialize(buffer, true)
+                    }
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_webDocument(_ reader: BufferReader) -> WebDocument? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: [Api.DocumentAttribute]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
+            }
+            var _6: Int32?
+            _6 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.WebDocument.webDocument(url: _1!, accessHash: _2!, size: _3!, mimeType: _4!, attributes: _5!, dcId: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .webDocument(let url, let accessHash, let size, let mimeType, let attributes, let dcId):
+                        return "(webDocument url: \(url), accessHash: \(accessHash), size: \(size), mimeType: \(mimeType), attributes: \(attributes), dcId: \(dcId))"
                 }
             }
         }
@@ -15266,6 +16346,337 @@ public struct Api {
         }
     }
 
+    public struct payments {
+        public enum ValidatedRequestedInfo: CustomStringConvertible {
+            case validatedRequestedInfo(flags: Int32, id: String?, shippingOptions: [Api.ShippingOption]?)
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .validatedRequestedInfo(let flags, let id, let shippingOptions):
+                        if boxed {
+                            buffer.appendInt32(-784000893)
+                        }
+                        serializeInt32(flags, buffer: buffer, boxed: false)
+                        if Int(flags) & Int(1 << 0) != 0 {serializeString(id!, buffer: buffer, boxed: false)}
+                        if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(shippingOptions!.count))
+                        for item in shippingOptions! {
+                            item.serialize(buffer, true)
+                        }}
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_validatedRequestedInfo(_ reader: BufferReader) -> ValidatedRequestedInfo? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                var _2: String?
+                if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
+                var _3: [Api.ShippingOption]?
+                if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ShippingOption.self)
+                } }
+                let _c1 = _1 != nil
+                let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+                let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+                if _c1 && _c2 && _c3 {
+                    return Api.payments.ValidatedRequestedInfo.validatedRequestedInfo(flags: _1!, id: _2, shippingOptions: _3)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .validatedRequestedInfo(let flags, let id, let shippingOptions):
+                            return "(payments.validatedRequestedInfo flags: \(flags), id: \(id), shippingOptions: \(shippingOptions))"
+                    }
+                }
+            }
+        }
+    
+        public enum PaymentResult: CustomStringConvertible {
+            case paymentResult(updates: Api.Updates)
+            case paymentVerficationNeeded(url: String)
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .paymentResult(let updates):
+                        if boxed {
+                            buffer.appendInt32(1314881805)
+                        }
+                        updates.serialize(buffer, true)
+                        break
+                    case .paymentVerficationNeeded(let url):
+                        if boxed {
+                            buffer.appendInt32(1800845601)
+                        }
+                        serializeString(url, buffer: buffer, boxed: false)
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_paymentResult(_ reader: BufferReader) -> PaymentResult? {
+                var _1: Api.Updates?
+                if let signature = reader.readInt32() {
+                    _1 = Api.parse(reader, signature: signature) as? Api.Updates
+                }
+                let _c1 = _1 != nil
+                if _c1 {
+                    return Api.payments.PaymentResult.paymentResult(updates: _1!)
+                }
+                else {
+                    return nil
+                }
+            }
+            fileprivate static func parse_paymentVerficationNeeded(_ reader: BufferReader) -> PaymentResult? {
+                var _1: String?
+                _1 = parseString(reader)
+                let _c1 = _1 != nil
+                if _c1 {
+                    return Api.payments.PaymentResult.paymentVerficationNeeded(url: _1!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .paymentResult(let updates):
+                            return "(payments.paymentResult updates: \(updates))"
+                        case .paymentVerficationNeeded(let url):
+                            return "(payments.paymentVerficationNeeded url: \(url))"
+                    }
+                }
+            }
+        }
+    
+        public enum PaymentForm: CustomStringConvertible {
+            case paymentForm(flags: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .paymentForm(let flags, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
+                        if boxed {
+                            buffer.appendInt32(1062645411)
+                        }
+                        serializeInt32(flags, buffer: buffer, boxed: false)
+                        serializeInt32(botId, buffer: buffer, boxed: false)
+                        invoice.serialize(buffer, true)
+                        serializeInt32(providerId, buffer: buffer, boxed: false)
+                        serializeString(url, buffer: buffer, boxed: false)
+                        if Int(flags) & Int(1 << 4) != 0 {serializeString(nativeProvider!, buffer: buffer, boxed: false)}
+                        if Int(flags) & Int(1 << 4) != 0 {nativeParams!.serialize(buffer, true)}
+                        if Int(flags) & Int(1 << 0) != 0 {savedInfo!.serialize(buffer, true)}
+                        if Int(flags) & Int(1 << 1) != 0 {savedCredentials!.serialize(buffer, true)}
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(users.count))
+                        for item in users {
+                            item.serialize(buffer, true)
+                        }
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_paymentForm(_ reader: BufferReader) -> PaymentForm? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                var _2: Int32?
+                _2 = reader.readInt32()
+                var _3: Api.Invoice?
+                if let signature = reader.readInt32() {
+                    _3 = Api.parse(reader, signature: signature) as? Api.Invoice
+                }
+                var _4: Int32?
+                _4 = reader.readInt32()
+                var _5: String?
+                _5 = parseString(reader)
+                var _6: String?
+                if Int(_1!) & Int(1 << 4) != 0 {_6 = parseString(reader) }
+                var _7: Api.DataJSON?
+                if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                    _7 = Api.parse(reader, signature: signature) as? Api.DataJSON
+                } }
+                var _8: Api.PaymentRequestedInfo?
+                if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                    _8 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
+                } }
+                var _9: Api.PaymentSavedCredentials?
+                if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                    _9 = Api.parse(reader, signature: signature) as? Api.PaymentSavedCredentials
+                } }
+                var _10: [Api.User]?
+                if let _ = reader.readInt32() {
+                    _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                }
+                let _c1 = _1 != nil
+                let _c2 = _2 != nil
+                let _c3 = _3 != nil
+                let _c4 = _4 != nil
+                let _c5 = _5 != nil
+                let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
+                let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+                let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
+                let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
+                let _c10 = _10 != nil
+                if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                    return Api.payments.PaymentForm.paymentForm(flags: _1!, botId: _2!, invoice: _3!, providerId: _4!, url: _5!, nativeProvider: _6, nativeParams: _7, savedInfo: _8, savedCredentials: _9, users: _10!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .paymentForm(let flags, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
+                            return "(payments.paymentForm flags: \(flags), botId: \(botId), invoice: \(invoice), providerId: \(providerId), url: \(url), nativeProvider: \(nativeProvider), nativeParams: \(nativeParams), savedInfo: \(savedInfo), savedCredentials: \(savedCredentials), users: \(users))"
+                    }
+                }
+            }
+        }
+    
+        public enum PaymentReceipt: CustomStringConvertible {
+            case paymentReceipt(flags: Int32, date: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .paymentReceipt(let flags, let date, let botId, let invoice, let providerId, let info, let shipping, let currency, let totalAmount, let credentialsTitle, let users):
+                        if boxed {
+                            buffer.appendInt32(1342771681)
+                        }
+                        serializeInt32(flags, buffer: buffer, boxed: false)
+                        serializeInt32(date, buffer: buffer, boxed: false)
+                        serializeInt32(botId, buffer: buffer, boxed: false)
+                        invoice.serialize(buffer, true)
+                        serializeInt32(providerId, buffer: buffer, boxed: false)
+                        if Int(flags) & Int(1 << 0) != 0 {info!.serialize(buffer, true)}
+                        if Int(flags) & Int(1 << 1) != 0 {shipping!.serialize(buffer, true)}
+                        serializeString(currency, buffer: buffer, boxed: false)
+                        serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                        serializeString(credentialsTitle, buffer: buffer, boxed: false)
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(users.count))
+                        for item in users {
+                            item.serialize(buffer, true)
+                        }
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_paymentReceipt(_ reader: BufferReader) -> PaymentReceipt? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                var _2: Int32?
+                _2 = reader.readInt32()
+                var _3: Int32?
+                _3 = reader.readInt32()
+                var _4: Api.Invoice?
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.Invoice
+                }
+                var _5: Int32?
+                _5 = reader.readInt32()
+                var _6: Api.PaymentRequestedInfo?
+                if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                    _6 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
+                } }
+                var _7: Api.ShippingOption?
+                if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                    _7 = Api.parse(reader, signature: signature) as? Api.ShippingOption
+                } }
+                var _8: String?
+                _8 = parseString(reader)
+                var _9: Int64?
+                _9 = reader.readInt64()
+                var _10: String?
+                _10 = parseString(reader)
+                var _11: [Api.User]?
+                if let _ = reader.readInt32() {
+                    _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                }
+                let _c1 = _1 != nil
+                let _c2 = _2 != nil
+                let _c3 = _3 != nil
+                let _c4 = _4 != nil
+                let _c5 = _5 != nil
+                let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+                let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+                let _c8 = _8 != nil
+                let _c9 = _9 != nil
+                let _c10 = _10 != nil
+                let _c11 = _11 != nil
+                if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                    return Api.payments.PaymentReceipt.paymentReceipt(flags: _1!, date: _2!, botId: _3!, invoice: _4!, providerId: _5!, info: _6, shipping: _7, currency: _8!, totalAmount: _9!, credentialsTitle: _10!, users: _11!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .paymentReceipt(let flags, let date, let botId, let invoice, let providerId, let info, let shipping, let currency, let totalAmount, let credentialsTitle, let users):
+                            return "(payments.paymentReceipt flags: \(flags), date: \(date), botId: \(botId), invoice: \(invoice), providerId: \(providerId), info: \(info), shipping: \(shipping), currency: \(currency), totalAmount: \(totalAmount), credentialsTitle: \(credentialsTitle), users: \(users))"
+                    }
+                }
+            }
+        }
+    
+        public enum SavedInfo: CustomStringConvertible {
+            case savedInfo(flags: Int32, savedInfo: Api.PaymentRequestedInfo?)
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .savedInfo(let flags, let savedInfo):
+                        if boxed {
+                            buffer.appendInt32(-74456004)
+                        }
+                        serializeInt32(flags, buffer: buffer, boxed: false)
+                        if Int(flags) & Int(1 << 0) != 0 {savedInfo!.serialize(buffer, true)}
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_savedInfo(_ reader: BufferReader) -> SavedInfo? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                var _2: Api.PaymentRequestedInfo?
+                if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                    _2 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
+                } }
+                let _c1 = _1 != nil
+                let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+                if _c1 && _c2 {
+                    return Api.payments.SavedInfo.savedInfo(flags: _1!, savedInfo: _2)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .savedInfo(let flags, let savedInfo):
+                            return "(payments.savedInfo flags: \(flags), savedInfo: \(savedInfo))"
+                    }
+                }
+            }
+        }
+    }
+
     public struct auth {
         public enum Authorization: CustomStringConvertible {
             case authorization(flags: Int32, tmpSessions: Int32?, user: Api.User)
@@ -16174,71 +17585,6 @@ public struct Api {
             }
         }
     
-        public enum AppChangelog: CustomStringConvertible {
-            case appChangelogEmpty
-            case appChangelog(message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
-        
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-        switch self {
-                    case .appChangelogEmpty:
-                        if boxed {
-                            buffer.appendInt32(-1350696044)
-                        }
-                        
-                        break
-                    case .appChangelog(let message, let media, let entities):
-                        if boxed {
-                            buffer.appendInt32(705920636)
-                        }
-                        serializeString(message, buffer: buffer, boxed: false)
-                        media.serialize(buffer, true)
-                        buffer.appendInt32(481674261)
-                        buffer.appendInt32(Int32(entities.count))
-                        for item in entities {
-                            item.serialize(buffer, true)
-                        }
-                        break
-        }
-        return true
-        }
-        
-            fileprivate static func parse_appChangelogEmpty(_ reader: BufferReader) -> AppChangelog? {
-                return Api.help.AppChangelog.appChangelogEmpty
-            }
-            fileprivate static func parse_appChangelog(_ reader: BufferReader) -> AppChangelog? {
-                var _1: String?
-                _1 = parseString(reader)
-                var _2: Api.MessageMedia?
-                if let signature = reader.readInt32() {
-                    _2 = Api.parse(reader, signature: signature) as? Api.MessageMedia
-                }
-                var _3: [Api.MessageEntity]?
-                if let _ = reader.readInt32() {
-                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
-                }
-                let _c1 = _1 != nil
-                let _c2 = _2 != nil
-                let _c3 = _3 != nil
-                if _c1 && _c2 && _c3 {
-                    return Api.help.AppChangelog.appChangelog(message: _1!, media: _2!, entities: _3!)
-                }
-                else {
-                    return nil
-                }
-            }
-        
-            public var description: String {
-                get {
-                    switch self {
-                        case .appChangelogEmpty:
-                            return "(help.appChangelogEmpty)"
-                        case .appChangelog(let message, let media, let entities):
-                            return "(help.appChangelog message: \(message), media: \(media), entities: \(entities))"
-                    }
-                }
-            }
-        }
-    
         public enum TermsOfService: CustomStringConvertible {
             case termsOfService(text: String)
         
@@ -16805,8 +18151,64 @@ public struct Api {
     }
 
     public struct upload {
+        public enum WebFile: CustomStringConvertible {
+            case webFile(size: Int32, mimeType: String, fileType: Api.storage.FileType, mtime: Int32, bytes: Buffer)
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .webFile(let size, let mimeType, let fileType, let mtime, let bytes):
+                        if boxed {
+                            buffer.appendInt32(568808380)
+                        }
+                        serializeInt32(size, buffer: buffer, boxed: false)
+                        serializeString(mimeType, buffer: buffer, boxed: false)
+                        fileType.serialize(buffer, true)
+                        serializeInt32(mtime, buffer: buffer, boxed: false)
+                        serializeBytes(bytes, buffer: buffer, boxed: false)
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_webFile(_ reader: BufferReader) -> WebFile? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                var _2: String?
+                _2 = parseString(reader)
+                var _3: Api.storage.FileType?
+                if let signature = reader.readInt32() {
+                    _3 = Api.parse(reader, signature: signature) as? Api.storage.FileType
+                }
+                var _4: Int32?
+                _4 = reader.readInt32()
+                var _5: Buffer?
+                _5 = parseBytes(reader)
+                let _c1 = _1 != nil
+                let _c2 = _2 != nil
+                let _c3 = _3 != nil
+                let _c4 = _4 != nil
+                let _c5 = _5 != nil
+                if _c1 && _c2 && _c3 && _c4 && _c5 {
+                    return Api.upload.WebFile.webFile(size: _1!, mimeType: _2!, fileType: _3!, mtime: _4!, bytes: _5!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .webFile(let size, let mimeType, let fileType, let mtime, let bytes):
+                            return "(upload.webFile size: \(size), mimeType: \(mimeType), fileType: \(fileType), mtime: \(mtime), bytes: \(bytes))"
+                    }
+                }
+            }
+        }
+    
         public enum File: CustomStringConvertible {
             case file(type: Api.storage.FileType, mtime: Int32, bytes: Buffer)
+            case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer)
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
         switch self {
@@ -16817,6 +18219,15 @@ public struct Api {
                         type.serialize(buffer, true)
                         serializeInt32(mtime, buffer: buffer, boxed: false)
                         serializeBytes(bytes, buffer: buffer, boxed: false)
+                        break
+                    case .fileCdnRedirect(let dcId, let fileToken, let encryptionKey, let encryptionIv):
+                        if boxed {
+                            buffer.appendInt32(352864346)
+                        }
+                        serializeInt32(dcId, buffer: buffer, boxed: false)
+                        serializeBytes(fileToken, buffer: buffer, boxed: false)
+                        serializeBytes(encryptionKey, buffer: buffer, boxed: false)
+                        serializeBytes(encryptionIv, buffer: buffer, boxed: false)
                         break
         }
         return true
@@ -16841,12 +18252,91 @@ public struct Api {
                     return nil
                 }
             }
+            fileprivate static func parse_fileCdnRedirect(_ reader: BufferReader) -> File? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                var _2: Buffer?
+                _2 = parseBytes(reader)
+                var _3: Buffer?
+                _3 = parseBytes(reader)
+                var _4: Buffer?
+                _4 = parseBytes(reader)
+                let _c1 = _1 != nil
+                let _c2 = _2 != nil
+                let _c3 = _3 != nil
+                let _c4 = _4 != nil
+                if _c1 && _c2 && _c3 && _c4 {
+                    return Api.upload.File.fileCdnRedirect(dcId: _1!, fileToken: _2!, encryptionKey: _3!, encryptionIv: _4!)
+                }
+                else {
+                    return nil
+                }
+            }
         
             public var description: String {
                 get {
                     switch self {
                         case .file(let type, let mtime, let bytes):
                             return "(upload.file type: \(type), mtime: \(mtime), bytes: \(bytes))"
+                        case .fileCdnRedirect(let dcId, let fileToken, let encryptionKey, let encryptionIv):
+                            return "(upload.fileCdnRedirect dcId: \(dcId), fileToken: \(fileToken), encryptionKey: \(encryptionKey), encryptionIv: \(encryptionIv))"
+                    }
+                }
+            }
+        }
+    
+        public enum CdnFile: CustomStringConvertible {
+            case cdnFileReuploadNeeded(requestToken: Buffer)
+            case cdnFile(bytes: Buffer)
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .cdnFileReuploadNeeded(let requestToken):
+                        if boxed {
+                            buffer.appendInt32(-290921362)
+                        }
+                        serializeBytes(requestToken, buffer: buffer, boxed: false)
+                        break
+                    case .cdnFile(let bytes):
+                        if boxed {
+                            buffer.appendInt32(-1449145777)
+                        }
+                        serializeBytes(bytes, buffer: buffer, boxed: false)
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_cdnFileReuploadNeeded(_ reader: BufferReader) -> CdnFile? {
+                var _1: Buffer?
+                _1 = parseBytes(reader)
+                let _c1 = _1 != nil
+                if _c1 {
+                    return Api.upload.CdnFile.cdnFileReuploadNeeded(requestToken: _1!)
+                }
+                else {
+                    return nil
+                }
+            }
+            fileprivate static func parse_cdnFile(_ reader: BufferReader) -> CdnFile? {
+                var _1: Buffer?
+                _1 = parseBytes(reader)
+                let _c1 = _1 != nil
+                if _c1 {
+                    return Api.upload.CdnFile.cdnFile(bytes: _1!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .cdnFileReuploadNeeded(let requestToken):
+                            return "(upload.cdnFileReuploadNeeded requestToken: \(requestToken))"
+                        case .cdnFile(let bytes):
+                            return "(upload.cdnFile bytes: \(bytes))"
                     }
                 }
             }
@@ -16856,13 +18346,13 @@ public struct Api {
     public struct storage {
         public enum FileType: CustomStringConvertible {
             case fileUnknown
+            case filePartial
             case fileJpeg
             case fileGif
             case filePng
             case filePdf
             case fileMp3
             case fileMov
-            case filePartial
             case fileMp4
             case fileWebp
         
@@ -16871,6 +18361,12 @@ public struct Api {
                     case .fileUnknown:
                         if boxed {
                             buffer.appendInt32(-1432995067)
+                        }
+                        
+                        break
+                    case .filePartial:
+                        if boxed {
+                            buffer.appendInt32(1086091090)
                         }
                         
                         break
@@ -16910,12 +18406,6 @@ public struct Api {
                         }
                         
                         break
-                    case .filePartial:
-                        if boxed {
-                            buffer.appendInt32(1086091090)
-                        }
-                        
-                        break
                     case .fileMp4:
                         if boxed {
                             buffer.appendInt32(-1278304028)
@@ -16935,6 +18425,9 @@ public struct Api {
             fileprivate static func parse_fileUnknown(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileUnknown
             }
+            fileprivate static func parse_filePartial(_ reader: BufferReader) -> FileType? {
+                return Api.storage.FileType.filePartial
+            }
             fileprivate static func parse_fileJpeg(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileJpeg
             }
@@ -16953,9 +18446,6 @@ public struct Api {
             fileprivate static func parse_fileMov(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileMov
             }
-            fileprivate static func parse_filePartial(_ reader: BufferReader) -> FileType? {
-                return Api.storage.FileType.filePartial
-            }
             fileprivate static func parse_fileMp4(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileMp4
             }
@@ -16968,6 +18458,8 @@ public struct Api {
                     switch self {
                         case .fileUnknown:
                             return "(storage.fileUnknown)"
+                        case .filePartial:
+                            return "(storage.filePartial)"
                         case .fileJpeg:
                             return "(storage.fileJpeg)"
                         case .fileGif:
@@ -16980,8 +18472,6 @@ public struct Api {
                             return "(storage.fileMp3)"
                         case .fileMov:
                             return "(storage.fileMov)"
-                        case .filePartial:
-                            return "(storage.filePartial)"
                         case .fileMp4:
                             return "(storage.fileMp4)"
                         case .fileWebp:
@@ -16993,6 +18483,47 @@ public struct Api {
     }
 
     public struct account {
+        public enum TmpPassword: CustomStringConvertible {
+            case tmpPassword(tmpPassword: Buffer, validUntil: Int32)
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .tmpPassword(let tmpPassword, let validUntil):
+                        if boxed {
+                            buffer.appendInt32(-614138572)
+                        }
+                        serializeBytes(tmpPassword, buffer: buffer, boxed: false)
+                        serializeInt32(validUntil, buffer: buffer, boxed: false)
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_tmpPassword(_ reader: BufferReader) -> TmpPassword? {
+                var _1: Buffer?
+                _1 = parseBytes(reader)
+                var _2: Int32?
+                _2 = reader.readInt32()
+                let _c1 = _1 != nil
+                let _c2 = _2 != nil
+                if _c1 && _c2 {
+                    return Api.account.TmpPassword.tmpPassword(tmpPassword: _1!, validUntil: _2!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .tmpPassword(let tmpPassword, let validUntil):
+                            return "(account.tmpPassword tmpPassword: \(tmpPassword), validUntil: \(validUntil))"
+                    }
+                }
+            }
+        }
+    
         public enum PasswordSettings: CustomStringConvertible {
             case passwordSettings(email: String)
         
@@ -18823,6 +20354,43 @@ public struct Api {
                         return result
                     })
                 }
+            
+                public static func setBotShippingResults(flags flags: Int32, queryId: Int64, error: String?, shippingOptions: [Api.ShippingOption]?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-436833542)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(error!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(shippingOptions!.count))
+                    for item in shippingOptions! {
+                        item.serialize(buffer, true)
+                    }}
+                    return (FunctionDescription({return "(messages.setBotShippingResults flags: \(flags), queryId: \(queryId), error: \(error), shippingOptions: \(shippingOptions))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setBotPrecheckoutResults(flags flags: Int32, queryId: Int64, error: String?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(163765653)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(error!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription({return "(messages.setBotPrecheckoutResults flags: \(flags), queryId: \(queryId), error: \(error))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel channel: Api.InputChannel, maxId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
@@ -19245,6 +20813,97 @@ public struct Api {
                         var result: Api.messages.Chats?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.Chats
+                        }
+                        return result
+                    })
+                }
+            }
+            public struct payments {
+                public static func getPaymentForm(msgId msgId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.payments.PaymentForm?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1712285883)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(payments.getPaymentForm msgId: \(msgId))"}), buffer, { (buffer: Buffer) -> Api.payments.PaymentForm? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.PaymentForm?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.PaymentForm
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getPaymentReceipt(msgId msgId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.payments.PaymentReceipt?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1601001088)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(payments.getPaymentReceipt msgId: \(msgId))"}), buffer, { (buffer: Buffer) -> Api.payments.PaymentReceipt? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.PaymentReceipt?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.PaymentReceipt
+                        }
+                        return result
+                    })
+                }
+            
+                public static func validateRequestedInfo(flags flags: Int32, msgId: Int32, info: Api.PaymentRequestedInfo) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.payments.ValidatedRequestedInfo?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1997180532)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    info.serialize(buffer, true)
+                    return (FunctionDescription({return "(payments.validateRequestedInfo flags: \(flags), msgId: \(msgId), info: \(info))"}), buffer, { (buffer: Buffer) -> Api.payments.ValidatedRequestedInfo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.ValidatedRequestedInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.ValidatedRequestedInfo
+                        }
+                        return result
+                    })
+                }
+            
+                public static func sendPaymentForm(flags flags: Int32, msgId: Int32, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.payments.PaymentResult?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(730364339)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(requestedInfoId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(shippingOptionId!, buffer: buffer, boxed: false)}
+                    credentials.serialize(buffer, true)
+                    return (FunctionDescription({return "(payments.sendPaymentForm flags: \(flags), msgId: \(msgId), requestedInfoId: \(requestedInfoId), shippingOptionId: \(shippingOptionId), credentials: \(credentials))"}), buffer, { (buffer: Buffer) -> Api.payments.PaymentResult? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.PaymentResult?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.PaymentResult
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getSavedInfo() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.payments.SavedInfo?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(578650699)
+                    
+                    return (FunctionDescription({return "(payments.getSavedInfo )"}), buffer, { (buffer: Buffer) -> Api.payments.SavedInfo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.SavedInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.SavedInfo
+                        }
+                        return result
+                    })
+                }
+            
+                public static func clearSavedInfo(flags flags: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-667062079)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(payments.clearSavedInfo flags: \(flags))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })
@@ -19839,20 +21498,6 @@ public struct Api {
                         return result
                     })
                 }
-                
-                public static func test() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(0x56730bcc)
-                    
-                    return (FunctionDescription({return "(help.test )"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
             
                 public static func saveAppLog(events events: [Api.InputAppEvent]) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
                     let buffer = Buffer()
@@ -19900,15 +21545,15 @@ public struct Api {
                     })
                 }
             
-                public static func getAppChangelog() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.help.AppChangelog?) {
+                public static func getAppChangelog(prevAppVersion prevAppVersion: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1189013126)
-                    
-                    return (FunctionDescription({return "(help.getAppChangelog )"}), buffer, { (buffer: Buffer) -> Api.help.AppChangelog? in
+                    buffer.appendInt32(-1877938321)
+                    serializeString(prevAppVersion, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(help.getAppChangelog prevAppVersion: \(prevAppVersion))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
-                        var result: Api.help.AppChangelog?
+                        var result: Api.Updates?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.help.AppChangelog
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
@@ -19934,6 +21579,34 @@ public struct Api {
                     serializeInt32(pendingUpdatesCount, buffer: buffer, boxed: false)
                     serializeString(message, buffer: buffer, boxed: false)
                     return (FunctionDescription({return "(help.setBotUpdatesStatus pendingUpdatesCount: \(pendingUpdatesCount), message: \(message))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getCdnConfig() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.CdnConfig?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1375900482)
+                    
+                    return (FunctionDescription({return "(help.getCdnConfig )"}), buffer, { (buffer: Buffer) -> Api.CdnConfig? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.CdnConfig?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.CdnConfig
+                        }
+                        return result
+                    })
+                }
+            
+                public static func test() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1058929929)
+                    
+                    return (FunctionDescription({return "(help.test )"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -20035,6 +21708,53 @@ public struct Api {
                     serializeInt32(fileTotalParts, buffer: buffer, boxed: false)
                     serializeBytes(bytes, buffer: buffer, boxed: false)
                     return (FunctionDescription({return "(upload.saveBigFilePart fileId: \(fileId), filePart: \(filePart), fileTotalParts: \(fileTotalParts), bytes: \(bytes))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getWebFile(location location: Api.InputWebFileLocation, offset: Int32, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.upload.WebFile?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(619086221)
+                    location.serialize(buffer, true)
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(upload.getWebFile location: \(location), offset: \(offset), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.upload.WebFile? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.upload.WebFile?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.upload.WebFile
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getCdnFile(fileToken fileToken: Buffer, offset: Int32, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.upload.CdnFile?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(536919235)
+                    serializeBytes(fileToken, buffer: buffer, boxed: false)
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(upload.getCdnFile fileToken: \(fileToken), offset: \(offset), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.upload.CdnFile? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.upload.CdnFile?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.upload.CdnFile
+                        }
+                        return result
+                    })
+                }
+            
+                public static func reuploadCdnFile(fileToken fileToken: Buffer, requestToken: Buffer) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(779755552)
+                    serializeBytes(fileToken, buffer: buffer, boxed: false)
+                    serializeBytes(requestToken, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(upload.reuploadCdnFile fileToken: \(fileToken), requestToken: \(requestToken))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -20432,6 +22152,21 @@ public struct Api {
                         return result
                     })
                 }
+            
+                public static func getTmpPassword(passwordHash passwordHash: Buffer, period: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.account.TmpPassword?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1250046590)
+                    serializeBytes(passwordHash, buffer: buffer, boxed: false)
+                    serializeInt32(period, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(account.getTmpPassword passwordHash: \(passwordHash), period: \(period))"}), buffer, { (buffer: Buffer) -> Api.account.TmpPassword? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.TmpPassword?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.TmpPassword
+                        }
+                        return result
+                    })
+                }
             }
             public struct photos {
                 public static func updateProfilePhoto(id id: Api.InputPhoto) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.UserProfilePhoto?) {
@@ -20498,14 +22233,28 @@ public struct Api {
                 }
             }
             public struct phone {
-                public static func requestCall(userId userId: Api.InputUser, randomId: Int32, gA: Buffer, `protocol`: Api.PhoneCallProtocol) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.phone.PhoneCall?) {
+                public static func getCallConfig() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.DataJSON?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1541757468)
+                    buffer.appendInt32(1430593449)
+                    
+                    return (FunctionDescription({return "(phone.getCallConfig )"}), buffer, { (buffer: Buffer) -> Api.DataJSON? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.DataJSON?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.DataJSON
+                        }
+                        return result
+                    })
+                }
+            
+                public static func requestCall(userId userId: Api.InputUser, randomId: Int32, gAHash: Buffer, `protocol`: Api.PhoneCallProtocol) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.phone.PhoneCall?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1536537556)
                     userId.serialize(buffer, true)
                     serializeInt32(randomId, buffer: buffer, boxed: false)
-                    serializeBytes(gA, buffer: buffer, boxed: false)
+                    serializeBytes(gAHash, buffer: buffer, boxed: false)
                     `protocol`.serialize(buffer, true)
-                    return (FunctionDescription({return "(phone.requestCall userId: \(userId), randomId: \(randomId), gA: \(gA), `protocol`: \(`protocol`))"}), buffer, { (buffer: Buffer) -> Api.phone.PhoneCall? in
+                    return (FunctionDescription({return "(phone.requestCall userId: \(userId), randomId: \(randomId), gAHash: \(gAHash), `protocol`: \(`protocol`))"}), buffer, { (buffer: Buffer) -> Api.phone.PhoneCall? in
                         let reader = BufferReader(buffer)
                         var result: Api.phone.PhoneCall?
                         if let signature = reader.readInt32() {
@@ -20515,14 +22264,13 @@ public struct Api {
                     })
                 }
             
-                public static func acceptCall(peer peer: Api.InputPhoneCall, gB: Buffer, keyFingerprint: Int64, `protocol`: Api.PhoneCallProtocol) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.phone.PhoneCall?) {
+                public static func acceptCall(peer peer: Api.InputPhoneCall, gB: Buffer, `protocol`: Api.PhoneCallProtocol) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.phone.PhoneCall?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(571411232)
+                    buffer.appendInt32(1003664544)
                     peer.serialize(buffer, true)
                     serializeBytes(gB, buffer: buffer, boxed: false)
-                    serializeInt64(keyFingerprint, buffer: buffer, boxed: false)
                     `protocol`.serialize(buffer, true)
-                    return (FunctionDescription({return "(phone.acceptCall peer: \(peer), gB: \(gB), keyFingerprint: \(keyFingerprint), `protocol`: \(`protocol`))"}), buffer, { (buffer: Buffer) -> Api.phone.PhoneCall? in
+                    return (FunctionDescription({return "(phone.acceptCall peer: \(peer), gB: \(gB), `protocol`: \(`protocol`))"}), buffer, { (buffer: Buffer) -> Api.phone.PhoneCall? in
                         let reader = BufferReader(buffer)
                         var result: Api.phone.PhoneCall?
                         if let signature = reader.readInt32() {
@@ -20532,18 +22280,18 @@ public struct Api {
                     })
                 }
             
-                public static func discardCall(peer peer: Api.InputPhoneCall, duration: Int32, reason: Api.PhoneCallDiscardReason, connectionId: Int64) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                public static func confirmCall(peer peer: Api.InputPhoneCall, gA: Buffer, keyFingerprint: Int64, `protocol`: Api.PhoneCallProtocol) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.phone.PhoneCall?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1576783324)
+                    buffer.appendInt32(788404002)
                     peer.serialize(buffer, true)
-                    serializeInt32(duration, buffer: buffer, boxed: false)
-                    reason.serialize(buffer, true)
-                    serializeInt64(connectionId, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(phone.discardCall peer: \(peer), duration: \(duration), reason: \(reason), connectionId: \(connectionId))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    serializeBytes(gA, buffer: buffer, boxed: false)
+                    serializeInt64(keyFingerprint, buffer: buffer, boxed: false)
+                    `protocol`.serialize(buffer, true)
+                    return (FunctionDescription({return "(phone.confirmCall peer: \(peer), gA: \(gA), keyFingerprint: \(keyFingerprint), `protocol`: \(`protocol`))"}), buffer, { (buffer: Buffer) -> Api.phone.PhoneCall? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.phone.PhoneCall?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.phone.PhoneCall
                         }
                         return result
                     })
@@ -20554,6 +22302,54 @@ public struct Api {
                     buffer.appendInt32(399855457)
                     peer.serialize(buffer, true)
                     return (FunctionDescription({return "(phone.receivedCall peer: \(peer))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func discardCall(peer peer: Api.InputPhoneCall, duration: Int32, reason: Api.PhoneCallDiscardReason, connectionId: Int64) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2027164582)
+                    peer.serialize(buffer, true)
+                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    reason.serialize(buffer, true)
+                    serializeInt64(connectionId, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(phone.discardCall peer: \(peer), duration: \(duration), reason: \(reason), connectionId: \(connectionId))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setCallRating(peer peer: Api.InputPhoneCall, rating: Int32, comment: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(475228724)
+                    peer.serialize(buffer, true)
+                    serializeInt32(rating, buffer: buffer, boxed: false)
+                    serializeString(comment, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(phone.setCallRating peer: \(peer), rating: \(rating), comment: \(comment))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func saveCallDebug(peer peer: Api.InputPhoneCall, debug: Api.DataJSON) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(662363518)
+                    peer.serialize(buffer, true)
+                    debug.serialize(buffer, true)
+                    return (FunctionDescription({return "(phone.saveCallDebug peer: \(peer), debug: \(debug))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

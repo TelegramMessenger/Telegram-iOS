@@ -225,7 +225,7 @@ public final class TelegramUser: Peer {
 public extension TelegramUser {
     public convenience init(user: Api.User) {
         switch user {
-            case let .user(flags, id, accessHash, firstName, lastName, username, phone, photo, _, _, _, botInlinePlaceholder):
+            case let .user(flags, id, accessHash, firstName, lastName, username, phone, photo, _, _, _, botInlinePlaceholder, _):
                 var telegramPhoto: [TelegramMediaImageRepresentation] = []
                 if let photo = photo {
                     switch photo {
@@ -266,7 +266,7 @@ public extension TelegramUser {
     
     public static func merge(_ lhs: TelegramUser?, rhs: Api.User) -> TelegramUser? {
         switch rhs {
-            case let .user(flags, _, accessHash, _, _, username, _, photo, _, _, _, botInlinePlaceholder):
+            case let .user(flags, _, accessHash, _, _, username, _, photo, _, _, _, botInlinePlaceholder, _):
                 if let _ = accessHash {
                     return TelegramUser(user: rhs)
                 } else {

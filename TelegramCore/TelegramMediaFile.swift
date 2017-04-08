@@ -312,7 +312,7 @@ public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.Docu
                 result.append(.ImageSize(size: CGSize(width: CGFloat(w), height: CGFloat(h))))
             case .documentAttributeAnimated:
                 result.append(.Animated)
-            case let .documentAttributeVideo(duration, w, h):
+            case let .documentAttributeVideo(flags, duration, w, h):
                 result.append(.Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h))))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0

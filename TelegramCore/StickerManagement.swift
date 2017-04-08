@@ -22,10 +22,10 @@ private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return (postbox.modify { modifier -> Void in
         addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
         addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
-    } |> then(.complete() |> delay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue())) |> restart
+    } |> then(.complete() |> delay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
 func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
