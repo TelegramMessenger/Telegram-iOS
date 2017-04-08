@@ -24,5 +24,6 @@ protocol ValueBox {
     func exists(_ table: ValueBoxTable, key: ValueBoxKey) -> Bool
     func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer)
     func remove(_ table: ValueBoxTable, key: ValueBoxKey)
+    func dropTable(_ table: ValueBoxTable)
     func drop()
 }

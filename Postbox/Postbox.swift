@@ -552,23 +552,68 @@ fileprivate class PipeNotifier: NSObject {
     }
 }
 
+public enum PostboxResult {
+    case upgrading
+    case postbox(Postbox)
+}
+
+public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration) -> Signal<PostboxResult, NoError> {
+    let queue = Queue(name: "org.telegram.postbox.Postbox")
+    return Signal { subscriber in
+        queue.async {
+            let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+            
+            loop: while true {
+                let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
+                
+                let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
+                
+                let userVersion: Int32? = metadataTable.userVersion()
+                let currentUserVersion: Int32 = 13
+                
+                if let userVersion = userVersion {
+                    if userVersion != currentUserVersion {
+                        if let operation = registeredUpgrades()[userVersion] {
+                            switch operation {
+                                case let .inplace(f):
+                                    valueBox.begin()
+                                    f(metadataTable, valueBox)
+                                    valueBox.commit()
+                            }
+                            continue loop
+                        } else {
+                            assertionFailure()
+                            valueBox.drop()
+                        }
+                    }
+                } else {
+                    metadataTable.setUserVersion(currentUserVersion)
+                }
+                
+                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, globalMessageIdsNamespace: globalMessageIdsNamespace, seedConfiguration: seedConfiguration, valueBox: valueBox)))
+                subscriber.putCompletion()
+                break
+            }
+        }
+        
+        return EmptyDisposable
+    }
+}
+
 public final class Postbox {
+    private let queue: Queue
     private let seedConfiguration: SeedConfiguration
     private let basePath: String
     private let globalMessageIdsNamespace: MessageId.Namespace
+    private let valueBox: ValueBox
     
     private let ipcNotificationsDisposable = MetaDisposable()
     //private var pipeNotifier: PipeNotifier!
-    
-    private let queue = Queue(name: "org.telegram.postbox.Postbox")
-    private var valueBox: ValueBox!
     
     private var transactionStateVersion: Int64 = 0
     
     private var viewTracker: ViewTracker!
     private var nextViewId = 0
-    
-    private var peerPipes: [PeerId: ValuePipe<Peer>] = [:]
     
     private var currentUpdatedState: Coding?
     private var currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
@@ -597,7 +642,7 @@ public final class Postbox {
     private var currentReplacedContactPeerIds: Set<PeerId>?
     private var currentUpdatedMasterClientId: Int64?
     
-    private var statePipe: ValuePipe<Coding> = ValuePipe()
+    private let statePipe: ValuePipe<Coding> = ValuePipe()
     private var masterClientId = Promise<Int64>()
     
     private var sessionClientId: Int64 = {
@@ -608,60 +653,62 @@ public final class Postbox {
     
     public let mediaBox: MediaBox
     
-    var tables: [Table] = []
+    let tables: [Table]
     
-    var metadataTable: MetadataTable!
-    var keychainTable: KeychainTable!
-    var peerTable: PeerTable!
-    var peerNotificationSettingsTable: PeerNotificationSettingsTable!
-    var cachedPeerDataTable: CachedPeerDataTable!
-    var peerPresenceTable: PeerPresenceTable!
-    var globalMessageIdsTable: GlobalMessageIdsTable!
-    var globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable!
-    var messageHistoryIndexTable: MessageHistoryIndexTable!
-    var messageHistoryTable: MessageHistoryTable!
-    var mediaTable: MessageMediaTable!
-    var chatListIndexTable: ChatListIndexTable!
-    var chatListTable: ChatListTable!
-    var messageHistoryMetadataTable: MessageHistoryMetadataTable!
-    var messageHistoryUnsentTable: MessageHistoryUnsentTable!
-    var messageHistoryTagsTable: MessageHistoryTagsTable!
-    var peerChatStateTable: PeerChatStateTable!
-    var readStateTable: MessageHistoryReadStateTable!
-    var synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable!
-    var contactsTable: ContactTable!
-    var itemCollectionInfoTable: ItemCollectionInfoTable!
-    var itemCollectionItemTable: ItemCollectionItemTable!
-    var itemCollectionReverseIndexTable: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>!
-    var peerChatInterfaceStateTable: PeerChatInterfaceStateTable!
-    var itemCacheMetaTable: ItemCacheMetaTable!
-    var itemCacheTable: ItemCacheTable!
-    var peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>!
-    var peerNameIndexTable: PeerNameIndexTable!
-    var peerChatTopTaggedMessageIdsTable: PeerChatTopTaggedMessageIdsTable!
-    var peerOperationLogMetadataTable: PeerOperationLogMetadataTable!
-    var peerMergedOperationLogIndexTable: PeerMergedOperationLogIndexTable!
-    var peerOperationLogTable: PeerOperationLogTable!
-    var timestampBasedMessageAttributesTable: TimestampBasedMessageAttributesTable!
-    var timestampBasedMessageAttributesIndexTable: TimestampBasedMessageAttributesIndexTable!
-    var preferencesTable: PreferencesTable!
-    var orderedItemListTable: OrderedItemListTable!
-    var orderedItemListIndexTable: OrderedItemListIndexTable!
+    let metadataTable: MetadataTable
+    let keychainTable: KeychainTable
+    let peerTable: PeerTable
+    let peerNotificationSettingsTable: PeerNotificationSettingsTable
+    let cachedPeerDataTable: CachedPeerDataTable
+    let peerPresenceTable: PeerPresenceTable
+    let globalMessageIdsTable: GlobalMessageIdsTable
+    let globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable
+    let messageHistoryIndexTable: MessageHistoryIndexTable
+    let messageHistoryTable: MessageHistoryTable
+    let mediaTable: MessageMediaTable
+    let chatListIndexTable: ChatListIndexTable
+    let chatListTable: ChatListTable
+    let messageHistoryMetadataTable: MessageHistoryMetadataTable
+    let messageHistoryUnsentTable: MessageHistoryUnsentTable
+    let messageHistoryTagsTable: MessageHistoryTagsTable
+    let peerChatStateTable: PeerChatStateTable
+    let readStateTable: MessageHistoryReadStateTable
+    let synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable
+    let contactsTable: ContactTable
+    let itemCollectionInfoTable: ItemCollectionInfoTable
+    let itemCollectionItemTable: ItemCollectionItemTable
+    let itemCollectionReverseIndexTable: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>
+    let peerChatInterfaceStateTable: PeerChatInterfaceStateTable
+    let itemCacheMetaTable: ItemCacheMetaTable
+    let itemCacheTable: ItemCacheTable
+    let peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>
+    let peerNameIndexTable: PeerNameIndexTable
+    let peerChatTopTaggedMessageIdsTable: PeerChatTopTaggedMessageIdsTable
+    let peerOperationLogMetadataTable: PeerOperationLogMetadataTable
+    let peerMergedOperationLogIndexTable: PeerMergedOperationLogIndexTable
+    let peerOperationLogTable: PeerOperationLogTable
+    let timestampBasedMessageAttributesTable: TimestampBasedMessageAttributesTable
+    let timestampBasedMessageAttributesIndexTable: TimestampBasedMessageAttributesIndexTable
+    let preferencesTable: PreferencesTable
+    let orderedItemListTable: OrderedItemListTable
+    let orderedItemListIndexTable: OrderedItemListIndexTable
     
     //temporary
-    var peerRatingTable: RatingTable<PeerId>!
+    let peerRatingTable: RatingTable<PeerId>
     
     
-    public init(basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration) {
+    fileprivate init(queue: Queue, basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration, valueBox: ValueBox) {
+        assert(queue.isCurrent())
+        
+        self.queue = queue
         self.basePath = basePath
         self.globalMessageIdsNamespace = globalMessageIdsNamespace
         self.seedConfiguration = seedConfiguration
         
         print("MediaBox path: \(self.basePath + "/media")")
         
-        //let _ = try? FileManager.default.removeItem(atPath: self.basePath)
-        
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
+        self.valueBox = valueBox
         
         /*self.pipeNotifier = PipeNotifier(basePath: basePath, notify: { [weak self] in
             //if let strongSelf = self {
@@ -674,7 +721,117 @@ public final class Postbox {
             //}
         })*/
         
-        self.openDatabase()
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
+        self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
+        
+        self.keychainTable = KeychainTable(valueBox: self.valueBox, table: KeychainTable.tableSpec(1))
+        self.peerTable = PeerTable(valueBox: self.valueBox, table: PeerTable.tableSpec(2))
+        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox, table: GlobalMessageIdsTable.tableSpec(3), namespace: self.globalMessageIdsNamespace)
+        self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox, table: MessageGloballyUniqueIdTable.tableSpec(32))
+        self.messageHistoryMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox, table: MessageHistoryMetadataTable.tableSpec(10))
+        self.messageHistoryUnsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox, table: MessageHistoryUnsentTable.tableSpec(11))
+        self.messageHistoryTagsTable = MessageHistoryTagsTable(valueBox: self.valueBox, table: MessageHistoryTagsTable.tableSpec(12))
+        self.messageHistoryIndexTable = MessageHistoryIndexTable(valueBox: self.valueBox, table: MessageHistoryIndexTable.tableSpec(4), globalMessageIdsTable: self.globalMessageIdsTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
+        self.mediaTable = MessageMediaTable(valueBox: self.valueBox, table: MessageMediaTable.tableSpec(6))
+        self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox, table: MessageHistoryReadStateTable.tableSpec(14))
+        self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox, table: MessageHistorySynchronizeReadStateTable.tableSpec(15))
+        self.timestampBasedMessageAttributesIndexTable = TimestampBasedMessageAttributesIndexTable(valueBox: self.valueBox, table: TimestampBasedMessageAttributesTable.tableSpec(33))
+        self.timestampBasedMessageAttributesTable = TimestampBasedMessageAttributesTable(valueBox: self.valueBox, table: TimestampBasedMessageAttributesTable.tableSpec(34), indexTable: self.timestampBasedMessageAttributesIndexTable)
+        self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, table: MessageHistoryTable.tableSpec(7), messageHistoryIndexTable: self.messageHistoryIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable, unsentTable: self.messageHistoryUnsentTable, tagsTable: self.messageHistoryTagsTable, readStateTable: self.readStateTable, synchronizeReadStateTable: self.synchronizeReadStateTable)
+        self.peerChatStateTable = PeerChatStateTable(valueBox: self.valueBox, table: PeerChatStateTable.tableSpec(13))
+        self.peerNameTokenIndexTable = ReverseIndexReferenceTable<PeerIdReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<PeerIdReverseIndexReference>.tableSpec(26))
+        self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox, table: PeerNameIndexTable.tableSpec(27), peerTable: self.peerTable, peerNameTokenIndexTable: self.peerNameTokenIndexTable)
+        self.contactsTable = ContactTable(valueBox: self.valueBox, table: ContactTable.tableSpec(16), peerNameIndexTable: self.peerNameIndexTable)
+        self.peerRatingTable = RatingTable<PeerId>(valueBox: self.valueBox, table: RatingTable<PeerId>.tableSpec(17))
+        self.cachedPeerDataTable = CachedPeerDataTable(valueBox: self.valueBox, table: CachedPeerDataTable.tableSpec(18))
+        self.peerNotificationSettingsTable = PeerNotificationSettingsTable(valueBox: self.valueBox, table: PeerNotificationSettingsTable.tableSpec(19))
+        self.peerPresenceTable = PeerPresenceTable(valueBox: self.valueBox, table: PeerPresenceTable.tableSpec(20))
+        self.itemCollectionInfoTable = ItemCollectionInfoTable(valueBox: self.valueBox, table: ItemCollectionInfoTable.tableSpec(21))
+        self.itemCollectionReverseIndexTable = ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>.tableSpec(36))
+        self.itemCollectionItemTable = ItemCollectionItemTable(valueBox: self.valueBox, table: ItemCollectionItemTable.tableSpec(22), reverseIndexTable: self.itemCollectionReverseIndexTable)
+        self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox, table: PeerChatInterfaceStateTable.tableSpec(23))
+        self.itemCacheMetaTable = ItemCacheMetaTable(valueBox: self.valueBox, table: ItemCacheMetaTable.tableSpec(24))
+        self.itemCacheTable = ItemCacheTable(valueBox: self.valueBox, table: ItemCacheTable.tableSpec(25))
+        self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable, metadataTable: self.messageHistoryMetadataTable, readStateTable: self.readStateTable, notificationSettingsTable: self.peerNotificationSettingsTable)
+        self.chatListTable = ChatListTable(valueBox: self.valueBox, table: ChatListTable.tableSpec(9), indexTable: self.chatListIndexTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
+        self.peerChatTopTaggedMessageIdsTable = PeerChatTopTaggedMessageIdsTable(valueBox: self.valueBox, table: PeerChatTopTaggedMessageIdsTable.tableSpec(28))
+        self.peerOperationLogMetadataTable = PeerOperationLogMetadataTable(valueBox: self.valueBox, table: PeerOperationLogMetadataTable.tableSpec(29))
+        self.peerMergedOperationLogIndexTable = PeerMergedOperationLogIndexTable(valueBox: self.valueBox, table: PeerMergedOperationLogIndexTable.tableSpec(30), metadataTable: self.peerOperationLogMetadataTable)
+        self.peerOperationLogTable = PeerOperationLogTable(valueBox: self.valueBox, table: PeerOperationLogTable.tableSpec(31), metadataTable: self.peerOperationLogMetadataTable, mergedIndexTable: self.peerMergedOperationLogIndexTable)
+        self.preferencesTable = PreferencesTable(valueBox: self.valueBox, table: PreferencesTable.tableSpec(35))
+        self.orderedItemListIndexTable = OrderedItemListIndexTable(valueBox: self.valueBox, table: OrderedItemListIndexTable.tableSpec(37))
+        self.orderedItemListTable = OrderedItemListTable(valueBox: self.valueBox, table: OrderedItemListTable.tableSpec(38), indexTable: self.orderedItemListIndexTable)
+        
+        var tables: [Table] = []
+        tables.append(self.metadataTable)
+        tables.append(self.keychainTable)
+        tables.append(self.peerTable)
+        tables.append(self.globalMessageIdsTable)
+        tables.append(self.globallyUniqueMessageIdsTable)
+        tables.append(self.messageHistoryMetadataTable)
+        tables.append(self.messageHistoryUnsentTable)
+        tables.append(self.messageHistoryTagsTable)
+        tables.append(self.messageHistoryIndexTable)
+        tables.append(self.mediaTable)
+        tables.append(self.readStateTable)
+        tables.append(self.synchronizeReadStateTable)
+        tables.append(self.messageHistoryTable)
+        tables.append(self.chatListIndexTable)
+        tables.append(self.chatListTable)
+        tables.append(self.peerChatStateTable)
+        tables.append(self.contactsTable)
+        tables.append(self.peerRatingTable)
+        tables.append(self.peerNotificationSettingsTable)
+        tables.append(self.cachedPeerDataTable)
+        tables.append(self.peerPresenceTable)
+        tables.append(self.itemCollectionInfoTable)
+        tables.append(self.itemCollectionItemTable)
+        tables.append(self.itemCollectionReverseIndexTable)
+        tables.append(self.peerChatInterfaceStateTable)
+        tables.append(self.itemCacheMetaTable)
+        tables.append(self.itemCacheTable)
+        tables.append(self.peerNameIndexTable)
+        tables.append(self.peerNameTokenIndexTable)
+        tables.append(self.peerChatTopTaggedMessageIdsTable)
+        tables.append(self.peerOperationLogMetadataTable)
+        tables.append(self.peerMergedOperationLogIndexTable)
+        tables.append(self.peerOperationLogTable)
+        tables.append(self.timestampBasedMessageAttributesTable)
+        tables.append(self.timestampBasedMessageAttributesIndexTable)
+        tables.append(self.preferencesTable)
+        tables.append(self.orderedItemListTable)
+        tables.append(self.orderedItemListIndexTable)
+        
+        self.tables = tables
+        
+        self.transactionStateVersion = self.metadataTable.transactionStateVersion()
+        
+        self.viewTracker = ViewTracker(queue: self.queue, fetchEarlierHistoryEntries: self.fetchEarlierHistoryEntries, fetchLaterHistoryEntries: self.fetchLaterHistoryEntries, fetchEarlierChatEntries: self.fetchEarlierChatEntries, fetchLaterChatEntries: self.fetchLaterChatEntries, fetchAnchorIndex: self.fetchAnchorIndex, renderMessage: self.renderIntermediateMessage, getPeer: { peerId in
+            return self.peerTable.get(peerId)
+        }, getPeerNotificationSettings: { peerId in
+            return self.peerNotificationSettingsTable.get(peerId)
+        }, getCachedPeerData: { peerId in
+            return self.cachedPeerDataTable.get(peerId)
+        }, getPeerPresence: { peerId in
+            return self.peerPresenceTable.get(peerId)
+        }, getTotalUnreadCount: {
+            return self.messageHistoryMetadataTable.getChatListTotalUnreadCount()
+        }, getPeerReadState: { peerId in
+            return self.readStateTable.getCombinedState(peerId)
+        }, operationLogGetOperations: { tag, fromIndex, limit in
+            return self.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: fromIndex, limit: limit)
+        }, operationLogGetTailIndex: { tag in
+            return self.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
+        }, getTimestampBasedMessageAttributesHead: { tag in
+            return self.timestampBasedMessageAttributesTable.head(tag: tag)
+        }, getPreferencesEntry: { key in
+            return self.preferencesTable.get(key: key)
+        }, unsentMessageIds: self.messageHistoryUnsentTable.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
+            return self.readStateTable.getCombinedState(peerId)
+        }))
+        
+        print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
     }
     
     deinit {
@@ -699,140 +856,6 @@ public final class Postbox {
         } catch (let e) {
             print("(Postbox debugRestoreState: error \(e))")
         }
-    }
-    
-    private func openDatabase() {
-        self.queue.justDispatch({
-            let startTime = CFAbsoluteTimeGetCurrent()
-            
-            do {
-                try FileManager.default.createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
-            } catch _ {
-            }
-            
-            //let _ = try? FileManager.default.removeItem(atPath: self.basePath + "/media")
-            
-            //#if TARGET_IPHONE_SIMULATOR
-            
-            //self.debugSaveState(name: "previous")
-            //self.debugRestoreState(name: "previous")
-            
-            //#endif
-            
-            self.valueBox = SqliteValueBox(basePath: self.basePath + "/db", queue: self.queue)
-            
-            self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
-            
-            let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 12
-            
-            if userVersion != currentUserVersion {
-                self.valueBox.drop()
-                self.metadataTable.setUserVersion(currentUserVersion)
-            }
-            
-            self.keychainTable = KeychainTable(valueBox: self.valueBox, table: KeychainTable.tableSpec(1))
-            self.peerTable = PeerTable(valueBox: self.valueBox, table: PeerTable.tableSpec(2))
-            self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox, table: GlobalMessageIdsTable.tableSpec(3), namespace: self.globalMessageIdsNamespace)
-            self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox, table: MessageGloballyUniqueIdTable.tableSpec(32))
-            self.messageHistoryMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox, table: MessageHistoryMetadataTable.tableSpec(10))
-            self.messageHistoryUnsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox, table: MessageHistoryUnsentTable.tableSpec(11))
-            self.messageHistoryTagsTable = MessageHistoryTagsTable(valueBox: self.valueBox, table: MessageHistoryTagsTable.tableSpec(12))
-            self.messageHistoryIndexTable = MessageHistoryIndexTable(valueBox: self.valueBox, table: MessageHistoryIndexTable.tableSpec(4), globalMessageIdsTable: self.globalMessageIdsTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
-            self.mediaTable = MessageMediaTable(valueBox: self.valueBox, table: MessageMediaTable.tableSpec(6))
-            self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox, table: MessageHistoryReadStateTable.tableSpec(14))
-            self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox, table: MessageHistorySynchronizeReadStateTable.tableSpec(15))
-            self.timestampBasedMessageAttributesIndexTable = TimestampBasedMessageAttributesIndexTable(valueBox: self.valueBox!, table: TimestampBasedMessageAttributesTable.tableSpec(33))
-            self.timestampBasedMessageAttributesTable = TimestampBasedMessageAttributesTable(valueBox: self.valueBox!, table: TimestampBasedMessageAttributesTable.tableSpec(34), indexTable: self.timestampBasedMessageAttributesIndexTable)
-            self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, table: MessageHistoryTable.tableSpec(7), messageHistoryIndexTable: self.messageHistoryIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.messageHistoryUnsentTable!, tagsTable: self.messageHistoryTagsTable, readStateTable: self.readStateTable, synchronizeReadStateTable: self.synchronizeReadStateTable!)
-            self.peerChatStateTable = PeerChatStateTable(valueBox: self.valueBox, table: PeerChatStateTable.tableSpec(13))
-            self.peerNameTokenIndexTable = ReverseIndexReferenceTable<PeerIdReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<PeerIdReverseIndexReference>.tableSpec(26))
-            self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox, table: PeerNameIndexTable.tableSpec(27), peerTable: self.peerTable, peerNameTokenIndexTable: self.peerNameTokenIndexTable)
-            self.contactsTable = ContactTable(valueBox: self.valueBox, table: ContactTable.tableSpec(16), peerNameIndexTable: self.peerNameIndexTable)
-            self.peerRatingTable = RatingTable<PeerId>(valueBox: self.valueBox, table: RatingTable<PeerId>.tableSpec(17))
-            self.cachedPeerDataTable = CachedPeerDataTable(valueBox: self.valueBox, table: CachedPeerDataTable.tableSpec(18))
-            self.peerNotificationSettingsTable = PeerNotificationSettingsTable(valueBox: self.valueBox, table: PeerNotificationSettingsTable.tableSpec(19))
-            self.peerPresenceTable = PeerPresenceTable(valueBox: self.valueBox, table: PeerPresenceTable.tableSpec(20))
-            self.itemCollectionInfoTable = ItemCollectionInfoTable(valueBox: self.valueBox, table: ItemCollectionInfoTable.tableSpec(21))
-            self.itemCollectionReverseIndexTable = ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>.tableSpec(36))
-            self.itemCollectionItemTable = ItemCollectionItemTable(valueBox: self.valueBox, table: ItemCollectionItemTable.tableSpec(22), reverseIndexTable: self.itemCollectionReverseIndexTable)
-            self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox, table: PeerChatInterfaceStateTable.tableSpec(23))
-            self.itemCacheMetaTable = ItemCacheMetaTable(valueBox: self.valueBox, table: ItemCacheMetaTable.tableSpec(24))
-            self.itemCacheTable = ItemCacheTable(valueBox: self.valueBox, table: ItemCacheTable.tableSpec(25))
-            self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable, metadataTable: self.messageHistoryMetadataTable, readStateTable: self.readStateTable, notificationSettingsTable: self.peerNotificationSettingsTable)
-            self.chatListTable = ChatListTable(valueBox: self.valueBox, table: ChatListTable.tableSpec(9), indexTable: self.chatListIndexTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
-            self.peerChatTopTaggedMessageIdsTable = PeerChatTopTaggedMessageIdsTable(valueBox: self.valueBox, table: PeerChatTopTaggedMessageIdsTable.tableSpec(28))
-            self.peerOperationLogMetadataTable = PeerOperationLogMetadataTable(valueBox: self.valueBox, table: PeerOperationLogMetadataTable.tableSpec(29))
-            self.peerMergedOperationLogIndexTable = PeerMergedOperationLogIndexTable(valueBox: self.valueBox, table: PeerMergedOperationLogIndexTable.tableSpec(30), metadataTable: self.peerOperationLogMetadataTable!)
-            self.peerOperationLogTable = PeerOperationLogTable(valueBox: self.valueBox, table: PeerOperationLogTable.tableSpec(31), metadataTable: self.peerOperationLogMetadataTable, mergedIndexTable: self.peerMergedOperationLogIndexTable)
-            self.preferencesTable = PreferencesTable(valueBox: self.valueBox, table: PreferencesTable.tableSpec(35))
-            self.orderedItemListIndexTable = OrderedItemListIndexTable(valueBox: self.valueBox, table: OrderedItemListIndexTable.tableSpec(37))
-            self.orderedItemListTable = OrderedItemListTable(valueBox: self.valueBox, table: OrderedItemListTable.tableSpec(38), indexTable: self.orderedItemListIndexTable)
-            
-            self.tables.append(self.keychainTable)
-            self.tables.append(self.peerTable)
-            self.tables.append(self.globalMessageIdsTable)
-            self.tables.append(self.globallyUniqueMessageIdsTable)
-            self.tables.append(self.messageHistoryMetadataTable)
-            self.tables.append(self.messageHistoryUnsentTable)
-            self.tables.append(self.messageHistoryTagsTable)
-            self.tables.append(self.messageHistoryIndexTable)
-            self.tables.append(self.mediaTable)
-            self.tables.append(self.readStateTable)
-            self.tables.append(self.synchronizeReadStateTable)
-            self.tables.append(self.messageHistoryTable)
-            self.tables.append(self.chatListIndexTable)
-            self.tables.append(self.chatListTable)
-            self.tables.append(self.peerChatStateTable)
-            self.tables.append(self.contactsTable)
-            self.tables.append(self.peerRatingTable)
-            self.tables.append(self.peerNotificationSettingsTable)
-            self.tables.append(self.cachedPeerDataTable)
-            self.tables.append(self.peerPresenceTable)
-            self.tables.append(self.itemCollectionInfoTable)
-            self.tables.append(self.itemCollectionItemTable)
-            self.tables.append(self.itemCollectionReverseIndexTable)
-            self.tables.append(self.peerChatInterfaceStateTable)
-            self.tables.append(self.itemCacheMetaTable)
-            self.tables.append(self.itemCacheTable)
-            self.tables.append(self.peerNameIndexTable)
-            self.tables.append(self.peerNameTokenIndexTable)
-            self.tables.append(self.peerChatTopTaggedMessageIdsTable)
-            self.tables.append(self.peerOperationLogMetadataTable)
-            self.tables.append(self.peerMergedOperationLogIndexTable)
-            self.tables.append(self.peerOperationLogTable)
-            self.tables.append(self.preferencesTable)
-            self.tables.append(self.orderedItemListTable)
-            self.tables.append(self.orderedItemListIndexTable)
-            
-            self.transactionStateVersion = self.metadataTable.transactionStateVersion()
-            
-            self.viewTracker = ViewTracker(queue: self.queue, fetchEarlierHistoryEntries: self.fetchEarlierHistoryEntries, fetchLaterHistoryEntries: self.fetchLaterHistoryEntries, fetchEarlierChatEntries: self.fetchEarlierChatEntries, fetchLaterChatEntries: self.fetchLaterChatEntries, fetchAnchorIndex: self.fetchAnchorIndex, renderMessage: self.renderIntermediateMessage, getPeer: { peerId in
-                return self.peerTable.get(peerId)
-            }, getPeerNotificationSettings: { peerId in
-                return self.peerNotificationSettingsTable.get(peerId)
-            }, getCachedPeerData: { peerId in
-                return self.cachedPeerDataTable.get(peerId)
-            }, getPeerPresence: { peerId in
-                return self.peerPresenceTable.get(peerId)
-            }, getTotalUnreadCount: {
-                return self.messageHistoryMetadataTable.getChatListTotalUnreadCount()
-            }, getPeerReadState: { peerId in
-                return self.readStateTable.getCombinedState(peerId)
-            }, operationLogGetOperations: { tag, fromIndex, limit in
-                return self.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: fromIndex, limit: limit)
-            }, operationLogGetTailIndex: { tag in
-                return self.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
-            }, getTimestampBasedMessageAttributesHead: { tag in
-                return self.timestampBasedMessageAttributesTable.head(tag: tag)
-            }, getPreferencesEntry: { key in
-                return self.preferencesTable.get(key: key)
-            }, unsentMessageIds: self.messageHistoryUnsentTable!.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable!.get(getCombinedPeerReadState: { peerId in
-                return self.readStateTable.getCombinedState(peerId)
-            }))
-            
-            print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
-        })
     }
     
     private func takeNextViewId() -> Int {
@@ -1191,9 +1214,9 @@ public final class Postbox {
                 table.clearMemoryCache()
             }
             self.viewTracker.refreshViewsDueToExternalTransaction(fetchAroundChatEntries: self.fetchAroundChatEntries, fetchAroundHistoryEntries: self.fetchAroundHistoryEntries, fetchUnsentMessageIds: {
-                return self.messageHistoryUnsentTable!.get()
+                return self.messageHistoryUnsentTable.get()
             }, fetchSynchronizePeerReadStateOperations: {
-                return self.synchronizeReadStateTable!.get(getCombinedPeerReadState: { peerId in
+                return self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
                     return self.readStateTable.getCombinedState(peerId)
                 })
             })
