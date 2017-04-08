@@ -14,24 +14,26 @@ private enum AccountKind {
     case unauthorized
 }
 
-public func currentAccount(apiId: Int32, supplementary: Bool, manager: AccountManager, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Either<UnauthorizedAccount, Account>?, NoError> {
+public func currentAccount(apiId: Int32, supplementary: Bool, manager: AccountManager, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
     return manager.allocatedCurrentAccountId()
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs == rhs
         })
-        |> mapToSignal { id -> Signal<Either<UnauthorizedAccount, Account>?, NoError> in
+        |> mapToSignal { id -> Signal<AccountResult?, NoError> in
             if let id = id {
                 let reload = ValuePromise<Bool>(true, ignoreRepeated: false)
-                return reload.get() |> mapToSignal { _ -> Signal<Either<UnauthorizedAccount, Account>?, NoError> in
+                return reload.get() |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
                     return accountWithId(apiId: apiId, id: id, supplementary: supplementary, appGroupPath: appGroupPath, testingEnvironment: testingEnvironment, auxiliaryMethods: auxiliaryMethods)
-                        |> mapToSignal { account -> Signal<Either<UnauthorizedAccount, Account>?, NoError> in
+                        |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
                             let postbox: Postbox
                             let initialKind: AccountKind
-                            switch account {
-                                case let .left(value: account):
+                            switch accountResult {
+                                case .upgrading:
+                                    return .complete()
+                                case let .unauthorized(account):
                                     postbox = account.postbox
                                     initialKind = .unauthorized
-                                case let.right(value: account):
+                                case let .authorized(account):
                                     postbox = account.postbox
                                     initialKind = .authorized
                             }
@@ -52,7 +54,7 @@ public func currentAccount(apiId: Int32, supplementary: Bool, manager: AccountMa
                                 |> distinctUntilChanged
                             
                             return Signal { subscriber in
-                                subscriber.putNext(account)
+                                subscriber.putNext(accountResult)
                                 
                                 return updatedKind.start(next: { value in
                                     if value {
@@ -154,9 +156,11 @@ private func cleanupAccount(apiId: Int32, accountManager: AccountManager, id: Ac
     return accountWithId(apiId: apiId, id: id, supplementary: true, appGroupPath: appGroupPath, testingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
         |> mapToSignal { account -> Signal<Void, NoError> in
             switch account {
-                case .left:
+                case .upgrading:
                     return .complete()
-                case let .right(account):
+                case .unauthorized:
+                    return .complete()
+                case let .authorized(account):
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                     return account.network.request(Api.functions.auth.logOut())
                         |> map { Optional($0) }

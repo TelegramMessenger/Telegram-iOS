@@ -311,6 +311,10 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .phoneCall(callId: callId, discardReason: discardReason, duration: duration))
         case .messageActionEmpty:
             return nil
+        case let .messageActionPaymentSent(currency, totalAmount):
+            return nil
+        case .messageActionPaymentSentMe:
+            return nil
     }
 }
 

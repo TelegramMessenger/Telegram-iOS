@@ -6,9 +6,9 @@ import Foundation
 #endif
 
 public struct AutomaticDownloadSettings {
-    public let downloadPhoto: Bool
-    public let downloadVideo: Bool
-    public let downloadAudio: Bool
+    public let downloadPhotos: Bool
+    public let downloadVoiceMessages: Bool
+    public let downloadGifs: Bool
 }
 
 public struct AccountSettings {
@@ -17,7 +17,7 @@ public struct AccountSettings {
 }
 
 func defaultAccountSettings() -> AccountSettings {
-    return AccountSettings(oneToOneChatsAutomaticDownloadSettings: AutomaticDownloadSettings(downloadPhoto: true, downloadVideo: false, downloadAudio: true), groupChatsAutomaticDownloadSettings: AutomaticDownloadSettings(downloadPhoto: true, downloadVideo: false, downloadAudio: true))
+    return AccountSettings(oneToOneChatsAutomaticDownloadSettings: AutomaticDownloadSettings(downloadPhotos: true, downloadVoiceMessages: true, downloadGifs: true), groupChatsAutomaticDownloadSettings: AutomaticDownloadSettings(downloadPhotos: true, downloadVoiceMessages: true, downloadGifs: true))
 }
 
 public extension AccountSettings {
