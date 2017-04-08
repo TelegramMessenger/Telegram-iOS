@@ -28,7 +28,7 @@ public enum AddressNameDomain {
     case peer(PeerId)
 }
 
-public func checkAddressNameFormat(_ value: String) -> AddressNameFormatError? {
+public func checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -> AddressNameFormatError? {
     var index = 0
     let length = value.characters.count
     for char in value.characters {
@@ -48,10 +48,9 @@ public func checkAddressNameFormat(_ value: String) -> AddressNameFormatError? {
         index += 1
     }
     
-    if length < 5 {
+    if length < 5 && (!canEmpty || length != 0) {
         return .tooShort
     }
-    
     return nil
 }
 

@@ -99,7 +99,7 @@ public enum UnauthorizedAccountStateContents: Coding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
     case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?)
-    case passwordEntry(hint: String)
+    case passwordEntry(hint: String, number:String?, code:String?)
     case signUp(number: String, codeHash: String, code: String, firstName: String, lastName: String)
     
     public init(decoder: Decoder) {
@@ -115,7 +115,7 @@ public enum UnauthorizedAccountStateContents: Coding, Equatable {
                 }
                 self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num"), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h"), timeout: decoder.decodeInt32ForKey("tm"), nextType: nextType)
             case UnauthorizedAccountStateContentsValue.passwordEntry.rawValue:
-                self = .passwordEntry(hint: decoder.decodeStringForKey("h"))
+                self = .passwordEntry(hint: decoder.decodeStringForKey("h"), number: decoder.decodeStringForKey("n"), code: decoder.decodeStringForKey("c"))
             case UnauthorizedAccountStateContentsValue.signUp.rawValue:
                 self = .signUp(number: decoder.decodeStringForKey("n"), codeHash: decoder.decodeStringForKey("h"), code: decoder.decodeStringForKey("c"), firstName: decoder.decodeStringForKey("f"), lastName: decoder.decodeStringForKey("l"))
             default:
@@ -147,9 +147,19 @@ public enum UnauthorizedAccountStateContents: Coding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "nt")
                 }
-            case let .passwordEntry(hint):
+            case let .passwordEntry(hint, number, code):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.passwordEntry.rawValue, forKey: "v")
                 encoder.encodeString(hint, forKey: "h")
+                if let number = number {
+                    encoder.encodeString(number, forKey: "n")
+                } else {
+                    encoder.encodeNil(forKey: "n")
+                }
+                if let code = code {
+                    encoder.encodeString(code, forKey: "c")
+                } else {
+                    encoder.encodeNil(forKey: "c")
+                }
             case let .signUp(number, codeHash, code, firstName, lastName):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.signUp.rawValue, forKey: "v")
                 encoder.encodeString(number, forKey: "n")
@@ -195,9 +205,9 @@ public enum UnauthorizedAccountStateContents: Coding, Equatable {
                 } else {
                     return false
                 }
-            case let .passwordEntry(hint):
-                if case .passwordEntry(hint) = rhs {
-                    return true
+            case let .passwordEntry(lhsHint, lhsNumber, lhsCode):
+                if case let .passwordEntry(rhsHint, rhsNumber, rhsCode) = rhs {
+                    return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode
                 } else {
                     return false
                 }
