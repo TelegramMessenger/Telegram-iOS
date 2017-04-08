@@ -121,7 +121,7 @@ final class PeerOperationLogTable: Table {
     private func key(peerId: PeerId, tag: PeerOperationLogTag, index: Int32) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 1 + 4)
         key.setInt64(0, value: peerId.toInt64())
-        key.setUInt8(1, value: tag.rawValue)
+        key.setUInt8(8, value: tag.rawValue)
         key.setInt32(9, value: index)
         return key
     }
@@ -249,7 +249,7 @@ final class PeerOperationLogTable: Table {
     
     func getMergedEntries(tag: PeerOperationLogTag, fromIndex: Int32, limit: Int) -> [PeerMergedOperationLogEntry] {
         var entries: [PeerMergedOperationLogEntry] = []
-        for (peerId, tagLocalIndex) in self.mergedIndexTable.getTagLocalIndices(tag: tag, fromMergedIndex: fromIndex, limit: limit) {
+        for (peerId, tagLocalIndex, mergedIndex) in self.mergedIndexTable.getTagLocalIndices(tag: tag, fromMergedIndex: fromIndex, limit: limit) {
             if let value = self.valueBox.get(self.table, key: self.key(peerId: peerId, tag: tag, index: tagLocalIndex)) {
                 if let entry = parseMergedEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, value) {
                     entries.append(entry)
@@ -257,6 +257,7 @@ final class PeerOperationLogTable: Table {
                     assertionFailure()
                 }
             } else {
+                self.mergedIndexTable.remove(tag: tag, mergedIndices: [mergedIndex])
                 assertionFailure()
             }
         }
@@ -334,10 +335,12 @@ final class PeerOperationLogTable: Table {
                         encoder.encodeRootObject(contents)
                     }
                     let contentBuffer = encoder.readBufferNoCopy()
-                    var contentBufferLength: Int32 = Int32(contentBuffer.length)
-                    buffer.write(&contentBufferLength, offset: 0, length: 4)
-                    buffer.write(contentBuffer.memory, offset: 0, length: contentBuffer.length)
-                    self.valueBox.set(self.table, key: key, value: buffer)
+                    withExtendedLifetime(encoder, {
+                        var contentBufferLength: Int32 = Int32(contentBuffer.length)
+                        buffer.write(&contentBufferLength, offset: 0, length: 4)
+                        buffer.write(contentBuffer.memory, offset: 0, length: contentBuffer.length)
+                        self.valueBox.set(self.table, key: key, value: buffer)
+                    })
                 }
             } else {
                 assertionFailure()

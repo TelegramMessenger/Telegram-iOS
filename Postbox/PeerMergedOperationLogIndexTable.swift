@@ -33,18 +33,20 @@ final class PeerMergedOperationLogIndexTable: Table {
     
     func remove(tag: PeerOperationLogTag, mergedIndices: [Int32]) {
         for index in mergedIndices {
+            assert(self.valueBox.exists(self.table, key: self.key(tag: tag, index: index)))
             self.valueBox.remove(self.table, key: self.key(tag: tag, index: index))
         }
     }
     
-    func getTagLocalIndices(tag: PeerOperationLogTag, fromMergedIndex: Int32, limit: Int) -> [(PeerId, Int32)] {
-        var result: [(PeerId, Int32)] = []
+    func getTagLocalIndices(tag: PeerOperationLogTag, fromMergedIndex: Int32, limit: Int) -> [(PeerId, Int32, Int32)] {
+        var result: [(PeerId, Int32, Int32)] = []
         self.valueBox.range(self.table, start: self.key(tag: tag, index: fromMergedIndex == 0 ? 0 : fromMergedIndex - 1), end: self.key(tag: tag, index: Int32.max), values: { key, value in
+            assert(key.getUInt8(0) == tag.rawValue)
             var peerIdValue: Int64 = 0
             var tagLocalIndexValue: Int32 = 0
             value.read(&peerIdValue, offset: 0, length: 8)
             value.read(&tagLocalIndexValue, offset: 0, length: 4)
-            result.append((PeerId(peerIdValue), tagLocalIndexValue))
+            result.append((PeerId(peerIdValue), tagLocalIndexValue, key.getInt32(1)))
             return true
         }, limit: limit)
         return result

@@ -102,9 +102,6 @@ public final class SqliteInterface {
     
     public init?(databasePath: String) {
         if let database = Database(databasePath) {
-            if !database.execute("pragma schema_version") {
-                return nil
-            }
             self.database = database
         } else {
             return nil

@@ -1057,6 +1057,10 @@ final class SqliteValueBox: ValueBox {
         self.deleteStatements.removeAll()
     }
     
+    public func dropTable(_ table: ValueBoxTable) {
+        self.database.execute("REMOVE FROM t\(table.id)")
+    }
+    
     public func drop() {
         assert(self.queue.isCurrent())
         self.clearStatements()

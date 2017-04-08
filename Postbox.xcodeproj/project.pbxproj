@@ -184,8 +184,6 @@
 		D0D511041D64D91C00A97B8A /* IpcNotifier.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D511031D64D75200A97B8A /* IpcNotifier.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D949F31D35302600740E02 /* RandomAccessResourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D949F21D35302600740E02 /* RandomAccessResourceTests.swift */; };
 		D0D949F51D35353900740E02 /* MappedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D949F41D35353900740E02 /* MappedFile.swift */; };
-		D0DA44411E4C7868005FDCA7 /* IncrementalUpgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA44401E4C7868005FDCA7 /* IncrementalUpgrade.swift */; };
-		D0DA44421E4C7868005FDCA7 /* IncrementalUpgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA44401E4C7868005FDCA7 /* IncrementalUpgrade.swift */; };
 		D0DA44481E4C7D1E005FDCA7 /* PostboxAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */; };
 		D0DA44491E4C7D1E005FDCA7 /* PostboxAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */; };
 		D0DF0C8F1D81A350008AEB01 /* PeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C8E1D81A350008AEB01 /* PeerView.swift */; };
@@ -200,6 +198,10 @@
 		D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A79D1B28B50400A402D9 /* Message.swift */; };
 		D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7A11B28B7DC00A402D9 /* Media.swift */; };
 		D0F019FD1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */; };
+		D0F02CDF1E99223D0065DEE2 /* Upgrades.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F02CDE1E99223D0065DEE2 /* Upgrades.swift */; };
+		D0F02CE01E99223E0065DEE2 /* Upgrades.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F02CDE1E99223D0065DEE2 /* Upgrades.swift */; };
+		D0F02CE21E9922F50065DEE2 /* PostboxUpgrade_12to13.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F02CE11E9922F50065DEE2 /* PostboxUpgrade_12to13.swift */; };
+		D0F02CE31E9922F50065DEE2 /* PostboxUpgrade_12to13.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F02CE11E9922F50065DEE2 /* PostboxUpgrade_12to13.swift */; };
 		D0F3CC721DDE1CDC008148FA /* ItemCacheTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC711DDE1CDC008148FA /* ItemCacheTable.swift */; };
 		D0F3CC741DDE1EB9008148FA /* ItemCacheMetaTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC731DDE1EB9008148FA /* ItemCacheMetaTable.swift */; };
 		D0F53BF31E794C6700117362 /* PeerChatStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F53BF21E794C6700117362 /* PeerChatStateView.swift */; };
@@ -378,7 +380,6 @@
 		D0D511031D64D75200A97B8A /* IpcNotifier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IpcNotifier.h; sourceTree = "<group>"; };
 		D0D949F21D35302600740E02 /* RandomAccessResourceTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RandomAccessResourceTests.swift; sourceTree = "<group>"; };
 		D0D949F41D35353900740E02 /* MappedFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MappedFile.swift; sourceTree = "<group>"; };
-		D0DA44401E4C7868005FDCA7 /* IncrementalUpgrade.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IncrementalUpgrade.swift; sourceTree = "<group>"; };
 		D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxAccess.swift; sourceTree = "<group>"; };
 		D0DF0C8E1D81A350008AEB01 /* PeerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerView.swift; sourceTree = "<group>"; };
 		D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewTracker.swift; sourceTree = "<group>"; };
@@ -394,6 +395,8 @@
 		D0E3A79D1B28B50400A402D9 /* Message.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		D0E3A7A11B28B7DC00A402D9 /* Media.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Media.swift; sourceTree = "<group>"; };
 		D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMergedOperationLogView.swift; sourceTree = "<group>"; };
+		D0F02CDE1E99223D0065DEE2 /* Upgrades.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Upgrades.swift; sourceTree = "<group>"; };
+		D0F02CE11E9922F50065DEE2 /* PostboxUpgrade_12to13.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_12to13.swift; sourceTree = "<group>"; };
 		D0F3CC711DDE1CDC008148FA /* ItemCacheTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCacheTable.swift; sourceTree = "<group>"; };
 		D0F3CC731DDE1EB9008148FA /* ItemCacheMetaTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCacheMetaTable.swift; sourceTree = "<group>"; };
 		D0F53BF21E794C6700117362 /* PeerChatStateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatStateView.swift; sourceTree = "<group>"; };
@@ -519,7 +522,8 @@
 		D0DA443F1E4C7834005FDCA7 /* Upgrade */ = {
 			isa = PBXGroup;
 			children = (
-				D0DA44401E4C7868005FDCA7 /* IncrementalUpgrade.swift */,
+				D0F02CDE1E99223D0065DEE2 /* Upgrades.swift */,
+				D0F02CE11E9922F50065DEE2 /* PostboxUpgrade_12to13.swift */,
 			);
 			name = Upgrade;
 			sourceTree = "<group>";
@@ -902,7 +906,6 @@
 				D03229EF1E6B33FD0000AF9C /* SqliteInterface.swift in Sources */,
 				D050F2671E4A5B5A00988324 /* TimestampBasedMessageAttributesTable.swift in Sources */,
 				D050F2681E4A5B5A00988324 /* TimestampBasedMessageAttributesIndexTable.swift in Sources */,
-				D0DA44421E4C7868005FDCA7 /* IncrementalUpgrade.swift in Sources */,
 				D050F2691E4A5B5A00988324 /* MultiplePeersView.swift in Sources */,
 				C2A315BE1E2E733900D89000 /* PeerMergedOperationLogIndexTable.swift in Sources */,
 				C2A315BF1E2E733900D89000 /* PeerMergedOperationLogView.swift in Sources */,
@@ -994,6 +997,7 @@
 				D0F7B1C01E045C62007EB8A5 /* StringIndexTokens.swift in Sources */,
 				D0F7B1CA1E045C6A007EB8A5 /* MessageHistoryUnsentTable.swift in Sources */,
 				D0BEAF6B1E54B5FB00BD963D /* AccountManagerMetadataTable.swift in Sources */,
+				D0F02CE01E99223E0065DEE2 /* Upgrades.swift in Sources */,
 				D0F7B1D01E045C6A007EB8A5 /* KeychainTable.swift in Sources */,
 				D0BEAF6E1E54B77900BD963D /* AccountManagerRecordTable.swift in Sources */,
 				D0B4184F1D7DFE20004562A4 /* ChatListHolesView.swift in Sources */,
@@ -1007,6 +1011,7 @@
 				D0B418321D7DFE16004562A4 /* SqliteValueBox.swift in Sources */,
 				D073CE741DCBF3B4007511FD /* Peer.swift in Sources */,
 				D073CE7A1DCBF3B4007511FD /* PeerReadState.swift in Sources */,
+				D0F02CE31E9922F50065DEE2 /* PostboxUpgrade_12to13.swift in Sources */,
 				D073CE801DCBF3B4007511FD /* PeerChatInterfaceState.swift in Sources */,
 				D0F7B1C81E045C6A007EB8A5 /* MessageHistoryOperation.swift in Sources */,
 				D0B844031DAB91A7005F29E1 /* PeerView.swift in Sources */,
@@ -1024,7 +1029,6 @@
 				D03229EE1E6B33FD0000AF9C /* SqliteInterface.swift in Sources */,
 				D0F9E8631C579F0200037222 /* MediaCleanupTable.swift in Sources */,
 				D0F3CC741DDE1EB9008148FA /* ItemCacheMetaTable.swift in Sources */,
-				D0DA44411E4C7868005FDCA7 /* IncrementalUpgrade.swift in Sources */,
 				D08D451F1D5D2CA700A7428A /* RatingTable.swift in Sources */,
 				D07CFF831DCA909100761F81 /* PeerChatInterfaceStateTable.swift in Sources */,
 				D0F9E86F1C5A0E7600037222 /* KeychainTable.swift in Sources */,
@@ -1116,6 +1120,7 @@
 				D08775031E3E3E7400A97350 /* PreferencesEntry.swift in Sources */,
 				D0AB0B901D65D4AB002C78E7 /* UnsentMessageIndicesView.swift in Sources */,
 				D0BEAF6A1E54B5FB00BD963D /* AccountManagerMetadataTable.swift in Sources */,
+				D0F02CDF1E99223D0065DEE2 /* Upgrades.swift in Sources */,
 				D08775001E3E3D9F00A97350 /* PreferencesTable.swift in Sources */,
 				D0BEAF6D1E54B77900BD963D /* AccountManagerRecordTable.swift in Sources */,
 				D03120F81DA53FF4006A2A60 /* PeerPresenceTable.swift in Sources */,
@@ -1129,6 +1134,7 @@
 				D0C735281C864DF300BB3149 /* PeerChatStateTable.swift in Sources */,
 				D0AAD1B31E3266B100D5B9DE /* TimestampBasedMessageAttributesTable.swift in Sources */,
 				D01F7D9B1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */,
+				D0F02CE21E9922F50065DEE2 /* PostboxUpgrade_12to13.swift in Sources */,
 				D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */,
 				D0C674CC1CBB14A700183765 /* PeerReadState.swift in Sources */,
 				D0D510F41D63BA8400A97B8A /* PostboxTransaction.swift in Sources */,
