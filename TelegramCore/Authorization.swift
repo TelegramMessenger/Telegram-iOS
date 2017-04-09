@@ -168,7 +168,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                                     case .SignUp:
                                         modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .signUp(number: number, codeHash: hash, code: code, firstName: "", lastName: "")))
                                     case let .Password(hint):
-                                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint)))
+                                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
                                     case let .Authorization(authorization):
                                         switch authorization {
                                             case let .authorization(_, _, user):
