@@ -1058,7 +1058,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     public func dropTable(_ table: ValueBoxTable) {
-        self.database.execute("REMOVE FROM t\(table.id)")
+        let _ = self.database.execute("DELETE FROM t\(table.id)")
     }
     
     public func drop() {
