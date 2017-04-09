@@ -13,15 +13,16 @@
 
 #define BUFFER_SIZE 960
 
-CAudioInputAudioUnit::CAudioInputAudioUnit(CAudioUnitIO* io){
+CAudioInputAudioUnit::CAudioInputAudioUnit(){
 	remainingDataSize=0;
 	isRecording=false;
-	this->io=io;
+	this->io=CAudioUnitIO::Get();
 	io->AttachInput(this);
 }
 
 CAudioInputAudioUnit::~CAudioInputAudioUnit(){
 	io->DetachInput();
+	CAudioUnitIO::Release();
 }
 
 void CAudioInputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){

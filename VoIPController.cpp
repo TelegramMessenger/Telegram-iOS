@@ -27,7 +27,6 @@
 #include <mach/mach_time.h>
 double CVoIPController::machTimebase=0;
 uint64_t CVoIPController::machTimestart=0;
-#import <Foundation/Foundation.h>
 #endif
 
 #define SHA1_LENGTH 20
@@ -132,6 +131,7 @@ CVoIPController::CVoIPController(){
 	prevSendLossCount=0;
 	receivedInit=false;
 	receivedInitAck=false;
+	peerPreferredRelay=NULL;
 	
 	needUpdateNat64Prefix=true;
 	nat64Present=false;
@@ -670,13 +670,11 @@ void CVoIPController::RunRecvThread(){
 						LOGW("Detected LAN");
 						in_addr lanAddr;
 						GetLocalNetworkItfInfo(&lanAddr, NULL);
-						CBufferOutputStream* pkt=GetOutgoingPacketBuffer();
-						if(pkt){
-							WritePacketHeader(pkt, PKT_LAN_ENDPOINT, 8);
-							pkt->WriteInt32(lanAddr.s_addr);
-							pkt->WriteInt32(localUdpPort);
-							sendQueue->Put(pkt);
-						}
+
+						CBufferOutputStream pkt(8);
+						pkt.WriteInt32(lanAddr.s_addr);
+						pkt.WriteInt32(localUdpPort);
+						SendPacketReliably(PKT_LAN_ENDPOINT, pkt.GetBuffer(), pkt.GetLength(), 0.5, 10);
 					}else{
 						for(i=0;i<endpoints.size();i++){
 							if(endpoints[i]->type==EP_TYPE_UDP_P2P_LAN){
@@ -1056,6 +1054,9 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 					break;
 			}
 			int i;
+			if(srcEndpoint->type==EP_TYPE_UDP_RELAY && srcEndpoint!=peerPreferredRelay){
+				peerPreferredRelay=srcEndpoint;
+			}
 			for(i=0;i<count;i++){
 				unsigned char streamID=in->ReadByte();
 				unsigned char flags=(unsigned char) (streamID & 0xC0);
@@ -1431,7 +1432,7 @@ void CVoIPController::RunTickThread(){
 					for(i=0;i<endpoints.size();i++){
 						if(endpoints[i]->type==EP_TYPE_UDP_P2P_INET || endpoints[i]->type==EP_TYPE_UDP_P2P_LAN){
 							endpoints[i]->_averageRtt=0;
-							memset(endpoints[i]->_rtts, 0, sizeof(voip_endpoint_t::_rtts));
+							memset(endpoints[i]->_rtts, 0, sizeof(endpoints[i]->_rtts));
 						}
 					}
 					if(allowP2p){
@@ -1788,9 +1789,15 @@ void CVoIPController::GetDebugString(char *buffer, size_t len){
 
 void CVoIPController::SendPublicEndpointsRequest(){
 	LOGI("Sending public endpoints request");
-	voip_endpoint_t* relay=GetEndpointByType(EP_TYPE_UDP_RELAY);
-	if(!relay)
-		return;
+	if(preferredRelay){
+		SendPublicEndpointsRequest(preferredRelay);
+	}
+	if(peerPreferredRelay && peerPreferredRelay!=preferredRelay){
+		SendPublicEndpointsRequest(peerPreferredRelay);
+	}
+}
+
+void CVoIPController::SendPublicEndpointsRequest(voip_endpoint_t *relay){
 	publicEndpointsReqTime=GetCurrentTime();
 	waitingForRelayPeerInfo=true;
 	char buf[32];

@@ -14,16 +14,17 @@
 #define BUFFER_SIZE 960
 const int8_t permutation[33]={0,1,2,3,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7,8,8,8,9,9,9,9,9,9,9,9,9,9,9};
 
-CAudioOutputAudioUnit::CAudioOutputAudioUnit(CAudioUnitIO* io){
+CAudioOutputAudioUnit::CAudioOutputAudioUnit(){
 	isPlaying=false;
 	remainingDataSize=0;
     level=0.0;
-	this->io=io;
+	this->io=CAudioUnitIO::Get();
 	io->AttachOutput(this);
 }
 
 CAudioOutputAudioUnit::~CAudioOutputAudioUnit(){
 	io->DetachOutput();
+	CAudioUnitIO::Release();
 }
 
 void CAudioOutputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){

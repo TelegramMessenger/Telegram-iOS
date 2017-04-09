@@ -17,10 +17,6 @@
 #include "EchoCanceller.h"
 #include "CongestionControl.h"
 
-#ifdef __APPLE__
-#import <Foundation/Foundation.h>
-#endif
-
 #define LIBTGVOIP_VERSION "0.3.2"
 
 #define PKT_INIT 1
@@ -238,6 +234,7 @@ private:
 	uint32_t WritePacketHeader(CBufferOutputStream* s, unsigned char type, uint32_t length);
 	static size_t AudioInputCallback(unsigned char* data, size_t length, void* param);
 	void SendPublicEndpointsRequest();
+	void SendPublicEndpointsRequest(voip_endpoint_t* relay);
 	voip_endpoint_t* GetEndpointByType(int type);
 	void SendPacketReliably(unsigned char type, unsigned char* data, size_t len, double retryInterval, double timeout);
 	void LogDebugInfo();
@@ -247,6 +244,7 @@ private:
 	std::vector<voip_endpoint_t*> endpoints;
 	voip_endpoint_t* currentEndpoint;
 	voip_endpoint_t* preferredRelay;
+	voip_endpoint_t* peerPreferredRelay;
 	bool runReceiver;
 	uint32_t seq;
 	uint32_t lastRemoteSeq;

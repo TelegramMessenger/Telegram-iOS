@@ -15,6 +15,7 @@
 #include "../../os/android/AudioInputOpenSLES.h"
 #include "../../os/android/AudioInputAndroid.h"
 #include "../../os/android/AudioOutputAndroid.h"
+#include "../../audio/Resampler.h"
 
 JavaVM* sharedJVM;
 jfieldID audioRecordInstanceFld=NULL;
@@ -249,4 +250,12 @@ extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nat
 	CVoIPController* ctlr=((CVoIPController*)(intptr_t)inst);
 	std::string log=ctlr->GetDebugLog();
 	return env->NewStringUTF(log.c_str());
+}
+
+extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_Resampler_convert44to48(JNIEnv* env, jclass cls, jobject from, jobject to){
+	return tgvoip::audio::Resampler::Convert44To48((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
+}
+
+extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_Resampler_convert48to44(JNIEnv* env, jclass cls, jobject from, jobject to){
+	return tgvoip::audio::Resampler::Convert48To44((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
 }

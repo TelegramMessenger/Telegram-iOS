@@ -8,8 +8,12 @@
 #if defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
 #elif defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE
 #include "../os/darwin/AudioInputAudioUnit.h"
-#include "../os/darwin/AudioUnitIO.h"
+#else
+#include "../os/darwin/AudioInputAudioUnitOSX.h"
+#endif
 #else
 #error "Unsupported operating system"
 #endif
@@ -22,15 +26,13 @@ CAudioInput *CAudioInput::Create(){
 #if defined(__ANDROID__)
 	return new CAudioInputAndroid();
 #elif defined(__APPLE__)
-	return new CAudioInputAudioUnit(CAudioUnitIO::Get());
+	return new CAudioInputAudioUnit();
 #endif
 }
 
 
 CAudioInput::~CAudioInput(){
-#if defined(__APPLE__)
-	CAudioUnitIO::Release();
-#endif
+
 }
 
 bool CAudioInput::IsInitialized(){

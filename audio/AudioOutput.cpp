@@ -9,8 +9,12 @@
 #include "../os/android/AudioOutputOpenSLES.h"
 #include "../os/android/AudioOutputAndroid.h"
 #elif defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE
 #include "../os/darwin/AudioOutputAudioUnit.h"
-#include "../os/darwin/AudioUnitIO.h"
+#else
+#include "../os/darwin/AudioOutputAudioUnitOSX.h"
+#endif
 #else
 #error "Unsupported operating system"
 #endif
@@ -25,15 +29,13 @@ CAudioOutput *CAudioOutput::Create(){
 		return new CAudioOutputAndroid();
 	return new CAudioOutputOpenSLES();
 #elif defined(__APPLE__)
-	return new CAudioOutputAudioUnit(CAudioUnitIO::Get());
+	return new CAudioOutputAudioUnit();
 #endif
 }
 
 
 CAudioOutput::~CAudioOutput(){
-#if defined(__APPLE__)
-	CAudioUnitIO::Release();
-#endif
+
 }
 
 
@@ -44,3 +46,6 @@ int32_t CAudioOutput::GetEstimatedDelay(){
 	return 0;
 }
 
+float CAudioOutput::GetLevel(){
+	return 0;
+}

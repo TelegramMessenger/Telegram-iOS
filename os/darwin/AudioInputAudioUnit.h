@@ -15,7 +15,7 @@ class CAudioUnitIO;
 class CAudioInputAudioUnit : public CAudioInput{
 
 public:
-	CAudioInputAudioUnit(CAudioUnitIO* io);
+	CAudioInputAudioUnit();
 	virtual ~CAudioInputAudioUnit();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();

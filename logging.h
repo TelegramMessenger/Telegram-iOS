@@ -28,7 +28,7 @@ void tgvoip_log_file_printf(char level, const char* msg, ...);
 #define LOGW(...) {__android_log_print(ANDROID_LOG_WARN, TAG, _LOG_WRAP(__VA_ARGS__)); tgvoip_log_file_printf('W', __VA_ARGS__);}
 #define LOGE(...) {__android_log_print(ANDROID_LOG_ERROR, TAG, _LOG_WRAP(__VA_ARGS__)); tgvoip_log_file_printf('E', __VA_ARGS__);}
 
-#elif defined(__APPLE__) && TARGET_OS_IPHONE
+#elif defined(__APPLE__) && TARGET_OS_IPHONE && defined(TGVOIP_HAVE_TGLOG)
 
 #include "os/darwin/TGLogWrapper.h"
 
