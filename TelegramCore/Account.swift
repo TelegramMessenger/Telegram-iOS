@@ -226,7 +226,7 @@ func accountNetworkUsageInfoPath(basePath: String) -> String {
     return basePath + "/network-usage"
 }
 
-private func accountRecordIdPathName(_ id: AccountRecordId) -> String {
+public func accountRecordIdPathName(_ id: AccountRecordId) -> String {
     return "account-\(UInt64(bitPattern: id.int64))"
 }
 
