@@ -39,6 +39,11 @@ public enum ResourceDataRangeMode {
     case partial
 }
 
+public enum FetchResourceSourceType {
+    case local
+    case remote
+}
+
 private struct ResourceStorePaths {
     let partial: String
     let complete: String
@@ -523,7 +528,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResource(_ resource: MediaResource) -> Signal<Void, NoError> {
+    public func fetchedResource(_ resource: MediaResource, implNext:Bool = false) -> Signal<FetchResourceSourceType, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -532,6 +537,9 @@ public final class MediaBox {
                 let paths = self.storePathsForId(resource.id)
                 
                 if let _ = fileSize(paths.complete) {
+                    if implNext {
+                        subscriber.putNext(.local)
+                    }
                     subscriber.putCompletion()
                 } else {
                     let currentSize = fileSize(paths.partial) ?? 0
@@ -631,6 +639,10 @@ public final class MediaBox {
                                             let status: MediaResourceStatus
                                             if updatedData.complete {
                                                 status = .Local
+                                                if implNext {
+                                                    subscriber.putNext(.remote)
+                                                }
+                                                subscriber.putCompletion()
                                             } else {
                                                 if let resourceSize = resource.size {
                                                     status = .Fetching(progress: Float(updatedSize) / Float(resourceSize))
