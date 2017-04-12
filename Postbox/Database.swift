@@ -71,6 +71,7 @@ public final class Database {
         let flags = readonly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE
         let res = sqlite3_open_v2(location.description, &self.handle, flags | SQLITE_OPEN_FULLMUTEX, nil)
         if res != SQLITE_OK {
+            preconditionFailure("sqlite3_open_v2: \(res)")
             return nil
         }
     }

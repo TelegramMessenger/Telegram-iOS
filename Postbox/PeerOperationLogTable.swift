@@ -157,10 +157,12 @@ final class PeerOperationLogTable: Table {
         
         let encoder = Encoder()
         encoder.encodeRootObject(contents)
-        let contentBuffer = encoder.readBufferNoCopy()
-        var contentBufferLength: Int32 = Int32(contentBuffer.length)
-        buffer.write(&contentBufferLength, offset: 0, length: 4)
-        buffer.write(contentBuffer.memory, offset: 0, length: contentBuffer.length)
+        withExtendedLifetime(encoder, {
+            let contentBuffer = encoder.readBufferNoCopy()
+            var contentBufferLength: Int32 = Int32(contentBuffer.length)
+            buffer.write(&contentBufferLength, offset: 0, length: 4)
+            buffer.write(contentBuffer.memory, offset: 0, length: contentBuffer.length)
+        })
         
         self.valueBox.set(self.table, key: self.key(peerId: peerId, tag: tag, index: index), value: buffer)
         if let mergedIndex = mergedIndex {

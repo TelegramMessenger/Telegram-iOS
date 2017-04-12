@@ -46,7 +46,9 @@ final class PreferencesTable: Table {
                 if let value = self.cachedEntries[key]?.entry {
                     let encoder = Encoder()
                     encoder.encodeRootObject(value)
-                    self.valueBox.set(self.table, key: key, value: encoder.readBufferNoCopy())
+                    withExtendedLifetime(encoder, {
+                        self.valueBox.set(self.table, key: key, value: encoder.readBufferNoCopy())
+                    })
                 } else {
                     self.valueBox.remove(self.table, key: key)
                 }

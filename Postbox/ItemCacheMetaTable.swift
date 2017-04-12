@@ -69,7 +69,9 @@ final class ItemCacheMetaTable: Table {
                 if let state = self.cachedCollectionStates[id] {
                     sharedEncoder.reset()
                     sharedEncoder.encodeRootObject(state)
-                    self.valueBox.set(self.table, key: self.key(id), value: sharedEncoder.readBufferNoCopy())
+                    withExtendedLifetime(sharedEncoder, {
+                        self.valueBox.set(self.table, key: self.key(id), value: sharedEncoder.readBufferNoCopy())
+                    })
                 }
             }
         }

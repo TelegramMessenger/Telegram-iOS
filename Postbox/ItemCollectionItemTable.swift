@@ -221,7 +221,9 @@ final class ItemCollectionItemTable: Table {
             let item = itemByIndex[index]!
             sharedEncoder.reset()
             sharedEncoder.encodeRootObject(item)
-            self.valueBox.set(self.table, key: self.key(collectionId: collectionId, index: index), value: sharedEncoder.readBufferNoCopy())
+            withExtendedLifetime(sharedEncoder, {
+                self.valueBox.set(self.table, key: self.key(collectionId: collectionId, index: index), value: sharedEncoder.readBufferNoCopy())
+            })
             if !item.indexKeys.isEmpty {
                 self.reverseIndexTable.add(namespace: ReverseIndexNamespace(collectionId.namespace), reference: ItemCollectionItemReverseIndexReference(collectionId: collectionId, itemIndex: index), tokens: item.indexKeys.map({ ValueBoxKey($0) }))
             }

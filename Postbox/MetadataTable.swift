@@ -8,19 +8,19 @@ private enum MetadataKey: Int32 {
     case AccessChallenge = 5
 }
 
-public enum PostboxAccessChallengeData: Coding {
+public enum PostboxAccessChallengeData: Coding, Equatable {
     case none
-    case numericalPassword(String, Int32?)
-    case plaintextPassword(String, Int32?)
+    case numericalPassword(value: String, timeout: Int32?)
+    case plaintextPassword(value: String, timeout: Int32?)
     
     public init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("r") as Int32 {
             case 0:
                 self = .none
             case 1:
-                self = .numericalPassword(decoder.decodeStringForKey("t"), decoder.decodeInt32ForKey("a"))
+                self = .numericalPassword(value: decoder.decodeStringForKey("t"), timeout: decoder.decodeInt32ForKey("a"))
             case 2:
-                self = .plaintextPassword(decoder.decodeStringForKey("t"), decoder.decodeInt32ForKey("a"))
+                self = .plaintextPassword(value: decoder.decodeStringForKey("t"), timeout: decoder.decodeInt32ForKey("a"))
             default:
                 assertionFailure()
                 self = .none
@@ -46,6 +46,29 @@ public enum PostboxAccessChallengeData: Coding {
                     encoder.encodeInt32(timeout, forKey: "a")
                 } else {
                     encoder.encodeNil(forKey: "a")
+                }
+        }
+    }
+    
+    public static func ==(lhs: PostboxAccessChallengeData, rhs: PostboxAccessChallengeData) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .numericalPassword(lhsText, lhsTimeout):
+                if case let .numericalPassword(rhsText, rhsTimeout) = rhs, lhsText == rhsText, lhsTimeout == rhsTimeout {
+                    return true
+                } else {
+                    return false
+                }
+            case let .plaintextPassword(lhsText, lhsTimeout):
+                if case let .plaintextPassword(rhsText, rhsTimeout) = rhs, lhsText == rhsText, lhsTimeout == rhsTimeout {
+                    return true
+                } else {
+                    return false
                 }
         }
     }
@@ -106,7 +129,9 @@ final class MetadataTable: Table {
         
         let encoder = Encoder()
         encoder.encodeRootObject(state)
-        self.valueBox.set(self.table, key: self.key(.State), value: encoder.readBufferNoCopy())
+        withExtendedLifetime(encoder, {
+            self.valueBox.set(self.table, key: self.key(.State), value: encoder.readBufferNoCopy())
+        })
     }
     
     func transactionStateVersion() -> Int64 {
@@ -157,7 +182,9 @@ final class MetadataTable: Table {
     func setAccessChallengeData(_ data: PostboxAccessChallengeData) {
         let encoder = Encoder()
         data.encode(encoder)
-        self.valueBox.set(self.table, key: self.key(.AccessChallenge), value: encoder.readBufferNoCopy())
+        withExtendedLifetime(encoder, {
+            self.valueBox.set(self.table, key: self.key(.AccessChallenge), value: encoder.readBufferNoCopy())
+        })
     }
     
     override func clearMemoryCache() {

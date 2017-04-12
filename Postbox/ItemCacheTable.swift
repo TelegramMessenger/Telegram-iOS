@@ -48,7 +48,9 @@ final class ItemCacheTable: Table {
     func put(id: ItemCacheEntryId, entry: Coding, metaTable: ItemCacheMetaTable) {
         let encoder = Encoder()
         encoder.encodeRootObject(entry)
-        self.valueBox.set(self.table, key: self.itemKey(id: id), value: encoder.readBufferNoCopy())
+        withExtendedLifetime(encoder, {
+            self.valueBox.set(self.table, key: self.itemKey(id: id), value: encoder.readBufferNoCopy())
+        })
     }
     
     func retrieve(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) -> Coding? {

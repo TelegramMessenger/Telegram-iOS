@@ -205,7 +205,9 @@ final class ChatListIndexTable: Table {
                         }
                 }
                 
-                self.valueBox.set(self.table, key: self.key(peerId), value: writeBuffer.readBufferNoCopy())
+                withExtendedLifetime(writeBuffer, {
+                    self.valueBox.set(self.table, key: self.key(peerId), value: writeBuffer.readBufferNoCopy())
+                })
             }
             self.updatedPreviousCachedIndices.removeAll()
             

@@ -27,7 +27,9 @@ final class OrderedItemListIndexTable: Table {
     func set(collectionId: Int32, id: MemoryBuffer, content: Coding) {
         let encoder = Encoder()
         encoder.encodeRootObject(content)
-        self.valueBox.set(self.table, key: self.key(collectionId: collectionId, id: id), value: encoder.readBufferNoCopy())
+        withExtendedLifetime(encoder, {
+            self.valueBox.set(self.table, key: self.key(collectionId: collectionId, id: id), value: encoder.readBufferNoCopy())
+        })
     }
     
     func getAllItemIds(collectionId: Int32) -> [MemoryBuffer] {

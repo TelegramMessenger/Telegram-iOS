@@ -77,7 +77,9 @@ final class MessageMediaTable: Table {
                     messageReferenceCount += 1
                     sharedWriteBuffer.write(&messageReferenceCount, offset: 0, length: 4)
                     
-                    self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
+                    withExtendedLifetime(sharedWriteBuffer, {
+                        self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
+                    })
                     
                     return .Reference
                 } else if type == MediaEntryType.MessageReference.rawValue {
@@ -110,7 +112,9 @@ final class MessageMediaTable: Table {
                         var messageReferenceCount: Int32 = 2
                         sharedWriteBuffer.write(&messageReferenceCount, offset: 0, length: 4)
                         
-                        self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
+                        withExtendedLifetime(sharedWriteBuffer, {
+                            self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
+                        })
                     }
                     
                     return .Reference
@@ -130,7 +134,9 @@ final class MessageMediaTable: Table {
                 sharedWriteBuffer.write(&idId, offset: 0, length: 4)
                 sharedWriteBuffer.write(&idTimestamp, offset: 0, length: 4)
                 
-                self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
+                withExtendedLifetime(sharedWriteBuffer, {
+                    self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
+                })
                 
                 return .Embed(media)
             }
@@ -160,7 +166,9 @@ final class MessageMediaTable: Table {
                 if messageReferenceCount <= 0 {
                     self.valueBox.remove(self.table, key: self.key(id))
                 } else {
-                    self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
+                    withExtendedLifetime(sharedWriteBuffer, {
+                        self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
+                    })
                 }
                 
                 return .Reference
@@ -221,7 +229,9 @@ final class MessageMediaTable: Table {
                     if id != updatedId {
                         self.valueBox.remove(self.table, key: self.key(id))
                     }
-                    self.valueBox.set(self.table, key: self.key(updatedId), value: sharedWriteBuffer.readBufferNoCopy())
+                    withExtendedLifetime(sharedWriteBuffer, {
+                        self.valueBox.set(self.table, key: self.key(updatedId), value: sharedWriteBuffer.readBufferNoCopy())
+                    })
                 } else if type == MediaEntryType.MessageReference.rawValue {
                     var idPeerId: Int64 = 0
                     var idNamespace: Int32 = 0

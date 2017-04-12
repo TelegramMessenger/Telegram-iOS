@@ -37,7 +37,9 @@ final class AccountManagerRecordTable: Table {
         if let record = record {
             let encoder = Encoder()
             record.encode(encoder)
-            self.valueBox.set(self.table, key: self.key(id), value: encoder.readBufferNoCopy())
+            withExtendedLifetime(encoder, {
+                self.valueBox.set(self.table, key: self.key(id), value: encoder.readBufferNoCopy())
+            })
         } else {
             self.valueBox.remove(self.table, key: self.key(id))
         }

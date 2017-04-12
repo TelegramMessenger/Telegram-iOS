@@ -136,9 +136,9 @@ final class SqliteValueBox: ValueBox {
         if let result = Database(path) {
             database = result
         } else {
-            assertionFailure()
-            let _ = try? FileManager.default.removeItem(atPath: path)
-            database = Database(path)!
+            preconditionFailure("Couldn't open database")
+            //let _ = try? FileManager.default.removeItem(atPath: path)
+            //database = Database(path)!
         }
         
         database.execute("PRAGMA cache_size=-2097152")

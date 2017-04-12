@@ -156,7 +156,9 @@ final class ItemCollectionInfoTable: Table {
         for (id, info) in infos {
             sharedEncoder.reset()
             sharedEncoder.encodeRootObject(info)
-            self.valueBox.set(self.table, key: self.key(collectionId: id, index: index), value: sharedEncoder.readBufferNoCopy())
+            withExtendedLifetime(sharedEncoder, {
+                self.valueBox.set(self.table, key: self.key(collectionId: id, index: index), value: sharedEncoder.readBufferNoCopy())
+            })
             index += 1
         }
     }
