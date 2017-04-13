@@ -79,7 +79,7 @@ public struct MacosLegacy {
                 return parser(reader)
             }
             else {
-                print("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                Logger.log("TL", "Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
