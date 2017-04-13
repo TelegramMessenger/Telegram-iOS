@@ -131,7 +131,7 @@ public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> S
                                 |> mapError { error -> AddPeerAdminError in
                                     return .addMemberError(error)
                                 }
-                                |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, role: .channelRoleModerator))
+                                |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, role: .channelRoleEditor))
                                     |> mapError { error -> AddPeerAdminError in
                                         return .generic
                                     }
