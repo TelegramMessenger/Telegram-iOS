@@ -6,6 +6,8 @@ public enum PostboxViewKey: Hashable {
     case itemCollectionInfo(id: ItemCollectionId)
     case peerChatState(peerId: PeerId)
     case orderedItemList(id: Int32)
+    case accessChallengeData
+    case preferences(keys: Set<ValueBoxKey>)
     
     public var hashValue: Int {
         switch self {
@@ -19,6 +21,10 @@ public enum PostboxViewKey: Hashable {
                 return id.hashValue
             case let .orderedItemList(id):
                 return id.hashValue
+            case .accessChallengeData:
+                return 2
+            case .preferences:
+                return 3
         }
     }
     
@@ -54,6 +60,18 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case .accessChallengeData:
+                if case .accessChallengeData = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .preferences(lhsKeys):
+                if case let .preferences(rhsKeys) = rhs, lhsKeys == rhsKeys {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -70,5 +88,9 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePeerChatStateView(postbox: postbox, peerId: peerId)
         case let .orderedItemList(id):
             return MutableOrderedItemListView(postbox: postbox, collectionId: id)
+        case .accessChallengeData:
+            return MutableAccessChallengeDataView(postbox: postbox)
+        case let .preferences(keys):
+            return MutablePreferencesView(postbox: postbox, keys: keys)
     }
 }

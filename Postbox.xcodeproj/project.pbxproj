@@ -55,6 +55,8 @@
 		D050F2681E4A5B5A00988324 /* TimestampBasedMessageAttributesIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1B01E3266B100D5B9DE /* TimestampBasedMessageAttributesIndexTable.swift */; };
 		D050F2691E4A5B5A00988324 /* MultiplePeersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386B1E3FCEE50044D6FE /* MultiplePeersView.swift */; };
 		D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D055BD321B7D3D2D00F06C0A /* MediaBox.swift */; };
+		D0575AE31E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */; };
+		D0575AE41E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */; };
 		D05F09A61C9E9F9300BB6F96 /* MediaResourceStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */; };
 		D060B77B1CF4845A0050BE9B /* ReadStateTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */; };
 		D073CE741DCBF3B4007511FD /* Peer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7831B28AE0900A402D9 /* Peer.swift */; };
@@ -312,6 +314,7 @@
 		D044E1621B2AD677001EE087 /* MurMurHash32.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MurMurHash32.m; sourceTree = "<group>"; };
 		D049EAEF1E44D9B900A2CD3A /* PostboxStateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxStateView.swift; sourceTree = "<group>"; };
 		D055BD321B7D3D2D00F06C0A /* MediaBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaBox.swift; sourceTree = "<group>"; };
+		D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccessChallengeDataView.swift; sourceTree = "<group>"; };
 		D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceStatus.swift; sourceTree = "<group>"; };
 		D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReadStateTableTests.swift; sourceTree = "<group>"; };
 		D07516401B2D9CEF00AE42E0 /* sqlite3.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqlite3.c; sourceTree = "<group>"; };
@@ -654,6 +657,7 @@
 				D0FA0AC91E780A26005BB9B7 /* PostboxView.swift */,
 				D0FA0ACC1E781067005BB9B7 /* Views.swift */,
 				D0F53BF21E794C6700117362 /* PeerChatStateView.swift */,
+				D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -910,6 +914,7 @@
 				C2A315BE1E2E733900D89000 /* PeerMergedOperationLogIndexTable.swift in Sources */,
 				C2A315BF1E2E733900D89000 /* PeerMergedOperationLogView.swift in Sources */,
 				C2A315BD1E2E732000D89000 /* PeerOperationLogMetadataTable.swift in Sources */,
+				D0575AE41E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */,
 				C2A315BC1E2E730400D89000 /* PeerOperationLogTable.swift in Sources */,
 				C2AC9C131E1E5D200085C7DE /* UnreadMessageCountsView.swift in Sources */,
 				D0B418481D7DFE20004562A4 /* MessageHistoryView.swift in Sources */,
@@ -1033,6 +1038,7 @@
 				D07CFF831DCA909100761F81 /* PeerChatInterfaceStateTable.swift in Sources */,
 				D0F9E86F1C5A0E7600037222 /* KeychainTable.swift in Sources */,
 				D0E3A7821B28ADD000A402D9 /* Postbox.swift in Sources */,
+				D0575AE31E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */,
 				D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */,
 				D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */,
 				D0DF0C8F1D81A350008AEB01 /* PeerView.swift in Sources */,

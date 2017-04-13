@@ -528,7 +528,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResource(_ resource: MediaResource, implNext:Bool = false) -> Signal<FetchResourceSourceType, NoError> {
+    public func fetchedResource(_ resource: MediaResource, implNext: Bool = false) -> Signal<FetchResourceSourceType, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             

@@ -1,23 +1,23 @@
 import Foundation
 
-final class MutablePreferencesView {
+final class MutablePreferencesView: MutablePostboxView {
     fileprivate let keys: Set<ValueBoxKey>
     fileprivate var values: [ValueBoxKey: PreferencesEntry]
     
-    init(keys: Set<ValueBoxKey>, get: (ValueBoxKey) -> PreferencesEntry?) {
+    init(postbox: Postbox, keys: Set<ValueBoxKey>) {
         self.keys = keys
         var values: [ValueBoxKey: PreferencesEntry] = [:]
         for key in keys {
-            if let value = get(key) {
+            if let value = postbox.preferencesTable.get(key: key) {
                 values[key] = value
             }
         }
         self.values = values
     }
     
-    func replay(operations: [PreferencesOperation], get: (ValueBoxKey) -> PreferencesEntry?) -> Bool {
+    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         var updated = false
-        for operation in operations {
+        for operation in transaction.currentPreferencesOperations {
             switch operation {
                 case let .update(key, value):
                     if self.keys.contains(key) {
@@ -44,9 +44,13 @@ final class MutablePreferencesView {
         
         return updated
     }
+    
+    func immutableView() -> PostboxView {
+        return PreferencesView(self)
+    }
 }
 
-public final class PreferencesView {
+public final class PreferencesView: PostboxView {
     public let values: [ValueBoxKey: PreferencesEntry]
     
     init(_ view: MutablePreferencesView) {

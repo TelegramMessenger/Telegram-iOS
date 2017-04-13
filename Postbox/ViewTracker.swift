@@ -501,7 +501,7 @@ final class ViewTracker {
         }
         
         for (mutableView, pipe) in self.preferencesViews.copyItems() {
-            if mutableView.replay(operations: transaction.currentPreferencesOperations, get: self.getPreferencesEntry) {
+            if mutableView.replay(postbox: postbox, transaction: transaction) {
                 pipe.putNext(PreferencesView(mutableView))
             }
         }

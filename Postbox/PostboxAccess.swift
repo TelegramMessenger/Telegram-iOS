@@ -38,7 +38,7 @@ public func accessPostbox(basePath: String, password: String?) -> Signal<Postbox
                 case .none:
                     subscriber.putNext(.unlocked)
                     subscriber.putCompletion()
-                case let .numericalPassword(text, _):
+                case let .numericalPassword(text, _, _):
                     if text == password {
                         subscriber.putNext(.unlocked)
                         subscriber.putCompletion()
@@ -46,7 +46,7 @@ public func accessPostbox(basePath: String, password: String?) -> Signal<Postbox
                         subscriber.putNext(.locked(.numericPassword(length: Int32(text.characters.count))))
                         subscriber.putCompletion()
                     }
-                case let .plaintextPassword(text, _):
+                case let .plaintextPassword(text, _, _):
                     if text == password {
                         subscriber.putNext(.unlocked)
                         subscriber.putCompletion()

@@ -31,7 +31,7 @@ public final class AccountManager {
     fileprivate init(queue: Queue, basePath: String) {
         self.queue = queue
         self.basePath = basePath
-        let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: false, attributes: nil)
+        let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
         
         self.metadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
