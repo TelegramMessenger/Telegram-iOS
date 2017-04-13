@@ -442,6 +442,10 @@ extension StoreMessage {
                     let _ = storeFlags.insert(.Incoming)
                 }
                 
+                if (flags & (1 << 4)) != 0 {
+                    let _ = storeFlags.insert(.Personal)
+                }
+                
                 var media: [Media] = []
                 if let action = telegramMediaActionFromApiAction(action) {
                     media.append(action)

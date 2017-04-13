@@ -86,3 +86,47 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId) -> Signa
         }
     }
 }
+
+public func clearAuthorHistory(account: Account, peerId: PeerId, memberId:PeerId) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Signal<Void, Void> in
+        
+        if let peer = modifier.getPeer(peerId), let memberPeer = modifier.getPeer(memberId), let inputChannel = apiInputChannel(peer), let inputUser = apiInputUser(memberPeer) {
+            
+            let signal = account.network.request(Api.functions.channels.deleteUserHistory(channel: inputChannel, userId: inputUser))
+                |> map { result -> Api.messages.AffectedHistory? in
+                    return result
+                }
+                |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+                    return .fail(false)
+                }
+                |> mapToSignal { result -> Signal<Void, Bool> in
+                    if let result = result {
+                        switch result {
+                        case let .affectedHistory(pts, ptsCount, offset):
+                            account.stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                            if offset == 0 {
+                                return .fail(true)
+                            } else {
+                                return .complete()
+                            }
+                        }
+                    } else {
+                        return .fail(true)
+                    }
+            }
+            return (signal |> restart)
+                |> `catch` { success -> Signal<Void, NoError> in
+                    if success {
+                        return account.postbox.modify { modifier -> Void in
+                            modifier.removeAllMessagesWithAuthor(peerId, authorId: memberId)
+                        }
+                    } else {
+                        return .complete()
+                    }
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+

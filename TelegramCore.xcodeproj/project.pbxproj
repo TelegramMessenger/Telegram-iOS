@@ -19,6 +19,8 @@
 		C239BE981E62F0D200C2C453 /* LoadMessagesIfNecessary.swift in Sources */ = {isa = PBXBuildFile; fileRef = C239BE961E62EE1E00C2C453 /* LoadMessagesIfNecessary.swift */; };
 		C239BE9C1E630CA700C2C453 /* UpdatePinnedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C239BE9B1E630CA700C2C453 /* UpdatePinnedMessage.swift */; };
 		C239BE9D1E630CB300C2C453 /* UpdatePinnedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C239BE9B1E630CA700C2C453 /* UpdatePinnedMessage.swift */; };
+		C23BC3871E9BE3CA00D79F92 /* ImportContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23BC3861E9BE3CA00D79F92 /* ImportContact.swift */; };
+		C23BC3881E9BE3CB00D79F92 /* ImportContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23BC3861E9BE3CA00D79F92 /* ImportContact.swift */; };
 		C251D7431E65E50500283EDE /* StickerSetInstallation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C251D7421E65E50500283EDE /* StickerSetInstallation.swift */; };
 		C251D7441E65E50500283EDE /* StickerSetInstallation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C251D7421E65E50500283EDE /* StickerSetInstallation.swift */; };
 		C25638021E79E7FC00311607 /* TwoStepVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */; };
@@ -509,6 +511,7 @@
 		C2366C881E4F40480097CCFF /* SupportPeerId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SupportPeerId.swift; sourceTree = "<group>"; };
 		C239BE961E62EE1E00C2C453 /* LoadMessagesIfNecessary.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadMessagesIfNecessary.swift; sourceTree = "<group>"; };
 		C239BE9B1E630CA700C2C453 /* UpdatePinnedMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatePinnedMessage.swift; sourceTree = "<group>"; };
+		C23BC3861E9BE3CA00D79F92 /* ImportContact.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImportContact.swift; sourceTree = "<group>"; };
 		C251D7421E65E50500283EDE /* StickerSetInstallation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerSetInstallation.swift; sourceTree = "<group>"; };
 		C27982501E72C97800262BFD /* MacosLegacy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacosLegacy.swift; sourceTree = "<group>"; };
 		C27982521E73077800262BFD /* SecretChatStateBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatStateBridge.swift; sourceTree = "<group>"; };
@@ -1291,6 +1294,7 @@
 				C2FD33EA1E696C78008D13D4 /* GroupsInCommon.swift */,
 				D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */,
 				D0F3A8A71E82CD7D00B4C64C /* UpdatePeerChatInterfaceState.swift */,
+				C23BC3861E9BE3CA00D79F92 /* ImportContact.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -1579,6 +1583,7 @@
 				D049EAD51E43D98500A2CD3A /* RecentMediaItem.swift in Sources */,
 				D0C50E341E93A86600F62E39 /* CallSessionManager.swift in Sources */,
 				D00D34421E6EDD2E0057B307 /* ManagedSynchronizeConsumeMessageContentsOperations.swift in Sources */,
+				C23BC3871E9BE3CA00D79F92 /* ImportContact.swift in Sources */,
 				D03B0D0A1D62255C00955575 /* Holes.swift in Sources */,
 				D0B843CB1DA7FF30005F29E1 /* NBPhoneNumberUtil.m in Sources */,
 				D03B0D5E1D631A6900955575 /* Network.swift in Sources */,
@@ -1802,6 +1807,7 @@
 				D03C536A1DAD5CA9004C17B3 /* TelegramUser.swift in Sources */,
 				D001F3EA1E128A1C007A8C60 /* TelegramPeerNotificationSettings.swift in Sources */,
 				D0FA8BA81E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */,
+				C23BC3881E9BE3CB00D79F92 /* ImportContact.swift in Sources */,
 				D001F3EB1E128A1C007A8C60 /* EnqueueMessage.swift in Sources */,
 				D00C7CEC1E37A8540080C3D5 /* SetSecretChatMessageAutoremoveTimeoutInteractively.swift in Sources */,
 				D0B844481DAB91FD005F29E1 /* ManagedMessageHistoryHoles.swift in Sources */,

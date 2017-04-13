@@ -107,6 +107,16 @@ public func reportPeer(account: Account, peerId:PeerId, reason:ReportPeerReason)
     } |> switchToLatest
 }
 
+public func reportSupergroupPeer(account: Account, peerId:PeerId, memberId:PeerId, messageIds:[MessageId]) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputChannel(peer), let memberPeer = modifier.getPeer(memberId), let inputMember = apiInputUser(memberPeer) {
+            return account.network.request(Api.functions.channels.reportSpam(channel: inputPeer, userId: inputMember, id: messageIds.map({$0.id}))) |> mapError {_ in} |> map {_ in}
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
 public func dismissReportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
