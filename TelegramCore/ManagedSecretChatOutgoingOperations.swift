@@ -408,7 +408,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
                 result.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
-            case let .Video(duration, size):
+            case let .Video(duration, size, videoFlags):
                 result.append(.documentAttributeVideo(duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
             case let .Audio(isVoice, duration, title, performer, waveform):
                 var flags: Int32 = 0

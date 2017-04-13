@@ -430,7 +430,7 @@ extension TelegramMediaFileAttribute {
                 }
                 self = .Sticker(displayText: alt, packReference: packReference)
             case let .documentAttributeVideo(duration, w, h):
-                self = .Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h)))
+                self = .Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h)), flags: [])
             default:
                 return nil
         }
@@ -497,7 +497,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             text = caption
                         }
                         if let file = file {
-                            var parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h))), .FileName(fileName: "video.mov")]
+                            var parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h)), flags: []), .FileName(fileName: "video.mov")]
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: arc4random64())

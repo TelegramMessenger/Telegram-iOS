@@ -42,12 +42,26 @@ public enum StickerPackReference: Coding {
     }
 }
 
+public struct TelegramMediaVideoFlags: OptionSet {
+    public var rawValue: Int32
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let instantRoundVideo = TelegramMediaVideoFlags(rawValue: 1 << 0)
+}
+
 public enum TelegramMediaFileAttribute: Coding {
     case FileName(fileName: String)
     case Sticker(displayText: String, packReference: StickerPackReference?)
     case ImageSize(size: CGSize)
     case Animated
-    case Video(duration: Int, size: CGSize)
+    case Video(duration: Int, size: CGSize, flags: TelegramMediaVideoFlags)
     case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: MemoryBuffer?)
     case HasLinkedStickers
     
@@ -63,7 +77,7 @@ public enum TelegramMediaFileAttribute: Coding {
             case typeAnimated:
                 self = .Animated
             case typeVideo:
-                self = .Video(duration: Int(decoder.decodeInt32ForKey("du")), size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w")), height: CGFloat(decoder.decodeInt32ForKey("h"))))
+                self = .Video(duration: Int(decoder.decodeInt32ForKey("du")), size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w")), height: CGFloat(decoder.decodeInt32ForKey("h"))), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f")))
             case typeAudio:
                 let waveformBuffer = decoder.decodeBytesForKeyNoCopy("wf")
                 var waveform: MemoryBuffer?
@@ -97,11 +111,12 @@ public enum TelegramMediaFileAttribute: Coding {
                 encoder.encodeInt32(Int32(size.height), forKey: "h")
             case .Animated:
                 encoder.encodeInt32(typeAnimated, forKey: "t")
-            case let .Video(duration, size):
+            case let .Video(duration, size, flags):
                 encoder.encodeInt32(typeVideo, forKey: "t")
                 encoder.encodeInt32(Int32(duration), forKey: "du")
                 encoder.encodeInt32(Int32(size.width), forKey: "w")
                 encoder.encodeInt32(Int32(size.height), forKey: "h")
+                encoder.encodeInt32(flags.rawValue, forKey: "f")
             case let .Audio(isVoice, duration, title, performer, waveform):
                 encoder.encodeInt32(typeAudio, forKey: "t")
                 encoder.encodeInt32(isVoice ? 1 : 0, forKey: "iv")
@@ -233,7 +248,7 @@ public final class TelegramMediaFile: Media, Equatable {
     public var dimensions: CGSize? {
         for attribute in self.attributes {
             switch attribute {
-                case let .Video(_, size):
+                case let .Video(_, size, _):
                     return size
                 case let .ImageSize(size):
                     return size
@@ -313,7 +328,11 @@ public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.Docu
             case .documentAttributeAnimated:
                 result.append(.Animated)
             case let .documentAttributeVideo(flags, duration, w, h):
-                result.append(.Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h))))
+                var videoFlags = TelegramMediaVideoFlags()
+                if (flags & (1 << 0)) != 0 {
+                    videoFlags.insert(.instantRoundVideo)
+                }
+                result.append(.Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h)), flags: videoFlags))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
                 var waveformBuffer: MemoryBuffer?
