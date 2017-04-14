@@ -396,6 +396,16 @@ public final class Modifier {
         }
     }
     
+    public func getOrderedItemListItem(collectionId: Int32, itemId: MemoryBuffer) -> OrderedItemListEntry? {
+        assert(!self.disposed)
+        return self.postbox?.getOrderedItemListItem(collectionId: collectionId, itemId: itemId)
+    }
+    
+    public func removeOrderedItemListItem(collectionId: Int32, itemId: MemoryBuffer) {
+        assert(!self.disposed)
+        self.postbox?.removeOrderedItemListItem(collectionId: collectionId, itemId: itemId)
+    }
+    
     public func getMessage(_ id: MessageId) -> Message? {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -2090,8 +2100,16 @@ public final class Postbox {
         self.orderedItemListTable.addItemOrMoveToFirstPosition(collectionId: collectionId, item: item, removeTailIfCountExceeds: removeTailIfCountExceeds, operations: &self.currentOrderedItemListOperations)
     }
     
+    fileprivate func removeOrderedItemListItem(collectionId: Int32, itemId: MemoryBuffer) {
+        self.orderedItemListTable.remove(collectionId: collectionId, itemId: itemId, operations: &self.currentOrderedItemListOperations)
+    }
+    
     fileprivate func getOrderedListItemIds(collectionId: Int32) -> [MemoryBuffer] {
         return self.orderedItemListTable.getItemIds(collectionId: collectionId)
+    }
+    
+    fileprivate func getOrderedItemListItem(collectionId: Int32, itemId: MemoryBuffer) -> OrderedItemListEntry? {
+        return self.orderedItemListTable.getItem(collectionId: collectionId, itemId: itemId)
     }
     
     fileprivate func setAccessChallengeData(_ data: PostboxAccessChallengeData) {

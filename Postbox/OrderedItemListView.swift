@@ -29,6 +29,14 @@ final class MutableOrderedItemListView: MutablePostboxView {
                             }
                         }
                         updated = true
+                    case let .remove(itemId):
+                        inner: for i in 0 ..< self.items.count {
+                            if self.items[i].id == itemId {
+                                self.items.remove(at: i)
+                                updated = true
+                                break inner
+                            }
+                        }
                 }
             }
         }

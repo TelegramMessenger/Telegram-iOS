@@ -3,6 +3,7 @@ import Foundation
 enum OrderedItemListOperation {
     case replace([OrderedItemListEntry])
     case addOrMoveToFirstPosition(OrderedItemListEntry, Int?)
+    case remove(MemoryBuffer)
 }
 
 private enum OrderedItemListKeyNamespace: UInt8 {
@@ -75,6 +76,14 @@ final class OrderedItemListTable: Table {
         return items
     }
     
+    func getItem(collectionId: Int32, itemId: MemoryBuffer) -> OrderedItemListEntry? {
+        if let contents = self.indexTable.get(collectionId: collectionId, id: itemId) as? OrderedItemListEntryContents {
+            return OrderedItemListEntry(id: itemId, contents: contents)
+        } else {
+            return nil
+        }
+    }
+    
     func replaceItems(collectionId: Int32, items: [OrderedItemListEntry], operations: inout [Int32: [OrderedItemListOperation]]) {
         if operations[collectionId] == nil {
             operations[collectionId] = [.replace(items)]
@@ -144,6 +153,26 @@ final class OrderedItemListTable: Table {
         self.valueBox.set(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: 0), value: item.id)
         var itemIndex: UInt32 = 0
         self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: item.id), value: MemoryBuffer(memory: &itemIndex, capacity: 4, length: 4, freeWhenDone: false))
+    }
+    
+    func remove(collectionId: Int32, itemId: MemoryBuffer, operations: inout [Int32: [OrderedItemListOperation]]) {
+        if let index = self.getIndex(collectionId: collectionId, id: itemId) {
+            var orderedIds = self.getItemIds(collectionId: collectionId)
+            
+            self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: itemId))
+            self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: index))
+            
+            for i in (Int(index) + 1) ..< orderedIds.count {
+                var updatedIndex: UInt32 = UInt32(i - 1)
+                self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[i]), value: MemoryBuffer(memory: &updatedIndex, capacity: 4, length: 4, freeWhenDone: false))
+                self.valueBox.set(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: updatedIndex), value: orderedIds[i])
+            }
+            
+            if operations[collectionId] == nil {
+                operations[collectionId] = []
+            }
+            operations[collectionId]!.append(.remove(itemId))
+        }
     }
     
     func testIntegrity(collectionId: Int32) -> Bool {
