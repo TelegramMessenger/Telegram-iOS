@@ -18,8 +18,8 @@ private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilt
         return Api.MessagesFilter.inputMessagesFilterMusic
     } else if tagMask == .WebPage {
         return Api.MessagesFilter.inputMessagesFilterUrl
-    } else if tagMask == .Voice {
-        return Api.MessagesFilter.inputMessagesFilterVoice
+    } else if tagMask == .VoiceOrInstantVideo {
+        return Api.MessagesFilter.inputMessagesFilterRoundVoice
     } else {
         return nil
     }

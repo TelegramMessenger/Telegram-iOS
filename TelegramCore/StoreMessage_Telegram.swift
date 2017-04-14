@@ -9,17 +9,33 @@ public func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity
     var tags = MessageTags()
     for attachment in media {
         if let _ = attachment as? TelegramMediaImage {
-            let _ = tags.insert(.PhotoOrVideo)
+            tags.insert(.PhotoOrVideo)
         } else if let file = attachment as? TelegramMediaFile {
-            if file.isSticker || file.isAnimated {
-            } else if file.isVideo {
-                let _ = tags.insert(.PhotoOrVideo)
-            } else if file.isVoice {
-                let _ = tags.insert(.Voice)
-            } else if file.isMusic {
-                let _ = tags.insert(.Music)
+            var refinedTag: MessageTags?
+            inner: for attribute in file.attributes {
+                switch attribute {
+                    case let .Video(_, _, flags):
+                        if flags.contains(.instantRoundVideo) {
+                            refinedTag = .VoiceOrInstantVideo
+                        } else {
+                            refinedTag = .PhotoOrVideo
+                        }
+                        break inner
+                    case let .Audio(isVoice, _, _, _, _):
+                        if isVoice {
+                            refinedTag = .VoiceOrInstantVideo
+                        } else {
+                            refinedTag = .Music
+                        }
+                        break inner
+                    default:
+                        break
+                }
+            }
+            if let refinedTag = refinedTag {
+                tags.insert(refinedTag)
             } else {
-                let _ = tags.insert(.File)
+                tags.insert(.File)
             }
         } else if let webpage = attachment as? TelegramMediaWebpage, case .Loaded = webpage.content {
             tags.insert(.WebPage)

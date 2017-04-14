@@ -60,10 +60,10 @@ public extension MessageTags {
     static let File = MessageTags(rawValue: 1 << 1)
     static let Music = MessageTags(rawValue: 1 << 2)
     static let WebPage = MessageTags(rawValue: 1 << 3)
-    static let Voice = MessageTags(rawValue: 1 << 4)
+    static let VoiceOrInstantVideo = MessageTags(rawValue: 1 << 4)
 }
 
-let allMessageTags: MessageTags = [.PhotoOrVideo, .File, .Music, .WebPage, .Voice]
+let allMessageTags: MessageTags = [.PhotoOrVideo, .File, .Music, .WebPage, .VoiceOrInstantVideo]
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
 
 struct OperationLogTags {
@@ -79,6 +79,7 @@ struct OperationLogTags {
     static let SynchronizeInstalledMasks = PeerOperationLogTag(value: 9)
     static let SynchronizeMarkFeaturedStickerPacksAsSeen = PeerOperationLogTag(value: 10)
     static let SynchronizeChatInputStates = PeerOperationLogTag(value: 11)
+    static let SynchronizeSavedGifs = PeerOperationLogTag(value: 12)
 }
 
 private enum PreferencesKeyValues: Int32 {

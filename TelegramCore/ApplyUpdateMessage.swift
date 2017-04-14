@@ -50,6 +50,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         }
         
         var sentStickers: [TelegramMediaFile] = []
+        var sentGifs: [TelegramMediaFile] = []
         
         modifier.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
@@ -101,9 +102,15 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
             }
             
-            for media in media {
-                if let file = media as? TelegramMediaFile, file.isSticker {
-                    sentStickers.append(file)
+            if storeForwardInfo == nil {
+                for media in media {
+                    if let file = media as? TelegramMediaFile {
+                        if file.isSticker {
+                            sentStickers.append(file)
+                        } else if file.isVideo && file.isAnimated {
+                            sentGifs.append(file)
+                        }
+                    }
                 }
             }
             
@@ -122,6 +129,9 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         }
         for file in sentStickers {
             modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+        }
+        for file in sentGifs {
+            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
         }
         stateManager.addUpdates(result)
     }
