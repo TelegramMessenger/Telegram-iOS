@@ -218,6 +218,15 @@ public final class TelegramMediaFile: Media, Equatable {
         return false
     }
     
+    public var isVideoMessage: Bool {
+        for attribute in self.attributes {
+            if case .Video(_, _, let flags) = attribute {
+                return flags.contains(.instantRoundVideo)
+            }
+        }
+        return false
+    }
+    
     public var isAnimated: Bool {
         for attribute in self.attributes {
             if case .Animated = attribute {
