@@ -15,6 +15,10 @@
 #else
 #include "../os/darwin/AudioOutputAudioUnitOSX.h"
 #endif
+#elif defined(_WIN32)
+#include "../os/windows/AudioOutputWave.h"
+#elif defined(__linux__)
+#include "../os/linux/AudioOutputALSA.h"
 #else
 #error "Unsupported operating system"
 #endif
@@ -30,9 +34,16 @@ CAudioOutput *CAudioOutput::Create(){
 	return new CAudioOutputOpenSLES();
 #elif defined(__APPLE__)
 	return new CAudioOutputAudioUnit();
+#elif defined(_WIN32)
+	return new tgvoip::audio::AudioOutputWave();
+#elif defined(__linux__)
+	return new tgvoip::audio::AudioOutputALSA();
 #endif
 }
 
+CAudioOutput::CAudioOutput(){
+	failed=false;
+}
 
 CAudioOutput::~CAudioOutput(){
 
@@ -43,7 +54,7 @@ int32_t CAudioOutput::GetEstimatedDelay(){
 #if defined(__ANDROID__)
 	return systemVersion<21 ? 150 : 50;
 #endif
-	return 0;
+	return 60;
 }
 
 float CAudioOutput::GetLevel(){

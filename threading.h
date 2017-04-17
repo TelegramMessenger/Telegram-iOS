@@ -35,6 +35,33 @@ typedef pthread_cond_t tgvoip_lock_t;
 #define wait_lock(lock, mutex) pthread_cond_wait(&lock, &mutex)
 #define notify_lock(lock) pthread_cond_broadcast(&lock)
 
+#elif defined(_WIN32)
+
+#include <Windows.h>
+typedef HANDLE tgvoip_thread_t;
+typedef CRITICAL_SECTION tgvoip_mutex_t;
+typedef HANDLE tgvoip_lock_t; // uncomment for XP compatibility
+//typedef CONDITION_VARIABLE tgvoip_lock_t;
+
+#define start_thread(ref, entry, arg) (ref=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)entry, arg, 0, NULL))
+#define join_thread(thread) {WaitForSingleObject(thread, INFINITE); CloseHandle(thread);}
+#define set_thread_name(thread, name) // threads in Windows don't have names
+#define set_thread_priority(thread, priority) SetThreadPriority(thread, priority)
+#define get_thread_max_priority() THREAD_PRIORITY_HIGHEST
+#define get_thread_min_priority() THREAD_PRIORITY_LOWEST
+#define init_mutex(mutex) InitializeCriticalSection(&mutex)
+#define free_mutex(mutex) DeleteCriticalSection(&mutex)
+#define lock_mutex(mutex) EnterCriticalSection(&mutex)
+#define unlock_mutex(mutex) LeaveCriticalSection(&mutex)
+#define init_lock(lock) (lock=CreateEvent(NULL, false, false, NULL))
+#define free_lock(lock) CloseHandle(lock)
+#define wait_lock(lock, mutex) {LeaveCriticalSection(&mutex); WaitForSingleObject(lock, INFINITE); EnterCriticalSection(&mutex);}
+#define notify_lock(lock) PulseEvent(lock)
+//#define init_lock(lock) InitializeConditionVariable(&lock)
+//#define free_lock(lock) // ?
+//#define wait_lock(lock, mutex) SleepConditionVariableCS(&lock, &mutex, INFINITE)
+//#define notify_lock(lock) WakeAllConditionVariable(&lock)
+
 #else
 #error "No threading implementation for your operating system"
 #endif

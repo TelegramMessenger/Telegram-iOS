@@ -9,6 +9,7 @@
 #include <wchar.h>
 #include <map>
 #include <string>
+#include <vector>
 #include <libtgvoip/VoIPServerConfig.h>
 #include "../../VoIPController.h"
 #include "../../os/android/AudioOutputOpenSLES.h"
@@ -26,7 +27,9 @@ struct impl_data_android_t{
 	jobject javaObject;
 };
 
-void updateConnectionState(CVoIPController* cntrlr, int state){
+using namespace tgvoip;
+
+void updateConnectionState(VoIPController* cntrlr, int state){
 	impl_data_android_t* impl=(impl_data_android_t*) cntrlr->implData;
 	if(!impl->javaObject)
 		return;
@@ -70,29 +73,30 @@ extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativ
 
 	impl_data_android_t* impl=(impl_data_android_t*) malloc(sizeof(impl_data_android_t));
 	impl->javaObject=env->NewGlobalRef(thiz);
-	CVoIPController* cntrlr=new CVoIPController();
+	VoIPController* cntrlr=new VoIPController();
 	cntrlr->implData=impl;
 	cntrlr->SetStateCallback(updateConnectionState);
 	return (jlong)(intptr_t)cntrlr;
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeStart(JNIEnv* env, jobject thiz, jlong inst){
-	((CVoIPController*)(intptr_t)inst)->Start();
+	((VoIPController*)(intptr_t)inst)->Start();
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeConnect(JNIEnv* env, jobject thiz, jlong inst){
-	((CVoIPController*)(intptr_t)inst)->Connect();
+	((VoIPController*)(intptr_t)inst)->Connect();
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetEncryptionKey(JNIEnv* env, jobject thiz, jlong inst, jbyteArray key, jboolean isOutgoing){
 	jbyte* akey=env->GetByteArrayElements(key, NULL);
-	((CVoIPController*)(intptr_t)inst)->SetEncryptionKey((char *) akey, isOutgoing);
+	((VoIPController*)(intptr_t)inst)->SetEncryptionKey((char *) akey, isOutgoing);
 	env->ReleaseByteArrayElements(key, akey, JNI_ABORT);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetRemoteEndpoints(JNIEnv* env, jobject thiz, jlong inst, jobjectArray endpoints, jboolean allowP2p){
 	size_t len=(size_t) env->GetArrayLength(endpoints);
-	voip_endpoint_t* eps=(voip_endpoint_t *) malloc(sizeof(voip_endpoint_t)*len);
+//	voip_endpoint_t* eps=(voip_endpoint_t *) malloc(sizeof(voip_endpoint_t)*len);
+	std::vector<Endpoint> eps;
 	/*public String ip;
 		public String ipv6;
 		public int port;
@@ -111,25 +115,25 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 		jint port=env->GetIntField(endpoint, portFld);
 		jlong id=env->GetLongField(endpoint, idFld);
 		jbyteArray peerTag=(jbyteArray) env->GetObjectField(endpoint, peerTagFld);
-		eps[i].id=id;
-		eps[i].port=(uint32_t) port;
 		const char* ipChars=env->GetStringUTFChars(ip, NULL);
-		inet_aton(ipChars, &eps[i].address);
+		std::string ipLiteral(ipChars);
+		IPv4Address v4addr(ipLiteral);
+		IPv6Address v6addr("::0");
 		env->ReleaseStringUTFChars(ip, ipChars);
 		if(ipv6 && env->GetStringLength(ipv6)){
 			const char* ipv6Chars=env->GetStringUTFChars(ipv6, NULL);
-			inet_pton(AF_INET6, ipv6Chars, &eps[i].address6);
+			v6addr=IPv6Address(ipv6Chars);
 			env->ReleaseStringUTFChars(ipv6, ipv6Chars);
 		}
+		unsigned char pTag[16];
 		if(peerTag && env->GetArrayLength(peerTag)){
 			jbyte* peerTagBytes=env->GetByteArrayElements(peerTag, NULL);
-			memcpy(eps[i].peerTag, peerTagBytes, 16);
+			memcpy(pTag, peerTagBytes, 16);
 			env->ReleaseByteArrayElements(peerTag, peerTagBytes, JNI_ABORT);
 		}
-		eps[i].type=EP_TYPE_UDP_RELAY;
+		eps.push_back(Endpoint((int64_t)id, (uint16_t)port, v4addr, v6addr, EP_TYPE_UDP_RELAY, pTag));
 	}
-	((CVoIPController*)(intptr_t)inst)->SetRemoteEndpoints(eps, len, allowP2p);
-	free(eps);
+	((VoIPController*)(intptr_t)inst)->SetRemoteEndpoints(eps, allowP2p);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetNativeBufferSize(JNIEnv* env, jclass thiz, jint size){
@@ -140,7 +144,7 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeRelease(JNIEnv* env, jobject thiz, jlong inst){
 	//env->DeleteGlobalRef(CAudioInputAndroid::jniClass);
 
-	CVoIPController* ctlr=((CVoIPController*)(intptr_t)inst);
+	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
 	impl_data_android_t* impl=(impl_data_android_t*)ctlr->implData;
 	delete ctlr;
 	env->DeleteGlobalRef(impl->javaObject);
@@ -169,16 +173,16 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_AudioTrackJNI_nativeC
 
 extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nativeGetDebugString(JNIEnv* env, jobject thiz, jlong inst){
 	char buf[10240];
-	((CVoIPController*)(intptr_t)inst)->GetDebugString(buf, 10240);
+	((VoIPController*)(intptr_t)inst)->GetDebugString(buf, 10240);
 	return env->NewStringUTF(buf);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetNetworkType(JNIEnv* env, jobject thiz, jlong inst, jint type){
-	((CVoIPController*)(intptr_t)inst)->SetNetworkType(type);
+	((VoIPController*)(intptr_t)inst)->SetNetworkType(type);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetMicMute(JNIEnv* env, jobject thiz, jlong inst, jboolean mute){
-	((CVoIPController*)(intptr_t)inst)->SetMicMute(mute);
+	((VoIPController*)(intptr_t)inst)->SetMicMute(mute);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetConfig(JNIEnv* env, jobject thiz, jlong inst, jdouble recvTimeout, jdouble initTimeout, jint dataSavingMode, jboolean enableAEC, jboolean enableNS, jboolean enableAGC, jstring logFilePath){
@@ -197,28 +201,28 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 	}else{
 		memset(cfg.logFilePath, 0, sizeof(cfg.logFilePath));
 	}
-	((CVoIPController*)(intptr_t)inst)->SetConfig(&cfg);
+	((VoIPController*)(intptr_t)inst)->SetConfig(&cfg);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeDebugCtl(JNIEnv* env, jobject thiz, jlong inst, jint request, jint param){
-	((CVoIPController*)(intptr_t)inst)->DebugCtl(request, param);
+	((VoIPController*)(intptr_t)inst)->DebugCtl(request, param);
 }
 
 extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nativeGetVersion(JNIEnv* env, jclass clasz){
-	return env->NewStringUTF(CVoIPController::GetVersion());
+	return env->NewStringUTF(VoIPController::GetVersion());
 }
 
 extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativeGetPreferredRelayID(JNIEnv* env, jclass clasz, jlong inst){
-	return ((CVoIPController*)(intptr_t)inst)->GetPreferredRelayID();
+	return ((VoIPController*)(intptr_t)inst)->GetPreferredRelayID();
 }
 
 extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_VoIPController_nativeGetLastError(JNIEnv* env, jclass clasz, jlong inst){
-	return ((CVoIPController*)(intptr_t)inst)->GetLastError();
+	return ((VoIPController*)(intptr_t)inst)->GetLastError();
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeGetStats(JNIEnv* env, jclass clasz, jlong inst, jobject stats){
 	voip_stats_t _stats;
-	((CVoIPController*)(intptr_t)inst)->GetStats(&_stats);
+	((VoIPController*)(intptr_t)inst)->GetStats(&_stats);
 	jclass cls=env->GetObjectClass(stats);
 	env->SetLongField(stats, env->GetFieldID(cls, "bytesSentWifi", "J"), _stats.bytesSentWifi);
 	env->SetLongField(stats, env->GetFieldID(cls, "bytesSentMobile", "J"), _stats.bytesSentMobile);
@@ -243,11 +247,11 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPServerConfig_nati
 		env->ReleaseStringUTFChars(jval, cval);
 		config[key]=val;
 	}
-	CVoIPServerConfig::GetSharedInstance()->Update(config);
+	ServerConfig::GetSharedInstance()->Update(config);
 }
 
 extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nativeGetDebugLog(JNIEnv* env, jobject thiz, jlong inst){
-	CVoIPController* ctlr=((CVoIPController*)(intptr_t)inst);
+	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
 	std::string log=ctlr->GetDebugLog();
 	return env->NewStringUTF(log.c_str());
 }

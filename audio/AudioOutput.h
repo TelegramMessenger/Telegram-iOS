@@ -12,6 +12,7 @@
 
 class CAudioOutput : public CMediaStreamItf{
 public:
+	CAudioOutput();
 	virtual ~CAudioOutput();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels)=0;
 	virtual bool IsPlaying()=0;
@@ -22,6 +23,9 @@ public:
 #if defined(__ANDROID__)
 	static int systemVersion;
 #endif
+
+protected:
+	bool failed;
 };
 
 

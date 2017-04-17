@@ -8,6 +8,7 @@
 #define LIBTGVOIP_CONGESTIONCONTROL_H
 
 #include <stdlib.h>
+#include <stdint.h>
 #include "threading.h"
 
 #define TGVOIP_CONCTL_STARTUP 0

@@ -38,6 +38,19 @@ void tgvoip_log_file_printf(char level, const char* msg, ...);
 #define LOGW(msg, ...) __tgvoip_call_tglog("W/tgvoip: " msg, ##__VA_ARGS__)
 #define LOGE(msg, ...) __tgvoip_call_tglog("E/tgvoip: " msg, ##__VA_ARGS__)
 
+#elif defined(_WIN32) && defined(_DEBUG)
+
+#include <windows.h>
+#include <stdio.h>
+
+#define _TGVOIP_W32_LOG_PRINT(msg, ...){ char __log_buf[1024]; snprintf(__log_buf, 1024, msg, ##__VA_ARGS__); OutputDebugStringA(__log_buf); }
+
+#define LOGV(msg, ...) _TGVOIP_W32_LOG_PRINT("V/tgvoip: " msg "\n", ##__VA_ARGS__)
+#define LOGD(msg, ...) _TGVOIP_W32_LOG_PRINT("D/tgvoip: " msg "\n", ##__VA_ARGS__)
+#define LOGI(msg, ...) _TGVOIP_W32_LOG_PRINT("I/tgvoip: " msg "\n", ##__VA_ARGS__)
+#define LOGW(msg, ...) _TGVOIP_W32_LOG_PRINT("W/tgvoip: " msg "\n", ##__VA_ARGS__)
+#define LOGE(msg, ...) _TGVOIP_W32_LOG_PRINT("E/tgvoip: " msg "\n", ##__VA_ARGS__)
+
 #else
 
 #include <stdio.h>

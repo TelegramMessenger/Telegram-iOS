@@ -11,7 +11,6 @@
 /*
  * The core AEC algorithm, SSE2 version of speed-critical functions.
  */
-#if defined(WEBRTC_ARCH_X86_FAMILY)
 #include <emmintrin.h>
 #include <math.h>
 #include <string.h>  // memset
@@ -22,6 +21,8 @@ extern "C" {
 #include "webrtc/modules/audio_processing/aec/aec_common.h"
 #include "webrtc/modules/audio_processing/aec/aec_core_optimized_methods.h"
 #include "webrtc/modules/audio_processing/utility/ooura_fft.h"
+
+#if defined(WEBRTC_ARCH_X86_FAMILY)
 
 namespace webrtc {
 

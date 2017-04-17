@@ -17,6 +17,8 @@
 #define kOutputBus 0
 #define kInputBus 1
 
+using namespace tgvoip;
+
 int CAudioUnitIO::refCount=0;
 CAudioUnitIO* CAudioUnitIO::sharedInstance=NULL;
 bool CAudioUnitIO::haveAudioSession=false;
@@ -210,9 +212,9 @@ void* CAudioUnitIO::StartFakeIOThread(void *arg){
 
 void CAudioUnitIO::RunFakeIOThread(){
 	double neededDataDuration=0;
-	double prevTime=CVoIPController::GetCurrentTime();
+	double prevTime=VoIPController::GetCurrentTime();
 	while(runFakeIO){
-		double t=CVoIPController::GetCurrentTime();
+		double t=VoIPController::GetCurrentTime();
 		neededDataDuration+=t-prevTime;
 		prevTime=t;
 		while(neededDataDuration>=0.020){

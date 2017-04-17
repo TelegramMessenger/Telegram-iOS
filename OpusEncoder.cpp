@@ -9,6 +9,8 @@
 #include "logging.h"
 #include "VoIPServerConfig.h"
 
+using namespace tgvoip;
+
 COpusEncoder::COpusEncoder(CMediaStreamItf *source):queue(11), bufferPool(960*2, 10){
 	this->source=source;
 	source->SetCallback(COpusEncoder::Callback, this);
@@ -24,10 +26,10 @@ COpusEncoder::COpusEncoder(CMediaStreamItf *source):queue(11), bufferPool(960*2,
 	echoCanceller=NULL;
 	complexity=10;
 	frameDuration=20;
-	mediumCorrectionBitrate=CVoIPServerConfig::GetSharedInstance()->GetInt("audio_medium_fec_bitrate", 10000);
-	strongCorrectionBitrate=CVoIPServerConfig::GetSharedInstance()->GetInt("audio_strong_fec_bitrate", 8000);
-	mediumCorrectionMultiplier=CVoIPServerConfig::GetSharedInstance()->GetDouble("audio_medium_fec_multiplier", 1.5);
-	strongCorrectionMultiplier=CVoIPServerConfig::GetSharedInstance()->GetDouble("audio_strong_fec_multiplier", 2.0);
+	mediumCorrectionBitrate=ServerConfig::GetSharedInstance()->GetInt("audio_medium_fec_bitrate", 10000);
+	strongCorrectionBitrate=ServerConfig::GetSharedInstance()->GetInt("audio_strong_fec_bitrate", 8000);
+	mediumCorrectionMultiplier=ServerConfig::GetSharedInstance()->GetDouble("audio_medium_fec_multiplier", 1.5);
+	strongCorrectionMultiplier=ServerConfig::GetSharedInstance()->GetDouble("audio_strong_fec_multiplier", 2.0);
 }
 
 COpusEncoder::~COpusEncoder(){

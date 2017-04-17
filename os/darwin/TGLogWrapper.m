@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 
-#import "ASCommon.h"
+#import <ASCommon.h>
 
 void __tgvoip_call_tglog(char* format, ...){
 	va_list args;

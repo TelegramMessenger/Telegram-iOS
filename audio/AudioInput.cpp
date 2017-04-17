@@ -14,6 +14,10 @@
 #else
 #include "../os/darwin/AudioInputAudioUnitOSX.h"
 #endif
+#elif defined(_WIN32)
+#include "../os/windows/AudioInputWave.h"
+#elif defined(__linux__)
+#include "../os/linux/AudioInputALSA.h"
 #else
 #error "Unsupported operating system"
 #endif
@@ -27,6 +31,10 @@ CAudioInput *CAudioInput::Create(){
 	return new CAudioInputAndroid();
 #elif defined(__APPLE__)
 	return new CAudioInputAudioUnit();
+#elif defined(_WIN32)
+	return new tgvoip::audio::AudioInputWave();
+#elif defined(__linux__)
+	return new tgvoip::audio::AudioInputALSA();
 #endif
 }
 

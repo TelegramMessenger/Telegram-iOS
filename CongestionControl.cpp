@@ -11,6 +11,8 @@
 #include <math.h>
 #include <assert.h>
 
+using namespace tgvoip;
+
 CCongestionControl::CCongestionControl(){
 	memset(rttHistory, 0, 100*sizeof(double));
 	memset(inflightPackets, 0, 100*sizeof(tgvoip_congestionctl_packet_t));
@@ -27,7 +29,7 @@ CCongestionControl::CCongestionControl(){
 	stateTransitionTime=0;
 	inflightDataSize=0;
 	lossCount=0;
-	cwnd=(size_t) CVoIPServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024);
+	cwnd=(size_t) ServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024);
 	init_mutex(mutex);
 }
 
@@ -81,7 +83,7 @@ void CCongestionControl::PacketAcknowledged(uint32_t seq){
 	int i;
 	for(i=0;i<100;i++){
 		if(inflightPackets[i].seq==seq && inflightPackets[i].sendTime>0){
-			tmpRtt+=(CVoIPController::GetCurrentTime()-inflightPackets[i].sendTime);
+			tmpRtt+=(VoIPController::GetCurrentTime()-inflightPackets[i].sendTime);
 			tmpRttCount++;
 			inflightPackets[i].sendTime=0;
 			inflightDataSize-=inflightPackets[i].size;
@@ -119,7 +121,7 @@ void CCongestionControl::PacketSent(uint32_t seq, size_t size){
 	}
 	slot->seq=seq;
 	slot->size=size;
-	slot->sendTime=CVoIPController::GetCurrentTime();
+	slot->sendTime=VoIPController::GetCurrentTime();
 	inflightDataSize+=size;
 	unlock_mutex(mutex);
 }
@@ -138,7 +140,7 @@ void CCongestionControl::Tick(){
 	}
 	int i;
 	for(i=0;i<100;i++){
-		if(inflightPackets[i].sendTime!=0 && CVoIPController::GetCurrentTime()-inflightPackets[i].sendTime>2){
+		if(inflightPackets[i].sendTime!=0 && VoIPController::GetCurrentTime()-inflightPackets[i].sendTime>2){
 			inflightPackets[i].sendTime=0;
 			inflightDataSize-=inflightPackets[i].size;
 			lossCount++;
@@ -152,17 +154,17 @@ void CCongestionControl::Tick(){
 
 
 int CCongestionControl::GetBandwidthControlAction(){
-	if(CVoIPController::GetCurrentTime()-lastActionTime<1)
+	if(VoIPController::GetCurrentTime()-lastActionTime<1)
 		return TGVOIP_CONCTL_ACT_NONE;
 	size_t inflightAvg=GetInflightDataSize();
 	size_t max=cwnd+cwnd/10;
 	size_t min=cwnd-cwnd/10;
 	if(inflightAvg<min){
-		lastActionTime=CVoIPController::GetCurrentTime();
+		lastActionTime=VoIPController::GetCurrentTime();
 		return TGVOIP_CONCTL_ACT_INCREASE;
 	}
 	if(inflightAvg>max){
-		lastActionTime=CVoIPController::GetCurrentTime();
+		lastActionTime=VoIPController::GetCurrentTime();
 		return TGVOIP_CONCTL_ACT_DECREASE;
 	}
 	return TGVOIP_CONCTL_ACT_NONE;

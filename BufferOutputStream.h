@@ -8,6 +8,7 @@
 #define LIBTGVOIP_BUFFEROUTPUTSTREAM_H
 
 #include <stdlib.h>
+#include <stdint.h>
 
 class CBufferOutputStream{
 

@@ -11,12 +11,13 @@
 #include <string>
 #include "threading.h"
 
+namespace tgvoip{
 
-class CVoIPServerConfig{
+class ServerConfig{
 public:
-	CVoIPServerConfig();
-	~CVoIPServerConfig();
-	static CVoIPServerConfig* GetSharedInstance();
+	ServerConfig();
+	~ServerConfig();
+	static ServerConfig* GetSharedInstance();
 	int32_t GetInt(std::string name, int32_t fallback);
 	double GetDouble(std::string name, double fallback);
 	std::string GetString(std::string name, std::string fallback);
@@ -25,11 +26,11 @@ public:
     void Update(const char **values, int count);
 
 private:
-	static CVoIPServerConfig* sharedInstance;
+	static ServerConfig* sharedInstance;
 	bool ContainsKey(std::string key);
 	std::map<std::string, std::string> config;
 	tgvoip_mutex_t mutex;
 };
-
+}
 
 #endif //TGVOIP_VOIPSERVERCONFIG_H

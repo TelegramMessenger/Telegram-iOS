@@ -10,6 +10,8 @@
 #include "VoIPServerConfig.h"
 #include <math.h>
 
+using namespace tgvoip;
+
 CJitterBuffer::CJitterBuffer(CMediaStreamItf *out, uint32_t step):bufferPool(JITTER_SLOT_SIZE, JITTER_SLOT_COUNT){
 	if(out)
 		out->SetCallback(CJitterBuffer::CallbackOut, this);
@@ -23,20 +25,20 @@ CJitterBuffer::CJitterBuffer(CMediaStreamItf *out, uint32_t step):bufferPool(JIT
 	dontDecMinDelay=0;
 	lostPackets=0;
 	if(step<30){
-		minMinDelay=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_20", 6);
-		maxMinDelay=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_20", 25);
-		maxUsedSlots=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_20", 50);
+		minMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_20", 6);
+		maxMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_20", 25);
+		maxUsedSlots=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_20", 50);
 	}else if(step<50){
-		minMinDelay=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_40", 4);
-		maxMinDelay=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_40", 15);
-		maxUsedSlots=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_40", 30);
+		minMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_40", 4);
+		maxMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_40", 15);
+		maxUsedSlots=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_40", 30);
 	}else{
-		minMinDelay=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_60", 1);
-		maxMinDelay=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_60", 10);
-		maxUsedSlots=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_60", 20);
+		minMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_60", 1);
+		maxMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_60", 10);
+		maxUsedSlots=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_60", 20);
 	}
-	lossesToReset=(uint32_t) CVoIPServerConfig::GetSharedInstance()->GetInt("jitter_losses_to_reset", 20);
-	resyncThreshold=CVoIPServerConfig::GetSharedInstance()->GetDouble("jitter_resync_threshold", 1.0);
+	lossesToReset=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_losses_to_reset", 20);
+	resyncThreshold=ServerConfig::GetSharedInstance()->GetDouble("jitter_resync_threshold", 1.0);
 	Reset();
 	init_mutex(mutex);
 }
@@ -208,7 +210,7 @@ void CJitterBuffer::PutInternal(jitter_packet_t* pkt){
 			prevTime=slots[i].recvTime;
 		}
 	}*/
-	double time=CVoIPController::GetCurrentTime();
+	double time=VoIPController::GetCurrentTime();
 	if(expectNextAtTime!=0){
 		double dev=expectNextAtTime-time;
 		//LOGV("packet dev %f", dev);

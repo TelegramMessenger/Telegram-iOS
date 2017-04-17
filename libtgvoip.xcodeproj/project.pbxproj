@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		69015D8A1E9D846F00AC9763 /* NetworkSocketPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69015D881E9D846F00AC9763 /* NetworkSocketPosix.cpp */; };
+		69015D8B1E9D846F00AC9763 /* NetworkSocketPosix.h in Headers */ = {isa = PBXBuildFile; fileRef = 69015D891E9D846F00AC9763 /* NetworkSocketPosix.h */; };
+		69015D941E9D848700AC9763 /* NetworkSocket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69015D921E9D848700AC9763 /* NetworkSocket.cpp */; };
+		69015D951E9D848700AC9763 /* NetworkSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 69015D931E9D848700AC9763 /* NetworkSocket.h */; };
 		6915307B1E6B5BAB004F643F /* logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6915307A1E6B5BAB004F643F /* logging.cpp */; };
 		692AB8CB1E6759DD00706ACC /* AudioInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8881E6759DD00706ACC /* AudioInput.cpp */; };
 		692AB8CC1E6759DD00706ACC /* AudioInput.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8891E6759DD00706ACC /* AudioInput.h */; };
@@ -232,6 +236,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		69015D881E9D846F00AC9763 /* NetworkSocketPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkSocketPosix.cpp; sourceTree = "<group>"; };
+		69015D891E9D846F00AC9763 /* NetworkSocketPosix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSocketPosix.h; sourceTree = "<group>"; };
+		69015D921E9D848700AC9763 /* NetworkSocket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkSocket.cpp; sourceTree = "<group>"; };
+		69015D931E9D848700AC9763 /* NetworkSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSocket.h; sourceTree = "<group>"; };
 		6915307A1E6B5BAB004F643F /* logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cpp; sourceTree = "<group>"; };
 		692AB8881E6759DD00706ACC /* AudioInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioInput.cpp; sourceTree = "<group>"; };
 		692AB8891E6759DD00706ACC /* AudioInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioInput.h; sourceTree = "<group>"; };
@@ -427,6 +435,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		69015D871E9D846F00AC9763 /* posix */ = {
+			isa = PBXGroup;
+			children = (
+				69015D881E9D846F00AC9763 /* NetworkSocketPosix.cpp */,
+				69015D891E9D846F00AC9763 /* NetworkSocketPosix.h */,
+			);
+			name = posix;
+			path = ../../../../TDesktop/TBuild/tdesktop/third_party/libtgvoip/os/posix;
+			sourceTree = "<group>";
+		};
 		692AB8861E6759BF00706ACC /* libtgvoip */ = {
 			isa = PBXGroup;
 			children = (
@@ -450,6 +468,8 @@
 				692AB8AA1E6759DD00706ACC /* logging.h */,
 				692AB8AB1E6759DD00706ACC /* MediaStreamItf.cpp */,
 				692AB8AC1E6759DD00706ACC /* MediaStreamItf.h */,
+				69015D921E9D848700AC9763 /* NetworkSocket.cpp */,
+				69015D931E9D848700AC9763 /* NetworkSocket.h */,
 				692AB8AD1E6759DD00706ACC /* OpusDecoder.cpp */,
 				692AB8AE1E6759DD00706ACC /* OpusDecoder.h */,
 				692AB8AF1E6759DD00706ACC /* OpusEncoder.cpp */,
@@ -479,6 +499,7 @@
 		692AB8B11E6759DD00706ACC /* os */ = {
 			isa = PBXGroup;
 			children = (
+				69015D871E9D846F00AC9763 /* posix */,
 				692AB8BD1E6759DD00706ACC /* darwin */,
 			);
 			path = os;
@@ -875,6 +896,7 @@
 				69A6DDDB1E95EC7700000E69 /* aec_common.h in Headers */,
 				69A6DDDD1E95EC7700000E69 /* aec_core.h in Headers */,
 				69A6DE051E95EC7800000E69 /* block_mean_calculator.h in Headers */,
+				69015D8B1E9D846F00AC9763 /* NetworkSocketPosix.h in Headers */,
 				69A6DD951E95EC7700000E69 /* atomicops.h in Headers */,
 				69A6DD991E95EC7700000E69 /* constructormagic.h in Headers */,
 				69A6DDA01E95EC7700000E69 /* type_traits.h in Headers */,
@@ -887,6 +909,7 @@
 				69A6DE0A1E95EC7800000E69 /* delay_estimator_wrapper.h in Headers */,
 				69A6DE141E95EC7800000E69 /* metrics.h in Headers */,
 				692AB8FE1E6759DD00706ACC /* AudioUnitIO.h in Headers */,
+				69015D951E9D848700AC9763 /* NetworkSocket.h in Headers */,
 				69A6DE131E95EC7800000E69 /* cpu_features_wrapper.h in Headers */,
 				69A6DDDF1E95EC7700000E69 /* aec_core_optimized_methods.h in Headers */,
 				69A6DE101E95EC7800000E69 /* ooura_fft_tables_neon_sse2.h in Headers */,
@@ -1055,6 +1078,7 @@
 				69A6DDE81E95EC7700000E69 /* aecm_core_neon.cc in Sources */,
 				69A6DDBB1E95EC7700000E69 /* get_hanning_window.c in Sources */,
 				69A6DDB51E95EC7700000E69 /* downsample_fast_neon.c in Sources */,
+				69015D941E9D848700AC9763 /* NetworkSocket.cpp in Sources */,
 				69A6DDC41E95EC7700000E69 /* lpc_to_refl_coef.c in Sources */,
 				69A6DDEC1E95EC7700000E69 /* analog_agc.c in Sources */,
 				69A6DDA71E95EC7700000E69 /* ring_buffer.c in Sources */,
@@ -1110,6 +1134,7 @@
 				692AB8CB1E6759DD00706ACC /* AudioInput.cpp in Sources */,
 				69A6DDCC1E95EC7700000E69 /* resample_48khz.c in Sources */,
 				69A6DDAC1E95EC7700000E69 /* complex_bit_reverse_arm.S in Sources */,
+				69015D8A1E9D846F00AC9763 /* NetworkSocketPosix.cpp in Sources */,
 				69A6DDD81E95EC7700000E69 /* vector_scaling_operations.c in Sources */,
 				69A6DE0D1E95EC7800000E69 /* ooura_fft_neon.cc in Sources */,
 				692AB8FD1E6759DD00706ACC /* AudioUnitIO.cpp in Sources */,
@@ -1241,12 +1266,10 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				HEADER_SEARCH_PATHS = (
-					../../Telegraph/thirdparty/opus/include/opus,
+					"$(PROJECT_DIR)/../../Telegraph/thirdparty/opus/include/opus",
 					"$(inherited)",
-					../../Telegraph,
+					"$(PROJECT_DIR)/../../Telegraph",
 					webrtc_dsp,
-					"../Telegram-iOS/Telegraph/thirdparty/opus/include/opus",
-					"../Telegram-iOS/Telegraph",
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -1278,12 +1301,10 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				HEADER_SEARCH_PATHS = (
-					../../Telegraph/thirdparty/opus/include/opus,
+					"$(PROJECT_DIR)/../../Telegraph/thirdparty/opus/include/opus",
 					"$(inherited)",
-					../../Telegraph,
+					"$(PROJECT_DIR)/../../Telegraph",
 					webrtc_dsp,
-					"../Telegram-iOS/Telegraph/thirdparty/opus/include/opus",
-					"../Telegram-iOS/Telegraph",
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -1366,12 +1387,10 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				HEADER_SEARCH_PATHS = (
-					../../Telegraph/thirdparty/opus/include/opus,
+					"$(PROJECT_DIR)/../../Telegraph/thirdparty/opus/include/opus",
 					"$(inherited)",
-					../../Telegraph,
+					"$(PROJECT_DIR)/../../Telegraph",
 					webrtc_dsp,
-					"../Telegram-iOS/Telegraph/thirdparty/opus/include/opus",
-					"../Telegram-iOS/Telegraph",
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -1448,12 +1467,10 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				HEADER_SEARCH_PATHS = (
-					../../Telegraph/thirdparty/opus/include/opus,
+					"$(PROJECT_DIR)/../../Telegraph/thirdparty/opus/include/opus",
 					"$(inherited)",
-					../../Telegraph,
+					"$(PROJECT_DIR)/../../Telegraph",
 					webrtc_dsp,
-					"../Telegram-iOS/Telegraph/thirdparty/opus/include/opus",
-					"../Telegram-iOS/Telegraph",
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
