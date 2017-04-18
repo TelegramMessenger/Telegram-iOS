@@ -116,8 +116,8 @@ public final class MediaBox {
     private var randomAccessContexts: [WrappedMediaResourceId: RandomAccessMediaResourceContext] = [:]
     private var cachedRepresentationContexts: [CachedMediaResourceRepresentationKey: CachedMediaResourceRepresentationContext] = [:]
     
-    private var wrappedFetchResource = Promise<(MediaResource, Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError>>()
-    public var fetchResource: ((MediaResource, Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError>)? {
+    private var wrappedFetchResource = Promise<(MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>>()
+    public var fetchResource: ((MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>)? {
         didSet {
             if let fetchResource = self.fetchResource {
                 wrappedFetchResource.set(.single(fetchResource))
@@ -399,7 +399,7 @@ public final class MediaBox {
         }
     }
     
-    private func randomAccessContext(for resource: MediaResource, size: Int) -> RandomAccessMediaResourceContext {
+    private func randomAccessContext(for resource: MediaResource, size: Int, tag: MediaResourceFetchTag?) -> RandomAccessMediaResourceContext {
         assert(self.dataQueue.isCurrent())
         
         let resourceId = WrappedMediaResourceId(resource.id)
@@ -415,7 +415,7 @@ public final class MediaBox {
                 if let strongSelf = self {
                     strongSelf.dataQueue.async {
                         let fetch = strongSelf.wrappedFetchResource.get() |> take(1) |> mapToSignal { fetch -> Signal<MediaResourceDataFetchResult, NoError> in
-                            return fetch(resource, range)
+                            return fetch(resource, range, tag)
                         }
                         var offset = 0
                         disposable.set(fetch.start(next: { [weak strongSelf] result in
@@ -444,13 +444,13 @@ public final class MediaBox {
         return dataContext
     }
     
-    public func fetchedResourceData(_ resource: MediaResource, size: Int, in range: Range<Int>) -> Signal<Void, NoError> {
+    public func fetchedResourceData(_ resource: MediaResource, size: Int, in range: Range<Int>, tag: MediaResourceFetchTag?) -> Signal<Void, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.dataQueue.async {
                 let resourceId = WrappedMediaResourceId(resource.id)
-                let dataContext = self.randomAccessContext(for: resource, size: size)
+                let dataContext = self.randomAccessContext(for: resource, size: size, tag: tag)
                 
                 let listener = dataContext.addListenerForFetchedData(in: range)
                 
@@ -472,13 +472,13 @@ public final class MediaBox {
         }
     }
     
-    public func resourceData(_ resource: MediaResource, size: Int, in range: Range<Int>, mode: ResourceDataRangeMode = .complete) -> Signal<Data, NoError> {
+    public func resourceData(_ resource: MediaResource, size: Int, in range: Range<Int>, tag: MediaResourceFetchTag?, mode: ResourceDataRangeMode = .complete) -> Signal<Data, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.dataQueue.async {
                 let resourceId = WrappedMediaResourceId(resource.id)
-                let dataContext = self.randomAccessContext(for: resource, size: size)
+                let dataContext = self.randomAccessContext(for: resource, size: size, tag: tag)
                 
                 let listenerMode: RandomAccessResourceDataRangeMode
                 switch mode {
@@ -528,7 +528,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResource(_ resource: MediaResource, implNext: Bool = false) -> Signal<FetchResourceSourceType, NoError> {
+    public func fetchedResource(_ resource: MediaResource, tag: MediaResourceFetchTag?, implNext: Bool = false) -> Signal<FetchResourceSourceType, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -573,7 +573,7 @@ public final class MediaBox {
                         var fd: Int32?
                         let dataQueue = self.dataQueue
                         dataContext.fetchDisposable = ((self.wrappedFetchResource.get() |> take(1) |> mapToSignal { fetch -> Signal<MediaResourceDataFetchResult, NoError> in
-                            return fetch(resource, currentSize ..< Int.max)
+                            return fetch(resource, currentSize ..< Int.max, tag)
                         }) |> afterDisposed {
                             dataQueue.async {
                                 if let fd = fd {
@@ -961,6 +961,39 @@ public final class MediaBox {
                 }
             }
             return disposable
+        }
+    }
+    
+    public func collectResourceCacheUsage(_ ids: [MediaResourceId]) -> Signal<[WrappedMediaResourceId: Int64], NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                var result: [WrappedMediaResourceId: Int64] = [:]
+                for id in ids {
+                    let wrappedId = WrappedMediaResourceId(id)
+                    let paths = self.storePathsForId(id)
+                    if let size = fileSize(paths.complete) {
+                        result[wrappedId] = Int64(size)
+                    } else if let size = fileSize(paths.partial) {
+                        result[wrappedId] = Int64(size)
+                    }
+                }
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
+    public func removeCachedResources(_ ids: Set<WrappedMediaResourceId>) -> Signal<Void, NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                for id in ids {
+                    let paths = self.storePathsForId(id.id)
+                    unlink(paths.complete)
+                    unlink(paths.partial)
+                }
+            }
+            return EmptyDisposable
         }
     }
 }

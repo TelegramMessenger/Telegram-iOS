@@ -47,3 +47,6 @@ public protocol CachedMediaResourceRepresentation {
     var uniqueId: String { get }
     func isEqual(to: CachedMediaResourceRepresentation) -> Bool
 }
+
+public protocol MediaResourceFetchTag {
+}

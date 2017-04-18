@@ -1827,6 +1827,57 @@ final class MessageHistoryTable: Table {
     func getMessageCountInRange(peerId: PeerId, tagMask: MessageTags, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int32 {
         return self.tagsTable.getMessageCountInRange(tagMask: tagMask, peerId: peerId, lowerBound: lowerBound, upperBound: upperBound)
     }
+    
+    func enumerateMedia(lowerBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
+        var mediaRefs: [MediaId: Media] = [:]
+        var result: [PeerId: Set<MediaId>] = [:]
+        var lastIndex: MessageIndex?
+        var count = 0
+        self.valueBox.range(self.table, start: self.key(lowerBound == nil ? MessageIndex.absoluteLowerBound() : lowerBound!), end: self.key(MessageIndex.absoluteUpperBound()), values: { key, value in
+            count += 1
+            
+            let entry = self.readIntermediateEntry(key, value: value)
+            lastIndex = entry.index
+            
+            if case let .Message(message) = entry {
+                var parsedMedia: [Media] = []
+                
+                let embeddedMediaData = message.embeddedMediaData.sharedBufferNoCopy()
+                if embeddedMediaData.length > 4 {
+                    var embeddedMediaCount: Int32 = 0
+                    embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
+                    for _ in 0 ..< embeddedMediaCount {
+                        var mediaLength: Int32 = 0
+                        embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
+                        if let media = Decoder(buffer: MemoryBuffer(memory: embeddedMediaData.memory + embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                            parsedMedia.append(media)
+                        }
+                        embeddedMediaData.skip(Int(mediaLength))
+                    }
+                }
+                
+                for mediaId in message.referencedMedia {
+                    if let media = self.messageMediaTable.get(mediaId, embedded: { _ in
+                        return nil
+                    }) {
+                        parsedMedia.append(media)
+                    }
+                }
+                
+                for media in parsedMedia {
+                    if let id = media.id {
+                        mediaRefs[id] = media
+                        if result[message.id.peerId] == nil {
+                            result[message.id.peerId] = Set()
+                        }
+                        result[message.id.peerId]!.insert(id)
+                    }
+                }
+            }
+            return true
+        }, limit: limit)
+        return (result, mediaRefs, count == 0 ? nil : lastIndex)
+    }
 
     func debugList(_ peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
         var operationsByPeerId: [PeerId : [MessageHistoryOperation]] = [:]

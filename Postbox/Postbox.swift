@@ -547,6 +547,15 @@ public final class Modifier {
         assert(!self.disposed)
         self.postbox?.setAccessChallengeData(data)
     }
+    
+    public func enumerateMedia(lowerBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.messageHistoryTable.enumerateMedia(lowerBound: lowerBound, limit: limit)
+        } else {
+            return ([:], [:], nil)
+        }
+    }
 }
 
 fileprivate class PipeNotifier: NSObject {
