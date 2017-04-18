@@ -52,6 +52,12 @@ public struct ListViewItemNodeLayout {
     }
 }
 
+public enum ListViewItemNodeVisibility {
+    case none
+    case nearlyVisible
+    case visible
+}
+
 open class ListViewItemNode: ASDisplayNode {
     let rotated: Bool
     final var index: Int?
@@ -84,6 +90,8 @@ open class ListViewItemNode: ASDisplayNode {
     public final var scrollPositioningInsets: UIEdgeInsets = UIEdgeInsets()
     
     public final var canBeUsedAsScrollToItemAnchor: Bool = true
+    
+    open var visibility: ListViewItemNodeVisibility = .none
     
     open var canBeSelected: Bool {
         return true

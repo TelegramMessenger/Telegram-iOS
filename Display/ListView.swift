@@ -172,7 +172,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     public func reportStackTrace(stack: String!, withSlide slide: String!) {
         NSLog("reportStackTrace stack: \(stack)\n\nslide: \(slide)")
     }
-    
+
     override public init() {
         class DisplayLinkProxy: NSObject {
             weak var target: ListView?
@@ -459,7 +459,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         self.updateItemHeaders()
         
-        for (headerId, headerNode) in self.itemHeaderNodes {
+        for (_, headerNode) in self.itemHeaderNodes {
             //let position = headerNode.position
             //headerNode.position = CGPoint(x: position.x, y: position.y - deltaY)
             
@@ -490,6 +490,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         self.updateVisibleContentOffset()
         self.updateVisibleItemRange()
+        self.updateItemNodesVisibilities()
         
         //CATransaction.commit()
     }
@@ -2104,6 +2105,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     }
                 }
                 
+                self.updateItemNodesVisibilities()
+                
                 self.updateScroller()
                 self.setNeedsAnimations()
                 
@@ -2117,6 +2120,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 completion()
             } else {
                 self.updateItemHeaders(headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
+                self.updateItemNodesVisibilities()
                 
                 if animated {
                     self.setNeedsAnimations()
@@ -2280,10 +2284,24 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             addHeader(previousHeaderId, previousUpperBound, previousLowerBound, previousHeaderItem, hasValidNodes)
         }
         
-        var currentIds = Set(self.itemHeaderNodes.keys)
+        let currentIds = Set(self.itemHeaderNodes.keys)
         for id in currentIds.subtracting(visibleHeaderNodes) {
             if let headerNode = self.itemHeaderNodes.removeValue(forKey: id) {
                 headerNode.removeFromSupernode()
+            }
+        }
+    }
+    
+    private func updateItemNodesVisibilities() {
+        let visibilityRect = CGRect(origin: CGPoint(x: 0.0, y: self.insets.top), size: CGSize(width: self.visibleSize.width, height: self.visibleSize.height - self.insets.top - self.insets.bottom))
+        for itemNode in self.itemNodes {
+            let itemFrame = itemNode.apparentFrame
+            var visibility: ListViewItemNodeVisibility = .none
+            if visibilityRect.intersects(itemFrame) {
+                visibility = .visible
+            }
+            if visibility != itemNode.visibility {
+                itemNode.visibility = visibility
             }
         }
     }

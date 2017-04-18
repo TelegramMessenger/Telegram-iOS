@@ -11,12 +11,6 @@ private class WindowRootViewController: UIViewController {
     override var prefersStatusBarHidden: Bool {
         return false
     }
-    
-    /*override func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
-        if let presentController = self.presentController {
-            presentController(viewControllerToPresent, flag, completion)
-        }
-    }*/
 }
 
 private struct WindowLayout: Equatable {
@@ -115,9 +109,37 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> Container
     return ContainerViewLayout(size: layout.size, intrinsicInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: inputHeight)
 }
 
-public class Window: UIWindow {
-    public static let statusBarTracingTag: Int32 = 0
-    public static let keyboardTracingTag: Int32 = 1
+public final class WindowHostView {
+    public let view: UIView
+    public let isRotating: () -> Bool
+    
+    let updateSupportedInterfaceOrientations: (UIInterfaceOrientationMask) -> Void
+    
+    var present: ((ViewController) -> Void)?
+    var updateSize: ((CGSize) -> Void)?
+    var layoutSubviews: (() -> Void)?
+    var updateToInterfaceOrientation: (() -> Void)?
+    var isUpdatingOrientationLayout = false
+    var hitTest: ((CGPoint, UIEvent?) -> UIView?)?
+    
+    init(view: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void) {
+        self.view = view
+        self.isRotating = isRotating
+        self.updateSupportedInterfaceOrientations = updateSupportedInterfaceOrientations
+    }
+}
+
+public struct WindowTracingTags {
+    public static let statusBar: Int32 = 0
+    public static let keyboard: Int32 = 1
+}
+
+public protocol WindowHost {
+    func present(_ controller: ViewController)
+}
+
+public class Window1 {
+    public let hostView: WindowHostView
     
     private let statusBarHost: StatusBarHost?
     private let statusBarManager: StatusBarManager?
@@ -128,15 +150,15 @@ public class Window: UIWindow {
     private var windowLayout: WindowLayout
     private var updatingLayout: UpdatingLayout?
     
-    public var isUpdatingOrientationLayout = false
-    
     private let presentationContext: PresentationContext
     
     private var tracingStatusBarsInvalidated = false
     
     private var statusBarHidden = false
     
-    public init(frame: CGRect, statusBarHost: StatusBarHost?) {
+    public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
+        self.hostView = hostView
+        
         self.statusBarHost = statusBarHost
         let statusBarHeight: CGFloat
         if let statusBarHost = statusBarHost {
@@ -156,13 +178,31 @@ public class Window: UIWindow {
             minimized = false
         }
         
-        self.windowLayout = WindowLayout(size: frame.size, statusBarHeight: statusBarHeight, inputHeight: 0.0, inputMinimized: minimized)
+        self.windowLayout = WindowLayout(size: self.hostView.view.bounds.size, statusBarHeight: statusBarHeight, inputHeight: 0.0, inputMinimized: minimized)
         self.presentationContext = PresentationContext()
         
-        super.init(frame: frame)
+        self.hostView.present = { [weak self] controller in
+            self?.present(controller)
+        }
         
-        self.layer.setInvalidateTracingSublayers { [weak self] in
+        self.hostView.updateSize = { [weak self] size in
+            self?.updateSize(size)
+        }
+        
+        self.hostView.view.layer.setInvalidateTracingSublayers { [weak self] in
             self?.invalidateTracingStatusBars()
+        }
+        
+        self.hostView.layoutSubviews = { [weak self] in
+            self?.layoutSubviews()
+        }
+        
+        self.hostView.updateToInterfaceOrientation = { [weak self] in
+            self?.updateToInterfaceOrientation()
+        }
+        
+        self.hostView.hitTest = { [weak self] point, event in
+            return self?.hitTest(point, with: event)
         }
         
         self.keyboardManager?.minimizedUpdated = { [weak self] in
@@ -173,23 +213,8 @@ public class Window: UIWindow {
             }
         }
         
-        self.presentationContext.view = self
+        self.presentationContext.view = self.hostView.view
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
-        
-        let rootViewController = WindowRootViewController()
-        super.rootViewController = rootViewController
-        rootViewController.viewWillAppear(false)
-        rootViewController.viewDidAppear(false)
-        rootViewController.view.isHidden = true
-        
-        rootViewController.presentController = { [weak self] controller, animated, completion in
-            if let strongSelf = self {
-                strongSelf.present(LegacyPresentedController(legacyController: controller, presentation: .custom))
-                if let completion = completion {
-                    completion()
-                }
-            }
-        }
         
         self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self {
@@ -205,7 +230,7 @@ public class Window: UIWindow {
                 let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
                 let keyboardHeight = max(0.0, UIScreen.main.bounds.size.height - keyboardFrame.minY)
                 var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
-                if duration > DBL_EPSILON {
+                if duration > Double.ulpOfOne {
                     duration = 0.5
                 }
                 let curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
@@ -237,54 +262,36 @@ public class Window: UIWindow {
     
     private func invalidateTracingStatusBars() {
         self.tracingStatusBarsInvalidated = true
-        self.setNeedsLayout()
+        self.hostView.view.setNeedsLayout()
     }
     
-    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        for view in self.hostView.view.subviews.reversed() {
+            if NSStringFromClass(type(of: view)) == "UITransitionView" {
+                if let result = view.hitTest(point, with: event) {
+                    return result
+                }
+            }
+        }
+        
+        if let result = self._topLevelOverlayController?.view.hitTest(point, with: event) {
+            return result
+        }
+        
         if let result = self.presentationContext.hitTest(point, with: event) {
             return result
         }
         return self.viewController?.view.hitTest(point, with: event)
     }
     
-    public override var frame: CGRect {
-        get {
-            return super.frame
+    func updateSize(_ value: CGSize) {
+        let transition: ContainedViewLayoutTransition
+        if self.hostView.isRotating() {
+            transition = .animated(duration: orientationChangeDuration, curve: .easeInOut)
+        } else {
+            transition = .immediate
         }
-        set(value) {
-            let sizeUpdated = super.frame.size != value.size
-            super.frame = value
-            
-            if sizeUpdated {
-                let transition: ContainedViewLayoutTransition
-                if self.isRotating() {
-                    transition = .animated(duration: orientationChangeDuration, curve: .easeInOut)
-                } else {
-                    transition = .immediate
-                }
-                self.updateLayout { $0.update(size: value.size, transition: transition, overrideTransition: true) }
-            }
-        }
-    }
-    
-    public override var bounds: CGRect {
-        get {
-            return super.frame
-        }
-        set(value) {
-            let sizeUpdated = super.bounds.size != value.size
-            super.bounds = value
-            
-            if sizeUpdated {
-                let transition: ContainedViewLayoutTransition
-                if self.isRotating() {
-                    transition = .animated(duration: orientationChangeDuration, curve: .easeInOut)
-                } else {
-                    transition = .immediate
-                }
-                self.updateLayout { $0.update(size: value.size, transition: transition, overrideTransition: true) }
-            }
-        }
+        self.updateLayout { $0.update(size: value, transition: transition, overrideTransition: true) }
     }
     
     private var _rootController: ContainableController?
@@ -301,14 +308,33 @@ public class Window: UIWindow {
             if let rootController = self._rootController {
                 rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
                 
-                self.addSubview(rootController.view)
+                self.hostView.view.addSubview(rootController.view)
             }
         }
     }
     
-    override public func layoutSubviews() {
-        super.layoutSubviews()
-        
+    private var _topLevelOverlayController: ContainableController?
+    public var topLevelOverlayController: ContainableController? {
+        get {
+            return _topLevelOverlayController
+        }
+        set(value) {
+            if let topLevelOverlayController = self._topLevelOverlayController {
+                topLevelOverlayController.view.removeFromSuperview()
+            }
+            self._topLevelOverlayController = value
+            
+            if let topLevelOverlayController = self._topLevelOverlayController {
+                topLevelOverlayController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
+                
+                self.hostView.view.addSubview(topLevelOverlayController.view)
+            }
+            
+            self.presentationContext.topLevelSubview = self._topLevelOverlayController?.view
+        }
+    }
+    
+    private func layoutSubviews() {
         if self.tracingStatusBarsInvalidated, let statusBarManager = statusBarManager, let keyboardManager = keyboardManager {
             self.tracingStatusBarsInvalidated = false
             
@@ -316,7 +342,7 @@ public class Window: UIWindow {
                 statusBarManager.surfaces = []
             } else {
                 var statusBarSurfaces: [StatusBarSurface] = []
-                for layers in self.layer.traceableLayerSurfaces(withTag: Window.statusBarTracingTag) {
+                for layers in self.hostView.view.layer.traceableLayerSurfaces(withTag: WindowTracingTags.statusBar) {
                     let surface = StatusBarSurface()
                     for layer in layers {
                         let traceableInfo = layer.traceableInfo()
@@ -326,12 +352,12 @@ public class Window: UIWindow {
                     }
                     statusBarSurfaces.append(surface)
                 }
-                self.layer.adjustTraceableLayerTransforms(CGSize())
+                self.hostView.view.layer.adjustTraceableLayerTransforms(CGSize())
                 statusBarManager.surfaces = statusBarSurfaces
             }
             
             var keyboardSurfaces: [KeyboardSurface] = []
-            for layers in self.layer.traceableLayerSurfaces(withTag: Window.keyboardTracingTag) {
+            for layers in self.hostView.view.layer.traceableLayerSurfaces(withTag: WindowTracingTags.keyboard) {
                 for layer in layers {
                     if let view = layer.delegate as? UITracingLayerView {
                         keyboardSurfaces.append(KeyboardSurface(host: view))
@@ -339,22 +365,23 @@ public class Window: UIWindow {
                 }
             }
             keyboardManager.surfaces = keyboardSurfaces
+            self.hostView.updateSupportedInterfaceOrientations(self.presentationContext.combinedSupportedOrientations())
         }
         
-        if !Window.isDeviceRotating() {
-            if !self.isUpdatingOrientationLayout {
+        if !UIWindow.isDeviceRotating() {
+            if !self.hostView.isUpdatingOrientationLayout {
                 self.commitUpdatingLayout()
             } else {
                 self.addPostUpdateToInterfaceOrientationBlock(f: { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.setNeedsLayout()
+                        strongSelf.hostView.view.setNeedsLayout()
                     }
                 })
             }
         } else {
-            Window.addPostDeviceOrientationDidChange({ [weak self] in
+            UIWindow.addPostDeviceOrientationDidChange({ [weak self] in
                 if let strongSelf = self {
-                    strongSelf.setNeedsLayout()
+                    strongSelf.hostView.view.setNeedsLayout()
                 }
             })
         }
@@ -362,11 +389,7 @@ public class Window: UIWindow {
     
     var postUpdateToInterfaceOrientationBlocks: [(Void) -> Void] = []
     
-    override public func _update(toInterfaceOrientation arg1: Int32, duration arg2: Double, force arg3: Bool) {
-        self.isUpdatingOrientationLayout = true
-        super._update(toInterfaceOrientation: arg1, duration: arg2, force: arg3)
-        self.isUpdatingOrientationLayout = false
-        
+    private func updateToInterfaceOrientation() {
         let blocks = self.postUpdateToInterfaceOrientationBlocks
         self.postUpdateToInterfaceOrientationBlocks = []
         for f in blocks {
@@ -383,14 +406,14 @@ public class Window: UIWindow {
             self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         }
         update(&self.updatingLayout!)
-        self.setNeedsLayout()
+        self.hostView.view.setNeedsLayout()
     }
     
     private func commitUpdatingLayout() {
         if let updatingLayout = self.updatingLayout {
             self.updatingLayout = nil
             if updatingLayout.layout != self.windowLayout {
-                var statusBarHeight: CGFloat
+                var statusBarHeight: CGFloat?
                 if let statusBarHost = self.statusBarHost {
                     statusBarHeight = statusBarHost.statusBarFrame.size.height
                 } else {
@@ -398,14 +421,14 @@ public class Window: UIWindow {
                 }
                 let statusBarWasHidden = self.statusBarHidden
                 if statusBarHiddenInLandscape && updatingLayout.layout.size.width > updatingLayout.layout.size.height {
-                    statusBarHeight = 0.0
+                    statusBarHeight = nil
                     self.statusBarHidden = true
                 } else {
                     self.statusBarHidden = false
                 }
                 if self.statusBarHidden != statusBarWasHidden {
                     self.tracingStatusBarsInvalidated = true
-                    self.setNeedsLayout()
+                    self.hostView.view.setNeedsLayout()
                 }
                 self.windowLayout = WindowLayout(size: updatingLayout.layout.size, statusBarHeight: statusBarHeight, inputHeight: updatingLayout.layout.inputHeight, inputMinimized: updatingLayout.layout.inputMinimized)
                 

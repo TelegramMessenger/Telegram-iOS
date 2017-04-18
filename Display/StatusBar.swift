@@ -27,7 +27,7 @@ public class StatusBarSurface {
 public class StatusBar: ASDisplayNode {
     public var statusBarStyle: StatusBarStyle = .Black {
         didSet {
-            if self.statusBarStyle != statusBarStyle {
+            if self.statusBarStyle != oldValue {
                 self.layer.invalidateUpTheTree()
             }
         }
@@ -40,7 +40,7 @@ public class StatusBar: ASDisplayNode {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: Window.statusBarTracingTag))
+        self.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: WindowTracingTags.statusBar))
         
         self.clipsToBounds = true
         self.isUserInteractionEnabled = false

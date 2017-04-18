@@ -126,7 +126,7 @@ open class LegacyPresentedController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    override open func dismiss() {
+    override open func dismiss(completion: (() -> Void)? = nil) {
         switch self.presentation {
             case .modal:
                 self.controllerNode.animateModalOut { [weak self] in
@@ -135,7 +135,7 @@ open class LegacyPresentedController: ViewController {
                     } else if let controller = self?.legacyController as? TGNavigationController {
                         controller.didDismiss()
                     }*/
-                    self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                    self?.presentingViewController?.dismiss(animated: false, completion: completion)
                 }
             case .custom:
                 /*if let controller = self.legacyController as? TGViewController {
@@ -143,7 +143,7 @@ open class LegacyPresentedController: ViewController {
                 } else if let controller = self.legacyController as? TGNavigationController {
                     controller.didDismiss()
                 }*/
-                self.presentingViewController?.dismiss(animated: false, completion: nil)
+                self.presentingViewController?.dismiss(animated: false, completion: completion)
         }
     }
 }

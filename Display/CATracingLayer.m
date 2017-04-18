@@ -231,7 +231,41 @@ static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull
 
 - (void)addAnimation:(CAAnimation *)anim forKey:(NSString *)key {
     if ([anim isKindOfClass:[CABasicAnimation class]]) {
-        if ([key isEqualToString:@"position"]) {
+        if (false && [key isEqualToString:@"bounds.origin.y"]) {
+            CABasicAnimation *animCopy = [anim copy];
+            CGFloat from = [animCopy.fromValue floatValue];
+            CGFloat to = [animCopy.toValue floatValue];
+            
+            animCopy.fromValue = [NSValue valueWithCATransform3D:CATransform3DMakeTranslation(0.0, to - from, 0.0f)];
+            animCopy.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+            animCopy.keyPath = @"sublayerTransform";
+            
+            __weak CATracingLayer *weakSelf = self;
+            anim.delegate = [[CATracingLayerAnimationDelegate alloc] initWithDelegate:anim.delegate animationStopped:^{
+                __strong CATracingLayer *strongSelf = weakSelf;
+                if (strongSelf != nil) {
+                    [strongSelf invalidateUpTheTree];
+                }
+            }];
+            
+            [super addAnimation:anim forKey:key];
+            
+            CABasicAnimation *positionAnimCopy = [animCopy copy];
+            positionAnimCopy.fromValue = [NSValue valueWithCATransform3D:CATransform3DMakeTranslation(0.0, 0.0, 0.0f)];
+            positionAnimCopy.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+            positionAnimCopy.additive = true;
+            positionAnimCopy.delegate = [[CATracingLayerAnimationDelegate alloc] initWithDelegate:anim.delegate animationStopped:^{
+                __strong CATracingLayer *strongSelf = weakSelf;
+                if (strongSelf != nil) {
+                    [strongSelf invalidateUpTheTree];
+                }
+            }];
+            
+            [self invalidateUpTheTree];
+            
+            [self mirrorAnimationDownTheTree:animCopy key:@"sublayerTransform"];
+            [self mirrorPositionAnimationDownTheTree:positionAnimCopy key:@"sublayerTransform"];
+        } else if ([key isEqualToString:@"position"]) {
             CABasicAnimation *animCopy = [anim copy];
             CGPoint from = [animCopy.fromValue CGPointValue];
             CGPoint to = [animCopy.toValue CGPointValue];

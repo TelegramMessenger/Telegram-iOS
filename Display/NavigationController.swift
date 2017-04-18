@@ -504,4 +504,17 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
         }
         return false
     }
+    
+    public final var window: WindowHost? {
+        if let window = self.view.window as? WindowHost {
+            return window
+        } else if let superwindow = self.view.window {
+            for subview in superwindow.subviews {
+                if let subview = subview as? WindowHost {
+                    return subview
+                }
+            }
+        }
+        return nil
+    }
 }

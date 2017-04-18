@@ -33,6 +33,8 @@ final class PresentationContext {
     
     private var presentationDisposables = DisposableSet()
     
+    var topLevelSubview: UIView?
+    
     public func present(_ controller: ViewController) {
         let controllerReady = controller.ready.get()
             |> filter({ $0 })
@@ -40,7 +42,7 @@ final class PresentationContext {
             |> deliverOnMainQueue
             |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
         
-        if let view = self.view, let initialLayout = self.layout {
+        if let _ = self.view, let initialLayout = self.layout {
             controller.view.frame = CGRect(origin: CGPoint(), size: initialLayout.size)
             controller.containerLayoutUpdated(initialLayout, transition: .immediate)
         
@@ -60,10 +62,18 @@ final class PresentationContext {
                         controller.setIgnoreAppearanceMethodInvocations(true)
                         if layout != initialLayout {
                             controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-                            view.addSubview(controller.view)
+                            if let topLevelSubview = strongSelf.topLevelSubview {
+                                view.insertSubview(controller.view, belowSubview: topLevelSubview)
+                            } else {
+                                view.addSubview(controller.view)
+                            }
                             controller.containerLayoutUpdated(layout, transition: .immediate)
                         } else {
-                            view.addSubview(controller.view)
+                            if let topLevelSubview = strongSelf.topLevelSubview {
+                                view.insertSubview(controller.view, belowSubview: topLevelSubview)
+                            } else {
+                                view.addSubview(controller.view)
+                            }
                         }
                         controller.setIgnoreAppearanceMethodInvocations(false)
                         view.layer.invalidateUpTheTree()
@@ -115,7 +125,11 @@ final class PresentationContext {
         if let view = self.view, let layout = self.layout {
             for controller in self.controllers {
                 controller.viewWillAppear(false)
-                view.addSubview(controller.view)
+                if let topLevelSubview = self.topLevelSubview {
+                    view.insertSubview(controller.view, belowSubview: topLevelSubview)
+                } else {
+                    view.addSubview(controller.view)
+                }
                 controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
                 controller.containerLayoutUpdated(layout, transition: .immediate)
                 controller.viewDidAppear(false)
@@ -140,5 +154,15 @@ final class PresentationContext {
             }
         }
         return nil
+    }
+    
+    func combinedSupportedOrientations() -> UIInterfaceOrientationMask {
+        var mask: UIInterfaceOrientationMask = .all
+        
+        for controller in self.controllers {
+            mask = mask.intersection(controller.supportedInterfaceOrientations)
+        }
+        
+        return mask
     }
 }

@@ -33,6 +33,11 @@ open class ViewControllerPresentationArguments {
     private var containerLayout = ContainerViewLayout()
     private let presentationContext: PresentationContext
     
+    public final var supportedOrientations: UIInterfaceOrientationMask = .all
+    override open var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return self.supportedOrientations
+    }
+    
     public private(set) var presentationArguments: Any?
     
     private var _displayNode: ASDisplayNode?
@@ -137,9 +142,9 @@ open class ViewControllerPresentationArguments {
         
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: max(0.0, statusBarHeight - 20.0)), size: CGSize(width: layout.size.width, height: 64.0))
-        if statusBarHeight.isLessThanOrEqualTo(0.0) {
-            navigationBarFrame.origin.y -= 20.0
-            navigationBarFrame.size.height = 20.0 + 32.0
+        if layout.statusBarHeight == nil {
+            //navigationBarFrame.origin.y -= 20.0
+            navigationBarFrame.size.height = 44.0
         }
         
         if !self.displayNavigationBar {
@@ -169,7 +174,7 @@ open class ViewControllerPresentationArguments {
     
     open func displayNodeDidLoad() {
         if let layer = self.displayNode.layer as? CATracingLayer {
-            layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: false, userData: self.displayNode.layer, tracingTag: Window.keyboardTracingTag))
+            layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: false, userData: self.displayNode.layer, tracingTag: WindowTracingTags.keyboard))
         }
         self.updateScrollToTopView()
     }
@@ -195,7 +200,14 @@ open class ViewControllerPresentationArguments {
     }
     
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
-        preconditionFailure("use present(_:in)")
+        super.present(viewControllerToPresent, animated: flag, completion: completion)
+        return
+        
+        if let controller = viewControllerToPresent as? ViewController {
+            self.present(controller, in: .window)
+        } else {
+            preconditionFailure("use present(_:in) for \(viewControllerToPresent)")
+        }
     }
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
@@ -206,12 +218,12 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    private var window: Window? {
-        if let window = self.view.window as? Window {
+    public final var window: WindowHost? {
+        if let window = self.view.window as? WindowHost {
             return window
         } else if let superwindow = self.view.window {
             for subview in superwindow.subviews {
-                if let subview = subview as? Window {
+                if let subview = subview as? WindowHost {
                     return subview
                 }
             }
@@ -247,6 +259,6 @@ open class ViewControllerPresentationArguments {
         super.viewDidAppear(animated)
     }
     
-    open func dismiss() {
+    open func dismiss(completion: (() -> Void)? = nil) {
     }
 }

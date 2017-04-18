@@ -31,8 +31,8 @@ public enum ContainedViewLayoutTransition {
 }
 
 public extension ContainedViewLayoutTransition {
-    func updateFrame(node: ASDisplayNode, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
-        if node.frame.equalTo(frame) {
+    func updateFrame(node: ASDisplayNode, frame: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if node.frame.equalTo(frame) && !force {
             completion?(true)
         } else {
             switch self {
@@ -44,7 +44,7 @@ public extension ContainedViewLayoutTransition {
                 case let .animated(duration, curve):
                     let previousFrame = node.frame
                     node.frame = frame
-                    node.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                    node.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, force: force, completion: { result in
                         if let completion = completion {
                             completion(result)
                         }

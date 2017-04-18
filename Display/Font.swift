@@ -14,6 +14,14 @@ public struct Font {
         }
     }
     
+    public static func semibold(_ size: CGFloat) -> UIFont {
+        if #available(iOS 8.2, *) {
+            return UIFont.systemFont(ofSize: size, weight: UIFontWeightSemibold)
+        } else {
+            return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, size, nil)
+        }
+    }
+    
     public static func bold(_ size: CGFloat) -> UIFont {
         if #available(iOS 8.2, *) {
             return UIFont.boldSystemFont(ofSize: size)

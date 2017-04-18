@@ -18,7 +18,13 @@ private func mapStatusBar(_ statusBar: StatusBar) -> MappedStatusBar {
 }
 
 private func mappedSurface(_ surface: StatusBarSurface) -> MappedStatusBarSurface {
-    return MappedStatusBarSurface(statusBars: surface.statusBars.map(mapStatusBar), surface: surface)
+    var statusBars: [MappedStatusBar] = []
+    for statusBar in surface.statusBars {
+        if statusBar.statusBarStyle != .Ignore {
+            statusBars.append(mapStatusBar(statusBar))
+        }
+    }
+    return MappedStatusBarSurface(statusBars: statusBars, surface: surface)
 }
 
 private func optimizeMappedSurface(statusBarSize: CGSize, surface: MappedStatusBarSurface) -> MappedStatusBarSurface {
@@ -70,12 +76,36 @@ class StatusBarManager {
             return
         }
         
-        var mappedSurfaces = self.surfaces.map({ optimizeMappedSurface(statusBarSize: statusBarFrame.size, surface: mappedSurface($0)) })
+        var mappedSurfaces: [MappedStatusBarSurface] = []
+        var mapIndex = 0
+        var doNotOptimize = false
+        for surface in self.surfaces {
+            inner: for statusBar in surface.statusBars {
+                if statusBar.statusBarStyle == .Hide {
+                    doNotOptimize = true
+                    break inner
+                }
+            }
+            
+            let mapped = mappedSurface(surface)
+            
+            if doNotOptimize {
+                mappedSurfaces.append(mapped)
+            } else {
+                mappedSurfaces.append(optimizeMappedSurface(statusBarSize: statusBarFrame.size, surface: mapped))
+            }
+            mapIndex += 1
+        }
         
         var reduceSurfaces = true
         var reduceSurfacesStatusBarStyleAndAlpha: (StatusBarStyle, CGFloat)?
+        var reduceIndex = 0
         outer: for surface in mappedSurfaces {
             for mappedStatusBar in surface.statusBars {
+                if reduceIndex == 0 && mappedStatusBar.style == .Hide {
+                    reduceSurfaces = false
+                    break outer
+                }
                 if mappedStatusBar.frame.origin.equalTo(CGPoint()) {
                     let statusBarAlpha = mappedStatusBar.statusBar?.alpha ?? 1.0
                     if let reduceSurfacesStatusBarStyleAndAlpha = reduceSurfacesStatusBarStyleAndAlpha {
@@ -92,6 +122,7 @@ class StatusBarManager {
                     }
                 }
             }
+            reduceIndex += 1
         }
         
         if reduceSurfaces {
@@ -112,16 +143,19 @@ class StatusBarManager {
         var globalStatusBar: (StatusBarStyle, CGFloat)?
         
         var coveredIdentity = false
+        var statusBarIndex = 0
         for i in 0 ..< mappedSurfaces.count {
             for mappedStatusBar in mappedSurfaces[i].statusBars {
                 if let statusBar = mappedStatusBar.statusBar {
                     if mappedStatusBar.frame.origin.equalTo(CGPoint()) && !statusBar.layer.hasPositionOrOpacityAnimations() {
                         if !coveredIdentity {
-                            coveredIdentity = CGFloat(1.0).isLessThanOrEqualTo(statusBar.alpha)
-                            if i == 0 && globalStatusBar == nil {
-                                globalStatusBar = (mappedStatusBar.style, statusBar.alpha)
-                            } else {
-                                visibleStatusBars.append(statusBar)
+                            if statusBar.statusBarStyle != .Hide {
+                                coveredIdentity = CGFloat(1.0).isLessThanOrEqualTo(statusBar.alpha)
+                                if statusBarIndex == 0 && globalStatusBar == nil {
+                                    globalStatusBar = (mappedStatusBar.style, statusBar.alpha)
+                                } else {
+                                    visibleStatusBars.append(statusBar)
+                                }
                             }
                         }
                     } else {
@@ -130,11 +164,12 @@ class StatusBarManager {
                 } else {
                     if !coveredIdentity {
                         coveredIdentity = true
-                        if i == 0 && globalStatusBar == nil {
+                        if statusBarIndex == 0 && globalStatusBar == nil {
                             globalStatusBar = (mappedStatusBar.style, 1.0)
                         }
                     }
                 }
+                statusBarIndex += 1
             }
         }
         

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 private let groupSpacing: CGFloat = 16.0
 
 final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
+    private var groups: [ActionSheetItemGroup] = []
     private var groupNodes: [ActionSheetItemGroupNode] = []
     
     override init() {
@@ -11,6 +12,8 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
     }
     
     func setGroups(_ groups: [ActionSheetItemGroup]) {
+        self.groups = groups
+        
         for groupNode in self.groupNodes {
             groupNode.removeFromSupernode()
         }
@@ -71,5 +74,17 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         for node in self.groupNodes {
             node.animateDimViewsAlpha(from: from, to: to, duration: duration)
         }
+    }
+    
+    public func updateItem(groupIndex: Int, itemIndex: Int, _ f: (ActionSheetItem) -> ActionSheetItem) {
+        var item = self.groups[groupIndex].items[itemIndex]
+        let itemNode = self.groupNodes[groupIndex].itemNode(at: itemIndex)
+        item = f(item)
+        item.updateNode(itemNode)
+        
+        var groupItems = self.groups[groupIndex].items
+        groupItems[itemIndex] = item
+        
+        self.groups[groupIndex] = ActionSheetItemGroup(items: groupItems)
     }
 }

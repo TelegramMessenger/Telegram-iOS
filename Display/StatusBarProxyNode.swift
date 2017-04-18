@@ -4,6 +4,8 @@ import AsyncDisplayKit
 public enum StatusBarStyle {
     case Black
     case White
+    case Ignore
+    case Hide
 }
 
 private enum StatusBarItemType {
@@ -142,7 +144,7 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
                 
                 let baseColor: UInt32
                 switch style {
-                    case .Black:
+                    case .Black, .Ignore, .Hide:
                         baseColor = 0x000000
                     case .White:
                         baseColor = 0xffffff
@@ -193,7 +195,7 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
         
         let baseColor: UInt32
         switch style {
-        case .Black:
+        case .Black, .Ignore, .Hide:
             baseColor = 0x000000
         case .White:
             baseColor = 0xffffff

@@ -209,4 +209,8 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
             node.layer.animateAlpha(from: from, to: to, duration: duration)
         }
     }
+    
+    func itemNode(at index: Int) -> ActionSheetItemNode {
+        return self.itemNodes[index]
+    }
 }

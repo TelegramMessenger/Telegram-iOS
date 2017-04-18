@@ -35,7 +35,7 @@ open class NavigationBar: ASDisplayNode {
     open var foregroundColor: UIColor = UIColor.black {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: self.foregroundColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.foregroundColor)
             }
         }
     }
@@ -53,7 +53,7 @@ open class NavigationBar: ASDisplayNode {
     
     private var collapsed: Bool {
         get {
-            return self.frame.size.height < (20.0 + 44.0)
+            return self.frame.size.height.isLess(than: 44.0)
         }
     }
     
@@ -173,7 +173,7 @@ open class NavigationBar: ASDisplayNode {
     private var title: String? {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: self.foregroundColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.foregroundColor)
                 if self.titleNode.supernode == nil {
                     self.clippingNode.addSubnode(self.titleNode)
                 }
@@ -544,7 +544,7 @@ open class NavigationBar: ASDisplayNode {
     public func makeTransitionTitleNode(foregroundColor: UIColor) -> ASDisplayNode? {
         if let title = self.title {
             let node = ASTextNode()
-            node.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: foregroundColor)
+            node.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: foregroundColor)
             return node
         } else {
             return nil

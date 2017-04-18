@@ -49,4 +49,10 @@ open class ActionSheetController: ViewController {
             self.actionSheetNode.setGroups(groups)
         }
     }
+    
+    public func updateItem(groupIndex: Int, itemIndex: Int, _ f: (ActionSheetItem) -> ActionSheetItem) {
+        if self.isViewLoaded {
+            self.actionSheetNode.updateItem(groupIndex: groupIndex, itemIndex: itemIndex, f)
+        }
+    }
 }
