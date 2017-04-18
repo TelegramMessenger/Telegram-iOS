@@ -28,11 +28,11 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     let mtProto: MTProto
     let requestService: MTRequestMessageService
     
-    init(datacenterId: Int, context: MTContext, masterDatacenterId: Int) {
+    init(datacenterId: Int, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?) {
         self.datacenterId = datacenterId
         self.context = context
 
-        self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: nil)
+        self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: usageInfo)
         if datacenterId != masterDatacenterId {
             self.mtProto.authTokenMasterDatacenterId = masterDatacenterId
             self.mtProto.requiredAuthToken = Int(datacenterId) as NSNumber

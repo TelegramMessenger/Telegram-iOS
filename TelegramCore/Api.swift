@@ -130,6 +130,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[393186209] = { return Api.SendMessageAction.parse_sendMessageGeoLocationAction($0) }
     dict[1653390447] = { return Api.SendMessageAction.parse_sendMessageChooseContactAction($0) }
     dict[-580219064] = { return Api.SendMessageAction.parse_sendMessageGamePlayAction($0) }
+    dict[-1997373508] = { return Api.SendMessageAction.parse_sendMessageRecordRoundAction($0) }
+    dict[-1150187996] = { return Api.SendMessageAction.parse_sendMessageUploadRoundAction($0) }
     dict[-1137792208] = { return Api.PrivacyKey.parse_privacyKeyStatusTimestamp($0) }
     dict[1343122938] = { return Api.PrivacyKey.parse_privacyKeyChatInvite($0) }
     dict[1030105979] = { return Api.PrivacyKey.parse_privacyKeyPhoneCall($0) }
@@ -4875,6 +4877,8 @@ public struct Api {
         case sendMessageGeoLocationAction
         case sendMessageChooseContactAction
         case sendMessageGamePlayAction
+        case sendMessageRecordRoundAction
+        case sendMessageUploadRoundAction
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -4941,6 +4945,18 @@ public struct Api {
                 case .sendMessageGamePlayAction:
                     if boxed {
                         buffer.appendInt32(-580219064)
+                    }
+                    
+                    break
+                case .sendMessageRecordRoundAction:
+                    if boxed {
+                        buffer.appendInt32(-1997373508)
+                    }
+                    
+                    break
+                case .sendMessageUploadRoundAction:
+                    if boxed {
+                        buffer.appendInt32(-1150187996)
                     }
                     
                     break
@@ -5013,6 +5029,12 @@ public struct Api {
         fileprivate static func parse_sendMessageGamePlayAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageGamePlayAction
         }
+        fileprivate static func parse_sendMessageRecordRoundAction(_ reader: BufferReader) -> SendMessageAction? {
+            return Api.SendMessageAction.sendMessageRecordRoundAction
+        }
+        fileprivate static func parse_sendMessageUploadRoundAction(_ reader: BufferReader) -> SendMessageAction? {
+            return Api.SendMessageAction.sendMessageUploadRoundAction
+        }
     
         public var description: String {
             get {
@@ -5039,6 +5061,10 @@ public struct Api {
                         return "(sendMessageChooseContactAction)"
                     case .sendMessageGamePlayAction:
                         return "(sendMessageGamePlayAction)"
+                    case .sendMessageRecordRoundAction:
+                        return "(sendMessageRecordRoundAction)"
+                    case .sendMessageUploadRoundAction:
+                        return "(sendMessageUploadRoundAction)"
                 }
             }
         }

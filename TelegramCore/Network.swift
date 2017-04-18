@@ -94,7 +94,206 @@ private var registeredLoggingFunctions: Void = {
     registerLoggingFunctions()
 }()
 
-func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, keychain: Keychain, networkUsageInfoPath: String?, testingEnvironment: Bool) -> Signal<Network, NoError> {
+private enum UsageCalculationConnection: Int32 {
+    case cellular = 0
+    case wifi = 1
+}
+
+private enum UsageCalculationDirection: Int32 {
+    case incoming = 0
+    case outgoing = 1
+}
+
+private struct UsageCalculationTag {
+    let connection: UsageCalculationConnection
+    let direction: UsageCalculationDirection
+    let category: MediaResourceStatsCategory
+    
+    var key: Int32 {
+        switch category {
+            case .generic:
+                return 0 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .image:
+                return 1 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .video:
+                return 2 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .audio:
+                return 3 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .file:
+                return 4 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+        }
+    }
+}
+
+private enum UsageCalculationResetKey: Int32 {
+    case wifi = 80 //20 * 4 + 0
+    case cellular = 81 //20 * 4 + 2
+}
+
+private func usageCalculationInfo(basePath: String, category: MediaResourceStatsCategory?) -> MTNetworkUsageCalculationInfo {
+    let categoryValue: MediaResourceStatsCategory
+    if let category = category {
+        categoryValue = category
+    } else {
+        categoryValue = .generic
+    }
+    return MTNetworkUsageCalculationInfo(filePath: basePath + "/network-stats", incomingWWANKey: UsageCalculationTag(connection: .cellular, direction: .incoming, category: categoryValue).key, outgoingWWANKey: UsageCalculationTag(connection: .cellular, direction: .outgoing, category: categoryValue).key, incomingOtherKey: UsageCalculationTag(connection: .wifi, direction: .incoming, category: categoryValue).key, outgoingOtherKey: UsageCalculationTag(connection: .wifi, direction: .outgoing, category: categoryValue).key)
+}
+
+public struct NetworkUsageStatsDirectionsEntry: Equatable {
+    public let incoming: Int64
+    public let outgoing: Int64
+    
+    public static func ==(lhs: NetworkUsageStatsDirectionsEntry, rhs: NetworkUsageStatsDirectionsEntry) -> Bool {
+        return lhs.incoming == rhs.incoming && lhs.outgoing == rhs.outgoing
+    }
+}
+
+public struct NetworkUsageStatsConnectionsEntry: Equatable {
+    public let cellular: NetworkUsageStatsDirectionsEntry
+    public let wifi: NetworkUsageStatsDirectionsEntry
+    
+    public static func ==(lhs: NetworkUsageStatsConnectionsEntry, rhs: NetworkUsageStatsConnectionsEntry) -> Bool {
+        return lhs.cellular == rhs.cellular && lhs.wifi == rhs.wifi
+    }
+}
+
+public struct NetworkUsageStats: Equatable {
+    public let generic: NetworkUsageStatsConnectionsEntry
+    public let image: NetworkUsageStatsConnectionsEntry
+    public let video: NetworkUsageStatsConnectionsEntry
+    public let audio: NetworkUsageStatsConnectionsEntry
+    public let file: NetworkUsageStatsConnectionsEntry
+    
+    public let resetWifiTimestamp: Int32
+    public let resetCellularTimestamp: Int32
+    
+    public static func ==(lhs: NetworkUsageStats, rhs: NetworkUsageStats) -> Bool {
+        return lhs.generic == rhs.generic && lhs.image == rhs.image && lhs.video == rhs.video && lhs.audio == rhs.audio && lhs.file == rhs.file && lhs.resetWifiTimestamp == rhs.resetWifiTimestamp && lhs.resetCellularTimestamp == rhs.resetCellularTimestamp
+    }
+}
+
+public struct ResetNetworkUsageStats: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let wifi = ResetNetworkUsageStats(rawValue: 1 << 0)
+    public static let cellular = ResetNetworkUsageStats(rawValue: 1 << 1)
+}
+
+func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signal<NetworkUsageStats, NoError> {
+    return ((Signal<NetworkUsageStats, NoError> { subscriber in
+        let info = usageCalculationInfo(basePath: basePath, category: nil)
+        let manager = MTNetworkUsageManager(info: info)!
+        
+        let rawKeys: [UsageCalculationTag] = [
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .generic),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .generic),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .generic),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .generic),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .image),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .image),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .image),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .image),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .video),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .video),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .video),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .video),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .audio),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .audio),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .audio),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .audio),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .file),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .file),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .file),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .file)
+        ]
+        
+        var keys: [NSNumber] = rawKeys.map { $0.key as NSNumber }
+        
+        var resetKeys: [NSNumber] = []
+        var resetAddKeys: [NSNumber: NSNumber] = [:]
+        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        if reset.contains(.wifi) {
+            resetKeys = rawKeys.filter({ $0.connection == .wifi }).map({ $0.key as NSNumber })
+            resetAddKeys[UsageCalculationResetKey.wifi.rawValue as NSNumber] = Int64(timestamp) as NSNumber
+        }
+        if reset.contains(.cellular) {
+            resetKeys = rawKeys.filter({ $0.connection == .cellular }).map({ $0.key as NSNumber })
+            resetAddKeys[UsageCalculationResetKey.cellular.rawValue as NSNumber] = Int64(timestamp) as NSNumber
+        }
+        if !resetKeys.isEmpty {
+            manager.resetKeys(resetKeys, setKeys: resetAddKeys, completion: {})
+        }
+        keys.append(UsageCalculationResetKey.cellular.rawValue as NSNumber)
+        keys.append(UsageCalculationResetKey.wifi.rawValue as NSNumber)
+        
+        let disposable = manager.currentStats(forKeys: keys).start(next: { next in
+            var dict: [Int32: Int64] = [:]
+            for key in keys {
+                dict[key.int32Value] = 0
+            }
+            (next as! NSDictionary).enumerateKeysAndObjects({ key, value, _ in
+                dict[(key as AnyObject).int32Value] = (value as AnyObject).int64Value!
+            })
+            subscriber.putNext(NetworkUsageStats(
+                generic: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .generic).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .generic).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .generic).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .generic).key]!)),
+                image: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .image).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .image).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .image).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .image).key]!)),
+                video: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .video).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .video).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .video).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .video).key]!)),
+                audio: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .audio).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .audio).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .audio).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .audio).key]!)),
+                file: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .file).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .file).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .file).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .file).key]!)),
+                resetWifiTimestamp: Int32(dict[UsageCalculationResetKey.wifi.rawValue]!),
+                resetCellularTimestamp: Int32(dict[UsageCalculationResetKey.cellular.rawValue]!)
+            ))
+        })!
+        return ActionDisposable {
+            disposable.dispose()
+        }
+    }) |> then(Signal<NetworkUsageStats, NoError>.complete() |> delay(5.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
+func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -131,7 +330,7 @@ func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, ke
             }
             
             context.keychain = keychain
-            let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: nil)!
+            let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
             
             let connectionStatus = Promise<ConnectionStatus>(.WaitingForNetwork)
             
@@ -159,7 +358,7 @@ func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, ke
             mtProto.delegate = connectionStatusDelegate
             mtProto.add(requestService)
             
-            subscriber.putNext(Network(datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus))
+            subscriber.putNext(Network(datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath))
             subscriber.putCompletion()
         }
         
@@ -172,6 +371,7 @@ public class Network: NSObject, MTRequestMessageServiceDelegate {
     let context: MTContext
     let mtProto: MTProto
     let requestService: MTRequestMessageService
+    let basePath: String
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     
     private let _connectionStatus: Promise<ConnectionStatus>
@@ -184,13 +384,14 @@ public class Network: NSObject, MTRequestMessageServiceDelegate {
     
     var loggedOut: (() -> Void)?
     
-    fileprivate init(datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>) {
+    fileprivate init(datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String) {
         self.datacenterId = datacenterId
         self.context = context
         self.mtProto = mtProto
         self.requestService = requestService
         self.connectionStatusDelegate = connectionStatusDelegate
         self._connectionStatus = _connectionStatus
+        self.basePath = basePath
         
         super.init()
         
@@ -219,10 +420,10 @@ public class Network: NSObject, MTRequestMessageServiceDelegate {
         self.loggedOut?()
     }
     
-    func download(datacenterId: Int) -> Signal<Download, NoError> {
+    func download(datacenterId: Int, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                subscriber.putNext(Download(datacenterId: datacenterId, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId))
+                subscriber.putNext(Download(datacenterId: datacenterId, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory)))
             }
             subscriber.putCompletion()
             

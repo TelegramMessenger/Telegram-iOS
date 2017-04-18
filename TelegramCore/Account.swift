@@ -145,7 +145,7 @@ public class UnauthorizedAccount {
                 postbox.removeKeychainEntryForKey(key)
             })
             
-            return initializedNetwork(apiId: self.apiId, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: self.basePath), testingEnvironment: self.testingEnvironment)
+            return initializedNetwork(apiId: self.apiId, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment)
                 |> map { network in
                     let updated = UnauthorizedAccount(apiId: self.apiId, id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                     updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
@@ -219,6 +219,7 @@ private var declaredEncodables: Void = {
     declareEncodable(ArchivedStickerPacksInfo.self, f: { ArchivedStickerPacksInfo(decoder: $0) })
     declareEncodable(SynchronizeChatInputStateOperation.self, f: { SynchronizeChatInputStateOperation(decoder: $0) })
     declareEncodable(SynchronizeSavedGifsOperation.self, f: { SynchronizeSavedGifsOperation(decoder: $0) })
+    declareEncodable(CacheStorageSettings.self, f: { CacheStorageSettings(decoder: $0) })
     
     return
 }()
@@ -272,12 +273,12 @@ public func accountWithId(apiId: Int32, id: AccountRecordId, supplementary: Bool
                         if let accountState = accountState {
                             switch accountState {
                                 case let unauthorizedState as UnauthorizedAccountState:
-                                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: path), testingEnvironment: testingEnvironment)
+                                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment)
                                         |> map { network -> AccountResult in
                                             return .unauthorized(UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                         }
                                 case let authorizedState as AuthorizedAccountState:
-                                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: path), testingEnvironment: testingEnvironment)
+                                    return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment)
                                         |> map { network -> AccountResult in
                                             return .authorized(Account(id: id, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                                     }
@@ -286,7 +287,7 @@ public func accountWithId(apiId: Int32, id: AccountRecordId, supplementary: Bool
                             }
                         }
                         
-                        return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: 2, keychain: keychain, networkUsageInfoPath: accountNetworkUsageInfoPath(basePath: path), testingEnvironment: testingEnvironment)
+                        return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: testingEnvironment)
                             |> map { network -> AccountResult in
                                 return .unauthorized(UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                         }
@@ -365,9 +366,9 @@ public enum AccountNetworkState {
 
 public final class AccountAuxiliaryMethods {
     public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
-    public let fetchResource: (Account, MediaResource, Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError>?
+    public let fetchResource: (Account, MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?
     
-    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError>?) {
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?) {
         self.updatePeerChatInputState = updatePeerChatInputState
         self.fetchResource = fetchResource
     }
@@ -624,20 +625,6 @@ public class Account {
         self.managedOperationsDisposable.dispose()
     }
     
-    /*public func currentNetworkStats() -> Signal<MTNetworkUsageManagerStats, NoError> {
-        return Signal { subscriber in
-            let manager = MTNetworkUsageManager(info: MTNetworkUsageCalculationInfo(filePath: accountNetworkUsageInfoPath(basePath: self.basePath)))!
-            manager.currentStats().start(next: { next in
-                if let stats = next as? MTNetworkUsageManagerStats {
-                    subscriber.putNext(stats)
-                }
-                subscriber.putCompletion()
-            }, error: nil, completed: nil)
-            
-            return EmptyDisposable
-        }
-    }*/
-    
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
         return self.peerInputActivityManager.activities(peerId: peerId)
     }
@@ -653,15 +640,19 @@ public class Account {
     }
 }
 
+public func accountNetworkUsageStats(account: Account, reset: ResetNetworkUsageStats) -> Signal<NetworkUsageStats, NoError> {
+    return networkUsageStats(basePath: account.basePath, reset: reset)
+}
+
 public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
 public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: Media, _ userInteractive: Bool) -> Signal<Media?, NoError>
 
 public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
-    account.postbox.mediaBox.fetchResource = { [weak account] resource, range -> Signal<MediaResourceDataFetchResult, NoError> in
+    account.postbox.mediaBox.fetchResource = { [weak account] resource, range, tag -> Signal<MediaResourceDataFetchResult, NoError> in
         if let strongAccount = account {
-            if let result = fetchResource(account: strongAccount, resource: resource, range: range) {
+            if let result = fetchResource(account: strongAccount, resource: resource, range: range, tag: tag) {
                 return result
-            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, range) {
+            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, range, tag) {
                 return result
             } else {
                 return .never()

@@ -95,6 +95,10 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
                 return .sendMessageGamePlayAction
             case let .uploadingFile(progress):
                 return .sendMessageUploadDocumentAction(progress: progress)
+            case .recordingInstantVideo:
+                return .sendMessageRecordRoundAction
+            case .uploadingInstantVideo:
+                return .sendMessageUploadRoundAction
         }
     } else {
         return .sendMessageCancelAction

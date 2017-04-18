@@ -192,8 +192,8 @@ private final class MultipartFetchManager {
     }
 }
 
-func multipartFetch(account: Account, resource: TelegramCloudMediaResource, size: Int?, range: Range<Int>, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
-    return account.network.download(datacenterId: resource.datacenterId)
+func multipartFetch(account: Account, resource: TelegramCloudMediaResource, size: Int?, range: Range<Int>, tag: MediaResourceFetchTag?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
+    return account.network.download(datacenterId: resource.datacenterId, tag: tag)
         |> mapToSignal { download -> Signal<MediaResourceDataFetchResult, NoError> in
             return Signal { subscriber in
                 let inputLocation = resource.apiInputLocation

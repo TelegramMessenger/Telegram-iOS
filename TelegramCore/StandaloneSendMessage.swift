@@ -140,7 +140,7 @@ private enum UploadMediaEvent {
 }
 
 private func uploadedImage(account: Account, text: String, data: Data) -> Signal<UploadMediaEvent, NoError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false)
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
         |> map { next -> UploadMediaEvent in
             switch next {
                 case let .inputFile(inputFile):
@@ -154,7 +154,7 @@ private func uploadedImage(account: Account, text: String, data: Data) -> Signal
 }
 
 private func uploadedFile(account: Account, text: String, data: Data, mimeType: String, attributes: [TelegramMediaFileAttribute]) -> Signal<UploadMediaEvent, NoError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false)
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes)))
         |> map { next -> UploadMediaEvent in
             switch next {
                 case let .inputFile(inputFile):
