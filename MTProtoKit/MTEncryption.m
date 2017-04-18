@@ -305,10 +305,16 @@ NSData *MTExp(NSData *base, NSData *exp, NSData *modulus)
 {
     BN_CTX *ctx = BN_CTX_new();
     BIGNUM *bnBase = BN_bin2bn(base.bytes, (int)base.length, NULL);
+    BN_set_flags(bnBase, BN_FLG_CONSTTIME);
+
     BIGNUM *bnExp = BN_bin2bn(exp.bytes, (int)exp.length, NULL);
+    BN_set_flags(bnExp, BN_FLG_CONSTTIME);
+    
     BIGNUM *bnModulus = BN_bin2bn(modulus.bytes, (int)modulus.length, NULL);
+    BN_set_flags(bnModulus, BN_FLG_CONSTTIME);
     
     BIGNUM *bnRes = BN_new();
+    BN_set_flags(bnModulus, BN_FLG_CONSTTIME);
     
     BN_mod_exp(bnRes, bnBase, bnExp, bnModulus, ctx);
     
