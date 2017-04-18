@@ -5,6 +5,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+private let updatingAvatarOverlayImage = generateFilledCircleImage(diameter: 66.0, color: UIColor(white: 1.0, alpha: 0.5), backgroundColor: nil)
+
 enum ItemListAvatarAndNameInfoItemName: Equatable {
     case personName(firstName: String, lastName: String)
     case title(title: String)
@@ -35,7 +37,7 @@ enum ItemListAvatarAndNameInfoItemName: Equatable {
     
     var isEmpty: Bool {
         switch self {
-            case let .personName(firstName, lastName):
+            case let .personName(firstName, _):
                 return firstName.isEmpty
             case let .title(title):
                 return title.isEmpty
@@ -75,6 +77,10 @@ struct ItemListAvatarAndNameInfoItemState: Equatable {
     }
 }
 
+final class ItemListAvatarAndNameInfoItemContext {
+    var hiddenAvatarRepresentation: TelegramMediaImageRepresentation?
+}
+
 class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     let account: Account
     let peer: Peer?
@@ -84,8 +90,11 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let editingNameUpdated: (ItemListAvatarAndNameInfoItemName) -> Void
+    let avatarTapped: () -> Void
+    let context: ItemListAvatarAndNameInfoItemContext?
+    let updatingImage: TelegramMediaImageRepresentation?
     
-    init(account: Account, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void) {
+    init(account: Account, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: TelegramMediaImageRepresentation? = nil) {
         self.account = account
         self.peer = peer
         self.presence = presence
@@ -94,6 +103,9 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.editingNameUpdated = editingNameUpdated
+        self.avatarTapped = avatarTapped
+        self.context = context
+        self.updatingImage = updatingImage
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -141,6 +153,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     
     private let avatarNode: AvatarNode
+    private let updatingAvatarOverlay: ASImageNode
+    
     private let nameNode: TextNode
     private let statusNode: TextNode
     
@@ -151,6 +165,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
     private var item: ItemListAvatarAndNameInfoItem?
     private var layoutWidthAndNeighbors: (width: CGFloat, neighbors: ItemListNeighbors)?
     private var peerPresenceManager: PeerPresenceStatusManager?
+    
+    private let hiddenAvatarRepresentationDisposable = MetaDisposable()
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -166,6 +182,10 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.avatarNode = AvatarNode(font: Font.regular(28.0))
+        
+        self.updatingAvatarOverlay = ASImageNode()
+        self.updatingAvatarOverlay.displayWithoutProcessing = true
+        self.updatingAvatarOverlay.displaysAsynchronously = false
         
         self.nameNode = TextNode()
         self.nameNode.isLayerBacked = true
@@ -191,9 +211,20 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
         })
     }
     
+    deinit {
+        self.hiddenAvatarRepresentationDisposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.avatarNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.avatarTapGesture(_:))))
+    }
+    
     func asyncLayout() -> (_ item: ItemListAvatarAndNameInfoItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let layoutNameNode = TextNode.asyncLayout(self.nameNode)
         let layoutStatusNode = TextNode.asyncLayout(self.statusNode)
+        let currentOverlayImage = self.updatingAvatarOverlay.image
         
         return { item, width, neighbors in
             let displayTitle: ItemListAvatarAndNameInfoItemName
@@ -262,13 +293,40 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                     insets = UIEdgeInsets(top: topInset, left: 0.0, bottom: separatorHeight, right: 0.0)
             }
             
+            var updateAvatarOverlayImage: UIImage?
+            if item.updatingImage != nil && currentOverlayImage == nil {
+                updateAvatarOverlayImage = updatingAvatarOverlayImage
+            }
+            
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
                     strongSelf.layoutWidthAndNeighbors = (width, neighbors)
+                    
+                    if item.updatingImage != nil {
+                        if let updateAvatarOverlayImage = updateAvatarOverlayImage {
+                            strongSelf.updatingAvatarOverlay.image = updateAvatarOverlayImage
+                        }
+                        strongSelf.updatingAvatarOverlay.alpha = 1.0
+                        if strongSelf.updatingAvatarOverlay.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.updatingAvatarOverlay, aboveSubnode: strongSelf.avatarNode)
+                        }
+                    } else if strongSelf.updatingAvatarOverlay.supernode != nil {
+                        if animated {
+                            strongSelf.updatingAvatarOverlay.alpha = 0.0
+                            strongSelf.updatingAvatarOverlay.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { value in
+                                if value {
+                                    self?.updatingAvatarOverlay.removeFromSupernode()
+                                }
+                            })
+                        } else {
+                            strongSelf.updatingAvatarOverlay.removeFromSupernode()
+                        }
+                    }
                     
                     let avatarOriginY: CGFloat
                     switch item.style {
@@ -336,10 +394,13 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                     }*/
                     
                     if let peer = item.peer {
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer)
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, temporaryRepresentation: item.updatingImage)
                     }
                     
-                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 15.0, y: avatarOriginY), size: CGSize(width: 66.0, height: 66.0))
+                    let avatarFrame = CGRect(origin: CGPoint(x: 15.0, y: avatarOriginY), size: CGSize(width: 66.0, height: 66.0))
+                    strongSelf.avatarNode.frame = avatarFrame
+                    strongSelf.updatingAvatarOverlay.frame = avatarFrame
+                    
                     strongSelf.nameNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0), size: nameNodeLayout.size)
                     
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0 + nameNodeLayout.size.height + 4.0), size: statusNodeLayout.size)
@@ -483,6 +544,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                     if let presence = item.presence as? TelegramUserPresence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)
                     }
+                    
+                    strongSelf.updateAvatarHidden()
                 }
             })
         }
@@ -499,6 +562,28 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
             if let editingName = editingName {
                 item.editingNameUpdated(editingName)
             }
+        }
+    }
+    
+    @objc func avatarTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if let item = self.item {
+            item.avatarTapped()
+        }
+    }
+    
+    func avatarTransitionNode() -> (ASDisplayNode, CGRect) {
+        return (self.avatarNode, self.avatarNode.bounds)
+    }
+    
+    func updateAvatarHidden() {
+        var hidden = false
+        if let item = self.item, let context = item.context, let peer = item.peer, let hiddenAvatarRepresentation = context.hiddenAvatarRepresentation {
+            if peer.profileImageRepresentations.contains(hiddenAvatarRepresentation) {
+                hidden = true
+            }
+        }
+        if hidden != self.avatarNode.isHidden {
+            self.avatarNode.isHidden = hidden
         }
     }
 }

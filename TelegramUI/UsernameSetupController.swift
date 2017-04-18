@@ -282,7 +282,7 @@ public func usernameSetupController(account: Account) -> ViewController {
                 dismissImpl?()
             })
             
-            let controllerState = ItemListControllerState(title: "Username", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text("Username"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: usernameSetupControllerEntries(view: view, state: state), style: .blocks, animateChanges: false)
             
             return (controllerState, (listState, arguments))

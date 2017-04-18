@@ -135,7 +135,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
             case .addMemberInfo:
                 return ItemListTextItem(text: .plain("Only channel admins can see this list."), sectionId: self.section)
             case let .peerItem(_, participant, editing, enabled):
-                return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -417,7 +417,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: "Members", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(title: .text("Members"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             let listState = ItemListNodeState(entries: ChannelMembersControllerEntries(account: account, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))

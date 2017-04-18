@@ -131,3 +131,16 @@ func messageBubbleActionButtonImage(color: UIColor, position: MessageBubbleActio
         }
     })!.stretchableImage(withLeftCapWidth: Int(size.width / 2.0), topCapHeight: Int(size.height / 2.0))
 }
+
+func generateInstantVideoBackground(incoming: Bool, highlighted: Bool = false) -> UIImage? {
+    return generateImage(CGSize(width: 212.0, height: 212.0), rotatedContext: { size, context in
+        let lineWidth: CGFloat = 0.5
+        
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor((incoming ? (highlighted ? incomingStrokeColor : incomingStrokeColor) : (highlighted ? outgoingStrokeColor : outgoingStrokeColor)).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        context.setFillColor((incoming ? (highlighted ? incomingFillHighlightedColor : incomingFillColor) : (highlighted ? outgoingFillHighlightedColor : outgoingFillColor)).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: lineWidth, y: lineWidth), size: CGSize(width: size.width - lineWidth * 2.0, height: size.height - lineWidth * 2.0)))
+    })
+}

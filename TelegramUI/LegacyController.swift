@@ -2,17 +2,21 @@ import Foundation
 import Display
 import TelegramLegacyComponents
 
-enum LegacyControllerPresentation {
+public enum LegacyControllerPresentation {
     case custom
-    case modal
+    case modal(animateIn: Bool)
 }
 
-private func passControllerAppearanceAnimated(presentation: LegacyControllerPresentation) -> Bool {
+private func passControllerAppearanceAnimated(in: Bool, presentation: LegacyControllerPresentation) -> Bool {
     switch presentation {
-        case .custom:
+        case let .modal(animateIn):
+            if `in` {
+                return animateIn
+            } else {
+                return true
+            }
+        default:
             return false
-        case .modal:
-            return true
     }
 }
 
@@ -80,9 +84,15 @@ private final class LegacyControllerApplicationInterface: NSObject, TGLegacyAppl
     public func animateApplicationStatusBarStyleTransition(withDuration duration: TimeInterval) {
         
     }
+    
+    public func makeOverlayControllerWindow(_ parentController: TGViewController!, contentController: TGOverlayController!, keepKeyboard: Bool) -> TGOverlayControllerWindow! {
+        return LegacyOverlayWindowHost(presentInWindow: { [weak self] c in
+            self?.controller?.present(c, in: .window)
+        }, parentController: parentController, contentController: contentController, keepKeyboard: keepKeyboard)
+    }
 }
 
-class LegacyController: ViewController {
+public class LegacyController: ViewController {
     private let legacyController: UIViewController
     private let presentation: LegacyControllerPresentation
     
@@ -95,8 +105,9 @@ class LegacyController: ViewController {
     }
     
     var controllerLoaded: (() -> Void)?
+    public var presentationCompleted: (() -> Void)?
     
-    init(legacyController: UIViewController, presentation: LegacyControllerPresentation) {
+    public init(legacyController: UIViewController, presentation: LegacyControllerPresentation) {
         self.legacyController = legacyController
         self.presentation = presentation
         
@@ -109,60 +120,65 @@ class LegacyController: ViewController {
         self.navigationBar.isHidden = true
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func loadDisplayNode() {
+    override public func loadDisplayNode() {
         self.displayNode = LegacyControllerNode()
+        self.displayNodeDidLoad()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        if !self.legacyController.isViewLoaded {
+        if self.controllerNode.controllerView == nil {
             self.controllerNode.controllerView = self.legacyController.view
-            self.controllerNode.view.addSubview(self.legacyController.view)
+            self.controllerNode.view.insertSubview(self.legacyController.view, at: 0)
             
             if let controllerLoaded = self.controllerLoaded {
                 controllerLoaded()
             }
         }
         
-        self.legacyController.viewWillAppear(animated && passControllerAppearanceAnimated(presentation: self.presentation))
+        self.legacyController.viewWillAppear(animated && passControllerAppearanceAnimated(in: true, presentation: self.presentation))
     }
     
-    override func viewWillDisappear(_ animated: Bool) {
+    override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        self.legacyController.viewWillDisappear(animated && passControllerAppearanceAnimated(presentation: self.presentation))
+        self.legacyController.viewWillDisappear(animated && passControllerAppearanceAnimated(in: false, presentation: self.presentation))
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         switch self.presentation {
-            case .modal:
-                self.controllerNode.animateModalIn()
-                self.legacyController.viewDidAppear(true)
+            case let .modal(animateIn):
+                if animateIn {
+                    self.controllerNode.animateModalIn(completion: { [weak self] in
+                        self?.presentationCompleted?()
+                    })
+                }
+                self.legacyController.viewDidAppear(animated && animateIn)
             case .custom:
                 self.legacyController.viewDidAppear(animated)
         }
     }
     
-    override func viewDidDisappear(_ animated: Bool) {
+    override public func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
-        self.legacyController.viewDidDisappear(animated && passControllerAppearanceAnimated(presentation: self.presentation))
+        self.legacyController.viewDidDisappear(animated && passControllerAppearanceAnimated(in: false, presentation: self.presentation))
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    override open func dismiss() {
+    override open func dismiss(completion: (() -> Void)? = nil) {
         switch self.presentation {
             case .modal:
                 self.controllerNode.animateModalOut { [weak self] in
@@ -171,7 +187,7 @@ class LegacyController: ViewController {
                     } else if let controller = self?.legacyController as? TGNavigationController {
                         controller.didDismiss()
                     }
-                    self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                    self?.presentingViewController?.dismiss(animated: false, completion: completion)
                 }
             case .custom:
                 if let controller = self.legacyController as? TGViewController {
@@ -179,7 +195,7 @@ class LegacyController: ViewController {
                 } else if let controller = self.legacyController as? TGNavigationController {
                     controller.didDismiss()
                 }
-                self.presentingViewController?.dismiss(animated: false, completion: nil)
+                self.presentingViewController?.dismiss(animated: false, completion: completion)
         }
     }
 }

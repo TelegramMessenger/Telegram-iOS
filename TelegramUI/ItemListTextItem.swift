@@ -61,6 +61,7 @@ class ItemListTextItem: ListViewItem, ItemListItem {
 }
 
 private let titleFont = Font.regular(14.0)
+private let titleBoldFont = Font.semibold(14.0)
 
 class ItemListTextItemNode: ListViewItemNode {
     private let titleNode: TextNode
@@ -100,7 +101,7 @@ class ItemListTextItemNode: ListViewItemNode {
                 case let .plain(text):
                     attributedText = NSAttributedString(string: text, font: titleFont, textColor: UIColor(0x6d6d72))
                 case let .markdown(text):
-                    attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: UIColor(0x6d6d72)), link: MarkdownAttributeSet(font: titleFont, textColor: UIColor(0x007ee5)), linkAttribute: { contents in
+                    attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: UIColor(0x6d6d72)), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: UIColor(0x6d6d72)), link: MarkdownAttributeSet(font: titleFont, textColor: UIColor(0x007ee5)), linkAttribute: { contents in
                         return (TextNode.UrlAttribute, contents)
                     }))
             }

@@ -84,6 +84,17 @@ func contextMenuForChatPresentationIntefaceState(_ chatPresentationInterfaceStat
         }
     }
     
+    for media in message.media {
+        if let file = media as? TelegramMediaFile {
+            if file.isVideo && file.isAnimated {
+                actions.append(ContextMenuAction(content: .text("Save"), action: {
+                    let _ = addSavedGif(postbox: account.postbox, file: file).start()
+                }))
+                break
+            }
+        }
+    }
+    
     actions.append(ContextMenuAction(content: .text("More..."), action: {
         interfaceInteraction.beginMessageSelection(message.id)
     }))

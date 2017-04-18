@@ -68,6 +68,7 @@ struct ChatHistoryViewTransition {
     let initialData: InitialMessageHistoryData?
     let keyboardButtonsMessage: Message?
     let cachedData: CachedPeerData?
+    let scrolledToIndex: MessageIndex?
 }
 
 struct ChatHistoryListViewTransition {
@@ -81,6 +82,7 @@ struct ChatHistoryListViewTransition {
     let initialData: InitialMessageHistoryData?
     let keyboardButtonsMessage: Message?
     let cachedData: CachedPeerData?
+    let scrolledToIndex: MessageIndex?
 }
 
 private func maxMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> (incoming: MessageIndex?, overall: MessageIndex?) {
@@ -161,7 +163,7 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
 }
 
 private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, transition: ChatHistoryViewTransition) -> ChatHistoryListViewTransition {
-    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData)
+    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, scrolledToIndex: transition.scrolledToIndex)
 }
 
 private final class ChatHistoryTransactionOpaqueState {
@@ -224,6 +226,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var maxVisibleMessageIndexReported: MessageIndex?
     var maxVisibleMessageIndexUpdated: ((MessageIndex) -> Void)?
+    
+    var scrolledToIndex: ((MessageIndex) -> Void)?
     
     public init(account: Account, peerId: PeerId, tagMask: MessageTags?, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode = .bubbles) {
         self.account = account
@@ -472,6 +476,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 
                 strongSelf.enqueuedHistoryViewTransition = (transition, {
+                    if let scrolledToIndex = transition.scrolledToIndex {
+                        if let strongSelf = self {
+                            strongSelf.scrolledToIndex?(scrolledToIndex)
+                        }
+                    }
                     subscriber.putCompletion()
                 })
                 

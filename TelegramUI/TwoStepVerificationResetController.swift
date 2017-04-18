@@ -212,7 +212,7 @@ func twoStepVerificationResetController(account: Account, emailPattern: String, 
                 })
             }
             
-            let controllerState = ItemListControllerState(title: "E-Mail Code", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text("E-Mail Code"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: twoStepVerificationResetControllerEntries(state: state, emailPattern: emailPattern), style: .blocks, focusItemTag: TwoStepVerificationResetTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))

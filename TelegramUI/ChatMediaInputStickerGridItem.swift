@@ -106,9 +106,15 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     
     private let stickerFetchedDisposable = MetaDisposable()
     
+    var currentIsPreviewing = false
+    
     var interfaceInteraction: ChatControllerInteraction?
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     var selected: (() -> Void)?
+    
+    var stickerPackItem: StickerPackItem? {
+        return self.currentState?.1
+    }
     
     override init() {
         self.imageNode = TransformImageNode()
@@ -156,20 +162,35 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         }
     }
     
-    /*func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
-        if self.messageId == id {
-            return self.imageNode
-        } else {
-            return nil
-        }
-    }*/
-    
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
             interfaceInteraction.sendSticker(item.file)
         }
-        /*if let controllerInteraction = self.controllerInteraction, let messageId = self.messageId, case .ended = recognizer.state {
-            controllerInteraction.openMessage(messageId)
-        }*/
+    }
+    
+    func transitionNode() -> ASDisplayNode? {
+        return self.imageNode
+    }
+    
+    func updatePreviewing(animated: Bool) {
+        var isPreviewing = false
+        if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
+            isPreviewing = interaction.previewedStickerPackItem == item
+        }
+        if self.currentIsPreviewing != isPreviewing {
+            self.currentIsPreviewing = isPreviewing
+            
+            if isPreviewing {
+                self.layer.sublayerTransform = CATransform3DMakeScale(0.8, 0.8, 1.0)
+                if animated {
+                    self.layer.animateSpring(from: 1.0 as NSNumber, to: 0.8 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.4)
+                }
+            } else {
+                self.layer.sublayerTransform = CATransform3DIdentity
+                if animated {
+                    self.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5)
+                }
+            }
+        }
     }
 }

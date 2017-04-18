@@ -132,7 +132,7 @@ public func convertToSupergroupController(account: Account, peerId: PeerId) -> V
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             }
             
-            let controllerState = ItemListControllerState(title: "Supergroup", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(title: .text("Supergroup"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: convertToSupergroupEntries(), style: .blocks)
             
             return (controllerState, (listState, arguments))

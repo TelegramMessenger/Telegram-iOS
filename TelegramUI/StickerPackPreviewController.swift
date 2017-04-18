@@ -21,6 +21,8 @@ final class StickerPackPreviewController: ViewController {
     private let stickerPackInstalledDisposable = MetaDisposable()
     private let stickerPackInstalled = Promise<Bool>()
     
+    var sendSticker: ((TelegramMediaFile) -> Void)?
+    
     init(account: Account, stickerPack: StickerPackReference) {
         self.account = account
         self.stickerPack = stickerPack
@@ -49,6 +51,12 @@ final class StickerPackPreviewController: ViewController {
         self.controllerNode.cancel = { [weak self] in
             self?.dismiss()
         }
+        self.controllerNode.presentPreview = { [weak self] controller, arguments in
+            self?.present(controller, in: .window, with: arguments)
+        }
+        self.controllerNode.sendSticker = { [weak self] file in
+            self?.sendSticker?(file)
+        }
         self.displayNodeDidLoad()
         self.stickerPackDisposable.set((self.stickerPackContents.get() |> deliverOnMainQueue).start(next: { [weak self] next in
             self?.controllerNode.updateStickerPack(next)
@@ -65,8 +73,8 @@ final class StickerPackPreviewController: ViewController {
         }
     }
     
-    override func dismiss() {
-        self.controllerNode.animateOut()
+    override func dismiss(completion: (() -> Void)? = nil) {
+        self.controllerNode.animateOut(completion: completion)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

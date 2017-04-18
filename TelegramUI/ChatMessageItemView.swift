@@ -25,6 +25,11 @@ struct ChatMessageItemImageLayoutConstants {
     let maxDimensions: CGSize
 }
 
+struct ChatMessageItemInstantVideoConstants {
+    let insets: UIEdgeInsets
+    let dimensions: CGSize
+}
+
 struct ChatMessageItemFileLayoutConstants {
     let bubbleInsets: UIEdgeInsets
 }
@@ -37,6 +42,7 @@ struct ChatMessageItemLayoutConstants {
     let image: ChatMessageItemImageLayoutConstants
     let text: ChatMessageItemTextLayoutConstants
     let file: ChatMessageItemFileLayoutConstants
+    let instantVideo: ChatMessageItemInstantVideoConstants
     
     init() {
         self.avatarDiameter = 37.0
@@ -46,6 +52,7 @@ struct ChatMessageItemLayoutConstants {
         self.text = ChatMessageItemTextLayoutConstants(bubbleInsets: UIEdgeInsets(top: 6.0 + UIScreenPixel, left: 12.0, bottom: 6.0 - UIScreenPixel, right: 12.0))
         self.image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 0.5, left: 0.5, bottom: 0.5, right: 0.5), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 17.0, mergedCornerRadius: 5.0, contentMergedCornerRadius: 5.0, maxDimensions: CGSize(width: 260.0, height: 260.0))
         self.file = ChatMessageItemFileLayoutConstants(bubbleInsets: UIEdgeInsets(top: 15.0, left: 9.0, bottom: 15.0, right: 12.0))
+        self.instantVideo = ChatMessageItemInstantVideoConstants(insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), dimensions: CGSize(width: 212.0, height: 212.0))
     }
 }
 
@@ -63,7 +70,7 @@ public class ChatMessageItemView: ListViewItemNode {
     
     public init(layerBacked: Bool) {
         super.init(layerBacked: layerBacked, dynamicBounce: true, rotated: true)
-        self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
+        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
     }
 
     required public init?(coder aDecoder: NSCoder) {

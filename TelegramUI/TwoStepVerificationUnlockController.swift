@@ -506,7 +506,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     }
             }
             
-            let controllerState = ItemListControllerState(title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: twoStepVerificationUnlockSettingsControllerEntries(state: state, data: data), style: .blocks, focusItemTag: TwoStepVerificationUnlockSettingsEntryTag.password, emptyStateItem: emptyStateItem, animateChanges: false)
             
             return (controllerState, (listState, arguments))

@@ -68,6 +68,10 @@ final class ChatTitleView: UIView {
                         self.typingIndicator?.setUploading()
                     case .playingGame:
                         self.typingIndicator?.setPlaying()
+                    case .recordingInstantVideo:
+                        self.typingIndicator?.setAudioRecording()
+                    case .uploadingInstantVideo:
+                        self.typingIndicator?.setUploading()
                 }
             } else {
                 self.typingNode.isHidden = true

@@ -275,7 +275,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
                 })
             }
             
-            let controllerState = ItemListControllerState(title: formatPhoneNumber(phoneNumber), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text(formatPhoneNumber(phoneNumber)), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: changePhoneNumberCodeControllerEntries(state: state, codeData: data, timeout: timeout), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))

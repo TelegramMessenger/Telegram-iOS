@@ -35,6 +35,9 @@ final class ChatMessageSelectionNode: ASDisplayNode {
         if self.selected != selected {
             self.selected = selected
             self.checkNode.image = selected ? checkedImage : uncheckedImage
+            if animated {
+                self.checkNode.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+            }
         }
     }
     

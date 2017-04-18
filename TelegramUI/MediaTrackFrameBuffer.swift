@@ -12,7 +12,10 @@ enum MediaTrackFrameResult {
     case noFrames
     case skipFrame
     case frame(MediaTrackFrame)
+    case finished
 }
+
+private let traceEvents = false
 
 final class MediaTrackFrameBuffer {
     private let stallDuration: Double = 1.0
@@ -23,6 +26,7 @@ final class MediaTrackFrameBuffer {
     private let decoder: MediaTrackFrameDecoder
     private let type: MediaTrackFrameType
     let duration: CMTime
+    let rotationAngle: Double
     
     var statusUpdated: () -> Void = { }
     
@@ -32,11 +36,12 @@ final class MediaTrackFrameBuffer {
     private var endOfStream = false
     private var bufferedUntilTime: CMTime?
     
-    init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, duration: CMTime) {
+    init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, duration: CMTime, rotationAngle: Double) {
         self.frameSource = frameSource
         self.type = type
         self.decoder = decoder
         self.duration = duration
+        self.rotationAngle = rotationAngle
         
         self.frameSourceSinkIndex = self.frameSource.addEventSink { [weak self] event in
             if let strongSelf = self {
@@ -76,7 +81,9 @@ final class MediaTrackFrameBuffer {
         }
         
         if let maxUntilTime = maxUntilTime {
-            print("added \(frames.count) frames until \(CMTimeGetSeconds(maxUntilTime)), \(self.frames.count) total")
+            if traceEvents {
+                print("added \(frames.count) frames until \(CMTimeGetSeconds(maxUntilTime)), \(self.frames.count) total")
+            }
         }
         
         self.statusUpdated()
@@ -97,18 +104,31 @@ final class MediaTrackFrameBuffer {
             bufferedDuration = CMTimeGetSeconds(bufferedUntilTime) - timestamp
         }
         
+        let minTimestamp = timestamp - 1.0
+        for i in (0 ..< self.frames.count).reversed() {
+            if CMTimeGetSeconds(self.frames[i].pts) < minTimestamp {
+                self.frames.remove(at: i)
+            }
+        }
+        
         if bufferedDuration < self.lowWaterDuration {
-            print("buffered duration: \(bufferedDuration), requesting until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
+            if traceEvents {
+                print("buffered duration: \(bufferedDuration), requesting until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
+            }
             self.frameSource.generateFrames(until: timestamp + self.highWaterDuration)
             
             if bufferedDuration > self.stallDuration {
-                print("buffered1 duration: \(bufferedDuration), wait until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
+                if traceEvents {
+                    print("buffered1 duration: \(bufferedDuration), wait until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
+                }
                 return .full(until: timestamp + self.highWaterDuration)
             } else {
                 return .buffering
             }
         } else {
-            print("buffered2 duration: \(bufferedDuration), wait until \(timestamp) + \(bufferedDuration - self.lowWaterDuration)")
+            if traceEvents {
+                print("buffered2 duration: \(bufferedDuration), wait until \(timestamp) + \(bufferedDuration - self.lowWaterDuration)")
+            }
             return .full(until: timestamp + max(0.0, bufferedDuration - self.lowWaterDuration))
         }
     }
@@ -124,6 +144,16 @@ final class MediaTrackFrameBuffer {
                 return .frame(decodedFrame)
             } else {
                 return .skipFrame
+            }
+        } else {
+            if self.endOfStream, let decodedFrame = self.decoder.takeRemainingFrame() {
+                return .frame(decodedFrame)
+            } else {
+                if let bufferedUntilTime = bufferedUntilTime {
+                    if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
+                        return .finished
+                    }
+                }
             }
         }
         return .noFrames

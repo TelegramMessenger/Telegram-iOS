@@ -8,7 +8,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
     switch media {
         case let file as TelegramMediaFile:
             let signal = Signal<MediaResourceData, NoError> { subscriber in
-                let fetch = postbox.mediaBox.fetchedResource(file.resource).start()
+                let fetch = postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes))).start()
                 let data = postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { next in
                     subscriber.putNext(next)
                     if next.complete {
@@ -64,7 +64,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
         case let image as TelegramMediaImage:
             if let representation = largestImageRepresentation(image.representations) {
                 let signal = Signal<MediaResourceData, NoError> { subscriber in
-                    let fetch = postbox.mediaBox.fetchedResource(representation.resource).start()
+                    let fetch = postbox.mediaBox.fetchedResource(representation.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start()
                     let data = postbox.mediaBox.resourceData(representation.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { next in
                         subscriber.putNext(next)
                         if next.complete {

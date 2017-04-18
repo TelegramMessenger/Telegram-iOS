@@ -108,8 +108,14 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func setPeer(account: Account, peer: Peer) {
-        let updatedState = AvatarNodeState.PeerAvatar(peer.id, peer.displayLetters, peer.smallProfileImage)
+    public func setPeer(account: Account, peer: Peer, temporaryRepresentation: TelegramMediaImageRepresentation? = nil) {
+        var representation: TelegramMediaImageRepresentation?
+        if let temporaryRepresentation = temporaryRepresentation {
+            representation = temporaryRepresentation
+        } else {
+            representation = peer.smallProfileImage
+        }
+        let updatedState = AvatarNodeState.PeerAvatar(peer.id, peer.displayLetters, representation)
         if updatedState != self.state {
             self.state = updatedState
             
@@ -118,7 +124,7 @@ public final class AvatarNode: ASDisplayNode {
             self.displaySuspended = true
             self.contents = nil
             
-            if let signal = peerAvatarImage(account: account, peer: peer) {
+            if let signal = peerAvatarImage(account: account, peer: peer, temporaryRepresentation: temporaryRepresentation) {
                 self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
             } else {

@@ -106,7 +106,7 @@ public func debugController(account: Account, accountManager: AccountManager) ->
     
     let signal = Signal<Void, NoError>.single(Void())
         |> map { _ -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
-            let controllerState = ItemListControllerState(title: "Debug", leftNavigationButton: nil, rightNavigationButton: nil)
+            let controllerState = ItemListControllerState(title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil)
             let listState = ItemListNodeState(entries: debugControllerEntries(), style: .blocks)
             
             return (controllerState, (listState, arguments))

@@ -10,9 +10,10 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var items: [GalleryItem] = []
     private var itemNodes: [GalleryItemNode] = []
+    private var ignoreCentralItemIndexUpdate = false
     private var centralItemIndex: Int? {
         didSet {
-            if oldValue != self.centralItemIndex {
+            if oldValue != self.centralItemIndex && !self.ignoreCentralItemIndexUpdate {
                 self.centralItemIndexUpdated(self.centralItemIndex)
             }
         }
@@ -75,11 +76,19 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func replaceItems(_ items: [GalleryItem], centralItemIndex: Int?) {
+    func replaceItems(_ items: [GalleryItem], centralItemIndex: Int?, keepFirst: Bool = false) {
+        var keptItemNode: GalleryItemNode?
         for itemNode in self.itemNodes {
-            itemNode.removeFromSupernode()
+            if keepFirst && itemNode.index == 0 {
+                keptItemNode = itemNode
+            } else {
+                itemNode.removeFromSupernode()
+            }
         }
         self.itemNodes.removeAll()
+        if let keptItemNode = keptItemNode {
+            self.itemNodes.append(keptItemNode)
+        }
         if let centralItemIndex = centralItemIndex, centralItemIndex >= 0 && centralItemIndex < items.count {
             self.centralItemIndex = centralItemIndex
         } else {
@@ -143,6 +152,8 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             resetOffsetToCentralItem = true
         }
         
+        var notifyCentralItemUpdated = false
+        
         if let centralItemIndex = self.centralItemIndex, let centralItemNode = self.visibleItemNode(at: centralItemIndex) {
             if centralItemIndex != 0 {
                 if self.visibleItemNode(at: centralItemIndex - 1) == nil {
@@ -182,7 +193,10 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
                 
+                self.ignoreCentralItemIndexUpdate = true
                 self.centralItemIndex = centralItemCandidateNode.index
+                self.ignoreCentralItemIndexUpdate = false
+                notifyCentralItemUpdated = true
                 
                 if centralItemCandidateNode.index != 0 {
                     if self.visibleItemNode(at: centralItemCandidateNode.index - 1) == nil {
@@ -223,6 +237,10 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         for itemNode in self.itemNodes {
             itemNode.centralityUpdated(isCentral: itemNode.index == self.centralItemIndex)
             itemNode.visibilityUpdated(isVisible: self.scrollView.bounds.intersects(itemNode.frame))
+        }
+        
+        if notifyCentralItemUpdated {
+            self.centralItemIndexUpdated(self.centralItemIndex)
         }
     }
     

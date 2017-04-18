@@ -418,7 +418,7 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
                 case .voiceCalls:
                     title = "Voice Calls"
             }
-            let controllerState = ItemListControllerState(title: title, leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(kind: kind, state: state), style: .blocks, animateChanges: false)
             
             return (controllerState, (listState, arguments))

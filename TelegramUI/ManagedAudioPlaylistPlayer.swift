@@ -197,7 +197,7 @@ final class ManagedAudioPlaylistPlayer {
                                 }
                                 
                                 if let resource = item.resource {
-                                    let player = MediaPlayer(audioSessionManager: strongSelf.audioSessionManager, postbox: strongSelf.postbox, resource: resource, streamable: item.streamable)
+                                    let player = MediaPlayer(audioSessionManager: strongSelf.audioSessionManager, postbox: strongSelf.postbox, resource: resource, streamable: item.streamable, video: false, preferSoftwareDecoding: false, enableSound: true)
                                     player.actionAtEnd = .action({
                                         if let strongSelf = self {
                                             strongSelf.control(.navigation(.next))

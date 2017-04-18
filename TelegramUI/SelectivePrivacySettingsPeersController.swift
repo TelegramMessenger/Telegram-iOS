@@ -125,7 +125,7 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     func item(_ arguments: SelectivePrivacyPeersControllerArguments) -> ListViewItem {
         switch self {
             case let .peerItem(_, peer, editing, enabled):
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -296,7 +296,7 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             let listState = ItemListNodeState(entries: selectivePrivacyPeersControllerEntries(state: state, peers: peers), style: .blocks, emptyStateItem: nil, animateChanges: previous != nil && previous!.count >= peers.count)
             
             return (controllerState, (listState, arguments))

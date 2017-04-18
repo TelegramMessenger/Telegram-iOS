@@ -24,13 +24,35 @@ struct ItemListNavigationButton {
     let action: () -> Void
 }
 
+enum ItemListControllerTitle: Equatable {
+    case text(String)
+    case sectionControl([String], Int)
+    
+    static func ==(lhs: ItemListControllerTitle, rhs: ItemListControllerTitle) -> Bool {
+        switch lhs {
+            case let .text(text):
+                if case .text(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .sectionControl(lhsSection, lhsIndex):
+                if case let .sectionControl(rhsSection, rhsIndex) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 struct ItemListControllerState {
-    let title: String
+    let title: ItemListControllerTitle
     let leftNavigationButton: ItemListNavigationButton?
     let rightNavigationButton: ItemListNavigationButton?
     let animateChanges: Bool
     
-    init(title: String, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, animateChanges: Bool = true) {
+    init(title: ItemListControllerTitle, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, animateChanges: Bool = true) {
         self.title = title
         self.leftNavigationButton = leftNavigationButton
         self.rightNavigationButton = rightNavigationButton
@@ -44,8 +66,11 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     private var leftNavigationButtonTitleAndStyle: (String, ItemListNavigationButtonStyle)?
     private var rightNavigationButtonTitleAndStyle: (String, ItemListNavigationButtonStyle)?
     private var navigationButtonActions: (left: (() -> Void)?, right: (() -> Void)?) = (nil, nil)
+    private var segmentedTitleView: ItemListControllerSegmentedTitleView?
     
     private var didPlayPresentationAnimation = false
+    
+    var titleControlValueChanged: ((Int) -> Void)?
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -79,7 +104,26 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                 if let strongSelf = self {
                     let previousState = previousControllerState.swap(controllerState)
                     if previousState?.title != controllerState.title {
-                        strongSelf.title = controllerState.title
+                        switch controllerState.title {
+                            case let .text(text):
+                                strongSelf.title = text
+                                strongSelf.navigationItem.titleView = nil
+                                strongSelf.segmentedTitleView = nil
+                            case let .sectionControl(sections, index):
+                                strongSelf.title = ""
+                                if let segmentedTitleView = strongSelf.segmentedTitleView, segmentedTitleView.segments == sections {
+                                    segmentedTitleView.index = index
+                                } else {
+                                    let segmentedTitleView = ItemListControllerSegmentedTitleView(segments: sections, index: index)
+                                    strongSelf.segmentedTitleView = segmentedTitleView
+                                    strongSelf.navigationItem.titleView = strongSelf.segmentedTitleView
+                                    segmentedTitleView.indexUpdated = { index in
+                                        if let strongSelf = self {
+                                            strongSelf.titleControlValueChanged?(index)
+                                        }
+                                    }
+                                }
+                        }
                     }
                     strongSelf.navigationButtonActions = (left: controllerState.leftNavigationButton?.action, right: controllerState.rightNavigationButton?.action)
                     
@@ -154,8 +198,8 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         }
     }
     
-    override func dismiss() {
-        (self.displayNode as! ItemListNode<Entry>).animateOut()
+    override func dismiss(completion: (() -> Void)? = nil) {
+        (self.displayNode as! ItemListNode<Entry>).animateOut(completion: completion)
     }
     
     func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
@@ -168,5 +212,13 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
             }
         }
         return result
+    }
+    
+    func forEachItemNode(_ f: (ListViewItemNode) -> Void) {
+        (self.displayNode as! ItemListNode<Entry>).listNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ListViewItemNode {
+                f(itemNode)
+            }
+        }
     }
 }

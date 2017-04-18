@@ -26,8 +26,10 @@ final class LegacyControllerNode: ASDisplayNode {
         }
     }
     
-    func animateModalIn() {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+    func animateModalIn(completion: @escaping () -> Void) {
+        self.layer.animatePosition(from: CGPoint(x: 0.0, y: self.layer.bounds.size.height), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true, completion: { _ in
+            completion()
+        })
     }
     
     func animateModalOut(completion: @escaping () -> Void) {

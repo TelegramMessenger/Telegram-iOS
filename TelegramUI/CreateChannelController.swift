@@ -94,6 +94,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
             case let .channelInfo(peer, state):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
+                }, avatarTapped: {
                 })
             case .setProfilePhoto:
                 return ItemListActionItem(title: "Set Profile Photo", kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -217,7 +218,7 @@ public func createChannelController(account: Account) -> ViewController {
                 })
             }
             
-            let controllerState = ItemListControllerState(title: "Create Channel", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(title: .text("Create Channel"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: CreateChannelEntries(state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))

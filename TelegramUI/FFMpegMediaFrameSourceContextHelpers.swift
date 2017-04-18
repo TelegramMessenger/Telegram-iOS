@@ -4,7 +4,7 @@ import TelegramUIPrivateModule
 
 final class FFMpegMediaFrameSourceContextHelpers {
     static let registerFFMpegGlobals: Void = {
-        av_log_set_level(AV_LOG_DEBUG)
+        av_log_set_level(AV_LOG_QUIET)
         av_register_all()
         return
     }()

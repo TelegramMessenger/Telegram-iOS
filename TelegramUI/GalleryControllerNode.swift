@@ -5,6 +5,7 @@ import Display
 class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var statusBar: StatusBar?
     var navigationBar: NavigationBar?
+    let footerNode: GalleryFooterNode
     var transitionNodeForCentralItem: (() -> ASDisplayNode?)?
     var dismiss: (() -> Void)?
     
@@ -12,6 +13,8 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var backgroundNode: ASDisplayNode
     var scrollView: UIScrollView
     var pager: GalleryPagerNode
+    
+    private var presentationState = GalleryControllerPresentationState()
     
     var areControlsHidden = false
     var isBackgroundExtendedOverNavigationBar = true {
@@ -22,11 +25,12 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    override init() {
+    init(controllerInteraction: GalleryControllerInteraction) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor.black
         self.scrollView = UIScrollView()
         self.pager = GalleryPagerNode()
+        self.footerNode = GalleryFooterNode(controllerInteraction: controllerInteraction)
         
         super.init(viewBlock: {
             return UITracingLayerView()
@@ -39,6 +43,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     let alpha: CGFloat = strongSelf.areControlsHidden ? 0.0 : 1.0
                     strongSelf.navigationBar?.alpha = alpha
                     strongSelf.statusBar?.alpha = alpha
+                    strongSelf.footerNode.alpha = alpha
                 })
             }
         }
@@ -55,12 +60,16 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.view.addSubview(self.scrollView)
         
         self.scrollView.addSubview(self.pager.view)
+        self.addSubnode(self.footerNode)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (navigationBarHeight, layout)
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isBackgroundExtendedOverNavigationBar ? 0.0 : navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - (self.isBackgroundExtendedOverNavigationBar ? 0.0 : navigationBarHeight))))
+        
+        transition.updateFrame(node: self.footerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        self.footerNode.updateLayout(layout, footerContentNode: self.presentationState.footerContentNode, transition: transition)
         
         let previousContentHeight = self.scrollView.contentSize.height
         let previousVerticalOffset = self.scrollView.contentOffset.y
@@ -82,10 +91,12 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(0.0)
         self.statusBar?.alpha = 0.0
         self.navigationBar?.alpha = 0.0
+        self.footerNode.alpha = 0.0
         UIView.animate(withDuration: 0.2, animations: {
             self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(1.0)
             self.statusBar?.alpha = 1.0
             self.navigationBar?.alpha = 1.0
+            self.footerNode.alpha = 1.0
         })
         
         if animateContent {
@@ -107,6 +118,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(0.0)
             self.statusBar?.alpha = 0.0
             self.navigationBar?.alpha = 0.0
+            self.footerNode.alpha = 0.0
         }, completion: { _ in
             interfaceAnimationCompleted = true
             intermediateCompletion()
@@ -131,6 +143,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if !self.areControlsHidden {
             self.statusBar?.alpha = transition
             self.navigationBar?.alpha = transition
+            self.footerNode.alpha = transition
         }
     }
     
@@ -173,6 +186,13 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         } else {
             self.scrollView.setContentOffset(CGPoint(x: 0.0, y: self.scrollView.contentSize.height / 3.0), animated: true)
+        }
+    }
+    
+    func updatePresentationState(_ f: (GalleryControllerPresentationState) -> GalleryControllerPresentationState, transition: ContainedViewLayoutTransition) {
+        self.presentationState = f(self.presentationState)
+        if let (navigationBarHeight, layout) = self.containerLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
     }
 }

@@ -96,7 +96,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
     func item(_ arguments: ChannelBlacklistControllerArguments) -> ListViewItem {
         switch self {
             case let .peerItem(_, participant, editing, enabled):
-                return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -300,7 +300,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: "Blacklist", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(title: .text("Blacklist"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             let listState = ItemListNodeState(entries: channelBlacklistControllerEntries(view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))

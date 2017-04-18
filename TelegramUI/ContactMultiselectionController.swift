@@ -195,8 +195,8 @@ public class ContactMultiselectionController: ViewController {
         }
     }
     
-    override open func dismiss() {
-        self.contactsNode.animateOut()
+    override open func dismiss(completion: (() -> Void)? = nil) {
+        self.contactsNode.animateOut(completion: completion)
     }
     
     override public func viewDidDisappear(_ animated: Bool) {

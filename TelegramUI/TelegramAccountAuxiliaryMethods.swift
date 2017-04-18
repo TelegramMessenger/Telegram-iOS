@@ -10,7 +10,7 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
     } else {
         return interfaceState
     }
-}, fetchResource: { account, resource, range in
+}, fetchResource: { account, resource, range, _ in
     if let resource = resource as? VideoLibraryMediaResource {
         return fetchVideoLibraryMediaResource(resource: resource)
     } else if let resource = resource as? LocalFileVideoMediaResource {

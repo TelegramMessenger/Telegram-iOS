@@ -17,18 +17,18 @@ class ChatImageGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatImageGalleryItemNode()
+        let node = ChatImageGalleryItemNode(account: self.account)
         
         for media in self.message.media {
             if let image = media as? TelegramMediaImage {
-                node.setImage(account: account, image: image)
+                node.setImage(image: image)
                 break
             } else if let file = media as? TelegramMediaFile, file.mimeType.hasPrefix("image/") {
                 node.setFile(account: account, file: file)
                 break
             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let image = content.image {
-                    node.setImage(account: account, image: image)
+                    node.setImage(image: image)
                     break
                 } else if let file = content.file, file.mimeType.hasPrefix("image/") {
                     node.setFile(account: account, file: file)
@@ -41,27 +41,38 @@ class ChatImageGalleryItem: GalleryItem {
             node._title.set(.single("\(location.index + 1) of \(location.count)"))
         }
         
+        node.setMessage(self.message)
+        
         return node
     }
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? ChatImageGalleryItemNode, let location = self.location {
             node._title.set(.single("\(location.index + 1) of \(location.count)"))
+            
+            node.setMessage(self.message)
         }
     }
 }
 
 final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
+    private let account: Account
+    private var message: Message?
+    
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    private let footerContentNode: ChatItemGalleryFooterContentNode
     
     private var accountAndMedia: (Account, Media)?
     
     private var fetchDisposable = MetaDisposable()
     
-    override init() {
+    init(account: Account) {
+        self.account = account
+        
         self.imageNode = TransformImageNode()
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
         
         super.init()
         
@@ -71,11 +82,6 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.imageNode.view.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
-        
-        /*self.imageNode.layer.shadowRadius = 80.0
-        self.imageNode.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
-        self.imageNode.layer.shadowOffset = CGSize(width: 0.0, height: 40.0)
-        self.imageNode.layer.shadowOpacity = 0.5*/
     }
     
     deinit {
@@ -90,7 +96,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
-    fileprivate func setImage(account: Account, image: TelegramMediaImage) {
+    fileprivate func setMessage(_ message: Message) {
+        self.footerContentNode.setMessage(message)
+    }
+    
+    fileprivate func setImage(image: TelegramMediaImage) {
         if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(image) {
             if let largestSize = largestRepresentationForPhoto(image) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
@@ -98,7 +108,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 self.imageNode.setSignal(account: account, signal: chatMessagePhoto(account: account, photo: image), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource).start())
+                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -197,7 +207,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         if let (account, media) = self.accountAndMedia, let file = media as? TelegramMediaFile {
             if isVisible {
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
+                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
             } else {
                 self.fetchDisposable.set(nil)
             }
@@ -206,5 +216,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func title() -> Signal<String, NoError> {
         return self._title.get()
+    }
+    
+    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
+        return .single(self.footerContentNode)
     }
 }

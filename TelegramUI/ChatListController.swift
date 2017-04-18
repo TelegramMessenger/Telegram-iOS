@@ -27,6 +27,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     
     private var didSetup3dTouch = false
     
+    private let passcodeDisposable = MetaDisposable()
+    
     public override init(account: Account) {
         self.account = account
         
@@ -83,6 +85,29 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 }
             }
         })
+        
+        self.passcodeDisposable.set((account.postbox.combinedView(keys: [.accessChallengeData]) |> deliverOnMainQueue).start(next: { [weak self] view in
+            if let strongSelf = self {
+                let data = (view.views[.accessChallengeData] as! AccessChallengeDataView).data
+                strongSelf.titleView.updatePasscode(isPasscodeSet: data.isLockable, isManuallyLocked: data.autolockDeadline == 0)
+            }
+        }))
+        
+        self.titleView.toggleIsLocked = { [weak self] in
+            if let strongSelf = self {
+                let _ = strongSelf.account.postbox.modify({ modifier -> Void in
+                    var data = modifier.getAccessChallengeData()
+                    if data.isLockable {
+                        if data.autolockDeadline != 0 {
+                            data = data.withUpdatedAutolockDeadline(0)
+                        } else {
+                            data = data.withUpdatedAutolockDeadline(nil)
+                        }
+                        modifier.setAccessChallengeData(data)
+                    }
+                }).start()
+            }
+        }
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -93,6 +118,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.openMessageFromSearchDisposable.dispose()
         self.titleDisposable?.dispose()
         self.badgeDisposable?.dispose()
+        self.passcodeDisposable.dispose()
     }
     
     override public func loadDisplayNode() {

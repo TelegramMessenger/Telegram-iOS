@@ -372,7 +372,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                 
                 var updateLayout: GridNodeUpdateLayout?
                 if let updateSizeAndInsets = updateSizeAndInsets {
-                    updateLayout = GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, itemSize: CGSize(width: 200.0, height: 200.0)), transition: .immediate)
+                    updateLayout = GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: .fixed(itemSize: CGSize(width: 200.0, height: 200.0))), transition: .immediate)
                 }
                 
                 self.transaction(GridNodeTransaction(deleteItems: mappedTransition.deleteItems, insertItems: mappedTransition.insertItems, updateItems: mappedTransition.updateItems, scrollToItem: mappedTransition.scrollToItem, updateLayout: updateLayout, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: mappedTransition.topOffsetWithinMonth), completion: completion)
@@ -383,7 +383,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     }
     
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets) {
-        self.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, itemSize: itemSizeForContainerLayout(size: updateSizeAndInsets.size)), transition: .immediate), stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: .fixed(itemSize: itemSizeForContainerLayout(size: updateSizeAndInsets.size))), transition: .immediate), stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true

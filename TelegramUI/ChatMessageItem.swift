@@ -119,9 +119,22 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         var viewClassName: AnyClass = ChatMessageBubbleItemNode.self
         
-        for media in message.media {
-            if let telegramFile = media as? TelegramMediaFile, telegramFile.isSticker {
-                viewClassName = ChatMessageStickerItemNode.self
+        loop: for media in message.media {
+            if let telegramFile = media as? TelegramMediaFile {
+                for attribute in telegramFile.attributes {
+                    switch attribute {
+                        case .Sticker:
+                            viewClassName = ChatMessageStickerItemNode.self
+                            break loop
+                        case let .Video(_, _, flags):
+                            if flags.contains(.instantRoundVideo) {
+                                viewClassName = ChatMessageInstantVideoItemNode.self
+                                break loop
+                            }
+                        default:
+                            break
+                    }
+                }
             } else if let _ = media as? TelegramMediaAction {
                 viewClassName = ChatMessageActionItemNode.self
             }

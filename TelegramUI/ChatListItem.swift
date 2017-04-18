@@ -116,7 +116,7 @@ class ChatListItem: ListViewItem {
     }
 }
 
-private let titleFont = Font.medium(17.0)
+private let titleFont = Font.semibold(17.0)
 private let textFont = Font.regular(15.0)
 private let dateFont = Font.regular(14.0)
 private let badgeFont = Font.regular(14.0)
@@ -142,6 +142,8 @@ private let unpinOption = ItemListRevealOption(key: RevealOptionKey.unpin.rawVal
 private let muteOption = ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: "Mute", icon: muteIcon, color: UIColor(0xaaaab3))
 private let unmuteOption = ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: "Unmute", icon: unmuteIcon, color: UIColor(0xaaaab3))
 private let deleteOption = ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: "Delete", icon: deleteIcon, color: UIColor(0xff3824))
+
+private let itemHeight: CGFloat = 76.0 //68.0
 
 private func revealOptions(isPinned: Bool, isMuted: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
@@ -189,7 +191,7 @@ private func generateBadgeBackgroundImage(active: Bool) -> UIImage? {
         if active {
             context.setFillColor(UIColor(0x007ee5).cgColor)
         } else {
-            context.setFillColor(UIColor(0xbbbbbb).cgColor)
+            context.setFillColor(UIColor(0xadb3bb).cgColor)
         }
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
     })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10)
@@ -205,6 +207,8 @@ private let separatorHeight = 1.0 / UIScreen.main.scale
 
 private let pinnedBackgroundColor = UIColor(0xf7f7f7)
 
+private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 24.0)!
+
 class ChatListItemNode: ItemListRevealOptionsItemNode {
     var item: ChatListItem?
     
@@ -213,6 +217,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     let avatarNode: AvatarNode
     let titleNode: TextNode
+    let authorNode: TextNode
     let textNode: TextNode
     let dateNode: TextNode
     let statusNode: ASImageNode
@@ -239,7 +244,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.backgroundColor = .white
         
-        self.avatarNode = AvatarNode(font: Font.regular(24.0))
+        self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -249,6 +254,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.displaysAsynchronously = true
+        
+        self.authorNode = TextNode()
+        self.authorNode.isLayerBacked = true
+        self.authorNode.displaysAsynchronously = true
         
         self.textNode = TextNode()
         self.textNode.isLayerBacked = true
@@ -288,6 +297,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.avatarNode)
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.authorNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.dateNode)
         self.addSubnode(self.statusNode)
@@ -379,6 +389,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         let textLayout = TextNode.asyncLayout(self.textNode)
         let titleLayout = TextNode.asyncLayout(self.titleNode)
+        let authorLayout = TextNode.asyncLayout(self.authorNode)
         let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         
@@ -389,6 +400,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let notificationSettings = item.notificationSettings
             let embeddedState = item.embeddedState
             
+            var authorAttributedString: NSAttributedString?
             var textAttributedString: NSAttributedString?
             var dateAttributedString: NSAttributedString?
             var titleAttributedString: NSAttributedString?
@@ -402,7 +414,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let editingOffset: CGFloat
             if item.editing {
-                let sizeAndApply = editableControlLayout(68.0)
+                let sizeAndApply = editableControlLayout(itemHeight)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0.width
             } else {
@@ -412,7 +424,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if true {
                 let peer: Peer?
                 
-                var messageText: NSString
+                var messageText: String
                 if let message = message {
                     if let messageMain = messageMainPeer(message) {
                         peer = messageMain
@@ -420,7 +432,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         peer = item.peer.chatMainPeer
                     }
                     
-                    messageText = message.text as NSString
+                    messageText = message.text
                     if message.text.isEmpty {
                         for media in message.media {
                             switch media {
@@ -448,20 +460,22 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 
                 let attributedText: NSAttributedString
                 if let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
-                    let mutableAttributedText = NSMutableAttributedString()
-                    mutableAttributedText.append(NSAttributedString(string: "Draft: ", font: textFont, textColor: UIColor(0xdd4b39)))
-                    mutableAttributedText.append(NSAttributedString(string: embeddedState.text, font: textFont, textColor: UIColor(0x8e8e93)))
-                    attributedText = mutableAttributedText;
+                    authorAttributedString = NSAttributedString(string: "Draft", font: textFont, textColor: UIColor(0xdd4b39))
+                    
+                    attributedText = NSAttributedString(string: embeddedState.text, font: textFont, textColor: UIColor(0x8e8e93))
                 } else if let message = message, let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
                     if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                         attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: UIColor(0x8e8e93))
                     } else {
-                        let peerText: NSString = (author.id == account.peerId ? "You: " : author.compactDisplayTitle + ": ") as NSString
+                        let peerText: String = author.id == account.peerId ? "You" : author.displayTitle
                         
-                        let mutableAttributedText = NSMutableAttributedString(string: peerText.appending(messageText as String), attributes: [kCTFontAttributeName as String: textFont])
+                        authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: .black)
+                        attributedText = NSAttributedString(string: messageText, font: textFont, textColor: UIColor(0x8e8e93))
+                        
+                        /*let mutableAttributedText = NSMutableAttributedString(string: peerText.appending(messageText as String), attributes: [kCTFontAttributeName as String: textFont])
                         mutableAttributedText.addAttribute(kCTForegroundColorAttributeName as String, value: UIColor.black.cgColor, range: NSMakeRange(0, peerText.length))
                         mutableAttributedText.addAttribute(kCTForegroundColorAttributeName as String, value: UIColor(0x8e8e93).cgColor, range: NSMakeRange(peerText.length, messageText.length))
-                        attributedText = mutableAttributedText;
+                        attributedText = mutableAttributedText*/
                     }
                 } else {
                     attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: UIColor(0x8e8e93))
@@ -522,7 +536,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 muteWidth = currentMutedIconImage.size.width + 4.0
             }
             
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 12.0), size: CGSize(width: width - 78.0 - 10.0 - 1.0 - editingOffset, height: 68.0 - 12.0 - 9.0))
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 8.0), size: CGSize(width: width - 78.0 - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
             
             let (dateLayout, dateApply) = dateLayout(dateAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
@@ -530,18 +544,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let badgeSize: CGFloat
             if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
-                badgeSize = max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 2.0
+                badgeSize = max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
             } else {
                 badgeSize = 0.0
             }
             
-            let (textLayout, textApply) = textLayout(textAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
+            let (authorLayout, authorApply) = authorLayout(authorAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
+            
+            let (textLayout, textApply) = textLayout(textAttributedString, nil, authorAttributedString == nil ? 2 : 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
             
             let titleRect = CGRect(origin: rawContentRect.origin, size: CGSize(width: rawContentRect.width - dateLayout.size.width - 10.0 - statusWidth - muteWidth, height: rawContentRect.height))
             let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 68.0), insets: insets)
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: itemHeight), insets: insets)
             
             let peerRevealOptions = revealOptions(isPinned: item.index.pinningIndex != nil, isMuted: currentMutedIconImage != nil)
             
@@ -588,10 +604,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         })
                     }
                     
-                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: editingOffset + 10.0 + revealOffset, y: 4.0), size: CGSize(width: 60.0, height: 60.0)))
+                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: editingOffset + 10.0 + revealOffset, y: 7.0), size: CGSize(width: 60.0, height: 60.0)))
                     
                     let _ = dateApply()
                     let _ = textApply()
+                    let _ = authorApply()
                     let _ = titleApply()
                     let _ = badgeApply()
                     
@@ -635,7 +652,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let contentDeltaX = contentRect.origin.x - strongSelf.titleNode.frame.minX
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y), size: titleLayout.size)
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.maxY - textLayout.size.height - 1.0), size: textLayout.size)
+                    strongSelf.authorNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 1.0), size: authorLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 1.0 + (authorLayout.size.height.isZero ? 0.0 : (authorLayout.size.height - 3.0))), size: textLayout.size)
                     
                     if !contentDeltaX.isZero {
                         let titlePosition = strongSelf.titleNode.position
@@ -643,6 +661,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         let textPosition = strongSelf.textNode.position
                         transition.animatePosition(node: strongSelf.textNode, from: CGPoint(x: textPosition.x - contentDeltaX, y: textPosition.y))
+                        
+                        let authorPosition = strongSelf.authorNode.position
+                        transition.animatePosition(node: strongSelf.authorNode, from: CGPoint(x: authorPosition.x - contentDeltaX, y: authorPosition.y))
                     }
                     
                     let separatorInset: CGFloat
@@ -652,7 +673,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         separatorInset = editingOffset + 78.0 + rawContentRect.origin.x
                     }
                     
-                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: 68.0 - separatorHeight), size: CGSize(width: width - separatorInset, height: separatorHeight)))
+                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: itemHeight - separatorHeight), size: CGSize(width: width - separatorInset, height: separatorHeight)))
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     if item.index.pinningIndex != nil {
@@ -722,7 +743,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 12.0), size: CGSize(width: self.contentSize.width - 78.0 - 10.0 - 1.0 - editingOffset, height: 68.0 - 12.0 - 9.0))
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 8.0), size: CGSize(width: self.contentSize.width - 78.0 - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
             
             let contentRect = rawContentRect.offsetBy(dx: editingOffset + 78.0 + offset, dy: 0.0)
             
@@ -732,6 +753,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let titleFrame = self.titleNode.frame
             transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: titleFrame.origin.y), size: titleFrame.size))
+            
+            let authorFrame = self.authorNode.frame
+            transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: authorFrame.origin.y), size: authorFrame.size))
             
             let textFrame = self.textNode.frame
             transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: textFrame.origin.y), size: textFrame.size))

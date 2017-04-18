@@ -94,7 +94,7 @@ public final class SecretMediaPreviewController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)
     }
     
-    override open func dismiss() {
-        self.presentingViewController?.dismiss(animated: false, completion: nil)
+    override open func dismiss(completion: (() -> Void)? = nil) {
+        self.presentingViewController?.dismiss(animated: false, completion: completion)
     }
 }

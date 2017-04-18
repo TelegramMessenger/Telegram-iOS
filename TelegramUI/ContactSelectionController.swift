@@ -177,13 +177,13 @@ public class ContactSelectionController: ViewController {
         }))
     }
     
-    override open func dismiss() {
+    override open func dismiss(completion: (() -> Void)? = nil) {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
             switch presentationArguments.presentationAnimation {
                 case .modalSheet:
-                    self.contactsNode.animateOut()
+                    self.contactsNode.animateOut(completion: completion)
                 case .none:
-                    break
+                    completion?()
             }
         }
     }

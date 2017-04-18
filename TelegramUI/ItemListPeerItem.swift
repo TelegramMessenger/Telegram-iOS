@@ -30,12 +30,18 @@ enum ItemListPeerItemText {
     case none
 }
 
+enum ItemListPeerItemLabel {
+    case none
+    case text(String)
+    case disclosure(String)
+}
+
 final class ItemListPeerItem: ListViewItem, ItemListItem {
     let account: Account
     let peer: Peer
     let presence: PeerPresence?
     let text: ItemListPeerItemText
-    let label: String?
+    let label: ItemListPeerItemLabel
     let editing: ItemListPeerItemEditing
     let switchValue: Bool?
     let enabled: Bool
@@ -45,7 +51,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let removePeer: (PeerId) -> Void
     let toggleUpdated: ((Bool) -> Void)?
     
-    init(account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: String?, editing: ItemListPeerItemEditing, switchValue: Bool?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
+    init(account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, switchValue: Bool?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
         self.account = account
         self.peer = peer
         self.presence = presence
@@ -109,7 +115,10 @@ private let titleFont = Font.regular(17.0)
 private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(14.0)
 private let labelFont = Font.regular(13.0)
+private let labelDisclosureFont = Font.regular(17.0)
 private let avatarFont = Font.regular(17.0)
+
+private let arrowImage = UIImage(bundleImageName: "Peer Info/DisclosureArrow")?.precomposed()
 
 class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
@@ -121,6 +130,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let labelNode: TextNode
+    private var labelArrowNode: ASImageNode?
     private let statusNode: TextNode
     private var switchNode: SwitchNode?
     
@@ -200,6 +210,8 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         
         var currentSwitchNode = self.switchNode
         
+        var currentLabelArrowNode = self.labelArrowNode
+        
         return { item, width, neighbors in
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
@@ -258,11 +270,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                 case .none:
                     break
             }
-            
-            if let label = item.label {
-                labelAttributedString = NSAttributedString(string: label, font: labelFont, textColor: UIColor(0xa6a6a6))
-            }
-            
+
             let leftInset: CGFloat = 65.0
             
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
@@ -276,10 +284,33 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
+            var labelInset: CGFloat = 0.0
+            var updatedLabelArrowNode: ASImageNode?
+            switch item.label {
+                case .none:
+                    break
+                case let .text(text):
+                    labelAttributedString = NSAttributedString(string: text, font: labelFont, textColor: UIColor(0xa6a6a6))
+                    rightInset += 10.0
+                case let .disclosure(text):
+                    if let currentLabelArrowNode = currentLabelArrowNode {
+                        updatedLabelArrowNode = currentLabelArrowNode
+                    } else {
+                        let arrowNode = ASImageNode()
+                        arrowNode.isLayerBacked = true
+                        arrowNode.displayWithoutProcessing = true
+                        arrowNode.displaysAsynchronously = false
+                        arrowNode.image = arrowImage
+                        updatedLabelArrowNode = arrowNode
+                    }
+                    labelInset += 30.0
+                    labelAttributedString = NSAttributedString(string: text, font: labelDisclosureFont, textColor: UIColor(0x8e8e93))
+            }
+            
             let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - labelLayout.size.width - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0) - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - labelLayout.size.width - editingOffset - rightInset - labelInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0) - editingOffset - rightInset - labelInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
             let contentSize = CGSize(width: width, height: 48.0)
@@ -415,8 +446,23 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         switchNode.removeFromSupernode()
                         strongSelf.switchNode = nil
                     }
+                    
+                    var rightLabelInset: CGFloat = 15.0
+                    
+                    if let updatedLabelArrowNode = updatedLabelArrowNode {
+                        strongSelf.labelArrowNode = updatedLabelArrowNode
+                        strongSelf.addSubnode(updatedLabelArrowNode)
+                        if let image = updatedLabelArrowNode.image {
+                            let labelArrowNodeFrame = CGRect(origin: CGPoint(x: width - rightLabelInset - image.size.width, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                            transition.updateFrame(node: updatedLabelArrowNode, frame: labelArrowNodeFrame)
+                            rightLabelInset += 19.0
+                        }
+                    } else if let labelArrowNode = strongSelf.labelArrowNode {
+                        labelArrowNode.removeFromSupernode()
+                        strongSelf.labelArrowNode = nil
+                    }
 
-                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - labelLayout.size.width - 15.0 - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0 - labelLayout.size.height / 10.0)), size: labelLayout.size))
+                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - labelLayout.size.width - rightLabelInset - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size))
                     
                     transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0)))
                     strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer)
@@ -498,7 +544,18 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 25.0), size: self.statusNode.bounds.size))
-        transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - self.labelNode.bounds.size.width - 15.0, y: floor((self.contentSize.height - self.labelNode.bounds.size.height) / 2.0 - self.labelNode.bounds.size.height / 10.0)), size: self.labelNode.bounds.size))
+        
+        var rightLabelInset: CGFloat = 15.0
+        
+        if let labelArrowNode = self.labelArrowNode {
+            if let image = labelArrowNode.image {
+                let labelArrowNodeFrame = CGRect(origin: CGPoint(x: revealOffset + width - rightLabelInset - image.size.width, y: labelArrowNode.frame.minY), size: image.size)
+                transition.updateFrame(node: labelArrowNode, frame: labelArrowNodeFrame)
+                rightLabelInset += 19.0
+            }
+        }
+        
+        transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - self.labelNode.bounds.size.width - rightLabelInset, y: floor((self.contentSize.height - self.labelNode.bounds.size.height) / 2.0 - self.labelNode.bounds.size.height / 10.0)), size: self.labelNode.bounds.size))
         
         transition.updateFrame(node: avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0)))
     }

@@ -108,7 +108,9 @@ public class ChatController: TelegramController {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) {
                     for media in message.media {
                         if let file = media as? TelegramMediaFile {
-                            galleryMedia = file
+                            if !file.isAnimated {
+                                galleryMedia = file
+                            }
                         } else if let image = media as? TelegramMediaImage {
                             galleryMedia = image
                         } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
@@ -126,7 +128,11 @@ public class ChatController: TelegramController {
                         for attribute in file.attributes {
                             if case let .Sticker(_, reference) = attribute {
                                 if let reference = reference {
-                                    strongSelf.present(StickerPackPreviewController(account: strongSelf.account, stickerPack: reference), in: .window)
+                                    let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: reference)
+                                    controller.sendSticker = { file in
+                                        self?.controllerInteraction?.sendSticker(file)
+                                    }
+                                    strongSelf.present(controller, in: .window)
                                 }
                                 break
                             }
@@ -138,7 +144,11 @@ public class ChatController: TelegramController {
                             player.control(.navigation(.next))
                         }
                     } else {
-                        let gallery = GalleryController(account: strongSelf.account, messageId: id)
+                        let gallery = GalleryController(account: strongSelf.account, messageId: id, replaceRootController: { controller, ready in
+                            if let strongSelf = self {
+                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
+                            }
+                        })
                         
                         strongSelf.galleryHiddenMesageAndMediaDisposable.set(gallery.hiddenMedia.start(next: { [weak strongSelf] messageIdAndMedia in
                             if let strongSelf = strongSelf {
@@ -254,7 +264,7 @@ public class ChatController: TelegramController {
         }, toggleMessageSelection: { [weak self] id in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 if let _ = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) {
-                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState { $0.withToggledSelectedMessage(id) } })
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withToggledSelectedMessage(id) } })
                 }
             }
         }, sendMessage: { [weak self] text in
@@ -274,6 +284,17 @@ public class ChatController: TelegramController {
                 let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: text, attributes: attributes, media: nil, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId)]).start()
             }
         }, sendSticker: { [weak self] file in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                        })
+                    }
+                })
+                let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: file, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId)]).start()
+            }
+        }, sendGif: { [weak self] file in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
@@ -402,6 +423,37 @@ public class ChatController: TelegramController {
                     }
                 })
             }
+        }, openMessageShareMenu: { [weak self] id in
+            if let strongSelf = self {
+                var copyLink: (() -> Void)?
+                var shareAction: (([PeerId]) -> Void)?
+                let shareController = ShareController(account: strongSelf.account, shareAction: { peerIds in
+                    shareAction?(peerIds)
+                }, defaultAction: ShareControllerAction(title: "Copy Link", action: {
+                    copyLink?()
+                }))
+                strongSelf.present(shareController, in: .window)
+                shareAction = { [weak shareController] peerIds in
+                    shareController?.dismiss()
+                    
+                    if let strongSelf = self {
+                        for peerId in peerIds {
+                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: [.forward(source: id)]).start()
+                        }
+                    }
+                }
+                copyLink = { [weak shareController] in
+                    shareController?.dismiss()
+                    
+                    if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.peer {
+                        if let addressName = peer.addressName {
+                            UIPasteboard.general.string = "https://t.me/\(addressName)/\(id.id)"
+                        }
+                    }
+                }
+            }
+        }, presentController: { [weak self] controller, arguments in
+            self?.present(controller, in: .window, with: arguments)
         })
         
         self.controllerInteraction = controllerInteraction
@@ -748,6 +800,27 @@ public class ChatController: TelegramController {
             }
         }
         
+        self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] index in
+            if let strongSelf = self {
+                if let controllerInteraction = strongSelf.controllerInteraction {
+                    if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(index.id) {
+                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
+                        controllerInteraction.highlightedState = highlightedState
+                        strongSelf.updateItemNodesHighlightedStates(animated: true)
+                        
+                        strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(0.7, queue: Queue.mainQueue())).start(completed: {
+                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                if controllerInteraction.highlightedState == highlightedState {
+                                    controllerInteraction.highlightedState = nil
+                                    strongSelf.updateItemNodesHighlightedStates(animated: true)
+                                }
+                            }
+                        }))
+                    }
+                }
+            }
+        }
+        
         self.chatDisplayNode.historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
             if let strongSelf = self, !strongSelf.historyNavigationStack.isEmpty {
                 strongSelf.historyNavigationStack.filterOutIndicesLessThan(index)
@@ -792,7 +865,7 @@ public class ChatController: TelegramController {
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, scrolledToIndex: transition.scrolledToIndex), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -1450,7 +1523,7 @@ public class ChatController: TelegramController {
         
         if let controllerInteraction = self.controllerInteraction {
             if updatedChatPresentationInterfaceState.interfaceState.selectionState != controllerInteraction.selectionState {
-                let animated = controllerInteraction.selectionState == nil || updatedChatPresentationInterfaceState.interfaceState.selectionState == nil
+                //let animated = controllerInteraction.selectionState == nil || updatedChatPresentationInterfaceState.interfaceState.selectionState == nil
                 controllerInteraction.selectionState = updatedChatPresentationInterfaceState.interfaceState.selectionState
                 self.updateItemNodesSelectionStates(animated: animated)
             }
@@ -1526,7 +1599,7 @@ public class ChatController: TelegramController {
                 let controller = generator({ controller in
                     return presentOverlayController!(controller)
                 })
-                let legacyController = LegacyController(legacyController: controller, presentation: .modal)
+                let legacyController = LegacyController(legacyController: controller, presentation: .modal(animateIn: false))
                 
                 presentOverlayController = { [weak legacyController] controller in
                     if let legacyController = legacyController {

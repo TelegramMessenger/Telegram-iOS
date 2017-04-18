@@ -5,20 +5,32 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 
+final class StickerPackPreviewInteraction {
+    var previewedItem: StickerPackItem?
+    
+    let sendSticker: (StickerPackItem) -> Void
+    
+    init(sendSticker: @escaping (StickerPackItem) -> Void) {
+        self.sendSticker = sendSticker
+    }
+}
+
 final class StickerPackPreviewGridItem: GridItem {
     let account: Account
     let stickerItem: StickerPackItem
+    let interaction: StickerPackPreviewInteraction
     
     let section: GridSection? = nil
     
-    init(account: Account, stickerItem: StickerPackItem) {
+    init(account: Account, stickerItem: StickerPackItem, interaction: StickerPackPreviewInteraction) {
         self.account = account
         self.stickerItem = stickerItem
+        self.interaction = interaction
     }
     
     func node(layout: GridNodeLayout) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
-        node.setup(account: self.account, stickerItem: self.stickerItem)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction)
         return node
     }
     
@@ -27,25 +39,33 @@ final class StickerPackPreviewGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, stickerItem: self.stickerItem)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction)
     }
 }
+
+private let textFont = Font.regular(20.0)
 
 final class StickerPackPreviewGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
     private let imageNode: TransformImageNode
     private let textNode: ASTextNode
     
+    private var currentIsPreviewing = false
+    
     private let stickerFetchedDisposable = MetaDisposable()
     
-    var interfaceInteraction: ChatControllerInteraction?
-    var inputNodeInteraction: ChatMediaInputNodeInteraction?
+    var interaction: StickerPackPreviewInteraction?
+    
     var selected: (() -> Void)?
+    
+    var stickerPackItem: StickerPackItem? {
+        return self.currentState?.1
+    }
     
     override init() {
         self.imageNode = TransformImageNode()
-        //self.imageNode.alphaTransitionOnFirstUpdate = true
         self.imageNode.isLayerBacked = true
+        //self.imageNode.alphaTransitionOnFirstUpdate = true
         
         self.textNode = ASTextNode()
         self.textNode.isLayerBacked = true
@@ -67,7 +87,9 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: StickerPackItem) {
+    func setup(account: Account, stickerItem: StickerPackItem, interaction: StickerPackPreviewInteraction) {
+        self.interaction = interaction
+        
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
             var text = ""
             for attribute in stickerItem.file.attributes {
@@ -76,7 +98,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     break
                 }
             }
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(20.0), textColor: .black, paragraphAlignment: .right)
+            self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .black, paragraphAlignment: .right)
             if let dimensions = stickerItem.file.dimensions {
                 self.imageNode.setSignal(account: account, signal: chatMessageSticker(account: account, file: stickerItem.file, small: true))
                 self.stickerFetchedDisposable.set(fileInteractiveFetched(account: account, file: stickerItem.file).start())
@@ -107,25 +129,40 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         }
     }
     
-    /*func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
-     if self.messageId == id {
-     return self.imageNode
-     } else {
-     return nil
-     }
-     }*/
+    func transitionNode() -> ASDisplayNode? {
+        return self
+    }
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
-        if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(item.file)
+        if let interaction = self.interaction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
+            interaction.sendSticker(item)
         }
-        /*if let controllerInteraction = self.controllerInteraction, let messageId = self.messageId, case .ended = recognizer.state {
-         controllerInteraction.openMessage(messageId)
-         }*/
     }
     
     func animateIn() {
         self.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 60.0), to: CGPoint(), duration: 0.42, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+    }
+    
+    func updatePreviewing(animated: Bool) {
+        var isPreviewing = false
+        if let (_, item, _) = self.currentState, let interaction = self.interaction {
+            isPreviewing = interaction.previewedItem == item
+        }
+        if self.currentIsPreviewing != isPreviewing {
+            self.currentIsPreviewing = isPreviewing
+            
+            if isPreviewing {
+                self.layer.sublayerTransform = CATransform3DMakeScale(0.8, 0.8, 1.0)
+                if animated {
+                    self.layer.animateSpring(from: 1.0 as NSNumber, to: 0.8 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.4)
+                }
+            } else {
+                self.layer.sublayerTransform = CATransform3DIdentity
+                if animated {
+                    self.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5)
+                }
+            }
+        }
     }
 }
 

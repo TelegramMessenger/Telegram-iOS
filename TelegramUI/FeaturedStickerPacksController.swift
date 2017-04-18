@@ -189,7 +189,7 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
             let previous = previousPackCount
             previousPackCount = packCount
             
-            let controllerState = ItemListControllerState(title: "Trending Stickers", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(title: .text("Trending Stickers"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             
             let listState = ItemListNodeState(entries: featuredStickerPacksControllerEntries(state: state, view: view, featured: featured, unreadPacks: initialUnreadPacks), style: .blocks, animateChanges: false)
             return (controllerState, (listState, arguments))

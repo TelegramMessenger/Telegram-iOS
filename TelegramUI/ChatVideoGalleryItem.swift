@@ -17,7 +17,7 @@ class ChatVideoGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatVideoGalleryItemNode()
+        let node = ChatVideoGalleryItemNode(account: self.account)
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile, (file.isVideo || file.mimeType.hasPrefix("video/")) {
@@ -34,6 +34,7 @@ class ChatVideoGalleryItem: GalleryItem {
         if let location = self.location {
             node._title.set(.single("\(location.index + 1) of \(location.count)"))
         }
+        node.setMessage(self.message)
         
         return node
     }
@@ -41,6 +42,7 @@ class ChatVideoGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode) {
         if let node = node as? ChatVideoGalleryItemNode, let location = self.location {
             node._title.set(.single("\(location.index + 1) of \(location.count)"))
+            node.setMessage(self.message)
         }
     }
 }
@@ -59,6 +61,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let progressNode: RadialProgressNode
     
     private var accountAndFile: (Account, TelegramMediaFile, Bool)?
+    private var message: Message?
     
     private var isCentral = false
     
@@ -66,7 +69,9 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let fetchDisposable = MetaDisposable()
     private var resourceStatus: MediaResourceStatus?
     
-    override init() {
+    private let footerContentNode: ChatItemGalleryFooterContentNode
+    
+    init(account: Account) {
         self.videoNode = MediaPlayerNode()
         self.snapshotNode = TransformImageNode()
         self.snapshotNode.backgroundColor = UIColor.black
@@ -75,6 +80,8 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.progressButtonNode = HighlightableButtonNode()
         self.progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(white: 0.0, alpha: 0.6), foregroundColor: UIColor.white, icon: nil))
+        
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
         
         super.init()
         
@@ -107,6 +114,10 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         let progressFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressDiameter) / 2.0), y: floor((layout.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
         transition.updateFrame(node: self.progressButtonNode, frame: progressFrame)
         transition.updateFrame(node: self.progressNode, frame: CGRect(origin: CGPoint(), size: progressFrame.size))
+    }
+    
+    fileprivate func setMessage(_ message: Message) {
+        self.footerContentNode.setMessage(message)
     }
     
     func setFile(account: Account, file: TelegramMediaFile, loopVideo: Bool) {
@@ -165,7 +176,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 /*let source = VideoPlayerSource(account: account, resource: CloudFileMediaResource(location: file.location, size: file.size))
                 self.videoNode.player = VideoPlayer(source: source)*/
                 
-                let player = MediaPlayer(audioSessionManager: (account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, postbox: account.postbox, resource: file.resource, streamable: false)
+                let player = MediaPlayer(audioSessionManager: (account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, postbox: account.postbox, resource: file.resource, streamable: false, video: true, preferSoftwareDecoding: false, enableSound: true)
                 if loopVideo {
                     player.actionAtEnd = .loop
                 }
@@ -284,7 +295,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Local:
                         self.playVideo()
                     case .Remote:
-                        self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
+                        self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .video)).start())
                 }
             }
         }
@@ -299,9 +310,13 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Local:
                         self.playVideo()
                     case .Remote:
-                        self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
+                        self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .video)).start())
                 }
             }
         }
+    }
+    
+    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
+        return .single(self.footerContentNode)
     }
 }

@@ -2,10 +2,12 @@ import CoreMedia
 
 final class FFMpegMediaPassthroughVideoFrameDecoder: MediaTrackFrameDecoder {
     private let videoFormat: CMVideoFormatDescription
+    private let rotationAngle: Double
     private var resetDecoderOnNextFrame = true
     
-    init(videoFormat: CMVideoFormatDescription) {
+    init(videoFormat: CMVideoFormatDescription, rotationAngle: Double) {
         self.videoFormat = videoFormat
+        self.rotationAngle = rotationAngle
     }
     
     func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {
@@ -30,10 +32,15 @@ final class FFMpegMediaPassthroughVideoFrameDecoder: MediaTrackFrameDecoder {
             self.resetDecoderOnNextFrame = false
             let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer!, true)! as NSArray
             let dict = attachments[0] as! NSMutableDictionary
+            
             dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleBufferAttachmentKey_ResetDecoderBeforeDecoding as NSString as String)
         }
         
-        return MediaTrackFrame(type: .video, sampleBuffer: sampleBuffer!, resetDecoder: resetDecoder)
+        return MediaTrackFrame(type: .video, sampleBuffer: sampleBuffer!, resetDecoder: resetDecoder, decoded: false, rotationAngle: self.rotationAngle)
+    }
+    
+    func takeRemainingFrame() -> MediaTrackFrame? {
+        return nil
     }
     
     func reset() {

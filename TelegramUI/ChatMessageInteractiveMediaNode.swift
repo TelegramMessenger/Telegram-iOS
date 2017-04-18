@@ -14,6 +14,7 @@ private let secretMediaIcon = generateTintedImage(image: UIImage(bundleImageName
 
 final class ChatMessageInteractiveMediaNode: ASTransformNode {
     private let imageNode: TransformImageNode
+    private var videoNode: ManagedVideoNode?
     private var progressNode: RadialProgressNode?
     private var timeoutNode: RadialTimeoutNode?
     private var tapRecognizer: UITapGestureRecognizer?
@@ -27,6 +28,23 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     private let fetchControls = Atomic<FetchControls?>(value: nil)
     private var fetchStatus: MediaResourceStatus?
     private let fetchDisposable = MetaDisposable()
+    
+    var visibility: ListViewItemNodeVisibility = .none {
+        didSet {
+            if let videoNode = self.videoNode {
+                switch visibility {
+                    case .visible:
+                        if videoNode.supernode == nil {
+                            self.insertSubnode(videoNode, aboveSubnode: self.imageNode)
+                        }
+                    case .nearlyVisible, .none:
+                        if videoNode.supernode != nil {
+                            videoNode.removeFromSupernode()
+                        }
+                }
+            }
+        }
+    }
     
     var activateLocalContent: () -> Void = { }
     
@@ -86,10 +104,13 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    func asyncLayout() -> (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGFloat, ImageCorners, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
         let currentMessageIdAndFlags = self.messageIdAndFlags
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
+        
+        let currentVideoNode = self.videoNode
+        let hasCurrentVideoNode = currentVideoNode != nil
         
         return { account, message, media, corners, automaticDownload, constrainedSize, layoutConstants in
             var nativeSize: CGSize
@@ -107,6 +128,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 }
             }
             
+            var isInlinePlayableVideo = false
+            
             if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                 nativeSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5)).fitted(constrainedSize)
             } else if let file = media as? TelegramMediaFile, let dimensions = file.dimensions {
@@ -114,8 +137,16 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 if file.isAnimated {
                     nativeSize = nativeSize.fitted(CGSize(width: 480.0, height: 480.0))
                 }
+                isInlinePlayableVideo = file.isVideo && file.isAnimated
             } else {
                 nativeSize = CGSize(width: 54.0, height: 54.0)
+            }
+            
+            var updatedCorners = corners
+            if isInlinePlayableVideo {
+                updatedCorners = updatedCorners.withRemovedTails()
+                let radius = max(updatedCorners.bottomLeft.radius, updatedCorners.bottomRight.radius)
+                updatedCorners = ImageCorners(radius: radius)
             }
             
             let maxWidth: CGFloat
@@ -130,7 +161,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 secretProgressIcon = secretMediaIcon
             }
             
-            return (maxWidth, { constrainedSize in
+            return (maxWidth, updatedCorners, { constrainedSize in
                 return (min(maxWidth, nativeSize.width), { boundingWidth in
                     let drawingSize: CGSize
                     let boundingSize: CGSize
@@ -159,6 +190,10 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                         statusUpdated = true
                     }
                     
+                    var updatedVideoNode: ManagedVideoNode?
+                    var replaceVideoNode = false
+                    var updateVideoFile: TelegramMediaFile?
+                    
                     if mediaUpdated {
                         if let image = media as? TelegramMediaImage {
                             if isSecretMedia {
@@ -180,6 +215,22 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             } else {
                                 updateImageSignal = chatMessageVideo(account: account, video: file)
                             }
+                            
+                            if isInlinePlayableVideo {
+                                updateVideoFile = file
+                                if hasCurrentVideoNode {
+                                } else {
+                                    let videoNode = ManagedVideoNode()
+                                    videoNode.isUserInteractionEnabled = false
+                                    updatedVideoNode = videoNode
+                                    replaceVideoNode = true
+                                }
+                            } else {
+                                if hasCurrentVideoNode {
+                                    replaceVideoNode = true
+                                }
+                            }
+                            
                             updatedFetchControls = FetchControls(fetch: { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.fetchDisposable.set(chatMessageFileInteractiveFetched(account: account, file: file).start())
@@ -216,7 +267,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                         }
                     }
                     
-                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
+                    let arguments = TransformImageArguments(corners: updatedCorners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize)
                     
@@ -231,6 +282,32 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             strongSelf.imageNode.frame = imageFrame
                             strongSelf.progressNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             strongSelf.timeoutNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
+                            
+                            if replaceVideoNode {
+                                if let videoNode = strongSelf.videoNode {
+                                    videoNode.clearContext()
+                                    videoNode.removeFromSupernode()
+                                    strongSelf.videoNode = nil
+                                }
+                                
+                                if let updatedVideoNode = updatedVideoNode {
+                                    strongSelf.videoNode = updatedVideoNode
+                                    if strongSelf.visibility == .visible {
+                                        strongSelf.insertSubnode(updatedVideoNode, aboveSubnode: strongSelf.imageNode)
+                                    }
+                                }
+                            }
+                            
+                            if let videoNode = strongSelf.videoNode {
+                                if let updateVideoFile = updateVideoFile {
+                                    if let applicationContext = account.applicationContext as? TelegramApplicationContext {
+                                        videoNode.acquireContext(account: account, mediaManager: applicationContext.mediaManager, id: PeerMessageManagedMediaId(messageId: message.id), resource: updateVideoFile.resource)
+                                    }
+                                }
+                                
+                                videoNode.transformArguments = arguments
+                                videoNode.frame = imageFrame
+                            }
                             
                             if let updateImageSignal = updateImageSignal {
                                 strongSelf.imageNode.setSignal(account: account, signal: updateImageSignal)
@@ -289,22 +366,27 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                                 }
                                             }
                                             
+                                            var state: RadialProgressState
+                                            var hide = false
                                             switch status {
                                                 case let .Fetching(progress):
-                                                    strongSelf.progressNode?.state = .Fetching(progress: progress)
+                                                    state = .Fetching(progress: progress)
                                                 case .Local:
-                                                    var state: RadialProgressState = .None
+                                                    state = .None
                                                     if isSecretMedia && secretProgressIcon != nil {
                                                         state = .Image(secretProgressIcon!)
                                                     } else if let file = media as? TelegramMediaFile {
-                                                        if file.isVideo {
+                                                        if !isInlinePlayableVideo && file.isVideo {
                                                             state = .Play
+                                                        } else {
+                                                            hide = true
                                                         }
                                                     }
-                                                    strongSelf.progressNode?.state = state
                                                 case .Remote:
-                                                    strongSelf.progressNode?.state = .Remote
+                                                    state = .Remote
                                             }
+                                            strongSelf.progressNode?.state = state
+                                            strongSelf.progressNode?.isHidden = hide
                                         }
                                     }
                                 }))
@@ -327,12 +409,12 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGFloat, ImageCorners, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
         return { account, message, media, corners, automaticDownload, constrainedSize, layoutConstants in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
+            var imageLayout: (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGFloat, ImageCorners, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -342,9 +424,9 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 imageLayout = imageNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = imageLayout(account, message, media, corners, automaticDownload, constrainedSize, layoutConstants)
+            let (initialWidth, corners, continueLayout) = imageLayout(account, message, media, corners, automaticDownload, constrainedSize, layoutConstants)
             
-            return (initialWidth, { constrainedSize in
+            return (initialWidth, corners, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)
                 
                 return (finalWidth, { boundingWidth in

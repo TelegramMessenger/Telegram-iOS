@@ -113,7 +113,7 @@ public func debugAccountsController(account: Account, accountManager: AccountMan
     
     let signal = accountManager.accountRecords()
         |> map { view -> (ItemListControllerState, (ItemListNodeState<DebugAccountsControllerEntry>, DebugAccountsControllerEntry.ItemGenerationArguments)) in
-            let controllerState = ItemListControllerState(title: "Accounts", leftNavigationButton: nil, rightNavigationButton: nil)
+            let controllerState = ItemListControllerState(title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil)
             let listState = ItemListNodeState(entries: debugAccountsControllerEntries(view: view), style: .blocks)
             
             return (controllerState, (listState, arguments))

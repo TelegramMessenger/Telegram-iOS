@@ -3,18 +3,25 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+enum ItemListDisclosureStyle {
+    case arrow
+    case none
+}
+
 class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let title: String
     let label: String
     let sectionId: ItemListSectionId
     let style: ItemListStyle
-    let action: () -> Void
+    let disclosureStyle: ItemListDisclosureStyle
+    let action: (() -> Void)?
     
-    init(title: String, label: String, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void) {
+    init(title: String, label: String, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
         self.title = title
         self.label = label
         self.sectionId = sectionId
         self.style = style
+        self.disclosureStyle = disclosureStyle
         self.action = action
     }
     
@@ -53,7 +60,7 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     
     func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
-        self.action()
+        self.action?()
     }
 }
 
@@ -69,6 +76,16 @@ class ItemListDisclosureItemNode: ListViewItemNode {
     let titleNode: TextNode
     let labelNode: TextNode
     let arrowNode: ASImageNode
+    
+    private var item: ItemListDisclosureItem?
+    
+    override var canBeSelected: Bool {
+        if let item = self.item, let _ = item.action {
+            return true
+        } else {
+            return false
+        }
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -111,7 +128,14 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
         return { item, width, neighbors in
-            let rightInset: CGFloat = 34.0
+            var rightInset: CGFloat = 34.0
+            
+            switch item.disclosureStyle {
+                case .none:
+                    rightInset = 16.0
+                case .arrow:
+                    rightInset = 34.0
+            }
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -134,6 +158,8 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
                     let _ = titleApply()
                     let _ = labelApply()
                     
@@ -190,6 +216,13 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                     
                     if let arrowImage = arrowImage {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: width - 15.0 - arrowImage.size.width, y: 18.0), size: arrowImage.size)
+                    }
+                    
+                    switch item.disclosureStyle {
+                        case .none:
+                            strongSelf.arrowNode.isHidden = true
+                        case .arrow:
+                            strongSelf.arrowNode.isHidden = false
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: 44.0 + UIScreenPixel + UIScreenPixel))

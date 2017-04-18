@@ -6,7 +6,9 @@ import TelegramCore
 
 private final class UserInfoControllerArguments {
     let account: Account
+    let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
+    let tapAvatarAction: () -> Void
     let openChat: () -> Void
     let changeNotificationMuteSettings: () -> Void
     let openSharedMedia: () -> Void
@@ -15,9 +17,11 @@ private final class UserInfoControllerArguments {
     let deleteContact: () -> Void
     let displayUsernameContextMenu: (String) -> Void
     
-    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void) {
         self.account = account
+        self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
+        self.tapAvatarAction = tapAvatarAction
         self.openChat = openChat
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.openSharedMedia = openSharedMedia
@@ -239,7 +243,9 @@ private enum UserInfoEntry: ItemListNodeEntry {
             case let .info(peer, presence, cachedData, state):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
-                })
+                }, avatarTapped: {
+                    arguments.tapAvatarAction()
+                }, context: arguments.avatarAndNameInfoContext)
             case let .about(text):
                 return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section, action: nil)
             case let .phoneNumber(_, value):
@@ -440,15 +446,11 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var openChatImpl: (() -> Void)?
     var displayUsernameContextMenuImpl: ((String) -> Void)?
     
     let actionsDisposable = DisposableSet()
-    
-    if peerId.namespace == Namespaces.Peer.CloudChannel {
-        actionsDisposable.add(account.viewTracker.updatedCachedChannelParticipants(peerId, forceImmediateUpdate: true).start())
-    }
     
     let updatePeerNameDisposable = MetaDisposable()
     actionsDisposable.add(updatePeerNameDisposable)
@@ -459,7 +461,14 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     let changeMuteSettingsDisposable = MetaDisposable()
     actionsDisposable.add(changeMuteSettingsDisposable)
     
-    let arguments = UserInfoControllerArguments(account: account, updateEditingName: { editingName in
+    let hiddenAvatarRepresentationDisposable = MetaDisposable()
+    actionsDisposable.add(hiddenAvatarRepresentationDisposable)
+    
+    var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
+    let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
+    var updateHiddenAvatarImpl: (() -> Void)?
+    
+    let arguments = UserInfoControllerArguments(account: account, avatarAndNameInfoContext: avatarAndNameInfoContext, updateEditingName: { editingName in
         updateState { state in
             if let _ = state.editingState {
                 return state.withUpdatedEditingState(UserInfoEditingState(editingName: editingName))
@@ -467,6 +476,23 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 return state
             }
         }
+    }, tapAvatarAction: {
+        let _ = (account.postbox.loadedPeerWithId(peerId) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+            if peer.profileImageRepresentations.isEmpty {
+                return
+            }
+            
+            let galleryController = AvatarGalleryController(account: account, peer: peer, replaceRootController: { controller, ready in
+                
+            })
+            hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
+                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
+                updateHiddenAvatarImpl?()
+            }))
+            presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                return avatarGalleryTransitionArguments?(entry)
+            }))
+        })
     }, openChat: {
         openChatImpl?()
     }, changeNotificationMuteSettings: {
@@ -585,7 +611,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 })
             }
             
-            let controllerState = ItemListControllerState(title: "Info", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(title: .text("Info"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: userInfoEntries(account: account, view: view, state: state, peerChatState: (chatState.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState), style: .plain)
             
             return (controllerState, (listState, arguments))
@@ -632,6 +658,29 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                     }
                 }))
                 
+            }
+        }
+    }
+    avatarGalleryTransitionArguments = { [weak controller] entry in
+        if let controller = controller {
+            var result: (ASDisplayNode, CGRect)?
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    result = itemNode.avatarTransitionNode()
+                }
+            }
+            if let (node, _) = result {
+                return GalleryTransitionArguments(transitionNode: node, transitionContainerNode: controller.displayNode, transitionBackgroundNode: controller.displayNode)
+            }
+        }
+        return nil
+    }
+    updateHiddenAvatarImpl = { [weak controller] in
+        if let controller = controller {
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    itemNode.updateAvatarHidden()
+                }
             }
         }
     }

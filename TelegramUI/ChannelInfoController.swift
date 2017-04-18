@@ -3,9 +3,13 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramLegacyComponents
 
 private final class ChannelInfoControllerArguments {
     let account: Account
+    let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
+    let tapAvatarAction: () -> Void
+    let changeProfilePhoto: () -> Void
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updateEditingDescriptionText: (String) -> Void
     let openChannelTypeSetup: () -> Void
@@ -19,8 +23,11 @@ private final class ChannelInfoControllerArguments {
     let deleteChannel: () -> Void
     let displayAddressNameContextMenu: (String) -> Void
     
-    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void) {
         self.account = account
+        self.avatarAndNameInfoContext = avatarAndNameInfoContext
+        self.tapAvatarAction = tapAvatarAction
+        self.changeProfilePhoto = changeProfilePhoto
         self.updateEditingName = updateEditingName
         self.updateEditingDescriptionText = updateEditingDescriptionText
         self.openChannelTypeSetup = openChannelTypeSetup
@@ -48,9 +55,10 @@ private enum ChannelInfoEntryTag {
 }
 
 private enum ChannelInfoEntry: ItemListNodeEntry {
-    case info(peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState)
+    case info(peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: TelegramMediaImageRepresentation?)
     case about(text: String)
     case addressName(value: String)
+    case channelPhotoSetup
     case channelTypeSetup(isPublic: Bool)
     case channelDescriptionSetup(text: String)
     case admins(count: Int32)
@@ -64,7 +72,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .info, .about, .addressName, .channelTypeSetup, .channelDescriptionSetup:
+            case .info, .about, .addressName, .channelPhotoSetup, .channelTypeSetup, .channelDescriptionSetup:
                 return ChannelInfoSection.info.rawValue
             case .admins, .members, .banned:
                 return ChannelInfoSection.members.rawValue
@@ -83,33 +91,35 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return 1
             case .addressName:
                 return 2
-            case .channelDescriptionSetup:
+            case .channelPhotoSetup:
                 return 3
-            case .channelTypeSetup:
+            case .channelDescriptionSetup:
                 return 4
-            case .admins:
+            case .channelTypeSetup:
                 return 5
-            case .members:
+            case .admins:
                 return 6
-            case .banned:
+            case .members:
                 return 7
-            case .notifications:
+            case .banned:
                 return 8
-            case .sharedMedia:
+            case .notifications:
                 return 9
-            case .report:
+            case .sharedMedia:
                 return 10
-            case .leave:
+            case .report:
                 return 11
-            case .deleteChannel:
+            case .leave:
                 return 12
+            case .deleteChannel:
+                return 13
         }
     }
     
     static func ==(lhs: ChannelInfoEntry, rhs: ChannelInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsPeer, lhsCachedData, lhsState):
-                if case let .info(rhsPeer, rhsCachedData, rhsState) = rhs {
+            case let .info(lhsPeer, lhsCachedData, lhsState, lhsUpdatingAvatar):
+                if case let .info(rhsPeer, rhsCachedData, rhsState, rhsUpdatingAvatar) = rhs {
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                         if !lhsPeer.isEqual(rhsPeer) {
                             return false
@@ -127,6 +137,9 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     if lhsState != rhsState {
                         return false
                     }
+                    if lhsUpdatingAvatar != rhsUpdatingAvatar {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -139,6 +152,12 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 }
             case let .addressName(value):
                 if case .addressName(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .channelPhotoSetup:
+                if case .channelPhotoSetup = rhs {
                     return true
                 } else {
                     return false
@@ -190,16 +209,22 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChannelInfoControllerArguments) -> ListViewItem {
         switch self {
-            case let .info(peer, cachedData, state):
+            case let .info(peer, cachedData, state, updatingAvatar):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
-                })
+                }, avatarTapped: {
+                    arguments.tapAvatarAction()
+                }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
             case let .about(text):
                 return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section, action: nil)
             case let .addressName(value):
                 return ItemListTextWithLabelItem(label: "share link", text: "https://t.me/\(value)", multiline: false, sectionId: self.section, action: {
                     arguments.displayAddressNameContextMenu("https://t.me/\(value)")
                 }, tag: ChannelInfoEntryTag.addressName)
+            case .channelPhotoSetup:
+                return ItemListActionItem(title: "Set Channel Photo", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                    arguments.changeProfilePhoto()
+                })
             case let .channelTypeSetup(isPublic):
                 return ItemListDisclosureItem(title: "Channel Type", label: isPublic ? "Public" : "Private", sectionId: self.section, style: .plain, action: {
                     arguments.openChannelTypeSetup()
@@ -253,20 +278,26 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
 }
 
 private struct ChannelInfoState: Equatable {
+    let updatingAvatar: TelegramMediaImageRepresentation?
     let editingState: ChannelInfoEditingState?
     let savingData: Bool
     
-    init(editingState: ChannelInfoEditingState?, savingData: Bool) {
+    init(updatingAvatar: TelegramMediaImageRepresentation?, editingState: ChannelInfoEditingState?, savingData: Bool) {
+        self.updatingAvatar = updatingAvatar
         self.editingState = editingState
         self.savingData = savingData
     }
     
     init() {
+        self.updatingAvatar = nil
         self.editingState = nil
         self.savingData = false
     }
     
     static func ==(lhs: ChannelInfoState, rhs: ChannelInfoState) -> Bool {
+        if lhs.updatingAvatar != rhs.updatingAvatar {
+            return false
+        }
         if lhs.editingState != rhs.editingState {
             return false
         }
@@ -276,12 +307,16 @@ private struct ChannelInfoState: Equatable {
         return true
     }
     
+    func withUpdatedUpdatingAvatar(_ updatingAvatar: TelegramMediaImageRepresentation?) -> ChannelInfoState {
+        return ChannelInfoState(updatingAvatar: updatingAvatar, editingState: self.editingState, savingData: self.savingData)
+    }
+    
     func withUpdatedEditingState(_ editingState: ChannelInfoEditingState?) -> ChannelInfoState {
-        return ChannelInfoState(editingState: editingState, savingData: self.savingData)
+        return ChannelInfoState(updatingAvatar: self.updatingAvatar, editingState: editingState, savingData: self.savingData)
     }
     
     func withUpdatedSavingData(_ savingData: Bool) -> ChannelInfoState {
-        return ChannelInfoState(editingState: self.editingState, savingData: savingData)
+        return ChannelInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, savingData: savingData)
     }
 }
 
@@ -322,7 +357,11 @@ private func channelInfoEntries(account: Account, view: PeerView, state: Channel
         }
         
         let infoState = ItemListAvatarAndNameInfoItemState(editingName: canManageChannel ? state.editingState?.editingName : nil, updatingName: nil)
-        entries.append(.info(peer: peer, cachedData: view.cachedData, state: infoState))
+        entries.append(.info(peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
+        
+        if state.editingState != nil && canManageChannel {
+            entries.append(.channelPhotoSetup)
+        }
         
         if let cachedChannelData = view.cachedData as? CachedChannelData {
             if let editingState = state.editingState, canManageChannel {
@@ -408,7 +447,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var popToRootControllerImpl: (() -> Void)?
     var displayAddressNameContextMenuImpl: ((String) -> Void)?
     
@@ -427,7 +466,78 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     let changeMuteSettingsDisposable = MetaDisposable()
     actionsDisposable.add(changeMuteSettingsDisposable)
     
-    let arguments = ChannelInfoControllerArguments(account: account, updateEditingName: { editingName in
+    let hiddenAvatarRepresentationDisposable = MetaDisposable()
+    actionsDisposable.add(hiddenAvatarRepresentationDisposable)
+    
+    let updateAvatarDisposable = MetaDisposable()
+    actionsDisposable.add(updateAvatarDisposable)
+    let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+    
+    var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
+    let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
+    var updateHiddenAvatarImpl: (() -> Void)?
+    
+    let arguments = ChannelInfoControllerArguments(account: account, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
+        let _ = (account.postbox.loadedPeerWithId(peerId) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+            if peer.profileImageRepresentations.isEmpty {
+                return
+            }
+            
+            let galleryController = AvatarGalleryController(account: account, peer: peer, replaceRootController: { controller, ready in
+                
+            })
+            hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
+                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
+                updateHiddenAvatarImpl?()
+            }))
+            presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                return avatarGalleryTransitionArguments?(entry)
+            }))
+        })
+    }, changeProfilePhoto: {
+        let emptyController = LegacyEmptyController()
+        let navigationController = makeLegacyNavigationController(rootController: emptyController)
+        navigationController.setNavigationBarHidden(true, animated: false)
+        navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+        
+        let legacyController = LegacyController(legacyController: navigationController, presentation: .custom)
+        
+        presentControllerImpl?(legacyController, nil)
+        
+        let mixin = TGMediaAvatarMenuMixin(parentController: emptyController, hasDeleteButton: false, personalPhoto: true)!
+        mixin.applicationInterface = legacyController.applicationInterface
+        let _ = currentAvatarMixin.swap(mixin)
+        mixin.didDismiss = { [weak legacyController] in
+            legacyController?.dismiss()
+        }
+        mixin.didFinishWithImage = { image in
+            if let image = image {
+                if let data = UIImageJPEGRepresentation(image, 0.6) {
+                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                    updateState {
+                        $0.withUpdatedUpdatingAvatar(representation)
+                    }
+                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                        switch result {
+                            case .complete:
+                                updateState {
+                                    $0.withUpdatedUpdatingAvatar(nil)
+                                }
+                            case .progress:
+                                break
+                        }
+                    }))
+                }
+            }
+        }
+        mixin.didDismiss = { [weak legacyController] in
+            let _ = currentAvatarMixin.swap(nil)
+            legacyController?.dismiss()
+        }
+        mixin.present()
+    }, updateEditingName: { editingName in
         updateState { state in
             if let editingState = state.editingState {
                 return state.withUpdatedEditingState(ChannelInfoEditingState(editingName: editingName, editingDescriptionText: editingState.editingDescriptionText))
@@ -612,7 +722,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 })
             }
             
-            let controllerState = ItemListControllerState(title: "Info", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(title: .text("Info"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: channelInfoEntries(account: account, view: view, state: state), style: .plain)
             
             return (controllerState, (listState, arguments))
@@ -657,6 +767,29 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                     }
                 }))
                 
+            }
+        }
+    }
+    avatarGalleryTransitionArguments = { [weak controller] entry in
+        if let controller = controller {
+            var result: (ASDisplayNode, CGRect)?
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    result = itemNode.avatarTransitionNode()
+                }
+            }
+            if let (node, _) = result {
+                return GalleryTransitionArguments(transitionNode: node, transitionContainerNode: controller.displayNode, transitionBackgroundNode: controller.displayNode)
+            }
+        }
+        return nil
+    }
+    updateHiddenAvatarImpl = { [weak controller] in
+        if let controller = controller {
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    itemNode.updateAvatarHidden()
+                }
             }
         }
     }

@@ -5,6 +5,8 @@ import CoreMedia
 import TelegramCore
 import Postbox
 
+private let traceEvents = false
+
 private struct MediaPlayerControlTimebase {
     let timebase: CMTimebase
     let isAudio: Bool
@@ -40,9 +42,13 @@ private final class MediaPlayerContext {
     private let postbox: Postbox
     private let resource: MediaResource
     private let streamable: Bool
+    private let video: Bool
+    private let preferSoftwareDecoding: Bool
+    private var enableSound: Bool
     
     private var state: MediaPlayerState = .empty
     private var audioRenderer: MediaPlayerAudioRenderer?
+    fileprivate let videoRenderer: VideoPlayerProxy
     
     private var tickTimer: SwiftSignalKit.Timer?
     
@@ -51,29 +57,7 @@ private final class MediaPlayerContext {
     
     fileprivate var actionAtEnd: MediaPlayerActionAtEnd = .stop
     
-    fileprivate var playerNode: MediaPlayerNode? {
-        didSet {
-            if let playerNode = self.playerNode {
-                var controlTimebase: CMTimebase?
-                
-                switch self.state {
-                    case let .paused(loadedState):
-                        controlTimebase = loadedState.controlTimebase.timebase
-                    case let .playing(loadedState):
-                        controlTimebase = loadedState.controlTimebase.timebase
-                    case .empty, .seeking:
-                        break
-                }
-                if let controlTimebase = controlTimebase {
-                    DispatchQueue.main.async {
-                        playerNode.controlTimebase = controlTimebase
-                    }
-                }
-            }
-        }
-    }
-    
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, enableSound: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -82,6 +66,70 @@ private final class MediaPlayerContext {
         self.postbox = postbox
         self.resource = resource
         self.streamable = streamable
+        self.video = video
+        self.preferSoftwareDecoding = preferSoftwareDecoding
+        self.enableSound = enableSound
+        
+        self.videoRenderer = VideoPlayerProxy(queue: queue)
+        
+        self.videoRenderer.visibilityUpdated = { [weak self] value in
+            assert(queue.isCurrent())
+            
+            if let strongSelf = self {
+                switch strongSelf.state {
+                    case .empty:
+                        if value {
+                            strongSelf.play()
+                        }
+                    case .paused:
+                        if value {
+                            strongSelf.play()
+                        }
+                    case .playing:
+                        if !value {
+                            strongSelf.pause()
+                        }
+                    case let .seeking(_, _, _, action):
+                        switch action {
+                            case .pause:
+                                if value {
+                                    strongSelf.play()
+                                }
+                            case .play:
+                                if !value {
+                                    strongSelf.pause()
+                                }
+                        }
+                }
+            }
+        }
+        
+        self.videoRenderer.takeFrameAndQueue = (queue, { [weak self] in
+            assert(queue.isCurrent())
+            
+            if let strongSelf = self {
+                var maybeLoadedState: MediaPlayerLoadedState?
+                
+                switch strongSelf.state {
+                    case .empty:
+                        return .noFrames
+                    case let .paused(state):
+                        maybeLoadedState = state
+                    case let .playing(state):
+                        maybeLoadedState = state
+                    case .seeking:
+                        return .noFrames
+                }
+                
+                if let loadedState = maybeLoadedState, let videoBuffer = loadedState.mediaBuffers.videoBuffer {
+                    return videoBuffer.takeFrame()
+                } else {
+                    return .noFrames
+                }
+            } else {
+                return .noFrames
+            }
+        })
     }
     
     deinit {
@@ -156,7 +204,7 @@ private final class MediaPlayerContext {
             self.playerStatus.set(status)
         }
         
-        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resource: self.resource, streamable: self.streamable)
+        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resource: self.resource, streamable: self.streamable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding)
         let disposable = MetaDisposable()
         self.state = .seeking(frameSource: frameSource, timestamp: timestamp, disposable: disposable, action: action)
         
@@ -171,7 +219,9 @@ private final class MediaPlayerContext {
     }
     
     fileprivate func seekingCompleted(seekResult: MediaFrameSourceSeekResult) {
-        print("seekingCompleted at \(CMTimeGetSeconds(seekResult.timestamp))")
+        if traceEvents {
+            print("seekingCompleted at \(CMTimeGetSeconds(seekResult.timestamp))")
+        }
         
         assert(self.queue.isCurrent())
         
@@ -180,15 +230,20 @@ private final class MediaPlayerContext {
             return
         }
         
-        seekResult.buffers.audioBuffer?.statusUpdated = { [weak self] in
+        var buffers = seekResult.buffers
+        if !self.enableSound {
+            buffers = MediaPlaybackBuffers(audioBuffer: nil, videoBuffer: buffers.videoBuffer)
+        }
+        
+        buffers.audioBuffer?.statusUpdated = { [weak self] in
             self?.tick()
         }
-        seekResult.buffers.videoBuffer?.statusUpdated = { [weak self] in
+        buffers.videoBuffer?.statusUpdated = { [weak self] in
             self?.tick()
         }
         let controlTimebase: MediaPlayerControlTimebase
         
-        if let _ = seekResult.buffers.audioBuffer {
+        if let _ = buffers.audioBuffer {
             let renderer: MediaPlayerAudioRenderer
             if let currentRenderer = self.audioRenderer {
                 renderer = currentRenderer
@@ -216,73 +271,36 @@ private final class MediaPlayerContext {
             CMTimebaseSetTime(timebase!, seekResult.timestamp)
         }
         
-        let loadedState = MediaPlayerLoadedState(frameSource: frameSource, mediaBuffers: seekResult.buffers, controlTimebase: controlTimebase)
+        let loadedState = MediaPlayerLoadedState(frameSource: frameSource, mediaBuffers: buffers, controlTimebase: controlTimebase)
         
         if let audioRenderer = self.audioRenderer {
             let queue = self.queue
             audioRenderer.flushBuffers(at: seekResult.timestamp, completion: { [weak self] in
                 queue.async { [weak self] in
                     if let strongSelf = self {
-                        if let playerNode = strongSelf.playerNode {
-                            let queue = strongSelf.queue
-                            
-                            DispatchQueue.main.async {
-                                playerNode.reset()
-                                playerNode.controlTimebase = controlTimebase.timebase
-                                
-                                queue.async { [weak self] in
-                                    if let strongSelf = self {
-                                        switch action {
-                                            case .play:
-                                                strongSelf.state = .playing(loadedState)
-                                                strongSelf.audioRenderer?.start()
-                                            case .pause:
-                                                strongSelf.state = .paused(loadedState)
-                                        }
-                                        
-                                        strongSelf.lastStatusUpdateTimestamp = nil
-                                        strongSelf.tick()
-                                    }
-                                }
-                            }
-                        } else {
-                            switch action {
-                                case .play:
-                                    strongSelf.state = .playing(loadedState)
-                                    strongSelf.audioRenderer?.start()
-                                case .pause:
-                                    strongSelf.state = .paused(loadedState)
-                            }
-                            
-                            strongSelf.lastStatusUpdateTimestamp = nil
-                            strongSelf.tick()
+                        switch action {
+                            case .play:
+                                strongSelf.state = .playing(loadedState)
+                                strongSelf.audioRenderer?.start()
+                            case .pause:
+                                strongSelf.state = .paused(loadedState)
                         }
+                        
+                        strongSelf.lastStatusUpdateTimestamp = nil
+                        strongSelf.tick()
                     }
                 }
             })
         } else {
-            if let playerNode = self.playerNode {
-                let queue = self.queue
-                
-                DispatchQueue.main.async {
-                    playerNode.reset()
-                    playerNode.controlTimebase = controlTimebase.timebase
-                    
-                    queue.async { [weak self] in
-                        if let strongSelf = self {
-                            switch action {
-                                case .play:
-                                    strongSelf.state = .playing(loadedState)
-                                case .pause:
-                                    strongSelf.state = .paused(loadedState)
-                            }
-                            
-                            strongSelf.lastStatusUpdateTimestamp = nil
-                            strongSelf.tick()
-                        }
-                    }
-                }
+            switch action {
+                case .play:
+                    self.state = .playing(loadedState)
+                case .pause:
+                    self.state = .paused(loadedState)
             }
+            
+            self.lastStatusUpdateTimestamp = nil
+            self.tick()
         }
     }
     
@@ -364,7 +382,9 @@ private final class MediaPlayerContext {
         }
         
         let timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
-        print("tick at \(timestamp)")
+        if traceEvents {
+            print("tick at \(timestamp)")
+        }
         
         var duration: Double = 0.0
         var videoStatus: MediaTrackFrameBufferStatus?
@@ -429,7 +449,7 @@ private final class MediaPlayerContext {
                 let nextTickDelay = max(0.0, fullUntil - timestamp)
                 let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
                     self?.tick()
-                    }, queue: self.queue)
+                }, queue: self.queue)
                 self.tickTimer = tickTimer
                 tickTimer.start()
             } else {
@@ -446,7 +466,7 @@ private final class MediaPlayerContext {
                     
                     let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
                         self?.tick()
-                        }, queue: self.queue)
+                    }, queue: self.queue)
                     self.tickTimer = tickTimer
                     tickTimer.start()
                 } else {
@@ -466,15 +486,16 @@ private final class MediaPlayerContext {
             }
         }
         
-        if let playerNode = self.playerNode, let videoTrackFrameBuffer = loadedState.mediaBuffers.videoBuffer, videoTrackFrameBuffer.hasFrames {
-            let queue = self.queue.queue
+        if let videoTrackFrameBuffer = loadedState.mediaBuffers.videoBuffer, videoTrackFrameBuffer.hasFrames {
+            self.videoRenderer.state = (loadedState.controlTimebase.timebase, true, videoTrackFrameBuffer.rotationAngle)
+            /*let queue = self.queue.queue
             playerNode.beginRequestingFrames(queue: queue, takeFrame: { [weak videoTrackFrameBuffer] in
                 if let videoTrackFrameBuffer = videoTrackFrameBuffer {
                     return videoTrackFrameBuffer.takeFrame()
                 } else {
                     return .noFrames
                 }
-            })
+            })*/
         }
         
         if let audioRenderer = self.audioRenderer, let audioTrackFrameBuffer = loadedState.mediaBuffers.audioBuffer, audioTrackFrameBuffer.hasFrames {
@@ -594,9 +615,9 @@ final class MediaPlayer {
         }
     }
     
-    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource, streamable: Bool) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, enableSound: Bool) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable)
+            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: enableSound)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
@@ -641,10 +662,14 @@ final class MediaPlayer {
     }
     
     func attachPlayerNode(_ node: MediaPlayerNode) {
+        let nodeRef: Unmanaged<MediaPlayerNode> = Unmanaged.passRetained(node)
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                node.queue = self.queue
-                context.playerNode = node
+                context.videoRenderer.attachNodeAndRelease(nodeRef)
+            } else {
+                Queue.mainQueue().async {
+                    nodeRef.release()
+                }
             }
         }
     }

@@ -11,11 +11,13 @@ public final class TelegramApplicationContext {
     let mediaManager = MediaManager()
     
     public let applicationInForeground: Signal<Bool, NoError>
+    public let applicationIsActive: Signal<Bool, NoError>
     
-    public init(openUrl: @escaping (String) -> Void, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>) {
+    public init(openUrl: @escaping (String) -> Void, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>) {
         self.openUrl = openUrl
         self.getTopWindow = getTopWindow
         self.displayNotification = displayNotification
         self.applicationInForeground = applicationInForeground
+        self.applicationIsActive = applicationIsActive
     }
 }

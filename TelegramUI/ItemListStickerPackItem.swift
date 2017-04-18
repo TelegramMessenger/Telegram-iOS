@@ -331,11 +331,11 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             }
             
             var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            var updatedFetchSignal: Signal<Void, NoError>?
+            var updatedFetchSignal: Signal<FetchResourceSourceType, NoError>?
             if fileUpdated {
                 if let file = file {
                     updatedImageSignal = chatMessageSticker(account: item.account, file: file, small: false)
-                    updatedFetchSignal = item.account.postbox.mediaBox.fetchedResource(file.resource)
+                    updatedFetchSignal = item.account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic))
                 } else {
                     updatedImageSignal = .single({ _ in return nil })
                     updatedFetchSignal = .complete()

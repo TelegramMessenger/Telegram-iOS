@@ -88,7 +88,7 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
     func item(_ arguments: GroupsInCommonControllerArguments) -> ListViewItem {
         switch self {
         case let .peerItem(_, peer):
-            return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: nil, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
+            return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
                 arguments.openPeer(peer.id)
             }, setPeerIdWithRevealedOptions: { _ in
             }, removePeer: { _ in
@@ -162,7 +162,7 @@ public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewCo
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: "Groups in Common", leftNavigationButton: nil, rightNavigationButton: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text("Groups in Common"), leftNavigationButton: nil, rightNavigationButton: nil, animateChanges: false)
             let listState = ItemListNodeState(entries: groupsInCommonControllerEntries(state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))

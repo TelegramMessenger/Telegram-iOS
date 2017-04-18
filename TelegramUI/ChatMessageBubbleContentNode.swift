@@ -47,6 +47,8 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     
     var controllerInteraction: ChatControllerInteraction?
     
+    var visibility: ListViewItemNodeVisibility = .none
+    
     required override init() {
         //super.init(layerBacked: false)
         super.init()

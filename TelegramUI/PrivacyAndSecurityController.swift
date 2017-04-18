@@ -276,6 +276,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
+    var pushControllerInstantImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -361,7 +362,17 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             }
         }))
     }, openPasscode: {
-        
+        let _ = passcodeOptionsAccessController(account: account, completion: { animated in
+            if animated {
+                pushControllerImpl?(passcodeOptionsController(account: account))
+            } else {
+                pushControllerInstantImpl?(passcodeOptionsController(account: account))
+            }
+        }).start(next: { controller in
+            if let controller = controller {
+                presentControllerImpl?(controller)
+            }
+        })
     }, openTwoStepVerification: {
         pushControllerImpl?(twoStepVerificationUnlockSettingsController(account: account, mode: .access))
     }, openActiveSessions: {
@@ -434,7 +445,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             }
             
-            let controllerState = ItemListControllerState(title: "Privacy and Security", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text("Privacy and Security"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(state: state, privacySettings: privacySettings), style: .blocks, animateChanges: false)
             
             return (controllerState, (listState, arguments))
@@ -446,6 +457,9 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
     controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
+    pushControllerInstantImpl = { [weak controller] c in
+        (controller?.navigationController as? NavigationController)?.pushViewController(c, animated: false)
     }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

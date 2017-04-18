@@ -98,13 +98,14 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .groupInfo(peer, state):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
+                }, avatarTapped: {
                 })
             case .setProfilePhoto:
                 return ItemListActionItem(title: "Set Profile Photo", kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     
                 })
             case let .member(_, peer, presence):
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: nil, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _ in }, removePeer: { _ in })
+                return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _ in }, removePeer: { _ in })
         }
     }
 }
@@ -221,7 +222,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                 })
             }
             
-            let controllerState = ItemListControllerState(title: "Create Group", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(title: .text("Create Group"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: createGroupEntries(state: state, peerIds: peerIds, view: view), style: .blocks)
             
             return (controllerState, (listState, arguments))

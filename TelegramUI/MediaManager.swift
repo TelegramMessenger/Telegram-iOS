@@ -204,7 +204,7 @@ final class MediaManager: NSObject {
         self.globalControlsStatusDisposable.dispose()
     }
     
-    func videoContext(account: Account, id: ManagedMediaId, resource: MediaResource) -> Signal<ManagedVideoContext?, NoError> {
+    func videoContext(account: Account, id: ManagedMediaId, resource: MediaResource, preferSoftwareDecoding: Bool, backgroundThread: Bool) -> Signal<ManagedVideoContext?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -214,8 +214,9 @@ final class MediaManager: NSObject {
                 if let currentActiveContext = self.managedVideoContexts[wrappedId] {
                     activeContext = currentActiveContext
                 } else {
-                    let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, postbox: account.postbox, resource: resource, streamable: false)
-                    let playerNode = MediaPlayerNode()
+                    let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, postbox: account.postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: false)
+                    mediaPlayer.actionAtEnd = .loop
+                    let playerNode = MediaPlayerNode(backgroundThread: backgroundThread)
                     mediaPlayer.attachPlayerNode(playerNode)
                     activeContext = ActiveManagedVideoContext(context: ManagedVideoContext(mediaPlayer: mediaPlayer, playerNode: playerNode))
                     self.managedVideoContexts[wrappedId] = activeContext

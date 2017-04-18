@@ -64,7 +64,8 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                                     }
                                 }
                             }
-                            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _ in }, navigateToMessage: { _ in }, clickThroughMessage: { }, toggleMessageSelection: { _ in }, sendMessage: { _ in }, sendSticker: { _ in }, requestMessageActionCallback: { _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _ in }, updateInputState: { _ in })
+                            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _ in }, navigateToMessage: { _ in }, clickThroughMessage: { }, toggleMessageSelection: { _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _ in }, updateInputState: { _ in }, openMessageShareMenu: { _ in
+                            }, presentController: { _ in })
                         
                         let listNode = ChatHistoryListNode(account: account, peerId: updatedPlaylistPeerId, tagMask: .Music, messageId: nil, controllerInteraction: controllerInteraction, mode: .list)
                         listNode.preloadPages = true

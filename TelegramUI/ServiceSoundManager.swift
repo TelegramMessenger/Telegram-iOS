@@ -12,23 +12,33 @@ private func loadSystemSoundFromBundle(name: String) -> SystemSoundID? {
     return nil
 }
 
-final class ServiceSoundManager {
+public final class ServiceSoundManager {
     private let queue = Queue()
     private var messageDeliverySound: SystemSoundID?
+    private var incomingMessageSound: SystemSoundID?
     
     init() {
         self.queue.async {
             self.messageDeliverySound = loadSystemSoundFromBundle(name: "MessageSent.caf")
+            self.incomingMessageSound = loadSystemSoundFromBundle(name: "notification.caf")
         }
     }
     
-    func playMessageDeliveredSound() {
+    public func playMessageDeliveredSound() {
         self.queue.async {
             if let messageDeliverySound = self.messageDeliverySound {
                 AudioServicesPlaySystemSound(messageDeliverySound)
             }
         }
     }
+    
+    public func playIncomingMessageSound() {
+        self.queue.async {
+            if let incomingMessageSound = self.incomingMessageSound {
+                AudioServicesPlaySystemSound(incomingMessageSound)
+            }
+        }
+    }
 }
 
-let serviceSoundManager = ServiceSoundManager()
+public let serviceSoundManager = ServiceSoundManager()

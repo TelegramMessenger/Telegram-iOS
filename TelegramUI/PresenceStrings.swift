@@ -86,6 +86,45 @@ func stringForUserPresence(day: RelativeTimestampFormatDay, hours: Int32, minute
     return "last seen \(dayString) at \(stringForTime(hours: hours, minutes: minutes))"
 }
 
+private func humanReadableStringForTimestamp(day: RelativeTimestampFormatDay, hours: Int32, minutes: Int32) -> String {
+    let dayString: String
+    switch day {
+        case .today:
+            dayString = "today"
+        case .yesterday:
+            dayString = "yesterday"
+    }
+    return "\(dayString) at \(stringForTime(hours: hours, minutes: minutes))"
+}
+
+func humanReadableStringForTimestamp(timestamp: Int32) -> String {
+    var t: time_t = time_t(timestamp)
+    var timeinfo: tm = tm()
+    localtime_r(&t, &timeinfo)
+    
+    let timestampNow = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+    var now: time_t = time_t(timestampNow)
+    var timeinfoNow: tm = tm()
+    localtime_r(&now, &timeinfoNow)
+    
+    if timeinfo.tm_year != timeinfoNow.tm_year {
+        return "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year))"
+    }
+    
+    let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+    if dayDifference == 0 || dayDifference == -1 {
+        let day: RelativeTimestampFormatDay
+        if dayDifference == 0 {
+            day = .today
+        } else {
+            day = .yesterday
+        }
+        return humanReadableStringForTimestamp(day: day, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
+    } else {
+        return "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year))"
+    }
+}
+
 enum RelativeUserPresenceLastSeen {
     case justNow
     case minutesAgo(Int32)

@@ -121,7 +121,7 @@ func peerMessageHistoryAudioPlaylist(account: Account, messageId: MessageId) -> 
                     for media in message.media {
                         if let file = media as? TelegramMediaFile {
                             if file.isVoice {
-                                tagMask = .Voice
+                                tagMask = .VoiceOrInstantVideo
                             } else {
                                 tagMask = .Music
                             }

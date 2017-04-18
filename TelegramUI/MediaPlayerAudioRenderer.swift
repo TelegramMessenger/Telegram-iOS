@@ -352,7 +352,6 @@ private final class AudioPlayerRendererContext {
                 self.closeAudioUnit()
                 return
             }
-            
         }
     }
     
@@ -453,7 +452,7 @@ private final class AudioPlayerRendererContext {
                             case .skipFrame:
                                 self.checkBuffer()
                                 break
-                            case .noFrames:
+                            case .noFrames, .finished:
                                 self.requestingFramesContext = nil
                         }
                     }

@@ -15,6 +15,9 @@ final class ChatMediaActionSheetRollItem: ActionSheetItem {
     func node() -> ActionSheetItemNode {
         return ChatMediaActionSheetRollItemNode(assetSelected: self.assetSelected)
     }
+    
+    func updateNode(_ node: ActionSheetItemNode) {
+    }
 }
 
 private final class ChatMediaActionSheetRollItemNode: ActionSheetItemNode, PHPhotoLibraryChangeObserver {

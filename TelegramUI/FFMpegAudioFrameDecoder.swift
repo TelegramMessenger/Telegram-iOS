@@ -35,6 +35,10 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
         return nil
     }
     
+    func takeRemainingFrame() -> MediaTrackFrame? {
+        return nil
+    }
+    
     private func convertAudioFrame(_ frame: UnsafeMutablePointer<AVFrame>, pts: CMTime, duration: CMTime) -> MediaTrackFrame? {
         guard let data = self.swrContext.resample(frame) else {
             return nil
@@ -59,7 +63,7 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
         let resetDecoder = self.resetDecoderOnNextFrame
         self.resetDecoderOnNextFrame = false
         
-        return MediaTrackFrame(type: .audio, sampleBuffer: sampleBuffer!, resetDecoder: resetDecoder)
+        return MediaTrackFrame(type: .audio, sampleBuffer: sampleBuffer!, resetDecoder: resetDecoder, decoded: true)
     }
     
     func reset() {

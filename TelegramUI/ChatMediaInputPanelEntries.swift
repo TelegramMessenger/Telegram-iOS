@@ -3,12 +3,25 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
+enum ChatMediaInputPanelAuxiliaryNamespace: Int32 {
+    case recentGifs = 3
+    case recentStickers = 2
+    case trending = 4
+}
+
 enum ChatMediaInputPanelEntryStableId: Hashable {
+    case recentGifs
     case recentPacks
     case stickerPack(Int64)
     
     static func ==(lhs: ChatMediaInputPanelEntryStableId, rhs: ChatMediaInputPanelEntryStableId) -> Bool {
         switch lhs {
+            case .recentGifs:
+                if case .recentGifs = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case .recentPacks:
                 if case .recentPacks = rhs {
                     return true
@@ -26,8 +39,10 @@ enum ChatMediaInputPanelEntryStableId: Hashable {
     
     var hashValue: Int {
         switch self {
-            case .recentPacks:
+            case .recentGifs:
                 return 0
+            case .recentPacks:
+                return 1
             case let .stickerPack(id):
                 return id.hashValue
         }
@@ -35,11 +50,14 @@ enum ChatMediaInputPanelEntryStableId: Hashable {
 }
 
 enum ChatMediaInputPanelEntry: Comparable, Identifiable {
+    case recentGifs
     case recentPacks
     case stickerPack(index: Int, info: StickerPackCollectionInfo, topItem: StickerPackItem?)
     
     var stableId: ChatMediaInputPanelEntryStableId {
         switch self {
+            case .recentGifs:
+                return .recentGifs
             case .recentPacks:
                 return .recentPacks
             case let .stickerPack(_, info, _):
@@ -49,6 +67,12 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
     
     static func ==(lhs: ChatMediaInputPanelEntry, rhs: ChatMediaInputPanelEntry) -> Bool {
         switch lhs {
+            case .recentGifs:
+                if case .recentGifs = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case .recentPacks:
                 if case .recentPacks = rhs {
                     return true
@@ -66,11 +90,24 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
     
     static func <(lhs: ChatMediaInputPanelEntry, rhs: ChatMediaInputPanelEntry) -> Bool {
         switch lhs {
-            case .recentPacks:
+            case .recentGifs:
+                switch rhs {
+                    case .recentGifs:
+                        return false
+                    default:
+                        return true
+                }
                 return true
+            case .recentPacks:
+                switch rhs {
+                    case .recentGifs, recentPacks:
+                        return false
+                    default:
+                        return true
+                }
             case let .stickerPack(lhsIndex, lhsInfo, _):
                 switch rhs {
-                    case .recentPacks:
+                    case .recentGifs, .recentPacks:
                         return false
                     case let .stickerPack(rhsIndex, rhsInfo, _):
                         if lhsIndex == rhsIndex {
@@ -84,9 +121,14 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
     
     func item(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction) -> ListViewItem {
         switch self {
+            case .recentGifs:
+                return ChatMediaInputRecentGifsItem(inputNodeInteraction: inputNodeInteraction, selected: {
+                    let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentGifs.rawValue, id: 0)
+                    inputNodeInteraction.navigateToCollectionId(collectionId)
+                })
             case .recentPacks:
                 return ChatMediaInputRecentStickerPacksItem(inputNodeInteraction: inputNodeInteraction, selected: {
-                    let collectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudRecentStickers, id: 0)
+                    let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
             case let .stickerPack(index, info, topItem):

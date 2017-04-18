@@ -19,8 +19,14 @@ private let roundCorners = { () -> UIImage in
     return image
 }()
 
-func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) -> Signal<UIImage?, NoError>? {
-    if let smallProfileImage = peer.smallProfileImage {
+func peerAvatarImage(account: Account, peer: Peer, temporaryRepresentation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) -> Signal<UIImage?, NoError>? {
+    var smallProfileImage: TelegramMediaImageRepresentation?
+    if let temporaryRepresentation = temporaryRepresentation {
+        smallProfileImage = temporaryRepresentation
+    } else {
+        smallProfileImage = peer.smallProfileImage
+    }
+    if let smallProfileImage = smallProfileImage {
         let resourceData = account.postbox.mediaBox.resourceData(smallProfileImage.resource)
         let imageData = resourceData
             |> take(1)
@@ -41,7 +47,7 @@ func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = C
                         }, completed: {
                             subscriber.putCompletion()
                         })
-                        let fetchedDataDisposable = account.postbox.mediaBox.fetchedResource(smallProfileImage.resource).start()
+                        let fetchedDataDisposable = account.postbox.mediaBox.fetchedResource(smallProfileImage.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start()
                         return ActionDisposable {
                             resourceDataDisposable.dispose()
                             fetchedDataDisposable.dispose()

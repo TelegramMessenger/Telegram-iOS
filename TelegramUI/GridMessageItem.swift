@@ -292,7 +292,7 @@ final class GridMessageItemNode: GridItemNode {
                             case .Local:
                                 controllerInteraction.openMessage(messageId)
                             case .Remote:
-                                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
+                                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .file)).start())
                         }
                     }
                 } else {

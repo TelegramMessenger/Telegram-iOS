@@ -413,7 +413,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             let previous = previousPackCount
             previousPackCount = packCount
             
-            let controllerState = ItemListControllerState(title: mode == .general ? "Stickers" : "Masks", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(title: .text(mode == .general ? "Stickers" : "Masks"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             
             let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(state: state, mode: mode, view: view, featured: featured), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
             return (controllerState, (listState, arguments))

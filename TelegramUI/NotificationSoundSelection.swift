@@ -162,7 +162,7 @@ public func notificationSoundSelectionController(account: Account, isModal: Bool
     let signal = statePromise.get()
         |> map { state -> (ItemListControllerState, (ItemListNodeState<NotificationSoundSelectionEntry>, NotificationSoundSelectionEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(title: "Text Tone", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(title: .text("Text Tone"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))

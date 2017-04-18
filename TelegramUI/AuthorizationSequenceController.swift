@@ -12,11 +12,6 @@ public final class AuthorizationSequenceController: NavigationController {
     private var stateDisposable: Disposable?
     private let actionDisposable = MetaDisposable()
     
-    let _authorizedAccount = Promise<Account>()
-    public var authorizedAccount: Signal<Account, NoError> {
-        return self._authorizedAccount.get()
-    }
-    
     public init(account: UnauthorizedAccount) {
         self.account = account
         
@@ -251,19 +246,12 @@ public final class AuthorizationSequenceController: NavigationController {
                     self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
                 case let .confirmationCodeEntry(number, type, _, timeout, nextType):
                     self.setViewControllers([self.splashController(), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout)], animated: !self.viewControllers.isEmpty)
-                case let .passwordEntry(hint):
+                case let .passwordEntry(hint, _, _):
                     self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint)], animated: !self.viewControllers.isEmpty)
                 case let .signUp(_, _, _, firstName, lastName):
                     self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName)], animated: !self.viewControllers.isEmpty)
             }
         } else if let _ = state as? AuthorizedAccountState {
-            self._authorizedAccount.set(accountWithId(apiId: self.account.apiId, id: self.account.id, supplementary: false, appGroupPath: self.account.appGroupPath, testingEnvironment: self.account.testingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods) |> mapToSignal { account -> Signal<Account, NoError> in
-                if case let .right(authorizedAccount) = account {
-                    return .single(authorizedAccount)
-                } else {
-                    return .complete()
-                }
-            })
         }
     }
 }

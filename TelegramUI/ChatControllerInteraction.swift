@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import AsyncDisplayKit
 import TelegramCore
+import Display
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
@@ -19,8 +20,12 @@ public enum ChatControllerInteractionNavigateToPeer {
     case withBotStartPayload(ChatControllerInitialBotStart)
 }
 
-struct ChatInterfaceHighlightedState {
+struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
+    
+    static func ==(lhs: ChatInterfaceHighlightedState, rhs: ChatInterfaceHighlightedState) -> Bool {
+        return lhs.messageStableId == rhs.messageStableId
+    }
 }
 
 public final class ChatControllerInteraction {
@@ -38,6 +43,7 @@ public final class ChatControllerInteraction {
     let toggleMessageSelection: (MessageId) -> Void
     let sendMessage: (String) -> Void
     let sendSticker: (TelegramMediaFile) -> Void
+    let sendGif: (TelegramMediaFile) -> Void
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool) -> Void
     let openUrl: (String) -> Void
     let shareCurrentLocation: () -> Void
@@ -46,8 +52,10 @@ public final class ChatControllerInteraction {
     let openInstantPage: (MessageId) -> Void
     let openHashtag: (String?, String) -> Void
     let updateInputState: ((ChatTextInputState) -> ChatTextInputState) -> Void
+    let openMessageShareMenu: (MessageId) -> Void
+    let presentController: (ViewController, Any?) -> Void
     
-    public init(openMessage: @escaping (MessageId) -> Void, openSecretMessagePreview: @escaping (MessageId) -> Void, closeSecretMessagePreview: @escaping () -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageId?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (MessageId) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void) {
+    public init(openMessage: @escaping (MessageId) -> Void, openSecretMessagePreview: @escaping (MessageId) -> Void, closeSecretMessagePreview: @escaping () -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageId?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, sendGif: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (MessageId) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void) {
         self.openMessage = openMessage
         self.openSecretMessagePreview = openSecretMessagePreview
         self.closeSecretMessagePreview = closeSecretMessagePreview
@@ -59,6 +67,7 @@ public final class ChatControllerInteraction {
         self.toggleMessageSelection = toggleMessageSelection
         self.sendMessage = sendMessage
         self.sendSticker = sendSticker
+        self.sendGif = sendGif
         self.requestMessageActionCallback = requestMessageActionCallback
         self.openUrl = openUrl
         self.shareCurrentLocation = shareCurrentLocation
@@ -67,5 +76,7 @@ public final class ChatControllerInteraction {
         self.openInstantPage = openInstantPage
         self.openHashtag = openHashtag
         self.updateInputState = updateInputState
+        self.openMessageShareMenu = openMessageShareMenu
+        self.presentController = presentController
     }
 }

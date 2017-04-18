@@ -96,7 +96,7 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     func item(_ arguments: BlockedPeersControllerArguments) -> ListViewItem {
         switch self {
             case let .peerItem(_, peer, editing, enabled):
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -261,7 +261,7 @@ public func blockedPeersController(account: Account) -> ViewController {
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: "Blocked Users", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(title: .text("Blocked Users"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             let listState = ItemListNodeState(entries: blockedPeersControllerEntries(state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))

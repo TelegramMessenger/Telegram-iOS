@@ -415,7 +415,7 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
                 inAppSettings = InAppNotificationSettings.defaultSettings
             }
             
-            let controllerState = ItemListControllerState(title: "Notifications", leftNavigationButton: nil, rightNavigationButton: nil)
+            let controllerState = ItemListControllerState(title: .text("Notifications"), leftNavigationButton: nil, rightNavigationButton: nil)
             let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(globalSettings: viewSettings, inAppSettings: inAppSettings), style: .blocks)
             
             return (controllerState, (listState, arguments))

@@ -512,7 +512,7 @@ class ChatControllerNode: ASDisplayNode {
         }
         
         if let dismissedInputNode = dismissedInputNode {
-            transition.updateFrame(node: dismissedInputNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - CGFloat.ulpOfOne), size: CGSize(width: layout.size.width, height: max(insets.bottom, dismissedInputNode.bounds.size.height))), completion: { [weak self, weak dismissedInputNode] completed in
+            transition.updateFrame(node: dismissedInputNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom), size: CGSize(width: layout.size.width, height: max(insets.bottom, dismissedInputNode.bounds.size.height))), force: true, completion: { [weak self, weak dismissedInputNode] completed in
                 if completed {
                     if let strongSelf = self {
                         if strongSelf.inputNode !== dismissedInputNode {

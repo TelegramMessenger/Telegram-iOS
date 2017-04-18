@@ -17,7 +17,7 @@ private func tagsForMessage(_ message: Message) -> MessageTags? {
                         return .PhotoOrVideo
                     }
                 } else if file.isVoice {
-                    return .Voice
+                    return .VoiceOrInstantVideo
                 } else if file.isSticker {
                     return nil
                 } else {
@@ -148,19 +148,23 @@ class GalleryController: ViewController {
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
-    private let centralItemAttributesDisposable = DisposableSet()
+    private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
+    private let centralItemAttributesDisposable = DisposableSet();
     
     private let _hiddenMedia = Promise<(MessageId, Media)?>(nil)
     var hiddenMedia: Signal<(MessageId, Media)?, NoError> {
         return self._hiddenMedia.get()
     }
     
-    init(account: Account, messageId: MessageId) {
+    private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
+    
+    init(account: Account, messageId: MessageId, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
         self.account = account
+        self.replaceRootController = replaceRootController
         
         super.init()
         
-        self.navigationBar.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        self.navigationBar.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
         self.navigationBar.stripeColor = UIColor.clear
         self.navigationBar.foregroundColor = UIColor.white
         self.navigationBar.accentColor = UIColor.white
@@ -222,6 +226,12 @@ class GalleryController: ViewController {
             self?.navigationItem.titleView = titleView
         }))
         
+        self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in
+            self?.galleryNode.updatePresentationState({
+                $0.withUpdatedFooterContentNode(footerContentNode)
+            }, transition: .immediate)
+        }))
+        
         self.centralItemAttributesDisposable.add(self.centralItemNavigationStyle.get().start(next: { [weak self] style in
             if let strongSelf = self {
                 switch style {
@@ -256,6 +266,10 @@ class GalleryController: ViewController {
     }
     
     @objc func donePressed() {
+        self.dismiss(forceAway: false)
+    }
+    
+    private func dismiss(forceAway: Bool) {
         var animatedOutNode = true
         var animatedOutInterface = false
         
@@ -268,7 +282,7 @@ class GalleryController: ViewController {
         
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
             if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
-                if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
+                if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
                     animatedOutNode = false
                     centralItemNode.animateOut(to: transitionArguments.transitionNode, completion: {
                         animatedOutNode = true
@@ -285,7 +299,18 @@ class GalleryController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = GalleryControllerNode()
+        let controllerInteraction = GalleryControllerInteraction(presentController: { [weak self] controller, arguments in
+            if let strongSelf = self {
+                strongSelf.present(controller, in: .window, with: arguments)
+            }
+        }, dismissController: { [weak self] in
+            self?.dismiss(forceAway: true)
+        }, replaceRootController: { [weak self] controller, ready in
+            if let strongSelf = self {
+                strongSelf.replaceRootController(controller, ready)
+            }
+        })
+        self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()
         
         self.galleryNode.statusBar = self.statusBar
@@ -322,6 +347,7 @@ class GalleryController: ViewController {
                         strongSelf.centralItemTitle.set(node.title())
                         strongSelf.centralItemTitleView.set(node.titleView())
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
+                        strongSelf.centralItemFooterContentNode.set(node.footerContent())
                     }
                 }
                 if strongSelf.didSetReady {
@@ -341,6 +367,7 @@ class GalleryController: ViewController {
                 self.centralItemTitle.set(centralItemNode.title())
                 self.centralItemTitleView.set(centralItemNode.titleView())
                 self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
+                self.centralItemFooterContentNode.set(centralItemNode.footerContent())
                 
                 if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                     nodeAnimatesItself = true

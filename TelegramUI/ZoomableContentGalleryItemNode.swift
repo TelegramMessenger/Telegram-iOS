@@ -33,16 +33,44 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
         self.scrollView.scrollsToTop = false
         self.scrollView.delaysContentTouches = false
         
-        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.contentTap(_:)))
+        let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.contentTap(_:)))
+        tapRecognizer.tapActionAtPoint = { _ in
+            return .waitForDoubleTap
+        }
         
         self.scrollView.addGestureRecognizer(tapRecognizer)
         
         self.view.addSubview(self.scrollView)
     }
     
-    @objc func contentTap(_ recognizer: UITapGestureRecognizer) {
+    @objc func contentTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if recognizer.state == .ended {
-            self.toggleControlsVisibility()
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                    case .tap:
+                        self.toggleControlsVisibility()
+                    case .doubleTap:
+                        if let contentView = self.zoomableContent?.1.view, self.scrollView.zoomScale.isLessThanOrEqualTo(self.scrollView.minimumZoomScale) {
+                            let pointInView = self.scrollView.convert(location, to: contentView)
+                            
+                            let newZoomScale = self.scrollView.maximumZoomScale
+                            let scrollViewSize = self.scrollView.bounds.size
+                            
+                            let w = scrollViewSize.width / newZoomScale
+                            let h = scrollViewSize.height / newZoomScale
+                            let x = pointInView.x - (w / 2.0)
+                            let y = pointInView.y - (h / 2.0)
+                            
+                            let rectToZoomTo = CGRect(x: x, y: y, width: w, height: h)
+                            
+                            self.scrollView.zoom(to: rectToZoomTo, animated: true)
+                        } else {
+                            self.scrollView.setZoomScale(self.scrollView.minimumZoomScale, animated: true)
+                        }
+                    default:
+                        break
+                }
+            }
         }
     }
     

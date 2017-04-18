@@ -80,14 +80,14 @@ final class ChatMediaInputRecentStickerPacksItemNode: ListViewItemNode {
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
         
         self.imageNode.image = iconImage
-        self.imageNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
+        self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.highlightNode)
         self.addSubnode(self.imageNode)
         
-        self.currentCollectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudRecentStickers, id: 0)
+        self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
         
         let imageSize = CGSize(width: 26.0, height: 26.0)
         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)

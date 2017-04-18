@@ -3,6 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramLegacyComponents
 
 private let addMemberPlusIcon = UIImage(bundleImageName: "Peer Info/PeerItemPlusIcon")?.precomposed()
 
@@ -10,6 +11,9 @@ private final class GroupInfoArguments {
     let account: Account
     let peerId: PeerId
     
+    let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
+    let tapAvatarAction: () -> Void
+    let changeProfilePhoto: () -> Void
     let pushController: (ViewController) -> Void
     let presentController: (ViewController, ViewControllerPresentationArguments) -> Void
     let changeNotificationMuteSettings: () -> Void
@@ -22,9 +26,12 @@ private final class GroupInfoArguments {
     let removePeer: (PeerId) -> Void
     let convertToSupergroup: () -> Void
     
-    init(account: Account, peerId: PeerId, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void) {
+    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void) {
         self.account = account
         self.peerId = peerId
+        self.avatarAndNameInfoContext = avatarAndNameInfoContext
+        self.tapAvatarAction = tapAvatarAction
+        self.changeProfilePhoto = changeProfilePhoto
         self.pushController = pushController
         self.presentController = presentController
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
@@ -86,7 +93,7 @@ private enum GroupEntryStableId: Hashable, Equatable {
 }
 
 private enum GroupInfoEntry: ItemListNodeEntry {
-    case info(peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState)
+    case info(peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: TelegramMediaImageRepresentation?)
     case setGroupPhoto
     case about(String)
     case link(String)
@@ -124,8 +131,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: GroupInfoEntry, rhs: GroupInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsPeer, lhsCachedData, lhsState):
-                if case let .info(rhsPeer, rhsCachedData, rhsState) = rhs {
+            case let .info(lhsPeer, lhsCachedData, lhsState, lhsUpdatingAvatar):
+                if case let .info(rhsPeer, rhsCachedData, rhsState, rhsUpdatingAvatar) = rhs {
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                         if !lhsPeer.isEqual(rhsPeer) {
                             return false
@@ -141,6 +148,9 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsState != rhsState {
+                        return false
+                    }
+                    if lhsUpdatingAvatar != rhsUpdatingAvatar {
                         return false
                     }
                     return true
@@ -294,12 +304,15 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: GroupInfoArguments) -> ListViewItem {
         switch self {
-            case let .info(peer, cachedData, state):
+            case let .info(peer, cachedData, state, updatingAvatar):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
-                })
+                }, avatarTapped: {
+                    arguments.tapAvatarAction()
+                }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
             case .setGroupPhoto:
                 return ItemListActionItem(title: "Set Group Photo", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.changeProfilePhoto()
                 })
             case let .about(text):
                 return ItemListMultilineTextItem(text: text, sectionId: self.section, style: .blocks)
@@ -354,7 +367,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     case .member:
                         label = nil
                 }
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: label, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+                return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
                     if let infoController = peerInfoController(account: arguments.account, peer: peer) {
                         arguments.pushController(infoController)
                     }
@@ -397,6 +410,7 @@ private struct TemporaryParticipant: Equatable {
 }
 
 private struct GroupInfoState: Equatable {
+    let updatingAvatar: TelegramMediaImageRepresentation?
     let editingState: GroupInfoEditingState?
     let updatingName: ItemListAvatarAndNameInfoItemName?
     let peerIdWithRevealedOptions: PeerId?
@@ -408,6 +422,9 @@ private struct GroupInfoState: Equatable {
     let savingData: Bool
     
     static func ==(lhs: GroupInfoState, rhs: GroupInfoState) -> Bool {
+        if lhs.updatingAvatar != rhs.updatingAvatar {
+            return false
+        }
         if lhs.editingState != rhs.editingState {
             return false
         }
@@ -432,32 +449,36 @@ private struct GroupInfoState: Equatable {
         return true
     }
     
+    func withUpdatedUpdatingAvatar(_ updatingAvatar: TelegramMediaImageRepresentation?) -> GroupInfoState {
+        return GroupInfoState(updatingAvatar: updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+    }
+    
     func withUpdatedEditingState(_ editingState: GroupInfoEditingState?) -> GroupInfoState {
-        return GroupInfoState(editingState: editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
     }
     
     func withUpdatedUpdatingName(_ updatingName: ItemListAvatarAndNameInfoItemName?) -> GroupInfoState {
-        return GroupInfoState(editingState: self.editingState, updatingName: updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
     }
     
     func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> GroupInfoState {
-        return GroupInfoState(editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
     }
 
     func withUpdatedTemporaryParticipants(_ temporaryParticipants: [TemporaryParticipant]) -> GroupInfoState {
-        return GroupInfoState(editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
     }
     
     func withUpdatedSuccessfullyAddedParticipantIds(_ successfullyAddedParticipantIds: Set<PeerId>) -> GroupInfoState {
-        return GroupInfoState(editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
     }
     
     func withUpdatedRemovingParticipantIds(_ removingParticipantIds: Set<PeerId>) -> GroupInfoState {
-        return GroupInfoState(editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: removingParticipantIds, savingData: self.savingData)
     }
     
     func withUpdatedSavingData(_ savingData: Bool) -> GroupInfoState {
-        return GroupInfoState(editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: savingData)
     }
 }
 
@@ -496,7 +517,7 @@ private func groupInfoEntries(account: Account, view: PeerView, state: GroupInfo
     var entries: [GroupInfoEntry] = []
     if let peer = peerViewMainPeer(view) {
         let infoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingState?.editingName, updatingName: state.updatingName)
-        entries.append(.info(peer: peer, cachedData: view.cachedData, state: infoState))
+        entries.append(.info(peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
     }
     
     var highlightAdmins = false
@@ -849,14 +870,14 @@ private func valuesRequiringUpdate(state: GroupInfoState, view: PeerView) -> (ti
 }
 
 public func groupInfoController(account: Account, peerId: PeerId) -> ViewController {
-    let statePromise = ValuePromise(GroupInfoState(editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false), ignoreRepeated: true)
-    let stateValue = Atomic(value: GroupInfoState(editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false))
+    let statePromise = ValuePromise(GroupInfoState(updatingAvatar: nil, editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: GroupInfoState(updatingAvatar: nil, editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false))
     let updateState: ((GroupInfoState) -> GroupInfoState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -879,7 +900,78 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     let changeMuteSettingsDisposable = MetaDisposable()
     actionsDisposable.add(changeMuteSettingsDisposable)
     
-    let arguments = GroupInfoArguments(account: account, peerId: peerId, pushController: { controller in
+    let hiddenAvatarRepresentationDisposable = MetaDisposable()
+    actionsDisposable.add(hiddenAvatarRepresentationDisposable)
+    
+    let updateAvatarDisposable = MetaDisposable()
+    actionsDisposable.add(updateAvatarDisposable)
+    let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+    
+    var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
+    let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
+    var updateHiddenAvatarImpl: (() -> Void)?
+    
+    let arguments = GroupInfoArguments(account: account, peerId: peerId, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
+        let _ = (account.postbox.loadedPeerWithId(peerId) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+            if peer.profileImageRepresentations.isEmpty {
+                return
+            }
+            
+            let galleryController = AvatarGalleryController(account: account, peer: peer, replaceRootController: { controller, ready in
+                
+            })
+            hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
+                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
+                updateHiddenAvatarImpl?()
+            }))
+            presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                return avatarGalleryTransitionArguments?(entry)
+            }))
+        })
+    }, changeProfilePhoto: {
+        let emptyController = LegacyEmptyController()
+        let navigationController = makeLegacyNavigationController(rootController: emptyController)
+        navigationController.setNavigationBarHidden(true, animated: false)
+        navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+        
+        let legacyController = LegacyController(legacyController: navigationController, presentation: .custom)
+        
+        presentControllerImpl?(legacyController, nil)
+        
+        let mixin = TGMediaAvatarMenuMixin(parentController: emptyController, hasDeleteButton: false, personalPhoto: true)!
+        mixin.applicationInterface = legacyController.applicationInterface
+        let _ = currentAvatarMixin.swap(mixin)
+        mixin.didDismiss = { [weak legacyController] in
+            legacyController?.dismiss()
+        }
+        mixin.didFinishWithImage = { image in
+            if let image = image {
+                if let data = UIImageJPEGRepresentation(image, 0.6) {
+                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                    updateState {
+                        $0.withUpdatedUpdatingAvatar(representation)
+                    }
+                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                        switch result {
+                            case .complete:
+                                updateState {
+                                    $0.withUpdatedUpdatingAvatar(nil)
+                                }
+                            case .progress:
+                                break
+                        }
+                    }))
+                }
+            }
+        }
+        mixin.didDismiss = { [weak legacyController] in
+            let _ = currentAvatarMixin.swap(nil)
+            legacyController?.dismiss()
+        }
+        mixin.present()
+    }, pushController: { controller in
         pushControllerImpl?(controller)
     }, presentController: { controller, presentationArguments in
         presentControllerImpl?(controller, presentationArguments)
@@ -1180,7 +1272,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 })
             }
             
-            let controllerState = ItemListControllerState(title: "Info", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(title: .text("Info"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: groupInfoEntries(account: account, view: view, state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))
@@ -1195,6 +1287,29 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window, with: presentationArguments)
+    }
+    avatarGalleryTransitionArguments = { [weak controller] entry in
+        if let controller = controller {
+            var result: (ASDisplayNode, CGRect)?
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    result = itemNode.avatarTransitionNode()
+                }
+            }
+            if let (node, _) = result {
+                return GalleryTransitionArguments(transitionNode: node, transitionContainerNode: controller.displayNode, transitionBackgroundNode: controller.displayNode)
+            }
+        }
+        return nil
+    }
+    updateHiddenAvatarImpl = { [weak controller] in
+        if let controller = controller {
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    itemNode.updateAvatarHidden()
+                }
+            }
+        }
     }
     return controller
 }

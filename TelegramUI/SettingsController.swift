@@ -3,12 +3,18 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramLegacyComponents
 
 private struct SettingsItemArguments {
     let account: Account
     let accountManager: AccountManager
+    let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     
+    let avatarTapAction: () -> Void
+    
+    let changeProfilePhoto: () -> Void
     let openPrivacyAndSecurity: () -> Void
+    let openDataAndStorage: () -> Void
     let pushController: (ViewController) -> Void
     let presentController: (ViewController) -> Void
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
@@ -27,7 +33,7 @@ private enum SettingsSection: Int32 {
 }
 
 private enum SettingsEntry: ItemListNodeEntry {
-    case userInfo(Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState)
+    case userInfo(Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, TelegramMediaImageRepresentation?)
     case setProfilePhoto
     
     case notificationsAndSounds
@@ -87,8 +93,8 @@ private enum SettingsEntry: ItemListNodeEntry {
     
     static func ==(lhs: SettingsEntry, rhs: SettingsEntry) -> Bool {
         switch lhs {
-            case let .userInfo(lhsPeer, lhsCachedData, lhsEditingState):
-                if case let .userInfo(rhsPeer, rhsCachedData, rhsEditingState) = rhs {
+            case let .userInfo(lhsPeer, lhsCachedData, lhsEditingState, lhsUpdatingImage):
+                if case let .userInfo(rhsPeer, rhsCachedData, rhsEditingState, rhsUpdatingImage) = rhs {
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                         if !lhsPeer.isEqual(rhsPeer) {
                             return false
@@ -104,6 +110,9 @@ private enum SettingsEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsEditingState != rhsEditingState {
+                        return false
+                    }
+                    if lhsUpdatingImage != rhsUpdatingImage {
                         return false
                     }
                     return true
@@ -185,12 +194,15 @@ private enum SettingsEntry: ItemListNodeEntry {
     
     func item(_ arguments: SettingsItemArguments) -> ListViewItem {
         switch self {
-            case let .userInfo(peer, cachedData, state):
+            case let .userInfo(peer, cachedData, state, updatingImage):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max)), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
-                })
+                }, avatarTapped: {
+                    arguments.avatarTapAction()
+                }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingImage)
             case .setProfilePhoto:
                 return ItemListActionItem(title: "Set Profile Photo", kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.changeProfilePhoto()
                 })
             case .notificationsAndSounds:
                 return ItemListDisclosureItem(title: "Notifications and Sounds", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -202,7 +214,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case .dataAndStorage:
                 return ItemListDisclosureItem(title: "Data and Storage", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.openDataAndStorage()
                 })
             case .stickers:
                 return ItemListDisclosureItem(title: "Stickers", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -249,23 +261,31 @@ private struct SettingsEditingState: Equatable {
 }
 
 private struct SettingsState: Equatable {
+    let updatingAvatar: TelegramMediaImageRepresentation?
     let editingState: SettingsEditingState?
     let updatingName: ItemListAvatarAndNameInfoItemName?
     let loadingSupportPeer: Bool
     
+    func withUpdatedUpdatingAvatar(_ updatingAvatar: TelegramMediaImageRepresentation?) -> SettingsState {
+        return SettingsState(updatingAvatar: updatingAvatar, editingState: editingState, updatingName: self.updatingName, loadingSupportPeer: self.loadingSupportPeer)
+    }
+    
     func withUpdatedEditingState(_ editingState: SettingsEditingState?) -> SettingsState {
-        return SettingsState(editingState: editingState, updatingName: self.updatingName, loadingSupportPeer: self.loadingSupportPeer)
+        return SettingsState(updatingAvatar: self.updatingAvatar, editingState: editingState, updatingName: self.updatingName, loadingSupportPeer: self.loadingSupportPeer)
     }
     
     func withUpdatedUpdatingName(_ updatingName: ItemListAvatarAndNameInfoItemName?) -> SettingsState {
-        return SettingsState(editingState: self.editingState, updatingName: updatingName, loadingSupportPeer: self.loadingSupportPeer)
+        return SettingsState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: updatingName, loadingSupportPeer: self.loadingSupportPeer)
     }
     
     func withUpdatedLoadingSupportPeer(_ loadingSupportPeer: Bool) -> SettingsState {
-        return SettingsState(editingState: self.editingState, updatingName: self.updatingName, loadingSupportPeer: loadingSupportPeer)
+        return SettingsState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, loadingSupportPeer: loadingSupportPeer)
     }
     
     static func ==(lhs: SettingsState, rhs: SettingsState) -> Bool {
+        if lhs.updatingAvatar != rhs.updatingAvatar {
+            return false
+        }
         if lhs.editingState != rhs.editingState {
             return false
         }
@@ -284,7 +304,7 @@ private func settingsEntries(state: SettingsState, view: PeerView) -> [SettingsE
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
         let userInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingState?.editingName, updatingName: state.updatingName)
-        entries.append(.userInfo(peer, view.cachedData, userInfoState))
+        entries.append(.userInfo(peer, view.cachedData, userInfoState, state.updatingAvatar))
         entries.append(.setProfilePhoto)
         
         entries.append(.notificationsAndSounds)
@@ -310,16 +330,19 @@ private func settingsEntries(state: SettingsState, view: PeerView) -> [SettingsE
 }
 
 public func settingsController(account: Account, accountManager: AccountManager) -> ViewController {
-    let statePromise = ValuePromise(SettingsState(editingState: nil, updatingName: nil, loadingSupportPeer: false), ignoreRepeated: true)
-    let stateValue = Atomic(value: SettingsState(editingState: nil, updatingName: nil, loadingSupportPeer: false))
+    let statePromise = ValuePromise(SettingsState(updatingAvatar: nil, editingState: nil, updatingName: nil, loadingSupportPeer: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: SettingsState(updatingAvatar: nil, editingState: nil, updatingName: nil, loadingSupportPeer: false))
     let updateState: ((SettingsState) -> SettingsState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
+    
+    let updateAvatarDisposable = MetaDisposable()
+    actionsDisposable.add(updateAvatarDisposable)
     
     let updatePeerNameDisposable = MetaDisposable()
     actionsDisposable.add(updatePeerNameDisposable)
@@ -327,15 +350,89 @@ public func settingsController(account: Account, accountManager: AccountManager)
     let supportPeerDisposable = MetaDisposable()
     actionsDisposable.add(supportPeerDisposable)
     
-    //let privacySettings = Promise<AccountPrivacySettings?>()
-    //privacySettings.set(.single(nil) |> then(requestAccountPrivacySettings(account: account) |> map { Optional($0) }))
+    let hiddenAvatarRepresentationDisposable = MetaDisposable()
+    actionsDisposable.add(hiddenAvatarRepresentationDisposable)
     
-    let arguments = SettingsItemArguments(account: account, accountManager: accountManager, openPrivacyAndSecurity: {
+    let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+    
+    var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
+    let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
+    var updateHiddenAvatarImpl: (() -> Void)?
+    
+    let arguments = SettingsItemArguments(account: account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
+        var updating = false
+        updateState {
+            updating = $0.updatingAvatar != nil
+            return $0
+        }
+        
+        if updating {
+            return
+        }
+        
+        let _ = (account.postbox.loadedPeerWithId(account.peerId) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+            let galleryController = AvatarGalleryController(account: account, peer: peer, replaceRootController: { controller, ready in
+                
+            })
+            hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
+                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
+                updateHiddenAvatarImpl?()
+            }))
+            presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                return avatarGalleryTransitionArguments?(entry)
+            }))
+        })
+    }, changeProfilePhoto: {
+        let emptyController = LegacyEmptyController()
+        let navigationController = makeLegacyNavigationController(rootController: emptyController)
+        navigationController.setNavigationBarHidden(true, animated: false)
+        navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+        
+        let legacyController = LegacyController(legacyController: navigationController, presentation: .custom)
+        
+        presentControllerImpl?(legacyController, nil)
+        
+        let mixin = TGMediaAvatarMenuMixin(parentController: emptyController, hasDeleteButton: false, personalPhoto: true)!
+        mixin.applicationInterface = legacyController.applicationInterface
+        let _ = currentAvatarMixin.swap(mixin)
+        mixin.didDismiss = { [weak legacyController] in
+            legacyController?.dismiss()
+        }
+        mixin.didFinishWithImage = { image in
+            if let image = image {
+                if let data = UIImageJPEGRepresentation(image, 0.6) {
+                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                    updateState {
+                        $0.withUpdatedUpdatingAvatar(representation)
+                    }
+                    updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                        switch result {
+                            case .complete:
+                                updateState {
+                                    $0.withUpdatedUpdatingAvatar(nil)
+                                }
+                            case .progress:
+                                break
+                        }
+                    }))
+                }
+            }
+        }
+        mixin.didDismiss = { [weak legacyController] in
+            let _ = currentAvatarMixin.swap(nil)
+            legacyController?.dismiss()
+        }
+        mixin.present()
+    }, openPrivacyAndSecurity: {
         pushControllerImpl?(privacyAndSecurityController(account: account, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: account) |> map { Optional($0) })))
+    }, openDataAndStorage: {
+        pushControllerImpl?(dataAndStorageController(account: account))
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, presentController: { controller in
-        presentControllerImpl?(controller)
+        presentControllerImpl?(controller, nil)
     }, updateEditingName: { editingName in
         updateState { state in
             if let _ = state.editingState {
@@ -398,7 +495,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 let _ = logoutFromAccount(id: account.id, accountManager: accountManager).start()
             })
             ])
-        presentControllerImpl?(alertController)
+        presentControllerImpl?(alertController, nil)
     })
     
     let peerView = account.viewTracker.peerView(account.peerId)
@@ -421,7 +518,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 })
             }
             
-            let controllerState = ItemListControllerState(title: "Settings", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(title: .text("Settings"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
             let listState = ItemListNodeState(entries: settingsEntries(state: state, view: view), style: .blocks)
             
             return (controllerState, (listState, arguments))
@@ -437,8 +534,31 @@ public func settingsController(account: Account, accountManager: AccountManager)
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
-    presentControllerImpl = { [weak controller] value in
-        controller?.present(value, in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    presentControllerImpl = { [weak controller] value, arguments in
+        controller?.present(value, in: .window, with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }
+    avatarGalleryTransitionArguments = { [weak controller] entry in
+        if let controller = controller {
+            var result: (ASDisplayNode, CGRect)?
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    result = itemNode.avatarTransitionNode()
+                }
+            }
+            if let (node, _) = result {
+                return GalleryTransitionArguments(transitionNode: node, transitionContainerNode: controller.displayNode, transitionBackgroundNode: controller.displayNode)
+            }
+        }
+        return nil
+    }
+    updateHiddenAvatarImpl = { [weak controller] in
+        if let controller = controller {
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    itemNode.updateAvatarHidden()
+                }
+            }
+        }
     }
     return controller
 }

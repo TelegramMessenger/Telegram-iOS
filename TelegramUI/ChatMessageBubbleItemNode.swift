@@ -54,6 +54,9 @@ private let chatMessagePeerIdColors: [UIColor] = [
     UIColor(0x895dd5)
 ]
 
+private let shareButtonBackgroundImage = generateFilledCircleImage(diameter: 29.0, color: UIColor(0x748391, 0.45))
+private let shareButtonImage = UIImage(bundleImageName: "Chat/Message/ShareIcon")?.precomposed()
+
 class ChatMessageBubbleItemNode: ChatMessageItemView {
     private let backgroundNode: ChatMessageBackground
     private var transitionClippingNode: ASDisplayNode?
@@ -67,12 +70,24 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var contentNodes: [ChatMessageBubbleContentNode] = []
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
+    private var shareButtonNode: HighlightableButtonNode?
+    
     private var messageId: MessageId?
     private var messageStableId: UInt32?
     private var backgroundType: ChatMessageBackgroundType?
     private var highlightedState: Bool = false
     
     private var backgroundFrameTransition: (CGRect, CGRect)?
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            if self.visibility != oldValue {
+                for contentNode in self.contentNodes {
+                    contentNode.visibility = self.visibility
+                }
+            }
+        }
+    }
     
     required init() {
         self.backgroundNode = ChatMessageBackground()
@@ -94,20 +109,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
         }
-        
-        for contentNode in self.contentNodes {
-            //contentNode.animateInsertion(currentTimestamp, duration: duration)
-        }
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         super.animateRemoved(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        
-        for contentNode in self.contentNodes {
-            //contentNode.animateRemoved(currentTimestamp, duration: duration)
-        }
     }
     
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
@@ -130,6 +137,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.tapActionAtPoint = { [weak self] point in
             if let strongSelf = self {
+                if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
+                    return .fail
+                }
+                
                 if let avatarNode = strongSelf.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
                     return .waitForSingleTap
                 }
@@ -157,7 +168,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage:
                             return .waitForSingleTap
                         case .holdToPreviewSecretMedia:
-                            return .waitForHold
+                            return .waitForHold(timeout: 0.12, acceptTap: false)
                     }
                 }
             }
@@ -177,6 +188,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let forwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         let replyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
+        
+        var currentShareButtonNode = self.shareButtonNode
         
         let layoutConstants = self.layoutConstants
         
@@ -425,6 +438,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
             }
             
+            var needShareButton = false
+            if let peer = item.message.peers[item.message.id.peerId] {
+                if let channel = peer as? TelegramChannel {
+                    if case .broadcast = channel.info {
+                        needShareButton = true
+                    }
+                }
+            }
+            
+            var updatedShareButtonNode: HighlightableButtonNode?
+            if needShareButton {
+                if currentShareButtonNode != nil {
+                    updatedShareButtonNode = currentShareButtonNode
+                } else {
+                    let buttonNode = HighlightableButtonNode()
+                    buttonNode.setBackgroundImage(shareButtonBackgroundImage, for: [.normal])
+                    buttonNode.setImage(shareButtonImage, for: [.normal])
+                    updatedShareButtonNode = buttonNode
+                }
+            }
+            
             let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
             
             return (layout, { [weak self] animation in
@@ -510,6 +544,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 updatedContentNodes.append(contentNode)
                                 strongSelf.addSubnode(contentNode)
                                 contentNode.controllerInteraction = strongSelf.controllerInteraction
+                                
+                                contentNode.visibility = strongSelf.visibility
                             }
                         }
                         
@@ -554,10 +590,28 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         contentNodeOrigin.y += size.height
                     }
                     
+                    if let updatedShareButtonNode = updatedShareButtonNode {
+                        if updatedShareButtonNode !== strongSelf.shareButtonNode {
+                            if let shareButtonNode = strongSelf.shareButtonNode {
+                                shareButtonNode.removeFromSupernode()
+                            }
+                            strongSelf.shareButtonNode = updatedShareButtonNode
+                            strongSelf.addSubnode(updatedShareButtonNode)
+                            updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                    } else if let shareButtonNode = strongSelf.shareButtonNode {
+                        shareButtonNode.removeFromSupernode()
+                        strongSelf.shareButtonNode = nil
+                    }
+                    
                     if case .System = animation {
                         if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                             strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
                             strongSelf.enableTransitionClippingNode()
+                        }
+                        if let shareButtonNode = strongSelf.shareButtonNode {
+                            let currentBackgroundFrame = strongSelf.backgroundNode.frame
+                            shareButtonNode.frame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
                         }
                     } else {
                         if let _ = strongSelf.backgroundFrameTransition {
@@ -565,6 +619,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             strongSelf.backgroundFrameTransition = nil
                         }
                         strongSelf.backgroundNode.frame = backgroundFrame
+                        if let shareButtonNode = strongSelf.shareButtonNode {
+                            shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
+                        }
                         strongSelf.disableTransitionClippingNode()
                     }
                     let offset: CGFloat = incoming ? 42.0 : 0.0
@@ -663,6 +720,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if let backgroundFrameTransition = self.backgroundFrameTransition {
             let backgroundFrame = CGRect.interpolator()(backgroundFrameTransition.0, backgroundFrameTransition.1, progress) as! CGRect
             self.backgroundNode.frame = backgroundFrame
+            
+            if let shareButtonNode = self.shareButtonNode {
+                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
+            }
             
             if let transitionClippingNode = self.transitionClippingNode {
                 var fixedBackgroundFrame = backgroundFrame
@@ -802,6 +863,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
+            return shareButtonNode.view
+        }
+        
         if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
             return self.view
         }
@@ -857,7 +922,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let offset: CGFloat = incoming ? 42.0 : 0.0
             
             if let selectionNode = self.selectionNode {
-                selectionNode.updateSelected(selected, animated: false)
+                selectionNode.updateSelected(selected, animated: animated)
                 selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
@@ -923,7 +988,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             self.backgroundNode.setType(type: backgroundType, highlighted: false)
                             
                             if let updatedContents = self.backgroundNode.layer.contents {
-                                self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
+                                self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.42)
                             }
                         } else {
                             self.backgroundNode.setType(type: backgroundType, highlighted: false)
@@ -970,7 +1035,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     if let botPeer = botPeer, let addressName = botPeer.addressName {
                         controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: "@\(addressName) \(query)")), nil)
                     }
+                case .payment:
+                    break
             }
+        }
+    }
+    
+    @objc func shareButtonPressed() {
+        if let item = self.item, let controllerInteraction = self.controllerInteraction {
+            controllerInteraction.openMessageShareMenu(item.message.id)
         }
     }
 }

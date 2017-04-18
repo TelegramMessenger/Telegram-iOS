@@ -80,7 +80,11 @@ public class PeerMediaCollectionController: ViewController {
                     if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "audio/mpeg" {
                         
                     } else {
-                        let gallery = GalleryController(account: strongSelf.account, messageId: id)
+                        let gallery = GalleryController(account: strongSelf.account, messageId: id, replaceRootController: { controller, ready in
+                            if let strongSelf = self {
+                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
+                            }
+                        })
                         
                         strongSelf.galleryHiddenMesageAndMediaDisposable.set(gallery.hiddenMedia.start(next: { [weak strongSelf] messageIdAndMedia in
                             if let strongSelf = strongSelf {
@@ -181,6 +185,7 @@ public class PeerMediaCollectionController: ViewController {
                 }
             }, sendMessage: { _ in
             },sendSticker: { _ in
+            }, sendGif: { _ in
             }, requestMessageActionCallback: { _ in
             }, openUrl: { _ in
             }, shareCurrentLocation: {
@@ -189,7 +194,8 @@ public class PeerMediaCollectionController: ViewController {
             }, openInstantPage: { _ in
             }, openHashtag: {_ in
             }, updateInputState: { _ in
-            })
+            }, openMessageShareMenu: { _ in
+            }, presentController: { _ in })
         
         self.controllerInteraction = controllerInteraction
         

@@ -257,7 +257,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 if let addressName = peer.addressName {
                     label = "t.me/" + addressName
                 }
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .text(label), label: nil, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .text(label), label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)
@@ -666,7 +666,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                     })
             }
             
-            let controllerState = ItemListControllerState(title: isGroup ? "Group Type" : "Channel Link", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text(isGroup ? "Group Type" : "Channel Link"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: channelVisibilityControllerEntries(view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state), style: .blocks, animateChanges: false)
             
             return (controllerState, (listState, arguments))
@@ -709,7 +709,6 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                         return nil
                     }
                 }))
-                
             }
         }
     }

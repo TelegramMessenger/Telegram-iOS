@@ -13,6 +13,21 @@ class ManagedVideoNode: ASDisplayNode {
         }
     }
     
+    private let _player = Promise<MediaPlayer?>(nil)
+    var player: Signal<MediaPlayer?, NoError> {
+        return self._player.get()
+    }
+    
+    let preferSoftwareDecoding: Bool
+    let backgroundThread: Bool
+    
+    init(preferSoftwareDecoding: Bool = false, backgroundThread: Bool = true) {
+        self.preferSoftwareDecoding = preferSoftwareDecoding
+        self.backgroundThread = backgroundThread
+        
+        super.init()
+    }
+    
     deinit {
         self.videoContextDisposable.dispose()
     }
@@ -22,7 +37,7 @@ class ManagedVideoNode: ASDisplayNode {
     }
     
     func acquireContext(account: Account, mediaManager: MediaManager, id: ManagedMediaId, resource: MediaResource) {
-        self.videoContextDisposable.set((mediaManager.videoContext(account: account, id: id, resource: resource) |> deliverOnMainQueue).start(next: { [weak self] videoContext in
+        self.videoContextDisposable.set((mediaManager.videoContext(account: account, id: id, resource: resource, preferSoftwareDecoding: self.preferSoftwareDecoding, backgroundThread: self.backgroundThread) |> deliverOnMainQueue).start(next: { [weak self] videoContext in
             if let strongSelf = self {
                 if strongSelf.videoContext !== videoContext {
                     if let videoContext = strongSelf.videoContext {
@@ -32,11 +47,12 @@ class ManagedVideoNode: ASDisplayNode {
                     }
                     
                     strongSelf.videoContext = videoContext
+                    strongSelf._player.set(.single(videoContext?.mediaPlayer))
                     if let videoContext = videoContext {
                         strongSelf.addSubnode(videoContext.playerNode)
                         videoContext.playerNode.transformArguments = strongSelf.transformArguments
                         strongSelf.setNeedsLayout()
-                        videoContext.mediaPlayer.play()
+                        //videoContext.mediaPlayer.play()
                     }
                 }
             }

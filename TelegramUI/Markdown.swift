@@ -1,7 +1,7 @@
 import Foundation
 import Display
 
-private let controlStartCharactersSet = CharacterSet(charactersIn: "[")
+private let controlStartCharactersSet = CharacterSet(charactersIn: "[*")
 private let controlCharactersSet = CharacterSet(charactersIn: "[]()*_-\\")
 
 final class MarkdownAttributeSet {
@@ -16,12 +16,14 @@ final class MarkdownAttributeSet {
 
 final class MarkdownAttributes {
     let body: MarkdownAttributeSet
+    let bold: MarkdownAttributeSet
     let link: MarkdownAttributeSet
     let linkAttribute: (String) -> (String, Any)?
     
-    init(body: MarkdownAttributeSet, link: MarkdownAttributeSet, linkAttribute: @escaping (String) -> (String, Any)?) {
+    init(body: MarkdownAttributeSet, bold: MarkdownAttributeSet, link: MarkdownAttributeSet, linkAttribute: @escaping (String) -> (String, Any)?) {
         self.body = body
         self.link = link
+        self.bold = bold
         self.linkAttribute = linkAttribute
     }
 }
@@ -69,6 +71,27 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
                     }
                     result.append(NSAttributedString(string: parsedLinkText, attributes: linkAttributes))
                 }
+            } else if character == UInt16(("*" as UnicodeScalar).value) {
+                if range.location + 1 != remainingRange.length {
+                    let nextCharacter = nsString.character(at: range.location + 1)
+                    if nextCharacter == character {
+                        remainingRange = NSMakeRange(range.location + range.length + 1, remainingRange.location + remainingRange.length - (range.location + range.length + 1))
+                        
+                        if let bold = parseBold(string: nsString, remainingRange: &remainingRange) {
+                            let boldAttributes: [String: Any] = [NSFontAttributeName: attributes.bold.font, NSForegroundColorAttributeName: attributes.bold.textColor]
+                            result.append(NSAttributedString(string: bold, attributes: boldAttributes))
+                        } else {
+                            result.append(NSAttributedString(string: nsString.substring(with: NSMakeRange(remainingRange.location, 1)), attributes: bodyAttributes))
+                            remainingRange = NSMakeRange(range.location + 1, remainingRange.length - 1)
+                        }
+                    } else {
+                        result.append(NSAttributedString(string: nsString.substring(with: NSMakeRange(remainingRange.location, 1)), attributes: bodyAttributes))
+                        remainingRange = NSMakeRange(range.location + 1, remainingRange.length - 1)
+                    }
+                } else {
+                    result.append(NSAttributedString(string: nsString.substring(with: NSMakeRange(remainingRange.location, 1)), attributes: bodyAttributes))
+                    remainingRange = NSMakeRange(range.location + 1, remainingRange.length - 1)
+                }
             }
         } else {
             if remainingRange.length != 0 {
@@ -93,6 +116,19 @@ private func parseLink(string: NSString, remainingRange: inout NSRange) -> (text
             remainingRange = NSMakeRange(closingRoundBraceRange.location + closingRoundBraceRange.length, remainingRange.location + remainingRange.length - (closingRoundBraceRange.location + closingRoundBraceRange.length))
             return (linkText, linkContents)
         }
+    }
+    return nil
+}
+
+private func parseBold(string: NSString, remainingRange: inout NSRange) -> String? {
+    var localRemainingRange = remainingRange
+    let closingRange = string.range(of: "**", options: [], range: localRemainingRange)
+    if closingRange.location != NSNotFound {
+        localRemainingRange = NSMakeRange(closingRange.location + closingRange.length, remainingRange.location + remainingRange.length - (closingRange.location + closingRange.length))
+        
+        let result = string.substring(with: NSRange(location: remainingRange.location, length: closingRange.location - remainingRange.location))
+        remainingRange = localRemainingRange
+        return result
     }
     return nil
 }

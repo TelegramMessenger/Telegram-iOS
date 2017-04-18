@@ -383,7 +383,7 @@ public func recentSessionsController(account: Account) -> ViewController {
             let previous = previousSessions
             previousSessions = sessions
             
-            let controllerState = ItemListControllerState(title: "Active Sessions", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(title: .text("Active Sessions"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             let listState = ItemListNodeState(entries: recentSessionsControllerEntries(state: state, sessions: sessions), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && sessions != nil && previous!.count >= sessions!.count)
             
             return (controllerState, (listState, arguments))

@@ -313,7 +313,7 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
             }
             
-            let controllerState = ItemListControllerState(title: "Archived Stickers", leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(title: .text("Archived Stickers"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
             
             let listState = ItemListNodeState(entries: archivedStickerPacksControllerEntries(state: state, packs: packs, installedView: installedView), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
             return (controllerState, (listState, arguments))

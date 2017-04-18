@@ -18,6 +18,24 @@ public enum ImageCorner: Equatable {
                 return CGSize()
         }
     }
+    
+    public var withoutTail: ImageCorner {
+        switch self {
+            case .Corner:
+                return self
+            case let .Tail(radius):
+                return .Corner(radius)
+        }
+    }
+    
+    public var radius: CGFloat {
+        switch self {
+            case let .Corner(radius):
+                return radius
+            case let .Tail(radius):
+                return radius
+        }
+    }
 }
 
 public func ==(lhs: ImageCorner, rhs: ImageCorner) -> Bool {
@@ -69,6 +87,10 @@ public struct ImageCorners: Equatable {
         
         return UIEdgeInsets(top: 0.0, left: left, bottom: 0.0, right: right)
     }
+    
+    public func withRemovedTails() -> ImageCorners {
+        return ImageCorners(topLeft: self.topLeft.withoutTail, topRight: self.topRight.withoutTail, bottomLeft: self.bottomLeft.withoutTail, bottomRight: self.bottomRight.withoutTail)
+    }
 }
 
 public func ==(lhs: ImageCorners, rhs: ImageCorners) -> Bool {
@@ -78,6 +100,8 @@ public func ==(lhs: ImageCorners, rhs: ImageCorners) -> Bool {
 public class ImageNode: ASDisplayNode {
     private var disposable = MetaDisposable()
     private let hasImage: ValuePromise<Bool>?
+    private var first = true
+    private let enableEmpty: Bool
     
     var ready: Signal<Bool, NoError> {
         if let hasImage = self.hasImage {
@@ -87,24 +111,28 @@ public class ImageNode: ASDisplayNode {
         }
     }
     
-    init(enableHasImage: Bool = false) {
+    init(enableHasImage: Bool = false, enableEmpty: Bool = false) {
         if enableHasImage {
             self.hasImage = ValuePromise(false, ignoreRepeated: true)
         } else {
             self.hasImage = nil
         }
+        self.enableEmpty = enableEmpty
         super.init()
     }
     
     public func setSignal(_ signal: Signal<UIImage?, NoError>) {
-        var first = true
         var reportedHasImage = false
         self.disposable.set((signal |> deliverOnMainQueue).start(next: {[weak self] next in
             dispatcher.dispatch {
                 if let strongSelf = self {
-                    strongSelf.contents = next?.cgImage
-                    if first && next != nil {
-                        first = false
+                    if let image = next?.cgImage {
+                        strongSelf.contents = image
+                    } else if strongSelf.enableEmpty {
+                        strongSelf.contents = nil
+                    }
+                    if strongSelf.first && next != nil {
+                        strongSelf.first = false
                         if strongSelf.isNodeLoaded {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
                         }

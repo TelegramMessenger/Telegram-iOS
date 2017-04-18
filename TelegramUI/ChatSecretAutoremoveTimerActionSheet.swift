@@ -54,6 +54,9 @@ private final class AutoremoveTimeoutSelectorItem: ActionSheetItem {
     func node() -> ActionSheetItemNode {
         return AutoremoveTimeoutSelectorItemNode(currentValue: self.currentValue, valueChanged: self.valueChanged)
     }
+    
+    func updateNode(_ node: ActionSheetItemNode) {
+    }
 }
 
 private let timeoutValues: [(Int32, String)] = [

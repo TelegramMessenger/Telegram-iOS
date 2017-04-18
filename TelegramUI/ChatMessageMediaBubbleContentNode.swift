@@ -16,6 +16,12 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     private var item: ChatMessageItem?
     private var media: Media?
     
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            self.interactiveImageNode.visibility = self.visibility
+        }
+    }
+    
     required init() {
         self.interactiveImageNode = ChatMessageInteractiveMediaNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
@@ -51,9 +57,9 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
+            let initialImageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
             
-            let (initialWidth, refineLayout) = interactiveImageLayout(item.account, item.message, selectedMedia!, imageCorners, item.account.settings.automaticDownloadSettingsForPeerId(item.peerId).downloadPhoto, CGSize(width: constrainedSize.width, height: constrainedSize.height), layoutConstants)
+            let (initialWidth, _, refineLayout) = interactiveImageLayout(item.account, item.message, selectedMedia!, initialImageCorners, item.account.settings.automaticDownloadSettingsForPeerId(item.peerId).downloadPhotos, CGSize(width: constrainedSize.width, height: constrainedSize.height), layoutConstants)
             
             return (initialWidth + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, { constrainedSize in
                 let (refinedWidth, finishLayout) = refineLayout(constrainedSize)

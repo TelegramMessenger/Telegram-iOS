@@ -9,6 +9,23 @@ private let defaultBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 1.0)
 private let highlightedBackgroundColor: UIColor = UIColor(white: 0.9, alpha: 1.0)
 private let separatorColor: UIColor = UIColor(0xbcbbc1)
 
+private let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: .white)
+private let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: highlightedBackgroundColor)
+
+private let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    context.setFillColor(UIColor.white.cgColor)
+    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+})?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+
+private let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    context.setFillColor(highlightedBackgroundColor.cgColor)
+    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+})?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+
 final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let account: Account
     
@@ -17,20 +34,24 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
     private let dimNode: ASDisplayNode
     
     private let wrappingScrollNode: ASScrollNode
-    private let cancelButtonNode: HighlightTrackingButtonNode
+    private let cancelButtonNode: ASButtonNode
     
     private let contentContainerNode: ASDisplayNode
-    private let contentBackgroundNode: ASDisplayNode
+    private let contentBackgroundNode: ASImageNode
     private let contentGridNode: GridNode
-    private let installActionButtonNode: HighlightTrackingButtonNode
+    private let installActionButtonNode: ASButtonNode
     private let installActionSeparatorNode: ASDisplayNode
     private let contentTitleNode: ASTextNode
     private let contentSeparatorNode: ASDisplayNode
     
     private var activityIndicatorView: UIActivityIndicatorView?
     
+    private var interaction: StickerPackPreviewInteraction!
+    
+    var presentPreview: ((ViewController, Any?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
+    var sendSticker: ((TelegramMediaFile) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -39,6 +60,10 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
     private var stickerPackUpdated = false
     
     private var didSetItems = false
+    
+    private var previewController: StickerPreviewController?
+    
+    private var hapticFeedback: HapticFeedback?
     
     init(account: Account) {
         self.account = account
@@ -51,24 +76,33 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
-        self.cancelButtonNode = HighlightTrackingButtonNode()
-        self.cancelButtonNode.cornerRadius = 16.0
-        self.cancelButtonNode.clipsToBounds = true
+        self.cancelButtonNode = ASButtonNode()
+        self.cancelButtonNode.displaysAsynchronously = false
+        self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
+        self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
+        //self.cancelButtonNode.cornerRadius = 16.0
+        //self.cancelButtonNode.clipsToBounds = true
         
         self.contentContainerNode = ASDisplayNode()
-        self.contentContainerNode.cornerRadius = 16.0
-        self.contentContainerNode.clipsToBounds = true
+        //self.contentContainerNode.cornerRadius = 16.0
+        //self.contentContainerNode.clipsToBounds = true
         self.contentContainerNode.isOpaque = false
         
-        self.contentBackgroundNode = ASDisplayNode()
-        self.contentBackgroundNode.cornerRadius = 16.0
-        self.contentBackgroundNode.clipsToBounds = true
-        self.contentBackgroundNode.backgroundColor = defaultBackgroundColor
+        self.contentBackgroundNode = ASImageNode()
+        self.contentBackgroundNode.displaysAsynchronously = false
+        self.contentBackgroundNode.displayWithoutProcessing = true
+        self.contentBackgroundNode.image = roundedBackground
+        //self.contentBackgroundNode.cornerRadius = 16.0
+        //self.contentBackgroundNode.clipsToBounds = true
         
         self.contentGridNode = GridNode()
         
         self.installActionButtonNode = HighlightTrackingButtonNode()
-            
+        self.installActionButtonNode.displaysAsynchronously = false
+        self.installActionButtonNode.titleNode.displaysAsynchronously = false
+        self.installActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
+        self.installActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        
         self.contentTitleNode = ASTextNode()
         
         self.contentSeparatorNode = ASDisplayNode()
@@ -85,6 +119,13 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
             return UITracingLayerView()
         }, didLoad: nil)
         
+        self.interaction = StickerPackPreviewInteraction(sendSticker: { [weak self] item in
+            if let strongSelf = self {
+                strongSelf.sendSticker?(item.file)
+                strongSelf.cancel?()
+            }
+        })
+        
         self.backgroundColor = nil
         self.isOpaque = false
         
@@ -95,7 +136,7 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
         self.addSubnode(self.wrappingScrollNode)
         
         self.cancelButtonNode.setTitle("Cancel", with: Font.medium(20.0), with: UIColor(0x007ee5), for: .normal)
-        self.cancelButtonNode.backgroundColor = defaultBackgroundColor
+        /*self.cancelButtonNode.backgroundColor = defaultBackgroundColor
         self.cancelButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
@@ -106,9 +147,9 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
                     })
                 }
             }
-        }
+        }*/
         
-        self.installActionButtonNode.backgroundColor = defaultBackgroundColor
+        /*self.installActionButtonNode.backgroundColor = defaultBackgroundColor
         self.installActionButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
@@ -119,7 +160,7 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
                     })
                 }
             }
-        }
+        }*/
         
         self.wrappingScrollNode.addSubnode(self.cancelButtonNode)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -138,6 +179,15 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
         }
+        
+        let longTapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.previewGesture(_:)))
+        longTapRecognizer.tapActionAtPoint = { [weak self] location in
+            if let strongSelf = self, let _ = strongSelf.contentGridNode.itemNodeAtPoint(location) as? StickerPackPreviewGridItemNode {
+                return .waitForHold(timeout: 0.2, acceptTap: true)
+            }
+            return .fail
+        }
+        self.contentGridNode.view.addGestureRecognizer(longTapRecognizer)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -192,7 +242,7 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
                         self.didSetItems = true
                         animateIn = true
                         for i in 0 ..< items.count {
-                            insertItems.append(GridNodeInsertItem(index: i, item: StickerPackPreviewGridItem(account: self.account, stickerItem: items[i] as! StickerPackItem), previousIndex: nil))
+                            insertItems.append(GridNodeInsertItem(index: i, item: StickerPackPreviewGridItem(account: self.account, stickerItem: items[i] as! StickerPackItem, interaction: self.interaction), previousIndex: nil))
                         }
                     }
             }
@@ -228,7 +278,7 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
         transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
         transition.updateFrame(node: self.installActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
         
-        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, itemSize: CGSize(width: itemWidth, height: itemWidth)), transition: transition), stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth))), transition: transition), stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         transition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))))
         
         if animateIn {
@@ -246,8 +296,8 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
             self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            let gridPosition = self.contentGridNode.layer.position
-            self.contentGridNode.layer.animatePosition(from: CGPoint(x: gridPosition.x, y: gridPosition.y + topInset - buttonHeight), to: gridPosition, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            self.contentGridNode.layer.animateBoundsOriginYAdditive(from: -(topInset - buttonHeight), to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
         if let _ = self.stickerPack, self.stickerPackUpdated {
@@ -342,19 +392,20 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
         self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    func animateOut() {
+    func animateOut(completion: (() -> Void)? = nil) {
         var dimCompleted = false
         var offsetCompleted = false
         
-        let completion: () -> Void = { [weak self] in
+        let internalCompletion: () -> Void = { [weak self] in
             if let strongSelf = self, dimCompleted && offsetCompleted {
                 strongSelf.dismiss?()
             }
+            completion?()
         }
         
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             dimCompleted = true
-            completion()
+            internalCompletion()
         })
         
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
@@ -362,7 +413,7 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
         self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
         self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             offsetCompleted = true
-            completion()
+            internalCompletion()
         })
     }
     
@@ -430,6 +481,66 @@ final class StickerPackPreviewControllerNode: ASDisplayNode, UIScrollViewDelegat
         
         if additionalTopHeight >= 30.0 {
             self.cancelButtonPressed()
+        }
+    }
+    
+    @objc func previewGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .began:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture {
+                    if let itemNode = self.contentGridNode.itemNodeAtPoint(location) as? StickerPackPreviewGridItemNode {
+                        self.updatePreviewingItem(item: itemNode.stickerPackItem, animated: true)
+                    }
+                }
+            case .ended, .cancelled:
+                self.updatePreviewingItem(item: nil, animated: true)
+            case .changed:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture, let itemNode = self.contentGridNode.itemNodeAtPoint(location) as? StickerPackPreviewGridItemNode {
+                    self.updatePreviewingItem(item: itemNode.stickerPackItem, animated: true)
+                }
+            default:
+                break
+        }
+    }
+    
+    private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
+        if self.interaction.previewedItem != item {
+            self.interaction.previewedItem = item
+            
+            self.contentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? StickerPackPreviewGridItemNode {
+                    itemNode.updatePreviewing(animated: animated)
+                }
+            }
+            
+            if let item = item {
+                if let previewController = self.previewController {
+                    self.hapticFeedback?.tap()
+                    self.hapticFeedback?.prepareTap()
+                    previewController.updateItem(item)
+                } else {
+                    self.hapticFeedback = HapticFeedback()
+                    self.hapticFeedback?.prepareTap()
+                    let previewController = StickerPreviewController(account: self.account, item: item)
+                    self.previewController = previewController
+                    self.presentPreview?(previewController, StickerPreviewControllerPresentationArguments(transitionNode: { [weak self] item in
+                        if let strongSelf = self {
+                            var result: ASDisplayNode?
+                            strongSelf.contentGridNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? StickerPackPreviewGridItemNode, itemNode.stickerPackItem == item {
+                                    result = itemNode.transitionNode()
+                                }
+                            }
+                            return result
+                        }
+                        return nil
+                    }))
+                }
+            } else if let previewController = self.previewController {
+                self.hapticFeedback = nil
+                previewController.dismiss()
+                self.previewController = nil
+            }
         }
     }
 }

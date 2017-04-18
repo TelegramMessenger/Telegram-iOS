@@ -38,6 +38,10 @@ open class GalleryItemNode: ASDisplayNode {
         return .single(nil)
     }
     
+    open func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
+        return .single(nil)
+    }
+    
     open func navigationStyle() -> Signal<GalleryItemNodeNavigationStyle, NoError> {
         return .single(.dark)
     }

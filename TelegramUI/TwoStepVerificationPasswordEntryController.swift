@@ -413,7 +413,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                 })
             }
             
-            let controllerState = ItemListControllerState(title: "Password", leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
+            let controllerState = ItemListControllerState(title: .text("Password"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
             let listState = ItemListNodeState(entries: twoStepVerificationPasswordEntryControllerEntries(state: state, mode: mode), style: .blocks, focusItemTag: TwoStepVerificationPasswordEntryTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))

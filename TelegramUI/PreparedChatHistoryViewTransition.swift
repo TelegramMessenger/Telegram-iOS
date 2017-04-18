@@ -102,6 +102,8 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
             adjustedUpdateItems.append(ChatHistoryViewTransitionUpdateEntry(index: adjustedIndex, previousIndex: adjustedPreviousIndex, entry: entry, directionHint: directionHint))
         }
         
+        var scrolledToIndex: MessageIndex?
+        
         if let scrollPosition = scrollPosition {
             switch scrollPosition {
             case let .Unread(unreadIndex):
@@ -136,6 +138,9 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     }
                 }
             case let .Index(scrollIndex, position, directionHint, animated):
+                if case .Center = position {
+                    scrolledToIndex = scrollIndex
+                }
                 var index = toView.filteredEntries.count - 1
                 for entry in toView.filteredEntries {
                     if entry.index >= scrollIndex {
@@ -158,7 +163,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
             }
         }
         
-        subscriber.putNext(ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData))
+        subscriber.putNext(ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, scrolledToIndex: scrolledToIndex))
         subscriber.putCompletion()
         
         return EmptyDisposable

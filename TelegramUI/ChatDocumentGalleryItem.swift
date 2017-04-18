@@ -17,7 +17,7 @@ class ChatDocumentGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatDocumentGalleryItemNode()
+        let node = ChatDocumentGalleryItemNode(account: self.account)
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile {
@@ -34,6 +34,7 @@ class ChatDocumentGalleryItem: GalleryItem {
         if let location = self.location {
             node._title.set(.single("\(location.index + 1) of \(location.count)"))
         }
+        node.setMessage(self.message)
         
         return node
     }
@@ -41,6 +42,7 @@ class ChatDocumentGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode) {
         if let node = node as? ChatDocumentGalleryItemNode, let location = self.location {
             node._title.set(.single("\(location.index + 1) of \(location.count)"))
+            node.setMessage(self.message)
         }
     }
 }
@@ -55,7 +57,11 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     
     private var itemIsVisible = false
     
-    override init() {
+    private var message: Message?
+    
+    private let footerContentNode: ChatItemGalleryFooterContentNode
+    
+    init(account: Account) {
         if #available(iOS 9.0, *) {
             let webView = WKWebView()
             self.webView = webView
@@ -64,6 +70,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
             webView.scalesPageToFit = true
             self.webView = webView
         }
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
         
         super.init()
         
@@ -78,6 +85,10 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
         self.webView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight))
+    }
+    
+    fileprivate func setMessage(_ message: Message) {
+        self.footerContentNode.setMessage(message)
     }
     
     override func navigationStyle() -> Signal<GalleryItemNodeNavigationStyle, NoError> {
@@ -198,5 +209,9 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
             boundsCompleted = true
             intermediateCompletion()
         })
+    }
+    
+    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
+        return .single(self.footerContentNode)
     }
 }

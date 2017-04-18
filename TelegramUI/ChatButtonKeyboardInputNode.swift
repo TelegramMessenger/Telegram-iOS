@@ -183,6 +183,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                             controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: "@\(addressName) \(query)")), nil)
                         }
                     }
+                case .payment:
+                    break
             }
         }
     }
