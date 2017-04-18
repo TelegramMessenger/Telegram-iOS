@@ -25,7 +25,7 @@ public func updateAccountPhoto(account:Account, resource:MediaResource) -> Signa
 
 public func updatePeerPhoto(account:Account, peerId:PeerId, resource:MediaResource) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
      return account.postbox.loadedPeerWithId(peerId) |> mapError {_ in return .generic} |> mapToSignal { peer in
-        return multipartUpload(network: account.network, postbox: account.postbox, source: .resource(resource), encrypt: false)
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .resource(resource), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
             |> mapError {_ in return .generic}
             |> mapToSignal { result -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
                 switch result {
@@ -89,7 +89,12 @@ public func updatePeerPhoto(account:Account, peerId:PeerId, resource:MediaResour
                             for chat in updates.chats {
                                 if chat.peerId == peerId {
                                     if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                        return .single(.complete(groupOrChannel.profileImageRepresentations))
+                                        return account.postbox.modify { modifier -> UpdatePeerPhotoStatus in
+                                            updatePeers(modifier: modifier, peers: [groupOrChannel], update: { _, updated in
+                                                return updated
+                                            })
+                                            return .complete(groupOrChannel.profileImageRepresentations)
+                                        } |> mapError { _ in return .generic }
                                     }
                                 }
                             }

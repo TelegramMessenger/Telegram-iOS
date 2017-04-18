@@ -5,6 +5,8 @@ public enum PeerInputActivity: Comparable {
     case uploadingFile(progress: Int32)
     case recordingVoice
     case playingGame
+    case recordingInstantVideo
+    case uploadingInstantVideo
     
     public static func ==(lhs: PeerInputActivity, rhs: PeerInputActivity) -> Bool {
         switch lhs {
@@ -32,6 +34,18 @@ public enum PeerInputActivity: Comparable {
                 } else {
                     return false
                 }
+            case .recordingInstantVideo:
+                if case .recordingInstantVideo = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .uploadingInstantVideo:
+                if case .uploadingInstantVideo = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -43,8 +57,12 @@ public enum PeerInputActivity: Comparable {
                 return 1
             case .recordingVoice:
                 return 2
-            case .playingGame:
+            case .recordingInstantVideo:
                 return 3
+            case .uploadingInstantVideo:
+                return 4
+            case .playingGame:
+                return 5
         }
     }
     
@@ -70,6 +88,10 @@ extension PeerInputActivity {
                 self = .uploadingFile(progress: progress)
             case let .sendMessageUploadVideoAction(progress):
                 self = .uploadingFile(progress: progress)
+            case .sendMessageRecordRoundAction:
+                self = .recordingInstantVideo
+            case .sendMessageUploadRoundAction:
+                self = .uploadingInstantVideo
         }
     }
 }

@@ -74,7 +74,7 @@ func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoin
 
 private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerId: PeerId, image: TelegramMediaImage, text: String) -> Signal<PendingMessageUploadedContentResult, NoError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
-        return multipartUpload(network: network, postbox: postbox, source: .resource(largestRepresentation.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat)
+        return multipartUpload(network: network, postbox: postbox, source: .resource(largestRepresentation.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
             |> map { next -> PendingMessageUploadedContentResult in
                 switch next {
                     case let .progress(progress):
@@ -153,7 +153,7 @@ private enum UploadedMediaThumbnail {
 }
 
 private func uploadedThumbnail(network: Network, postbox: Postbox, image: TelegramMediaImageRepresentation) -> Signal<Api.InputFile?, NoError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(image.resource), encrypt: false)
+    return multipartUpload(network: network, postbox: postbox, source: .resource(image.resource), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
         |> mapToSignal { result -> Signal<Api.InputFile?, NoError> in
             switch result {
                 case .progress:
@@ -166,6 +166,20 @@ private func uploadedThumbnail(network: Network, postbox: Postbox, image: Telegr
         }
 }
 
+public func statsCategoryForFileWithAttributes(_ attributes: [TelegramMediaFileAttribute]) -> MediaResourceStatsCategory {
+    for attribute in attributes {
+        switch attribute {
+            case .Audio:
+                return .audio
+            case .Video:
+                return .video
+            default:
+                break
+        }
+    }
+    return .file
+}
+
 private func uploadedMediaFileContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, peerId: PeerId, messageId: MessageId?, text: String, attributes: [MessageAttribute], file: TelegramMediaFile) -> Signal<PendingMessageUploadedContentResult, NoError> {
     var hintSize: Int?
     if let size = file.size {
@@ -173,7 +187,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, transf
     } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
         hintSize = Int(size)
     }
-    let upload = multipartUpload(network: network, postbox: postbox, source: .resource(file.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, hintFileSize: hintSize)
+    let upload = multipartUpload(network: network, postbox: postbox, source: .resource(file.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes)), hintFileSize: hintSize)
         /*|> map { next -> UploadedMediaFileContent in
             switch next {
                 case let .progress(progress):

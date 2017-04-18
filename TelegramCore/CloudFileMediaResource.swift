@@ -5,10 +5,6 @@ import Foundation
     import Postbox
 #endif
 
-public protocol TelegramMediaResource: MediaResource, Coding {
-    func isEqual(to: TelegramMediaResource) -> Bool
-}
-
 protocol TelegramCloudMediaResource: TelegramMediaResource {
     var datacenterId: Int { get }
     var apiInputLocation: Api.InputFileLocation { get }

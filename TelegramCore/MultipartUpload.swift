@@ -322,8 +322,8 @@ enum MultipartUploadSource {
     case data(Data)
 }
 
-func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, hintFileSize: Int? = nil) -> Signal<MultipartUploadResult, NoError> {
-    return network.download(datacenterId: network.datacenterId)
+func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int? = nil) -> Signal<MultipartUploadResult, NoError> {
+    return network.download(datacenterId: network.datacenterId, tag: tag)
         |> mapToSignal { download -> Signal<MultipartUploadResult, NoError> in
             return Signal { subscriber in
                 var encryptionKey: SecretFileEncryptionKey?
@@ -348,7 +348,7 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                     case let .resource(resource):
                         dataSignal = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
                         headerSize = resource.headerSize
-                        fetchedResource = postbox.mediaBox.fetchedResource(resource) |> map {_ in}
+                        fetchedResource = postbox.mediaBox.fetchedResource(resource, tag: tag) |> map {_ in}
                     case let .data(data):
                         dataSignal = .single(.data(data))
                         headerSize = 0
