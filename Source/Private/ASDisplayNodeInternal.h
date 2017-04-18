@@ -224,6 +224,7 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 - (void)_insertSubnode:(ASDisplayNode *)subnode belowSubnode:(ASDisplayNode *)below;
 - (void)_insertSubnode:(ASDisplayNode *)subnode aboveSubnode:(ASDisplayNode *)above;
 - (void)_insertSubnode:(ASDisplayNode *)subnode atIndex:(NSInteger)idx;
+- (void)_removeFromSupernodeIfEqualTo:(ASDisplayNode *)supernode;
 - (void)_removeFromSupernode;
 
 // Private API for helper functions / unit tests.  Use ASDisplayNodeDisableHierarchyNotifications() to control this.
@@ -239,10 +240,10 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 - (void)displayImmediately;
 
 /// Alternative initialiser for backing with a custom view class.  Supports asynchronous display with _ASDisplayView subclasses.
-- (nullable instancetype)initWithViewClass:(Class)viewClass;
+- (instancetype)initWithViewClass:(Class)viewClass;
 
 /// Alternative initialiser for backing with a custom layer class.  Supports asynchronous display with _ASDisplayLayer subclasses.
-- (nullable instancetype)initWithLayerClass:(Class)layerClass;
+- (instancetype)initWithLayerClass:(Class)layerClass;
 
 @property (nonatomic, assign) CGFloat contentsScaleForDisplay;
 

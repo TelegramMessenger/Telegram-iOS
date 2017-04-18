@@ -224,18 +224,22 @@ struct ASImageNodeDrawParameters {
 
 - (void)setImage:(UIImage *)image
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    if (ASObjectIsEqual(_image, image)) {
-      return;
-    }
+  ASDN::MutexLocker l(__instanceLock__);
+  [self _locked_setImage:image];
+}
 
-    _image = image;
+- (void)_locked_setImage:(UIImage *)image
+{
+  if (ASObjectIsEqual(_image, image)) {
+    return;
   }
   
-  [self setNeedsLayout];
-
-  if (image) {
+  _image = image;
+  
+  if (image != nil) {
+    
+    // We explicitly call setNeedsDisplay in this case, although we know setNeedsDisplay will be called with lock held.
+    // Therefore we have to be careful in methods that are involved with setNeedsDisplay to not run into a deadlock
     [self setNeedsDisplay];
     
     if (_displayWithoutProcessing && ASDisplayNodeThreadIsMain()) {
@@ -248,26 +252,19 @@ struct ASImageNodeDrawParameters {
       return;
     }
     
-    [self setNeedsLayout];
-    if (image) {
-      [self setNeedsDisplay];
-      
-      if ([ASImageNode shouldShowImageScalingOverlay] && _debugLabelNode == nil) {
-        ASPerformBlockOnMainThread(^{
-          _debugLabelNode = [[ASTextNode alloc] init];
-          _debugLabelNode.layerBacked = YES;
-          [self addSubnode:_debugLabelNode];
-        });
-      }
-    } else {
-      self.contents = nil;
-    }
+  } else {
+    self.contents = nil;
   }
 }
 
 - (UIImage *)image
 {
   ASDN::MutexLocker l(__instanceLock__);
+  return _image;
+}
+
+- (UIImage *)_locked_Image
+{
   return _image;
 }
 

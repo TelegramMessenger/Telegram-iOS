@@ -8,8 +8,12 @@
 
 #ifndef MINIMAL_ASDK
 #import <Foundation/Foundation.h>
+#import <AsyncDisplayKit/ASBlockTypes.h>
+#import <AsyncDisplayKit/ASDimension.h>
 
 NS_ASSUME_NONNULL_BEGIN
+
+@class ASBatchContext;
 
 /**
  * A protocol that your section controllers should conform to,

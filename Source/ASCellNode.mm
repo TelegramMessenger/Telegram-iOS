@@ -90,8 +90,10 @@
       _viewControllerNode = asViewController.node;
       [_viewController view];
     } else {
+      // Careful to avoid retain cycle
+      UIViewController *viewController = _viewController;
       _viewControllerNode = [[ASDisplayNode alloc] initWithViewBlock:^{
-        return _viewController.view;
+        return viewController.view;
       }];
     }
     [self addSubnode:_viewControllerNode];

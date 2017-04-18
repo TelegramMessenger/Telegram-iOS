@@ -9,11 +9,10 @@
 #ifndef MINIMAL_ASDK
 
 #import <Foundation/Foundation.h>
+#import <AsyncDisplayKit/ASBlockTypes.h>
 #import <AsyncDisplayKit/ASDimension.h>
 
 NS_ASSUME_NONNULL_BEGIN
-
-@class ASCellNode;
 
 @protocol ASSupplementaryNodeSource <NSObject>
 
