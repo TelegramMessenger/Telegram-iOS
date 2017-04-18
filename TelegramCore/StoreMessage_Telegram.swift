@@ -374,6 +374,9 @@ extension StoreMessage {
                         if file.isVoice {
                             attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) == 0))
                             break
+                        } else if file.isInstantVideo {
+                            attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) == 0))
+                            break
                         }
                     }
                 }
