@@ -1322,7 +1322,7 @@ void VoIPController::RunTickThread(){
 					memmove(&qp->seqs[1], qp->seqs, 4*9);
 					qp->seqs[0]=seq;
 					qp->lastSentTime=GetCurrentTime();
-					LOGD("Sending queued packet, seq=%u, type=%u, len=%u", seq, qp->type, qp->length);
+					LOGD("Sending queued packet, seq=%u, type=%u, len=%u", seq, qp->type, unsigned(qp->length));
 					if(qp->firstSentTime==0)
 						qp->firstSentTime=qp->lastSentTime;
 					if(qp->length)
@@ -1440,7 +1440,7 @@ void VoIPController::RunTickThread(){
 					lastRemoteAckSeq,
 					recvLossCount,
 					conctl ? conctl->GetSendLossCount() : 0,
-					conctl ? conctl->GetInflightDataSize() : 0,
+					conctl ? (int)conctl->GetInflightDataSize() : 0,
 					encoder ? encoder->GetBitrate() : 0,
 					encoder ? encoder->GetPacketLoss() : 0,
 					jitterBuffer ? jitterBuffer->GetLastMeasuredJitter() : 0,
@@ -1774,14 +1774,15 @@ void VoIPController::GetDebugString(char *buffer, size_t len){
 			 jitterBuffer ? jitterBuffer->GetMinPacketCount() : 0, jitterBuffer ? jitterBuffer->GetCurrentDelay() : 0, avgLate[0], avgLate[1], avgLate[2],
 			// (int)(GetAverageRTT()*1000), 0,
 			 (int)(conctl->GetAverageRTT()*1000), (int)(conctl->GetMinimumRTT()*1000),
-			 conctl->GetInflightDataSize(), conctl->GetCongestionWindow(),
+			 int(conctl->GetInflightDataSize()), int(conctl->GetCongestionWindow()),
 			 keyFingerprint[0],keyFingerprint[1],keyFingerprint[2],keyFingerprint[3],keyFingerprint[4],keyFingerprint[5],keyFingerprint[6],keyFingerprint[7],
-				lastSentSeq, lastRemoteAckSeq, lastRemoteSeq,
+			 lastSentSeq, lastRemoteAckSeq, lastRemoteSeq,
 			 conctl->GetSendLossCount(), recvLossCount, encoder ? encoder->GetPacketLoss() : 0,
 			 encoder ? (encoder->GetBitrate()/1000) : 0,
 //			 audioPacketGrouping,
 			 outgoingStreams[0]->frameDuration, incomingStreams.size()>0 ? incomingStreams[0]->frameDuration : 0,
-			stats.bytesSentMobile+stats.bytesSentWifi, stats.bytesRecvdMobile+stats.bytesRecvdWifi);
+			 (long long unsigned int)(stats.bytesSentMobile+stats.bytesSentWifi),
+			 (long long unsigned int)(stats.bytesRecvdMobile+stats.bytesRecvdWifi));
 }
 
 
@@ -1830,7 +1831,7 @@ float VoIPController::GetOutputLevel(){
 
 
 void VoIPController::SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout){
-	LOGD("Send reliably, type=%u, len=%u, retry=%.3f, timeout=%.3f", type, len, retryInterval, timeout);
+	LOGD("Send reliably, type=%u, len=%u, retry=%.3f, timeout=%.3f", type, unsigned(len), retryInterval, timeout);
 	voip_queued_packet_t* pkt=(voip_queued_packet_t *) malloc(sizeof(voip_queued_packet_t));
 	memset(pkt, 0, sizeof(voip_queued_packet_t));
 	pkt->type=type;
@@ -2069,7 +2070,7 @@ Endpoint::Endpoint(int64_t id, uint16_t port, IPv4Address& _address, IPv6Address
 	this->port=port;
 	this->type=type;
 	memcpy(this->peerTag, peerTag, 16);
-	LOGV("new endpoint %lld: %s:%u", id, address.ToString().c_str(), port);
+	LOGV("new endpoint %lld: %s:%u", (long long int)id, address.ToString().c_str(), port);
 
 	lastPingSeq=0;
 	lastPingTime=0;

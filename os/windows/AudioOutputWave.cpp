@@ -101,7 +101,7 @@ void AudioOutputWave::SetCurrentDevice(std::string deviceID){
 
 	bool wasPlaying=isPlaying;
 	isPlaying=false;
-	LOGV("closing, hWaveOut=%d", hWaveOut);
+	LOGV("closing, hWaveOut=%d", (int)hWaveOut);
 	if(hWaveOut){
 		MMRESULT res;
 		if(isPlaying){
