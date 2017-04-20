@@ -245,7 +245,7 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
                 dict[key.int32Value] = 0
             }
             (next as! NSDictionary).enumerateKeysAndObjects({ key, value, _ in
-                dict[(key as AnyObject).int32Value] = (value as AnyObject).int64Value!
+                dict[(key as! NSNumber).int32Value] = (value as! NSNumber).int64Value
             })
             subscriber.putNext(NetworkUsageStats(
                 generic: NetworkUsageStatsConnectionsEntry(
