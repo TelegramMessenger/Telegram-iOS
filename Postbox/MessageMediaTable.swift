@@ -31,7 +31,7 @@ final class MessageMediaTable: Table {
         return key
     }
     
-    func get(_ id: MediaId, embedded: @noescape(MessageIndex, MediaId) -> Media?) -> Media? {
+    func get(_ id: MediaId, embedded: (MessageIndex, MediaId) -> Media?) -> Media? {
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
             var type: Int8 = 0
             value.read(&type, offset: 0, length: 1)
