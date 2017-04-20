@@ -22,7 +22,9 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                                 if addressList[Int(id)] == nil {
                                     addressList[Int(id)] = []
                                 }
-                                addressList[Int(id)]!.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: false))
+                                let restrictToTcp = (flags & (1 << 2)) != 0
+                                let isCdn = (flags & (1 << 3)) != 0
+                                addressList[Int(id)]!.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn))
                         }
                     }
                     network.context.performBatchUpdates {

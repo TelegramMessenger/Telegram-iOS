@@ -63,7 +63,9 @@ public class Serialization: NSObject, MTSerialization {
                             switch option {
                                 case let .dcOption(flags, id, ipAddress, port) where id == datacenterId:
                                     let preferForMedia = (flags & (1 << 1)) != 0
-                                    addressList.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: false))
+                                    let restrictToTcp = (flags & (1 << 2)) != 0
+                                    let isCdn = (flags & (1 << 3)) != 0
+                                    addressList.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn))
                                     break
                                 default:
                                     break
