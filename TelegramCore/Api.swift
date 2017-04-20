@@ -51,6 +51,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[690781161] = { return Api.PageBlock.parse_pageBlockEmbedPost($0) }
     dict[145955919] = { return Api.PageBlock.parse_pageBlockCollage($0) }
     dict[319588707] = { return Api.PageBlock.parse_pageBlockSlideshow($0) }
+    dict[-283684427] = { return Api.PageBlock.parse_pageBlockChannel($0) }
     dict[-614138572] = { return Api.account.TmpPassword.parse_tmpPassword($0) }
     dict[590459437] = { return Api.Photo.parse_photoEmpty($0) }
     dict[-1836524247] = { return Api.Photo.parse_photo($0) }
@@ -2825,6 +2826,7 @@ public struct Api {
         case pageBlockEmbedPost(url: String, webpageId: Int64, authorPhotoId: Int64, author: String, date: Int32, blocks: [Api.PageBlock], caption: Api.RichText)
         case pageBlockCollage(items: [Api.PageBlock], caption: Api.RichText)
         case pageBlockSlideshow(items: [Api.PageBlock], caption: Api.RichText)
+        case pageBlockChannel(channel: Api.Chat)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -2991,6 +2993,12 @@ public struct Api {
                         item.serialize(buffer, true)
                     }
                     caption.serialize(buffer, true)
+                    break
+                case .pageBlockChannel(let channel):
+                    if boxed {
+                        buffer.appendInt32(-283684427)
+                    }
+                    channel.serialize(buffer, true)
                     break
     }
     return true
@@ -3325,6 +3333,19 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_pageBlockChannel(_ reader: BufferReader) -> PageBlock? {
+            var _1: Api.Chat?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Chat
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.PageBlock.pageBlockChannel(channel: _1!)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -3371,6 +3392,8 @@ public struct Api {
                         return "(pageBlockCollage items: \(items), caption: \(caption))"
                     case .pageBlockSlideshow(let items, let caption):
                         return "(pageBlockSlideshow items: \(items), caption: \(caption))"
+                    case .pageBlockChannel(let channel):
+                        return "(pageBlockChannel channel: \(channel))"
                 }
             }
         }
