@@ -9,9 +9,10 @@
 #import "MTLogging.h"
 
 static void (*loggingFunction)(NSString *, va_list args) = NULL;
+static bool MTLogEnabledValue = true;
 
 bool MTLogEnabled() {
-    return loggingFunction != NULL;
+    return loggingFunction != NULL && MTLogEnabledValue;
 }
 
 void MTLog(NSString *format, ...) {
@@ -25,4 +26,8 @@ void MTLog(NSString *format, ...) {
 
 void MTLogSetLoggingFunction(void (*function)(NSString *, va_list args)) {
     loggingFunction = function;
+}
+
+void MTLogSetEnabled(bool enabled) {
+    MTLogEnabledValue = enabled;
 }

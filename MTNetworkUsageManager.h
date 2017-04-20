@@ -20,7 +20,7 @@ typedef struct {
 - (void)addIncomingBytes:(NSUInteger)incomingBytes interface:(MTNetworkUsageManagerInterface)interface;
 - (void)addOutgoingBytes:(NSUInteger)outgoingBytes interface:(MTNetworkUsageManagerInterface)interface;
 
-- (void)resetKeys:(NSArray<NSNumber *> *)keys completion:(void (^)())completion;
+- (void)resetKeys:(NSArray<NSNumber *> *)keys setKeys:(NSDictionary<NSNumber *, NSNumber *> *)setKeys completion:(void (^)())completion;
 - (MTSignal *)currentStatsForKeys:(NSArray<NSNumber *> *)keys;
 
 @end

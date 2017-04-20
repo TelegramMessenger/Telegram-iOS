@@ -103,13 +103,17 @@ static int offsetForInterface(MTNetworkUsageCalculationInfo *info, MTNetworkUsag
     }];
 }
 
-- (void)resetKeys:(NSArray<NSNumber *> *)keys completion:(void (^)())completion {
+- (void)resetKeys:(NSArray<NSNumber *> *)keys setKeys:(NSDictionary<NSNumber *, NSNumber *> *)setKeys completion:(void (^)())completion {
     [_queue dispatchOnQueue:^{
         if (_map) {
             for (NSNumber *key in keys) {
                 int64_t *ptr = (int64_t *)(_map + [key intValue] * 8);
                 *ptr = 0;
             }
+            [setKeys enumerateKeysAndObjectsUsingBlock:^(NSNumber *key, NSNumber *value, __unused BOOL *stop) {
+                int64_t *ptr = (int64_t *)(_map + [key intValue] * 8);
+                *ptr = [value longLongValue];
+            }];
             if (completion) {
                 completion();
             }

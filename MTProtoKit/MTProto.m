@@ -1214,7 +1214,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                 [strongSelf requestTransportTransaction];
                             }
                         }];
-                    }]]);
+                    } needsQuickAck:false expectsDataInResponse:true]]);
                 }
                 else
                     transactionReady(nil);
@@ -1772,8 +1772,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     int32_t messageDataLength = 0;
     [decryptedData getBytes:&messageDataLength range:NSMakeRange(28, 4)];
     
-    if (messageDataLength < 0 || messageDataLength > (int32_t)decryptedData.length)
+    if (messageDataLength < 0 || messageDataLength > (int32_t)decryptedData.length) {
+#if MTProtoV2
+        __unused NSData *result = MTSha256(decryptedData);
+#endif
         return nil;
+    }
     
 #if MTProtoV2
     int xValue = 8;
