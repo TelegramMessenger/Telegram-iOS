@@ -326,7 +326,7 @@ func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, ke
             }
             
             for (id, ip) in seedAddressList {
-                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false)]))
+                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false)]))
             }
             
             context.keychain = keychain
