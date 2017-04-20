@@ -27,6 +27,7 @@ private enum InstantPageBlockType: Int32 {
     case postEmbed = 18
     case collage = 19
     case slideshow = 20
+    case channelBanner = 21
 }
 
 public indirect enum InstantPageBlock: Coding, Equatable {
@@ -51,6 +52,7 @@ public indirect enum InstantPageBlock: Coding, Equatable {
     case postEmbed(url: String, webpageId: MediaId?, avatarId: MediaId?, author: String, date: Int32, blocks: [InstantPageBlock], caption: RichText)
     case collage(items: [InstantPageBlock], caption: RichText)
     case slideshow(items: [InstantPageBlock], caption: RichText)
+    case channelBanner(TelegramChannel?)
     
     public init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("r") as Int32 {
@@ -102,6 +104,8 @@ public indirect enum InstantPageBlock: Coding, Equatable {
                 self = .collage(items: decoder.decodeObjectArrayWithDecoderForKey("b"), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.slideshow.rawValue:
                 self = .slideshow(items: decoder.decodeObjectArrayWithDecoderForKey("b"), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
+            case InstantPageBlockType.channelBanner.rawValue:
+                self = .channelBanner(decoder.decodeObjectForKey("c") as? TelegramChannel)
             default:
                 self = .unsupported
         }
@@ -214,6 +218,13 @@ public indirect enum InstantPageBlock: Coding, Equatable {
                 encoder.encodeInt32(InstantPageBlockType.slideshow.rawValue, forKey: "r")
                 encoder.encodeObjectArray(items, forKey: "b")
                 encoder.encodeObject(caption, forKey: "c")
+            case let .channelBanner(channel):
+                encoder.encodeInt32(InstantPageBlockType.channelBanner.rawValue, forKey: "r")
+                if let channel = channel {
+                    encoder.encodeObject(channel, forKey: "c")
+                } else {
+                    encoder.encodeNil(forKey: "c")
+                }
         }
     }
     
@@ -345,7 +356,20 @@ public indirect enum InstantPageBlock: Coding, Equatable {
                 } else {
                     return false
                 }
-            }
+            case let .channelBanner(lhsChannel):
+                if case let .channelBanner(rhsChannel) = rhs {
+                    if let lhsChannel = lhsChannel, let rhsChannel = rhsChannel {
+                        if !lhsChannel.isEqual(rhsChannel) {
+                            return false
+                        }
+                    } else if (lhsChannel != nil) != (rhsChannel != nil) {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+        }
     }
 }
 
@@ -469,13 +493,15 @@ extension InstantPageBlock {
             case let .pageBlockCover(cover):
                 self = .cover(InstantPageBlock(apiBlock: cover))
             case let .pageBlockEmbed(flags, url, html, posterPhotoId, w, h, caption):
-                self = .webEmbed(url: url, html: html, dimensions: CGSize(width: CGFloat(w ?? 0), height: CGFloat(h ?? 0)), caption: RichText(apiText: caption), stretchToWidth: (flags & (1 << 0)) != 0, allowScrolling: (flags & (1 << 3)) != 0)
+                self = .webEmbed(url: url, html: html, dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), caption: RichText(apiText: caption), stretchToWidth: (flags & (1 << 0)) != 0, allowScrolling: (flags & (1 << 3)) != 0)
             case let .pageBlockEmbedPost(url, webpageId, authorPhotoId, author, date, blocks, caption):
                 self = .postEmbed(url: url, webpageId: webpageId == 0 ? nil : MediaId(namespace: Namespaces.Media.CloudWebpage, id: webpageId), avatarId: authorPhotoId == 0 ? nil : MediaId(namespace: Namespaces.Media.CloudImage, id: authorPhotoId), author: author, date: date, blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), caption: RichText(apiText: caption))
             case let .pageBlockCollage(items, caption):
                 self = .collage(items: items.map({ InstantPageBlock(apiBlock: $0) }), caption: RichText(apiText: caption))
             case let .pageBlockSlideshow(items, caption):
                 self = .slideshow(items: items.map({ InstantPageBlock(apiBlock: $0) }), caption: RichText(apiText: caption))
+            case let .pageBlockChannel(channel: apiChat):
+                self = .channelBanner(parseTelegramGroupOrChannel(chat: apiChat) as? TelegramChannel)
         }
     }
 }
