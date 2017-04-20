@@ -33,11 +33,15 @@ NSData *MTRsaEncrypt(NSString *publicKey, NSData *data);
 NSData *MTExp(NSData *base, NSData *exp, NSData *modulus);
 bool MTFactorize(uint64_t what, uint64_t *resA, uint64_t *resB);
     
+NSData *MTAesCtrDecrypt(NSData *data, NSData *key, NSData *iv);
+    
 @protocol MTKeychain;
 bool MTCheckIsSafeG(unsigned int g);
 bool MTCheckIsSafePrime(NSData *numberBytes, id<MTKeychain> keychain);
 bool MTCheckIsSafeGAOrB(NSData *gAOrB, NSData *p);
 bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain);
+    
+uint64_t MTRsaFingerprint(NSString *key);
 
 #ifdef __cplusplus
 }

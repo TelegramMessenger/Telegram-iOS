@@ -26,10 +26,6 @@
 
 @interface MTDatacenterAuthMessageService : NSObject <MTMessageService>
 
-#ifdef DEBUG
-+ (NSDictionary *)testEncryptedRsaDataSha1ToData;
-#endif
-
 @property (nonatomic, weak) id<MTDatacenterAuthMessageServiceDelegate> delegate;
 
 - (instancetype)initWithContext:(MTContext *)context;

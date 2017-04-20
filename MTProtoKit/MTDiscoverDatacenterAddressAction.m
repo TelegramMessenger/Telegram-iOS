@@ -123,7 +123,7 @@
             [_requestService addRequest:request];
         }
         else
-            [context authInfoForDatacenterWithIdRequired:_targetDatacenterId];
+            [context authInfoForDatacenterWithIdRequired:_targetDatacenterId isCdn:false];
     }
 }
 

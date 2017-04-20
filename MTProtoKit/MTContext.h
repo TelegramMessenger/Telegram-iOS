@@ -17,6 +17,7 @@
 @protocol MTKeychain;
 @class MTSessionInfo;
 @class MTApiEnvironment;
+@class MTSignal;
 
 @protocol MTContextChangeListener <NSObject>
 
@@ -27,12 +28,15 @@
 - (void)contextDatacenterAuthTokenUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authToken:(id)authToken;
 - (void)contextDatacenterTransportSchemeUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme media:(bool)media;
 - (void)contextIsPasswordRequiredUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId;
+- (void)contextDatacenterPublicKeysUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
+- (MTSignal *)fetchContextDatacenterPublicKeys:(MTContext *)context datacenterId:(NSInteger)datacenterId;
 
 @end
 
 @interface MTContextBlockChangeListener : NSObject <MTContextChangeListener>
 
 @property (nonatomic, copy) void (^contextIsPasswordRequiredUpdated)(MTContext *, NSInteger);
+@property (nonatomic, copy) MTSignal *(^fetchContextDatacenterPublicKeys)(MTContext *, NSInteger);
 
 @end
 
@@ -77,13 +81,17 @@
 - (void)invalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme isProbablyHttp:(bool)isProbablyHttp media:(bool)media;
 - (void)revalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme media:(bool)media;
 - (MTDatacenterAuthInfo *)authInfoForDatacenterWithId:(NSInteger)datacenterId;
+    
+- (NSArray<NSDictionary *> *)publicKeysForDatacenterWithId:(NSInteger)datacenterId;
+- (void)updatePublicKeysForDatacenterWithId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
+- (void)publicKeysForDatacenterWithIdRequired:(NSInteger)datacenterId;
 
 - (void)removeAllAuthTokens;
 - (id)authTokenForDatacenterWithId:(NSInteger)datacenterId;
 - (void)updateAuthTokenForDatacenterWithId:(NSInteger)datacenterId authToken:(id)authToken;
 
 - (void)addressSetForDatacenterWithIdRequired:(NSInteger)datacenterId;
-- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId;
+- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn;
 - (void)authTokenForDatacenterWithIdRequired:(NSInteger)datacenterId authToken:(id)authToken masterDatacenterId:(NSInteger)masterDatacenterId;
 
 - (void)reportProblemsWithDatacenterAddressForId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address;

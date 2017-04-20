@@ -21,6 +21,7 @@
 #import "MTRsa.h"
 
 #if TARGET_OS_IOS
+#   include <openssl/pem.h>
 #else
 #   include <openssl/pem.h>
 #endif
@@ -611,4 +612,43 @@ bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain)
     [keychain setObject:@(result) forKey:modKey group:@"primes"];
     
     return result;
+}
+
+NSData *MTAesCtrDecrypt(NSData *data, NSData *key, NSData *iv) {
+    MTAesCtr *ctr = [[MTAesCtr alloc] initWithKey:key.bytes keyLength:32 iv:iv.bytes decrypt:true];
+    NSMutableData *outData = [[NSMutableData alloc] initWithLength:data.length];
+    [ctr encryptIn:data.bytes out:outData.mutableBytes len:data.length];
+    return outData;
+}
+
+uint64_t MTRsaFingerprint(NSString *key) {
+    BIO *keyBio = BIO_new(BIO_s_mem());
+    
+    NSData *keyData = [key dataUsingEncoding:NSUTF8StringEncoding];
+    BIO_write(keyBio, keyData.bytes, (int)keyData.length);
+    RSA *rsaKey = PEM_read_bio_RSAPublicKey(keyBio, NULL, NULL, NULL);
+    
+    int nBytes = BN_num_bytes(rsaKey->n);
+    int eBytes = BN_num_bytes(rsaKey->e);
+    
+    NSMutableData *rawData = [[NSMutableData alloc] initWithLength:nBytes + eBytes];
+    BN_bn2bin(rsaKey->n, rawData.mutableBytes);
+    BN_bn2bin(rsaKey->e, rawData.mutableBytes + nBytes);
+    
+    NSData *sha1Data = MTSha1(rawData);
+    static uint8_t sha1Buffer[20];
+    [sha1Data getBytes:sha1Buffer length:20];
+    
+    uint64_t fingerprint = (((uint64_t) sha1Buffer[19]) << 56) |
+    (((uint64_t) sha1Buffer[18]) << 48) |
+    (((uint64_t) sha1Buffer[17]) << 40) |
+    (((uint64_t) sha1Buffer[16]) << 32) |
+    (((uint64_t) sha1Buffer[15]) << 24) |
+    (((uint64_t) sha1Buffer[14]) << 16) |
+    (((uint64_t) sha1Buffer[13]) << 8) |
+    ((uint64_t) sha1Buffer[12]);
+    RSA_free(rsaKey);
+    BIO_free(keyBio);
+    
+    return fingerprint;
 }

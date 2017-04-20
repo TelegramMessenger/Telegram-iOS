@@ -270,8 +270,8 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
                                 controlBytesReversed[i] = controlBytes[64 - 1 - i];
                             }
                             
-                            _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytes + 8 keyLength:32 iv:controlBytes + 8 + 32];
-                            _incomingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytesReversed + 8 keyLength:32 iv:controlBytesReversed + 8 + 32];
+                            _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytes + 8 keyLength:32 iv:controlBytes + 8 + 32 decrypt:false];
+                            _incomingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytesReversed + 8 keyLength:32 iv:controlBytesReversed + 8 + 32 decrypt:false];
                             
                             uint8_t encryptedControlBytes[64];
                             [_outgoingAesCtr encryptIn:controlBytes out:encryptedControlBytes len:64];

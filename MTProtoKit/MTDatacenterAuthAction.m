@@ -33,7 +33,7 @@
     [self cleanup];
 }
 
-- (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId
+- (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId isCdn:(bool)isCdn
 {
     _datacenterId = datacenterId;
     _context = context;
@@ -45,6 +45,7 @@
         else
         {
             _authMtProto = [[MTProto alloc] initWithContext:context datacenterId:_datacenterId usageCalculationInfo:nil];
+            _authMtProto.cdn = isCdn;
             _authMtProto.useUnauthorizedMode = true;
             
             MTDatacenterAuthMessageService *authService = [[MTDatacenterAuthMessageService alloc] initWithContext:context];

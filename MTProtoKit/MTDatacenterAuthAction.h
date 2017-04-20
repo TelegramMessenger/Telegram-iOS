@@ -21,7 +21,7 @@
 
 @property (nonatomic, weak) id<MTDatacenterAuthActionDelegate> delegate;
 
-- (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId;
+- (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId isCdn:(bool)isCdn;
 - (void)cancel;
 
 @end

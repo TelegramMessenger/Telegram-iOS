@@ -70,6 +70,8 @@
     
     NSMutableDictionary *_datacenterAuthInfoById;
     
+    NSMutableDictionary *_datacenterPublicKeysById;
+    
     NSMutableDictionary *_authTokenById;
     
     NSMutableArray *_changeListeners;
@@ -87,6 +89,8 @@
     NSMutableDictionary *_passwordRequiredByDatacenterId;
     
     NSMutableDictionary *_transportSchemeDisposableByDatacenterId;
+    
+    NSMutableDictionary<NSNumber *, id<MTDisposable> > *_fetchPublicKeysActions;
 }
 
 @end
@@ -126,6 +130,7 @@
         _datacenterMediaTransportSchemeById = [[NSMutableDictionary alloc] init];
         
         _datacenterAuthInfoById = [[NSMutableDictionary alloc] init];
+        _datacenterPublicKeysById = [[NSMutableDictionary alloc] init];
         
         _authTokenById = [[NSMutableDictionary alloc] init];
         
@@ -139,6 +144,8 @@
         _currentSessionInfos = [[NSMutableArray alloc] init];
         
         _passwordRequiredByDatacenterId = [[NSMutableDictionary alloc] init];
+        
+        _fetchPublicKeysActions = [[NSMutableDictionary alloc] init];
         
         [self updatePeriodicTasks];
     }
@@ -172,6 +179,9 @@
     NSDictionary *datacenterTransferAuthActions = _datacenterTransferAuthActions;
     _datacenterTransferAuthActions = nil;
     
+    NSDictionary *fetchPublicKeysActions = _fetchPublicKeysActions;
+    _fetchPublicKeysActions = nil;
+    
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         for (NSNumber *nDatacenterId in discoverDatacenterAddressActions)
@@ -193,6 +203,12 @@
             MTDatacenterTransferAuthAction *action = datacenterTransferAuthActions[nDatacenterId];
             action.delegate = nil;
             [action cancel];
+        }
+        
+        for (NSNumber *nDatacenterId in fetchPublicKeysActions)
+        {
+            id<MTDisposable> disposable = fetchPublicKeysActions[nDatacenterId];
+            [disposable dispose];
         }
     }];
 }
@@ -237,6 +253,11 @@
             NSDictionary *datacenterAuthInfoById = [keychain objectForKey:@"datacenterAuthInfoById" group:@"persistent"];
             if (datacenterAuthInfoById != nil)
                 _datacenterAuthInfoById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAuthInfoById];
+            
+            NSDictionary *datacenterPublicKeysById = [keychain objectForKey:@"datacenterPublicKeysById" group:@"ephemeral"];
+            if (datacenterPublicKeysById != nil) {
+                _datacenterPublicKeysById = [[NSMutableDictionary alloc] initWithDictionary:datacenterPublicKeysById];
+            }
             
             NSDictionary *authTokenById = [keychain objectForKey:@"authTokenById" group:@"persistent"];
             if (authTokenById != nil)
@@ -672,6 +693,55 @@
     
     return result;
 }
+    
+- (NSArray<NSDictionary *> *)publicKeysForDatacenterWithId:(NSInteger)datacenterId {
+    __block NSArray<NSDictionary *> *result = nil;
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        result = _datacenterPublicKeysById[@(datacenterId)];
+    } synchronous:true];
+    
+    return result;
+}
+    
+- (void)updatePublicKeysForDatacenterWithId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        if (publicKeys != nil) {
+            _datacenterPublicKeysById[@(datacenterId)] = publicKeys;
+            [_keychain setObject:_datacenterPublicKeysById forKey:@"datacenterPublicKeysById" group:@"ephemeral"];
+            
+            for (id<MTContextChangeListener> listener in _changeListeners) {
+                if ([listener respondsToSelector:@selector(contextDatacenterPublicKeysUpdated:datacenterId:publicKeys:)]) {
+                    [listener contextDatacenterPublicKeysUpdated:self datacenterId:datacenterId publicKeys:publicKeys];
+                }
+            }
+        }
+    } synchronous:false];
+}
+    
+- (void)publicKeysForDatacenterWithIdRequired:(NSInteger)datacenterId {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        if (_fetchPublicKeysActions[@(datacenterId)] == nil) {
+            for (id<MTContextChangeListener> listener in _changeListeners) {
+                MTSignal *signal = [listener fetchContextDatacenterPublicKeys:self datacenterId:datacenterId];
+                if (signal != nil) {
+                    __weak MTContext *weakSelf = self;
+                    MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
+                    _fetchPublicKeysActions[@(datacenterId)] = disposable;
+                    [disposable setDisposable:[signal startWithNext:^(NSArray<NSDictionary *> *next) {
+                        [[MTContext contextQueue] dispatchOnQueue:^{
+                            __strong MTContext *strongSelf = weakSelf;
+                            if (strongSelf != nil) {
+                                [strongSelf->_fetchPublicKeysActions removeObjectForKey:@(datacenterId)];
+                                [strongSelf updatePublicKeysForDatacenterWithId:datacenterId publicKeys:next];
+                            }
+                        } synchronous:false];
+                    }]];
+                    break;
+                }
+            }
+        }
+    } synchronous:false];
+}
 
 - (void)removeAllAuthTokens
 {
@@ -877,7 +947,7 @@
     }];
 }
 
-- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId
+- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
@@ -886,7 +956,7 @@
             MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] init];
             authAction.delegate = self;
             _datacenterAuthActions[@(datacenterId)] = authAction;
-            [authAction execute:self datacenterId:datacenterId];
+            [authAction execute:self datacenterId:datacenterId isCdn:isCdn];
         }
     }];
 }

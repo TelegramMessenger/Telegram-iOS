@@ -285,7 +285,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             {
                 [self setMtState:_mtState | MTProtoStateAwaitingDatacenterAuthorization];
                 
-                [_context authInfoForDatacenterWithIdRequired:_datacenterId];
+                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn];
             }
         }
         else if (_requiredAuthToken != nil && !_useUnauthorizedMode && ![_requiredAuthToken isEqual:[_context authTokenForDatacenterWithId:_datacenterId]])
@@ -1676,6 +1676,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                     [messageService mtProto:self protocolErrorReceived:protocolErrorCode];
             }
             
+            if (protocolErrorCode == -404 && _cdn) {
+                _authInfo = nil;
+                [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil];
+                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:true];
+                _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+            }
+            
             if (currentTransport == _transport)
                 [self requestSecureTransportReset];
             
@@ -2257,6 +2264,16 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if ([service respondsToSelector:@selector(mtProto:messageResendRequestFailed:)])
             {
                 [service mtProto:self messageResendRequestFailed:messageId];
+            }
+        }
+    }];
+}
+    
+- (void)contextDatacenterPublicKeysUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys {
+    [[MTProto managerQueue] dispatchOnQueue:^{
+        for (id<MTMessageService> service in _messageServices) {
+            if ([service respondsToSelector:@selector(mtProtoPublicKeysUpdated:datacenterId:publicKeys:)]) {
+                [service mtProtoPublicKeysUpdated:self datacenterId:datacenterId publicKeys:publicKeys];
             }
         }
     }];

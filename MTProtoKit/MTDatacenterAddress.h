@@ -15,8 +15,9 @@
 @property (nonatomic, readonly) uint16_t port;
 @property (nonatomic, readonly) bool preferForMedia;
 @property (nonatomic, readonly) bool restrictToTcp;
+@property (nonatomic, readonly) bool cdn;
 
-- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port preferForMedia:(bool)preferForMedia restrictToTcp:(bool)restrictToTcp;
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port preferForMedia:(bool)preferForMedia restrictToTcp:(bool)restrictToTcp cdn:(bool)cdn;
 
 - (BOOL)isEqualToAddress:(MTDatacenterAddress *)other;
 - (BOOL)isIpv6;

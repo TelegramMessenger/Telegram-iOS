@@ -36,6 +36,7 @@
 @property (nonatomic) bool shouldStayConnected;
 @property (nonatomic) bool useUnauthorizedMode;
 @property (nonatomic) bool media;
+@property (nonatomic) bool cdn;
 @property (nonatomic) id requiredAuthToken;
 @property (nonatomic) NSInteger authTokenMasterDatacenterId;
 
