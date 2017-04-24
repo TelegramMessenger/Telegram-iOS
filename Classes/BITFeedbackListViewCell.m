@@ -356,6 +356,11 @@
   }
 }
 
+- (NSString *)accessibilityLabel {
+  NSString *messageTime = [self.labelTitle accessibilityLabel];
+  NSString *messageText = [self.labelText accessibilityLabel];
+  return [NSString stringWithFormat:@"%@, %@", messageTime, messageText];
+}
 
 @end
 
