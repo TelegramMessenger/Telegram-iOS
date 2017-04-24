@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Error de autorización. Póngase en contacto con el desarrollador de la app.";
 "HockeyAuthenticationWrongEmailPassword" = "Ha escrito un correo o contraseña incorrectos. Compruébelos y vuelva a intentarlo.";
 "HockeyAuthenticationAuthSecretMissing" = "El “authorization secret” de HockeySDK no está definido. Póngase en contacto con el desarrollador de la app.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Obligatorio";

@@ -207,6 +207,7 @@
     
     if (0 == [indexPath row]) {
       textField.placeholder = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerEmailPlaceholder");
+      textField.accessibilityHint = BITHockeyLocalizedString(@"HockeyAccessibilityHintRequired");
       textField.text = self.email;
       _emailField = textField;
       

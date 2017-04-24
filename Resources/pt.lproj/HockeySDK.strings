@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Erro de autorização. Contate o desenvolvedor deste aplicativo.";
 "HockeyAuthenticationWrongEmailPassword" = "Você informou um e-mail ou senha inválidos. Verifique os dados e tente  novamente.";
 "HockeyAuthenticationAuthSecretMissing" = "O “authorization secret” do HockeySDK não foi definido. Contate o desenvolvedor deste aplicativo.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Necessário";
