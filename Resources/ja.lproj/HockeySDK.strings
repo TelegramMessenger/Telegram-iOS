@@ -276,4 +276,4 @@
 "HockeyAuthenticationAuthSecretMissing" = "HockeySDK “authorization secret” が設定されていません。このAppのデベロッパに連絡してください。";
 
 /* Accessibility strings */
-"HockeyAccessibilityHintRequired" = "必須";
+"HockeyAccessibilityHintRequired" = "必填";
