@@ -69,7 +69,7 @@ final class MutablePeerMergedOperationLogView {
                         }
                         for i in 0 ..< self.entries.count {
                             if i != 0 {
-                                assert(self.entries[i].mergedIndex == self.entries[i - 1].mergedIndex + 1)
+                                assert(self.entries[i].mergedIndex >= self.entries[i - 1].mergedIndex + 1)
                             }
                         }
                         if !self.entries.isEmpty {
@@ -80,7 +80,7 @@ final class MutablePeerMergedOperationLogView {
             } else {
                 assert(self.tailIndex != nil)
                 if let tailIndex = self.tailIndex {
-                    assert(self.entries.last!.mergedIndex == tailIndex)
+                    assert(self.entries.last!.mergedIndex <= tailIndex)
                 }
             }
         }

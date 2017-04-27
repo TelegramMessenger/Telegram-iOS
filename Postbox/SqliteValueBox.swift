@@ -148,12 +148,19 @@ final class SqliteValueBox: ValueBox {
             //database = Database(path)!
         }
         
-        database.execute("PRAGMA cache_size=-2097152")
-        database.execute("PRAGMA synchronous=NORMAL")
-        database.execute("PRAGMA journal_mode=WAL")
-        database.execute("PRAGMA temp_store=MEMORY")
-        database.execute("PRAGMA wal_autocheckpoint=500")
-        database.execute("PRAGMA journal_size_limit=1536")
+        sqlite3_busy_timeout(database.handle, 10000000)
+        
+        var resultCode: Bool
+        
+        //database.execute("PRAGMA cache_size=-2097152")
+        resultCode = database.execute("PRAGMA journal_mode=WAL")
+        assert(resultCode)
+        resultCode = database.execute("PRAGMA synchronous=NORMAL")
+        assert(resultCode)
+        //database.execute("PRAGMA temp_store=MEMORY")
+        resultCode = database.execute("PRAGMA wal_autocheckpoint=500")
+        assert(resultCode)
+        //database.execute("PRAGMA journal_size_limit=1536")
         
         /*var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "PRAGMA integrity_check", -1, &statement, nil)
@@ -168,13 +175,14 @@ final class SqliteValueBox: ValueBox {
         }
         preparedStatement.destroy()*/
         
-        sqlite3_busy_timeout(database.handle, 10000000)
-        
         let result = self.getUserVersion(database)
         if result != 2 {
-            database.execute("PRAGMA user_version=2")
-            database.execute("DROP TABLE IF EXISTS __meta_tables")
-            database.execute("CREATE TABLE __meta_tables (name INTEGER, keyType INTEGER)")
+            resultCode = database.execute("PRAGMA user_version=2")
+            assert(resultCode)
+            resultCode = database.execute("DROP TABLE IF EXISTS __meta_tables")
+            assert(resultCode)
+            resultCode = database.execute("CREATE TABLE __meta_tables (name INTEGER, keyType INTEGER)")
+            assert(resultCode)
         }
         
         for table in self.listTables(database) {
@@ -209,20 +217,23 @@ final class SqliteValueBox: ValueBox {
     
     public func begin() {
         assert(self.queue.isCurrent())
-        self.database.execute("BEGIN IMMEDIATE")
+        let resultCode = self.database.execute("BEGIN IMMEDIATE")
+        assert(resultCode)
     }
     
     public func commit() {
         assert(self.queue.isCurrent())
         let startTime = CFAbsoluteTimeGetCurrent()
-        self.database.execute("COMMIT")
+        let resultCode = self.database.execute("COMMIT")
+        assert(resultCode)
         self.commitTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
     private func getUserVersion(_ database: Database) -> Int64 {
         assert(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
-        sqlite3_prepare_v2(database.handle, "PRAGMA user_version", -1, &statement, nil)
+        let status = sqlite3_prepare_v2(database.handle, "PRAGMA user_version", -1, &statement, nil)
+        assert(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         let _ = preparedStatement.step()
         let value = preparedStatement.int64At(0)
@@ -233,7 +244,8 @@ final class SqliteValueBox: ValueBox {
     private func listTables(_ database: Database) -> [ValueBoxTable] {
         assert(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
-        sqlite3_prepare_v2(database.handle, "SELECT name, keyType FROM __meta_tables", -1, &statement, nil)
+        let status = sqlite3_prepare_v2(database.handle, "SELECT name, keyType FROM __meta_tables", -1, &statement, nil)
+        assert(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxTable] = []
         
@@ -252,13 +264,18 @@ final class SqliteValueBox: ValueBox {
         } else {
             switch table.keyType {
                 case .binary:
-                    self.database.execute("CREATE TABLE t\(table.id) (key BLOB, value BLOB)")
-                    self.database.execute("CREATE INDEX t\(table.id)_key ON t\(table.id) (key)")
+                    var resultCode: Bool
+                    resultCode = self.database.execute("CREATE TABLE t\(table.id) (key BLOB, value BLOB)")
+                    assert(resultCode)
+                    resultCode = self.database.execute("CREATE INDEX t\(table.id)_key ON t\(table.id) (key)")
+                    assert(resultCode)
                 case .int64:
-                    self.database.execute("CREATE TABLE t\(table.id) (key INTEGER PRIMARY KEY, value BLOB)")
+                    let resultCode = self.database.execute("CREATE TABLE t\(table.id) (key INTEGER PRIMARY KEY, value BLOB)")
+                    assert(resultCode)
             }
             self.tables[table.id] = table
-            self.database.execute("INSERT INTO __meta_tables(name, keyType) VALUES (\(table.id), \(table.keyType.rawValue))")
+            let resultCode = self.database.execute("INSERT INTO __meta_tables(name, keyType) VALUES (\(table.id), \(table.keyType.rawValue))")
+            assert(resultCode)
         }
     }
     
@@ -272,7 +289,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT value FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT value FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.getStatements[table.id] = preparedStatement
             resultStatement =  preparedStatement
@@ -301,7 +319,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyAscStatementsLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -333,7 +352,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyAscStatementsNoLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -363,7 +383,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyDescStatementsLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -394,7 +415,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyDescStatementsNoLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -425,7 +447,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueAscStatementsLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -456,7 +479,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueAscStatementsNoLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -487,7 +511,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueDescStatementsLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -519,7 +544,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueDescStatementsNoLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -548,7 +574,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) ORDER BY key ASC", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) ORDER BY key ASC", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.scanStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -569,7 +596,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT rowid FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT rowid FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.existsStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -597,7 +625,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "UPDATE t\(table.id) SET value=? WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "UPDATE t\(table.id) SET value=? WHERE key=?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.updateStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -626,7 +655,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.insertStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -659,7 +689,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "INSERT OR REPLACE INTO t\(table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "INSERT OR REPLACE INTO t\(table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.insertOrReplaceStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
@@ -692,7 +723,8 @@ final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "DELETE FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v2(self.database.handle, "DELETE FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.deleteStatements[table.id] = preparedStatement
             resultStatement = preparedStatement

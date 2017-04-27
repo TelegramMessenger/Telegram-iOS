@@ -37,11 +37,11 @@ public final class MappedFile {
         msync(self.memory, self.currentSize, MS_ASYNC)
     }
     
-    public func write(at range: Range<Int>, from data: UnsafePointer<Void>) {
+    public func write(at range: Range<Int>, from data: UnsafeRawPointer) {
         memcpy(self.memory.advanced(by: range.lowerBound), data, range.count)
     }
     
-    public func read(at range: Range<Int>, to data: UnsafeMutablePointer<Void>) {
+    public func read(at range: Range<Int>, to data: UnsafeMutableRawPointer) {
         memcpy(data, self.memory.advanced(by: range.lowerBound), range.count)
     }
     
