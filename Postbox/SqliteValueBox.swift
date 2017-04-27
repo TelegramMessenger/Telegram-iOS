@@ -39,10 +39,17 @@ private struct SqlitePreparedStatement {
         sqlite3_clear_bindings(statement)
     }
     
-    func step() -> Bool {
+    func step(_ initial:Bool = false, path:String? = nil) -> Bool {
         let result = sqlite3_step(statement)
         if result != SQLITE_ROW && result != SQLITE_DONE {
-            assertionFailure("Sqlite error \(result)")
+            if initial {
+                if let path = path {
+                    try? FileManager.default.removeItem(atPath: path)
+                    preconditionFailure()
+                }
+            } else  {
+                assertionFailure("Sqlite error \(result)")
+            }
         }
         return result == SQLITE_ROW
     }
@@ -229,7 +236,8 @@ final class SqliteValueBox: ValueBox {
         sqlite3_prepare_v2(database.handle, "SELECT name, keyType FROM __meta_tables", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxTable] = []
-        while preparedStatement.step() {
+        
+        while preparedStatement.step(true, path: basePath + "/db_sqlite") {
             let value = preparedStatement.int64At(0)
             let keyType = preparedStatement.int64At(1)
             tables.append(ValueBoxTable(id: Int32(value), keyType: ValueBoxKeyType(rawValue: Int32(keyType))!))
