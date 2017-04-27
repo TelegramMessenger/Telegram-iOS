@@ -3,7 +3,7 @@
 //  HockeySDK
 //
 //  Created by Stephan Diederich on 23.09.13.
-//  Copyright (c) 2013 __MyCompanyName__. All rights reserved.
+//
 //
 
 #import <XCTest/XCTest.h>
