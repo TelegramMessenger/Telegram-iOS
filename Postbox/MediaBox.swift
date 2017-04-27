@@ -576,8 +576,9 @@ public final class MediaBox {
                             return fetch(resource, currentSize ..< Int.max, tag)
                         }) |> afterDisposed {
                             dataQueue.async {
-                                if let fd = fd {
-                                    close(fd)
+                                if let thisFd = fd {
+                                    close(thisFd)
+                                    fd = nil
                                 }
                             }
                         }).start(next: { resultOption in
@@ -750,8 +751,9 @@ public final class MediaBox {
                                             }
                                         }
                                     case let .moveLocalFile(tempPath):
-                                        if let fd = fd {
-                                            close(fd)
+                                        if let thisFd = thisFd {
+                                            close(thisFd)
+                                            fd = nil
                                         }
                                         unlink(paths.partial)
                                         do {

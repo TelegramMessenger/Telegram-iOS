@@ -68,8 +68,15 @@ public final class Database {
     ///
     /// - returns: A new database connection.
     public init?(_ location: Location = .InMemory, readonly: Bool = false) {
-        let flags = readonly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE
-        let res = sqlite3_open_v2(location.description, &self.handle, flags | SQLITE_OPEN_FULLMUTEX, nil)
+        switch location {
+            case let .URI(uri):
+                let _ = open(uri + "-guard", O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)
+                break
+            default:
+                break
+        }
+        //let flags = readonly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE
+        let res = sqlite3_open(location.description, &self.handle)
         if res != SQLITE_OK {
             preconditionFailure("sqlite3_open_v2: \(res)")
             return nil
