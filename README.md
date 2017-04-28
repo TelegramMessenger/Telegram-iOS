@@ -2,9 +2,9 @@
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 
-## Version 4.1.4
+## Version 4.1.5
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.4/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.5/docs/docs/Changelog.html)
 
 **NOTE** If your are using the binary integration of our SDK, make sure that the `HockeySDKResources.bundle` inside the `HockeySDK.embeddedframework`-folder has been added to your application.
 
@@ -62,8 +62,7 @@ This document contains the following sections:
 ## 1. Requirements
 
 1. We assume that you already have a project in Xcode and that this project is opened in Xcode 7 or later.
-2. The SDK supports iOS 6.0 and later.
-3. Xcode 8 
+2. The SDK supports iOS 7.0 and later.
 
 <a id="setup"></a>
 ## 2. Setup
@@ -653,7 +652,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.4/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.5/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -667,7 +666,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-4.1.4.docset`
+  - `de.bitstadium.HockeySDK-iOS-4.1.5.docset`
 
 ### Feature are not working as expected
 

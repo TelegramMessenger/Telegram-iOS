@@ -17,8 +17,8 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 ## Prerequisites
 
 1. Before you integrate HockeySDK into your own app, you should add the app to HockeyApp if you haven't already. Read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-create-a-new-app) on how to do it.
-2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 6.
-3. The SDK supports iOS 6.0 or newer.
+2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 7 or later.
+3. The SDK supports iOS 7.0 or newer.
 
 ## Release Notes
 

@@ -1,3 +1,11 @@
+## 4.1.5
+
+This release officially dropps the support for iOS 6.
+
+- [FIX] Remove the dependency for AssetLibrary for the default subspec in our podspec [#403](https://github.com/bitstadium/HockeySDK-iOS/pull/403). Thanks to [@tschob](https://github.com/tschob) for the pointer.
+- [FIX] A couple of visual bugs have been fixed [#404](https://github.com/bitstadium/HockeySDK-iOS/pull/404) thanks to [@dweston](https://github.com/dtweston).
+- [IMPROVEMENT] We have improved accessibility of our feedback UI [#409](https://github.com/bitstadium/HockeySDK-iOS/pull/409) with help by [@erychagov](https://github.com/erychagov).
+
 ## 4.1.4
 
 - [IMPROVEMENT] Test targets won't be build in the run phase of the framework, which makes it possible to build individual configurations when using Carthage. Thanks a lot @wiedem for your contribution! [394](https://github.com/bitstadium/HockeySDK-iOS/pull/394)
