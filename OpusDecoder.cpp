@@ -167,10 +167,6 @@ void tgvoip::OpusDecoder::RunThread(){
 	size_t nextLen=0;
 	while(running){
 		//LOGV("after wait, running=%d", running);
-		if(!running){
-			LOGI("==== decoder exiting ====");
-			return;
-		}
 		//LOGD("Will get %d packets", packetsNeeded);
 		//lastDecodedLen=0;
 		memcpy(buffer, nextBuffer, nextLen);
@@ -200,6 +196,10 @@ void tgvoip::OpusDecoder::RunThread(){
 		//LOGV("After decode, size=%d", size);
 		for(i=0;i<packetsPerFrame;i++){
 			semaphore.Acquire();
+			if(!running){
+				LOGI("==== decoder exiting ====");
+				return;
+			}
 			unsigned char *buf=bufferPool->Get();
 			if(buf){
 				if(size>0){
