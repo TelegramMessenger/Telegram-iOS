@@ -1,6 +1,6 @@
 //
-//  HockeySDKTests.m
-//  HockeySDKTests
+//  BITStoreUpdateManagerTests.m
+//  HockeySDK
 //
 //  Created by Andreas Linde on 13.03.13.
 //
