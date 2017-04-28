@@ -44,7 +44,8 @@
  * @param uap The crash's threads context.
  * @param context The API client's supplied context value.
  *
- * @sa @ref async_safety
+ * @sa async_satefy
+ * @ref async_safety
  * @sa PLCrashReporter::setPostCrashCallbacks:
  */
 typedef void (*PLCrashReporterPostCrashSignalCallback)(siginfo_t *info, ucontext_t *uap, void *context);
@@ -55,7 +56,8 @@ typedef void (*PLCrashReporterPostCrashSignalCallback)(siginfo_t *info, ucontext
  * This structure contains callbacks supported by PLCrashReporter to allow the host application to perform
  * additional tasks prior to program termination after a crash has occured.
  *
- * @sa @ref async_safety
+ * @sa async_satefy
+ * @ref async_safety
  */
 typedef struct PLCrashReporterCallbacks {
     /** The version number of this structure. If not one of the defined version numbers for this type, the behavior
