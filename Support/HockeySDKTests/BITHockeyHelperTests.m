@@ -1,5 +1,5 @@
 //
-//  HockeySDKPrivateTests.m
+//  BITHockeyHelperTests.m
 //  HockeySDK
 //
 //  Created by Andreas Linde on 25.09.13.

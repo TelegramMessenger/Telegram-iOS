@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.license           = { :type => 'MIT', :file => 'HockeySDK-iOS/LICENSE' }
   s.author            = { 'Microsoft' => 'support@hockeyapp.net' }
 
-  s.platform          = :ios, '6.0'
+  s.platform          = :ios, '7.0'
   s.requires_arc      = true
   
   s.preserve_path = 'HockeySDK-iOS/README.md'

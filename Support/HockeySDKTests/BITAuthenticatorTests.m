@@ -1,6 +1,6 @@
 //
-//  HockeySDKTests.m
-//  HockeySDKTests
+//  BITAuthenticatorTests.m
+//  HockeySDK
 //
 //  Created by Andreas Linde on 13.03.13.
 //
