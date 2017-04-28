@@ -12,9 +12,9 @@
 
 using namespace tgvoip;
 
-CJitterBuffer::CJitterBuffer(CMediaStreamItf *out, uint32_t step):bufferPool(JITTER_SLOT_SIZE, JITTER_SLOT_COUNT){
+JitterBuffer::JitterBuffer(MediaStreamItf *out, uint32_t step):bufferPool(JITTER_SLOT_SIZE, JITTER_SLOT_COUNT){
 	if(out)
-		out->SetCallback(CJitterBuffer::CallbackOut, this);
+		out->SetCallback(JitterBuffer::CallbackOut, this);
 	this->step=step;
 	memset(slots, 0, sizeof(jitter_packet_t)*JITTER_SLOT_COUNT);
 	minDelay=6;
@@ -43,32 +43,32 @@ CJitterBuffer::CJitterBuffer(CMediaStreamItf *out, uint32_t step):bufferPool(JIT
 	init_mutex(mutex);
 }
 
-CJitterBuffer::~CJitterBuffer(){
+JitterBuffer::~JitterBuffer(){
 	Reset();
 	free_mutex(mutex);
 }
 
-void CJitterBuffer::SetMinPacketCount(uint32_t count){
+void JitterBuffer::SetMinPacketCount(uint32_t count){
 	if(minDelay==count)
 		return;
 	minDelay=count;
 	Reset();
 }
 
-int CJitterBuffer::GetMinPacketCount(){
+int JitterBuffer::GetMinPacketCount(){
 	return minDelay;
 }
 
-size_t CJitterBuffer::CallbackIn(unsigned char *data, size_t len, void *param){
-	//((CJitterBuffer*)param)->HandleInput(data, len);
+size_t JitterBuffer::CallbackIn(unsigned char *data, size_t len, void *param){
+	//((JitterBuffer*)param)->HandleInput(data, len);
 	return 0;
 }
 
-size_t CJitterBuffer::CallbackOut(unsigned char *data, size_t len, void *param){
-	return ((CJitterBuffer*)param)->HandleOutput(data, len, 0);
+size_t JitterBuffer::CallbackOut(unsigned char *data, size_t len, void *param){
+	return ((JitterBuffer*)param)->HandleOutput(data, len, 0);
 }
 
-void CJitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timestamp){
+void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timestamp){
 	jitter_packet_t pkt;
 	pkt.size=len;
 	pkt.buffer=data;
@@ -79,7 +79,7 @@ void CJitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timest
 	//LOGV("in, ts=%d", timestamp);
 }
 
-void CJitterBuffer::Reset(){
+void JitterBuffer::Reset(){
 	wasReset=true;
 	needBuffering=true;
 	lastPutTimestamp=0;
@@ -101,7 +101,7 @@ void CJitterBuffer::Reset(){
 }
 
 
-size_t CJitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetInSteps){
+size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetInSteps){
 	jitter_packet_t pkt;
 	pkt.buffer=buffer;
 	pkt.size=len;
@@ -116,7 +116,7 @@ size_t CJitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offset
 }
 
 
-int CJitterBuffer::GetInternal(jitter_packet_t* pkt, int offset){
+int JitterBuffer::GetInternal(jitter_packet_t* pkt, int offset){
 	/*if(needBuffering && lastPutTimestamp<nextTimestamp){
 		LOGV("jitter: don't have timestamp %lld, buffering", nextTimestamp);
 		Advance();
@@ -180,7 +180,7 @@ int CJitterBuffer::GetInternal(jitter_packet_t* pkt, int offset){
 	return JR_BUFFERING;
 }
 
-void CJitterBuffer::PutInternal(jitter_packet_t* pkt){
+void JitterBuffer::PutInternal(jitter_packet_t* pkt){
 	if(pkt->size>JITTER_SLOT_SIZE){
 		LOGE("The packet is too big to fit into the jitter buffer");
 		return;
@@ -264,12 +264,12 @@ void CJitterBuffer::PutInternal(jitter_packet_t* pkt){
 }
 
 
-void CJitterBuffer::Advance(){
+void JitterBuffer::Advance(){
 	nextTimestamp+=step;
 }
 
 
-int CJitterBuffer::GetCurrentDelay(){
+int JitterBuffer::GetCurrentDelay(){
 	int delay=0;
 	int i;
 	for(i=0;i<JITTER_SLOT_COUNT;i++){
@@ -279,7 +279,7 @@ int CJitterBuffer::GetCurrentDelay(){
 	return delay;
 }
 
-void CJitterBuffer::Tick(){
+void JitterBuffer::Tick(){
 	lock_mutex(mutex);
 	int i;
 
@@ -383,6 +383,8 @@ void CJitterBuffer::Tick(){
 			}
 		}
 	}
+	lastMeasuredJitter=stddev;
+	lastMeasuredDelay=stddevDelay;
 	//LOGV("stddev=%.3f, avg=%.3f, ndelay=%d, dontDec=%u", stddev, avgdev, stddevDelay, dontDecMinDelay);
 
 	//LOGV("jitter: avg delay=%d, delay=%d, late16=%.1f, dontDecMinDelay=%d", avgDelay, delayHistory[0], avgLate16, dontDecMinDelay);
@@ -412,7 +414,7 @@ void CJitterBuffer::Tick(){
 }
 
 
-void CJitterBuffer::GetAverageLateCount(double *out){
+void JitterBuffer::GetAverageLateCount(double *out){
 	double avgLate64=0, avgLate32=0, avgLate16=0;
 	int i;
 	for(i=0;i<64;i++){
@@ -431,10 +433,18 @@ void CJitterBuffer::GetAverageLateCount(double *out){
 }
 
 
-int CJitterBuffer::GetAndResetLostPacketCount(){
+int JitterBuffer::GetAndResetLostPacketCount(){
 	lock_mutex(mutex);
 	int r=lostPackets;
 	lostPackets=0;
 	unlock_mutex(mutex);
 	return r;
+}
+
+double JitterBuffer::GetLastMeasuredJitter(){
+	return lastMeasuredJitter;
+}
+
+double JitterBuffer::GetLastMeasuredDelay(){
+	return lastMeasuredDelay;
 }

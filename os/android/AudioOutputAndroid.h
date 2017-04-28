@@ -10,12 +10,13 @@
 #include <jni.h>
 #include "../../audio/AudioOutput.h"
 
-class CAudioOutputAndroid : public CAudioOutput{
+namespace tgvoip{ namespace audio{
+class AudioOutputAndroid : public AudioOutput{
 
 public:
 
-	CAudioOutputAndroid();
-	virtual ~CAudioOutputAndroid();
+	AudioOutputAndroid();
+	virtual ~AudioOutputAndroid();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
@@ -33,6 +34,6 @@ private:
 	bool running;
 
 };
-
+}}
 
 #endif //LIBTGVOIP_AUDIOOUTPUTANDROID_H

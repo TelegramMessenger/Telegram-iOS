@@ -17,40 +17,40 @@
 #include "JitterBuffer.h"
 #include <stdio.h>
 
-class COpusDecoder {
+namespace tgvoip{
+class OpusDecoder {
 public:
 	virtual void Start();
 
 	virtual void Stop();
 
-	COpusDecoder(CMediaStreamItf* dst);
-	virtual ~COpusDecoder();
+	OpusDecoder(MediaStreamItf* dst);
+	virtual ~OpusDecoder();
 	void HandleCallback(unsigned char* data, size_t len);
-	void SetEchoCanceller(CEchoCanceller* canceller);
+	void SetEchoCanceller(EchoCanceller* canceller);
 	void SetFrameDuration(uint32_t duration);
 	void ResetQueue();
-	void SetJitterBuffer(CJitterBuffer* jitterBuffer);
+	void SetJitterBuffer(JitterBuffer* jitterBuffer);
 
 private:
 	static size_t Callback(unsigned char* data, size_t len, void* param);
 	static void* StartThread(void* param);
 	void RunThread();
-	OpusDecoder* dec;
-	CBlockingQueue* decodedQueue;
-	CBufferPool* bufferPool;
+	::OpusDecoder* dec;
+	BlockingQueue* decodedQueue;
+	BufferPool* bufferPool;
 	unsigned char* buffer;
 	unsigned char* lastDecoded;
 	size_t lastDecodedLen, lastDecodedOffset;
-	int packetsNeeded;
 	size_t outputBufferSize;
 	bool running;
     tgvoip_thread_t thread;
-	tgvoip_lock_t lock;
+	Semaphore semaphore;
 	tgvoip_mutex_t mutex;
 	uint32_t frameDuration;
-	CEchoCanceller* echoCanceller;
-	CJitterBuffer* jitterBuffer;
+	EchoCanceller* echoCanceller;
+	JitterBuffer* jitterBuffer;
 };
-
+}
 
 #endif //LIBTGVOIP_OPUSDECODER_H

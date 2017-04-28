@@ -7,22 +7,24 @@
 #include "BufferOutputStream.h"
 #include <string.h>
 
-CBufferOutputStream::CBufferOutputStream(size_t size){
+using namespace tgvoip;
+
+BufferOutputStream::BufferOutputStream(size_t size){
 	buffer=(unsigned char*) malloc(size);
 	offset=0;
 	this->size=size;
 }
 
-CBufferOutputStream::~CBufferOutputStream(){
+BufferOutputStream::~BufferOutputStream(){
 	free(buffer);
 }
 
-void CBufferOutputStream::WriteByte(unsigned char byte){
+void BufferOutputStream::WriteByte(unsigned char byte){
 	this->ExpandBufferIfNeeded(1);
 	buffer[offset++]=byte;
 }
 
-void CBufferOutputStream::WriteInt32(int32_t i){
+void BufferOutputStream::WriteInt32(int32_t i){
 	this->ExpandBufferIfNeeded(4);
 	buffer[offset+3]=(unsigned char)((i >> 24) & 0xFF);
 	buffer[offset+2]=(unsigned char)((i >> 16) & 0xFF);
@@ -31,7 +33,7 @@ void CBufferOutputStream::WriteInt32(int32_t i){
 	offset+=4;
 }
 
-void CBufferOutputStream::WriteInt64(int64_t i){
+void BufferOutputStream::WriteInt64(int64_t i){
 	this->ExpandBufferIfNeeded(8);
 	buffer[offset+7]=(unsigned char)((i >> 56) & 0xFF);
 	buffer[offset+6]=(unsigned char)((i >> 48) & 0xFF);
@@ -44,28 +46,28 @@ void CBufferOutputStream::WriteInt64(int64_t i){
 	offset+=8;
 }
 
-void CBufferOutputStream::WriteInt16(int16_t i){
+void BufferOutputStream::WriteInt16(int16_t i){
 	this->ExpandBufferIfNeeded(2);
 	buffer[offset+1]=(unsigned char)((i >> 8) & 0xFF);
 	buffer[offset]=(unsigned char)(i & 0xFF);
 	offset+=2;
 }
 
-void CBufferOutputStream::WriteBytes(unsigned char *bytes, size_t count){
+void BufferOutputStream::WriteBytes(unsigned char *bytes, size_t count){
 	this->ExpandBufferIfNeeded(count);
 	memcpy(buffer+offset, bytes, count);
 	offset+=count;
 }
 
-unsigned char *CBufferOutputStream::GetBuffer(){
+unsigned char *BufferOutputStream::GetBuffer(){
 	return buffer;
 }
 
-size_t CBufferOutputStream::GetLength(){
+size_t BufferOutputStream::GetLength(){
 	return offset;
 }
 
-void CBufferOutputStream::ExpandBufferIfNeeded(size_t need){
+void BufferOutputStream::ExpandBufferIfNeeded(size_t need){
 	if(offset+need>size){
 		if(need<1024){
 			buffer=(unsigned char *) realloc(buffer, size+1024);
@@ -78,7 +80,7 @@ void CBufferOutputStream::ExpandBufferIfNeeded(size_t need){
 }
 
 
-void CBufferOutputStream::Reset(){
+void BufferOutputStream::Reset(){
 	offset=0;
 }
 

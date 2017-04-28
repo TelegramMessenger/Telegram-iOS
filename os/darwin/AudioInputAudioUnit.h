@@ -10,13 +10,14 @@
 #include <AudioUnit/AudioUnit.h>
 #include "../../audio/AudioInput.h"
 
-class CAudioUnitIO;
+namespace tgvoip{ namespace audio{
+class AudioUnitIO;
 
-class CAudioInputAudioUnit : public CAudioInput{
+class AudioInputAudioUnit : public AudioInput{
 
 public:
-	CAudioInputAudioUnit();
-	virtual ~CAudioInputAudioUnit();
+	AudioInputAudioUnit();
+	virtual ~AudioInputAudioUnit();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
@@ -26,8 +27,8 @@ private:
 	unsigned char remainingData[10240];
 	size_t remainingDataSize;
 	bool isRecording;
-	CAudioUnitIO* io;
+	AudioUnitIO* io;
 };
-
+}}
 
 #endif //LIBTGVOIP_AUDIOINPUTAUDIOUNIT_H

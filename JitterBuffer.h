@@ -28,10 +28,11 @@ struct jitter_packet_t{
 };
 typedef struct jitter_packet_t jitter_packet_t;
 
-class CJitterBuffer{
+namespace tgvoip{
+class JitterBuffer{
 public:
-	CJitterBuffer(CMediaStreamItf* out, uint32_t step);
-	~CJitterBuffer();
+	JitterBuffer(MediaStreamItf* out, uint32_t step);
+	~JitterBuffer();
 	void SetMinPacketCount(uint32_t count);
 	int GetMinPacketCount();
 	int GetCurrentDelay();
@@ -41,6 +42,8 @@ public:
 	void Tick();
 	void GetAverageLateCount(double* out);
 	int GetAndResetLostPacketCount();
+	double GetLastMeasuredJitter();
+	double GetLastMeasuredDelay();
 
 private:
 	static size_t CallbackIn(unsigned char* data, size_t len, void* param);
@@ -49,7 +52,7 @@ private:
 	int GetInternal(jitter_packet_t* pkt, int offset);
 	void Advance();
 
-	CBufferPool bufferPool;
+	BufferPool bufferPool;
 	tgvoip_mutex_t mutex;
 	jitter_packet_t slots[JITTER_SLOT_COUNT];
 	int64_t nextTimestamp;
@@ -78,7 +81,9 @@ private:
 	double expectNextAtTime;
 	double deviationHistory[64];
 	int deviationPtr;
+	double lastMeasuredJitter;
+	double lastMeasuredDelay;
 };
-
+}
 
 #endif //LIBTGVOIP_JITTERBUFFER_H

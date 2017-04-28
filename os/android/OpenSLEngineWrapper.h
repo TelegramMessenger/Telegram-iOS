@@ -10,7 +10,8 @@
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
 
-class COpenSLEngineWrapper{
+namespace tgvoip{ namespace audio{
+class OpenSLEngineWrapper{
 public:
 	static SLEngineItf CreateEngine();
 	static void DestroyEngine();
@@ -20,6 +21,6 @@ private:
 	static SLEngineItf sharedEngine;
 	static int count;
 };
-
+}}
 
 #endif //LIBTGVOIP_OPENSLENGINEWRAPPER_H

@@ -8,20 +8,33 @@
 #define LIBTGVOIP_AUDIOINPUT_H
 
 #include <stdint.h>
+#include <vector>
+#include <string>
 #include "../MediaStreamItf.h"
 
-class CAudioInput : public CMediaStreamItf{
+namespace tgvoip{
+
+class AudioInputDevice;
+class AudioOutputDevice;
+	
+namespace audio{
+class AudioInput : public MediaStreamItf{
 public:
-	CAudioInput();
-	virtual ~CAudioInput();
+	AudioInput();
+	AudioInput(std::string deviceID);
+	virtual ~AudioInput();
 
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels)=0;
 	bool IsInitialized();
-	static CAudioInput* Create();
+	virtual std::string GetCurrentDevice();
+	virtual void SetCurrentDevice(std::string deviceID);
+	static AudioInput* Create(std::string deviceID);
+	static void EnumerateDevices(std::vector<AudioInputDevice>& devs);
 
 protected:
+	std::string currentDevice;
 	bool failed;
 };
-
+}}
 
 #endif //LIBTGVOIP_AUDIOINPUT_H

@@ -27,7 +27,7 @@ ServerConfig *ServerConfig::GetSharedInstance(){
 }
 
 bool ServerConfig::GetBoolean(std::string name, bool fallback){
-	CMutexGuard sync(mutex);
+	MutexGuard sync(mutex);
 	if(ContainsKey(name)){
 		std::string val=config[name];
 		if(val=="true")
@@ -39,7 +39,7 @@ bool ServerConfig::GetBoolean(std::string name, bool fallback){
 }
 
 double ServerConfig::GetDouble(std::string name, double fallback){
-	CMutexGuard sync(mutex);
+	MutexGuard sync(mutex);
 	if(ContainsKey(name)){
 		std::string val=config[name];
 		char* end;
@@ -53,7 +53,7 @@ double ServerConfig::GetDouble(std::string name, double fallback){
 }
 
 int32_t ServerConfig::GetInt(std::string name, int32_t fallback){
-	CMutexGuard sync(mutex);
+	MutexGuard sync(mutex);
 	if(ContainsKey(name)){
 		std::string val=config[name];
 		char* end;
@@ -67,14 +67,14 @@ int32_t ServerConfig::GetInt(std::string name, int32_t fallback){
 }
 
 std::string ServerConfig::GetString(std::string name, std::string fallback){
-	CMutexGuard sync(mutex);
+	MutexGuard sync(mutex);
 	if(ContainsKey(name))
 		return config[name];
 	return fallback;
 }
 
 void ServerConfig::Update(std::map<std::string, std::string> newValues){
-	CMutexGuard sync(mutex);
+	MutexGuard sync(mutex);
 	LOGD("=== Updating voip config ===");
 	config.clear();
 	for(std::map<std::string, std::string>::iterator itr=newValues.begin();itr!=newValues.end();++itr){

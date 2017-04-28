@@ -12,10 +12,11 @@
 
 #include "../../audio/AudioOutput.h"
 
-class CAudioOutputOpenSLES : public CAudioOutput{
+namespace tgvoip{ namespace audio{
+class AudioOutputOpenSLES : public AudioOutput{
 public:
-	CAudioOutputOpenSLES();
-	virtual ~CAudioOutputOpenSLES();
+	AudioOutputOpenSLES();
+	virtual ~AudioOutputOpenSLES();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual bool IsPhone();
 	virtual void EnableLoudspeaker(bool enabled);
@@ -41,6 +42,6 @@ private:
 	unsigned char remainingData[10240];
 	size_t remainingDataSize;
 };
-
+}}
 
 #endif //LIBTGVOIP_AUDIOOUTPUTANDROID_H

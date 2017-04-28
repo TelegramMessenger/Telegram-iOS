@@ -9,11 +9,9 @@
 #include "logging.h"
 #include "VoIPServerConfig.h"
 
-using namespace tgvoip;
-
-COpusEncoder::COpusEncoder(CMediaStreamItf *source):queue(11), bufferPool(960*2, 10){
+tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source):queue(11), bufferPool(960*2, 10){
 	this->source=source;
-	source->SetCallback(COpusEncoder::Callback, this);
+	source->SetCallback(tgvoip::OpusEncoder::Callback, this);
 	enc=opus_encoder_create(48000, 1, OPUS_APPLICATION_VOIP, NULL);
 	opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(10));
 	opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC(15));
@@ -32,11 +30,11 @@ COpusEncoder::COpusEncoder(CMediaStreamItf *source):queue(11), bufferPool(960*2,
 	strongCorrectionMultiplier=ServerConfig::GetSharedInstance()->GetDouble("audio_strong_fec_multiplier", 2.0);
 }
 
-COpusEncoder::~COpusEncoder(){
+tgvoip::OpusEncoder::~OpusEncoder(){
 	opus_encoder_destroy(enc);
 }
 
-void COpusEncoder::Start(){
+void tgvoip::OpusEncoder::Start(){
 	if(running)
 		return;
 	running=true;
@@ -45,7 +43,7 @@ void COpusEncoder::Start(){
 	set_thread_name(thread, "opus_encoder");
 }
 
-void COpusEncoder::Stop(){
+void tgvoip::OpusEncoder::Stop(){
 	if(!running)
 		return;
 	running=false;
@@ -54,11 +52,11 @@ void COpusEncoder::Stop(){
 }
 
 
-void COpusEncoder::SetBitrate(uint32_t bitrate){
+void tgvoip::OpusEncoder::SetBitrate(uint32_t bitrate){
 	requestedBitrate=bitrate;
 }
 
-void COpusEncoder::Encode(unsigned char *data, size_t len){
+void tgvoip::OpusEncoder::Encode(unsigned char *data, size_t len){
 	if(requestedBitrate!=currentBitrate){
 		opus_encoder_ctl(enc, OPUS_SET_BITRATE(requestedBitrate));
 		currentBitrate=requestedBitrate;
@@ -75,8 +73,8 @@ void COpusEncoder::Encode(unsigned char *data, size_t len){
 	}
 }
 
-size_t COpusEncoder::Callback(unsigned char *data, size_t len, void* param){
-	COpusEncoder* e=(COpusEncoder*)param;
+size_t tgvoip::OpusEncoder::Callback(unsigned char *data, size_t len, void* param){
+	OpusEncoder* e=(OpusEncoder*)param;
 	unsigned char* buf=e->bufferPool.Get();
 	if(buf){
 		assert(len==960*2);
@@ -93,20 +91,20 @@ size_t COpusEncoder::Callback(unsigned char *data, size_t len, void* param){
 }
 
 
-uint32_t COpusEncoder::GetBitrate(){
+uint32_t tgvoip::OpusEncoder::GetBitrate(){
 	return requestedBitrate;
 }
 
-void COpusEncoder::SetEchoCanceller(CEchoCanceller* aec){
+void tgvoip::OpusEncoder::SetEchoCanceller(EchoCanceller* aec){
 	echoCanceller=aec;
 }
 
-void* COpusEncoder::StartThread(void* arg){
-	((COpusEncoder*)arg)->RunThread();
+void* tgvoip::OpusEncoder::StartThread(void* arg){
+	((OpusEncoder*)arg)->RunThread();
 	return NULL;
 }
 
-void COpusEncoder::RunThread(){
+void tgvoip::OpusEncoder::RunThread(){
 	unsigned char buf[960*2];
 	uint32_t bufferedCount=0;
 	uint32_t packetsPerFrame=frameDuration/20;
@@ -141,12 +139,12 @@ void COpusEncoder::RunThread(){
 }
 
 
-void COpusEncoder::SetOutputFrameDuration(uint32_t duration){
+void tgvoip::OpusEncoder::SetOutputFrameDuration(uint32_t duration){
 	frameDuration=duration;
 }
 
 
-void COpusEncoder::SetPacketLoss(int percent){
+void tgvoip::OpusEncoder::SetPacketLoss(int percent){
 	packetLossPercent=percent;
 	double multiplier=1;
 	if(currentBitrate<=strongCorrectionBitrate)
@@ -157,6 +155,6 @@ void COpusEncoder::SetPacketLoss(int percent){
 	opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(percent>17 ? OPUS_AUTO : OPUS_BANDWIDTH_FULLBAND));
 }
 
-int COpusEncoder::GetPacketLoss(){
+int tgvoip::OpusEncoder::GetPacketLoss(){
 	return packetLossPercent;
 }

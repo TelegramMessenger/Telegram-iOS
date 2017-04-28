@@ -10,11 +10,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-class CBufferOutputStream{
+namespace tgvoip{
+class BufferOutputStream{
 
 public:
-	CBufferOutputStream(size_t size);
-	~CBufferOutputStream();
+	BufferOutputStream(size_t size);
+	~BufferOutputStream();
 	void WriteByte(unsigned char byte);
 	void WriteInt64(int64_t i);
 	void WriteInt32(int32_t i);
@@ -30,6 +31,6 @@ private:
 	size_t size;
 	size_t offset;
 };
-
+}
 
 #endif //LIBTGVOIP_BUFFEROUTPUTSTREAM_H

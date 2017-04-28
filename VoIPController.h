@@ -146,6 +146,7 @@ struct voip_config_t{
 	double recv_timeout;
 	int data_saving;
 	char logFilePath[256];
+	char statsDumpFilePath[256];
 
 	bool enableAEC;
 	bool enableNS;
@@ -209,6 +210,20 @@ private:
 	double averageRTT;
 };
 
+class AudioDevice{
+public:
+	std::string id;
+	std::string displayName;
+};
+
+class AudioOutputDevice : public AudioDevice{
+
+};
+
+class AudioInputDevice : public AudioDevice{
+
+};
+
 class VoIPController
 {
 public:
@@ -242,6 +257,12 @@ public:
 	std::string GetDebugLog();
 	void GetDebugLog(char* buffer);
 	size_t GetDebugLogLength();
+	static std::vector<AudioInputDevice> EnumerateAudioInputs();
+	static std::vector<AudioOutputDevice> EnumerateAudioOutputs();
+	void SetCurrentAudioInput(std::string id);
+	void SetCurrentAudioOutput(std::string id);
+	std::string GetCurrentAudioInputID();
+	std::string GetCurrentAudioOutputID();
 
 private:
 	static void* StartRecvThread(void* arg);
@@ -259,8 +280,8 @@ private:
 	void SendInitAck();
 	void UpdateDataSavingState();
 	void KDF(unsigned char* msgKey, size_t x, unsigned char* aesKey, unsigned char* aesIv);
-	CBufferOutputStream* GetOutgoingPacketBuffer();
-	uint32_t WritePacketHeader(CBufferOutputStream* s, unsigned char type, uint32_t length);
+	BufferOutputStream* GetOutgoingPacketBuffer();
+	uint32_t WritePacketHeader(BufferOutputStream* s, unsigned char type, uint32_t length);
 	static size_t AudioInputCallback(unsigned char* data, size_t length, void* param);
 	void SendPublicEndpointsRequest();
 	void SendPublicEndpointsRequest(Endpoint& relay);
@@ -283,14 +304,14 @@ private:
 	uint32_t sendLossCountHistory[32];
 	uint32_t audioTimestampIn;
 	uint32_t audioTimestampOut;
-	CAudioInput* audioInput;
-	CAudioOutput* audioOutput;
-	CJitterBuffer* jitterBuffer;
-	COpusDecoder* decoder;
-	COpusEncoder* encoder;
-	CBlockingQueue* sendQueue;
-	CEchoCanceller* echoCanceller;
-	std::vector<CBufferOutputStream*> emptySendBuffers;
+	tgvoip::audio::AudioInput* audioInput;
+	tgvoip::audio::AudioOutput* audioOutput;
+	JitterBuffer* jitterBuffer;
+	OpusDecoder* decoder;
+	OpusEncoder* encoder;
+	BlockingQueue* sendQueue;
+	EchoCanceller* echoCanceller;
+	std::vector<BufferOutputStream*> emptySendBuffers;
     tgvoip_mutex_t sendBufferMutex;
 	tgvoip_mutex_t endpointsMutex;
 	bool stopping;
@@ -311,7 +332,7 @@ private:
 	int lastError;
 	bool micMuted;
 	uint32_t maxBitrate;
-	CBufferOutputStream* currentAudioPacket;
+	BufferOutputStream* currentAudioPacket;
 	void (*stateCallback)(VoIPController*, int);
 	std::vector<voip_stream_t*> outgoingStreams;
 	std::vector<voip_stream_t*> incomingStreams;
@@ -331,13 +352,16 @@ private:
 	double lastRecvPacketTime;
 	voip_config_t config;
 	int32_t peerVersion;
-	CCongestionControl* conctl;
+	CongestionControl* conctl;
 	voip_stats_t stats;
 	bool receivedInit;
 	bool receivedInitAck;
 	std::vector<std::string> debugLogs;
 	bool isOutgoing;
 	tgvoip::NetworkSocket* socket;
+	FILE* statsDump;
+	std::string currentAudioInput;
+	std::string currentAudioOutput;
 	
 	/*** server config values ***/
 	uint32_t maxAudioBitrate;

@@ -10,11 +10,12 @@
 #include <stdio.h>
 #include <stdint.h>
 
-class CBufferInputStream{
+namespace tgvoip{
+class BufferInputStream{
 
 public:
-	CBufferInputStream(unsigned char* data, size_t length);
-	~CBufferInputStream();
+	BufferInputStream(unsigned char* data, size_t length);
+	~BufferInputStream();
 	void Seek(size_t offset);
 	size_t GetLength();
 	size_t GetOffset();
@@ -32,6 +33,6 @@ private:
 	size_t length;
 	size_t offset;
 };
-
+}
 
 #endif //LIBTGVOIP_BUFFERINPUTSTREAM_H

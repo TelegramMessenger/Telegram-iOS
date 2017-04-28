@@ -10,13 +10,16 @@
 
 extern JavaVM* sharedJVM;
 
-jmethodID CAudioInputAndroid::initMethod=NULL;
-jmethodID CAudioInputAndroid::releaseMethod=NULL;
-jmethodID CAudioInputAndroid::startMethod=NULL;
-jmethodID CAudioInputAndroid::stopMethod=NULL;
-jclass CAudioInputAndroid::jniClass=NULL;
+using namespace tgvoip;
+using namespace tgvoip::audio;
 
-CAudioInputAndroid::CAudioInputAndroid(){
+jmethodID AudioInputAndroid::initMethod=NULL;
+jmethodID AudioInputAndroid::releaseMethod=NULL;
+jmethodID AudioInputAndroid::startMethod=NULL;
+jmethodID AudioInputAndroid::stopMethod=NULL;
+jclass AudioInputAndroid::jniClass=NULL;
+
+AudioInputAndroid::AudioInputAndroid(){
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -36,9 +39,9 @@ CAudioInputAndroid::CAudioInputAndroid(){
 	init_mutex(mutex);
 }
 
-CAudioInputAndroid::~CAudioInputAndroid(){
+AudioInputAndroid::~AudioInputAndroid(){
 	{
-		CMutexGuard guard(mutex);
+		MutexGuard guard(mutex);
 		JNIEnv *env=NULL;
 		bool didAttach=false;
 		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
@@ -58,8 +61,8 @@ CAudioInputAndroid::~CAudioInputAndroid(){
 	free_mutex(mutex);
 }
 
-void CAudioInputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	CMutexGuard guard(mutex);
+void AudioInputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
+	MutexGuard guard(mutex);
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -75,8 +78,8 @@ void CAudioInputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, 
 	}
 }
 
-void CAudioInputAndroid::Start(){
-	CMutexGuard guard(mutex);
+void AudioInputAndroid::Start(){
+	MutexGuard guard(mutex);
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -93,8 +96,8 @@ void CAudioInputAndroid::Start(){
 	running=true;
 }
 
-void CAudioInputAndroid::Stop(){
-	CMutexGuard guard(mutex);
+void AudioInputAndroid::Stop(){
+	MutexGuard guard(mutex);
 	running=false;
 	JNIEnv* env=NULL;
 	bool didAttach=false;
@@ -111,7 +114,7 @@ void CAudioInputAndroid::Stop(){
 	}
 }
 
-void CAudioInputAndroid::HandleCallback(JNIEnv* env, jobject buffer){
+void AudioInputAndroid::HandleCallback(JNIEnv* env, jobject buffer){
 	if(!running)
 		return;
 	unsigned char* buf=(unsigned char*) env->GetDirectBufferAddress(buffer);

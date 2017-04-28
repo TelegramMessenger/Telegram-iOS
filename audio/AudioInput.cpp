@@ -22,27 +22,56 @@
 #error "Unsupported operating system"
 #endif
 
-CAudioInput::CAudioInput(){
+using namespace tgvoip;
+using namespace tgvoip::audio;
+
+AudioInput::AudioInput() : currentDevice("default"){
 	failed=false;
 }
 
-CAudioInput *CAudioInput::Create(){
+AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
+	failed=false;
+}
+
+AudioInput *AudioInput::Create(std::string deviceID){
 #if defined(__ANDROID__)
-	return new CAudioInputAndroid();
+	return new AudioInputAndroid();
 #elif defined(__APPLE__)
-	return new CAudioInputAudioUnit();
+#if TARGET_OS_OSX
+	return new AudioInputAudioUnit(deviceID);
+#else
+	return new AudioInputAudioUnit();
+#endif
 #elif defined(_WIN32)
-	return new tgvoip::audio::AudioInputWave();
+	return new AudioInputWave(deviceID);
 #elif defined(__linux__)
-	return new tgvoip::audio::AudioInputALSA();
+	return new AudioInputALSA();
 #endif
 }
 
 
-CAudioInput::~CAudioInput(){
+AudioInput::~AudioInput(){
 
 }
 
-bool CAudioInput::IsInitialized(){
+bool AudioInput::IsInitialized(){
 	return !failed;
+}
+
+void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
+#if defined(__APPLE__) && TARGET_OS_OSX
+	AudioInputAudioUnit::EnumerateDevices(devs);
+#elif defined(_WIN32)
+	AudioInputWave::EnumerateDevices(devs);
+#elif defined(__linux__) && !defined(__ANDROID__)
+	return new AudioInputALSA();
+#endif
+}
+
+std::string AudioInput::GetCurrentDevice(){
+	return currentDevice;
+}
+
+void AudioInput::SetCurrentDevice(std::string deviceID){
+	
 }

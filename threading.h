@@ -10,6 +10,7 @@
 #if defined(_POSIX_THREADS) || defined(_POSIX_VERSION) || defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 
 #include <pthread.h>
+#include <semaphore.h>
 #include <sched.h>
 
 typedef pthread_t tgvoip_thread_t;
@@ -34,6 +35,40 @@ typedef pthread_cond_t tgvoip_lock_t;
 #define free_lock(lock) pthread_cond_destroy(&lock)
 #define wait_lock(lock, mutex) pthread_cond_wait(&lock, &mutex)
 #define notify_lock(lock) pthread_cond_broadcast(&lock)
+
+namespace tgvoip{
+class Semaphore{
+public:
+	Semaphore(unsigned int maxCount, unsigned int initValue){
+		sem_init(&sem, 0, initValue);
+	}
+
+	~Semaphore(){
+		sem_destroy(&sem);
+	}
+
+	void Acquire(){
+		sem_wait(&sem);
+	}
+
+	void Release(){
+		sem_post(&sem);
+	}
+
+	void Acquire(int count){
+		for(int i=0;i<count;i++)
+			Acquire();
+	}
+
+	void Release(int count){
+		for(int i=0;i<count;i++)
+			Release();
+	}
+
+private:
+	sem_t sem;
+};
+}
 
 #elif defined(_WIN32)
 
@@ -62,20 +97,54 @@ typedef HANDLE tgvoip_lock_t; // uncomment for XP compatibility
 //#define wait_lock(lock, mutex) SleepConditionVariableCS(&lock, &mutex, INFINITE)
 //#define notify_lock(lock) WakeAllConditionVariable(&lock)
 
+namespace tgvoip{
+class Semaphore{
+public:
+	Semaphore(unsigned int maxCount, unsigned int initValue){
+		h=CreateSemaphore(NULL, initValue, maxCount, NULL);
+	}
+
+	~Semaphore(){
+		CloseHandle(h);
+	}
+
+	void Acquire(){
+		WaitForSingleObject(h, INFINITE);
+	}
+
+	void Release(){
+		ReleaseSemaphore(h, 1, NULL);
+	}
+
+	void Acquire(int count){
+		for(int i=0;i<count;i++)
+			Acquire();
+	}
+
+	void Release(int count){
+		ReleaseSemaphore(h, count, NULL);
+	}
+
+private:
+	HANDLE h;
+};
+}
 #else
 #error "No threading implementation for your operating system"
 #endif
 
-class CMutexGuard{
+namespace tgvoip{
+class MutexGuard{
 public:
-    CMutexGuard(tgvoip_mutex_t &mutex) : mutex(mutex) {
+    MutexGuard(tgvoip_mutex_t &mutex) : mutex(mutex) {
 		lock_mutex(mutex);
 	}
-	~CMutexGuard(){
+	~MutexGuard(){
 		unlock_mutex(mutex);
 	}
 private:
 	tgvoip_mutex_t &mutex;
 };
-
+}
+	
 #endif //__THREADING_H

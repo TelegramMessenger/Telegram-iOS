@@ -14,50 +14,53 @@
 #define BUFFER_SIZE 960
 const int8_t permutation[33]={0,1,2,3,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7,8,8,8,9,9,9,9,9,9,9,9,9,9,9};
 
-CAudioOutputAudioUnit::CAudioOutputAudioUnit(){
+using namespace tgvoip;
+using namespace tgvoip::audio;
+
+AudioOutputAudioUnit::AudioOutputAudioUnit(){
 	isPlaying=false;
 	remainingDataSize=0;
     level=0.0;
-	this->io=CAudioUnitIO::Get();
+	this->io=AudioUnitIO::Get();
 	io->AttachOutput(this);
 }
 
-CAudioOutputAudioUnit::~CAudioOutputAudioUnit(){
+AudioOutputAudioUnit::~AudioOutputAudioUnit(){
 	io->DetachOutput();
-	CAudioUnitIO::Release();
+	AudioUnitIO::Release();
 }
 
-void CAudioOutputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
+void AudioOutputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
 	io->Configure(sampleRate, bitsPerSample, channels);
 }
 
-bool CAudioOutputAudioUnit::IsPhone(){
+bool AudioOutputAudioUnit::IsPhone(){
 	return false;
 }
 
-void CAudioOutputAudioUnit::EnableLoudspeaker(bool enabled){
+void AudioOutputAudioUnit::EnableLoudspeaker(bool enabled){
 
 }
 
-void CAudioOutputAudioUnit::Start(){
+void AudioOutputAudioUnit::Start(){
 	isPlaying=true;
 	io->EnableOutput(true);
 }
 
-void CAudioOutputAudioUnit::Stop(){
+void AudioOutputAudioUnit::Stop(){
 	isPlaying=false;
 	io->EnableOutput(false);
 }
 
-bool CAudioOutputAudioUnit::IsPlaying(){
+bool AudioOutputAudioUnit::IsPlaying(){
 	return isPlaying;
 }
 
-float CAudioOutputAudioUnit::GetLevel(){
+float AudioOutputAudioUnit::GetLevel(){
     return level / 9.0;
 }
 
-void CAudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
+void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 	int i;
     unsigned int k;
     int16_t absVal=0;

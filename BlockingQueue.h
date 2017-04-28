@@ -13,10 +13,11 @@
 
 using namespace std;
 
-class CBlockingQueue{
+namespace tgvoip{
+class BlockingQueue{
 public:
-	CBlockingQueue(size_t capacity);
-	~CBlockingQueue();
+	BlockingQueue(size_t capacity);
+	~BlockingQueue();
 	void Put(void* thing);
 	void* GetBlocking();
 	void* Get();
@@ -28,10 +29,11 @@ private:
 	void* GetInternal();
 	list<void*> queue;
 	size_t capacity;
-	tgvoip_lock_t lock;
+	//tgvoip_lock_t lock;
+	Semaphore semaphore;
 	tgvoip_mutex_t mutex;
 	void (*overflowCallback)(void*);
 };
-
+}
 
 #endif //LIBTGVOIP_BLOCKINGQUEUE_H

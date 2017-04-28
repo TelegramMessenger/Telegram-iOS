@@ -10,21 +10,22 @@
 #include <AudioUnit/AudioUnit.h>
 #include "../../threading.h"
 
-class CAudioInputAudioUnit;
-class CAudioOutputAudioUnit;
+namespace tgvoip{ namespace audio{
+class AudioInputAudioUnit;
+class AudioOutputAudioUnit;
 
-class CAudioUnitIO{
+class AudioUnitIO{
 public:
-	CAudioUnitIO();
-	~CAudioUnitIO();
+	AudioUnitIO();
+	~AudioUnitIO();
 	void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
-	void AttachInput(CAudioInputAudioUnit* i);
-	void AttachOutput(CAudioOutputAudioUnit* o);
+	void AttachInput(AudioInputAudioUnit* i);
+	void AttachOutput(AudioOutputAudioUnit* o);
 	void DetachInput();
 	void DetachOutput();
 	void EnableInput(bool enabled);
 	void EnableOutput(bool enabled);
-	static CAudioUnitIO* Get();
+	static AudioUnitIO* Get();
 	static void Release();
 	static void* StartFakeIOThread(void* arg);
 	static void AudioSessionAcquired();
@@ -37,8 +38,8 @@ private:
 	void ActuallyConfigure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	void ProcessAudioSessionAcquired();
 	AudioComponentInstance unit;
-	CAudioInputAudioUnit* input;
-	CAudioOutputAudioUnit* output;
+	AudioInputAudioUnit* input;
+	AudioOutputAudioUnit* output;
 	AudioBufferList inBufferList;
 	bool configured;
 	bool inputEnabled;
@@ -49,8 +50,9 @@ private:
 	uint32_t cfgChannels;
 	tgvoip_thread_t fakeIOThread;
 	static int refCount;
-	static CAudioUnitIO* sharedInstance;
+	static AudioUnitIO* sharedInstance;
 	static bool haveAudioSession;
 };
+}}
 
 #endif /* LIBTGVOIP_AUDIOUNITIO_H */

@@ -10,13 +10,16 @@
 
 extern JavaVM* sharedJVM;
 
-jmethodID CAudioOutputAndroid::initMethod=NULL;
-jmethodID CAudioOutputAndroid::releaseMethod=NULL;
-jmethodID CAudioOutputAndroid::startMethod=NULL;
-jmethodID CAudioOutputAndroid::stopMethod=NULL;
-jclass CAudioOutputAndroid::jniClass=NULL;
+using namespace tgvoip;
+using namespace tgvoip::audio;
 
-CAudioOutputAndroid::CAudioOutputAndroid(){
+jmethodID AudioOutputAndroid::initMethod=NULL;
+jmethodID AudioOutputAndroid::releaseMethod=NULL;
+jmethodID AudioOutputAndroid::startMethod=NULL;
+jmethodID AudioOutputAndroid::stopMethod=NULL;
+jclass AudioOutputAndroid::jniClass=NULL;
+
+AudioOutputAndroid::AudioOutputAndroid(){
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -35,7 +38,7 @@ CAudioOutputAndroid::CAudioOutputAndroid(){
 	running=false;
 }
 
-CAudioOutputAndroid::~CAudioOutputAndroid(){
+AudioOutputAndroid::~AudioOutputAndroid(){
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -53,7 +56,7 @@ CAudioOutputAndroid::~CAudioOutputAndroid(){
 	}
 }
 
-void CAudioOutputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
+void AudioOutputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -69,7 +72,7 @@ void CAudioOutputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample,
 	}
 }
 
-void CAudioOutputAndroid::Start(){
+void AudioOutputAndroid::Start(){
 	JNIEnv* env=NULL;
 	bool didAttach=false;
 	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
@@ -86,7 +89,7 @@ void CAudioOutputAndroid::Start(){
 	running=true;
 }
 
-void CAudioOutputAndroid::Stop(){
+void AudioOutputAndroid::Stop(){
 	running=false;
 	JNIEnv* env=NULL;
 	bool didAttach=false;
@@ -103,7 +106,7 @@ void CAudioOutputAndroid::Stop(){
 	}
 }
 
-void CAudioOutputAndroid::HandleCallback(JNIEnv* env, jbyteArray buffer){
+void AudioOutputAndroid::HandleCallback(JNIEnv* env, jbyteArray buffer){
 	if(!running)
 		return;
 	unsigned char* buf=(unsigned char*) env->GetByteArrayElements(buffer, NULL);
@@ -113,10 +116,10 @@ void CAudioOutputAndroid::HandleCallback(JNIEnv* env, jbyteArray buffer){
 }
 
 
-bool CAudioOutputAndroid::IsPlaying(){
+bool AudioOutputAndroid::IsPlaying(){
 	return false;
 }
 
-float CAudioOutputAndroid::GetLevel(){
+float AudioOutputAndroid::GetLevel(){
 	return 0;
 }

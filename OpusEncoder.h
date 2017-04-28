@@ -17,14 +17,15 @@
 
 #include <stdint.h>
 
-class COpusEncoder : public CMediaStreamItf{
+namespace tgvoip{
+class OpusEncoder : public MediaStreamItf{
 public:
-	COpusEncoder(CMediaStreamItf* source);
-	virtual ~COpusEncoder();
+	OpusEncoder(MediaStreamItf* source);
+	virtual ~OpusEncoder();
 	virtual void Start();
 	virtual void Stop();
 	void SetBitrate(uint32_t bitrate);
-	void SetEchoCanceller(CEchoCanceller* aec);
+	void SetEchoCanceller(EchoCanceller* aec);
 	void SetOutputFrameDuration(uint32_t duration);
 	void SetPacketLoss(int percent);
 	int GetPacketLoss();
@@ -35,15 +36,15 @@ private:
 	static void* StartThread(void* arg);
 	void RunThread();
 	void Encode(unsigned char* data, size_t len);
-	CMediaStreamItf* source;
-	OpusEncoder* enc;
+	MediaStreamItf* source;
+	::OpusEncoder* enc;
 	unsigned char buffer[4096];
 	uint32_t requestedBitrate;
 	uint32_t currentBitrate;
 	tgvoip_thread_t thread;
-	CBlockingQueue queue;
-	CBufferPool bufferPool;
-	CEchoCanceller* echoCanceller;
+	BlockingQueue queue;
+	BufferPool bufferPool;
+	EchoCanceller* echoCanceller;
 	int complexity;
 	bool running;
 	uint32_t frameDuration;
@@ -53,6 +54,6 @@ private:
 	double mediumCorrectionMultiplier;
 	double strongCorrectionMultiplier;
 };
-
+}
 
 #endif //LIBTGVOIP_OPUSENCODER_H

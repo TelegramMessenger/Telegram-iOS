@@ -10,11 +10,15 @@
 
 #define CHECK_SL_ERROR(res, msg) if(res!=SL_RESULT_SUCCESS){ LOGE(msg); return NULL; }
 
-SLObjectItf COpenSLEngineWrapper::sharedEngineObj=NULL;
-SLEngineItf COpenSLEngineWrapper::sharedEngine=NULL;
-int COpenSLEngineWrapper::count=0;
+using namespace tgvoip;
+using namespace tgvoip::audio;
 
-void COpenSLEngineWrapper::DestroyEngine(){
+
+SLObjectItf OpenSLEngineWrapper::sharedEngineObj=NULL;
+SLEngineItf OpenSLEngineWrapper::sharedEngine=NULL;
+int OpenSLEngineWrapper::count=0;
+
+void OpenSLEngineWrapper::DestroyEngine(){
 	count--;
 	LOGI("release: engine instance count %d", count);
 	if(count==0){
@@ -25,7 +29,7 @@ void COpenSLEngineWrapper::DestroyEngine(){
 	LOGI("after release");
 }
 
-SLEngineItf COpenSLEngineWrapper::CreateEngine(){
+SLEngineItf OpenSLEngineWrapper::CreateEngine(){
 	count++;
 	if(sharedEngine)
 		return sharedEngine;

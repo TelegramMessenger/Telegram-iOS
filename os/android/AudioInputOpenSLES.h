@@ -12,11 +12,12 @@
 
 #include "../../audio/AudioInput.h"
 
-class CAudioInputOpenSLES : public CAudioInput{
+namespace tgvoip{ namespace audio{
+class AudioInputOpenSLES : public AudioInput{
 
 public:
-	CAudioInputOpenSLES();
-	virtual ~CAudioInputOpenSLES();
+	AudioInputOpenSLES();
+	virtual ~AudioInputOpenSLES();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
@@ -34,6 +35,6 @@ private:
 	int16_t* nativeBuffer;
 	size_t positionInBuffer;
 };
-
+}}
 
 #endif //LIBTGVOIP_AUDIOINPUTOPENSLES_H

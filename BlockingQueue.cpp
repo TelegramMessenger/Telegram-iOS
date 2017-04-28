@@ -6,30 +6,25 @@
 
 #include "BlockingQueue.h"
 
-CBlockingQueue::CBlockingQueue(size_t capacity){
+using namespace tgvoip;
+
+BlockingQueue::BlockingQueue(size_t capacity) : semaphore(capacity, 0){
 	this->capacity=capacity;
 	overflowCallback=NULL;
-	init_lock(lock);
 	init_mutex(mutex);
 }
 
-CBlockingQueue::~CBlockingQueue(){
-	lock_mutex(mutex);
-	notify_lock(lock);
-	unlock_mutex(mutex);
-	lock_mutex(mutex);
-	unlock_mutex(mutex);
-	free_lock(lock);
+BlockingQueue::~BlockingQueue(){
+	semaphore.Release();
 	free_mutex(mutex);
 }
 
-void CBlockingQueue::Put(void *thing){
-	lock_mutex(mutex);
-	if(queue.empty()){
-		notify_lock(lock);
-	}
+void BlockingQueue::Put(void *thing){
+	MutexGuard sync(mutex);
 	queue.push_back(thing);
+	bool didOverflow=false;
 	while(queue.size()>capacity){
+		didOverflow=true;
 		if(overflowCallback){
 			overflowCallback(queue.front());
 			queue.pop_front();
@@ -37,28 +32,27 @@ void CBlockingQueue::Put(void *thing){
 			abort();
 		}
 	}
-	unlock_mutex(mutex);
+	if(!didOverflow)
+		semaphore.Release();
 }
 
-void *CBlockingQueue::GetBlocking(){
-	lock_mutex(mutex);
-	while(queue.empty()){
-		wait_lock(lock, mutex);
-	}
+void *BlockingQueue::GetBlocking(){
+	semaphore.Acquire();
+	MutexGuard sync(mutex);
 	void* r=GetInternal();
-	unlock_mutex(mutex);
 	return r;
 }
 
 
-void *CBlockingQueue::Get(){
-	lock_mutex(mutex);
+void *BlockingQueue::Get(){
+	MutexGuard sync(mutex);
+	if(queue.size()>0)
+		semaphore.Acquire();
 	void* r=GetInternal();
-	unlock_mutex(mutex);
 	return r;
 }
 
-void *CBlockingQueue::GetInternal(){
+void *BlockingQueue::GetInternal(){
 	if(queue.size()==0)
 		return NULL;
 	void* r=queue.front();
@@ -67,18 +61,16 @@ void *CBlockingQueue::GetInternal(){
 }
 
 
-unsigned int CBlockingQueue::Size(){
+unsigned int BlockingQueue::Size(){
 	return queue.size();
 }
 
 
-void CBlockingQueue::PrepareDealloc(){
-	lock_mutex(mutex);
-	notify_lock(lock);
-	unlock_mutex(mutex);
+void BlockingQueue::PrepareDealloc(){
+
 }
 
 
-void CBlockingQueue::SetOverflowCallback(void (*overflowCallback)(void *)){
+void BlockingQueue::SetOverflowCallback(void (*overflowCallback)(void *)){
 	this->overflowCallback=overflowCallback;
 }

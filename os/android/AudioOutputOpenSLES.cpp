@@ -16,11 +16,14 @@
 #define CHECK_SL_ERROR(res, msg) if(res!=SL_RESULT_SUCCESS){ LOGE(msg); return; }
 #define BUFFER_SIZE 960 // 20 ms
 
-int CAudioOutputOpenSLES::nativeBufferSize;
+using namespace tgvoip;
+using namespace tgvoip::audio;
 
-CAudioOutputOpenSLES::CAudioOutputOpenSLES(){
+int AudioOutputOpenSLES::nativeBufferSize;
+
+AudioOutputOpenSLES::AudioOutputOpenSLES(){
 	SLresult result;
-	slEngine=COpenSLEngineWrapper::CreateEngine();
+	slEngine=OpenSLEngineWrapper::CreateEngine();
 
 	const SLInterfaceID pOutputMixIDs[] = {};
 	const SLboolean pOutputMixRequired[] = {};
@@ -46,7 +49,7 @@ CAudioOutputOpenSLES::CAudioOutputOpenSLES(){
 	remainingDataSize=0;
 }
 
-CAudioOutputOpenSLES::~CAudioOutputOpenSLES(){
+AudioOutputOpenSLES::~AudioOutputOpenSLES(){
 	if(!stopped)
 		Stop();
 	(*slBufferQueue)->Clear(slBufferQueue);
@@ -54,21 +57,21 @@ CAudioOutputOpenSLES::~CAudioOutputOpenSLES(){
 	(*slPlayerObj)->Destroy(slPlayerObj);
 	LOGV("destroy slOutputMixObj");
 	(*slOutputMixObj)->Destroy(slOutputMixObj);
-	COpenSLEngineWrapper::DestroyEngine();
+	OpenSLEngineWrapper::DestroyEngine();
 	free(buffer);
 	free(nativeBuffer);
 }
 
 
-void CAudioOutputOpenSLES::SetNativeBufferSize(int size){
-	CAudioOutputOpenSLES::nativeBufferSize=size;
+void AudioOutputOpenSLES::SetNativeBufferSize(int size){
+	AudioOutputOpenSLES::nativeBufferSize=size;
 }
 
-void CAudioOutputOpenSLES::BufferCallback(SLAndroidSimpleBufferQueueItf bq, void *context){
-	((CAudioOutputOpenSLES*)context)->HandleSLCallback();
+void AudioOutputOpenSLES::BufferCallback(SLAndroidSimpleBufferQueueItf bq, void *context){
+	((AudioOutputOpenSLES*)context)->HandleSLCallback();
 }
 
-void CAudioOutputOpenSLES::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
+void AudioOutputOpenSLES::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
 	assert(slPlayerObj==NULL);
 	SLDataLocator_AndroidSimpleBufferQueue locatorBufferQueue =
 			{SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE, 1};
@@ -100,34 +103,34 @@ void CAudioOutputOpenSLES::Configure(uint32_t sampleRate, uint32_t bitsPerSample
 	result=(*slPlayerObj)->GetInterface(slPlayerObj, SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &slBufferQueue);
 	CHECK_SL_ERROR(result, "Error getting buffer queue");
 
-	result=(*slBufferQueue)->RegisterCallback(slBufferQueue, CAudioOutputOpenSLES::BufferCallback, this);
+	result=(*slBufferQueue)->RegisterCallback(slBufferQueue, AudioOutputOpenSLES::BufferCallback, this);
 	CHECK_SL_ERROR(result, "Error setting buffer queue callback");
 
 	(*slBufferQueue)->Enqueue(slBufferQueue, nativeBuffer, nativeBufferSize*sizeof(int16_t));
 }
 
-bool CAudioOutputOpenSLES::IsPhone(){
+bool AudioOutputOpenSLES::IsPhone(){
 	return false;
 }
 
-void CAudioOutputOpenSLES::EnableLoudspeaker(bool enabled){
+void AudioOutputOpenSLES::EnableLoudspeaker(bool enabled){
 
 }
 
-void CAudioOutputOpenSLES::Start(){
+void AudioOutputOpenSLES::Start(){
 	stopped=false;
 	SLresult result=(*slPlayer)->SetPlayState(slPlayer, SL_PLAYSTATE_PLAYING);
 	CHECK_SL_ERROR(result, "Error starting player");
 }
 
-void CAudioOutputOpenSLES::Stop(){
+void AudioOutputOpenSLES::Stop(){
 	stopped=true;
 	LOGV("Stopping OpenSL output");
 	SLresult result=(*slPlayer)->SetPlayState(slPlayer, SL_PLAYSTATE_PAUSED);
 	CHECK_SL_ERROR(result, "Error starting player");
 }
 
-void CAudioOutputOpenSLES::HandleSLCallback(){
+void AudioOutputOpenSLES::HandleSLCallback(){
 	/*if(stopped){
 		//LOGV("left HandleSLCallback early");
 		return;
@@ -153,7 +156,7 @@ void CAudioOutputOpenSLES::HandleSLCallback(){
 }
 
 
-bool CAudioOutputOpenSLES::IsPlaying(){
+bool AudioOutputOpenSLES::IsPlaying(){
 	if(slPlayer){
 		uint32_t state;
 		(*slPlayer)->GetPlayState(slPlayer, &state);
@@ -163,6 +166,6 @@ bool CAudioOutputOpenSLES::IsPlaying(){
 }
 
 
-float CAudioOutputOpenSLES::GetLevel(){
+float AudioOutputOpenSLES::GetLevel(){
 	return 0; // we don't use this anyway
 }

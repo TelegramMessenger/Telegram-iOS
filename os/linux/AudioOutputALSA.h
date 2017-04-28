@@ -14,7 +14,7 @@
 namespace tgvoip{
 namespace audio{
 
-class AudioOutputALSA : public CAudioOutput{
+class AudioOutputALSA : public AudioOutput{
 public:
 	AudioOutputALSA();
 	virtual ~AudioOutputALSA();

@@ -8,19 +8,23 @@
 #define LIBTGVOIP_AUDIOOUTPUTWAVE_H
 
 #include <windows.h>
+#include <string>
+#include <vector>
 #include "../../audio/AudioOutput.h"
 
 namespace tgvoip{
 namespace audio{
 
-class AudioOutputWave : public CAudioOutput{
+class AudioOutputWave : public AudioOutput{
 public:
-	AudioOutputWave();
+	AudioOutputWave(std::string deviceID);
 	virtual ~AudioOutputWave();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual bool IsPlaying();
+	virtual void SetCurrentDevice(std::string deviceID);
+	static void EnumerateDevices(std::vector<AudioOutputDevice>& devs);
 
 private:
 	HWAVEOUT hWaveOut;

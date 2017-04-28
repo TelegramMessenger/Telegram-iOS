@@ -23,40 +23,75 @@
 #error "Unsupported operating system"
 #endif
 
+using namespace tgvoip;
+using namespace tgvoip::audio;
+
 #if defined(__ANDROID__)
-int CAudioOutput::systemVersion;
+int AudioOutput::systemVersion;
 #endif
 
-CAudioOutput *CAudioOutput::Create(){
+AudioOutput *AudioOutput::Create(std::string deviceID){
 #if defined(__ANDROID__)
 	if(systemVersion<21)
-		return new CAudioOutputAndroid();
-	return new CAudioOutputOpenSLES();
+		return new AudioOutputAndroid();
+	return new AudioOutputOpenSLES();
 #elif defined(__APPLE__)
-	return new CAudioOutputAudioUnit();
+#if TARGET_OS_OSX
+	return new AudioOutputAudioUnit(deviceID);
+#else
+	return new AudioOutputAudioUnit();
+#endif
 #elif defined(_WIN32)
-	return new tgvoip::audio::AudioOutputWave();
+	return new AudioOutputWave(deviceID);
 #elif defined(__linux__)
-	return new tgvoip::audio::AudioOutputALSA();
+	return new AudioOutputALSA();
 #endif
 }
 
-CAudioOutput::CAudioOutput(){
+AudioOutput::AudioOutput() : currentDevice("default"){
 	failed=false;
 }
 
-CAudioOutput::~CAudioOutput(){
+AudioOutput::AudioOutput(std::string deviceID) : currentDevice(deviceID){
+	failed=false;
+}
+
+AudioOutput::~AudioOutput(){
 
 }
 
 
-int32_t CAudioOutput::GetEstimatedDelay(){
+int32_t AudioOutput::GetEstimatedDelay(){
 #if defined(__ANDROID__)
 	return systemVersion<21 ? 150 : 50;
 #endif
 	return 60;
 }
 
-float CAudioOutput::GetLevel(){
+float AudioOutput::GetLevel(){
 	return 0;
+}
+
+
+void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
+#if defined(__APPLE__) && TARGET_OS_OSX
+	AudioOutputAudioUnit::EnumerateDevices(devs);
+#elif defined(_WIN32)
+	AudioOutputWave::EnumerateDevices(devs);
+#elif defined(__linux__) && !defined(__ANDROID__)
+	return new AudioInputALSA();
+#endif
+}
+
+
+std::string AudioOutput::GetCurrentDevice(){
+	return currentDevice;
+}
+
+void AudioOutput::SetCurrentDevice(std::string deviceID){
+	
+}
+
+bool AudioOutput::IsInitialized(){
+	return !failed;
 }

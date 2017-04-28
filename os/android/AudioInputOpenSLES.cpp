@@ -15,12 +15,13 @@
 #define CHECK_SL_ERROR(res, msg) if(res!=SL_RESULT_SUCCESS){ LOGE(msg); return; }
 #define BUFFER_SIZE 960 // 20 ms
 
-int CAudioInputOpenSLES::nativeBufferSize;
+using namespace tgvoip;
+using namespace tgvoip::audio;
 
-FILE* test;
+int AudioInputOpenSLES::nativeBufferSize;
 
-CAudioInputOpenSLES::CAudioInputOpenSLES(){
-	slEngine=COpenSLEngineWrapper::CreateEngine();
+AudioInputOpenSLES::AudioInputOpenSLES(){
+	slEngine=OpenSLEngineWrapper::CreateEngine();
 
 	LOGI("Native buffer size is %u samples", nativeBufferSize);
 	if(nativeBufferSize<BUFFER_SIZE && BUFFER_SIZE % nativeBufferSize!=0){
@@ -35,11 +36,10 @@ CAudioInputOpenSLES::CAudioInputOpenSLES(){
 
 	buffer=(int16_t*)calloc(BUFFER_SIZE, sizeof(int16_t));
 	nativeBuffer=(int16_t*)calloc((size_t) nativeBufferSize, sizeof(int16_t));
-	//test=fopen("/sdcard/test.raw", "wb");
 	slRecorderObj=NULL;
 }
 
-CAudioInputOpenSLES::~CAudioInputOpenSLES(){
+AudioInputOpenSLES::~AudioInputOpenSLES(){
 	//Stop();
 	(*slBufferQueue)->Clear(slBufferQueue);
 	(*slRecorderObj)->Destroy(slRecorderObj);
@@ -47,18 +47,18 @@ CAudioInputOpenSLES::~CAudioInputOpenSLES(){
 	slRecorder=NULL;
 	slBufferQueue=NULL;
 	slEngine=NULL;
-	COpenSLEngineWrapper::DestroyEngine();
+	OpenSLEngineWrapper::DestroyEngine();
 	free(buffer);
 	buffer=NULL;
 	free(nativeBuffer);
 	nativeBuffer=NULL;
 }
 
-void CAudioInputOpenSLES::BufferCallback(SLAndroidSimpleBufferQueueItf bq, void *context){
-	((CAudioInputOpenSLES*)context)->HandleSLCallback();
+void AudioInputOpenSLES::BufferCallback(SLAndroidSimpleBufferQueueItf bq, void *context){
+	((AudioInputOpenSLES*)context)->HandleSLCallback();
 }
 
-void CAudioInputOpenSLES::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
+void AudioInputOpenSLES::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
 	assert(slRecorderObj==NULL);
 	SLDataLocator_IODevice loc_dev = {SL_DATALOCATOR_IODEVICE,
 									  SL_IODEVICE_AUDIOINPUT,
@@ -90,24 +90,24 @@ void CAudioInputOpenSLES::Configure(uint32_t sampleRate, uint32_t bitsPerSample,
 	result=(*slRecorderObj)->GetInterface(slRecorderObj, SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &slBufferQueue);
 	CHECK_SL_ERROR(result, "Error getting buffer queue");
 
-	result=(*slBufferQueue)->RegisterCallback(slBufferQueue, CAudioInputOpenSLES::BufferCallback, this);
+	result=(*slBufferQueue)->RegisterCallback(slBufferQueue, AudioInputOpenSLES::BufferCallback, this);
 	CHECK_SL_ERROR(result, "Error setting buffer queue callback");
 
 	(*slBufferQueue)->Enqueue(slBufferQueue, nativeBuffer, nativeBufferSize*sizeof(int16_t));
 }
 
-void CAudioInputOpenSLES::Start(){
+void AudioInputOpenSLES::Start(){
 	SLresult result=(*slRecorder)->SetRecordState(slRecorder, SL_RECORDSTATE_RECORDING);
 	CHECK_SL_ERROR(result, "Error starting record");
 }
 
-void CAudioInputOpenSLES::Stop(){
+void AudioInputOpenSLES::Stop(){
 	SLresult result=(*slRecorder)->SetRecordState(slRecorder, SL_RECORDSTATE_STOPPED);
 	CHECK_SL_ERROR(result, "Error stopping record");
 }
 
 
-void CAudioInputOpenSLES::HandleSLCallback(){
+void AudioInputOpenSLES::HandleSLCallback(){
 	//SLmillisecond pMsec = 0;
 	//(*slRecorder)->GetPosition(slRecorder, &pMsec);
 	//LOGI("Callback! pos=%lu", pMsec);

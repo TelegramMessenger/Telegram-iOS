@@ -48,6 +48,10 @@ void NetworkSocketPosix::SetMaxPriority(){
 }
 
 void NetworkSocketPosix::Send(NetworkPacket *packet){
+	if(!packet || !packet->address){
+		LOGW("tried to send null packet");
+		return;
+	}
 	sockaddr_in6 addr;
 	IPv4Address* v4addr=dynamic_cast<IPv4Address*>(packet->address);
 	if(v4addr){
@@ -120,6 +124,7 @@ void NetworkSocketPosix::Receive(NetworkPacket *packet){
 	if(len>0)
 		packet->length=(size_t) len;
 	else{
+		LOGE("error receiving %d / %s", errno, strerror(errno));
 		packet->length=0;
 		return;
 	}

@@ -11,11 +11,12 @@
 #include "BufferPool.h"
 #include "BlockingQueue.h"
 
-class CEchoCanceller{
+namespace tgvoip{
+class EchoCanceller{
 
 public:
-	CEchoCanceller(bool enableAEC, bool enableNS, bool enableAGC);
-	virtual ~CEchoCanceller();
+	EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC);
+	virtual ~EchoCanceller();
 	virtual void Start();
 	virtual void Stop();
 	void SpeakerOutCallback(unsigned char* data, size_t len);
@@ -39,14 +40,14 @@ private:
 	void* splittingFilterFarendIn; // webrtc::IFChannelBuffer
 	void* splittingFilterFarendOut; // webrtc::IFChannelBuffer
 	tgvoip_thread_t bufferFarendThread;
-	CBlockingQueue* farendQueue;
-	CBufferPool* farendBufferPool;
+	BlockingQueue* farendQueue;
+	BufferPool* farendBufferPool;
 	bool running;
 	void* ns; // NsxHandle
 	void* agc;
 	int32_t agcMicLevel;
 #endif
 };
-
+}
 
 #endif //LIBTGVOIP_ECHOCANCELLER_H

@@ -10,10 +10,11 @@
 #include <stdint.h>
 #include "threading.h"
 
-class CBufferPool{
+namespace tgvoip{
+class BufferPool{
 public:
-	CBufferPool(unsigned int size, unsigned int count);
-	~CBufferPool();
+	BufferPool(unsigned int size, unsigned int count);
+	~BufferPool();
 	unsigned char* Get();
 	void Reuse(unsigned char* buffer);
 
@@ -23,6 +24,6 @@ private:
 	unsigned char* buffers[64];
 	tgvoip_mutex_t mutex;
 };
-
+}
 
 #endif //LIBTGVOIP_BUFFERPOOL_H

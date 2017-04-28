@@ -9,7 +9,8 @@
 
 #include <string.h>
 
-class CMediaStreamItf{
+namespace tgvoip{
+class MediaStreamItf{
 public:
 	virtual void Start()=0;
 	virtual void Stop()=0;
@@ -22,6 +23,7 @@ private:
 	size_t (*callback)(unsigned char*, size_t, void*);
 	void* callbackParam;
 };
+}
 
 
 #endif //LIBTGVOIP_MEDIASTREAMINPUT_H

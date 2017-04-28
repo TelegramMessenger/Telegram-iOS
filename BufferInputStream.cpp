@@ -10,42 +10,44 @@
 #include <exception>
 #include <stdexcept>
 
-CBufferInputStream::CBufferInputStream(unsigned char* data, size_t length){
+using namespace tgvoip;
+
+BufferInputStream::BufferInputStream(unsigned char* data, size_t length){
 	this->buffer=data;
 	this->length=length;
 	offset=0;
 }
 
-CBufferInputStream::~CBufferInputStream(){
+BufferInputStream::~BufferInputStream(){
 
 }
 
 
-void CBufferInputStream::Seek(size_t offset){
+void BufferInputStream::Seek(size_t offset){
 	if(offset>length){
 		throw std::out_of_range("Not enough bytes in buffer");
 	}
 	this->offset=offset;
 }
 
-size_t CBufferInputStream::GetLength(){
+size_t BufferInputStream::GetLength(){
 	return length;
 }
 
-size_t CBufferInputStream::GetOffset(){
+size_t BufferInputStream::GetOffset(){
 	return offset;
 }
 
-size_t CBufferInputStream::Remaining(){
+size_t BufferInputStream::Remaining(){
 	return length-offset;
 }
 
-unsigned char CBufferInputStream::ReadByte(){
+unsigned char BufferInputStream::ReadByte(){
 	EnsureEnoughRemaining(1);
 	return (unsigned char)buffer[offset++];
 }
 
-int32_t CBufferInputStream::ReadInt32(){
+int32_t BufferInputStream::ReadInt32(){
 	EnsureEnoughRemaining(4);
 	int32_t res=((int32_t)buffer[offset] & 0xFF) |
 			(((int32_t)buffer[offset+1] & 0xFF) << 8) |
@@ -55,7 +57,7 @@ int32_t CBufferInputStream::ReadInt32(){
 	return res;
 }
 
-int64_t CBufferInputStream::ReadInt64(){
+int64_t BufferInputStream::ReadInt64(){
 	EnsureEnoughRemaining(8);
 	int64_t res=((int64_t)buffer[offset] & 0xFF) |
 			(((int64_t)buffer[offset+1] & 0xFF) << 8) |
@@ -69,7 +71,7 @@ int64_t CBufferInputStream::ReadInt64(){
 	return res;
 }
 
-int16_t CBufferInputStream::ReadInt16(){
+int16_t BufferInputStream::ReadInt16(){
 	EnsureEnoughRemaining(2);
 	int16_t res=(uint16_t)buffer[offset] | ((uint16_t)buffer[offset+1] << 8);
 	offset+=2;
@@ -77,7 +79,7 @@ int16_t CBufferInputStream::ReadInt16(){
 }
 
 
-int32_t CBufferInputStream::ReadTlLength(){
+int32_t BufferInputStream::ReadTlLength(){
 	unsigned char l=ReadByte();
 	if(l<254)
 		return l;
@@ -90,14 +92,14 @@ int32_t CBufferInputStream::ReadTlLength(){
 	return res;
 }
 
-void CBufferInputStream::ReadBytes(unsigned char *to, size_t count){
+void BufferInputStream::ReadBytes(unsigned char *to, size_t count){
 	EnsureEnoughRemaining(count);
 	memcpy(to, buffer+offset, count);
 	offset+=count;
 }
 
 
-void CBufferInputStream::EnsureEnoughRemaining(size_t need){
+void BufferInputStream::EnsureEnoughRemaining(size_t need){
 	if(length-offset<need){
 		throw std::out_of_range("Not enough bytes in buffer");
 	}
