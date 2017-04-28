@@ -2099,7 +2099,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				RUN_CLANG_STATIC_ANALYZER = YES;
@@ -2160,7 +2160,7 @@
 					"$(SRCROOT)/HockeySDKTests/Vendor/**",
 				);
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -2469,7 +2469,7 @@
 					"$(SRCROOT)/HockeySDKTests/Vendor/**",
 				);
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -2528,7 +2528,7 @@
 					"$(SRCROOT)/HockeySDKTests/Vendor/**",
 				);
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -2600,7 +2600,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				RUN_CLANG_STATIC_ANALYZER = YES;
@@ -2690,7 +2690,7 @@
 					"$(SRCROOT)/HockeySDKTests/Vendor/**",
 				);
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -3132,7 +3132,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				RUN_CLANG_STATIC_ANALYZER = YES;
@@ -3192,7 +3192,7 @@
 					"$(SRCROOT)/HockeySDKTests/Vendor/**",
 				);
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -3418,7 +3418,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				ONLY_ACTIVE_ARCH = YES;
@@ -3462,7 +3462,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				RUN_CLANG_STATIC_ANALYZER = YES;
