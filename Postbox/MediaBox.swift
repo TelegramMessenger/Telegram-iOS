@@ -751,7 +751,7 @@ public final class MediaBox {
                                             }
                                         }
                                     case let .moveLocalFile(tempPath):
-                                        if let thisFd = thisFd {
+                                        if let thisFd = fd {
                                             close(thisFd)
                                             fd = nil
                                         }
