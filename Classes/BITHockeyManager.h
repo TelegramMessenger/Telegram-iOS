@@ -191,6 +191,18 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)startManager;
 
+/**
+ Starts the manager and runs all modules from a Xamarin environment. This is intended to be used by the HockeySDK-Xamarin.
+ We now need to make a difference as BITCrashManager needs to setup PLCrashReporter differently for Xamarin apps.
+ 
+ @warning Do not use this API from within a native iOS app.
+ 
+ Call this after configuring the manager and setting up all modules.
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ */
+- (void)startManagerInXamarinEnvironment;
 
 #pragma mark - Public Properties
 

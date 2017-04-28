@@ -1154,10 +1154,18 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 }
 
+- (void)startManagerInXamarinEnvironment {
+  [self startManagerInSdkEnvironment:BITSdkEnvironmentXamarin];
+}
+
+- (void)startManager {
+  [self startManagerInSdkEnvironment:BITSdkEnvironmentNative];
+}
+
 /**
  *	 Main startup sequence initializing PLCrashReporter if it wasn't disabled
  */
-- (void)startManager {
+- (void)startManagerInSdkEnvironment:(BITSdkEnvironment)sdkEnvironment {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
   
   [self registerObservers];
@@ -1179,8 +1187,21 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
         symbolicationStrategy = PLCrashReporterSymbolicationStrategyAll;
       }
       
-      BITPLCrashReporterConfig *config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
-                                                                               symbolicationStrategy: symbolicationStrategy];
+      BITPLCrashReporterConfig *config;
+      
+      switch (sdkEnvironment) {
+        case BITSdkEnvironmentXamarin:
+          config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
+                                                         symbolicationStrategy: symbolicationStrategy
+                                        shouldRegisterUncaughtExceptionHandler:NO];
+
+          break;
+        default:
+          config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
+                                                         symbolicationStrategy: symbolicationStrategy];
+          break;
+      }
+      
       self.plCrashReporter = [[BITPLCrashReporter alloc] initWithConfiguration: config];
       
       // Check if we previously crashed
