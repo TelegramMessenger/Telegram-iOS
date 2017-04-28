@@ -275,3 +275,6 @@
 "HockeyAuthenticationContactDeveloper" = "Pogreška u autoriziranju. Molimo Vas kontaktirajte razvojnog programera ove aplikacije.";
 "HockeyAuthenticationWrongEmailPassword" = "E-mail adresa ili lozinka koju ste unijeli nije ispravna. Molimo Vas provjerite Vaš unos i pokušajte iznova.";
 "HockeyAuthenticationAuthSecretMissing" = "HockeySDK \"authorization secret\" nije postavljen. Molimo Vas kontaktirajte razvojnog programera ove aplikacije.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Obavezno";

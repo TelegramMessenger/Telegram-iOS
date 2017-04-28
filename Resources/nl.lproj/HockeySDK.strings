@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Fout bij identiteitscontrole. Neem contact op met de ontwikkelaar van deze app.";
 "HockeyAuthenticationWrongEmailPassword" = "U hebt een ongeldig e-mailadres of wachtwoord ingevoerd. Controleer uw gegevens en probeer opnieuw.";
 "HockeyAuthenticationAuthSecretMissing" = "Het 'Authorization secret' van HockeySDK is nog niet ingesteld. Neem contact op met de ontwikkelaar van deze app.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Verplicht";

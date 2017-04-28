@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "خطای مجوز. لطفا با توسعه دهنده این برنامه تماس بگیرید.";
 "HockeyAuthenticationWrongEmailPassword" = "شما یک پست الکترونیک و یا رمز عبور نامعتبر وارد کرده اید. لطفا ورودی های خود را بررسی و دوباره امتحان کنید.";
 "HockeyAuthenticationAuthSecretMissing" = "مجوز مخفی HockeySDK تنظیم نشده است. لطفا با توسعه دهنده این برنامه تماس بگیرید.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "مورد نیاز";

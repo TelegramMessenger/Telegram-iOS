@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Autentiseringsfeil, vennligst kontakt utvikleren av appen.";
 "HockeyAuthenticationWrongEmailPassword" = "Du har ikke oppgitt en gyldig e-postadresse eller passord, kontroller opplysningene og prøv igjen.";
 "HockeyAuthenticationAuthSecretMissing" = "HockeySDKet mangler autentiseringshemmelighet, vennligst kontakt utvikleren av appen.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Påkrevd";

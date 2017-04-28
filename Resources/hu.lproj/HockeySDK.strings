@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Hitelesítési hiba. Kérjük, lépjen kapcsolatba az alkalmazás fejlesztőjével.";
 "HockeyAuthenticationWrongEmailPassword" = "Érvénytelen e-mail címet vagy jelszót adott meg. Kérjük, ellenőrizze a bevitelt és adja meg az adatokat újra.";
 "HockeyAuthenticationAuthSecretMissing" = "A HockeySDK \"authorization secret\" még nincs beállítva. Kérjük, lépjen kapcsolatba az alkalmazás fejlesztőjével.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Szükséges mező";
