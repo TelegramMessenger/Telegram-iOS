@@ -146,6 +146,12 @@ typedef NS_OPTIONS(NSUInteger, PLCrashReporterSymbolicationStrategy) {
     
     /** The configured symbolication strategy. */
     PLCrashReporterSymbolicationStrategy _symbolicationStrategy;
+  
+   /**
+    * Flag indicating if the uncaughtExceptionHandler should be initialized or not. It usually is, except in a
+    * Xamarin environment.
+    */
+  BOOL _shouldRegisterUncaughtExceptionHandler;
 }
 
 + (instancetype) defaultConfiguration;
@@ -154,12 +160,19 @@ typedef NS_OPTIONS(NSUInteger, PLCrashReporterSymbolicationStrategy) {
 - (instancetype) initWithSignalHandlerType: (PLCrashReporterSignalHandlerType) signalHandlerType
                      symbolicationStrategy: (PLCrashReporterSymbolicationStrategy) symbolicationStrategy;
 
+- (instancetype) initWithSignalHandlerType: (PLCrashReporterSignalHandlerType) signalHandlerType
+                     symbolicationStrategy: (PLCrashReporterSymbolicationStrategy) symbolicationStrategy
+               shouldRegisterUncaughtExceptionHandler: (BOOL) shouldRegisterUncaughtExceptionHandler;
+
+
 /** The configured signal handler type. */
 @property(nonatomic, readonly) PLCrashReporterSignalHandlerType signalHandlerType;
 
 /** The configured symbolication strategy. */
 @property(nonatomic, readonly) PLCrashReporterSymbolicationStrategy symbolicationStrategy;
 
+/** Should PLCrashReporter regiser an uncaught exception handler? This is entended to be used in Xamarin apps */
+@property(nonatomic, readonly) BOOL shouldRegisterUncaughtExceptionHandler;
 
 @end
 

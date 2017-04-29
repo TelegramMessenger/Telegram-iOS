@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "認証エラー。このAppのデベロッパに連絡してください。";
 "HockeyAuthenticationWrongEmailPassword" = "無効なメールアドレスまたはパスワードが入力されました。入力を確認し、やり直してください。";
 "HockeyAuthenticationAuthSecretMissing" = "HockeySDK “authorization secret” が設定されていません。このAppのデベロッパに連絡してください。";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "必填";

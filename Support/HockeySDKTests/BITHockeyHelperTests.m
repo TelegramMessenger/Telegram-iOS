@@ -1,5 +1,5 @@
 //
-//  HockeySDKPrivateTests.m
+//  BITHockeyHelperTests.m
 //  HockeySDK
 //
 //  Created by Andreas Linde on 25.09.13.
@@ -71,12 +71,6 @@
 - (void)testAppName {
   NSString *resultString = bit_appName(@"Placeholder");
   assertThatBool([resultString isEqualToString:@"Placeholder"], isTrue());
-}
-
-- (void)testUUIDPreiOS6 {
-  NSString *resultString = bit_UUIDPreiOS6();
-  assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
 }
 
 - (void)testUUID {

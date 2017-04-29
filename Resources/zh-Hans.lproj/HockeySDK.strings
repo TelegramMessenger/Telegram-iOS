@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "授权错误。请联系这个 app 开发人员。";
 "HockeyAuthenticationWrongEmailPassword" = "你输入了一个无效的电子邮件或密码，请检查后再试一次。";
 "HockeyAuthenticationAuthSecretMissing" = "尚未设置 HockeySDK  authorization secret。请联系这个 app 的开发人员。";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "必填";

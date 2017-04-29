@@ -35,26 +35,10 @@
 #define __IPHONE_6_1     60100
 #endif
 
-
-/**
- * Header style depending on the iOS version
- */
-typedef NS_ENUM(NSUInteger, BITAppStoreHeaderStyle) {
-  /**
-   * Default is iOS 6 style
-   */
-  BITAppStoreHeaderStyleDefault = 0,
-  /**
-   * Draw header in the iOS 7 style
-   */
-  BITAppStoreHeaderStyleOS7 = 1
-};
-
 @interface BITAppStoreHeader : UIView
 
 @property (nonatomic, copy) NSString *headerText;
 @property (nonatomic, copy) NSString *subHeaderText;
 @property (nonatomic, strong) UIImage *iconImage;
-@property (nonatomic, assign) BITAppStoreHeaderStyle style;
 
 @end

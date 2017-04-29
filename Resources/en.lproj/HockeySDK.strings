@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of this app.";
 "HockeyAuthenticationWrongEmailPassword" = "You have entered an invalid email or password. Please check your input and try again.";
 "HockeyAuthenticationAuthSecretMissing" = "The HockeySDK authorization secret has not been set. Please contact the developer of this app.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Required";

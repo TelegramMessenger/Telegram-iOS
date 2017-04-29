@@ -85,6 +85,8 @@
 
 - (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment hockeyAppClient:(BITHockeyAppClient *)hockeyAppClient NS_DESIGNATED_INITIALIZER;
 
+- (void)startManagerInXamarinEnvironment;
+
 - (void)cleanCrashReports;
 
 - (NSString *)userIDForCrashReport;

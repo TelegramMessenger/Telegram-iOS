@@ -57,13 +57,7 @@
 - (instancetype)init {
   if ((self = [super init])) {
     _serverURL = BITHOCKEYSDK_URL;
-
-    if ([self isPreiOS7Environment]) {
-      _barStyle = UIBarStyleBlackOpaque;
-      self.navigationBarTintColor = BIT_RGBCOLOR(25, 25, 25);
-    } else {
-      _barStyle = UIBarStyleDefault;
-    }
+    _barStyle = UIBarStyleDefault;
     _modalPresentationStyle = UIModalPresentationFormSheet;
     
     NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
@@ -92,10 +86,6 @@
 
 - (NSString *)encodedAppIdentifier {
   return bit_encodeAppIdentifier(_appIdentifier);
-}
-
-- (BOOL)isPreiOS7Environment {
-  return bit_isPreiOS7Environment();
 }
 
 - (NSString *)getDevicePlatform {
@@ -184,13 +174,11 @@
     navController.navigationBar.tintColor = self.navigationBarTintColor;
   } else {
     // in case of iOS 7 we overwrite the tint color on the navigation bar
-    if (![self isPreiOS7Environment]) {
-      if ([UIWindow instancesRespondToSelector:NSSelectorFromString(@"tintColor")]) {
-        [navController.navigationBar setTintColor:BIT_RGBCOLOR(0, 122, 255)];
-      }
+    if ([UIWindow instancesRespondToSelector:NSSelectorFromString(@"tintColor")]) {
+      [navController.navigationBar setTintColor:BIT_RGBCOLOR(0, 122, 255)];
     }
   }
-  navController.modalPresentationStyle = self.modalPresentationStyle;
+  navController.modalPresentationStyle = modalPresentationStyle;
   
   return navController;
 }

@@ -126,7 +126,7 @@ static NSUInteger const BITDefaultFileCount = 50;
 /**
  * Deletes a file at the given path.
  *
- * @param the path to look for a file and delete it.
+ * @param path The path to look for a file and delete it.
  */
 - (void)deleteFileAtPath:(NSString *)path {
   __weak typeof(self) weakSelf = self;

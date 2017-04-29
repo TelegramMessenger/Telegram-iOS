@@ -82,7 +82,6 @@ FOUNDATION_EXPORT NSString *const BITChannelBlockedNotification;
 /**
  *  A C function that serializes a given dictionary to JSON and appends it to a char string
  *
- *  @param dictionary A dictionary which will be serialized to JSON and then appended to the string.
  *  @param string The C string which the dictionary's JSON representation will be appended to.
  */
 void bit_appendStringToSafeJsonStream(NSString *string, char *__nonnull*__nonnull jsonStream);
@@ -90,7 +89,7 @@ void bit_appendStringToSafeJsonStream(NSString *string, char *__nonnull*__nonnul
 /**
  *  Reset BITSafeJsonEventsString so we can start appending JSON dictionaries.
  *
- *  @param string The string that will be reset.
+ *  @param jsonStream The string that will be reset.
  */
 void bit_resetSafeJsonStream(char *__nonnull*__nonnull jsonStream);
 
