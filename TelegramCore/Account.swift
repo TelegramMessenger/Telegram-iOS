@@ -387,6 +387,7 @@ public class Account {
     private let serviceQueue = Queue()
     
     public private(set) var stateManager: AccountStateManager!
+    public private(set) var callSessionManager: CallSessionManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
     private var peerInputActivityManager: PeerInputActivityManager!
@@ -436,6 +437,9 @@ public class Account {
         
         self.peerInputActivityManager = PeerInputActivityManager()
         self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
+        self.callSessionManager = CallSessionManager(postbox: postbox, network: network, addUpdates: { [weak self] updates in
+            self?.stateManager.addUpdates(updates)
+        })
         self.localInputActivityManager = PeerInputActivityManager()
         self.viewTracker = AccountViewTracker(account: self)
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)

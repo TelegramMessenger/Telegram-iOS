@@ -995,6 +995,8 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, timestamp: date)
                 }
                 updatedState.addUpdateChatInputState(peerId: peer.peerId, state: inputState)
+            case let .updatePhoneCall(phoneCall):
+                updatedState.addUpdateCall(phoneCall)
             default:
                     break
         }
@@ -1369,7 +1371,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1416,6 +1418,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     var updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:]
     var updatedSecretChatTypingActivities = Set<PeerId>()
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
+    var updatedCalls: [Api.PhoneCall] = []
     
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
     
@@ -1569,6 +1572,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 modifier.updatePeerChatInterfaceState(peerId, update: { current in
                     return auxiliaryMethods.updatePeerChatInputState(current, inputState)
                 })
+            case let .UpdateCall(call):
+                updatedCalls.append(call)
         }
     }
     
@@ -1742,5 +1747,5 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
         }
     }
     
-    return AccountReplayedFinalState(state: finalState, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages)
+    return AccountReplayedFinalState(state: finalState, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls)
 }

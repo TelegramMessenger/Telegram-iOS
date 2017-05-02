@@ -48,6 +48,7 @@ public struct Namespaces {
         public static let CloudRecentInlineBots: Int32 = 3
         public static let CloudFeaturedStickerPacks: Int32 = 4
         public static let CloudArchivedStickerPacks: Int32 = 5
+        public static let CloudWallpapers: Int32 = 6
     }
     
     struct CachedItemCollection {
