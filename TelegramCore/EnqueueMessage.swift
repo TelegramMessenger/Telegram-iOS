@@ -229,17 +229,22 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         
                         attributes.append(ForwardSourceInfoAttribute(messageId: sourceMessage.id))
                         attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
-                        let forwardInfo: StoreMessageForwardInfo
+                        let forwardInfo: StoreMessageForwardInfo?
                         if let sourceForwardInfo = sourceMessage.forwardInfo {
                             forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date)
                         } else {
-                            var sourceId:PeerId? = nil
-                            var sourceMessageId:MessageId? = nil
-                            if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
-                                sourceId = peer.id
-                                sourceMessageId = sourceMessage.id
+                            if sourceMessage.id.peerId != account.peerId {
+                                var sourceId:PeerId? = nil
+                                var sourceMessageId:MessageId? = nil
+                                if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
+                                    sourceId = peer.id
+                                    sourceMessageId = sourceMessage.id
+                                }
+                                forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp)
+                            } else {
+                                forwardInfo = nil
                             }
-                            forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp)
+
                         }
                         
                         var entitiesAttribute: TextEntitiesMessageAttribute?
