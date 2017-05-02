@@ -69,6 +69,7 @@ enum AccountStateMutationOperation {
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
     case UpdateChatInputState(PeerId, SynchronizeableChatInputState?)
+    case UpdateCall(Api.PhoneCall)
 }
 
 struct AccountMutableState {
@@ -253,9 +254,13 @@ struct AccountMutableState {
         self.addOperation(.UpdateChatInputState(peerId, state))
     }
     
+    mutating func addUpdateCall(_ call: Api.PhoneCall) {
+        self.addOperation(.UpdateCall(call))
+    }
+    
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {
@@ -318,27 +323,31 @@ struct AccountReplayedFinalState {
     let addedSecretMessageIds: [MessageId]
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
+    let updatedCalls: [Api.PhoneCall]
 }
 
 struct AccountFinalStateEvents {
     let addedIncomingMessageIds: [MessageId]
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
+    let updatedCalls: [Api.PhoneCall]
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty
+        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty
     }
     
     init() {
         self.addedIncomingMessageIds = []
         self.updatedTypingActivities = [:]
         self.updatedWebpages = [:]
+        self.updatedCalls = []
     }
     
-    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage]) {
+    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall]) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = updatedTypingActivities
         self.updatedWebpages = updatedWebpages
+        self.updatedCalls = updatedCalls
     }
     
     init(state: AccountReplayedFinalState) {
@@ -361,9 +370,10 @@ struct AccountFinalStateEvents {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = state.updatedTypingActivities
         self.updatedWebpages = state.updatedWebpages
+        self.updatedCalls = state.updatedCalls
     }
     
     func union(with other: AccountFinalStateEvents) -> AccountFinalStateEvents {
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages)
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls)
     }
 }

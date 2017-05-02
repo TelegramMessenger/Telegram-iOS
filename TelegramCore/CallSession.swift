@@ -1,14 +1,9 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import SwiftSignalKitMac
 #else
     import Postbox
+    import SwiftSignalKit
 #endif
-
-enum CallSessionState {
-    case requested(a: MemoryBuffer, config: SecretChatEncryptionConfig)
-    case accepting(gAHash: MemoryBuffer, b: MemoryBuffer, config: SecretChatEncryptionConfig)
-    case confirming(a: MemoryBuffer, gB: MemoryBuffer, config: SecretChatEncryptionConfig)
-    case active
-}
 

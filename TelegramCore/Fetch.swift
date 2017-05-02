@@ -36,7 +36,7 @@ func fetchResource(account: Account, resource: MediaResource, range: Range<Int>,
     } else if let secretFileResource = resource as? SecretFileMediaResource {
         return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchSecretFileResource(account: account, resource: secretFileResource, range: range, tag: tag))
     } else if let cloudResource = resource as? TelegramCloudMediaResource {
-        return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, size: resource.size, range: range, tag: tag))
+        return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, size: resource.size == 0 ? nil : resource.size, range: range, tag: tag))
     } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
         if false {
             //return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchLocalFileResource(path: localFileResource.localFilePath) |> delay(10.0, queue: Queue.concurrentDefaultQueue()))

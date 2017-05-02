@@ -430,6 +430,11 @@ public final class AccountStateManager {
                             if !events.updatedWebpages.isEmpty {
                                 strongSelf.notifyUpdatedWebpages(events.updatedWebpages)
                             }
+                            if !events.updatedCalls.isEmpty {
+                                for call in events.updatedCalls {
+                                    strongSelf.account.callSessionManager.updateSession(call)
+                                }
+                            }
                             strongSelf.operations.removeFirst()
                             var pollCount = 0
                             for i in 0 ..< strongSelf.operations.count {
