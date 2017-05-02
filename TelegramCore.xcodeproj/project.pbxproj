@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C205FEA81EB3B75900455808 /* ExportMessageLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C205FEA71EB3B75900455808 /* ExportMessageLink.swift */; };
+		C205FEA91EB3B75900455808 /* ExportMessageLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C205FEA71EB3B75900455808 /* ExportMessageLink.swift */; };
 		C22EE61B1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */; };
 		C22EE61C1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */; };
 		C2366C831E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */; };
@@ -517,6 +519,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C205FEA71EB3B75900455808 /* ExportMessageLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExportMessageLink.swift; sourceTree = "<group>"; };
 		C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ToggleChannelSignatures.swift; sourceTree = "<group>"; };
 		C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupReturnAndLeft.swift; sourceTree = "<group>"; };
 		C2366C851E4F403C0097CCFF /* AddressNames.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddressNames.swift; sourceTree = "<group>"; };
@@ -1319,6 +1322,7 @@
 				D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */,
 				D0F3A8A71E82CD7D00B4C64C /* UpdatePeerChatInterfaceState.swift */,
 				C23BC3861E9BE3CA00D79F92 /* ImportContact.swift */,
+				C205FEA71EB3B75900455808 /* ExportMessageLink.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -1557,6 +1561,7 @@
 				D0E23DDF1E8082A400B9B6D2 /* ArchivedStickerPacks.swift in Sources */,
 				D0BC386E1E3FDAB70044D6FE /* CreateGroup.swift in Sources */,
 				D0FA8BB31E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
+				C205FEA81EB3B75900455808 /* ExportMessageLink.swift in Sources */,
 				D0E305AA1E5BA02D00D7A3A2 /* ChannelBlacklist.swift in Sources */,
 				C22EE61B1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */,
 				D073CE601DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
@@ -1822,6 +1827,7 @@
 				D0F53BEA1E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */,
 				D001F3EE1E128A1C007A8C60 /* AccountStateManager.swift in Sources */,
 				D0B844351DAB91E0005F29E1 /* NBPhoneNumberDesc.m in Sources */,
+				C205FEA91EB3B75900455808 /* ExportMessageLink.swift in Sources */,
 				D0448CA31E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,
 				D0B8442F1DAB91E0005F29E1 /* NBMetadataHelper.m in Sources */,
 				D0B8444C1DAB91FD005F29E1 /* UpdateCachedPeerData.swift in Sources */,
