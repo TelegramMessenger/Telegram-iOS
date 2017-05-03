@@ -147,7 +147,7 @@ private final class CallSessionManagerContext {
         }
     }
     
-    func callState(internalId: CallSessionInternalId) -> Signal<CallSessionState, NoError> {
+    public func callState(internalId: CallSessionInternalId) -> Signal<CallSessionState, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -211,9 +211,9 @@ private final class CallSessionManagerContext {
             self.contextUpdated(internalId: internalId)
             self.ringingStatesUpdated()
             
-            self.queue.after(3.0, { [weak self] in
-                self?.accept(internalId: internalId)
-            })
+//            self.queue.after(3.0, { [weak self] in
+//                self?.accept(internalId: internalId)
+//            })
         }
     }
     
@@ -534,7 +534,7 @@ public final class CallSessionManager {
         }
     }
     
-    func accept(internalId: CallSessionInternalId) {
+    public func accept(internalId: CallSessionInternalId) {
         self.withContext { context in
             context.accept(internalId: internalId)
         }
