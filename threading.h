@@ -36,6 +36,41 @@ typedef pthread_cond_t tgvoip_lock_t;
 #define wait_lock(lock, mutex) pthread_cond_wait(&lock, &mutex)
 #define notify_lock(lock) pthread_cond_broadcast(&lock)
 
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+namespace tgvoip{
+class Semaphore{
+public:
+	Semaphore(unsigned int maxCount, unsigned int initValue){
+		sem = dispatch_semaphore_create(initValue);
+	}
+	
+	~Semaphore(){
+	}
+	
+	void Acquire(){
+		dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+	}
+	
+	void Release(){
+		dispatch_semaphore_signal(sem);
+	}
+	
+	void Acquire(int count){
+		for(int i=0;i<count;i++)
+			Acquire();
+	}
+	
+	void Release(int count){
+		for(int i=0;i<count;i++)
+			Release();
+	}
+	
+private:
+	dispatch_semaphore_t sem;
+};
+}
+#else
 namespace tgvoip{
 class Semaphore{
 public:
@@ -69,6 +104,7 @@ private:
 	sem_t sem;
 };
 }
+#endif
 
 #elif defined(_WIN32)
 
