@@ -147,7 +147,7 @@ private final class CallSessionManagerContext {
         }
     }
     
-    public func callState(internalId: CallSessionInternalId) -> Signal<CallSessionState, NoError> {
+    func callState(internalId: CallSessionInternalId) -> Signal<CallSessionState, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
