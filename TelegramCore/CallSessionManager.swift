@@ -57,6 +57,11 @@ public enum CallSessionState {
     }
 }
 
+public struct CallSession {
+    public let isOutgoing: Bool
+    public let state: CallSessionState
+}
+
 public struct CallSessionConnection {
     public let id: Int64
     public let ip: String
@@ -83,8 +88,9 @@ private func parseConnectionSet(primary: Api.PhoneConnection, alternative: [Api.
 
 private final class CallSessionContext {
     let peerId: PeerId
+    let isOutgoing: Bool
     var state: CallSessionInternalState
-    let subscribers = Bag<(CallSessionState) -> Void>()
+    let subscribers = Bag<(CallSession) -> Void>()
     
     var isEmpty: Bool {
         if case .terminated = self.state {
@@ -94,8 +100,9 @@ private final class CallSessionContext {
         }
     }
     
-    init(peerId: PeerId, state: CallSessionInternalState) {
+    init(peerId: PeerId, isOutgoing: Bool, state: CallSessionInternalState) {
         self.peerId = peerId
+        self.isOutgoing = isOutgoing
         self.state = state
     }
 }
@@ -147,7 +154,7 @@ private final class CallSessionManagerContext {
         }
     }
     
-    func callState(internalId: CallSessionInternalId) -> Signal<CallSessionState, NoError> {
+    func callState(internalId: CallSessionInternalId) -> Signal<CallSession, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -156,6 +163,7 @@ private final class CallSessionManagerContext {
                     let index = context.subscribers.add { next in
                         subscriber.putNext(next)
                     }
+                    subscriber.putNext(CallSession(isOutgoing: context.isOutgoing, state: CallSessionState(context)))
                     disposable.set(ActionDisposable {
                         queue.async {
                             if let strongSelf = self, let context = strongSelf.contexts[internalId] {
@@ -186,7 +194,7 @@ private final class CallSessionManagerContext {
     
     private func contextUpdated(internalId: CallSessionInternalId) {
         if let context = self.contexts[internalId] {
-            let session = CallSessionState(context)
+            let session = CallSession(isOutgoing: context.isOutgoing, state: CallSessionState(context))
             for subscriber in context.subscribers.copyItems() {
                 subscriber(session)
             }
@@ -206,7 +214,7 @@ private final class CallSessionManagerContext {
         
         if randomStatus == 0 {
             let internalId = self.nextId
-            self.contexts[internalId] = CallSessionContext(peerId: peerId, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b))
+            self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: false, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b))
             self.contextIdByStableId[stableId] = internalId
             self.contextUpdated(internalId: internalId)
             self.ringingStatesUpdated()
@@ -459,7 +467,7 @@ private final class CallSessionManagerContext {
             self.nextId += 1
             
             let internalId = self.nextId
-            self.contexts[internalId] = CallSessionContext(peerId: peerId, state: .requesting(a: a, disposable: (requestCallSession(postbox: self.postbox, network: self.network, peerId: peerId, a: a) |> deliverOn(queue)).start(next: { [weak self] result in
+            self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: true, state: .requesting(a: a, disposable: (requestCallSession(postbox: self.postbox, network: self.network, peerId: peerId, a: a) |> deliverOn(queue)).start(next: { [weak self] result in
                 if let strongSelf = self, let context = strongSelf.contexts[internalId] {
                     if case .requesting = context.state {
                         switch result {
@@ -545,12 +553,10 @@ public final class CallSessionManager {
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
             
-            queue.async {
-                self?.withContext { context in
-                    if let internalId = context.request(peerId: peerId) {
-                        subscriber.putNext(internalId)
-                        subscriber.putCompletion()
-                    }
+            self?.withContext { context in
+                if let internalId = context.request(peerId: peerId) {
+                    subscriber.putNext(internalId)
+                    subscriber.putCompletion()
                 }
             }
             
@@ -570,7 +576,7 @@ public final class CallSessionManager {
         }
     }
     
-    public func callState(internalId: CallSessionInternalId) -> Signal<CallSessionState, NoError> {
+    public func callState(internalId: CallSessionInternalId) -> Signal<CallSession, NoError> {
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
             self?.withContext { context in
