@@ -64,7 +64,7 @@ void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
 #elif defined(_WIN32)
 	AudioInputWave::EnumerateDevices(devs);
 #elif defined(__linux__) && !defined(__ANDROID__)
-	return new AudioInputALSA();
+	
 #endif
 }
 

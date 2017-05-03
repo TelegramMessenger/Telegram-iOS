@@ -46,6 +46,9 @@ public:
 	}
 	
 	~Semaphore(){
+#if ! __has_feature(objc_arc)
+        dispatch_release(sem);
+#endif
 	}
 	
 	void Acquire(){
