@@ -33,7 +33,7 @@ public enum CallSessionState {
     case ringing
     case accepting
     case requesting(ringing: Bool)
-    case active(SecretChatKeyFingerprint, CallSessionConnectionSet)
+    case active(Data, CallSessionConnectionSet)
     case dropping
     case terminated
     
@@ -47,8 +47,8 @@ public enum CallSessionState {
                 self = .requesting(ringing: false)
             case let .requested(_, _, _, _, _, remoteConfirmationTimestamp):
                 self = .requesting(ringing: remoteConfirmationTimestamp != nil)
-            case let .active(_, _, _, _, _, keyFingerprint, connections):
-                self = .active(keyFingerprint, connections)
+            case let .active(_, _, _, key, _, _, connections):
+                self = .active(key, connections)
             case .dropping:
                 self = .dropping
             case .terminated:
