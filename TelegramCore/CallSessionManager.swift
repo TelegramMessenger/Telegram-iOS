@@ -15,8 +15,8 @@ enum CallSessionInternalState {
     case awaitingConfirmation(id: Int64, accessHash: Int64, gAHash: Data, b: Data, config: SecretChatEncryptionConfig)
     case requesting(a: Data, disposable: Disposable)
     case requested(id: Int64, accessHash: Int64, a: Data, gA: Data, config: SecretChatEncryptionConfig, remoteConfirmationTimestamp: Int32?)
-    case confirming(id: Int64, accessHash: Int64, key: Data, keyId: Int64, keyFingerprint: SecretChatKeyFingerprint, disposable: Disposable)
-    case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyFingerprint: SecretChatKeyFingerprint, connections: CallSessionConnectionSet)
+    case confirming(id: Int64, accessHash: Int64, key: Data, keyId: Int64, keyVisualHash: Data, disposable: Disposable)
+    case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyVisualHash: Data, connections: CallSessionConnectionSet)
     case dropping(Disposable)
     case terminated
 }
@@ -33,7 +33,7 @@ public enum CallSessionState {
     case ringing
     case accepting
     case requesting(ringing: Bool)
-    case active(Data, CallSessionConnectionSet)
+    case active(key: Data, keyVisualHash: Data, connections: CallSessionConnectionSet)
     case dropping
     case terminated
     
@@ -47,8 +47,8 @@ public enum CallSessionState {
                 self = .requesting(ringing: false)
             case let .requested(_, _, _, _, _, remoteConfirmationTimestamp):
                 self = .requesting(ringing: remoteConfirmationTimestamp != nil)
-            case let .active(_, _, _, key, _, _, connections):
-                self = .active(key, connections)
+            case let .active(_, _, _, key, _, keyVisualHash, connections):
+                self = .active(key: key, keyVisualHash: keyVisualHash, connections: connections)
             case .dropping:
                 self = .dropping
             case .terminated:
@@ -301,8 +301,8 @@ private final class CallSessionManagerContext {
                                                 context.state = .awaitingConfirmation(id: id, accessHash: accessHash, gAHash: gAHash, b: b, config: config)
                                                 strongSelf.contextUpdated(internalId: internalId)
                                             case let .call(config, gA, timestamp, connections):
-                                                if let (key, keyId, keyFingerprint) = strongSelf.makeSessionEncryptionKey(config: config, gAHash: gAHash, b: b, gA: gA) {
-                                                    context.state = .active(id: id, accessHash: accessHash, beginTimestamp: timestamp, key: key, keyId: keyId, keyFingerprint: keyFingerprint, connections: connections)
+                                                if let (key, keyId, keyVisualHash) = strongSelf.makeSessionEncryptionKey(config: config, gAHash: gAHash, b: b, gA: gA) {
+                                                    context.state = .active(id: id, accessHash: accessHash, beginTimestamp: timestamp, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: connections)
                                                     strongSelf.contextUpdated(internalId: internalId)
                                                 } else {
                                                     strongSelf.drop(internalId: internalId)
@@ -346,9 +346,9 @@ private final class CallSessionManagerContext {
                                 memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
                             }
                             
-                            let keyFingerprint = SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key)))
+                            let keyVisualHash = MTSha256(key + gA)!
                         
-                            context.state = .confirming(id: id, accessHash: accessHash, key: key, keyId: keyId, keyFingerprint: keyFingerprint, disposable: (confirmCallSession(network: self.network, stableId: id, accessHash: accessHash, gA: gA, keyFingerprint: keyId) |> deliverOnMainQueue).start(next: { [weak self] updatedCall in
+                            context.state = .confirming(id: id, accessHash: accessHash, key: key, keyId: keyId, keyVisualHash: keyVisualHash, disposable: (confirmCallSession(network: self.network, stableId: id, accessHash: accessHash, gA: gA, keyFingerprint: keyId) |> deliverOnMainQueue).start(next: { [weak self] updatedCall in
                                 if let strongSelf = self, let context = strongSelf.contexts[internalId], case .confirming = context.state {
                                     if let updatedCall = updatedCall {
                                         strongSelf.updateSession(updatedCall)
@@ -399,9 +399,9 @@ private final class CallSessionManagerContext {
                         case .accepting, .active, .dropping, .requesting, .ringing, .terminated, .requested:
                             break
                         case let .awaitingConfirmation(_, accessHash, gAHash, b, config):
-                            if let (key, calculatedKeyId, calculatedKeyFingerprint) = self.makeSessionEncryptionKey(config: config, gAHash: gAHash, b: b, gA: gAOrB.makeData()) {
+                            if let (key, calculatedKeyId, keyVisualHash) = self.makeSessionEncryptionKey(config: config, gAHash: gAHash, b: b, gA: gAOrB.makeData()) {
                                 if keyFingerprint == calculatedKeyId {
-                                    context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyFingerprint: calculatedKeyFingerprint, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections))
+                                    context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections))
                                     self.contextUpdated(internalId: internalId)
                                 } else {
                                     self.drop(internalId: internalId)
@@ -409,8 +409,8 @@ private final class CallSessionManagerContext {
                             } else {
                                 self.drop(internalId: internalId)
                             }
-                        case let .confirming(id, accessHash, key, keyId, keyFingerprint, _):
-                            context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyFingerprint: keyFingerprint, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections))
+                        case let .confirming(id, accessHash, key, keyId, keyVisualHash, _):
+                            context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections))
                             self.contextUpdated(internalId: internalId)
                     }
                 }
@@ -434,7 +434,7 @@ private final class CallSessionManagerContext {
         }
     }
     
-    private func makeSessionEncryptionKey(config: SecretChatEncryptionConfig, gAHash: Data, b: Data, gA: Data) -> (key: Data, keyId: Int64, keyFingerprint: SecretChatKeyFingerprint)? {
+    private func makeSessionEncryptionKey(config: SecretChatEncryptionConfig, gAHash: Data, b: Data, gA: Data) -> (key: Data, keyId: Int64, keyVisualHash: Data)? {
         var key = MTExp(gA, b, config.p.makeData())!
         
         if key.count > 256 {
@@ -456,7 +456,9 @@ private final class CallSessionManagerContext {
             return nil
         }
         
-        return (key, keyId, SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key))))
+        let keyVisualHash = MTSha256(key + gA)!
+        
+        return (key, keyId, keyVisualHash)
     }
     
     func request(peerId: PeerId) -> CallSessionInternalId? {
