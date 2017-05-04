@@ -549,7 +549,6 @@ public final class CallSessionManager {
     }
     
     public func request(peerId: PeerId) -> Signal<CallSessionInternalId, CallRequestError> {
-        let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
             
