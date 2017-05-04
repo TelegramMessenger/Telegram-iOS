@@ -15,7 +15,7 @@
 
 using namespace tgvoip;
 
-NetworkSocketPosix::NetworkSocketPosix() : lastRecvdV4(0){
+NetworkSocketPosix::NetworkSocketPosix() : lastRecvdV4(0), lastRecvdV6("::0"){
 	needUpdateNat64Prefix=true;
 	nat64Present=false;
 	switchToV6at=0;
@@ -137,6 +137,9 @@ void NetworkSocketPosix::Receive(NetworkPacket *packet){
 		in_addr v4addr=*((in_addr *) &srcAddr.sin6_addr.s6_addr[12]);
 		lastRecvdV4=IPv4Address(v4addr.s_addr);
 		packet->address=&lastRecvdV4;
+	}else{
+		lastRecvdV6=IPv6Address(srcAddr.sin6_addr.s6_addr);
+		packet->address=&lastRecvdV6;
 	}
 }
 

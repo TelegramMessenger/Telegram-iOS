@@ -17,6 +17,7 @@
 #endif
 #elif defined(_WIN32)
 #include "../os/windows/AudioOutputWave.h"
+#include "../os/windows/AudioOutputWASAPI.h"
 #elif defined(__linux__)
 #include "../os/linux/AudioOutputALSA.h"
 #else
@@ -42,9 +43,13 @@ AudioOutput *AudioOutput::Create(std::string deviceID){
 	return new AudioOutputAudioUnit();
 #endif
 #elif defined(_WIN32)
-	return new AudioOutputWave(deviceID);
+#ifdef TGVOIP_WINXP_COMPAT
+	if(LOBYTE(LOWORD(GetVersion()))<6)
+		return new AudioOutputWave(deviceID);
+#endif
+	return new AudioOutputWASAPI(deviceID);
 #elif defined(__linux__)
-	return new AudioOutputALSA();
+	return new AudioOutputALSA(deviceID);
 #endif
 }
 
@@ -77,9 +82,15 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 #if defined(__APPLE__) && TARGET_OS_OSX
 	AudioOutputAudioUnit::EnumerateDevices(devs);
 #elif defined(_WIN32)
-	AudioOutputWave::EnumerateDevices(devs);
+#ifdef TGVOIP_WINXP_COMPAT
+	if(LOBYTE(LOWORD(GetVersion()))<6){
+		AudioOutputWave::EnumerateDevices(devs);
+		return;
+	}
+#endif
+	AudioOutputWASAPI::EnumerateDevices(devs);
 #elif defined(__linux__) && !defined(__ANDROID__)
-	//AudioOutputALSA::EnumerateDevices(devs);
+	AudioOutputALSA::EnumerateDevices(devs);
 #endif
 }
 

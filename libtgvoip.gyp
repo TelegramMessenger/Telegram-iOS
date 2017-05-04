@@ -229,6 +229,7 @@
               'defines': [
                 'NOMINMAX',
                 '_USING_V110_SDK71_',
+                'TGVOIP_WINXP_COMPAT'
               ],
               'sources': [
                 '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.cpp',
@@ -237,6 +238,10 @@
                 '<(tgvoip_src_loc)/os/windows/AudioInputWave.h',
                 '<(tgvoip_src_loc)/os/windows/AudioOutputWave.cpp',
                 '<(tgvoip_src_loc)/os/windows/AudioOutputWave.h',
+                '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.cpp',
+                '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.h',
+                '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.cpp',
+                '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.h',
               ],
               'libraries': [
                 'winmm',

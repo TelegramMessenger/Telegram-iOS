@@ -16,12 +16,14 @@ namespace audio{
 
 class AudioOutputALSA : public AudioOutput{
 public:
-	AudioOutputALSA();
+	AudioOutputALSA(std::string devID);
 	virtual ~AudioOutputALSA();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual bool IsPlaying();
+	virtual void SetCurrentDevice(std::string devID);
+	static void EnumerateDevices(std::vector<AudioOutputDevice>& devs);
 
 private:
 	static void* StartThread(void* arg);

@@ -1,5 +1,7 @@
 //
-// Created by Grishka on 10.04.17.
+// libtgvoip is free and unencumbered public domain software.
+// For more information, see http://unlicense.org or the UNLICENSE file
+// you should have received with this source code distribution.
 //
 
 #include "NetworkSocketWinsock.h"
@@ -12,14 +14,18 @@
 
 using namespace tgvoip;
 
-NetworkSocketWinsock::NetworkSocketWinsock() : lastRecvdV4(0){
+NetworkSocketWinsock::NetworkSocketWinsock() : lastRecvdV4(0), lastRecvdV6("::0"){
 	needUpdateNat64Prefix=true;
 	nat64Present=false;
 	switchToV6at=0;
 	isV4Available=false;
 
+#ifdef TGVOIP_WINXP_COMPAT
 	DWORD version=GetVersion();
 	isAtLeastVista=LOBYTE(LOWORD(version))>=6; // Vista is 6.0, XP is 5.1 and 5.2
+#else
+	isAtLeastVista=true;
+#endif
 
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -160,6 +166,9 @@ void NetworkSocketWinsock::Receive(NetworkPacket *packet){
 			in_addr v4addr=*((in_addr *)&srcAddr.sin6_addr.s6_addr[12]);
 			lastRecvdV4=IPv4Address(v4addr.s_addr);
 			packet->address=&lastRecvdV4;
+		}else{
+			lastRecvdV6=IPv6Address(srcAddr.sin6_addr.s6_addr);
+			packet->address=&lastRecvdV6;
 		}
 	}
 }

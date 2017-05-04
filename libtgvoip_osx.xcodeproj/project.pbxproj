@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		690725BE1EBBD5DE005D860B /* NetworkSocketPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 690725BC1EBBD5DE005D860B /* NetworkSocketPosix.cpp */; };
+		690725BF1EBBD5DE005D860B /* NetworkSocketPosix.h in Headers */ = {isa = PBXBuildFile; fileRef = 690725BD1EBBD5DE005D860B /* NetworkSocketPosix.h */; };
+		690725C21EBBD5F2005D860B /* NetworkSocket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 690725C01EBBD5F2005D860B /* NetworkSocket.cpp */; };
+		690725C31EBBD5F2005D860B /* NetworkSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 690725C11EBBD5F2005D860B /* NetworkSocket.h */; };
 		6915307B1E6B5BAB004F643F /* logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6915307A1E6B5BAB004F643F /* logging.cpp */; };
 		692AB8CB1E6759DD00706ACC /* AudioInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8881E6759DD00706ACC /* AudioInput.cpp */; };
 		692AB8CC1E6759DD00706ACC /* AudioInput.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8891E6759DD00706ACC /* AudioInput.h */; };
@@ -225,6 +229,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		690725BC1EBBD5DE005D860B /* NetworkSocketPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkSocketPosix.cpp; sourceTree = "<group>"; };
+		690725BD1EBBD5DE005D860B /* NetworkSocketPosix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSocketPosix.h; sourceTree = "<group>"; };
+		690725C01EBBD5F2005D860B /* NetworkSocket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkSocket.cpp; sourceTree = "<group>"; };
+		690725C11EBBD5F2005D860B /* NetworkSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSocket.h; sourceTree = "<group>"; };
 		6915307A1E6B5BAB004F643F /* logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cpp; sourceTree = "<group>"; };
 		692AB8881E6759DD00706ACC /* AudioInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioInput.cpp; sourceTree = "<group>"; };
 		692AB8891E6759DD00706ACC /* AudioInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioInput.h; sourceTree = "<group>"; };
@@ -413,6 +421,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		690725BB1EBBD5DE005D860B /* posix */ = {
+			isa = PBXGroup;
+			children = (
+				690725BC1EBBD5DE005D860B /* NetworkSocketPosix.cpp */,
+				690725BD1EBBD5DE005D860B /* NetworkSocketPosix.h */,
+			);
+			path = posix;
+			sourceTree = "<group>";
+		};
 		692AB8861E6759BF00706ACC /* libtgvoip */ = {
 			isa = PBXGroup;
 			children = (
@@ -436,6 +453,8 @@
 				692AB8AA1E6759DD00706ACC /* logging.h */,
 				692AB8AB1E6759DD00706ACC /* MediaStreamItf.cpp */,
 				692AB8AC1E6759DD00706ACC /* MediaStreamItf.h */,
+				690725C01EBBD5F2005D860B /* NetworkSocket.cpp */,
+				690725C11EBBD5F2005D860B /* NetworkSocket.h */,
 				692AB8AD1E6759DD00706ACC /* OpusDecoder.cpp */,
 				692AB8AE1E6759DD00706ACC /* OpusDecoder.h */,
 				692AB8AF1E6759DD00706ACC /* OpusEncoder.cpp */,
@@ -465,6 +484,7 @@
 		692AB8B11E6759DD00706ACC /* os */ = {
 			isa = PBXGroup;
 			children = (
+				690725BB1EBBD5DE005D860B /* posix */,
 				692AB8BD1E6759DD00706ACC /* darwin */,
 			);
 			path = os;
@@ -863,6 +883,7 @@
 				69A6DF291E96149300000E69 /* splitting_filter.h in Headers */,
 				692AB8DB1E6759DD00706ACC /* EchoCanceller.h in Headers */,
 				69A6DF391E96149300000E69 /* asm_defines.h in Headers */,
+				690725C31EBBD5F2005D860B /* NetworkSocket.h in Headers */,
 				69A6DF1D1E96149300000E69 /* noise_suppression.h in Headers */,
 				69A6DEBF1E96149300000E69 /* safe_compare.h in Headers */,
 				69A6DF111E96149300000E69 /* aecm_defines.h in Headers */,
@@ -876,6 +897,7 @@
 				69A6DEC41E96149300000E69 /* stringutils.h in Headers */,
 				69A6DF1F1E96149300000E69 /* noise_suppression_x.h in Headers */,
 				692AB8E71E6759DD00706ACC /* JitterBuffer.h in Headers */,
+				690725BF1EBBD5DE005D860B /* NetworkSocketPosix.h in Headers */,
 				69A6DF131E96149300000E69 /* echo_control_mobile.h in Headers */,
 				69A6DEE41E96149300000E69 /* signal_processing_library.h in Headers */,
 				69A6DF1A1E96149300000E69 /* apm_data_dumper.h in Headers */,
@@ -1015,6 +1037,7 @@
 				69A6DEF41E96149300000E69 /* resample_fractional.c in Sources */,
 				6915307B1E6B5BAB004F643F /* logging.cpp in Sources */,
 				69A6DEE11E96149300000E69 /* get_scaling_square.c in Sources */,
+				690725C21EBBD5F2005D860B /* NetworkSocket.cpp in Sources */,
 				69A6DEC71E96149300000E69 /* channel_buffer.cc in Sources */,
 				69A6DF191E96149300000E69 /* apm_data_dumper.cc in Sources */,
 				69A6DF221E96149300000E69 /* nsx_core.c in Sources */,
@@ -1074,6 +1097,7 @@
 				69A6DEF01E96149300000E69 /* resample_48khz.c in Sources */,
 				69A6DECF1E96149300000E69 /* auto_correlation.c in Sources */,
 				69A6DF121E96149300000E69 /* echo_control_mobile.cc in Sources */,
+				690725BE1EBBD5DE005D860B /* NetworkSocketPosix.cpp in Sources */,
 				69A6DF1C1E96149300000E69 /* noise_suppression.c in Sources */,
 				69A6DED41E96149300000E69 /* copy_set_operations.c in Sources */,
 				69A6DEC31E96149300000E69 /* stringutils.cc in Sources */,
@@ -1228,10 +1252,10 @@
 				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = (
-					"-DTGVOIP_USE_AUDIO_SESSION",
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_POSIX",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
+					"-DTGVOIP_USE_DESKTOP_DSP",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1266,10 +1290,10 @@
 				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = (
-					"-DTGVOIP_USE_AUDIO_SESSION",
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_POSIX",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
+					"-DTGVOIP_USE_DESKTOP_DSP",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1355,10 +1379,10 @@
 				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = (
-					"-DTGVOIP_USE_AUDIO_SESSION",
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_POSIX",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
+					"-DTGVOIP_USE_DESKTOP_DSP",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1438,10 +1462,10 @@
 				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = (
-					"-DTGVOIP_USE_AUDIO_SESSION",
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_POSIX",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
+					"-DTGVOIP_USE_DESKTOP_DSP",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";

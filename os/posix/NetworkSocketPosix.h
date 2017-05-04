@@ -36,7 +36,7 @@ private:
 	double switchToV6at;
 	bool isV4Available;
 	IPv4Address lastRecvdV4;
-
+	IPv6Address lastRecvdV6;
 };
 
 }

@@ -9,6 +9,7 @@
 #include <dlfcn.h>
 #include "AudioOutputALSA.h"
 #include "../../logging.h"
+#include "../../VoIPController.h"
 
 #define BUFFER_SIZE 960
 #define CHECK_ERROR(res, msg) if(res<0){LOGE(msg ": %s", _snd_strerror(res));}
@@ -17,7 +18,7 @@
 
 using namespace tgvoip::audio;
 
-AudioOutputALSA::AudioOutputALSA(){
+AudioOutputALSA::AudioOutputALSA(std::string devID){
 	isPlaying=false;
 
 	lib=dlopen("libasound.so", RTLD_LAZY);
@@ -34,11 +35,9 @@ AudioOutputALSA::AudioOutputALSA(){
 	LOAD_FUNCTION(lib, "snd_pcm_recover", _snd_pcm_recover);
 	LOAD_FUNCTION(lib, "snd_strerror", _snd_strerror);
 
-	int res=_snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
-	CHECK_ERROR(res, "snd_pcm_open failed");
+	handle=NULL;
 
-	res=_snd_pcm_set_params(handle, SND_PCM_FORMAT_S16, SND_PCM_ACCESS_RW_INTERLEAVED, 1, 48000, 1, 100000);
-	CHECK_ERROR(res, "snd_pcm_set_params failed");
+	SetCurrentDevice(devID);
 }
 
 AudioOutputALSA::~AudioOutputALSA(){
@@ -88,4 +87,91 @@ void AudioOutputALSA::RunThread(){
 			break;
 		}
 	}
+}
+
+void AudioOutputALSA::SetCurrentDevice(std::string devID){
+	bool wasPlaying=isPlaying;
+	isPlaying=false;
+	if(handle){
+		join_thread(thread);
+		_snd_pcm_close(handle);
+	}
+	currentDevice=devID;
+
+	int res=_snd_pcm_open(&handle, devID.c_str(), SND_PCM_STREAM_PLAYBACK, 0);
+	if(res<0)
+		res=_snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
+	CHECK_ERROR(res, "snd_pcm_open failed");
+
+	res=_snd_pcm_set_params(handle, SND_PCM_FORMAT_S16, SND_PCM_ACCESS_RW_INTERLEAVED, 1, 48000, 1, 100000);
+	CHECK_ERROR(res, "snd_pcm_set_params failed");
+
+	if(wasPlaying){
+		isPlaying=true;
+		start_thread(thread, AudioOutputALSA::StartThread, this);
+	}
+}
+
+void AudioOutputALSA::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
+	int (*_snd_device_name_hint)(int card, const char* iface, void*** hints);
+	char* (*_snd_device_name_get_hint)(const void* hint, const char* id);
+	int (*_snd_device_name_free_hint)(void** hinst);
+	void* lib=dlopen("libasound.so", RTLD_LAZY);
+	if(!lib)
+		return;
+
+	_snd_device_name_hint=(typeof(_snd_device_name_hint))dlsym(lib, "snd_device_name_hint");
+	_snd_device_name_get_hint=(typeof(_snd_device_name_get_hint))dlsym(lib, "snd_device_name_get_hint");
+	_snd_device_name_free_hint=(typeof(_snd_device_name_free_hint))dlsym(lib, "snd_device_name_free_hint");
+
+	if(!_snd_device_name_hint || !_snd_device_name_get_hint || !_snd_device_name_free_hint){
+		dlclose(lib);
+		return;
+	}
+
+	char** hints;
+	int err=_snd_device_name_hint(-1, "pcm", (void***)&hints);
+	if(err!=0){
+		dlclose(lib);
+		return;
+	}
+
+	char** n=hints;
+	while(*n){
+		char* name=_snd_device_name_get_hint(*n, "NAME");
+		if(strncmp(name, "surround", 8)==0 || strcmp(name, "null")==0){
+			free(name);
+			n++;
+			continue;
+		}
+		char* desc=_snd_device_name_get_hint(*n, "DESC");
+		char* ioid=_snd_device_name_get_hint(*n, "IOID");
+		if(!ioid || strcmp(ioid, "Output")==0){
+			char* l1=strtok(desc, "\n");
+			char* l2=strtok(NULL, "\n");
+			char* tmp=strtok(l1, ",");
+			char* actualName=tmp;
+			while((tmp=strtok(NULL, ","))){
+				actualName=tmp;
+			}
+			if(actualName[0]==' ')
+				actualName++;
+			AudioOutputDevice dev;
+			dev.id=std::string(name);
+			if(l2){
+				char buf[256];
+				snprintf(buf, sizeof(buf), "%s (%s)", actualName, l2);
+				dev.displayName=std::string(buf);
+			}else{
+				dev.displayName=std::string(actualName);
+			}
+			devs.push_back(dev);
+		}
+		free(name);
+		free(desc);
+		free(ioid);
+		n++;
+	}
+
+	dlclose(lib);
 }

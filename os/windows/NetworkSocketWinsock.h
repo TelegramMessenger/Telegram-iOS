@@ -1,5 +1,7 @@
 //
-// Created by Grishka on 10.04.17.
+// libtgvoip is free and unencumbered public domain software.
+// For more information, see http://unlicense.org or the UNLICENSE file
+// you should have received with this source code distribution.
 //
 
 #ifndef LIBTGVOIP_NETWORKSOCKETWINSOCK_H
@@ -37,6 +39,7 @@ private:
 	double switchToV6at;
 	bool isV4Available;
 	IPv4Address lastRecvdV4;
+	IPv6Address lastRecvdV6;
 	bool isAtLeastVista;
 
 };

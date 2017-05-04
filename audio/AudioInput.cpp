@@ -15,7 +15,10 @@
 #include "../os/darwin/AudioInputAudioUnitOSX.h"
 #endif
 #elif defined(_WIN32)
+#ifdef TGVOIP_WINXP_COMPAT
 #include "../os/windows/AudioInputWave.h"
+#endif
+#include "../os/windows/AudioInputWASAPI.h"
 #elif defined(__linux__)
 #include "../os/linux/AudioInputALSA.h"
 #else
@@ -43,9 +46,13 @@ AudioInput *AudioInput::Create(std::string deviceID){
 	return new AudioInputAudioUnit();
 #endif
 #elif defined(_WIN32)
-	return new AudioInputWave(deviceID);
+#ifdef TGVOIP_WINXP_COMPAT
+	if(LOBYTE(LOWORD(GetVersion()))<6)
+		return new AudioInputWave(deviceID);
+#endif
+	return new AudioInputWASAPI(deviceID);
 #elif defined(__linux__)
-	return new AudioInputALSA();
+	return new AudioInputALSA(deviceID);
 #endif
 }
 
@@ -62,9 +69,15 @@ void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
 #if defined(__APPLE__) && TARGET_OS_OSX
 	AudioInputAudioUnit::EnumerateDevices(devs);
 #elif defined(_WIN32)
-	AudioInputWave::EnumerateDevices(devs);
+#ifdef TGVOIP_WINXP_COMPAT
+	if(LOBYTE(LOWORD(GetVersion()))<6){
+		AudioInputWave::EnumerateDevices(devs);
+		return;
+	}
+#endif
+	AudioInputWASAPI::EnumerateDevices(devs);
 #elif defined(__linux__) && !defined(__ANDROID__)
-	
+	AudioInputALSA::EnumerateDevices(devs);
 #endif
 }
 
