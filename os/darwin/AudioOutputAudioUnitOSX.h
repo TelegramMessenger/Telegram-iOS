@@ -29,11 +29,14 @@ public:
 private:
 	static OSStatus BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData);
 	static OSStatus DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData);
+	void SetPanRight(bool panRight);
 	unsigned char remainingData[10240];
 	size_t remainingDataSize;
 	bool isPlaying;
 	AudioUnit unit;
 	int hardwareSampleRate;
+	bool isMacBookPro;
+	AudioDeviceID sysDevID;
 };
 }}
 

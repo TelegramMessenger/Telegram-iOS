@@ -30,6 +30,7 @@ using namespace tgvoip::audio;
 #if defined(__ANDROID__)
 int AudioOutput::systemVersion;
 #endif
+int32_t AudioOutput::estimatedDelay=60;
 
 AudioOutput *AudioOutput::Create(std::string deviceID){
 #if defined(__ANDROID__)
@@ -70,7 +71,7 @@ int32_t AudioOutput::GetEstimatedDelay(){
 #if defined(__ANDROID__)
 	return systemVersion<21 ? 150 : 50;
 #endif
-	return 60;
+	return estimatedDelay;
 }
 
 float AudioOutput::GetLevel(){

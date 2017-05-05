@@ -1854,8 +1854,10 @@ void VoIPController::SetConfig(voip_config_t *cfg){
 	if(tgvoipLogFile){
 		fclose(tgvoipLogFile);
 	}
-	if(strlen(cfg->logFilePath))
-		tgvoipLogFile=fopen(cfg->logFilePath, "w");
+	if(strlen(cfg->logFilePath)){
+		tgvoipLogFile=fopen(cfg->logFilePath, "a");
+		tgvoip_log_file_write_header();
+	}
 	if(statsDump)
 		fclose(statsDump);
 	if(strlen(cfg->statsDumpFilePath)){

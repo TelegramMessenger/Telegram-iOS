@@ -14,6 +14,7 @@
 #endif
 
 void tgvoip_log_file_printf(char level, const char* msg, ...);
+void tgvoip_log_file_write_header();
 
 #if defined(__ANDROID__)
 
@@ -43,24 +44,49 @@ void tgvoip_log_file_printf(char level, const char* msg, ...);
 #include <windows.h>
 #include <stdio.h>
 
-#define _TGVOIP_W32_LOG_PRINT(msg, ...){ char __log_buf[1024]; snprintf(__log_buf, 1024, msg, ##__VA_ARGS__); OutputDebugStringA(__log_buf); }
+#define _TGVOIP_W32_LOG_PRINT(verb, msg, ...){ char __log_buf[1024]; snprintf(__log_buf, 1024, "%c/tgvoip: " msg "\n", verb, ##__VA_ARGS__); OutputDebugStringA(__log_buf); tgvoip_log_file_printf((char)verb, msg, __VA_ARGS__);}
 
-#define LOGV(msg, ...) _TGVOIP_W32_LOG_PRINT("V/tgvoip: " msg "\n", ##__VA_ARGS__)
-#define LOGD(msg, ...) _TGVOIP_W32_LOG_PRINT("D/tgvoip: " msg "\n", ##__VA_ARGS__)
-#define LOGI(msg, ...) _TGVOIP_W32_LOG_PRINT("I/tgvoip: " msg "\n", ##__VA_ARGS__)
-#define LOGW(msg, ...) _TGVOIP_W32_LOG_PRINT("W/tgvoip: " msg "\n", ##__VA_ARGS__)
-#define LOGE(msg, ...) _TGVOIP_W32_LOG_PRINT("E/tgvoip: " msg "\n", ##__VA_ARGS__)
+#define LOGV(msg, ...) _TGVOIP_W32_LOG_PRINT('V', msg, ##__VA_ARGS__)
+#define LOGD(msg, ...) _TGVOIP_W32_LOG_PRINT('D', msg, ##__VA_ARGS__)
+#define LOGI(msg, ...) _TGVOIP_W32_LOG_PRINT('I', msg, ##__VA_ARGS__)
+#define LOGW(msg, ...) _TGVOIP_W32_LOG_PRINT('W', msg, ##__VA_ARGS__)
+#define LOGE(msg, ...) _TGVOIP_W32_LOG_PRINT('E', msg, ##__VA_ARGS__)
 
 #else
 
 #include <stdio.h>
 
-#define LOGV(msg, ...) printf("V/tgvoip: " msg "\n", ##__VA_ARGS__)
-#define LOGD(msg, ...) printf("D/tgvoip: " msg "\n", ##__VA_ARGS__)
-#define LOGI(msg, ...) printf("I/tgvoip: " msg "\n", ##__VA_ARGS__)
-#define LOGW(msg, ...) printf("W/tgvoip: " msg "\n", ##__VA_ARGS__)
-#define LOGE(msg, ...) printf("E/tgvoip: " msg "\n", ##__VA_ARGS__)
+#define _TGVOIP_LOG_PRINT(verb, msg, ...) {printf("%c/tgvoip: " msg "\n", verb, ##__VA_ARGS__); tgvoip_log_file_printf(verb, msg, ##__VA_ARGS__);}
 
+#define LOGV(msg, ...) _TGVOIP_LOG_PRINT('V', msg, ##__VA_ARGS__)
+#define LOGD(msg, ...) _TGVOIP_LOG_PRINT('D', msg, ##__VA_ARGS__)
+#define LOGI(msg, ...) _TGVOIP_LOG_PRINT('I', msg, ##__VA_ARGS__)
+#define LOGW(msg, ...) _TGVOIP_LOG_PRINT('W', msg, ##__VA_ARGS__)
+#define LOGE(msg, ...) _TGVOIP_LOG_PRINT('E', msg, ##__VA_ARGS__)
+
+#endif
+
+#ifdef TGVOIP_LOG_VERBOSITY
+#if TGVOIP_LOG_VERBOSITY<5
+#undef LOGV
+#define LOGV(msg, ...)
+#endif
+#if TGVOIP_LOG_VERBOSITY<4
+#undef LOGD
+#define LOGD(msg, ...)
+#endif
+#if TGVOIP_LOG_VERBOSITY<3
+#undef LOGI
+#define LOGI(msg, ...)
+#endif
+#if TGVOIP_LOG_VERBOSITY<2
+#undef LOGW
+#define LOGW(msg, ...)
+#endif
+#if TGVOIP_LOG_VERBOSITY<1
+#undef LOGE
+#define LOGE(msg, ...)
+#endif
 #endif
 
 #endif //__LOGGING_H

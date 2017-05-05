@@ -209,6 +209,8 @@
                 '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnitOSX.h',
                 '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnitOSX.cpp',
                 '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnitOSX.h',
+                '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.mm',
+                '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.h',
                 '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.cpp',
                 '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.h',
               ],

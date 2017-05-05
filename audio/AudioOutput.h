@@ -40,6 +40,7 @@ public:
 protected:
 	std::string currentDevice;
 	bool failed;
+	static int32_t estimatedDelay;
 };
 }}
 

@@ -20,6 +20,7 @@ using namespace tgvoip::audio;
 
 AudioOutputALSA::AudioOutputALSA(std::string devID){
 	isPlaying=false;
+	handle=NULL;
 
 	lib=dlopen("libasound.so", RTLD_LAZY);
 	if(!lib){
@@ -35,14 +36,14 @@ AudioOutputALSA::AudioOutputALSA(std::string devID){
 	LOAD_FUNCTION(lib, "snd_pcm_recover", _snd_pcm_recover);
 	LOAD_FUNCTION(lib, "snd_strerror", _snd_strerror);
 
-	handle=NULL;
-
 	SetCurrentDevice(devID);
 }
 
 AudioOutputALSA::~AudioOutputALSA(){
-	_snd_pcm_close(handle);
-	dlclose(lib);
+	if(handle)
+		_snd_pcm_close(handle);
+	if(lib)
+		dlclose(lib);
 }
 
 void AudioOutputALSA::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){

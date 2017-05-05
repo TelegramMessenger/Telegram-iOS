@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/sysctl.h>
 #include "AudioOutputAudioUnitOSX.h"
 #include "../../logging.h"
 #include "../../VoIPController.h"
@@ -22,6 +23,7 @@ using namespace tgvoip::audio;
 AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
 	remainingDataSize=0;
 	isPlaying=false;
+	sysDevID=NULL;
 	
 	OSStatus status;
 	AudioComponentDescription inputDesc={
@@ -38,6 +40,15 @@ AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
 	flag=0;
 	status = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, kInputBus, &flag, sizeof(flag));
 	CHECK_AU_ERROR(status, "Error enabling AudioUnit input");
+	
+	char model[128];
+	memset(model, 0, sizeof(model));
+	size_t msize=sizeof(model);
+	int mres=sysctlbyname("hw.model", model, &msize, NULL, 0);
+	if(mres==0){
+		LOGV("Mac model: %s", model);
+		isMacBookPro=(strncmp("MacBookPro", model, 10)==0);
+	}
 	
 	SetCurrentDevice(deviceID);
 	
@@ -75,6 +86,15 @@ AudioOutputAudioUnit::~AudioOutputAudioUnit(){
 	propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
 	propertyAddress.mElement = kAudioObjectPropertyElementMaster;
 	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+	
+	AudioObjectPropertyAddress dataSourceProp={
+		kAudioDevicePropertyDataSource,
+		kAudioDevicePropertyScopeOutput,
+		kAudioObjectPropertyElementMaster
+	};
+	if(isMacBookPro && sysDevID && AudioObjectHasProperty(sysDevID, &dataSourceProp)){
+		AudioObjectRemovePropertyListener(sysDevID, &dataSourceProp, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+	}
 	
 	AudioUnitUninitialize(unit);
 	AudioComponentInstanceDispose(unit);
@@ -216,8 +236,17 @@ void AudioOutputAudioUnit::EnumerateDevices(std::vector<AudioOutputDevice>& devs
 
 void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
 	UInt32 size=sizeof(AudioDeviceID);
-	AudioDeviceID inputDevice=NULL;
+	AudioDeviceID outputDevice=NULL;
 	OSStatus status;
+	AudioObjectPropertyAddress dataSourceProp={
+		kAudioDevicePropertyDataSource,
+		kAudioDevicePropertyScopeOutput,
+		kAudioObjectPropertyElementMaster
+	};
+	
+	if(isMacBookPro && sysDevID && AudioObjectHasProperty(sysDevID, &dataSourceProp)){
+		AudioObjectRemovePropertyListener(sysDevID, &dataSourceProp, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+	}
 	
 	if(deviceID=="default"){
 		AudioObjectPropertyAddress propertyAddress;
@@ -225,7 +254,7 @@ void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
 		propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
 		propertyAddress.mElement = kAudioObjectPropertyElementMaster;
 		UInt32 propsize = sizeof(AudioDeviceID);
-		status = AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &propsize, &inputDevice);
+		status = AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &propsize, &outputDevice);
 		CHECK_AU_ERROR(status, "Error getting default input device");
 	}else{
 		AudioObjectPropertyAddress propertyAddress = {
@@ -251,11 +280,11 @@ void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
 			CFStringGetCString(deviceUID, buf, 1024, kCFStringEncodingUTF8);
 			if(deviceID==buf){
 				LOGV("Found device for id %s", buf);
-				inputDevice=audioDevices[i];
+				outputDevice=audioDevices[i];
 				break;
 			}
 		}
-		if(!inputDevice){
+		if(!outputDevice){
 			LOGW("Requested device not found, using default");
 			SetCurrentDevice("default");
 			return;
@@ -266,7 +295,7 @@ void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
 							  kAudioOutputUnitProperty_CurrentDevice,
 							  kAudioUnitScope_Global,
 							  kOutputBus,
-							  &inputDevice,
+							  &outputDevice,
 							  size);
 	CHECK_AU_ERROR(status, "Error setting output device");
 	
@@ -287,13 +316,53 @@ void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
 	LOGD("Switched playback device, new sample rate %d", hardwareSampleRate);
 	
 	this->currentDevice=deviceID;
+	sysDevID=outputDevice;
+	
+	AudioObjectPropertyAddress propertyAddress = {
+		kAudioDevicePropertyBufferFrameSize,
+		kAudioObjectPropertyScopeGlobal,
+		kAudioObjectPropertyElementMaster
+	};
+	size=4;
+	UInt32 bufferFrameSize;
+	status=AudioObjectGetPropertyData(outputDevice, &propertyAddress, 0, NULL, &size, &bufferFrameSize);
+	if(status==noErr){
+		estimatedDelay=bufferFrameSize/48;
+		LOGD("CoreAudio buffer size for output device is %u frames (%u ms)", bufferFrameSize, estimatedDelay);
+	}
+	
+	if(isMacBookPro){
+		if(AudioObjectHasProperty(outputDevice, &dataSourceProp)){
+			UInt32 dataSource;
+			size=4;
+			AudioObjectGetPropertyData(outputDevice, &dataSourceProp, 0, NULL, &size, &dataSource);
+			SetPanRight(dataSource=='ispk');
+			AudioObjectAddPropertyListener(outputDevice, &dataSourceProp, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+		}else{
+			SetPanRight(false);
+		}
+	}
+}
+
+void AudioOutputAudioUnit::SetPanRight(bool panRight){
+	LOGI("%sabling pan right on macbook pro", panRight ? "En" : "Dis");
+	int32_t channelMap[]={panRight ? -1 : 0, 0};
+	OSStatus status=AudioUnitSetProperty(unit, kAudioOutputUnitProperty_ChannelMap, kAudioUnitScope_Global, kOutputBus, channelMap, sizeof(channelMap));
+	CHECK_AU_ERROR(status, "Error setting channel map");
 }
 
 OSStatus AudioOutputAudioUnit::DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData){
-	LOGV("System default input device changed");
 	AudioOutputAudioUnit* self=(AudioOutputAudioUnit*)inClientData;
-	if(self->currentDevice=="default"){
-		self->SetCurrentDevice(self->currentDevice);
+	if(inAddresses[0].mSelector==kAudioHardwarePropertyDefaultOutputDevice){
+		LOGV("System default input device changed");
+		if(self->currentDevice=="default"){
+			self->SetCurrentDevice(self->currentDevice);
+		}
+	}else if(inAddresses[0].mSelector==kAudioDevicePropertyDataSource){
+		UInt32 dataSource;
+		UInt32 size=4;
+		AudioObjectGetPropertyData(inObjectID, inAddresses, 0, NULL, &size, &dataSource);
+		self->SetPanRight(dataSource=='ispk');
 	}
 	return noErr;
 }
