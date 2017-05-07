@@ -207,7 +207,7 @@ typedef enum {
             
         case UIDeviceIFPGA: return IFPGA_NAMESTRING;
             
-        case UIDeviceOSX: return @"OSX";
+        case UIDeviceOSX: return @"macOS";
             
         default: return IOS_FAMILY_UNKNOWN_DEVICE;
     }
