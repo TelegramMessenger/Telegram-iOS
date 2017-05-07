@@ -335,6 +335,8 @@
 		D0B418BA1D7E05BB004562A4 /* NetworkLogging.m in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E421D631E6600955575 /* NetworkLogging.m */; };
 		D0B418BB1D7E05BE004562A4 /* NetworkLogging.h in Headers */ = {isa = PBXBuildFile; fileRef = D03B0E411D631E6600955575 /* NetworkLogging.h */; };
 		D0B418BC1D7E05D0004562A4 /* TelegramCoreIncludes.h in Headers */ = {isa = PBXBuildFile; fileRef = D03B0E5B1D63240700955575 /* TelegramCoreIncludes.h */; };
+		D0B477731EBF54A20033A0AB /* RecentCalls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B477721EBF54A20033A0AB /* RecentCalls.swift */; };
+		D0B477741EBF54A20033A0AB /* RecentCalls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B477721EBF54A20033A0AB /* RecentCalls.swift */; };
 		D0B843811DA6EDAE005F29E1 /* CachedUserData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843801DA6EDAE005F29E1 /* CachedUserData.swift */; };
 		D0B843831DA6EDB8005F29E1 /* CachedGroupData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843821DA6EDB8005F29E1 /* CachedGroupData.swift */; };
 		D0B843851DA6EDC4005F29E1 /* CachedChannelData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843841DA6EDC4005F29E1 /* CachedChannelData.swift */; };
@@ -418,8 +420,6 @@
 		D0C48F3A1E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */; };
 		D0C48F3C1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */; };
 		D0C48F3D1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */; };
-		D0C50E311E93A85E00F62E39 /* CallSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E301E93A85D00F62E39 /* CallSession.swift */; };
-		D0C50E321E93A85E00F62E39 /* CallSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E301E93A85D00F62E39 /* CallSession.swift */; };
 		D0C50E341E93A86600F62E39 /* CallSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E331E93A86600F62E39 /* CallSessionManager.swift */; };
 		D0C50E351E93A86600F62E39 /* CallSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E331E93A86600F62E39 /* CallSessionManager.swift */; };
 		D0CAF2EA1D75EC600011F558 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */; };
@@ -704,6 +704,7 @@
 		D0B418701D7E0409004562A4 /* PostboxMac.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PostboxMac.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug/PostboxMac.framework"; sourceTree = "<group>"; };
 		D0B418711D7E0409004562A4 /* SwiftSignalKitMac.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftSignalKitMac.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug/SwiftSignalKitMac.framework"; sourceTree = "<group>"; };
 		D0B4187E1D7E054E004562A4 /* MtProtoKitMac.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MtProtoKitMac.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug/MtProtoKitMac.framework"; sourceTree = "<group>"; };
+		D0B477721EBF54A20033A0AB /* RecentCalls.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentCalls.swift; sourceTree = "<group>"; };
 		D0B843801DA6EDAE005F29E1 /* CachedUserData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedUserData.swift; sourceTree = "<group>"; };
 		D0B843821DA6EDB8005F29E1 /* CachedGroupData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedGroupData.swift; sourceTree = "<group>"; };
 		D0B843841DA6EDC4005F29E1 /* CachedChannelData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedChannelData.swift; sourceTree = "<group>"; };
@@ -751,7 +752,6 @@
 		D0BEAF5F1E54ACF900BD963D /* AccountManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountManager.swift; sourceTree = "<group>"; };
 		D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacksInfo.swift; sourceTree = "<group>"; };
 		D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedPeerFromMessage.swift; sourceTree = "<group>"; };
-		D0C50E301E93A85D00F62E39 /* CallSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSession.swift; sourceTree = "<group>"; };
 		D0C50E331E93A86600F62E39 /* CallSessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSessionManager.swift; sourceTree = "<group>"; };
 		D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MtProtoKitDynamic.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/MtProtoKitDynamic.framework"; sourceTree = "<group>"; };
 		D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPackInteractiveOperations.swift; sourceTree = "<group>"; };
@@ -1275,8 +1275,8 @@
 		D0C50E2F1E93A83B00F62E39 /* Calls */ = {
 			isa = PBXGroup;
 			children = (
-				D0C50E301E93A85D00F62E39 /* CallSession.swift */,
 				D0C50E331E93A86600F62E39 /* CallSessionManager.swift */,
+				D0B477721EBF54A20033A0AB /* RecentCalls.swift */,
 			);
 			name = Calls;
 			sourceTree = "<group>";
@@ -1616,6 +1616,7 @@
 				D03B0D0A1D62255C00955575 /* Holes.swift in Sources */,
 				D0B843CB1DA7FF30005F29E1 /* NBPhoneNumberUtil.m in Sources */,
 				D03B0D5E1D631A6900955575 /* Network.swift in Sources */,
+				D0B477731EBF54A20033A0AB /* RecentCalls.swift in Sources */,
 				D0B8438E1DA7D296005F29E1 /* CachedGroupParticipants.swift in Sources */,
 				D0B843BD1DA7FF30005F29E1 /* NBMetadataHelper.m in Sources */,
 				D03B0CF51D62250800955575 /* TelegramMediaContact.swift in Sources */,
@@ -1756,7 +1757,6 @@
 				D0E305A71E5B5CBE00D7A3A2 /* PeerAdmins.swift in Sources */,
 				D0B843C51DA7FF30005F29E1 /* NBPhoneNumber.m in Sources */,
 				D03B0D0D1D62255C00955575 /* SynchronizePeerReadState.swift in Sources */,
-				D0C50E311E93A85E00F62E39 /* CallSession.swift in Sources */,
 				D03B0D081D62255C00955575 /* ChannelState.swift in Sources */,
 				C251D7431E65E50500283EDE /* StickerSetInstallation.swift in Sources */,
 			);
@@ -1806,8 +1806,8 @@
 				D0E23DE01E8082A400B9B6D2 /* ArchivedStickerPacks.swift in Sources */,
 				D050F2521E4A59C200988324 /* JoinLink.swift in Sources */,
 				D0F7B1E91E045C87007EB8A5 /* PeerCommands.swift in Sources */,
+				D0B477741EBF54A20033A0AB /* RecentCalls.swift in Sources */,
 				D00D97C81E32901700E5C2B6 /* PeerInputActivity.swift in Sources */,
-				D0C50E321E93A85E00F62E39 /* CallSession.swift in Sources */,
 				D0B844311DAB91E0005F29E1 /* NBPhoneMetaData.m in Sources */,
 				C22EE61C1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */,
 				D0B418AC1D7E0597004562A4 /* Network.swift in Sources */,

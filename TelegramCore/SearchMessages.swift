@@ -9,8 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-
-public func searchMessages(account: Account, peerId: PeerId?, query: String, tagMask:MessageTags? = nil) -> Signal<[Message], NoError> {
+public func searchMessages(account: Account, peerId: PeerId?, query: String, tagMask: MessageTags? = nil) -> Signal<[Message], NoError> {
     let searchResult: Signal<Api.messages.Messages, NoError>
     
     let filter:Api.MessagesFilter
@@ -105,7 +104,6 @@ public func downloadMessage(account: Account, message: MessageId) -> Signal<Mess
     return signal
         |> retryRequest
         |> mapToSignal { result -> Signal<Message?, NoError> in
-            NSLog("TGNT download message3 \(result)")
             let messages: [Api.Message]
             let chats: [Api.Chat]
             let users: [Api.User]
