@@ -77,15 +77,15 @@ AudioOutputWASAPI::~AudioOutputWASAPI(){
 		audioSessionControl->UnregisterAudioSessionNotification(this);
 	}
 
-	SafeRelease(&audioSessionControl);
-	SafeRelease(&renderClient);
-	SafeRelease(&audioClient);
-	SafeRelease(&device);
 	SetEvent(shutdownEvent);
 	if(thread){
 		WaitForSingleObject(thread, INFINITE);
 		CloseHandle(thread);
 	}
+	SafeRelease(&audioSessionControl);
+	SafeRelease(&renderClient);
+	SafeRelease(&audioClient);
+	SafeRelease(&device);
 	CloseHandle(shutdownEvent);
 	CloseHandle(audioSamplesReadyEvent);
 	CloseHandle(streamSwitchEvent);
