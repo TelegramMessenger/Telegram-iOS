@@ -22,7 +22,9 @@ AudioOutputALSA::AudioOutputALSA(std::string devID){
 	isPlaying=false;
 	handle=NULL;
 
-	lib=dlopen("libasound.so", RTLD_LAZY);
+	lib=dlopen("libasound.so.2", RTLD_LAZY);
+	if(!lib)
+		lib=dlopen("libasound.so", RTLD_LAZY);
 	if(!lib){
 		LOGE("Error loading libasound: %s", dlerror());
 		failed=true;
@@ -117,7 +119,9 @@ void AudioOutputALSA::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 	int (*_snd_device_name_hint)(int card, const char* iface, void*** hints);
 	char* (*_snd_device_name_get_hint)(const void* hint, const char* id);
 	int (*_snd_device_name_free_hint)(void** hinst);
-	void* lib=dlopen("libasound.so", RTLD_LAZY);
+	void* lib=dlopen("libasound.so.2", RTLD_LAZY);
+	if(!lib)
+		dlopen("libasound.so", RTLD_LAZY);
 	if(!lib)
 		return;
 
