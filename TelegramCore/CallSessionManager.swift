@@ -33,12 +33,22 @@ enum CallSessionInternalState {
     case terminated(reason: CallSessionTerminationReason, reportRating: Bool)
 }
 
-public typealias CallSessionInternalId = Int64
+public typealias CallSessionInternalId = UUID
 typealias CallSessionStableId = Int64
 
-public struct CallSessionRingingState {
+public struct CallSessionRingingState: Equatable {
     public let id: CallSessionInternalId
     public let peerId: PeerId
+    
+    public static func ==(lhs: CallSessionRingingState, rhs: CallSessionRingingState) -> Bool {
+        return lhs.id == rhs.id && lhs.peerId == rhs.peerId
+    }
+}
+
+public enum DropCallReason {
+    case hangUp
+    case busy
+    case disconnect
 }
 
 public enum CallSessionState {
@@ -70,6 +80,7 @@ public enum CallSessionState {
 }
 
 public struct CallSession {
+    public let id: CallSessionInternalId
     public let isOutgoing: Bool
     public let state: CallSessionState
 }
@@ -126,9 +137,8 @@ private final class CallSessionManagerContext {
     private let addUpdates: (Api.Updates) -> Void
     
     private let ringingSubscribers = Bag<([CallSessionRingingState]) -> Void>()
-    private var nextId: CallSessionInternalId = 0
     private var contexts: [CallSessionInternalId: CallSessionContext] = [:]
-    private var contextIdByStableId: [CallSessionStableId: Int64] = [:]
+    private var contextIdByStableId: [CallSessionStableId: CallSessionInternalId] = [:]
     
     private let disposables = DisposableSet()
     
@@ -153,6 +163,7 @@ private final class CallSessionManagerContext {
                     let index = strongSelf.ringingSubscribers.add { next in
                         subscriber.putNext(next)
                     }
+                    subscriber.putNext(strongSelf.ringingStatesValue())
                     disposable.set(ActionDisposable {
                         queue.async {
                             if let strongSelf = self {
@@ -175,7 +186,7 @@ private final class CallSessionManagerContext {
                     let index = context.subscribers.add { next in
                         subscriber.putNext(next)
                     }
-                    subscriber.putNext(CallSession(isOutgoing: context.isOutgoing, state: CallSessionState(context)))
+                    subscriber.putNext(CallSession(id: internalId, isOutgoing: context.isOutgoing, state: CallSessionState(context)))
                     disposable.set(ActionDisposable {
                         queue.async {
                             if let strongSelf = self, let context = strongSelf.contexts[internalId] {
@@ -192,21 +203,26 @@ private final class CallSessionManagerContext {
         }
     }
     
-    private func ringingStatesUpdated() {
+    private func ringingStatesValue() -> [CallSessionRingingState] {
         var ringingContexts: [CallSessionRingingState] = []
         for (id, context) in self.contexts {
             if case .ringing = context.state {
                 ringingContexts.append(CallSessionRingingState(id: id, peerId: context.peerId))
             }
         }
+        return ringingContexts
+    }
+    
+    private func ringingStatesUpdated() {
+        let states = self.ringingStatesValue()
         for subscriber in self.ringingSubscribers.copyItems() {
-            subscriber(ringingContexts)
+            subscriber(states)
         }
     }
     
     private func contextUpdated(internalId: CallSessionInternalId) {
         if let context = self.contexts[internalId] {
-            let session = CallSession(isOutgoing: context.isOutgoing, state: CallSessionState(context))
+            let session = CallSession(id: internalId, isOutgoing: context.isOutgoing, state: CallSessionState(context))
             for subscriber in context.subscribers.copyItems() {
                 subscriber(session)
             }
@@ -218,39 +234,40 @@ private final class CallSessionManagerContext {
             return
         }
         
-        self.nextId += 1
-        
         let bBytes = malloc(256)!
         let randomStatus = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))
         let b = Data(bytesNoCopy: bBytes, count: 256, deallocator: .free)
         
         if randomStatus == 0 {
-            let internalId = self.nextId
+            let internalId = CallSessionInternalId()
             self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: false, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b))
             self.contextIdByStableId[stableId] = internalId
             self.contextUpdated(internalId: internalId)
             self.ringingStatesUpdated()
-            
-            self.queue.after(3.0, { [weak self] in
-                self?.accept(internalId: internalId)
-            })
         }
     }
     
-    func drop(internalId: CallSessionInternalId) {
+    func drop(internalId: CallSessionInternalId, reason: DropCallReason) {
         if let context = self.contexts[internalId] {
             var dropData: (CallSessionStableId, Int64, DropCallSessionReason)?
             var wasRinging = false
             switch context.state {
                 case let .ringing(id, accessHash, _, _):
                     wasRinging = true
-                    dropData = (id, accessHash, .abort)
+                    dropData = (id, accessHash, .busy)
                 case let .accepting(id, accessHash, _, _, disposable):
                     dropData = (id, accessHash, .abort)
                     disposable.dispose()
                 case let .active(id, accessHash, beginTimestamp, _, _, _, _):
                     let duration = max(0, Int32(CFAbsoluteTimeGetCurrent()) - beginTimestamp)
-                    dropData = (id, accessHash, .hangUp(duration))
+                    let internalReason: DropCallSessionReason
+                    switch reason {
+                        case .busy, .hangUp:
+                            internalReason = .hangUp(duration)
+                        case .disconnect:
+                            internalReason = .disconnect
+                    }
+                    dropData = (id, accessHash, internalReason)
                 case .dropping, .terminated:
                     break
                 case let .awaitingConfirmation(id, accessHash, _, _, _):
@@ -290,10 +307,10 @@ private final class CallSessionManagerContext {
         }
     }
     
-    func drop(stableId: CallSessionStableId) {
+    func drop(stableId: CallSessionStableId, reason: DropCallReason) {
         if let internalId = self.contextIdByStableId[stableId] {
             self.contextIdByStableId.removeValue(forKey: stableId)
-            self.drop(internalId: internalId)
+            self.drop(internalId: internalId, reason: reason)
         }
     }
     
@@ -306,7 +323,7 @@ private final class CallSessionManagerContext {
                             if case .accepting = context.state {
                                 switch result {
                                     case .failed:
-                                        strongSelf.drop(internalId: internalId)
+                                        strongSelf.drop(internalId: internalId, reason: .disconnect)
                                     case let .success(call):
                                         switch call {
                                             case let .waiting(config):
@@ -317,7 +334,7 @@ private final class CallSessionManagerContext {
                                                     context.state = .active(id: id, accessHash: accessHash, beginTimestamp: timestamp, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: connections)
                                                     strongSelf.contextUpdated(internalId: internalId)
                                                 } else {
-                                                    strongSelf.drop(internalId: internalId)
+                                                    strongSelf.drop(internalId: internalId, reason: .disconnect)
                                                 }
                                         }
                                 }
@@ -365,13 +382,13 @@ private final class CallSessionManagerContext {
                                         if let updatedCall = updatedCall {
                                             strongSelf.updateSession(updatedCall)
                                         } else {
-                                            strongSelf.drop(internalId: internalId)
+                                            strongSelf.drop(internalId: internalId, reason: .disconnect)
                                         }
                                     }
                                 }))
                                 self.contextUpdated(internalId: internalId)
                             default:
-                                self.drop(internalId: internalId)
+                                self.drop(internalId: internalId, reason: .disconnect)
                         }
                     } else {
                         assertionFailure()
@@ -408,7 +425,7 @@ private final class CallSessionManagerContext {
                                 break
                         }
                     } else {
-                        assertionFailure()
+                        //assertionFailure()
                     }
                 }
             case let .phoneCall(id, _, _, _, _, gAOrB, keyFingerprint, _, connection, alternativeConnections, startDate):
@@ -423,10 +440,10 @@ private final class CallSessionManagerContext {
                                         context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections))
                                         self.contextUpdated(internalId: internalId)
                                     } else {
-                                        self.drop(internalId: internalId)
+                                        self.drop(internalId: internalId, reason: .disconnect)
                                     }
                                 } else {
-                                    self.drop(internalId: internalId)
+                                    self.drop(internalId: internalId, reason: .disconnect)
                                 }
                             case let .confirming(id, accessHash, key, keyId, keyVisualHash, _):
                                 context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections))
@@ -486,14 +503,11 @@ private final class CallSessionManagerContext {
         return (key, keyId, keyVisualHash)
     }
     
-    func request(peerId: PeerId) -> CallSessionInternalId? {
+    func request(peerId: PeerId, internalId: CallSessionInternalId) -> CallSessionInternalId? {
         let aBytes = malloc(256)!
         let randomStatus = SecRandomCopyBytes(nil, 256, aBytes.assumingMemoryBound(to: UInt8.self))
         let a = Data(bytesNoCopy: aBytes, count: 256, deallocator: .free)
         if randomStatus == 0 {
-            self.nextId += 1
-            
-            let internalId = self.nextId
             self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: true, state: .requesting(a: a, disposable: (requestCallSession(postbox: self.postbox, network: self.network, peerId: peerId, a: a) |> deliverOn(queue)).start(next: { [weak self] result in
                 if let strongSelf = self, let context = strongSelf.contexts[internalId] {
                     if case .requesting = context.state {
@@ -557,30 +571,30 @@ public final class CallSessionManager {
         }
     }
     
-    public func drop(internalId: CallSessionInternalId) {
+    public func drop(internalId: CallSessionInternalId, reason: DropCallReason) {
         self.withContext { context in
-            context.drop(internalId: internalId)
+            context.drop(internalId: internalId, reason: reason)
         }
     }
     
-    func drop(stableId: CallSessionStableId) {
+    func drop(stableId: CallSessionStableId, reason: DropCallReason) {
         self.withContext { context in
-            context.drop(stableId: stableId)
+            context.drop(stableId: stableId, reason: reason)
         }
     }
     
-    func accept(internalId: CallSessionInternalId) {
+    public func accept(internalId: CallSessionInternalId) {
         self.withContext { context in
             context.accept(internalId: internalId)
         }
     }
     
-    public func request(peerId: PeerId) -> Signal<CallSessionInternalId, CallRequestError> {
+    public func request(peerId: PeerId, internalId: CallSessionInternalId = CallSessionInternalId()) -> Signal<CallSessionInternalId, NoError> {
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
             
             self?.withContext { context in
-                if let internalId = context.request(peerId: peerId) {
+                if let internalId = context.request(peerId: peerId, internalId: internalId) {
                     subscriber.putNext(internalId)
                     subscriber.putCompletion()
                 }
@@ -749,6 +763,8 @@ private func confirmCallSession(network: Network, stableId: CallSessionStableId,
 private enum DropCallSessionReason {
     case abort
     case hangUp(Int32)
+    case busy
+    case disconnect
 }
 
 private func dropCallSession(network: Network, addUpdates: @escaping (Api.Updates) -> Void, stableId: CallSessionStableId, accessHash: Int64, reason: DropCallSessionReason) -> Signal<Void, NoError> {
@@ -760,6 +776,10 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
         case let .hangUp(value):
             duration = value
             mappedReason = .phoneCallDiscardReasonHangup
+        case .busy:
+            mappedReason = .phoneCallDiscardReasonBusy
+        case .disconnect:
+            mappedReason = .phoneCallDiscardReasonDisconnect
     }
     return network.request(Api.functions.phone.discardCall(peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
         |> map { Optional($0) }
