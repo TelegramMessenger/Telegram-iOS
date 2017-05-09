@@ -9,7 +9,6 @@
 #include "AudioInputWASAPI.h"
 #include "../../logging.h"
 #include "../../VoIPController.h"
-#include <functiondiscoverykeys.h>
 
 #define BUFFER_SIZE 960
 #define CHECK_RES(res, msg) {if(FAILED(res)){LOGE("%s failed: HRESULT=0x%08X", msg, res); failed=true; return;}}
@@ -50,15 +49,17 @@ AudioInputWASAPI::AudioInputWASAPI(std::string deviceID){
 	format.nAvgBytesPerSec=format.nSamplesPerSec*format.nBlockAlign;
 	format.wBitsPerSample=16;
 
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	res=CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&enumerator));
 	CHECK_RES(res, "CoCreateInstance(MMDeviceEnumerator)");
 	res=enumerator->RegisterEndpointNotificationCallback(this);
 	CHECK_RES(res, "enumerator->RegisterEndpointNotificationCallback");
+	audioSessionControl=NULL;
+	device=NULL;
+#endif
 
 	audioClient=NULL;
 	captureClient=NULL;
-	audioSessionControl=NULL;
-	device=NULL;
 	thread=NULL;
 
 	SetCurrentDevice(deviceID);
@@ -69,25 +70,33 @@ AudioInputWASAPI::~AudioInputWASAPI(){
 		audioClient->Stop();
 	}
 
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	if(audioSessionControl){
 		audioSessionControl->UnregisterAudioSessionNotification(this);
 	}
+#endif
 
 	SetEvent(shutdownEvent);
 	if(thread){
-		WaitForSingleObject(thread, INFINITE);
+		WaitForSingleObjectEx(thread, INFINITE, false);
 		CloseHandle(thread);
 	}
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	SafeRelease(&audioSessionControl);
+#endif
 	SafeRelease(&captureClient);
 	SafeRelease(&audioClient);
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	SafeRelease(&device);
+#endif
 	CloseHandle(shutdownEvent);
 	CloseHandle(audioSamplesReadyEvent);
 	CloseHandle(streamSwitchEvent);
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	if(enumerator)
 		enumerator->UnregisterEndpointNotificationCallback(this);
 	SafeRelease(&enumerator);
+#endif
 }
 
 void AudioInputWASAPI::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
@@ -116,6 +125,7 @@ bool AudioInputWASAPI::IsRecording(){
 }
 
 void AudioInputWASAPI::EnumerateDevices(std::vector<tgvoip::AudioInputDevice>& devs){
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	HRESULT res;
 	res=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	SCHECK_RES(res, "CoInitializeEx");
@@ -173,6 +183,7 @@ void AudioInputWASAPI::EnumerateDevices(std::vector<tgvoip::AudioInputDevice>& d
 
 	SafeRelease(&deviceCollection);
 	SafeRelease(&deviceEnumerator);
+#endif
 }
 
 void AudioInputWASAPI::SetCurrentDevice(std::string deviceID){
@@ -193,14 +204,17 @@ void AudioInputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 		CHECK_RES(res, "audioClient->Stop");
 	}
 
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	if(audioSessionControl){
 		res=audioSessionControl->UnregisterAudioSessionNotification(this);
 		CHECK_RES(res, "audioSessionControl->UnregisterAudioSessionNotification");
 	}
 
 	SafeRelease(&audioSessionControl);
+#endif
 	SafeRelease(&captureClient);
 	SafeRelease(&audioClient);
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	SafeRelease(&device);
 
 	IMMDeviceCollection *deviceCollection = NULL;
@@ -240,9 +254,22 @@ void AudioInputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 
 	if(deviceCollection)
 		SafeRelease(&deviceCollection);
+
+	if(!device){
+		LOGE("Didn't find capture device; failing");
+		failed=true;
+		return;
+	}
 	
 	res=device->Activate(__uuidof(IAudioClient), CLSCTX_INPROC_SERVER, NULL, (void**)&audioClient);
 	CHECK_RES(res, "device->Activate");
+#else
+	Platform::String^ defaultDevID=Windows::Media::Devices::MediaDevice::GetDefaultAudioCaptureId(Windows::Media::Devices::AudioDeviceRole::Communications);
+	HRESULT res1, res2;
+	audioClient=WindowsSandboxUtils::ActivateAudioDevice(defaultDevID->Data(), &res1, &res2);
+	CHECK_RES(res1, "activate1");
+	CHECK_RES(res2, "activate2");
+#endif
 
 	res = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST | 0x80000000/*AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM*/, 60 * 10000, 0, &format, NULL);
 	CHECK_RES(res, "audioClient->Initialize");
@@ -259,11 +286,13 @@ void AudioInputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 	res = audioClient->GetService(IID_PPV_ARGS(&captureClient));
 	CHECK_RES(res, "audioClient->GetService");
 
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	res=audioClient->GetService(IID_PPV_ARGS(&audioSessionControl));
 	CHECK_RES(res, "audioClient->GetService(IAudioSessionControl)");
 
 	res=audioSessionControl->RegisterAudioSessionNotification(this);
 	CHECK_RES(res, "audioSessionControl->RegisterAudioSessionNotification");
+#endif
 
 	if(isRecording)
 		audioClient->Start();
@@ -283,15 +312,13 @@ void AudioInputWASAPI::RunThread() {
 	HRESULT res=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	CHECK_RES(res, "CoInitializeEx in capture thread");
 
-	uint32_t bufferSize;
-	res=audioClient->GetBufferSize(&bufferSize);
-	CHECK_RES(res, "audioClient->GetBufferSize");
+	uint32_t bufferSize=0;
 	uint32_t framesWritten=0;
 
 	bool running=true;
 
 	while(running){
-		DWORD waitResult=WaitForMultipleObjects(3, waitArray, false, INFINITE);
+		DWORD waitResult=WaitForMultipleObjectsEx(3, waitArray, false, INFINITE, false);
 		if(waitResult==WAIT_OBJECT_0){ // shutdownEvent
 			LOGV("capture thread shutting down");
 			running=false;
@@ -299,8 +326,13 @@ void AudioInputWASAPI::RunThread() {
 			LOGV("stream switch");
 			ActuallySetCurrentDevice(streamChangeToDevice);
 			ResetEvent(streamSwitchEvent);
+			bufferSize=0;
 			LOGV("stream switch done");
 		}else if(waitResult==WAIT_OBJECT_0+2){ // audioSamplesReadyEvent
+			if(bufferSize==0){
+				res=audioClient->GetBufferSize(&bufferSize);
+				CHECK_RES(res, "audioClient->GetBufferSize");
+			}
 			BYTE* data;
 			uint32_t framesAvailable;
 			DWORD flags;
@@ -326,6 +358,7 @@ void AudioInputWASAPI::RunThread() {
 	}
 }
 
+#ifdef TGVOIP_WINDOWS_DESKTOP
 HRESULT AudioInputWASAPI::OnSessionDisconnected(AudioSessionDisconnectReason reason) {
 	if(!isDefaultDevice){
 		streamChangeToDevice="default";
@@ -371,3 +404,4 @@ HRESULT AudioInputWASAPI::QueryInterface(REFIID iid, void** obj){
 
 	return S_OK;
 }
+#endif

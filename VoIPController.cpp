@@ -1221,6 +1221,12 @@ void VoIPController::RunTickThread(){
 		conctl->Tick();
 
 		if(state==STATE_ESTABLISHED){
+			if((audioInput && !audioInput->IsInitialized()) || (audioOutput && !audioOutput->IsInitialized())){
+				LOGE("Audio I/O failed");
+				lastError=TGVOIP_ERROR_AUDIO_IO;
+				SetState(STATE_FAILED);
+			}
+
 			int act=conctl->GetBandwidthControlAction();
 			if(act==TGVOIP_CONCTL_ACT_DECREASE){
 				uint32_t bitrate=encoder->GetBitrate();

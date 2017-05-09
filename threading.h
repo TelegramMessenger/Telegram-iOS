@@ -118,12 +118,20 @@ typedef HANDLE tgvoip_lock_t; // uncomment for XP compatibility
 //typedef CONDITION_VARIABLE tgvoip_lock_t;
 
 #define start_thread(ref, entry, arg) (ref=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)entry, arg, 0, NULL))
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
 #define join_thread(thread) {WaitForSingleObject(thread, INFINITE); CloseHandle(thread);}
+#else
+#define join_thread(thread) {WaitForSingleObjectEx(thread, INFINITE, false); CloseHandle(thread);}
+#endif
 #define set_thread_name(thread, name) // threads in Windows don't have names
 #define set_thread_priority(thread, priority) SetThreadPriority(thread, priority)
 #define get_thread_max_priority() THREAD_PRIORITY_HIGHEST
 #define get_thread_min_priority() THREAD_PRIORITY_LOWEST
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
 #define init_mutex(mutex) InitializeCriticalSection(&mutex)
+#else
+#define init_mutex(mutex) InitializeCriticalSectionEx(&mutex, 0, 0)
+#endif
 #define free_mutex(mutex) DeleteCriticalSection(&mutex)
 #define lock_mutex(mutex) EnterCriticalSection(&mutex)
 #define unlock_mutex(mutex) LeaveCriticalSection(&mutex)
@@ -140,7 +148,11 @@ namespace tgvoip{
 class Semaphore{
 public:
 	Semaphore(unsigned int maxCount, unsigned int initValue){
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
 		h=CreateSemaphore(NULL, initValue, maxCount, NULL);
+#else
+		h=CreateSemaphoreEx(NULL, initValue, maxCount, NULL, 0, 0);
+#endif
 	}
 
 	~Semaphore(){
@@ -148,7 +160,11 @@ public:
 	}
 
 	void Acquire(){
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
 		WaitForSingleObject(h, INFINITE);
+#else
+		WaitForSingleObjectEx(h, INFINITE, false);
+#endif
 	}
 
 	void Release(){
