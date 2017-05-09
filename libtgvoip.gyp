@@ -8,14 +8,15 @@
         'dependencies': [],
         'defines': [
           'WEBRTC_APM_DEBUG_DUMP=0',
-          'TGVOIP_USE_DESKTOP_DSP'
+          'TGVOIP_USE_DESKTOP_DSP',
         ],
         'variables': {
-          'tgvoip_src_loc': '../../third_party/libtgvoip',
+          'tgvoip_src_loc': '.',
+          'official_build_target%': '',
         },
         'include_dirs': [
           '<(tgvoip_src_loc)/webrtc_dsp',
-          '../../../Libraries/opus/include',
+          '<(DEPTH)/../../../Libraries/opus/include',
         ],
         'direct_dependent_settings': {
           'include_dirs': [
@@ -59,6 +60,36 @@
           '<(tgvoip_src_loc)/audio/Resampler.h',
           '<(tgvoip_src_loc)/NetworkSocket.cpp',
           '<(tgvoip_src_loc)/NetworkSocket.h',
+
+          # Windows
+          '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.cpp',
+          '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.h',
+          '<(tgvoip_src_loc)/os/windows/AudioInputWave.cpp',
+          '<(tgvoip_src_loc)/os/windows/AudioInputWave.h',
+          '<(tgvoip_src_loc)/os/windows/AudioOutputWave.cpp',
+          '<(tgvoip_src_loc)/os/windows/AudioOutputWave.h',
+          '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.cpp',
+          '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.h',
+          '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.cpp',
+          '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.h',
+
+          # macOS
+          '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnitOSX.cpp',
+          '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnitOSX.h',
+          '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnitOSX.cpp',
+          '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnitOSX.h',
+          '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.mm',
+          '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.h',
+
+          # Linux
+          '<(tgvoip_src_loc)/os/linux/AudioInputALSA.cpp',
+          '<(tgvoip_src_loc)/os/linux/AudioInputALSA.h',
+          '<(tgvoip_src_loc)/os/linux/AudioOutputALSA.cpp',
+          '<(tgvoip_src_loc)/os/linux/AudioOutputALSA.h',
+
+          # POSIX
+          '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.cpp',
+          '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.h',
 
           '<(tgvoip_src_loc)/webrtc_dsp/webrtc/base/array_view.h',
           '<(tgvoip_src_loc)/webrtc_dsp/webrtc/base/atomicops.h',
@@ -203,26 +234,50 @@
         },
         'conditions': [
           [
+            '"<(OS)" != "win"', {
+              'sources/': [['exclude', '<(tgvoip_src_loc)/os/windows/']],
+            }, {
+              'sources/': [['exclude', '<(tgvoip_src_loc)/os/posix/']],
+            },
+          ],
+          [
+            '"<(OS)" != "mac"', {
+              'sources/': [['exclude', '<(tgvoip_src_loc)/os/darwin/']],
+            },
+          ],
+          [
+            '"<(OS)" != "linux"', {
+              'sources/': [['exclude', '<(tgvoip_src_loc)/os/linux/']],
+            },
+          ],
+          [
             '"<(OS)" == "mac"', {
-              'sources': [
-                '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnitOSX.cpp',
-                '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnitOSX.h',
-                '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnitOSX.cpp',
-                '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnitOSX.h',
-                '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.mm',
-                '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.h',
-                '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.cpp',
-                '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.h',
-              ],
-              'include_dirs': [
-                '../../../Libraries/openssl-xcode/include',
-              ],
               'xcode_settings': {
                 'CLANG_CXX_LANGUAGE_STANDARD': 'c++1z',
               },
               'defines': [
                 'WEBRTC_POSIX',
               ],
+              'conditions': [
+                [ '"<(official_build_target)" == "mac32"', {
+                  'xcode_settings': {
+                    'MACOSX_DEPLOYMENT_TARGET': '10.6',
+                    'OTHER_CPLUSPLUSFLAGS': [ '-nostdinc++' ],
+                  },
+                  'include_dirs': [
+                    '/usr/local/macold/include/c++/v1',
+                    '<(DEPTH)/../../../Libraries/macold/openssl-1.0.1h/include',
+                  ],
+                }, {
+                  'xcode_settings': {
+                    'MACOSX_DEPLOYMENT_TARGET': '10.8',
+                    'CLANG_CXX_LIBRARY': 'libc++',
+                  },
+                  'include_dirs': [
+                    '<(DEPTH)/../../../Libraries/openssl-xcode/include',
+                  ],
+                }]
+              ]
             },
           ],
           [
@@ -232,18 +287,6 @@
                 'NOMINMAX',
                 '_USING_V110_SDK71_',
                 'TGVOIP_WINXP_COMPAT'
-              ],
-              'sources': [
-                '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.cpp',
-                '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.h',
-                '<(tgvoip_src_loc)/os/windows/AudioInputWave.cpp',
-                '<(tgvoip_src_loc)/os/windows/AudioInputWave.h',
-                '<(tgvoip_src_loc)/os/windows/AudioOutputWave.cpp',
-                '<(tgvoip_src_loc)/os/windows/AudioOutputWave.h',
-                '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.cpp',
-                '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.h',
-                '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.cpp',
-                '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.h',
               ],
               'libraries': [
                 'winmm',
@@ -259,6 +302,7 @@
                   'AdditionalOptions': [
                     '/MP',   # Enable multi process build.
                     '/EHsc', # Catch C++ exceptions only, extern C functions never throw a C++ exception.
+                    '/wd4068', # Disable "warning C4068: unknown pragma"
                   ],
                   'TreatWChar_tAsBuiltInType': 'false',
                 },
@@ -276,7 +320,7 @@
                     '_DEBUG',
                   ],
                   'include_dirs': [
-                    '../../../Libraries/openssl_debug/Debug/include',
+                    '<(DEPTH)/../../../Libraries/openssl_debug/Debug/include',
                   ],
                   'msvs_settings': {
                     'VCCLCompilerTool': {
@@ -296,7 +340,7 @@
                     'NDEBUG',
                   ],
                   'include_dirs': [
-                     '../../../Libraries/openssl/Release/include',
+                     '<(DEPTH)/../../../Libraries/openssl/Release/include',
                   ],
                   'msvs_settings': {
                     'VCCLCompilerTool': {
@@ -308,6 +352,11 @@
                       'EnableEnhancedInstructionSet': '2', # Streaming SIMD Extensions 2 (/arch:SSE2)
                       'WholeProgramOptimization': 'true',  # /GL
                     },
+                    'VCLibrarianTool': {
+                      'AdditionalOptions': [
+                        '/LTCG',
+                      ]
+                    },
                   },
                 },
               },
@@ -315,21 +364,12 @@
           ],
           [
             '"<(OS)" == "linux"', {
-              'sources': [
-                '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.cpp',
-                '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.h',
-
-                '<(tgvoip_src_loc)/os/linux/AudioInputALSA.cpp',
-                '<(tgvoip_src_loc)/os/linux/AudioInputALSA.h',
-                '<(tgvoip_src_loc)/os/linux/AudioOutputALSA.cpp',
-                '<(tgvoip_src_loc)/os/linux/AudioOutputALSA.h',
-              ],
               'defines': [
                 'WEBRTC_POSIX',
               ],
               'direct_dependent_settings': {
                 'libraries': [
-                  
+
                 ],
               },
             },
