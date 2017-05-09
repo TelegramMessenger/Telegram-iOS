@@ -14,10 +14,17 @@ public enum CallSessionError {
     case privacyRestricted
     case notSupportedByPeer
     case serverProvided(String)
+    case disconnected
+}
+
+public enum CallSessionEndedType {
+    case hungUp
+    case busy
+    case missed
 }
 
 public enum CallSessionTerminationReason {
-    case ended
+    case ended(CallSessionEndedType)
     case error(CallSessionError)
 }
 
@@ -279,7 +286,7 @@ private final class CallSessionManagerContext {
                     dropData = (id, accessHash, .abort)
                 case let .requesting(_, disposable):
                     disposable.dispose()
-                    context.state = .terminated(reason: .ended, reportRating: false)
+                    context.state = .terminated(reason: .ended(.hungUp), reportRating: false)
                     self.contextUpdated(internalId: internalId)
                     if context.isEmpty {
                         self.contexts.removeValue(forKey: internalId)
@@ -291,7 +298,7 @@ private final class CallSessionManagerContext {
                 context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, reason: reason) |> deliverOn(self.queue)).start(completed: { [weak self] in
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
-                            context.state = .terminated(reason: .ended, reportRating: false)
+                            context.state = .terminated(reason: .ended(.hungUp), reportRating: false)
                             strongSelf.contextUpdated(internalId: internalId)
                             if context.isEmpty {
                                 strongSelf.contexts.removeValue(forKey: internalId)
@@ -398,27 +405,42 @@ private final class CallSessionManagerContext {
                 let reportRating = (flags & (1 << 2)) != 0
                 if let internalId = self.contextIdByStableId[id] {
                     if let context = self.contexts[internalId] {
+                        let parsedReason: CallSessionTerminationReason
+                        if let reason = reason {
+                            switch reason {
+                                case .phoneCallDiscardReasonBusy:
+                                    parsedReason = .ended(.busy)
+                                case .phoneCallDiscardReasonDisconnect:
+                                    parsedReason = .error(.disconnected)
+                                case .phoneCallDiscardReasonHangup:
+                                    parsedReason = .ended(.hungUp)
+                                case .phoneCallDiscardReasonMissed:
+                                    parsedReason = .ended(.missed)
+                            }
+                        } else {
+                            parsedReason = .ended(.hungUp)
+                        }
                         switch context.state {
                             case let .accepting(_, _, _, _, disposable):
                                 disposable.dispose()
-                                context.state = .terminated(reason: .ended, reportRating: reportRating)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating)
                                 self.contextUpdated(internalId: internalId)
                             case .active:
-                                context.state = .terminated(reason: .ended, reportRating: reportRating)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating)
                                 self.contextUpdated(internalId: internalId)
                             case .awaitingConfirmation, .requested:
-                                context.state = .terminated(reason: .ended, reportRating: reportRating)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating)
                                 self.contextUpdated(internalId: internalId)
                             case let .confirming(_, _, _, _, _, disposable):
                                 disposable.dispose()
-                                context.state = .terminated(reason: .ended, reportRating: reportRating)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating)
                                 self.contextUpdated(internalId: internalId)
                             case let .requesting(_, disposable):
                                 disposable.dispose()
-                                context.state = .terminated(reason: .ended, reportRating: reportRating)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating)
                                 self.contextUpdated(internalId: internalId)
                             case .ringing:
-                                context.state = .terminated(reason: .ended, reportRating: reportRating)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating)
                                 self.ringingStatesUpdated()
                                 self.contextUpdated(internalId: internalId)
                             case .dropping, .terminated:
