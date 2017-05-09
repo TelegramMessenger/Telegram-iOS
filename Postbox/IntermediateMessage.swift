@@ -29,6 +29,7 @@ class IntermediateMessage {
     let timestamp: Int32
     let flags: MessageFlags
     let tags: MessageTags
+    let globalTags: GlobalMessageTags
     let forwardInfo: IntermediateMessageForwardInfo?
     let authorId: PeerId?
     let text: String
@@ -36,7 +37,7 @@ class IntermediateMessage {
     let embeddedMediaData: ReadBuffer
     let referencedMedia: [MediaId]
     
-    init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: IntermediateMessageForwardInfo?, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
+    init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, forwardInfo: IntermediateMessageForwardInfo?, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
         self.stableId = stableId
         self.stableVersion = stableVersion
         self.id = id
@@ -44,6 +45,7 @@ class IntermediateMessage {
         self.timestamp = timestamp
         self.flags = flags
         self.tags = tags
+        self.globalTags = globalTags
         self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text

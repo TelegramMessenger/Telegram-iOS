@@ -228,6 +228,18 @@ public struct MessageTags: OptionSet {
     public static let All = MessageTags(rawValue: 0xffffffff)
 }
 
+public struct GlobalMessageTags: OptionSet {
+    public var rawValue: UInt32
+    
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+}
+
 public struct MessageFlags: OptionSet {
     public var rawValue: UInt32
     
@@ -343,6 +355,7 @@ public final class Message: CustomStringConvertible {
     public let timestamp: Int32
     public let flags: MessageFlags
     public let tags: MessageTags
+    public let globalTags: GlobalMessageTags
     public let forwardInfo: MessageForwardInfo?
     public let author: Peer?
     public let text: String
@@ -352,7 +365,7 @@ public final class Message: CustomStringConvertible {
     public let associatedMessages: SimpleDictionary<MessageId, Message>
     public let associatedMessageIds: [MessageId]
     
-    public init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>, associatedMessageIds: [MessageId]) {
+    public init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>, associatedMessageIds: [MessageId]) {
         self.stableId = stableId
         self.stableVersion = stableVersion
         self.id = id
@@ -360,6 +373,7 @@ public final class Message: CustomStringConvertible {
         self.timestamp = timestamp
         self.flags = flags
         self.tags = tags
+        self.globalTags = globalTags
         self.forwardInfo = forwardInfo
         self.author = author
         self.text = text
@@ -444,18 +458,20 @@ public final class StoreMessage {
     public let globallyUniqueId: Int64?
     public let flags: StoreMessageFlags
     public let tags: MessageTags
+    public let globalTags: GlobalMessageTags
     public let forwardInfo: StoreMessageForwardInfo?
     public let authorId: PeerId?
     public let text: String
     public let attributes: [MessageAttribute]
     public let media: [Media]
     
-    public init(id: MessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+    public init(id: MessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
         self.id = .Id(id)
         self.globallyUniqueId = globallyUniqueId
         self.timestamp = timestamp
         self.flags = flags
         self.tags = tags
+        self.globalTags = globalTags
         self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text
@@ -463,12 +479,13 @@ public final class StoreMessage {
         self.media = media
     }
     
-    public init(peerId: PeerId, namespace: MessageId.Namespace, globallyUniqueId: Int64?, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+    public init(peerId: PeerId, namespace: MessageId.Namespace, globallyUniqueId: Int64?, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
         self.id = .Partial(peerId, namespace)
         self.timestamp = timestamp
         self.globallyUniqueId = globallyUniqueId
         self.flags = flags
         self.tags = tags
+        self.globalTags = globalTags
         self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text
@@ -483,18 +500,20 @@ final class InternalStoreMessage {
     let globallyUniqueId: Int64?
     let flags: StoreMessageFlags
     let tags: MessageTags
+    let globalTags: GlobalMessageTags
     let forwardInfo: StoreMessageForwardInfo?
     let authorId: PeerId?
     let text: String
     let attributes: [MessageAttribute]
     let media: [Media]
     
-    init(id: MessageId, timestamp: Int32, globallyUniqueId: Int64?, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+    init(id: MessageId, timestamp: Int32, globallyUniqueId: Int64?, flags: StoreMessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
         self.id = id
         self.timestamp = timestamp
         self.globallyUniqueId = globallyUniqueId
         self.flags = flags
         self.tags = tags
+        self.globalTags = globalTags
         self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text
