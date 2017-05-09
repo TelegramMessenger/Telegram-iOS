@@ -118,7 +118,7 @@ size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetI
 
 int JitterBuffer::GetInternal(jitter_packet_t* pkt, int offset){
 	/*if(needBuffering && lastPutTimestamp<nextTimestamp){
-		LOGV("jitter: don't have timestamp %lld, buffering", nextTimestamp);
+		LOGV("jitter: don't have timestamp %lld, buffering", (long long int)nextTimestamp);
 		Advance();
 		return JR_BUFFERING;
 	}*/
@@ -136,7 +136,7 @@ int JitterBuffer::GetInternal(jitter_packet_t* pkt, int offset){
 
 	if(i<JITTER_SLOT_COUNT){
 		if(pkt && pkt->size<slots[i].size){
-			LOGE("jitter: packet won't fit into provided buffer of %d (need %d)", slots[i].size, pkt->size);
+			LOGE("jitter: packet won't fit into provided buffer of %d (need %d)", int(slots[i].size), int(pkt->size));
 		}else{
 			if(pkt) {
 				pkt->size = slots[i].size;
@@ -153,7 +153,7 @@ int JitterBuffer::GetInternal(jitter_packet_t* pkt, int offset){
 		return JR_OK;
 	}
 
-	LOGW("jitter: found no packet for timestamp %lld (last put = %d, lost = %d)", timestampToGet, lastPutTimestamp, lostCount);
+	LOGW("jitter: found no packet for timestamp %lld (last put = %d, lost = %d)", (long long int)timestampToGet, lastPutTimestamp, lostCount);
 
 	if(offset==0)
 		Advance();
@@ -190,7 +190,7 @@ void JitterBuffer::PutInternal(jitter_packet_t* pkt){
 	if(wasReset){
 		wasReset=false;
 		nextTimestamp=((int64_t)pkt->timestamp)-step*minDelay;
-		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%d)", nextTimestamp, step, minDelay);
+		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%d)", (long long int)nextTimestamp, step, minDelay);
 	}
 	
 	for(i=0;i<JITTER_SLOT_COUNT;i++){
