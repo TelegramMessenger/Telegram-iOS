@@ -148,7 +148,7 @@ VoIPController::VoIPController() : activeNetItfName(""), currentAudioInput("defa
 	statsDump=NULL;
 
 	socket=NetworkSocket::Create();
-	
+
 	maxAudioBitrate=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("audio_max_bitrate", 20000);
 	maxAudioBitrateGPRS=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("audio_max_bitrate_gprs", 8000);
 	maxAudioBitrateEDGE=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("audio_max_bitrate_edge", 16000);
@@ -170,7 +170,7 @@ VoIPController::VoIPController() : activeNetItfName(""), currentAudioInput("defa
 	needNotifyAcquiredAudioSession=false;
 #endif
 #endif
-    
+
 	voip_stream_t* stm=(voip_stream_t *) malloc(sizeof(voip_stream_t));
 	stm->id=1;
 	stm->type=STREAM_TYPE_AUDIO;
@@ -311,7 +311,7 @@ void VoIPController::Start(){
 	if(cfgFrameSize==20 || cfgFrameSize==40 || cfgFrameSize==60)
 		outgoingStreams[0]->frameDuration=(uint16_t) cfgFrameSize;
 	socket->Open();
-	
+
 
 	SendPacket(NULL, 0, currentEndpoint);
 
@@ -553,7 +553,10 @@ void VoIPController::RunRecvThread(){
 			continue;
 		}
 		size_t len=packet.length;
-
+		if(!len){
+			LOGE("Packet has zero length.");
+			continue;
+		}
 		//LOGV("Received %d bytes from %s:%d at %.5lf", len, inet_ntoa(srcAddr.sin_addr), ntohs(srcAddr.sin_port), GetCurrentTime());
 		Endpoint* srcEndpoint=NULL;
 
@@ -585,7 +588,7 @@ void VoIPController::RunRecvThread(){
 		try{
 		if(memcmp(buffer, srcEndpoint->type==EP_TYPE_UDP_RELAY ? srcEndpoint->peerTag : callID, 16)!=0){
 			LOGW("Received packet has wrong peerTag");
-			
+
 			continue;
 		}
 		in.Seek(16);
@@ -598,7 +601,7 @@ void VoIPController::RunRecvThread(){
 					break;
 				}
 			}
-            
+
 			if(isPublicIpResponse){
 				waitingForRelayPeerInfo=false;
 				in.Seek(in.GetOffset()+12);
@@ -648,12 +651,12 @@ void VoIPController::RunRecvThread(){
 				}else{
 					LOGE("It looks like a reflector response but tlid is %08X, expected %08X", tlid, TLID_UDP_REFLECTOR_PEER_INFO);
 				}
-				
+
 				continue;
 			}
 		}
 		if(in.Remaining()<40){
-			
+
 			continue;
 		}
 
@@ -662,7 +665,7 @@ void VoIPController::RunRecvThread(){
 		in.ReadBytes(msgHash, 16);
 		if(memcmp(fingerprint, keyFingerprint, 8)!=0){
 			LOGW("Received packet has wrong key fingerprint");
-			
+
 			continue;
 		}
 		unsigned char key[32], iv[32];
@@ -677,7 +680,7 @@ void VoIPController::RunRecvThread(){
 		crypto.sha1((uint8_t *) (buffer+in.GetOffset()-4), (size_t) (_len+4), sha);
 		if(memcmp(msgHash, sha+(SHA1_LENGTH-16), 16)!=0){
 			LOGW("Received packet has wrong hash after decryption");
-			
+
 			continue;
 		}
 
@@ -700,7 +703,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			type=(unsigned char) ((flags >> 24) & 0xFF);
 			if(!(flags & PFLAG_HAS_SEQ && flags & PFLAG_HAS_RECENT_RECV)){
 				LOGW("Received packet doesn't have PFLAG_HAS_SEQ, PFLAG_HAS_RECENT_RECV, or both");
-				
+
 				continue;
 			}
 			if(flags & PFLAG_HAS_CALL_ID){
@@ -708,7 +711,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				in.ReadBytes(pktCallID, 16);
 				if(memcmp(pktCallID, callID, 16)!=0){
 					LOGW("Received packet has wrong call id");
-					
+
 					lastError=TGVOIP_ERROR_UNKNOWN;
 					SetState(STATE_FAILED);
 					return;
@@ -721,7 +724,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				uint32_t proto=(uint32_t) in.ReadInt32();
 				if(proto!=PROTOCOL_NAME){
 					LOGW("Received packet uses wrong protocol");
-					
+
 					lastError=TGVOIP_ERROR_INCOMPATIBLE;
 					SetState(STATE_FAILED);
 					return;
@@ -745,7 +748,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			acks=(uint32_t) in.ReadInt32();
 		}else{
 			LOGW("Received a packet of unknown type %08X", tlid);
-			
+
 			continue;
 		}
 		packetsRecieved++;
@@ -764,13 +767,13 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 		}else if(!seqgt(pseq, lastRemoteSeq) && lastRemoteSeq-pseq<32){
 			if(recvPacketTimes[lastRemoteSeq-pseq]!=0){
 				LOGW("Received duplicated packet for seq %u", pseq);
-				
+
 				continue;
 			}
 			recvPacketTimes[lastRemoteSeq-pseq]=GetCurrentTime();
 		}else if(lastRemoteSeq-pseq>=32){
 			LOGW("Packet %u is out of order and too late", pseq);
-			
+
 			continue;
 		}
 		if(seqgt(ackId, lastRemoteAckSeq)){
@@ -856,7 +859,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			uint32_t minVer=(uint32_t) in.ReadInt32();
 			if(minVer>PROTOCOL_VERSION || peerVersion<MIN_PROTOCOL_VERSION){
 				lastError=TGVOIP_ERROR_INCOMPATIBLE;
-				
+
 				SetState(STATE_FAILED);
 				return;
 			}
@@ -866,7 +869,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				UpdateDataSavingState();
 				UpdateAudioBitrate();
 			}
-			
+
 			int i;
 			int numSupportedAudioCodecs=in.ReadByte();
 			for(i=0; i<numSupportedAudioCodecs; i++){
@@ -883,7 +886,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				out->WriteInt32(PROTOCOL_VERSION);
 				out->WriteInt32(MIN_PROTOCOL_VERSION);
 			}
-			
+
 			out->WriteByte((unsigned char) outgoingStreams.size());
 			for(i=0; i<outgoingStreams.size(); i++){
 				out->WriteByte(outgoingStreams[i]->id);
@@ -908,7 +911,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 					uint32_t minVer=(uint32_t) in.ReadInt32();
 					if(minVer>PROTOCOL_VERSION || peerVersion<MIN_PROTOCOL_VERSION){
 						lastError=TGVOIP_ERROR_INCOMPATIBLE;
-						
+
 						SetState(STATE_FAILED);
 						return;
 					}
@@ -960,7 +963,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 						if(!audioInput->IsInitialized()){
 							LOGE("Erorr initializing audio capture");
 							lastError=TGVOIP_ERROR_AUDIO_IO;
-							
+
 							SetState(STATE_FAILED);
 							return;
 						}
@@ -968,7 +971,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 					if(!audioOutput->IsInitialized()){
 						LOGE("Erorr initializing audio playback");
 						lastError=TGVOIP_ERROR_AUDIO_IO;
-						
+
 						SetState(STATE_FAILED);
 						return;
 					}
@@ -1044,14 +1047,14 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			LOGD("Received ping from %s:%d", packet.address->ToString().c_str(), srcEndpoint->port);
 			if(srcEndpoint->type!=EP_TYPE_UDP_RELAY && !allowP2p){
 				LOGW("Received p2p ping but p2p is disabled by manual override");
-				
+
 				continue;
 			}
 			if(srcEndpoint==currentEndpoint){
 				BufferOutputStream *pkt=GetOutgoingPacketBuffer();
 				if(!pkt){
 					LOGW("Dropping pong packet, queue overflow");
-					
+
 					continue;
 				}
 				WritePacketHeader(pkt, PKT_PONG, 4);
@@ -1463,7 +1466,7 @@ void VoIPController::RunTickThread(){
 					jitterBuffer ? jitterBuffer->GetLastMeasuredDelay()*0.06 : 0,
 					jitterBuffer ? jitterBuffer->GetCurrentDelay()*0.06 : 0);
 		}
-		
+
 #if defined(__APPLE__) && defined(TGVOIP_USE_AUDIO_SESSION)
 		if(needNotifyAcquiredAudioSession){
 			needNotifyAcquiredAudioSession=false;

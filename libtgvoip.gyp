@@ -367,6 +367,9 @@
               'defines': [
                 'WEBRTC_POSIX',
               ],
+              'cflags_cc': [
+                '-msse4.1',
+              ],
               'direct_dependent_settings': {
                 'libraries': [
 
