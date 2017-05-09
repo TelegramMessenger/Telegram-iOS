@@ -54,6 +54,10 @@ public func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity
     return tags
 }
 
+public func globalTagsForStoreMessage(media: [Media]) -> GlobalMessageTags {
+    return []
+}
+
 extension Api.Message {
     var peerId: PeerId? {
         switch self {
@@ -421,7 +425,7 @@ extension StoreMessage {
                     storeFlags.insert(.Personal)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(media: medias, textEntities: entitiesAttribute?.entities), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(media: medias, textEntities: entitiesAttribute?.entities), globalTags: globalTagsForStoreMessage(media: medias), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
@@ -470,7 +474,7 @@ extension StoreMessage {
                     media.append(action)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: [], globalTags: globalTagsForStoreMessage(media: media), forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }
