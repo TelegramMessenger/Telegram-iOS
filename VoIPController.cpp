@@ -610,15 +610,21 @@ void VoIPController::RunRecvThread(){
 					uint32_t peerAddr=(uint32_t) in.ReadInt32();
 					uint32_t peerPort=(uint32_t) in.ReadInt32();
 					for(std::vector<Endpoint*>::iterator itrtr=endpoints.begin();itrtr!=endpoints.end();++itrtr){
-						if((*itrtr)->type==EP_TYPE_UDP_P2P_INET){
-							delete *itrtr;
+						Endpoint* ep=*itrtr;
+						if(ep->type==EP_TYPE_UDP_P2P_INET){
+							if(currentEndpoint==ep)
+								currentEndpoint=preferredRelay;
+							delete ep;
 							endpoints.erase(itrtr);
 							break;
 						}
 					}
 					for(std::vector<Endpoint*>::iterator itrtr=endpoints.begin();itrtr!=endpoints.end();++itrtr){
-						if((*itrtr)->type==EP_TYPE_UDP_P2P_LAN){
-							delete *itrtr;
+						Endpoint* ep=*itrtr;
+						if(ep->type==EP_TYPE_UDP_P2P_LAN){
+							if(currentEndpoint==ep)
+								currentEndpoint=preferredRelay;
+							delete ep;
 							endpoints.erase(itrtr);
 							break;
 						}
@@ -1100,6 +1106,8 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			lock_mutex(endpointsMutex);
 			for(std::vector<Endpoint*>::iterator itrtr=endpoints.begin();itrtr!=endpoints.end();++itrtr){
 				if((*itrtr)->type==EP_TYPE_UDP_P2P_LAN){
+					if(currentEndpoint==*itrtr)
+						currentEndpoint=preferredRelay;
 					delete *itrtr;
 					endpoints.erase(itrtr);
 					break;
@@ -1165,7 +1173,9 @@ void VoIPController::RunSendThread(){
 	while(runReceiver){
 		BufferOutputStream* pkt=(BufferOutputStream *) sendQueue->GetBlocking();
 		if(pkt){
+			lock_mutex(endpointsMutex);
 			SendPacket(pkt->GetBuffer(), pkt->GetLength(), currentEndpoint);
+			unlock_mutex(endpointsMutex);
 			pkt->Reset();
 			lock_mutex(sendBufferMutex);
 			emptySendBuffers.push_back(pkt);
