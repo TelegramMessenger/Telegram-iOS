@@ -18,8 +18,7 @@ IAudioClient* WindowsSandboxUtils::ActivateAudioDevice(const wchar_t* devID, HRE
 	ActivationHandler activationHandler(event);
 	Windows::ApplicationModel::Core::CoreApplication::GetCurrentView()->CoreWindow->Dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, ref new Windows::UI::Core::DispatchedHandler([devID, callRes, actRes, activationHandler](){
 		ComPtr<IActivateAudioInterfaceAsyncOperation> actHandler;
-		Platform::String^ sel=Windows::Media::Devices::MediaDevice::GetDefaultAudioRenderId(Windows::Media::Devices::AudioDeviceRole::Communications);
-		HRESULT cr=ActivateAudioInterfaceAsync(sel->Data(), __uuidof(IAudioClient), NULL, (IActivateAudioInterfaceCompletionHandler*)&activationHandler, &actHandler);
+		HRESULT cr=ActivateAudioInterfaceAsync(devID, __uuidof(IAudioClient), NULL, (IActivateAudioInterfaceCompletionHandler*)&activationHandler, &actHandler);
 		if(callRes)
 			*callRes=cr;
 	}));

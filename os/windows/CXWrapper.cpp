@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include <collection.h>
 #include "CXWrapper.h"
 
 using namespace libtgvoip;
@@ -11,6 +12,7 @@ using namespace tgvoip;
 using namespace Windows::Security::Cryptography;
 using namespace Windows::Security::Cryptography::Core;
 using namespace Windows::Storage::Streams;
+using namespace Windows::Data::Json;
 
 //CryptographicHash^ MicrosoftCryptoImpl::sha1Hash;
 //CryptographicHash^ MicrosoftCryptoImpl::sha256Hash;
@@ -18,9 +20,9 @@ HashAlgorithmProvider^ MicrosoftCryptoImpl::sha1Provider;
 HashAlgorithmProvider^ MicrosoftCryptoImpl::sha256Provider;
 SymmetricKeyAlgorithmProvider^ MicrosoftCryptoImpl::aesKeyProvider;
 
-struct tgvoip_cx_data{
+/*struct tgvoip_cx_data{
 	VoIPControllerWrapper^ self;
-};
+};*/
 
 VoIPControllerWrapper::VoIPControllerWrapper(){
 	VoIPController::crypto.aes_ige_decrypt=MicrosoftCryptoImpl::AesIgeDecrypt;
@@ -28,17 +30,14 @@ VoIPControllerWrapper::VoIPControllerWrapper(){
 	VoIPController::crypto.sha1=MicrosoftCryptoImpl::SHA1;
 	VoIPController::crypto.sha256=MicrosoftCryptoImpl::SHA256;
 	VoIPController::crypto.rand_bytes=MicrosoftCryptoImpl::RandBytes;
+	MicrosoftCryptoImpl::Init();
 	controller=new VoIPController();
-	tgvoip_cx_data* implData=(tgvoip_cx_data*)malloc(sizeof(tgvoip_cx_data));
-	implData->self=this;
-	controller->implData=implData;
+	controller->implData=(void*)this;
 	controller->SetStateCallback(VoIPControllerWrapper::OnStateChanged);
 	stateCallback=nullptr;
 }
 
 VoIPControllerWrapper::~VoIPControllerWrapper(){
-	((tgvoip_cx_data*)controller->implData)->self=nullptr;
-	free(controller->implData);
 	delete controller;
 }
 
@@ -72,12 +71,13 @@ void VoIPControllerWrapper::SetPublicEndpoints(Windows::Foundation::Collections:
 			throw ref new Platform::InvalidArgumentException("Peer tag must be exactly 16 bytes long");
 		memcpy(ep.peerTag, _ep->peerTag->Data, 16);
 		eps.push_back(ep);
+		iterator->MoveNext();
 	}
 	controller->SetRemoteEndpoints(eps, allowP2P);
 }
 
-void VoIPControllerWrapper::SetNetworkType(int type){
-	controller->SetNetworkType(type);
+void VoIPControllerWrapper::SetNetworkType(NetworkType type){
+	controller->SetNetworkType((int)type);
 }
 
 void VoIPControllerWrapper::SetStateCallback(IStateCallback^ callback){
@@ -112,8 +112,8 @@ Platform::String^ VoIPControllerWrapper::GetDebugLog(){
 	return res;
 }
 
-int VoIPControllerWrapper::GetLastError(){
-	return controller->GetLastError();
+Error VoIPControllerWrapper::GetLastError(){
+	return (Error)controller->GetLastError();
 }
 
 Platform::String^ VoIPControllerWrapper::GetVersion(){
@@ -124,12 +124,47 @@ Platform::String^ VoIPControllerWrapper::GetVersion(){
 }
 
 void VoIPControllerWrapper::OnStateChanged(VoIPController* c, int state){
-	((tgvoip_cx_data*)c->implData)->self->OnStateChangedInternal(state);
+	reinterpret_cast<VoIPControllerWrapper^>(c->implData)->OnStateChangedInternal(state);
 }
 
 void VoIPControllerWrapper::OnStateChangedInternal(int state){
 	if(stateCallback)
-		stateCallback->OnCallStateChanged(state);
+		stateCallback->OnCallStateChanged((CallState)state);
+}
+
+void VoIPControllerWrapper::SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath){
+	voip_config_t config{0};
+	config.init_timeout=initTimeout;
+	config.recv_timeout=recvTimeout;
+	config.data_saving=(int)dataSavingMode;
+	config.enableAEC=enableAEC;
+	config.enableAGC=enableAGC;
+	config.enableNS=enableNS;
+	if(logFilePath!=nullptr){
+		WideCharToMultiByte(CP_UTF8, 0, logFilePath->Data(), -1, config.logFilePath, sizeof(config.logFilePath), NULL, NULL);
+	}
+	if(statsDumpFilePath!=nullptr){
+		WideCharToMultiByte(CP_UTF8, 0, statsDumpFilePath->Data(), -1, config.statsDumpFilePath, sizeof(config.statsDumpFilePath), NULL, NULL);
+	}
+	controller->SetConfig(&config);
+}
+
+void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
+	JsonObject^ jconfig=JsonValue::Parse(json)->GetObject();
+	std::map<std::string, std::string> config;
+
+	for each (auto item in jconfig){
+		char _key[128];
+		char _value[256];
+		WideCharToMultiByte(CP_UTF8, 0, item->Key->Data(), -1, _key, sizeof(_key), NULL, NULL);
+		WideCharToMultiByte(CP_UTF8, 0, item->Value->ToString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
+		std::string key(_key);
+		std::string value(_value);
+
+		config[key]=value;
+	}
+
+	ServerConfig::GetSharedInstance()->Update(config);
 }
 
 void MicrosoftCryptoImpl::AesIgeEncrypt(uint8_t* in, uint8_t* out, size_t len, uint8_t* key, uint8_t* iv){

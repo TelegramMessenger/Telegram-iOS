@@ -13,8 +13,43 @@ namespace libtgvoip{
 		property Platform::Array<uint8>^ peerTag;
 	};
 
+	public enum class CallState : int{
+		WaitInit=1,
+		WaitInitAck,
+		Established,
+		Failed
+	};
+
+	public enum class Error : int{
+		Unknown=0,
+		Incompatible,
+		Timeout,
+		AudioIO
+	};
+
+	public enum class NetworkType : int{
+		Unknown=0,
+		GPRS,
+		EDGE,
+		UMTS,
+		HSPA,
+		LTE,
+		WiFi,
+		Ethernet,
+		OtherHighSpeed,
+		OtherLowSpeed,
+		Dialup,
+		OtherMobile
+	};
+
+	public enum class DataSavingMode{
+		Never=0,
+		MobileOnly,
+		Always
+	};
+
 	public interface class IStateCallback{
-		void OnCallStateChanged(int newState);
+		void OnCallStateChanged(CallState newState);
 	};
 
     public ref class VoIPControllerWrapper sealed{
@@ -23,14 +58,16 @@ namespace libtgvoip{
 		void Start();
 		void Connect();
 		void SetPublicEndpoints(Windows::Foundation::Collections::IIterable<Endpoint^>^ endpoints, bool allowP2P);
-		void SetNetworkType(int type);
+		void SetNetworkType(NetworkType type);
 		void SetStateCallback(IStateCallback^ callback);
 		void SetMicMute(bool mute);
 		void SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing);
+		void SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath);
 		Platform::String^ GetDebugString();
 		Platform::String^ GetDebugLog();
-		int GetLastError();
+		Error GetLastError();
 		static Platform::String^ GetVersion();
+		static void UpdateServerConfig(Platform::String^ json);
 		//static Platform::String^ TestAesIge();
 	private:
 		~VoIPControllerWrapper();
@@ -39,6 +76,7 @@ namespace libtgvoip{
 		tgvoip::VoIPController* controller;
 		IStateCallback^ stateCallback;
     };
+
 
 	ref class MicrosoftCryptoImpl{
 	public:
