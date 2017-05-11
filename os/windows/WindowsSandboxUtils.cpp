@@ -12,57 +12,40 @@
 using namespace tgvoip;
 using namespace Microsoft::WRL;
 
-IAudioClient* WindowsSandboxUtils::ActivateAudioDevice(const wchar_t* devID, HRESULT* callRes, HRESULT* actRes){
+IAudioClient* WindowsSandboxUtils::ActivateAudioDevice(const wchar_t* devID, HRESULT* callRes, HRESULT* actRes) {
 	// Did I say that I hate pointlessly asynchronous things?
-	HANDLE event = CreateEventEx(NULL, NULL, 0, 0);
+	HANDLE event = CreateEventEx(NULL, NULL, 0, EVENT_ALL_ACCESS);
 	ActivationHandler activationHandler(event);
-	Windows::ApplicationModel::Core::CoreApplication::GetCurrentView()->CoreWindow->Dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, ref new Windows::UI::Core::DispatchedHandler([devID, callRes, actRes, activationHandler](){
-		ComPtr<IActivateAudioInterfaceAsyncOperation> actHandler;
-		HRESULT cr=ActivateAudioInterfaceAsync(devID, __uuidof(IAudioClient), NULL, (IActivateAudioInterfaceCompletionHandler*)&activationHandler, &actHandler);
-		if(callRes)
-			*callRes=cr;
-	}));
-	WaitForSingleObjectEx(event, INFINITE, false);
+	IActivateAudioInterfaceAsyncOperation* actHandler;
+	HRESULT cr = ActivateAudioInterfaceAsync(devID, __uuidof(IAudioClient2), NULL, (IActivateAudioInterfaceCompletionHandler*)&activationHandler, &actHandler);
+	if (callRes)
+		*callRes = cr;
+	DWORD resulttt = WaitForSingleObjectEx(event, INFINITE, false);
+	DWORD last = GetLastError();
 	CloseHandle(event);
-	if(actRes)
-		*actRes=activationHandler.actResult;
+	if (actRes)
+		*actRes = activationHandler.actResult;
 	return activationHandler.client;
 }
 
-ActivationHandler::ActivationHandler(HANDLE _event) : event(_event), refCount(1){
+ActivationHandler::ActivationHandler(HANDLE _event) : event(_event)
+{
 
 }
 
-STDMETHODIMP ActivationHandler::ActivateCompleted(IActivateAudioInterfaceAsyncOperation* op){
-	HRESULT res = op->GetActivateResult(&actResult, (IUnknown**)&client);
+STDMETHODIMP ActivationHandler::ActivateCompleted(IActivateAudioInterfaceAsyncOperation * operation)
+{
+	HRESULT hr = S_OK;
+	HRESULT hrActivateResult = S_OK;
+	IUnknown *punkAudioInterface = nullptr;
+
+	hr = operation->GetActivateResult(&hrActivateResult, &punkAudioInterface);
+	if (SUCCEEDED(hr) && SUCCEEDED(hrActivateResult))
+	{
+		punkAudioInterface->QueryInterface(IID_PPV_ARGS(&client));
+	}
+
 	SetEvent(event);
 
-	return S_OK;
-}
-
-HRESULT ActivationHandler::QueryInterface(REFIID iid, void** obj){
-	if(!obj){
-		return E_POINTER;
-	}
-	*obj=NULL;
-
-	if(iid==IID_IUnknown){
-		*obj=static_cast<IUnknown*>(this);
-		AddRef();
-	}else if(iid==__uuidof(IActivateAudioInterfaceCompletionHandler)){
-		*obj=static_cast<IActivateAudioInterfaceCompletionHandler*>(this);
-		AddRef();
-	}else{
-		return E_NOINTERFACE;
-	}
-
-	return S_OK;
-}
-
-ULONG ActivationHandler::AddRef(){
-	return InterlockedIncrement(&refCount);
-}
-
-ULONG ActivationHandler::Release(){
-	return InterlockedDecrement(&refCount);
+	return hr;
 }
