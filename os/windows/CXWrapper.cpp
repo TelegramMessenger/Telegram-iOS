@@ -157,7 +157,10 @@ void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
 		char _key[128];
 		char _value[256];
 		WideCharToMultiByte(CP_UTF8, 0, item->Key->Data(), -1, _key, sizeof(_key), NULL, NULL);
-		WideCharToMultiByte(CP_UTF8, 0, item->Value->ToString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
+		if(item->Value->ValueType==Windows::Data::Json::JsonValueType::String)
+			WideCharToMultiByte(CP_UTF8, 0, ((Platform::String^)item->Value)->Data(), -1, _value, sizeof(_value), NULL, NULL);
+		else
+			WideCharToMultiByte(CP_UTF8, 0, item->Value->ToString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
 		std::string key(_key);
 		std::string value(_value);
 
@@ -215,8 +218,9 @@ void MicrosoftCryptoImpl::SHA1(uint8_t* msg, size_t len, uint8_t* out){
 	CryptographicHash^ hash=sha1Provider->CreateHash();
 	hash->Append(CryptographicBuffer::CreateFromByteArray(arr));
 	IBuffer^ res=hash->GetValueAndReset();
-	CryptographicBuffer::CopyToByteArray(res, &arr);
-	memcpy(out, arr->Data, res->Length);
+	Platform::Array<uint8>^ _out=ref new Platform::Array<uint8>(20);
+	CryptographicBuffer::CopyToByteArray(res, &_out);
+	memcpy(out, _out->Data, 20);
 
 	//LeaveCriticalSection(&hashMutex);
 }
@@ -229,8 +233,9 @@ void MicrosoftCryptoImpl::SHA256(uint8_t* msg, size_t len, uint8_t* out){
 	CryptographicHash^ hash=sha256Provider->CreateHash();
 	hash->Append(CryptographicBuffer::CreateFromByteArray(arr));
 	IBuffer^ res=hash->GetValueAndReset();
-	CryptographicBuffer::CopyToByteArray(res, &arr);
-	memcpy(out, arr->Data, res->Length);
+	Platform::Array<uint8>^ _out=ref new Platform::Array<uint8>(32);
+	CryptographicBuffer::CopyToByteArray(res, &_out);
+	memcpy(out, _out->Data, 32);
 
 	//LeaveCriticalSection(&hashMutex);
 }
