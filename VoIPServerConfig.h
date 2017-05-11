@@ -9,6 +9,7 @@
 
 #include <map>
 #include <string>
+#include <stdint.h>
 #include "threading.h"
 
 namespace tgvoip{

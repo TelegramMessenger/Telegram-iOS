@@ -47,8 +47,10 @@ public:
 	virtual bool IsPlaying();
 	virtual void SetCurrentDevice(std::string deviceID);
 	static void EnumerateDevices(std::vector<AudioOutputDevice>& devs);
+#ifdef TGVOIP_WINDOWS_DESKTOP
 	STDMETHOD_(ULONG, AddRef)();
 	STDMETHOD_(ULONG, Release)();
+#endif
 
 private:
 	void ActuallySetCurrentDevice(std::string deviceID);

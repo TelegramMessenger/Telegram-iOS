@@ -44,6 +44,10 @@ void tgvoip_log_file_write_header();
 #include <windows.h>
 #include <stdio.h>
 
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
+
 #define _TGVOIP_W32_LOG_PRINT(verb, msg, ...){ char __log_buf[1024]; snprintf(__log_buf, 1024, "%c/tgvoip: " msg "\n", verb, ##__VA_ARGS__); OutputDebugStringA(__log_buf); tgvoip_log_file_printf((char)verb, msg, __VA_ARGS__);}
 
 #define LOGV(msg, ...) _TGVOIP_W32_LOG_PRINT('V', msg, ##__VA_ARGS__)

@@ -7,8 +7,9 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-
-#ifndef WEBRTC_BASE_TYPE_TRAITS_H_
+ 
+#if (!defined(_MSC_VER) || _MSC_VER>1800)
+#ifndef WEBRTC_BASE_TYPE_TRAITS_H_ 
 #define WEBRTC_BASE_TYPE_TRAITS_H_
 
 #include <cstddef>
@@ -75,3 +76,4 @@ static_assert(!HasDataAndSize<Test4, int>::value,
 }  // namespace rtc
 
 #endif  // WEBRTC_BASE_TYPE_TRAITS_H_
+#endif

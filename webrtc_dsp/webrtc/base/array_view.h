@@ -101,7 +101,11 @@ class ArrayView final {
   // std::vector).
   template <
       typename U,
+#if defined(_MSC_VER) && _MCS_VER<=1800
+      typename std::enable_if<true>::type* = nullptr>
+#else
       typename std::enable_if<HasDataAndSize<U, T>::value>::type* = nullptr>
+#endif
   ArrayView(U& u) : ArrayView(u.data(), u.size()) {}
 
   // Indexing, size, and iteration. These allow mutation even if the ArrayView

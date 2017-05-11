@@ -6,19 +6,27 @@
 //
 
 #include <audioclient.h>
+#include <windows.h>
+#include <mmdeviceapi.h>
+#include <wrl.h>
 #include <wrl/implements.h>
-
-namespace tgvoip{
 
 using namespace Microsoft::WRL;
 
-class ActivationHandler : public RuntimeClass< RuntimeClassFlags< ClassicCom >, FtmBase, IActivateAudioInterfaceCompletionHandler >{
+namespace tgvoip{
+
+class ActivationHandler : public IActivateAudioInterfaceCompletionHandler{
 public:
 	ActivationHandler(HANDLE _event);
 	STDMETHOD(ActivateCompleted)(IActivateAudioInterfaceAsyncOperation* op);
+	STDMETHOD(QueryInterface)(REFIID iid, void **pvObject);
+	STDMETHOD_(ULONG, AddRef)();
+	STDMETHOD_(ULONG, Release)();
 	HANDLE event;
 	IAudioClient* client;
 	HRESULT actResult;
+private:
+	ULONG refCount;
 };
 
 

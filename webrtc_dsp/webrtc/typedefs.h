@@ -32,7 +32,7 @@
 #define WEBRTC_ARCH_X86
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
-#elif defined(__ARMEL__)
+#elif defined(__ARMEL__) || defined(_M_ARM)
 #define WEBRTC_ARCH_ARM_FAMILY
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
@@ -63,6 +63,10 @@
 
 // TODO(pbos): Use webrtc/base/basictypes.h instead to include fixed-size ints.
 #include <stdint.h>
+
+#if defined(_MSC_VER) && _MSC_VER<=1800 && !defined(__cplusplus)
+#define inline __inline
+#endif
 
 // Annotate a function indicating the caller must examine the return value.
 // Use like:

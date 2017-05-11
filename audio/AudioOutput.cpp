@@ -16,7 +16,9 @@
 #include "../os/darwin/AudioOutputAudioUnitOSX.h"
 #endif
 #elif defined(_WIN32)
+#ifdef TGVOIP_WINXP_COMPAT
 #include "../os/windows/AudioOutputWave.h"
+#endif
 #include "../os/windows/AudioOutputWASAPI.h"
 #elif defined(__linux__)
 #include "../os/linux/AudioOutputALSA.h"

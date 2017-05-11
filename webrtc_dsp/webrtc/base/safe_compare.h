@@ -31,6 +31,10 @@
 #ifndef WEBRTC_BASE_SAFE_COMPARE_H_
 #define WEBRTC_BASE_SAFE_COMPARE_H_
 
+#if _MSC_VER<=1800
+#define constexpr const // Older MSVC used for WP app doesn't support this thing but we can ignore it
+#endif
+
 #include <stddef.h>
 #include <stdint.h>
 

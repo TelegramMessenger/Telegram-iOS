@@ -6,7 +6,6 @@
 //
 
 #include "WindowsSandboxUtils.h"
-#include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <windows.h>
 
@@ -31,9 +30,40 @@ IAudioClient* WindowsSandboxUtils::ActivateAudioDevice(const wchar_t* devID, HRE
 	return activationHandler.client;
 }
 
+ActivationHandler::ActivationHandler(HANDLE _event) : event(_event), refCount(1){
+
+}
+
 STDMETHODIMP ActivationHandler::ActivateCompleted(IActivateAudioInterfaceAsyncOperation* op){
 	HRESULT res = op->GetActivateResult(&actResult, (IUnknown**)&client);
 	SetEvent(event);
 
 	return S_OK;
+}
+
+HRESULT ActivationHandler::QueryInterface(REFIID iid, void** obj){
+	if(!obj){
+		return E_POINTER;
+	}
+	*obj=NULL;
+
+	if(iid==IID_IUnknown){
+		*obj=static_cast<IUnknown*>(this);
+		AddRef();
+	}else if(iid==__uuidof(IActivateAudioInterfaceCompletionHandler)){
+		*obj=static_cast<IActivateAudioInterfaceCompletionHandler*>(this);
+		AddRef();
+	}else{
+		return E_NOINTERFACE;
+	}
+
+	return S_OK;
+}
+
+ULONG ActivationHandler::AddRef(){
+	return InterlockedIncrement(&refCount);
+}
+
+ULONG ActivationHandler::Release(){
+	return InterlockedDecrement(&refCount);
 }

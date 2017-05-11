@@ -7,7 +7,11 @@
 #include "NetworkSocketWinsock.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+
+#else
 #include <IPHlpApi.h>
+#endif
 #include <assert.h>
 #include "../../logging.h"
 #include "../../VoIPController.h"
@@ -264,6 +268,32 @@ void NetworkSocketWinsock::OnActiveInterfaceChanged(){
 }
 
 std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv6Address *v6addr){
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+	Windows::Networking::Connectivity::ConnectionProfile^ profile=Windows::Networking::Connectivity::NetworkInformation::GetInternetConnectionProfile();
+	if(profile){
+		Windows::Foundation::Collections::IVectorView<Windows::Networking::HostName^>^ hostnames=Windows::Networking::Connectivity::NetworkInformation::GetHostNames();
+		for(unsigned int i=0;i<hostnames->Size;i++){
+			Windows::Networking::HostName^ n = hostnames->GetAt(i);
+			if(n->Type!=Windows::Networking::HostNameType::Ipv4 && n->Type!=Windows::Networking::HostNameType::Ipv6)
+				continue;
+			if(n->IPInformation->NetworkAdapter->Equals(profile->NetworkAdapter)){
+				if(v4addr && n->Type==Windows::Networking::HostNameType::Ipv4){
+					char buf[INET_ADDRSTRLEN];
+					WideCharToMultiByte(CP_UTF8, 0, n->RawName->Data(), -1, buf, sizeof(buf), NULL, NULL);
+					*v4addr=IPv4Address(buf);
+				}else if(v6addr && n->Type==Windows::Networking::HostNameType::Ipv6){
+					char buf[INET6_ADDRSTRLEN];
+					WideCharToMultiByte(CP_UTF8, 0, n->RawName->Data(), -1, buf, sizeof(buf), NULL, NULL);
+					*v6addr=IPv6Address(buf);
+				}
+			}
+		}
+		char buf[128];
+		WideCharToMultiByte(CP_UTF8, 0, profile->NetworkAdapter->NetworkAdapterId.ToString()->Data(), -1, buf, sizeof(buf), NULL, NULL);
+		return std::string(buf);
+	}
+	return "";
+#else
 	IP_ADAPTER_ADDRESSES* addrs=(IP_ADAPTER_ADDRESSES*)malloc(15*1024);
 	ULONG size=15*1024;
 	ULONG flags=GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME;
@@ -328,6 +358,7 @@ std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv
 
 	free(addrs);
 	return bestName;
+#endif
 }
 
 uint16_t NetworkSocketWinsock::GetLocalPort(){
