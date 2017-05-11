@@ -708,17 +708,7 @@ public final class Decoder {
             return 0
         }
     }
-    
-    public func decodeInt32ForKey(_ key: String) -> Int32 {
-        if Decoder.positionOnStringKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32) {
-            var value: Int32 = 0
-            memcpy(&value, self.buffer.memory + self.offset, 4)
-            self.offset += 4
-            return value
-        } else {
-            return 0
-        }
-    }
+
     
     public func decodeInt32ForKey(_ key: StaticString) -> Int32? {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32) {

@@ -37,6 +37,16 @@ final class MutablePeerMergedOperationLogView {
                             self.tailIndex = entry.mergedIndex
                         }
                     }
+                case let .updateContents(entry):
+                    if entry.tag == self.tag {
+                        loop: for i in 0 ..< self.entries.count {
+                            if self.entries[i].tagLocalIndex == entry.tagLocalIndex {
+                                self.entries[i] = entry
+                                updated = true
+                                break loop
+                            }
+                        }
+                    }
                 case let .remove(tag, mergedIndices):
                     if tag == self.tag {
                         updated = true
