@@ -250,121 +250,121 @@
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\audio_util.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\channel_buffer.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\fft4g.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\ring_buffer.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\auto_correlation.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\auto_corr_to_refl_coef.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\complex_bit_reverse.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\complex_fft.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\copy_set_operations.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\cross_correlation.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\cross_correlation_neon.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\division_operations.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\dot_product_with_scale.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\downsample_fast.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\downsample_fast_neon.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\energy.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\filter_ar.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\filter_ar_fast_q12.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\filter_ma_fast_q12.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\get_hanning_window.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\get_scaling_square.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\ilbc_specific_functions.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\levinson_durbin.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\lpc_to_refl_coef.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\min_max_operations.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\min_max_operations_neon.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\randomization_functions.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\real_fft.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\refl_coef_to_lpc.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\resample.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\resample_48khz.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\resample_by_2.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\resample_by_2_internal.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\resample_fractional.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\splitting_filter_impl.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\spl_init.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\spl_inl.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\spl_sqrt.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\spl_sqrt_floor.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\sqrt_of_one_minus_x_squared.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\signal_processing\vector_scaling_operations.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\sparse_fir_filter.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\common_audio\wav_file.cc" />
@@ -379,29 +379,29 @@
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\aec\aec_resampler.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\aec\echo_cancellation.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\agc\legacy\analog_agc.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\agc\legacy\digital_agc.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\logging\apm_data_dumper.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\ns\noise_suppression.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\ns\noise_suppression_x.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\ns\nsx_core.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\ns\nsx_core_c.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\ns\nsx_core_neon.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\ns\ns_core.c">
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\splitting_filter.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\three_band_filter_bank.cc" />
