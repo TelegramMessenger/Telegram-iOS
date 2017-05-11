@@ -236,7 +236,8 @@ private final class MultipartUploadManager {
         if let resourceData = self.resourceData, resourceData.complete, self.committedOffset >= resourceData.size {
             if self.headerPartReady {
                 let effectiveSize = self.state.finalize()
-                self.completed(MultipartIntermediateResult(id: self.fileId, partCount: Int32(effectiveSize / self.defaultPartSize + (effectiveSize % self.defaultPartSize == 0 ? 0 : 1)), md5Digest: "", size: Int32(resourceData.size), bigTotalParts: self.bigTotalParts))
+                let effectivePartCount = Int32(effectiveSize / self.defaultPartSize + (effectiveSize % self.defaultPartSize == 0 ? 0 : 1))
+                self.completed(MultipartIntermediateResult(id: self.fileId, partCount: effectivePartCount, md5Digest: "", size: Int32(resourceData.size), bigTotalParts: self.bigTotalParts))
             } else {
                 let partOffset = 0
                 let partSize = min(resourceData.size - partOffset, self.defaultPartSize)
@@ -372,8 +373,13 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                                 uintPtr[3] = bytes[3] ^ bytes[7]
                             })
                         }
-                        let inputFile = Api.InputEncryptedFile.inputEncryptedFileUploaded(id: result.id, parts: result.partCount, md5Checksum: result.md5Digest, keyFingerprint: fingerprint)
-                        subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                        if let _ = result.bigTotalParts {
+                            let inputFile = Api.InputEncryptedFile.inputEncryptedFileBigUploaded(id: result.id, parts: result.partCount, keyFingerprint: fingerprint)
+                            subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                        } else {
+                            let inputFile = Api.InputEncryptedFile.inputEncryptedFileUploaded(id: result.id, parts: result.partCount, md5Checksum: result.md5Digest, keyFingerprint: fingerprint)
+                            subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                        }
                     } else {
                         if let _ = result.bigTotalParts {
                             let inputFile = Api.InputFile.inputFileBig(id: result.id, parts: result.partCount, name: "file.jpg")

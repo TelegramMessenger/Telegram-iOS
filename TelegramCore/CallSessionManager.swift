@@ -283,7 +283,7 @@ private final class CallSessionManagerContext {
                     disposable.dispose()
                     dropData = (id, accessHash, .abort)
                 case let .requested(id, accessHash, _, _, _, _):
-                    dropData = (id, accessHash, .abort)
+                    dropData = (id, accessHash, .busy)
                 case let .requesting(_, disposable):
                     disposable.dispose()
                     context.state = .terminated(reason: .ended(.hungUp), reportRating: false)
