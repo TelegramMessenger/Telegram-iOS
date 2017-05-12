@@ -339,6 +339,8 @@ void AudioOutputWASAPI::RunThread() {
 			ResetEvent(streamSwitchEvent);
 			LOGV("stream switch done");
 		}else if(waitResult==WAIT_OBJECT_0+2){ // audioSamplesReadyEvent
+			if(!audioClient)
+				continue;
 			BYTE* data;
 			uint32_t padding;
 			uint32_t framesAvailable;

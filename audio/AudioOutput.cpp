@@ -22,6 +22,7 @@
 #include "../os/windows/AudioOutputWASAPI.h"
 #elif defined(__linux__)
 #include "../os/linux/AudioOutputALSA.h"
+#include "../os/linux/AudioOutputPulse.h"
 #else
 #error "Unsupported operating system"
 #endif
@@ -52,6 +53,13 @@ AudioOutput *AudioOutput::Create(std::string deviceID){
 #endif
 	return new AudioOutputWASAPI(deviceID);
 #elif defined(__linux__)
+	if(AudioOutputPulse::IsAvailable()){
+		AudioOutputPulse* aop=new AudioOutputPulse(deviceID);
+		if(!aop->IsInitialized())
+			delete aop;
+		else
+			return aop;
+	}
 	return new AudioOutputALSA(deviceID);
 #endif
 }
@@ -93,7 +101,10 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 #endif
 	AudioOutputWASAPI::EnumerateDevices(devs);
 #elif defined(__linux__) && !defined(__ANDROID__)
-	AudioOutputALSA::EnumerateDevices(devs);
+	if(AudioOutputPulse::IsAvailable())
+		AudioOutputPulse::EnumerateDevices(devs);
+	else
+		AudioOutputALSA::EnumerateDevices(devs);
 #endif
 }
 

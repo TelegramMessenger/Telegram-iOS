@@ -158,7 +158,7 @@ void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
 		char _value[256];
 		WideCharToMultiByte(CP_UTF8, 0, item->Key->Data(), -1, _key, sizeof(_key), NULL, NULL);
 		if(item->Value->ValueType==Windows::Data::Json::JsonValueType::String)
-			WideCharToMultiByte(CP_UTF8, 0, ((Platform::String^)item->Value)->Data(), -1, _value, sizeof(_value), NULL, NULL);
+			WideCharToMultiByte(CP_UTF8, 0, item->Value->GetString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
 		else
 			WideCharToMultiByte(CP_UTF8, 0, item->Value->ToString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
 		std::string key(_key);

@@ -329,6 +329,8 @@ void AudioInputWASAPI::RunThread() {
 			bufferSize=0;
 			LOGV("stream switch done");
 		}else if(waitResult==WAIT_OBJECT_0+2){ // audioSamplesReadyEvent
+			if(!audioClient)
+				continue;
 			if(bufferSize==0){
 				res=audioClient->GetBufferSize(&bufferSize);
 				CHECK_RES(res, "audioClient->GetBufferSize");

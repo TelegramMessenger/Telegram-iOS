@@ -87,6 +87,10 @@
           '<(tgvoip_src_loc)/os/linux/AudioInputALSA.h',
           '<(tgvoip_src_loc)/os/linux/AudioOutputALSA.cpp',
           '<(tgvoip_src_loc)/os/linux/AudioOutputALSA.h',
+          '<(tgvoip_src_loc)/os/linux/AudioOutputPulse.cpp',
+          '<(tgvoip_src_loc)/os/linux/AudioOutputPulse.h',
+          '<(tgvoip_src_loc)/os/linux/AudioInputPulse.cpp',
+          '<(tgvoip_src_loc)/os/linux/AudioInputPulse.h',
 
           # POSIX
           '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.cpp',
