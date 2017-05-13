@@ -55,6 +55,8 @@ namespace libtgvoip{
     public ref class VoIPControllerWrapper sealed{
     public:
         VoIPControllerWrapper();
+		virtual ~VoIPControllerWrapper();
+
 		void Start();
 		void Connect();
 		void SetPublicEndpoints(Windows::Foundation::Collections::IIterable<Endpoint^>^ endpoints, bool allowP2P);
@@ -70,7 +72,6 @@ namespace libtgvoip{
 		static void UpdateServerConfig(Platform::String^ json);
 		//static Platform::String^ TestAesIge();
 	private:
-		~VoIPControllerWrapper();
 		static void OnStateChanged(tgvoip::VoIPController* c, int state);
 		void OnStateChangedInternal(int state);
 		tgvoip::VoIPController* controller;
