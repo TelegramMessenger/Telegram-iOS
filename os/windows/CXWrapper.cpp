@@ -14,23 +14,27 @@ using namespace Windows::Security::Cryptography::Core;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Data::Json;
 
+#ifdef TGVOIP_USE_CUSTOM_CRYPTO
 //CryptographicHash^ MicrosoftCryptoImpl::sha1Hash;
 //CryptographicHash^ MicrosoftCryptoImpl::sha256Hash;
 HashAlgorithmProvider^ MicrosoftCryptoImpl::sha1Provider;
 HashAlgorithmProvider^ MicrosoftCryptoImpl::sha256Provider;
 SymmetricKeyAlgorithmProvider^ MicrosoftCryptoImpl::aesKeyProvider;
+#endif
 
 /*struct tgvoip_cx_data{
 	VoIPControllerWrapper^ self;
 };*/
 
 VoIPControllerWrapper::VoIPControllerWrapper(){
+#ifdef TGVOIP_USE_CUSTOM_CRYPTO
 	VoIPController::crypto.aes_ige_decrypt=MicrosoftCryptoImpl::AesIgeDecrypt;
 	VoIPController::crypto.aes_ige_encrypt=MicrosoftCryptoImpl::AesIgeEncrypt;
 	VoIPController::crypto.sha1=MicrosoftCryptoImpl::SHA1;
 	VoIPController::crypto.sha256=MicrosoftCryptoImpl::SHA256;
 	VoIPController::crypto.rand_bytes=MicrosoftCryptoImpl::RandBytes;
 	MicrosoftCryptoImpl::Init();
+#endif
 	controller=new VoIPController();
 	controller->implData=(void*)this;
 	controller->SetStateCallback(VoIPControllerWrapper::OnStateChanged);
@@ -158,7 +162,7 @@ void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
 		char _value[256];
 		WideCharToMultiByte(CP_UTF8, 0, item->Key->Data(), -1, _key, sizeof(_key), NULL, NULL);
 		if(item->Value->ValueType==Windows::Data::Json::JsonValueType::String)
-			WideCharToMultiByte(CP_UTF8, 0, ((Platform::String^)item->Value)->Data(), -1, _value, sizeof(_value), NULL, NULL);
+			WideCharToMultiByte(CP_UTF8, 0, item->Value->GetString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
 		else
 			WideCharToMultiByte(CP_UTF8, 0, item->Value->ToString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
 		std::string key(_key);
@@ -169,6 +173,8 @@ void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
 
 	ServerConfig::GetSharedInstance()->Update(config);
 }
+
+#ifdef TGVOIP_USE_CUSTOM_CRYPTO
 
 void MicrosoftCryptoImpl::AesIgeEncrypt(uint8_t* in, uint8_t* out, size_t len, uint8_t* key, uint8_t* iv){
 	Platform::Array<uint8>^ keybuf=ref new Platform::Array<uint8>(16);
@@ -299,3 +305,5 @@ void MicrosoftCryptoImpl::XorInt128(uint8_t* a, uint8_t* b, uint8_t* out){
 	res+=CryptographicBuffer::EncodeToHexString(CryptographicBuffer::CreateFromByteArray(out));
 	return res;
 }*/
+
+#endif

@@ -77,6 +77,7 @@ namespace libtgvoip{
 		IStateCallback^ stateCallback;
     };
 
+#ifdef TGVOIP_USE_CUSTOM_CRYPTO
 
 	ref class MicrosoftCryptoImpl{
 	public:
@@ -94,4 +95,6 @@ namespace libtgvoip{
 		static Windows::Security::Cryptography::Core::HashAlgorithmProvider^ sha256Provider;
 		static Windows::Security::Cryptography::Core::SymmetricKeyAlgorithmProvider^ aesKeyProvider;
 	};
+
+#endif
 }
