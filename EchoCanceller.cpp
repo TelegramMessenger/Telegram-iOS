@@ -6,6 +6,7 @@
 
 #include "EchoCanceller.h"
 #include "audio/AudioOutput.h"
+#include "audio/AudioInput.h"
 #include "logging.h"
 #include <string.h>
 #include <stdio.h>
@@ -263,13 +264,13 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 
 		lock_mutex(aecMutex);
 		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0], _nsOut[0], samplesOut, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay());
-		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, _nsOut[0]+160, samplesOut+160, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay());
+		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, _nsOut[0]+160, samplesOut+160, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay());
 		unlock_mutex(aecMutex);
 		memcpy(bufOut->ibuf()->bands(0)[0], samplesOut, 320*2);
 	}else if(enableAEC){
 		lock_mutex(aecMutex);
 		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0], NULL, samplesOut, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay());
-		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, NULL, samplesOut+160, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay());
+		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, NULL, samplesOut+160, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay());
 		unlock_mutex(aecMutex);
 		memcpy(bufOut->ibuf()->bands(0)[0], samplesOut, 320*2);
 	}else if(enableNS){
@@ -339,12 +340,12 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 			aecIn[i]=bufOut->fbuf_const()->bands(0)[i];
 			aecOut[i]=_aecOut[i];
 		}
-		webrtc::WebRtcAec_Process(aec, aecIn, 3, aecOut, AEC_FRAME_SIZE, audio::AudioOutput::GetEstimatedDelay(), 0);
+		webrtc::WebRtcAec_Process(aec, aecIn, 3, aecOut, AEC_FRAME_SIZE, audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay(), 0);
 		for(i=0;i<3;i++){
 			aecOut[i]+=160;
 			aecIn[i]+=160;
 		}
-		webrtc::WebRtcAec_Process(aec, aecIn, 3, aecOut, AEC_FRAME_SIZE, audio::AudioOutput::GetEstimatedDelay(), 0);
+		webrtc::WebRtcAec_Process(aec, aecIn, 3, aecOut, AEC_FRAME_SIZE, audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay(), 0);
 		
 		memcpy(bufOut->fbuf()->bands(0)[0], _aecOut[0], 320*4);
 		memcpy(bufOut->fbuf()->bands(0)[1], _aecOut[1], 320*4);

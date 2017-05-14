@@ -2098,7 +2098,10 @@ Endpoint::Endpoint(int64_t id, uint16_t port, IPv4Address& _address, IPv6Address
 }
 
 Endpoint::Endpoint() : address(0), v6address("::0") {
-
+	lastPingSeq=0;
+	lastPingTime=0;
+	averageRTT=0;
+	memset(rtts, 0, sizeof(rtts));
 }
 
 #if defined(__APPLE__) && TARGET_OS_IPHONE
