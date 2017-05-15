@@ -284,6 +284,19 @@ void AudioInputAudioUnit::SetCurrentDevice(std::string deviceID){
 	LOGD("Switched capture device, new sample rate %d", hardwareSampleRate);
 	
 	this->currentDevice=deviceID;
+	
+	AudioObjectPropertyAddress propertyAddress = {
+		kAudioDevicePropertyBufferFrameSize,
+		kAudioObjectPropertyScopeGlobal,
+		kAudioObjectPropertyElementMaster
+	};
+	size=4;
+	UInt32 bufferFrameSize;
+	status=AudioObjectGetPropertyData(inputDevice, &propertyAddress, 0, NULL, &size, &bufferFrameSize);
+	if(status==noErr){
+		estimatedDelay=bufferFrameSize/48;
+		LOGD("CoreAudio buffer size for output device is %u frames (%u ms)", bufferFrameSize, estimatedDelay);
+	}
 }
 
 OSStatus AudioInputAudioUnit::DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData){

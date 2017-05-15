@@ -30,10 +30,12 @@ public:
 	virtual void SetCurrentDevice(std::string deviceID);
 	static AudioInput* Create(std::string deviceID);
 	static void EnumerateDevices(std::vector<AudioInputDevice>& devs);
+	static int32_t GetEstimatedDelay();
 
 protected:
 	std::string currentDevice;
 	bool failed;
+	static int32_t estimatedDelay;
 };
 }}
 
