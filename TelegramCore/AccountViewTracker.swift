@@ -315,6 +315,7 @@ public final class AccountViewTracker {
                 context = existingContext
                 context.referenceData = referenceData
                 if context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 5 {
+                    context.timestamp = CFAbsoluteTimeGetCurrent()
                     dataUpdated = true
                 }
             } else {
