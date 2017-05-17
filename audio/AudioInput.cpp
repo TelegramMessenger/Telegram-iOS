@@ -5,6 +5,7 @@
 //
 
 #include "AudioInput.h"
+#include "../logging.h"
 #if defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
 #elif defined(__APPLE__)

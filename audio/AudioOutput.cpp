@@ -5,6 +5,7 @@
 //
 
 #include "AudioOutput.h"
+#include "../logging.h"
 #if defined(__ANDROID__)
 #include "../os/android/AudioOutputOpenSLES.h"
 #include "../os/android/AudioOutputAndroid.h"
