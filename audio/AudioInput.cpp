@@ -61,6 +61,7 @@ AudioInput *AudioInput::Create(std::string deviceID){
 			delete aip;
 		else
 			return aip;
+		LOGW("in: PulseAudio available but not working; trying ALSA");
 	}
 	return new AudioInputALSA(deviceID);
 #endif

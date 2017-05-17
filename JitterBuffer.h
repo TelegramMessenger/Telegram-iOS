@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <vector>
+#include <stdio.h>
 #include "MediaStreamItf.h"
 #include "BlockingQueue.h"
 #include "BufferPool.h"
@@ -83,6 +84,7 @@ private:
 	int deviationPtr;
 	double lastMeasuredJitter;
 	double lastMeasuredDelay;
+	//FILE* dump;
 };
 }
 
