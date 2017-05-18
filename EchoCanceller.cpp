@@ -66,7 +66,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 #else
 		aec=webrtc::WebRtcAec_Create();
 		webrtc::WebRtcAec_Init(aec, 48000, 48000);
-		webrtc::WebRtcAec_enable_delay_agnostic(webrtc::WebRtcAec_aec_core(aec), 1);
+		//webrtc::WebRtcAec_enable_delay_agnostic(webrtc::WebRtcAec_aec_core(aec), 1);
 		webrtc::AecConfig config;
 		config.metricsMode=webrtc::kAecFalse;
 		config.nlpMode=webrtc::kAecNlpAggressive;
@@ -99,7 +99,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		WebRtcAgcConfig agcConfig;
 		agcConfig.compressionGaindB = 9;
 		agcConfig.limiterEnable = 1;
-		agcConfig.targetLevelDbfs = 3;
+		agcConfig.targetLevelDbfs = 9;
 		WebRtcAgc_Init(agc, 0, 255, kAgcModeAdaptiveAnalog, 48000);
 		WebRtcAgc_set_config(agc, agcConfig);
 		agcMicLevel=128;
