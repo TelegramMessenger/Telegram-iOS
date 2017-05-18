@@ -255,7 +255,14 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                             }
                         }
                         
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(media: sourceMessage.media, textEntities: entitiesAttribute?.entities), globalTags: globalTagsForStoreMessage(media: sourceMessage.media), forwardInfo: forwardInfo, authorId: account.peerId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                        let authorId:PeerId?
+                        if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info, !info.flags.contains(.messagesShouldHaveSignatures) {
+                            authorId = peer.id
+                        }  else {
+                            authorId = account.peerId
+                        }
+                        
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(media: sourceMessage.media, textEntities: entitiesAttribute?.entities), globalTags: globalTagsForStoreMessage(media: sourceMessage.media), forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                     }
             }
         }
