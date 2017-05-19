@@ -5,7 +5,11 @@
 #include <string>
 #include <collection.h>
 #include "CXWrapper.h"
+#include <wrl.h>  
+#include <robuffer.h>  
 
+using namespace Windows::Storage::Streams;
+using namespace Microsoft::WRL;
 using namespace libtgvoip;
 using namespace Platform;
 using namespace tgvoip;
@@ -171,19 +175,27 @@ void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
 }
 
 void MicrosoftCryptoImpl::AesIgeEncrypt(uint8_t* in, uint8_t* out, size_t len, uint8_t* key, uint8_t* iv){
-	Platform::Array<uint8>^ keybuf=ref new Platform::Array<uint8>(16);
-	memcpy(keybuf->Data, key, 16);
-	CryptographicKey^ _key=aesKeyProvider->CreateSymmetricKey(CryptographicBuffer::CreateFromByteArray(keybuf));
-	Platform::Array<uint8>^ tmpIn=ref new Platform::Array<uint8>(16);
-	Platform::Array<uint8>^ tmpOut=ref new Platform::Array<uint8>(16);
+	IBuffer^ keybuf=IBufferFromPtr(key, 32);
+	CryptographicKey^ _key=aesKeyProvider->CreateSymmetricKey(keybuf);
+	uint8_t tmpOut[16];
 	uint8_t* xPrev=iv+16;
 	uint8_t* yPrev=iv;
+	uint8_t x[16];
+	uint8_t y[16];
 	for(size_t offset=0;offset<len;offset+=16){
-		uint8_t* y=tmpIn->Data;
-		uint8_t* x=in+offset;
+		for (size_t i=0;i<16;i++){
+			if (offset+i < len){
+				x[i] = in[offset+i];
+			}
+			else{
+				x[i]=0;
+			}
+		}
 		XorInt128(x, yPrev, y);
-		CryptographicBuffer::CopyToByteArray(CryptographicEngine::Encrypt(_key, CryptographicBuffer::CreateFromByteArray(tmpIn), nullptr), &tmpOut);
-		XorInt128(tmpOut->Data, xPrev, y);
+		IBuffer^ inbuf=IBufferFromPtr(y, 16);
+		IBuffer^ outbuf=CryptographicEngine::Encrypt(_key, inbuf, nullptr);
+		IBufferToPtr(outbuf, 16, tmpOut);
+		XorInt128(tmpOut, xPrev, y);
 		memcpy(xPrev, x, 16);
 		memcpy(yPrev, y, 16);
 		memcpy(out+offset, y, 16);
@@ -191,19 +203,27 @@ void MicrosoftCryptoImpl::AesIgeEncrypt(uint8_t* in, uint8_t* out, size_t len, u
 }
 
 void MicrosoftCryptoImpl::AesIgeDecrypt(uint8_t* in, uint8_t* out, size_t len, uint8_t* key, uint8_t* iv){
-	Platform::Array<uint8>^ keybuf=ref new Platform::Array<uint8>(16);
-	memcpy(keybuf->Data, key, 16);
-	CryptographicKey^ _key=aesKeyProvider->CreateSymmetricKey(CryptographicBuffer::CreateFromByteArray(keybuf));
-	Platform::Array<uint8>^ tmpIn=ref new Platform::Array<uint8>(16);
-	Platform::Array<uint8>^ tmpOut=ref new Platform::Array<uint8>(16);
+	IBuffer^ keybuf=IBufferFromPtr(key, 32);
+	CryptographicKey^ _key=aesKeyProvider->CreateSymmetricKey(keybuf);
+	uint8_t tmpOut[16];
 	uint8_t* xPrev=iv;
 	uint8_t* yPrev=iv+16;
+	uint8_t x[16];
+	uint8_t y[16];
 	for(size_t offset=0;offset<len;offset+=16){
-		uint8_t* y=tmpIn->Data;
-		uint8_t* x=in+offset;
+		for (size_t i=0;i<16;i++){
+			if (offset+i < len){
+				x[i] = in[offset+i];
+			}
+			else{
+				x[i]=0;
+			}
+		}
 		XorInt128(x, yPrev, y);
-		CryptographicBuffer::CopyToByteArray(CryptographicEngine::Decrypt(_key, CryptographicBuffer::CreateFromByteArray(tmpIn), nullptr), &tmpOut);
-		XorInt128(tmpOut->Data, xPrev, y);
+		IBuffer^ inbuf=IBufferFromPtr(y, 16);
+		IBuffer^ outbuf=CryptographicEngine::Decrypt(_key, inbuf, nullptr);
+		IBufferToPtr(outbuf, 16, tmpOut);
+		XorInt128(tmpOut, xPrev, y);
 		memcpy(xPrev, x, 16);
 		memcpy(yPrev, y, 16);
 		memcpy(out+offset, y, 16);
@@ -213,14 +233,11 @@ void MicrosoftCryptoImpl::AesIgeDecrypt(uint8_t* in, uint8_t* out, size_t len, u
 void MicrosoftCryptoImpl::SHA1(uint8_t* msg, size_t len, uint8_t* out){
 	//EnterCriticalSection(&hashMutex);
 
-	Platform::Array<uint8>^ arr=ref new Platform::Array<uint8>(len);
-	memcpy(arr->Data, msg, len);
+	IBuffer^ arr=IBufferFromPtr(msg, len);
 	CryptographicHash^ hash=sha1Provider->CreateHash();
-	hash->Append(CryptographicBuffer::CreateFromByteArray(arr));
+	hash->Append(arr);
 	IBuffer^ res=hash->GetValueAndReset();
-	Platform::Array<uint8>^ _out=ref new Platform::Array<uint8>(20);
-	CryptographicBuffer::CopyToByteArray(res, &_out);
-	memcpy(out, _out->Data, 20);
+	IBufferToPtr(res, 20, out);
 
 	//LeaveCriticalSection(&hashMutex);
 }
@@ -228,22 +245,17 @@ void MicrosoftCryptoImpl::SHA1(uint8_t* msg, size_t len, uint8_t* out){
 void MicrosoftCryptoImpl::SHA256(uint8_t* msg, size_t len, uint8_t* out){
 	//EnterCriticalSection(&hashMutex);
 
-	Platform::Array<uint8>^ arr=ref new Platform::Array<uint8>(len);
-	memcpy(arr->Data, msg, len);
+	IBuffer^ arr=IBufferFromPtr(msg, len);
 	CryptographicHash^ hash=sha256Provider->CreateHash();
-	hash->Append(CryptographicBuffer::CreateFromByteArray(arr));
+	hash->Append(arr);
 	IBuffer^ res=hash->GetValueAndReset();
-	Platform::Array<uint8>^ _out=ref new Platform::Array<uint8>(32);
-	CryptographicBuffer::CopyToByteArray(res, &_out);
-	memcpy(out, _out->Data, 32);
-
+	IBufferToPtr(res, 32, out);
 	//LeaveCriticalSection(&hashMutex);
 }
 
 void MicrosoftCryptoImpl::RandBytes(uint8_t* buffer, size_t len){
-	Platform::Array<uint8>^ a=ref new Platform::Array<uint8>(len);
-	CryptographicBuffer::CopyToByteArray(CryptographicBuffer::GenerateRandom(len), &a);
-	memcpy(buffer, a->Data, len);
+	IBuffer^ res=CryptographicBuffer::GenerateRandom(len);
+	IBufferToPtr(res, len, buffer);
 }
 
 void MicrosoftCryptoImpl::Init(){
@@ -260,6 +272,22 @@ void MicrosoftCryptoImpl::XorInt128(uint8_t* a, uint8_t* b, uint8_t* out){
 	uint64_t* _out=reinterpret_cast<uint64_t*>(out);
 	_out[0]=_a[0]^_b[0];
 	_out[1]=_a[1]^_b[1];
+}
+
+void MicrosoftCryptoImpl::IBufferToPtr(IBuffer^ buffer, size_t len, uint8_t* out)
+{
+	ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(buffer)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+
+	byte* hashBuffer;
+	bufferByteAccess->Buffer(&hashBuffer);
+	CopyMemory(out, hashBuffer, len);
+}
+
+IBuffer^ MicrosoftCryptoImpl::IBufferFromPtr(uint8_t* msg, size_t len)
+{
+	ComPtr<NativeBuffer> nativeBuffer=Make<NativeBuffer>((byte *)msg, len);
+	return reinterpret_cast<IBuffer^>(nativeBuffer.Get());
 }
 
 /*Platform::String^ VoIPControllerWrapper::TestAesIge(){

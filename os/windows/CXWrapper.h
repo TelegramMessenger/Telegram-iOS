@@ -1,5 +1,10 @@
 ﻿#pragma once
 
+#include <wrl.h>
+#include <wrl/implements.h>
+#include <windows.storage.streams.h>
+#include <robuffer.h>
+#include <vector>
 #include "../../VoIPController.h"
 #include "../../VoIPServerConfig.h"
 
@@ -55,6 +60,7 @@ namespace libtgvoip{
     public ref class VoIPControllerWrapper sealed{
     public:
         VoIPControllerWrapper();
+		virtual ~VoIPControllerWrapper();
 		void Start();
 		void Connect();
 		void SetPublicEndpoints(Windows::Foundation::Collections::IIterable<Endpoint^>^ endpoints, bool allowP2P);
@@ -70,7 +76,6 @@ namespace libtgvoip{
 		static void UpdateServerConfig(Platform::String^ json);
 		//static Platform::String^ TestAesIge();
 	private:
-		~VoIPControllerWrapper();
 		static void OnStateChanged(tgvoip::VoIPController* c, int state);
 		void OnStateChangedInternal(int state);
 		tgvoip::VoIPController* controller;
@@ -88,10 +93,64 @@ namespace libtgvoip{
 		static void Init();
 	private:
 		static inline void XorInt128(uint8_t* a, uint8_t* b, uint8_t* out);
+		static void IBufferToPtr(Windows::Storage::Streams::IBuffer^ buffer, size_t len, uint8_t* out);
+		static Windows::Storage::Streams::IBuffer^ IBufferFromPtr(uint8_t* msg, size_t len);
 		/*static Windows::Security::Cryptography::Core::CryptographicHash^ sha1Hash;
 		static Windows::Security::Cryptography::Core::CryptographicHash^ sha256Hash;*/
 		static Windows::Security::Cryptography::Core::HashAlgorithmProvider^ sha1Provider;
 		static Windows::Security::Cryptography::Core::HashAlgorithmProvider^ sha256Provider;
 		static Windows::Security::Cryptography::Core::SymmetricKeyAlgorithmProvider^ aesKeyProvider;
+	};
+
+	class NativeBuffer :
+		public Microsoft::WRL::RuntimeClass<Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::RuntimeClassType::WinRtClassicComMix>,
+		ABI::Windows::Storage::Streams::IBuffer,
+		Windows::Storage::Streams::IBufferByteAccess>
+	{
+	public:
+		NativeBuffer(byte *buffer, UINT totalSize)
+		{
+			m_length=totalSize;
+			m_buffer=buffer;
+		}
+
+		virtual ~NativeBuffer()
+		{
+		}
+
+		STDMETHODIMP RuntimeClassInitialize(byte *buffer, UINT totalSize)
+		{
+			m_length=totalSize;
+			m_buffer=buffer;
+			return S_OK;
+		}
+
+		STDMETHODIMP Buffer(byte **value)
+		{
+			*value=m_buffer;
+			return S_OK;
+		}
+
+		STDMETHODIMP get_Capacity(UINT32 *value)
+		{
+			*value=m_length;
+			return S_OK;
+		}
+
+		STDMETHODIMP get_Length(UINT32 *value)
+		{
+			*value=m_length;
+			return S_OK;
+		}
+
+		STDMETHODIMP put_Length(UINT32 value)
+		{
+			m_length=value;
+			return S_OK;
+		}
+
+	private:
+		UINT32 m_length;
+		byte *m_buffer;
 	};
 }
