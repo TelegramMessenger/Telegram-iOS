@@ -1264,6 +1264,7 @@
 					"-DWEBRTC_POSIX",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DTGVOIP_USE_DESKTOP_DSP",
+					"-DWEBRTC_MAC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1302,6 +1303,7 @@
 					"-DWEBRTC_POSIX",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DTGVOIP_USE_DESKTOP_DSP",
+					"-DWEBRTC_MAC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1391,6 +1393,7 @@
 					"-DWEBRTC_POSIX",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DTGVOIP_USE_DESKTOP_DSP",
+					"-DWEBRTC_MAC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1474,6 +1477,7 @@
 					"-DWEBRTC_POSIX",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DTGVOIP_USE_DESKTOP_DSP",
+					"-DWEBRTC_MAC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";

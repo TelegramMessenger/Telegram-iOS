@@ -39,6 +39,8 @@ JitterBuffer::JitterBuffer(MediaStreamItf *out, uint32_t step):bufferPool(JITTER
 	}
 	lossesToReset=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_losses_to_reset", 20);
 	resyncThreshold=ServerConfig::GetSharedInstance()->GetDouble("jitter_resync_threshold", 1.0);
+	//dump=fopen("/sdcard/tgvoip_jitter_dump.txt", "a");
+	//fprintf(dump, "==================================\n");
 	Reset();
 	init_mutex(mutex);
 }
@@ -260,6 +262,7 @@ void JitterBuffer::PutInternal(jitter_packet_t* pkt){
 		memcpy(slots[i].buffer, pkt->buffer, pkt->size);
 	else
 		LOGE("WTF!!");
+	//fprintf(dump, "%f %d\n", time-prevRecvTime, GetCurrentDelay());
 	prevRecvTime=time;
 }
 

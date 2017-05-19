@@ -13,7 +13,7 @@
 #include "../../VoIPController.h"
 
 #define BUFFER_SIZE 960
-#define CHECK_ERROR(res, msg) if(res!=0){LOGE(msg "failed: %s", pa_strerror(res)); failed=true; return;}
+#define CHECK_ERROR(res, msg) if(res!=0){LOGE(msg " failed: %s", pa_strerror(res)); failed=true; return;}
 #define CHECK_DL_ERROR(res, msg) if(!res){LOGE(msg ": %s", dlerror()); failed=true; return;}
 #define LOAD_DL_FUNCTION(name) {_import_##name=(typeof(_import_##name))dlsym(lib, #name); CHECK_DL_ERROR(_import_##name, "Error getting entry point for " #name);}
 
@@ -120,7 +120,6 @@ AudioOutputPulse::AudioOutputPulse(std::string devID){
 		return;
 	}
 	pa_context_set_state_callback(context, AudioOutputPulse::ContextStateCallback, this);
-	pa_threaded_mainloop_lock(mainloop);
 	int err=pa_threaded_mainloop_start(mainloop);
 	CHECK_ERROR(err, "pa_threaded_mainloop_start");
 
@@ -128,7 +127,9 @@ AudioOutputPulse::AudioOutputPulse(std::string devID){
 	CHECK_ERROR(err, "pa_context_connect");
 
 	while(true){
+		pa_threaded_mainloop_lock(mainloop);
 		pa_context_state_t contextState=pa_context_get_state(context);
+		pa_threaded_mainloop_unlock(mainloop);
 		if(!PA_CONTEXT_IS_GOOD(contextState)){
 			LOGE("Error initializing PulseAudio (PA_CONTEXT_IS_GOOD)");
 			failed=true;
@@ -213,7 +214,6 @@ bool AudioOutputPulse::IsPlaying(){
 void AudioOutputPulse::SetCurrentDevice(std::string devID){
 	currentDevice=devID;
 	if(isPlaying && isConnected){
-		pa_threaded_mainloop_lock(mainloop);
 		pa_stream_disconnect(stream);
 		isConnected=false;
 	}
@@ -235,7 +235,9 @@ void AudioOutputPulse::SetCurrentDevice(std::string devID){
 	CHECK_ERROR(err, "pa_stream_connect_playback");
 
 	while(true){
+		pa_threaded_mainloop_lock(mainloop);
 		pa_stream_state_t streamState=pa_stream_get_state(stream);
+		pa_threaded_mainloop_unlock(mainloop);
 		if(!PA_STREAM_IS_GOOD(streamState)){
 			LOGE("Error connecting to audio device '%s'", devID.c_str());
 			failed=true;
@@ -247,7 +249,6 @@ void AudioOutputPulse::SetCurrentDevice(std::string devID){
 	}
 
 	isConnected=true;
-	pa_threaded_mainloop_unlock(mainloop);
 
 	if(isPlaying){
 		pa_operation_unref(pa_stream_cork(stream, 0, AudioOutputPulse::StreamSuccessCallback, mainloop));

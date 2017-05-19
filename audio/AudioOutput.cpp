@@ -5,6 +5,7 @@
 //
 
 #include "AudioOutput.h"
+#include "../logging.h"
 #if defined(__ANDROID__)
 #include "../os/android/AudioOutputOpenSLES.h"
 #include "../os/android/AudioOutputAndroid.h"
@@ -59,6 +60,7 @@ AudioOutput *AudioOutput::Create(std::string deviceID){
 			delete aop;
 		else
 			return aop;
+		LOGW("out: PulseAudio available but not working; trying ALSA");
 	}
 	return new AudioOutputALSA(deviceID);
 #endif
