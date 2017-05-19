@@ -268,9 +268,17 @@ void AudioOutputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 #else
 	Platform::String^ defaultDevID=Windows::Media::Devices::MediaDevice::GetDefaultAudioRenderId(Windows::Media::Devices::AudioDeviceRole::Communications);
 	HRESULT res1, res2;
-	audioClient=WindowsSandboxUtils::ActivateAudioDevice(defaultDevID->Data(), &res1, &res2);
+	IAudioClient2* audioClient2=WindowsSandboxUtils::ActivateAudioDevice(defaultDevID->Data(), &res1, &res2);
 	CHECK_RES(res1, "activate1");
 	CHECK_RES(res2, "activate2");
+
+	AudioClientProperties properties={};
+	properties.cbSize=sizeof AudioClientProperties;
+	properties.eCategory=AudioCategory_Communications;
+	res = audioClient2->SetClientProperties(&properties);
+	CHECK_RES(res, "audioClient2->SetClientProperties");
+
+	audioClient = audioClient2;
 #endif
 
 	res = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST | 0x80000000/*AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM*/, 60 * 10000, 0, &format, NULL);

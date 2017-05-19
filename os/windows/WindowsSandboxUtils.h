@@ -23,12 +23,12 @@ namespace tgvoip {
 
 		ActivationHandler(HANDLE _event);
 		HANDLE event;
-		IAudioClient* client;
+		IAudioClient2* client;
 		HRESULT actResult;
 	};
 
 	class WindowsSandboxUtils {
 	public:
-		static IAudioClient* ActivateAudioDevice(const wchar_t* devID, HRESULT* callResult, HRESULT* actResult);
+		static IAudioClient2* ActivateAudioDevice(const wchar_t* devID, HRESULT* callResult, HRESULT* actResult);
 	};
 }
