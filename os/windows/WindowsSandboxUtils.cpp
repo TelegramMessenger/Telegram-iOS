@@ -12,7 +12,7 @@
 using namespace tgvoip;
 using namespace Microsoft::WRL;
 
-IAudioClient* WindowsSandboxUtils::ActivateAudioDevice(const wchar_t* devID, HRESULT* callRes, HRESULT* actRes) {
+IAudioClient2* WindowsSandboxUtils::ActivateAudioDevice(const wchar_t* devID, HRESULT* callRes, HRESULT* actRes) {
 	// Did I say that I hate pointlessly asynchronous things?
 	HANDLE event = CreateEventEx(NULL, NULL, 0, EVENT_ALL_ACCESS);
 	ActivationHandler activationHandler(event);
