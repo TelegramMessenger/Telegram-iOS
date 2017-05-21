@@ -50,6 +50,7 @@ using namespace tgvoip::audio;
 AudioOutputPulse::AudioOutputPulse(std::string devID){
 	isPlaying=false;
 	isConnected=false;
+	didStart=false;
 
 	mainloop=NULL;
 	mainloopApi=NULL;
@@ -122,6 +123,7 @@ AudioOutputPulse::AudioOutputPulse(std::string devID){
 	pa_context_set_state_callback(context, AudioOutputPulse::ContextStateCallback, this);
 	int err=pa_threaded_mainloop_start(mainloop);
 	CHECK_ERROR(err, "pa_threaded_mainloop_start");
+	didStart=true;
 
 	err=pa_context_connect(context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL);
 	CHECK_ERROR(err, "pa_context_connect");
@@ -159,7 +161,7 @@ AudioOutputPulse::AudioOutputPulse(std::string devID){
 }
 
 AudioOutputPulse::~AudioOutputPulse(){
-	if(mainloop)
+	if(mainloop && didStart)
 		pa_threaded_mainloop_stop(mainloop);
 	if(stream){
 		pa_stream_disconnect(stream);
@@ -220,7 +222,7 @@ void AudioOutputPulse::SetCurrentDevice(std::string devID){
 
 	pa_buffer_attr bufferAttr={
 		.maxlength=960*6,
-		.tlength=960*2,
+		.tlength=960*4,
 		.prebuf=0,
 		.minreq=960*2
 	};

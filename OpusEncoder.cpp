@@ -108,7 +108,7 @@ void tgvoip::OpusEncoder::RunThread(){
 	unsigned char buf[960*2];
 	uint32_t bufferedCount=0;
 	uint32_t packetsPerFrame=frameDuration/20;
-	LOGV("starting decoder, packets per frame=%d", packetsPerFrame);
+	LOGV("starting encoder, packets per frame=%d", packetsPerFrame);
 	unsigned char* frame;
 	if(packetsPerFrame>1)
 		frame=(unsigned char *) malloc(960*2*packetsPerFrame);

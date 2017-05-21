@@ -37,9 +37,10 @@ public:
 	void SetMinPacketCount(uint32_t count);
 	int GetMinPacketCount();
 	int GetCurrentDelay();
+	double GetAverageDelay();
 	void Reset();
 	void HandleInput(unsigned char* data, size_t len, uint32_t timestamp);
-	size_t HandleOutput(unsigned char* buffer, size_t len, int offsetInSteps);
+	size_t HandleOutput(unsigned char* buffer, size_t len, int offsetInSteps, int* playbackScaledDuration);
 	void Tick();
 	void GetAverageLateCount(double* out);
 	int GetAndResetLostPacketCount();
@@ -84,6 +85,9 @@ private:
 	int deviationPtr;
 	double lastMeasuredJitter;
 	double lastMeasuredDelay;
+	int outstandingDelayChange;
+	unsigned int dontChangeDelay;
+	double avgDelay;
 	//FILE* dump;
 };
 }

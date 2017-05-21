@@ -71,6 +71,7 @@ private:
 
 	bool isPlaying;
 	bool isConnected;
+	bool didStart;
 	unsigned char remainingData[10240];
 	size_t remainingDataSize;
 };
