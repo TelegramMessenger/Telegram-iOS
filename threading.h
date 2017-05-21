@@ -112,6 +112,7 @@ private:
 #elif defined(_WIN32)
 
 #include <Windows.h>
+#include <assert.h>
 typedef HANDLE tgvoip_thread_t;
 typedef CRITICAL_SECTION tgvoip_mutex_t;
 typedef HANDLE tgvoip_lock_t; // uncomment for XP compatibility
@@ -151,7 +152,8 @@ public:
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
 		h=CreateSemaphore(NULL, initValue, maxCount, NULL);
 #else
-		h=CreateSemaphoreEx(NULL, initValue, maxCount, NULL, 0, 0);
+		h=CreateSemaphoreEx(NULL, initValue, maxCount, NULL, 0, SEMAPHORE_ALL_ACCESS);
+		assert(h);
 #endif
 	}
 

@@ -331,6 +331,7 @@ void AudioInputWASAPI::RunThread() {
 	uint32_t framesWritten=0;
 
 	bool running=true;
+	//double prevCallback=VoIPController::GetCurrentTime();
 
 	while(running){
 		DWORD waitResult=WaitForMultipleObjectsEx(3, waitArray, false, INFINITE, false);
@@ -351,13 +352,17 @@ void AudioInputWASAPI::RunThread() {
 				CHECK_RES(res, "audioClient->GetBufferSize");
 			}
 			BYTE* data;
-			uint32_t framesAvailable;
+			uint32_t framesAvailable=bufferSize;
 			DWORD flags;
 
 			res=captureClient->GetBuffer(&data, &framesAvailable, &flags, NULL, NULL);
 			CHECK_RES(res, "captureClient->GetBuffer");
 			size_t dataLen=framesAvailable*2;
 			assert(remainingDataLen+dataLen<sizeof(remainingData));
+
+			//double t=VoIPController::GetCurrentTime();
+			//LOGV("audio capture: %u, time %f", framesAvailable, t-prevCallback);
+			//prevCallback=t;
 
 			memcpy(remainingData+remainingDataLen, data, dataLen);
 			remainingDataLen+=dataLen;

@@ -1183,6 +1183,8 @@ void VoIPController::RunSendThread(){
 			lock_mutex(sendBufferMutex);
 			emptySendBuffers.push_back(pkt);
 			unlock_mutex(sendBufferMutex);
+		}else{
+			LOGE("tried to send null packet");
 		}
 	}
 	LOGI("=== send thread exiting ===");
@@ -1464,7 +1466,7 @@ void VoIPController::RunTickThread(){
 					encoder ? encoder->GetPacketLoss() : 0,
 					jitterBuffer ? jitterBuffer->GetLastMeasuredJitter() : 0,
 					jitterBuffer ? jitterBuffer->GetLastMeasuredDelay()*0.06 : 0,
-					jitterBuffer ? jitterBuffer->GetCurrentDelay()*0.06 : 0);
+					jitterBuffer ? jitterBuffer->GetAverageDelay()*0.06 : 0);
 		}
 
 #if defined(__APPLE__) && defined(TGVOIP_USE_AUDIO_SESSION)
@@ -1778,7 +1780,7 @@ void VoIPController::GetDebugString(char *buffer, size_t len){
 		memset(avgLate, 0, 3*sizeof(double));
 	snprintf(buffer, len,
 			 "Remote endpoints: \n%s"
-					 "Jitter buffer: %d/%d | %.1f, %.1f, %.1f\n"
+					 "Jitter buffer: %d/%.2f | %.1f, %.1f, %.1f\n"
 					 "RTT avg/min: %d/%d\n"
 					 "Congestion window: %d/%d bytes\n"
 					 "Key fingerprint: %02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n"
@@ -1790,7 +1792,7 @@ void VoIPController::GetDebugString(char *buffer, size_t len){
 					"Frame size out/in: %d/%d\n"
 					 "Bytes sent/recvd: %llu/%llu",
 			 endpointsBuf,
-			 jitterBuffer ? jitterBuffer->GetMinPacketCount() : 0, jitterBuffer ? jitterBuffer->GetCurrentDelay() : 0, avgLate[0], avgLate[1], avgLate[2],
+			 jitterBuffer ? jitterBuffer->GetMinPacketCount() : 0, jitterBuffer ? jitterBuffer->GetAverageDelay() : 0, avgLate[0], avgLate[1], avgLate[2],
 			// (int)(GetAverageRTT()*1000), 0,
 			 (int)(conctl->GetAverageRTT()*1000), (int)(conctl->GetMinimumRTT()*1000),
 			 int(conctl->GetInflightDataSize()), int(conctl->GetCongestionWindow()),

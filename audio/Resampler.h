@@ -14,6 +14,8 @@ namespace tgvoip{ namespace audio{
 		static size_t Convert48To44(int16_t* from, int16_t* to, size_t fromLen, size_t toLen);
 		static size_t Convert44To48(int16_t* from, int16_t* to, size_t fromLen, size_t toLen);
 		static size_t Convert(int16_t* from, int16_t* to, size_t fromLen, size_t toLen, int num, int denom);
+		static void Rescale60To80(int16_t* in, int16_t* out);
+		static void Rescale60To40(int16_t* in, int16_t* out);
 	};
 }}
 

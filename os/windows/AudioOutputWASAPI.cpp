@@ -342,6 +342,7 @@ void AudioOutputWASAPI::RunThread() {
 	uint32_t framesWritten=0;
 
 	bool running=true;
+	//double prevCallback=VoIPController::GetCurrentTime();
 
 	while(running){
 		DWORD waitResult=WaitForMultipleObjectsEx(3, waitArray, false, INFINITE, false);
@@ -364,17 +365,21 @@ void AudioOutputWASAPI::RunThread() {
 			framesAvailable=bufferSize-padding;
 			res=renderClient->GetBuffer(framesAvailable, &data);
 			CHECK_RES(res, "renderClient->GetBuffer");
+
+			//double t=VoIPController::GetCurrentTime();
+			//LOGV("framesAvail: %u, time: %f, isPlaying: %d", framesAvailable, t-prevCallback, isPlaying);
+			//prevCallback=t;
 			
-			size_t bufferSize=framesAvailable*2;
-			while(bufferSize>remainingDataLen){
+			size_t bytesAvailable=framesAvailable*2;
+			while(bytesAvailable>remainingDataLen){
 				InvokeCallback(remainingData+remainingDataLen, 960*2);
 				remainingDataLen+=960*2;
 			}
-			memcpy(data, remainingData, bufferSize);
-			if(remainingDataLen>bufferSize){
-				memmove(remainingData, remainingData+bufferSize, remainingDataLen-bufferSize);
+			memcpy(data, remainingData, bytesAvailable);
+			if(remainingDataLen>bytesAvailable){
+				memmove(remainingData, remainingData+bytesAvailable, remainingDataLen-bytesAvailable);
 			}
-			remainingDataLen-=bufferSize;
+			remainingDataLen-=bytesAvailable;
 
 			res=renderClient->ReleaseBuffer(framesAvailable, 0);
 			CHECK_RES(res, "renderClient->ReleaseBuffer");

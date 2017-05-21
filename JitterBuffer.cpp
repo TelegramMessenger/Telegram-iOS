@@ -24,6 +24,7 @@ JitterBuffer::JitterBuffer(MediaStreamItf *out, uint32_t step):bufferPool(JITTER
 	dontIncMinDelay=0;
 	dontDecMinDelay=0;
 	lostPackets=0;
+	outstandingDelayChange=0;
 	if(step<30){
 		minMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_20", 6);
 		maxMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_20", 25);
@@ -67,7 +68,7 @@ size_t JitterBuffer::CallbackIn(unsigned char *data, size_t len, void *param){
 }
 
 size_t JitterBuffer::CallbackOut(unsigned char *data, size_t len, void *param){
-	return ((JitterBuffer*)param)->HandleOutput(data, len, 0);
+	return 0; //((JitterBuffer*)param)->HandleOutput(data, len, 0, NULL);
 }
 
 void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timestamp){
@@ -100,15 +101,31 @@ void JitterBuffer::Reset(){
 	expectNextAtTime=0;
 	memset(deviationHistory, 0, sizeof(deviationHistory));
 	deviationPtr=0;
+	outstandingDelayChange=0;
+	dontChangeDelay=0;
 }
 
 
-size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetInSteps){
+size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetInSteps, int* playbackScaledDuration){
 	jitter_packet_t pkt;
 	pkt.buffer=buffer;
 	pkt.size=len;
 	lock_mutex(mutex);
 	int result=GetInternal(&pkt, offsetInSteps);
+	if(playbackScaledDuration){
+		if(outstandingDelayChange!=0){
+			if(outstandingDelayChange<0){
+				*playbackScaledDuration=40;
+				outstandingDelayChange+=20;
+			}else{
+				*playbackScaledDuration=80;
+				outstandingDelayChange-=20;
+			}
+			LOGV("outstanding delay change: %d", outstandingDelayChange);
+		}else{
+			*playbackScaledDuration=60;
+		}
+	}
 	unlock_mutex(mutex);
 	if(result==JR_OK){
 		return pkt.size;
@@ -191,6 +208,7 @@ void JitterBuffer::PutInternal(jitter_packet_t* pkt){
 	int i;
 	if(wasReset){
 		wasReset=false;
+		outstandingDelayChange=0;
 		nextTimestamp=((int64_t)pkt->timestamp)-step*minDelay;
 		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%d)", (long long int)nextTimestamp, step, minDelay);
 	}
@@ -340,7 +358,7 @@ void JitterBuffer::Tick(){
 	memmove(&delayHistory[1], delayHistory, 63*sizeof(int));
 	delayHistory[0]=GetCurrentDelay();
 
-	int avgDelay=0;
+	avgDelay=0;
 	int min=100;
 	for(i=0;i<32;i++){
 		avgDelay+=delayHistory[i];
@@ -375,8 +393,10 @@ void JitterBuffer::Tick(){
 		if(diff>1)
 			diff=1;
 		if((diff>0 && dontIncMinDelay==0) || (diff<0 && dontDecMinDelay==0)){
-			nextTimestamp+=diff*(int32_t)step;
+			//nextTimestamp+=diff*(int32_t)step;
 			minDelay+=diff;
+			outstandingDelayChange+=diff*60;
+			dontChangeDelay+=32;
 			LOGD("new delay from stddev %d", minDelay);
 			if(diff<0){
 				dontDecMinDelay+=25;
@@ -389,10 +409,21 @@ void JitterBuffer::Tick(){
 	lastMeasuredJitter=stddev;
 	lastMeasuredDelay=stddevDelay;
 	//LOGV("stddev=%.3f, avg=%.3f, ndelay=%d, dontDec=%u", stddev, avgdev, stddevDelay, dontDecMinDelay);
+	if(dontChangeDelay==0){
+		if(avgDelay>minDelay+0.5){
+			outstandingDelayChange-=20;
+			dontChangeDelay+=10;
+		}else if(avgDelay<minDelay-0.3){
+			outstandingDelayChange+=20;
+			dontChangeDelay+=10;
+		}
+	}
+	if(dontChangeDelay>0)
+		dontChangeDelay--;
 
 	//LOGV("jitter: avg delay=%d, delay=%d, late16=%.1f, dontDecMinDelay=%d", avgDelay, delayHistory[0], avgLate16, dontDecMinDelay);
-	if(!adjustingDelay) {
-		if (((minDelay==1 ? (avgDelay>=3) : (avgDelay>=minDelay/2)) && delayHistory[0]>minDelay && avgLate16<=0.1 && absolutelyNoLatePackets && dontDecMinDelay<32 && min>minDelay) /*|| (avgRecvTimeDiff>0 && delayHistory[0]>minDelay/2 && avgRecvTimeDiff*1000<step/2)*/) {
+	/*if(!adjustingDelay) {
+		if (((minDelay==1 ? (avgDelay>=3) : (avgDelay>=minDelay/2)) && delayHistory[0]>minDelay && avgLate16<=0.1 && absolutelyNoLatePackets && dontDecMinDelay<32 && min>minDelay)) {
 			LOGI("jitter: need adjust");
 			adjustingDelay=true;
 		}
@@ -409,7 +440,7 @@ void JitterBuffer::Tick(){
 				LOGI("jitter: done adjusting");
 			}
 		}
-	}
+	}*/
 
 	tickCount++;
 
@@ -450,4 +481,8 @@ double JitterBuffer::GetLastMeasuredJitter(){
 
 double JitterBuffer::GetLastMeasuredDelay(){
 	return lastMeasuredDelay;
+}
+
+double JitterBuffer::GetAverageDelay(){
+	return avgDelay;
 }

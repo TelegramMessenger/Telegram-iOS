@@ -5,6 +5,7 @@
 //
 
 #include "OpusDecoder.h"
+#include "audio/Resampler.h"
 #include "logging.h"
 #include <assert.h>
 
@@ -17,7 +18,7 @@ tgvoip::OpusDecoder::OpusDecoder(MediaStreamItf *dst) : semaphore(32, 0){
 	dst->SetCallback(OpusDecoder::Callback, this);
 	dec=opus_decoder_create(48000, 1, NULL);
 	//test=fopen("/sdcard/test.raw", "wb");
-	buffer=(unsigned char *) malloc(4096);
+	buffer=(unsigned char *) malloc(8192);
 	//lastDecoded=(unsigned char*) malloc(960*2);
 	lastDecoded=NULL;
 	lastDecodedLen=0;
@@ -67,6 +68,8 @@ void tgvoip::OpusDecoder::HandleCallback(unsigned char *data, size_t len){
 		int i;
 		for(i=0;i<count;i++){
 			lastDecoded=(unsigned char*) decodedQueue->GetBlocking();
+			if(!lastDecoded)
+				return;
 			memcpy(data+(i*PACKET_SIZE), lastDecoded, PACKET_SIZE);
 			if(echoCanceller)
 				echoCanceller->SpeakerOutCallback(data, PACKET_SIZE);
@@ -75,6 +78,8 @@ void tgvoip::OpusDecoder::HandleCallback(unsigned char *data, size_t len){
 		semaphore.Release(count);
 	}else if(len==PACKET_SIZE){
 		lastDecoded=(unsigned char*) decodedQueue->GetBlocking();
+		if(!lastDecoded)
+			return;
 		memcpy(data, lastDecoded, PACKET_SIZE);
 		bufferPool->Reuse(lastDecoded);
 		semaphore.Release();
@@ -86,6 +91,8 @@ void tgvoip::OpusDecoder::HandleCallback(unsigned char *data, size_t len){
 		if(lastDecodedOffset==0){
 			lastDecoded=(unsigned char*) decodedQueue->GetBlocking();
 		}
+		if(!lastDecoded)
+			return;
 
 		memcpy(data, lastDecoded+lastDecodedOffset, len);
 		lastDecodedOffset+=len;
@@ -172,7 +179,8 @@ void tgvoip::OpusDecoder::RunThread(){
 		memcpy(buffer, nextBuffer, nextLen);
 		size_t inLen=nextLen;
 		//nextLen=InvokeCallback(nextBuffer, 8192);
-		nextLen=jitterBuffer->HandleOutput(nextBuffer, 8192, 0);
+		int playbackDuration=0;
+		nextLen=jitterBuffer->HandleOutput(nextBuffer, 8192, 0, &playbackDuration);
 		if(first){
 			first=false;
 			continue;
@@ -180,7 +188,7 @@ void tgvoip::OpusDecoder::RunThread(){
 		//LOGV("Before decode, len=%d", inLen);
 		if(!inLen){
 			LOGV("Trying to recover late packet");
-			inLen=jitterBuffer->HandleOutput(buffer, 8192, -2);
+			inLen=jitterBuffer->HandleOutput(buffer, 8192, -2, &playbackDuration);
 			if(inLen)
 				LOGV("Decoding late packet");
 		}
@@ -194,7 +202,18 @@ void tgvoip::OpusDecoder::RunThread(){
 		if(size<0)
 			LOGW("decoder: opus_decode error %d", size);
 		//LOGV("After decode, size=%d", size);
-		for(i=0;i<packetsPerFrame;i++){
+		//LOGD("playbackDuration=%d", playbackDuration);
+		unsigned char* processedBuffer;
+		if(playbackDuration==80){
+			processedBuffer=buffer;
+			audio::Resampler::Rescale60To80((int16_t*) decodeBuffer, (int16_t*) processedBuffer);
+		}else if(playbackDuration==40){
+			processedBuffer=buffer;
+			audio::Resampler::Rescale60To40((int16_t*) decodeBuffer, (int16_t*) processedBuffer);
+		}else{
+			processedBuffer=decodeBuffer;
+		}
+		for(i=0;i</*packetsPerFrame*/ playbackDuration/20;i++){
 			semaphore.Acquire();
 			if(!running){
 				LOGI("==== decoder exiting ====");
@@ -203,7 +222,7 @@ void tgvoip::OpusDecoder::RunThread(){
 			unsigned char *buf=bufferPool->Get();
 			if(buf){
 				if(size>0){
-					memcpy(buf, decodeBuffer+(PACKET_SIZE*i), PACKET_SIZE);
+					memcpy(buf, processedBuffer+(PACKET_SIZE*i), PACKET_SIZE);
 				}else{
 					LOGE("Error decoding, result=%d", size);
 					memset(buf, 0, PACKET_SIZE);

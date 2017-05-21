@@ -29,7 +29,7 @@
 #include "CongestionControl.h"
 #include "NetworkSocket.h"
 
-#define LIBTGVOIP_VERSION "0.4"
+#define LIBTGVOIP_VERSION "0.4.1"
 
 #define PKT_INIT 1
 #define PKT_INIT_ACK 2
