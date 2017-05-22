@@ -121,6 +121,8 @@ AudioInputPulse::AudioInputPulse(std::string devID){
 		return;
 	}
 	pa_context_set_state_callback(context, AudioInputPulse::ContextStateCallback, this);
+	pa_threaded_mainloop_lock(mainloop);
+	isLocked=true;
 	int err=pa_threaded_mainloop_start(mainloop);
 	CHECK_ERROR(err, "pa_threaded_mainloop_start");
 	didStart=true;
@@ -156,13 +158,18 @@ AudioInputPulse::AudioInputPulse(std::string devID){
 	}
 	pa_stream_set_state_callback(stream, AudioInputPulse::StreamStateCallback, this);
 	pa_stream_set_read_callback(stream, AudioInputPulse::StreamReadCallback, this);
+	pa_threaded_mainloop_unlock(mainloop);
+	isLocked=false;
 
 	SetCurrentDevice(devID);
 }
 
 AudioInputPulse::~AudioInputPulse(){
-	if(mainloop && didStart)
+	if(mainloop && didStart){
+		if(isLocked)
+			pa_threaded_mainloop_unlock(mainloop);
 		pa_threaded_mainloop_stop(mainloop);
+	}
 	if(stream){
 		pa_stream_disconnect(stream);
 		pa_stream_unref(stream);

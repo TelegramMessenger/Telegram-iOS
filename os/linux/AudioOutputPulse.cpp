@@ -51,6 +51,7 @@ AudioOutputPulse::AudioOutputPulse(std::string devID){
 	isPlaying=false;
 	isConnected=false;
 	didStart=false;
+	isLocked=false;
 
 	mainloop=NULL;
 	mainloopApi=NULL;
@@ -121,6 +122,8 @@ AudioOutputPulse::AudioOutputPulse(std::string devID){
 		return;
 	}
 	pa_context_set_state_callback(context, AudioOutputPulse::ContextStateCallback, this);
+	pa_threaded_mainloop_lock(mainloop);
+	isLocked=true;
 	int err=pa_threaded_mainloop_start(mainloop);
 	CHECK_ERROR(err, "pa_threaded_mainloop_start");
 	didStart=true;
@@ -129,9 +132,7 @@ AudioOutputPulse::AudioOutputPulse(std::string devID){
 	CHECK_ERROR(err, "pa_context_connect");
 
 	while(true){
-		pa_threaded_mainloop_lock(mainloop);
 		pa_context_state_t contextState=pa_context_get_state(context);
-		pa_threaded_mainloop_unlock(mainloop);
 		if(!PA_CONTEXT_IS_GOOD(contextState)){
 			LOGE("Error initializing PulseAudio (PA_CONTEXT_IS_GOOD)");
 			failed=true;
@@ -156,13 +157,18 @@ AudioOutputPulse::AudioOutputPulse(std::string devID){
 	}
 	pa_stream_set_state_callback(stream, AudioOutputPulse::StreamStateCallback, this);
 	pa_stream_set_write_callback(stream, AudioOutputPulse::StreamWriteCallback, this);
+	pa_threaded_mainloop_unlock(mainloop);
+	isLocked=false;
 
 	SetCurrentDevice(devID);
 }
 
 AudioOutputPulse::~AudioOutputPulse(){
-	if(mainloop && didStart)
+	if(mainloop && didStart){
+		if(isLocked)
+			pa_threaded_mainloop_unlock(mainloop);
 		pa_threaded_mainloop_stop(mainloop);
+	}
 	if(stream){
 		pa_stream_disconnect(stream);
 		pa_stream_unref(stream);
