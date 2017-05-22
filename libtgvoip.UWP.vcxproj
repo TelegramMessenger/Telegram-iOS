@@ -135,15 +135,15 @@
   <PropertyGroup />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <MappedPlatform>Release</MappedPlatform>
+    <MappedPlatform>Debug</MappedPlatform>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <GenerateManifest>false</GenerateManifest>
-    <MappedPlatform>ARM\Release</MappedPlatform>
+    <MappedPlatform>ARM\Debug</MappedPlatform>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <MappedPlatform>x64\Release</MappedPlatform>
+    <MappedPlatform>x64\Debug</MappedPlatform>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <GenerateManifest>false</GenerateManifest>
@@ -596,11 +596,6 @@
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\utility\ooura_fft_neon.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\utility\ooura_fft_sse2.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\system_wrappers\source\cpu_features.cc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\libopus\libopus.vcxproj">
-      <Project>{904ac506-51a0-474e-9f55-ec3febbcccd9}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
