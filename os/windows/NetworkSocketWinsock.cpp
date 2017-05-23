@@ -381,7 +381,14 @@ std::string NetworkSocketWinsock::V4AddressToString(uint32_t address){
 	addr.sin_family=AF_INET;
 	addr.sin_addr.s_addr=address;
 	DWORD len=sizeof(buf);
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+	wchar_t wbuf[INET6_ADDRSTRLEN];
+	ZeroMemory(wbuf, sizeof(wbuf));
+	WSAAddressToStringW((sockaddr*)&addr, sizeof(addr), NULL, wbuf, &len);
+	WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), NULL, NULL);
+#else
 	WSAAddressToStringA((sockaddr*)&addr, sizeof(addr), NULL, buf, &len);
+#endif
 	return std::string(buf);
 }
 
@@ -392,7 +399,14 @@ std::string NetworkSocketWinsock::V6AddressToString(unsigned char *address){
 	addr.sin6_family=AF_INET6;
 	memcpy(addr.sin6_addr.s6_addr, address, 16);
 	DWORD len=sizeof(buf);
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+	wchar_t wbuf[INET6_ADDRSTRLEN];
+	ZeroMemory(wbuf, sizeof(wbuf));
+	WSAAddressToStringW((sockaddr*)&addr, sizeof(addr), NULL, wbuf, &len);
+	WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), NULL, NULL);
+#else
 	WSAAddressToStringA((sockaddr*)&addr, sizeof(addr), NULL, buf, &len);
+#endif
 	return std::string(buf);
 }
 
