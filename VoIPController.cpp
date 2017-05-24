@@ -178,6 +178,15 @@ VoIPController::VoIPController() : activeNetItfName(""), currentAudioInput("defa
 	stm->enabled=1;
 	stm->frameDuration=60;
 	outgoingStreams.push_back(stm);
+
+	std::vector<AudioOutputDevice> odevs=EnumerateAudioOutputs();
+	for(int i=0;i<odevs.size();i++){
+		LOGD("out device #%d: %s (%s)", i, odevs[i].id.c_str(), odevs[i].displayName.c_str());
+	}
+	std::vector<AudioInputDevice> idevs=EnumerateAudioInputs();
+	for(int i=0;i<idevs.size();i++){
+		LOGD("in device #%d: %s (%s)", i, idevs[i].id.c_str(), idevs[i].displayName.c_str());
+	}
 }
 
 VoIPController::~VoIPController(){
@@ -564,7 +573,7 @@ void VoIPController::RunRecvThread(){
 		if(src4){
 			lock_mutex(endpointsMutex);
 			for(std::vector<Endpoint*>::iterator itrtr=endpoints.begin();itrtr!=endpoints.end();++itrtr){
-				if((*itrtr)->address==*src4){
+				if((*itrtr)->address==*src4 && (*itrtr)->port==packet.port){
 					srcEndpoint=*itrtr;
 					break;
 				}

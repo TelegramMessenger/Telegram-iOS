@@ -141,6 +141,7 @@ void NetworkSocketPosix::Receive(NetworkPacket *packet){
 		lastRecvdV6=IPv6Address(srcAddr.sin6_addr.s6_addr);
 		packet->address=&lastRecvdV6;
 	}
+	packet->port=ntohs(srcAddr.sin6_port);
 }
 
 void NetworkSocketPosix::Open(){

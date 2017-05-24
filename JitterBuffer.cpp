@@ -411,7 +411,7 @@ void JitterBuffer::Tick(){
 	//LOGV("stddev=%.3f, avg=%.3f, ndelay=%d, dontDec=%u", stddev, avgdev, stddevDelay, dontDecMinDelay);
 	if(dontChangeDelay==0){
 		if(avgDelay>minDelay+0.5){
-			outstandingDelayChange-=20;
+			outstandingDelayChange-=avgDelay>minDelay+2 ? 60 : 20;
 			dontChangeDelay+=10;
 		}else if(avgDelay<minDelay-0.3){
 			outstandingDelayChange+=20;

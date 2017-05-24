@@ -157,11 +157,11 @@ void NetworkSocketWinsock::Receive(NetworkPacket *packet){
 	}
 	//LOGV("Received %d bytes from %s:%d at %.5lf", len, inet_ntoa(srcAddr.sin_addr), ntohs(srcAddr.sin_port), GetCurrentTime());
 	if(addr->sa_family==AF_INET){
-		packet->port=srcAddr4.sin_port;
+		packet->port=ntohs(srcAddr4.sin_port);
 		lastRecvdV4=IPv4Address(srcAddr4.sin_addr.s_addr);
 		packet->address=&lastRecvdV4;
 	}else{
-		packet->port=srcAddr.sin6_port;
+		packet->port=ntohs(srcAddr.sin6_port);
 		if(!isV4Available && IN6_IS_ADDR_V4MAPPED(&srcAddr.sin6_addr)){
 			isV4Available=true;
 			LOGI("Detected IPv4 connectivity, will not try IPv6");
@@ -382,7 +382,7 @@ std::string NetworkSocketWinsock::V4AddressToString(uint32_t address){
 	addr.sin_addr.s_addr=address;
 	DWORD len=sizeof(buf);
 #if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
-	wchar_t wbuf[INET6_ADDRSTRLEN];
+	wchar_t wbuf[INET_ADDRSTRLEN];
 	ZeroMemory(wbuf, sizeof(wbuf));
 	WSAAddressToStringW((sockaddr*)&addr, sizeof(addr), NULL, wbuf, &len);
 	WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), NULL, NULL);
@@ -415,7 +415,13 @@ uint32_t NetworkSocketWinsock::StringToV4Address(std::string address){
 	ZeroMemory(&addr, sizeof(addr));
 	addr.sin_family=AF_INET;
 	int size=sizeof(addr);
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+	wchar_t buf[INET_ADDRSTRLEN];
+	MultiByteToWideChar(CP_UTF8, 0, address.c_str(), -1, buf, INET_ADDRSTRLEN);
+	WSAStringToAddressW(buf, AF_INET, NULL, (sockaddr*)&addr, &size);
+#else
 	WSAStringToAddressA((char*)address.c_str(), AF_INET, NULL, (sockaddr*)&addr, &size);
+#endif
 	return addr.sin_addr.s_addr;
 }
 
@@ -424,6 +430,12 @@ void NetworkSocketWinsock::StringToV6Address(std::string address, unsigned char 
 	ZeroMemory(&addr, sizeof(addr));
 	addr.sin6_family=AF_INET6;
 	int size=sizeof(addr);
-	WSAStringToAddressA((char*)address.c_str(), AF_INET6, NULL, (sockaddr*)&addr, &size);
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+	wchar_t buf[INET6_ADDRSTRLEN];
+	MultiByteToWideChar(CP_UTF8, 0, address.c_str(), -1, buf, INET6_ADDRSTRLEN);
+	WSAStringToAddressW(buf, AF_INET, NULL, (sockaddr*)&addr, &size);
+#else
+	WSAStringToAddressA((char*)address.c_str(), AF_INET, NULL, (sockaddr*)&addr, &size);
+#endif
 	memcpy(out, addr.sin6_addr.s6_addr, 16);
 }
