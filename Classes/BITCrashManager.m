@@ -1154,18 +1154,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 }
 
-- (void)startManagerInXamarinEnvironment {
-  [self startManagerInSdkEnvironment:BITSdkEnvironmentXamarin];
-}
-
-- (void)startManager {
-  [self startManagerInSdkEnvironment:BITSdkEnvironmentNative];
-}
-
 /**
  *	 Main startup sequence initializing PLCrashReporter if it wasn't disabled
  */
-- (void)startManagerInSdkEnvironment:(BITSdkEnvironment)sdkEnvironment {
+- (void)startManager {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
   
   [self registerObservers];
@@ -1187,21 +1179,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
         symbolicationStrategy = PLCrashReporterSymbolicationStrategyAll;
       }
       
-      BITPLCrashReporterConfig *config;
-      
-      switch (sdkEnvironment) {
-        case BITSdkEnvironmentXamarin:
-          config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
-                                                         symbolicationStrategy: symbolicationStrategy
-                                        shouldRegisterUncaughtExceptionHandler:NO];
-
-          break;
-        default:
-          config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
-                                                         symbolicationStrategy: symbolicationStrategy];
-          break;
-      }
-      
+      BITPLCrashReporterConfig *config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
+                                                                               symbolicationStrategy: symbolicationStrategy];
       self.plCrashReporter = [[BITPLCrashReporter alloc] initWithConfiguration: config];
       
       // Check if we previously crashed
@@ -1263,11 +1242,9 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
         } else {
           
           // If we're running in a Xamarin Environment, the exception handler will be the one by the xamarin runtime, not ours.
-          // So only make sure we're logging the error in a non-xamarin environment.
-          if(sdkEnvironment != BITSdkEnvironmentXamarin) {
-            // this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
-            BITHockeyLogError(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
-          }
+          // In other cases, this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
+          BITHockeyLogError(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
+          BITHockeyLogError(@"[HockeySDK] ERROR: If you are using the HockeySDK-Xamarin, this is expected behavior and you can ignore this message");
         }
         
         // Add the C++ uncaught exception handler, which is currently not handled by PLCrashReporter internally
