@@ -220,15 +220,6 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 }
 
 - (void)startManager {
-  [self startManagerWithEnvironment:BITSdkEnvironmentNative];
-}
-
-- (void)startManagerInXamarinEnvironment {
-  [self startManagerWithEnvironment:BITSdkEnvironmentXamarin];
-  BITHockeyLogVerbose(@"Started the BITHockeyManager with Xamarin Environment.");
-}
-
-- (void)startManagerWithEnvironment:(BITSdkEnvironment)sdkEnvironment {
   if (!_validAppIdentifier) return;
   if (_startManagerIsInvoked) {
     BITHockeyLogWarning(@"[HockeySDK] Warning: startManager should only be invoked once! This call is ignored.");
@@ -262,15 +253,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     }
 #endif
 
-    // Start BITCrashManager with the environment flag to make sure we don't break NSException reporting for Xamarin.
-    switch (sdkEnvironment) {
-      case BITSdkEnvironmentXamarin:
-        [_crashManager startManagerInXamarinEnvironment];
-        break;
-      default:
-        [_crashManager startManager];
-        break;
-    }
+    [_crashManager startManager];
   }
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
   
