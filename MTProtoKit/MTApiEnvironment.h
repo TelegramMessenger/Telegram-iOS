@@ -18,7 +18,7 @@
 @property (nonatomic, strong) NSNumber *layer;
     
 @property (nonatomic, strong, readonly) NSString *langPack;
-@property (nonatomic, strong, readonly) NSString *langPackCode
+@property (nonatomic, strong, readonly) NSString *langPackCode;
 
 @property (nonatomic, strong, readonly) NSString *apiInitializationHash;
 
