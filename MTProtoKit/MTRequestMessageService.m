@@ -69,8 +69,6 @@
         
         _requests = [[NSMutableArray alloc] init];
         _dropReponseContexts = [[NSMutableArray alloc] init];
-        
-        _apiEnvironment = context.apiEnvironment;
     }
     return self;
 }
@@ -272,6 +270,11 @@
 {
     _mtProto = mtProto;
     _serialization = mtProto.context.serialization;
+    _apiEnvironment = mtProto.apiEnvironment;
+}
+    
+- (void)mtProtoApiEnvironmentUpdated:(MTProto *)mtProto apiEnvironment:(MTApiEnvironment *)apiEnvironment {
+    _apiEnvironment = apiEnvironment;
 }
 
 - (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId
@@ -286,13 +289,21 @@
         [buffer appendInt32:(int32_t)0xda9b0d0d];
         [buffer appendInt32:(int32_t)[_serialization currentLayer]];
         
-        // initConnection
-        [buffer appendInt32:(int32_t)0x69796de9];
+        //initConnection#c7481da6 {X:Type} api_id:int device_model:string system_version:string app_version:string system_lang_code:string lang_pack:string lang_code:string query:!X = X;
+
+        bool layerSupportsLangpacks = [_serialization currentLayer] >= 67;
+        
+        [buffer appendInt32:(int32_t)(layerSupportsLangpacks ? 0xc7481da6 : 0x69796de9)];
         [buffer appendInt32:(int32_t)_apiEnvironment.apiId];
         [buffer appendTLString:_apiEnvironment.deviceModel];
         [buffer appendTLString:_apiEnvironment.systemVersion];
         [buffer appendTLString:_apiEnvironment.appVersion];
-        [buffer appendTLString:_apiEnvironment.langCode];
+        [buffer appendTLString:_apiEnvironment.systemLangCode];
+        
+        if (layerSupportsLangpacks) {
+            [buffer appendTLString:_apiEnvironment.langPack];
+            [buffer appendTLString:_apiEnvironment.langPackCode];
+        }
         
         [buffer appendBytes:currentData.bytes length:currentData.length];
         currentData = buffer.data;

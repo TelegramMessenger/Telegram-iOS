@@ -14,8 +14,11 @@
 @property (nonatomic, strong, readonly) NSString *deviceModel;
 @property (nonatomic, strong, readonly) NSString *systemVersion;
 @property (nonatomic, strong) NSString *appVersion;
-@property (nonatomic, strong, readonly) NSString *langCode;
+@property (nonatomic, strong, readonly) NSString *systemLangCode;
 @property (nonatomic, strong) NSNumber *layer;
+    
+@property (nonatomic, strong, readonly) NSString *langPack;
+@property (nonatomic, strong, readonly) NSString *langPackCode
 
 @property (nonatomic, strong, readonly) NSString *apiInitializationHash;
 
@@ -24,5 +27,7 @@
 @property (nonatomic) NSDictionary *datacenterAddressOverrides;
 
 @property (nonatomic, copy) void (^passwordInputHandler)();
+
+- (MTApiEnvironment *)withUpdatedLangPackCode:(NSString *)langPackCode;
 
 @end
