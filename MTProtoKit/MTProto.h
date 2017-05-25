@@ -12,6 +12,7 @@
 @class MTQueue;
 @class MTContext;
 @class MTNetworkUsageCalculationInfo;
+@class MTApiEnvironment;
 
 @class MTProto;
 
@@ -30,7 +31,8 @@
 
 @property (nonatomic, weak) id<MTProtoDelegate> delegate;
 
-@property (nonatomic, strong) MTContext *context;
+@property (nonatomic, strong, readonly) MTContext *context;
+@property (nonatomic, strong, readonly) MTApiEnvironment *apiEnvironment;
 @property (nonatomic) NSInteger datacenterId;
 
 @property (nonatomic) bool shouldStayConnected;

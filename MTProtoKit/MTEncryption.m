@@ -20,6 +20,8 @@
 #import "MTAes.h"
 #import "MTRsa.h"
 
+#import "MTBuffer.h"
+
 #if TARGET_OS_IOS
 #   include <openssl/pem.h>
 #else
@@ -673,11 +675,17 @@ uint64_t MTRsaFingerprint(NSString *key) {
     int nBytes = BN_num_bytes(rsaKey->n);
     int eBytes = BN_num_bytes(rsaKey->e);
     
-    NSMutableData *rawData = [[NSMutableData alloc] initWithLength:nBytes + eBytes];
-    BN_bn2bin(rsaKey->n, rawData.mutableBytes);
-    BN_bn2bin(rsaKey->e, rawData.mutableBytes + nBytes);
+    MTBuffer *buffer = [[MTBuffer alloc] init];
     
-    NSData *sha1Data = MTSha1(rawData);
+    NSMutableData *nData = [[NSMutableData alloc] initWithLength:nBytes];
+    BN_bn2bin(rsaKey->n, nData.mutableBytes);
+    [buffer appendTLBytes:nData];
+    
+    NSMutableData *eData = [[NSMutableData alloc] initWithLength:eBytes];
+    BN_bn2bin(rsaKey->e, eData.mutableBytes);
+    [buffer appendTLBytes:eData];
+    
+    NSData *sha1Data = MTSha1(buffer.data);
     static uint8_t sha1Buffer[20];
     [sha1Data getBytes:sha1Buffer length:20];
     

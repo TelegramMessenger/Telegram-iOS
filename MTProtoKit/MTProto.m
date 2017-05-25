@@ -118,6 +118,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         _context = context;
         _datacenterId = datacenterId;
         _usageCalculationInfo = usageCalculationInfo;
+        _apiEnvironment = context.apiEnvironment;
         
         [_context addChangeListener:self];
         
@@ -2278,6 +2279,18 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         for (id<MTMessageService> service in _messageServices) {
             if ([service respondsToSelector:@selector(mtProtoPublicKeysUpdated:datacenterId:publicKeys:)]) {
                 [service mtProtoPublicKeysUpdated:self datacenterId:datacenterId publicKeys:publicKeys];
+            }
+        }
+    }];
+}
+    
+- (void)contextApiEnvironmentUpdated:(MTContext *)context apiEnvironment:(MTApiEnvironment *)apiEnvironment {
+    [[MTProto managerQueue] dispatchOnQueue:^{
+        _apiEnvironment = apiEnvironment;
+        
+        for (id<MTMessageService> service in _messageServices) {
+            if ([service respondsToSelector:@selector(mtProtoApiEnvironmentUpdated:apiEnvironment:)]) {
+                [service mtProtoApiEnvironmentUpdated:self apiEnvironment:apiEnvironment];
             }
         }
     }];
