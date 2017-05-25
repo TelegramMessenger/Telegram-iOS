@@ -10,6 +10,7 @@
 
 @class MTDatacenterAddress;
 @class MTHttpWorker;
+@class MTQueue;
 
 @protocol MTHttpWorkerDelegate <NSObject>
 
@@ -34,6 +35,8 @@
 @property (nonatomic, strong, readonly) id internalId;
 @property (nonatomic, weak) id<MTHttpWorkerDelegate> delegate;
 @property (nonatomic, readonly) bool performsLongPolling;
+
++ (MTQueue *)httpWorkerProcessingQueue;
 
 - (instancetype)initWithDelegate:(id<MTHttpWorkerDelegate>)delegate address:(MTDatacenterAddress *)address payloadData:(NSData *)payloadData performsLongPolling:(bool)performsLongPolling;
 
