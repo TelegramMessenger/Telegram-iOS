@@ -28,7 +28,7 @@ func addSecretChatOutgoingOperation(modifier: Modifier, peerId: PeerId, operatio
 }
 
 private final class ManagedSecretChatOutgoingOperationsHelper {
-    var operationDisposables: [Int32: Disposable] = [:]
+    var operationDisposables: [Int32: (PeerMergedOperationLogEntry, Disposable)] = [:]
     
     func update(_ entries: [PeerMergedOperationLogEntry]) -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) {
         var disposeOperations: [Disposable] = []
@@ -37,6 +37,23 @@ private final class ManagedSecretChatOutgoingOperationsHelper {
         var hasRunningOperationForPeerId = Set<PeerId>()
         var validMergedIndices = Set<Int32>()
         for entry in entries {
+            if let entryAndDisposable = self.operationDisposables[entry.mergedIndex] {
+                if let lhsOperation = entryAndDisposable.0.contents as? SecretChatOutgoingOperation, let rhsOperation = entry.contents as? SecretChatOutgoingOperation {
+                    var lhsDelete = false
+                    if case .deleteMessages = lhsOperation.contents {
+                        lhsDelete = true
+                    }
+                    var rhsDelete = false
+                    if case .deleteMessages = rhsOperation.contents {
+                        rhsDelete = true
+                    }
+                    if lhsDelete != rhsDelete {
+                        disposeOperations.append(entryAndDisposable.1)
+                        self.operationDisposables.removeValue(forKey: entry.mergedIndex)
+                    }
+                }
+            }
+            
             if !hasRunningOperationForPeerId.contains(entry.peerId) {
                 hasRunningOperationForPeerId.insert(entry.peerId)
                 validMergedIndices.insert(entry.mergedIndex)
@@ -44,16 +61,16 @@ private final class ManagedSecretChatOutgoingOperationsHelper {
                 if self.operationDisposables[entry.mergedIndex] == nil {
                     let disposable = MetaDisposable()
                     beginOperations.append((entry, disposable))
-                    self.operationDisposables[entry.mergedIndex] = disposable
+                    self.operationDisposables[entry.mergedIndex] = (entry, disposable)
                 }
             }
         }
         
         var removeMergedIndices: [Int32] = []
-        for (mergedIndex, disposable) in self.operationDisposables {
+        for (mergedIndex, entryAndDisposable) in self.operationDisposables {
             if !validMergedIndices.contains(mergedIndex) {
                 removeMergedIndices.append(mergedIndex)
-                disposeOperations.append(disposable)
+                disposeOperations.append(entryAndDisposable.1)
             }
         }
         
@@ -67,7 +84,7 @@ private final class ManagedSecretChatOutgoingOperationsHelper {
     func reset() -> [Disposable] {
         let disposables = Array(self.operationDisposables.values)
         self.operationDisposables.removeAll()
-        return disposables
+        return disposables.map { $0.1 }
     }
 }
 
@@ -615,7 +632,7 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
     }
 }
 
-private func markOutgoingOperationAsCompleted(modifier: Modifier, peerId: PeerId, tagLocalIndex: Int32) {
+private func markOutgoingOperationAsCompleted(modifier: Modifier, peerId: PeerId, tagLocalIndex: Int32, forceRemove: Bool) {
     var removeFromTagMergedIndexOnly = false
     if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
         switch state.embeddedState {
@@ -627,7 +644,7 @@ private func markOutgoingOperationAsCompleted(modifier: Modifier, peerId: PeerId
                 break
         }
     }
-    if removeFromTagMergedIndexOnly {
+    if removeFromTagMergedIndexOnly && !forceRemove {
         modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
             if let operation = entry?.contents as? SecretChatOutgoingOperation {
                 return PeerOperationLogEntryUpdate(mergedIndex: .remove, contents: .update(operation.withUpdatedDelivered(true)))
@@ -637,7 +654,35 @@ private func markOutgoingOperationAsCompleted(modifier: Modifier, peerId: PeerId
             }
         })
     } else {
-        modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
+        let _ = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
+    }
+}
+
+private func replaceOutgoingOperationWithEmptyMessage(modifier: Modifier, peerId: PeerId, tagLocalIndex: Int32, globallyUniqueId: Int64) {
+    var layer: SecretChatLayer?
+    let state = modifier.getPeerChatState(peerId) as? SecretChatState
+    if let state = state {
+        switch state.embeddedState {
+            case .terminated, .handshake:
+                break
+            case .basicLayer:
+                layer = .layer8
+            case let .sequenceBasedLayer(sequenceState):
+                layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+        }
+    }
+    if let layer = layer {
+        modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
+            if let _ = entry?.contents as? SecretChatOutgoingOperation {
+                return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .update(SecretChatOutgoingOperation(contents: SecretChatOutgoingOperationContents.deleteMessages(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: [globallyUniqueId]), mutable: true, delivered: false)))
+            } else {
+                assertionFailure()
+                return PeerOperationLogEntryUpdate(mergedIndex: .remove, contents: .none)
+            }
+        })
+    } else {
+        assertionFailure()
+        let _ = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
     }
 }
 
@@ -649,7 +694,11 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                 return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: wasDelivered, wasDelivered: wasDelivered)
                     |> mapToSignal { result in
                         return postbox.modify { modifier -> Void in
-                            markOutgoingOperationAsCompleted(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex)
+                            if result == nil {
+                                replaceOutgoingOperationWithEmptyMessage(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
+                            } else {
+                                markOutgoingOperationAsCompleted(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
+                            }
                             modifier.updateMessage(message.id, update: { currentMessage in
                                 var flags = StoreMessageFlags(currentMessage.flags)
                                 var timestamp = message.timestamp
@@ -690,7 +739,11 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
             return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: action.globallyUniqueId, file: nil, asService: true, wasDelivered: wasDelivered)
                 |> mapToSignal { result in
                     return postbox.modify { modifier -> Void in
-                        markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex)
+                        if result == nil {
+                            replaceOutgoingOperationWithEmptyMessage(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: action.globallyUniqueId)
+                        } else {
+                            markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
+                        }
                         if let messageId = action.messageId {
                             modifier.updateMessage(messageId, update: { currentMessage in
                                 var flags = StoreMessageFlags(currentMessage.flags)
@@ -786,7 +839,7 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
         }
         |> mapToSignal { _ -> Signal<Void, NoError> in
             return postbox.modify { modifier -> Void in
-                markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex)
+                markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: true)
             }
         }
 }
