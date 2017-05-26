@@ -47,11 +47,11 @@ final class SecretChatIncomingEncryptedOperation: Coding {
     }
     
     init(decoder: Decoder) {
-        self.peerId = PeerId(decoder.decodeInt64ForKey("p"))
-        self.globallyUniqueId = decoder.decodeInt64ForKey("u")
-        self.timestamp = decoder.decodeInt32ForKey("t")
-        self.type = SecretChatIncomingEncryptedOperationType(decoder.decodeInt32ForKey("k"))
-        self.keyFingerprint = decoder.decodeInt64ForKey("f")
+        self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+        self.globallyUniqueId = decoder.decodeInt64ForKey("u", orElse: 0)
+        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
+        self.type = SecretChatIncomingEncryptedOperationType(decoder.decodeInt32ForKey("k", orElse: 0))
+        self.keyFingerprint = decoder.decodeInt64ForKey("f", orElse: 0)
         self.contents = decoder.decodeBytesForKey("c")!
         self.mediaFileReference = decoder.decodeObjectForKey("m", decoder: { SecretChatFileReference(decoder: $0) }) as? SecretChatFileReference
     }

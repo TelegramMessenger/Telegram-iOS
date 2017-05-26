@@ -72,6 +72,7 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
         })
         
         return ActionDisposable {
+            disposable.dispose()
             let disposables = helper.with { helper -> [Disposable] in
                 return helper.reset()
             }

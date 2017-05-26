@@ -13,7 +13,7 @@ public class EditedMessageAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.date = decoder.decodeInt32ForKey("d")
+        self.date = decoder.decodeInt32ForKey("d", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {

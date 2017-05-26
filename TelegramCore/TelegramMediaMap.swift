@@ -21,11 +21,11 @@ public final class NamedGeoPlace: Coding {
     }
     
     public init(decoder: Decoder) {
-        self.country = decoder.decodeStringForKey("gp_co")
-        self.state = decoder.decodeStringForKey("gp_sta")
-        self.city = decoder.decodeStringForKey("gp_ci")
-        self.district = decoder.decodeStringForKey("gp_dis")
-        self.street = decoder.decodeStringForKey("gp_str")
+        self.country = decoder.decodeOptionalStringForKey("gp_co")
+        self.state = decoder.decodeOptionalStringForKey("gp_sta")
+        self.city = decoder.decodeOptionalStringForKey("gp_ci")
+        self.district = decoder.decodeOptionalStringForKey("gp_dis")
+        self.street = decoder.decodeOptionalStringForKey("gp_str")
     }
     
     public func encode(_ encoder: Encoder) {
@@ -65,10 +65,10 @@ public final class MapVenue: Coding {
     }
     
     public init(decoder: Decoder) {
-        self.title = decoder.decodeStringForKey("ti")
-        self.address = decoder.decodeStringForKey("ad")
-        self.provider = decoder.decodeStringForKey("pr")
-        self.id = decoder.decodeStringForKey("id")
+        self.title = decoder.decodeStringForKey("ti", orElse: "")
+        self.address = decoder.decodeOptionalStringForKey("ad")
+        self.provider = decoder.decodeOptionalStringForKey("pr")
+        self.id = decoder.decodeOptionalStringForKey("id")
     }
     
     public func encode(_ encoder: Encoder) {
@@ -103,8 +103,8 @@ public final class TelegramMediaMap: Media {
     }
     
     public init(decoder: Decoder) {
-        self.latitude = decoder.decodeDoubleForKey("la")
-        self.longitude = decoder.decodeDoubleForKey("lo")
+        self.latitude = decoder.decodeDoubleForKey("la", orElse: 0.0)
+        self.longitude = decoder.decodeDoubleForKey("lo", orElse: 0.0)
         self.geoPlace = decoder.decodeObjectForKey("gp", decoder: { NamedGeoPlace(decoder: $0) }) as? NamedGeoPlace
         self.venue = decoder.decodeObjectForKey("ve", decoder: { MapVenue(decoder: $0) }) as? MapVenue
     }

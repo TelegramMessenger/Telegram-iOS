@@ -17,8 +17,8 @@ public class ReplyMessageAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        let namespaceAndId: Int64 = decoder.decodeInt64ForKey("i")
-        self.messageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("p")), namespace: Int32(namespaceAndId & 0xffffffff), id: Int32((namespaceAndId >> 32) & 0xffffffff))
+        let namespaceAndId: Int64 = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.messageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("p", orElse: 0)), namespace: Int32(namespaceAndId & 0xffffffff), id: Int32((namespaceAndId >> 32) & 0xffffffff))
     }
     
     public func encode(_ encoder: Encoder) {

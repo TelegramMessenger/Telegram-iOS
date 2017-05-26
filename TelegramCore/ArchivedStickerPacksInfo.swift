@@ -33,7 +33,7 @@ public final class ArchivedStickerPacksInfo: OrderedItemListEntryContents {
     }
     
     public init(decoder: Decoder) {
-        self.count = (decoder.decodeInt32ForKey("c") as Int32)
+        self.count = decoder.decodeInt32ForKey("c", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {

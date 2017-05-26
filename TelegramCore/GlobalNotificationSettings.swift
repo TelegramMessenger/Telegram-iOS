@@ -21,8 +21,8 @@ public struct MessageNotificationSettings: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.enabled = (decoder.decodeInt32ForKey("e") as Int32) != 0
-        self.displayPreviews = (decoder.decodeInt32ForKey("p") as Int32) != 0
+        self.enabled = decoder.decodeInt32ForKey("e", orElse: 0) != 0
+        self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
         self.sound = PeerMessageSound.decodeInline(decoder)
     }
     

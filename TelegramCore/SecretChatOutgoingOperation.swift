@@ -17,13 +17,13 @@ enum SecretChatOutgoingFileReference: Coding {
     case uploadedLarge(id: Int64, partCount: Int32, keyFingerprint: Int32)
     
     init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("v") as Int32 {
+        switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case SecretChatOutgoingFileValue.remote.rawValue:
-                self = .remote(id: decoder.decodeInt64ForKey("i"), accessHash: decoder.decodeInt64ForKey("a"))
+                self = .remote(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("a", orElse: 0))
             case SecretChatOutgoingFileValue.uploadedRegular.rawValue:
-                self = .uploadedRegular(id: decoder.decodeInt64ForKey("i"), partCount: decoder.decodeInt32ForKey("p"), md5Digest: decoder.decodeStringForKey("d"), keyFingerprint: decoder.decodeInt32ForKey("f"))
+                self = .uploadedRegular(id: decoder.decodeInt64ForKey("i", orElse: 0), partCount: decoder.decodeInt32ForKey("p", orElse: 0), md5Digest: decoder.decodeStringForKey("d", orElse: ""), keyFingerprint: decoder.decodeInt32ForKey("f", orElse: 0))
             case SecretChatOutgoingFileValue.uploadedLarge.rawValue:
-                self = .uploadedLarge(id: decoder.decodeInt64ForKey("i"), partCount: decoder.decodeInt32ForKey("p"), keyFingerprint: decoder.decodeInt32ForKey("f"))
+                self = .uploadedLarge(id: decoder.decodeInt64ForKey("i", orElse: 0), partCount: decoder.decodeInt32ForKey("p", orElse: 0), keyFingerprint: decoder.decodeInt32ForKey("f", orElse: 0))
             default:
                 assertionFailure()
                 self = .remote(id: 0, accessHash: 0)
@@ -64,7 +64,7 @@ struct SecretChatOutgoingFile: Coding {
     
     init(decoder: Decoder) {
         self.reference = decoder.decodeObjectForKey("r", decoder: { SecretChatOutgoingFileReference(decoder: $0) }) as! SecretChatOutgoingFileReference
-        self.size = decoder.decodeInt32ForKey("s")
+        self.size = decoder.decodeInt32ForKey("s", orElse: 0)
         self.key = SecretFileEncryptionKey(aesKey: decoder.decodeBytesForKey("k")!.makeData(), aesIv: decoder.decodeBytesForKey("i")!.makeData())
     }
     
@@ -116,39 +116,39 @@ enum SecretChatOutgoingOperationContents: Coding {
     case terminate
     
     init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SecretChatOutgoingOperationValue.initialHandshakeAccept.rawValue:
-                self = .initialHandshakeAccept(gA: decoder.decodeBytesForKey("g")!, accessHash: decoder.decodeInt64ForKey("h"), b: decoder.decodeBytesForKey("b")!)
+                self = .initialHandshakeAccept(gA: decoder.decodeBytesForKey("g")!, accessHash: decoder.decodeInt64ForKey("h", orElse: 0), b: decoder.decodeBytesForKey("b")!)
             case SecretChatOutgoingOperationValue.sendMessage.rawValue:
-                self = .sendMessage(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p")), namespace: decoder.decodeInt32ForKey("i.n"), id: decoder.decodeInt32ForKey("i.i")), file: decoder.decodeObjectForKey("f", decoder: { SecretChatOutgoingFile(decoder: $0) }) as? SecretChatOutgoingFile)
+                self = .sendMessage(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0)), file: decoder.decodeObjectForKey("f", decoder: { SecretChatOutgoingFile(decoder: $0) }) as? SecretChatOutgoingFile)
             case SecretChatOutgoingOperationValue.readMessagesContent.rawValue:
-                self = .readMessagesContent(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
+                self = .readMessagesContent(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
             case SecretChatOutgoingOperationValue.deleteMessages.rawValue:
-                self = .deleteMessages(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
+                self = .deleteMessages(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
             case SecretChatOutgoingOperationValue.screenshotMessages.rawValue:
-                self = .screenshotMessages(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
+                self = .screenshotMessages(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
             case SecretChatOutgoingOperationValue.clearHistory.rawValue:
-                self = .clearHistory(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"))
+                self = .clearHistory(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0))
             case SecretChatOutgoingOperationValue.resendOperations.rawValue:
-                self = .resendOperations(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), fromSeqNo: decoder.decodeInt32ForKey("f"), toSeqNo: decoder.decodeInt32ForKey("t"))
+                self = .resendOperations(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), fromSeqNo: decoder.decodeInt32ForKey("f", orElse: 0), toSeqNo: decoder.decodeInt32ForKey("t", orElse: 0))
             case SecretChatOutgoingOperationValue.reportLayerSupport.rawValue:
-                self = .reportLayerSupport(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), layerSupport: decoder.decodeInt32ForKey("l"))
+                self = .reportLayerSupport(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), layerSupport: decoder.decodeInt32ForKey("l", orElse: 0))
             case SecretChatOutgoingOperationValue.pfsRequestKey.rawValue:
-                self = .pfsRequestKey(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), rekeySessionId: decoder.decodeInt64ForKey("s"), a: decoder.decodeBytesForKey("a")!)
+                self = .pfsRequestKey(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), rekeySessionId: decoder.decodeInt64ForKey("s", orElse: 0), a: decoder.decodeBytesForKey("a")!)
             case SecretChatOutgoingOperationValue.pfsAcceptKey.rawValue:
-                self = .pfsAcceptKey(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), rekeySessionId: decoder.decodeInt64ForKey("s"), gA: decoder.decodeBytesForKey("g")!, b: decoder.decodeBytesForKey("b")!)
+                self = .pfsAcceptKey(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), rekeySessionId: decoder.decodeInt64ForKey("s", orElse: 0), gA: decoder.decodeBytesForKey("g")!, b: decoder.decodeBytesForKey("b")!)
             case SecretChatOutgoingOperationValue.pfsAbortSession.rawValue:
-                self = .pfsAbortSession(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), rekeySessionId: decoder.decodeInt64ForKey("s"))
+                self = .pfsAbortSession(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), rekeySessionId: decoder.decodeInt64ForKey("s", orElse: 0))
             case SecretChatOutgoingOperationValue.pfsCommitKey.rawValue:
-                self = .pfsCommitKey(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), rekeySessionId: decoder.decodeInt64ForKey("s"), keyFingerprint: decoder.decodeInt64ForKey("f"))
+                self = .pfsCommitKey(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), rekeySessionId: decoder.decodeInt64ForKey("s", orElse: 0), keyFingerprint: decoder.decodeInt64ForKey("f", orElse: 0))
             case SecretChatOutgoingOperationValue.noop.rawValue:
-                self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"))
+                self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0))
             case SecretChatOutgoingOperationValue.setMessageAutoremoveTimeout.rawValue:
-                self = .setMessageAutoremoveTimeout(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i"), timeout: decoder.decodeInt32ForKey("t"), messageId: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p")), namespace: decoder.decodeInt32ForKey("m.n"), id: decoder.decodeInt32ForKey("m.i")))
+                self = .setMessageAutoremoveTimeout(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), timeout: decoder.decodeInt32ForKey("t", orElse: 0), messageId: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0)))
             case SecretChatOutgoingOperationValue.terminate.rawValue:
                 self = .terminate
             default:
-                self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l"))!, actionGloballyUniqueId: 0)
+                self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: 0)
                 assertionFailure()
         }
     }
@@ -256,8 +256,8 @@ final class SecretChatOutgoingOperation: Coding {
     
     init(decoder: Decoder) {
         self.contents = decoder.decodeObjectForKey("c", decoder: { SecretChatOutgoingOperationContents(decoder: $0) }) as! SecretChatOutgoingOperationContents
-        self.mutable = (decoder.decodeInt32ForKey("m") as Int32) != 0
-        self.delivered = (decoder.decodeInt32ForKey("d") as Int32) != 0
+        self.mutable = decoder.decodeInt32ForKey("m", orElse: 0) != 0
+        self.delivered = decoder.decodeInt32ForKey("d", orElse: 0) != 0
     }
     
     func encode(_ encoder: Encoder) {

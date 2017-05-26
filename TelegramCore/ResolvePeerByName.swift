@@ -30,12 +30,12 @@ final class CachedResolvedByNamePeer: Coding {
     }
     
     init(decoder: Decoder) {
-        if let peerId = (decoder.decodeInt64ForKey("p") as Int64?) {
+        if let peerId = decoder.decodeOptionalInt64ForKey("p") {
             self.peerId = PeerId(peerId)
         } else {
             self.peerId = nil
         }
-        self.timestamp = decoder.decodeInt32ForKey("t")
+        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
     }
     
     func encode(_ encoder: Encoder) {

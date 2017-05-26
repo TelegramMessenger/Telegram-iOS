@@ -40,25 +40,25 @@ public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.url = decoder.decodeStringForKey("u")
-        self.displayUrl = decoder.decodeStringForKey("d")
-        self.type = decoder.decodeStringForKey("ty")
-        self.websiteName = decoder.decodeStringForKey("ws")
-        self.title = decoder.decodeStringForKey("ti")
-        self.text = decoder.decodeStringForKey("tx")
-        self.embedUrl = decoder.decodeStringForKey("eu")
-        self.embedType = decoder.decodeStringForKey("et")
-        if let embedSizeWidth: Int32 = decoder.decodeInt32ForKey("esw"), let embedSizeHeight: Int32 = decoder.decodeInt32ForKey("esh") {
+        self.url = decoder.decodeStringForKey("u", orElse: "")
+        self.displayUrl = decoder.decodeStringForKey("d", orElse: "")
+        self.type = decoder.decodeOptionalStringForKey("ty")
+        self.websiteName = decoder.decodeOptionalStringForKey("ws")
+        self.title = decoder.decodeOptionalStringForKey("ti")
+        self.text = decoder.decodeOptionalStringForKey("tx")
+        self.embedUrl = decoder.decodeOptionalStringForKey("eu")
+        self.embedType = decoder.decodeOptionalStringForKey("et")
+        if let embedSizeWidth = decoder.decodeOptionalInt32ForKey("esw"), let embedSizeHeight = decoder.decodeOptionalInt32ForKey("esh") {
             self.embedSize = CGSize(width: CGFloat(embedSizeWidth), height: CGFloat(embedSizeHeight))
         } else {
             self.embedSize = nil
         }
-        if let duration: Int32 = decoder.decodeInt32ForKey("du") {
+        if let duration = decoder.decodeOptionalInt32ForKey("du") {
             self.duration = Int(duration)
         } else {
             self.duration = nil
         }
-        self.author = decoder.decodeStringForKey("au")
+        self.author = decoder.decodeOptionalStringForKey("au")
         
         if let image = decoder.decodeObjectForKey("im") as? TelegramMediaImage {
             self.image = image
@@ -207,8 +207,8 @@ public final class TelegramMediaWebpage: Media, Equatable {
     public init(decoder: Decoder) {
         self.webpageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         
-        if decoder.decodeInt32ForKey("ct") == 0 {
-            self.content = .Pending(decoder.decodeInt32ForKey("pendingDate"))
+        if decoder.decodeInt32ForKey("ct", orElse: 0) == 0 {
+            self.content = .Pending(decoder.decodeInt32ForKey("pendingDate", orElse: 0))
         } else {
             self.content = .Loaded(TelegramMediaWebpageLoadedContent(decoder: decoder))
         }

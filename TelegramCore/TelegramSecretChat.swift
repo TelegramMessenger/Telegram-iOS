@@ -34,15 +34,15 @@ public final class TelegramSecretChat: Peer {
     }
     
     public init(decoder: Decoder) {
-        self.id = PeerId(decoder.decodeInt64ForKey("i"))
-        self.regularPeerId = PeerId(decoder.decodeInt64ForKey("r"))
+        self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
+        self.regularPeerId = PeerId(decoder.decodeInt64ForKey("r", orElse: 0))
         self.notificationSettingsPeerId = self.regularPeerId
-        self.accessHash = decoder.decodeInt64ForKey("h")
-        self.creationDate = decoder.decodeInt32ForKey("d")
-        self.role = SecretChatRole(rawValue: decoder.decodeInt32ForKey("o"))!
-        self.embeddedState = SecretChatEmbeddedPeerState(rawValue: decoder.decodeInt32ForKey("s"))!
+        self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
+        self.creationDate = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.role = SecretChatRole(rawValue: decoder.decodeInt32ForKey("o", orElse: 0))!
+        self.embeddedState = SecretChatEmbeddedPeerState(rawValue: decoder.decodeInt32ForKey("s", orElse: 0))!
         self.associatedPeerIds = [self.regularPeerId]
-        self.messageAutoremoveTimeout = decoder.decodeInt32ForKey("at")
+        self.messageAutoremoveTimeout = decoder.decodeOptionalInt32ForKey("at")
     }
     
     public func encode(_ encoder: Encoder) {

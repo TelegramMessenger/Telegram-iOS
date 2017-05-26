@@ -21,8 +21,8 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.timeout = decoder.decodeInt32ForKey("t")
-        self.countdownBeginTime = decoder.decodeInt32ForKey("c")
+        self.timeout = decoder.decodeInt32ForKey("t", orElse: 0)
+        self.countdownBeginTime = decoder.decodeOptionalInt32ForKey("c")
     }
     
     public func encode(_ encoder: Encoder) {

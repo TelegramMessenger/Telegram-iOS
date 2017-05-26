@@ -55,7 +55,7 @@ public indirect enum InstantPageBlock: Coding, Equatable {
     case channelBanner(TelegramChannel?)
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case InstantPageBlockType.unsupported.rawValue:
                 self = .unsupported
             case InstantPageBlockType.title.rawValue:
@@ -63,7 +63,7 @@ public indirect enum InstantPageBlock: Coding, Equatable {
             case InstantPageBlockType.subtitle.rawValue:
                 self = .subtitle(decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.authorDate.rawValue:
-                self = .authorDate(author: decoder.decodeObjectForKey("a", decoder: { RichText(decoder: $0) }) as! RichText, date: decoder.decodeInt32ForKey("d"))
+                self = .authorDate(author: decoder.decodeObjectForKey("a", decoder: { RichText(decoder: $0) }) as! RichText, date: decoder.decodeInt32ForKey("d", orElse: 0))
             case InstantPageBlockType.header.rawValue:
                 self = .header(decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.subheader.rawValue:
@@ -77,29 +77,29 @@ public indirect enum InstantPageBlock: Coding, Equatable {
             case InstantPageBlockType.divider.rawValue:
                 self = .divider
             case InstantPageBlockType.anchor.rawValue:
-                self = .anchor(decoder.decodeStringForKey("s"))
+                self = .anchor(decoder.decodeStringForKey("s", orElse: ""))
             case InstantPageBlockType.list.rawValue:
-                self = .list(items: decoder.decodeObjectArrayWithDecoderForKey("l"), ordered: decoder.decodeInt32ForKey("o") != 0)
+                self = .list(items: decoder.decodeObjectArrayWithDecoderForKey("l"), ordered: decoder.decodeOptionalInt32ForKey("o") != 0)
             case InstantPageBlockType.blockQuote.rawValue:
                 self = .blockQuote(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.pullQuote.rawValue:
                 self = .pullQuote(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.image.rawValue:
-                self = .image(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n"), id: decoder.decodeInt64ForKey("i.i")), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
+                self = .image(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0)), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.video.rawValue:
-                self = .video(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n"), id: decoder.decodeInt64ForKey("i.i")), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText, autoplay: decoder.decodeInt32ForKey("ap") != 0, loop: decoder.decodeInt32ForKey("lo") != 0)
+                self = .video(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0)), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText, autoplay: decoder.decodeInt32ForKey("ap", orElse: 0) != 0, loop: decoder.decodeInt32ForKey("lo", orElse: 0) != 0)
             case InstantPageBlockType.cover.rawValue:
                 self = .cover(decoder.decodeObjectForKey("c", decoder: { InstantPageBlock(decoder: $0) }) as! InstantPageBlock)
             case InstantPageBlockType.webEmbed.rawValue:
-                self = .webEmbed(url: decoder.decodeStringForKey("u"), html: decoder.decodeStringForKey("h"), dimensions: CGSize(width: CGFloat(decoder.decodeInt32ForKey("sw")), height: CGFloat(decoder.decodeInt32ForKey("sh"))), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText, stretchToWidth: decoder.decodeInt32ForKey("st") != 0, allowScrolling: decoder.decodeInt32ForKey("as") != 0)
+                self = .webEmbed(url: decoder.decodeOptionalStringForKey("u"), html: decoder.decodeOptionalStringForKey("h"), dimensions: CGSize(width: CGFloat(decoder.decodeInt32ForKey("sw", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("sh", orElse: 0))), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText, stretchToWidth: decoder.decodeInt32ForKey("st", orElse: 0) != 0, allowScrolling: decoder.decodeInt32ForKey("as", orElse: 0) != 0)
             case InstantPageBlockType.postEmbed.rawValue:
                 var avatarId: MediaId?
-                let avatarIdNamespace: Int32? = decoder.decodeInt32ForKey("av.n")
-                let avatarIdId: Int64? = decoder.decodeInt64ForKey("av.i")
+                let avatarIdNamespace: Int32? = decoder.decodeOptionalInt32ForKey("av.n")
+                let avatarIdId: Int64? = decoder.decodeOptionalInt64ForKey("av.i")
                 if let avatarIdNamespace = avatarIdNamespace, let avatarIdId = avatarIdId {
                     avatarId = MediaId(namespace: avatarIdNamespace, id: avatarIdId)
                 }
-                self = .postEmbed(url: decoder.decodeStringForKey("u"), webpageId: MediaId(namespace: decoder.decodeInt32ForKey("w.n"), id: decoder.decodeInt64ForKey("w.i")), avatarId: avatarId, author: decoder.decodeStringForKey("a"), date: decoder.decodeInt32ForKey("d"), blocks: decoder.decodeObjectArrayWithDecoderForKey("b"), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
+                self = .postEmbed(url: decoder.decodeStringForKey("u", orElse: ""), webpageId: MediaId(namespace: decoder.decodeInt32ForKey("w.n", orElse: 0), id: decoder.decodeInt64ForKey("w.i", orElse: 0)), avatarId: avatarId, author: decoder.decodeStringForKey("a", orElse: ""), date: decoder.decodeInt32ForKey("d", orElse: 0), blocks: decoder.decodeObjectArrayWithDecoderForKey("b"), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.collage.rawValue:
                 self = .collage(items: decoder.decodeObjectArrayWithDecoderForKey("b"), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.slideshow.rawValue:
@@ -420,7 +420,7 @@ public final class InstantPage: Coding, Equatable {
     public init(decoder: Decoder) {
         self.blocks = decoder.decodeObjectArrayWithDecoderForKey("b")
         self.media = MediaDictionary(decoder: decoder).dict
-        self.isComplete = decoder.decodeInt32ForKey("c") != 0
+        self.isComplete = decoder.decodeInt32ForKey("c", orElse: 0) != 0
     }
     
     public func encode(_ encoder: Encoder) {

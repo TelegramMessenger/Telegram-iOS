@@ -13,7 +13,7 @@ public class ForwardSourceInfoAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.messageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("p")), namespace: decoder.decodeInt32ForKey("n"), id: decoder.decodeInt32ForKey("i"))
+        self.messageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("p", orElse: 0)), namespace: decoder.decodeInt32ForKey("n", orElse: 0), id: decoder.decodeInt32ForKey("i", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {

@@ -107,8 +107,8 @@ public struct MessageTextEntity: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.range = Int(decoder.decodeInt32ForKey("start")) ..< Int(decoder.decodeInt32ForKey("end"))
-        let type: Int32 = decoder.decodeInt32ForKey("_rawValue")
+        self.range = Int(decoder.decodeInt32ForKey("start", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("end", orElse: 0))
+        let type: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
         switch type {
             case 1:
                 self.type = .Mention
@@ -129,9 +129,9 @@ public struct MessageTextEntity: Coding, Equatable {
             case 9:
                 self.type = .Pre
             case 10:
-                self.type = .TextUrl(url: decoder.decodeStringForKey("url"))
+                self.type = .TextUrl(url: decoder.decodeStringForKey("url", orElse: ""))
             case 11:
-                self.type = .TextMention(peerId: PeerId(decoder.decodeInt64ForKey("peerId")))
+                self.type = .TextMention(peerId: PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0)))
             default:
                 self.type = .Unknown
         }

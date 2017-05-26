@@ -17,9 +17,9 @@ public struct SynchronizeableChatInputState: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.text = decoder.decodeStringForKey("t")
-        self.timestamp = decoder.decodeInt32ForKey("s")
-        if let messageIdPeerId = (decoder.decodeInt64ForKey("m.p") as Int64?), let messageIdNamespace = (decoder.decodeInt32ForKey("m.n") as Int32?), let messageIdId = (decoder.decodeInt32ForKey("m.i") as Int32?) {
+        self.text = decoder.decodeStringForKey("t", orElse: "")
+        self.timestamp = decoder.decodeInt32ForKey("s", orElse: 0)
+        if let messageIdPeerId = decoder.decodeOptionalInt64ForKey("m.p"), let messageIdNamespace = decoder.decodeOptionalInt32ForKey("m.n"), let messageIdId = decoder.decodeOptionalInt32ForKey("m.i") {
             self.replyToMessageId = MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId)
         } else {
             self.replyToMessageId = nil

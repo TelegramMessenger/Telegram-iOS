@@ -13,7 +13,7 @@ final class ChannelState: PeerChatState, Equatable, CustomStringConvertible {
     }
     
     init(decoder: Decoder) {
-        self.pts = decoder.decodeInt32ForKey("pts")
+        self.pts = decoder.decodeInt32ForKey("pts", orElse: 0)
     }
     
     func encode(_ encoder: Encoder) {

@@ -16,11 +16,11 @@ public enum ChatContextResultMessage: Coding, Equatable {
     case contact(media: TelegramMediaContact, replyMarkup: ReplyMarkupMessageAttribute?)
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("_v") as Int32 {
+        switch decoder.decodeInt32ForKey("_v", orElse: 0) {
             case 0:
-                self = .auto(caption: decoder.decodeStringForKey("c"), replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+                self = .auto(caption: decoder.decodeStringForKey("c", orElse: ""), replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
             case 1:
-                self = .text(text: decoder.decodeStringForKey("t"), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, disableUrlPreview: decoder.decodeInt32ForKey("du") != 0, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+                self = .text(text: decoder.decodeStringForKey("t", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, disableUrlPreview: decoder.decodeInt32ForKey("du", orElse: 0) != 0, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
             case 2:
                 self = .mapLocation(media: decoder.decodeObjectForKey("l") as! TelegramMediaMap, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
             case 3:

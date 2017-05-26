@@ -10,11 +10,11 @@ enum SecretChatKeyValidity: Coding, Equatable {
     case sequenceBasedIndexRange(fromCanonicalIndex: Int32)
     
     init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .indefinite
             case 1:
-                self = .sequenceBasedIndexRange(fromCanonicalIndex: decoder.decodeInt32ForKey("l"))
+                self = .sequenceBasedIndexRange(fromCanonicalIndex: decoder.decodeInt32ForKey("l", orElse: 0))
             default:
                 assertionFailure()
                 self = .sequenceBasedIndexRange(fromCanonicalIndex: Int32.max)
@@ -63,10 +63,10 @@ final class SecretChatKey: Coding, Equatable {
     }
     
     init(decoder: Decoder) {
-        self.fingerprint = decoder.decodeInt64ForKey("f")
+        self.fingerprint = decoder.decodeInt64ForKey("f", orElse: 0)
         self.key = decoder.decodeBytesForKey("k")!
         self.validity = decoder.decodeObjectForKey("v", decoder: { SecretChatKeyValidity(decoder: $0) }) as! SecretChatKeyValidity
-        self.useCount = decoder.decodeInt32ForKey("u")
+        self.useCount = decoder.decodeInt32ForKey("u", orElse: 0)
     }
     
     func encode(_ encoder: Encoder) {

@@ -16,11 +16,11 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
     case payment
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("v") as Int32 {
+        switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .text
             case 1:
-                self = .url(decoder.decodeStringForKey("u"))
+                self = .url(decoder.decodeStringForKey("u", orElse: ""))
             case 2:
                 self = .callback(decoder.decodeBytesForKey("d") ?? MemoryBuffer())
             case 3:
@@ -28,7 +28,7 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
             case 4:
                 self = .requestMap
             case 5:
-                self = .switchInline(samePeer: decoder.decodeInt32ForKey("s") != 0, query: decoder.decodeStringForKey("q"))
+                self = .switchInline(samePeer: decoder.decodeInt32ForKey("s", orElse: 0) != 0, query: decoder.decodeStringForKey("q", orElse: ""))
             case 6:
                 self = .openWebApp
             case 7:
@@ -127,7 +127,7 @@ public struct ReplyMarkupButton: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.title = decoder.decodeStringForKey(".t")
+        self.title = decoder.decodeStringForKey(".t", orElse: "")
         self.action = ReplyMarkupButtonAction(decoder: decoder)
     }
     
@@ -190,7 +190,7 @@ public class ReplyMarkupMessageAttribute: MessageAttribute, Equatable {
     
     public required init(decoder: Decoder) {
         self.rows = decoder.decodeObjectArrayWithDecoderForKey("r")
-        self.flags = ReplyMarkupMessageFlags(rawValue: decoder.decodeInt32ForKey("f"))
+        self.flags = ReplyMarkupMessageFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {

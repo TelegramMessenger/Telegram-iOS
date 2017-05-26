@@ -149,11 +149,11 @@ public enum TelegramChannelInfo: Equatable {
     }
     
     fileprivate static func decode(decoder: Decoder) -> TelegramChannelInfo {
-        let type: Int32 = decoder.decodeInt32ForKey("i.t")
+        let type: Int32 = decoder.decodeInt32ForKey("i.t", orElse: 0)
         if type == 0 {
-            return .broadcast(TelegramChannelBroadcastInfo(flags: TelegramChannelBroadcastFlags(rawValue: decoder.decodeInt32ForKey("i.f"))))
+            return .broadcast(TelegramChannelBroadcastInfo(flags: TelegramChannelBroadcastFlags(rawValue: decoder.decodeInt32ForKey("i.f", orElse: 0))))
         } else {
-            return .group(TelegramChannelGroupInfo(flags: TelegramChannelGroupFlags(rawValue: decoder.decodeInt32ForKey("i.f"))))
+            return .group(TelegramChannelGroupInfo(flags: TelegramChannelGroupFlags(rawValue: decoder.decodeInt32ForKey("i.f", orElse: 0))))
         }
     }
 }
@@ -209,17 +209,17 @@ public final class TelegramChannel: Peer {
     }
     
     public init(decoder: Decoder) {
-        self.id = PeerId(decoder.decodeInt64ForKey("i"))
-        self.accessHash = decoder.decodeInt64ForKey("ah")
-        self.title = decoder.decodeStringForKey("t")
-        self.username = decoder.decodeStringForKey("un")
+        self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
+        self.accessHash = decoder.decodeOptionalInt64ForKey("ah")
+        self.title = decoder.decodeStringForKey("t", orElse: "")
+        self.username = decoder.decodeOptionalStringForKey("un")
         self.photo = decoder.decodeObjectArrayForKey("ph")
-        self.creationDate = decoder.decodeInt32ForKey("d")
-        self.version = decoder.decodeInt32ForKey("v")
-        self.participationStatus = TelegramChannelParticipationStatus(rawValue: decoder.decodeInt32ForKey("ps"))
-        self.role = TelegramChannelRole(rawValue: decoder.decodeInt32ForKey("ro"))
+        self.creationDate = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.version = decoder.decodeInt32ForKey("v", orElse: 0)
+        self.participationStatus = TelegramChannelParticipationStatus(rawValue: decoder.decodeInt32ForKey("ps", orElse: 0))
+        self.role = TelegramChannelRole(rawValue: decoder.decodeInt32ForKey("ro", orElse: 0))
         self.info = TelegramChannelInfo.decode(decoder: decoder)
-        self.flags = TelegramChannelFlags(rawValue: decoder.decodeInt32ForKey("fl"))
+        self.flags = TelegramChannelFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
         self.restrictionInfo = decoder.decodeObjectForKey("ri") as? PeerAccessRestrictionInfo
     }
     

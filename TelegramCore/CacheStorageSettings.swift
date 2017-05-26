@@ -19,7 +19,7 @@ public struct CacheStorageSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.defaultCacheStorageTimeout = decoder.decodeInt32ForKey("dt") as Int32
+        self.defaultCacheStorageTimeout = decoder.decodeInt32ForKey("dt", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {

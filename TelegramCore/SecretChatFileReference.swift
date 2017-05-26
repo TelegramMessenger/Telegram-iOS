@@ -21,11 +21,11 @@ final class SecretChatFileReference: Coding {
     }
     
     init(decoder: Decoder) {
-        self.id = decoder.decodeInt64ForKey("i")
-        self.accessHash = decoder.decodeInt64ForKey("a")
-        self.size = decoder.decodeInt32ForKey("s")
-        self.datacenterId = decoder.decodeInt32ForKey("d")
-        self.keyFingerprint = decoder.decodeInt32ForKey("f")
+        self.id = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
+        self.size = decoder.decodeInt32ForKey("s", orElse: 0)
+        self.datacenterId = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.keyFingerprint = decoder.decodeInt32ForKey("f", orElse: 0)
     }
     
     func encode(_ encoder: Encoder) {

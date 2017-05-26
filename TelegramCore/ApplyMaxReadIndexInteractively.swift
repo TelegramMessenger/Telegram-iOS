@@ -16,7 +16,7 @@ public func applyMaxReadIndexInteractively(postbox: Postbox, network: Network, i
                 if let message = modifier.getMessage(id) {
                     for attribute in message.attributes {
                         if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                            if attribute.countdownBeginTime == nil && !message.containsSecretMedia {
+                            if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && !message.containsSecretMedia {
                                 modifier.updateMessage(message.id, update: { currentMessage in
                                     var storeForwardInfo: StoreMessageForwardInfo?
                                     if let forwardInfo = currentMessage.forwardInfo {
@@ -49,7 +49,7 @@ func applyOutgoingReadMaxIndex(modifier: Modifier, index: MessageIndex, beginAt 
             if let message = modifier.getMessage(id), !message.flags.contains(.Incoming) {
                 for attribute in message.attributes {
                     if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                        if attribute.countdownBeginTime == nil && !message.containsSecretMedia {
+                        if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && !message.containsSecretMedia {
                             modifier.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {

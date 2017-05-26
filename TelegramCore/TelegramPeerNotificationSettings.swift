@@ -10,11 +10,11 @@ public enum PeerMuteState: Equatable {
     case muted(until: Int32)
     
     fileprivate static func decodeInline(_ decoder: Decoder) -> PeerMuteState {
-        switch decoder.decodeInt32ForKey("m.v") as Int32 {
+        switch decoder.decodeInt32ForKey("m.v", orElse: 0) {
             case 0:
                 return .unmuted
             case 1:
-                return .muted(until: decoder.decodeInt32ForKey("m.u"))
+                return .muted(until: decoder.decodeInt32ForKey("m.u", orElse: 0))
             default:
                 return .unmuted
         }
@@ -62,13 +62,13 @@ public enum PeerMessageSound: Equatable {
     case bundledClassic(id: Int32)
     
     static func decodeInline(_ decoder: Decoder) -> PeerMessageSound {
-        switch decoder.decodeInt32ForKey("s.v") as Int32 {
+        switch decoder.decodeInt32ForKey("s.v", orElse: 0) {
             case PeerMessageSoundValue.none.rawValue:
                 return .none
             case PeerMessageSoundValue.bundledModern.rawValue:
-                return .bundledModern(id: decoder.decodeInt32ForKey("s.i"))
+                return .bundledModern(id: decoder.decodeInt32ForKey("s.i", orElse: 0))
             case PeerMessageSoundValue.bundledClassic.rawValue:
-                return .bundledClassic(id: decoder.decodeInt32ForKey("s.i"))
+                return .bundledClassic(id: decoder.decodeInt32ForKey("s.i", orElse: 0))
             default:
                 assertionFailure()
                 return .bundledModern(id: 0)

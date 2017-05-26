@@ -61,18 +61,18 @@ public enum ChannelParticipant: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case ChannelParticipantValue.member.rawValue:
-                self = .member(id: PeerId(decoder.decodeInt64ForKey("i")), invitedAt: decoder.decodeInt32ForKey("t"))
+                self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
             case ChannelParticipantValue.creator.rawValue:
-                self = .creator(id: PeerId(decoder.decodeInt64ForKey("i")))
+                self = .creator(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)))
             case ChannelParticipantValue.editor.rawValue:
-                self = .editor(id: PeerId(decoder.decodeInt64ForKey("i")), invitedBy: PeerId(decoder.decodeInt64ForKey("p")), invitedAt: decoder.decodeInt32ForKey("t"))
+                self = .editor(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("p", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
             case ChannelParticipantValue.moderator.rawValue:
-                self = .moderator(id: PeerId(decoder.decodeInt64ForKey("i")), invitedBy: PeerId(decoder.decodeInt64ForKey("p")), invitedAt: decoder.decodeInt32ForKey("t"))
+                self = .moderator(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("p", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
             default:
                 assertionFailure()
-                self = .member(id: PeerId(decoder.decodeInt64ForKey("i")), invitedAt: decoder.decodeInt32ForKey("t"))
+                self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
         }
     }
     

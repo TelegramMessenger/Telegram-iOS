@@ -401,3 +401,81 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
             }
         }
 }
+
+func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageIndex, limit: Int32 = 100) -> Signal<Void, NoError> {
+    let offset: Signal<(Int32, Int32, Api.InputPeer), NoError>
+    if holeIndex.id.peerId.namespace == Namespaces.Peer.Empty {
+        offset = single((0, 0, Api.InputPeer.inputPeerEmpty), NoError.self)
+    } else {
+        offset = postbox.loadedPeerWithId(holeIndex.id.peerId)
+            |> take(1)
+            |> map { peer in
+                return (holeIndex.timestamp, holeIndex.id.id + 1, apiInputPeer(peer) ?? .inputPeerEmpty)
+        }
+    }
+    return offset
+        |> mapToSignal { (timestamp, id, peer) -> Signal<Void, NoError> in
+            let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: peer, q: "", filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offset: 0, maxId: holeIndex.id.id, limit: limit))
+                |> retryRequest
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    let messages: [Api.Message]
+                    let chats: [Api.Chat]
+                    let users: [Api.User]
+                    switch result {
+                        case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                        case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                        case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                    }
+                    return postbox.modify { modifier -> Void in
+                        var storeMessages: [StoreMessage] = []
+                        var topIndex: MessageIndex?
+                        
+                        for message in messages {
+                            if let storeMessage = StoreMessage(apiMessage: message) {
+                                storeMessages.append(storeMessage)
+                                if let index = storeMessage.index, topIndex == nil || index < topIndex! {
+                                    topIndex = index
+                                }
+                            }
+                        }
+                        
+                        var updatedIndex: MessageIndex?
+                        if let topIndex = topIndex {
+                            updatedIndex = topIndex.predecessor()
+                        }
+                        
+                        modifier.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
+                        
+                        var peers: [Peer] = []
+                        var peerPresences: [PeerId: PeerPresence] = [:]
+                        for chat in chats {
+                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                peers.append(groupOrChannel)
+                            }
+                        }
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                            if let presence = TelegramUserPresence(apiUser: user) {
+                                peerPresences[telegramUser.id] = presence
+                            }
+                        }
+                        
+                        updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        modifier.updatePeerPresences(peerPresences)
+                    }
+                }
+            return searchResult
+        }
+}

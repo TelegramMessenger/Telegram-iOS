@@ -15,7 +15,7 @@ public class ViewCountMessageAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.count = Int(decoder.decodeInt32ForKey("c"))
+        self.count = Int(decoder.decodeInt32ForKey("c", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {

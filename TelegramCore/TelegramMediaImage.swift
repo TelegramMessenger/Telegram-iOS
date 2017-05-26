@@ -90,7 +90,7 @@ public final class TelegramMediaImageRepresentation: Coding, Equatable, CustomSt
     }
     
     public init(decoder: Decoder) {
-        self.dimensions = CGSize(width: CGFloat(decoder.decodeInt32ForKey("dx")), height: CGFloat(decoder.decodeInt32ForKey("dy")))
+        self.dimensions = CGSize(width: CGFloat(decoder.decodeInt32ForKey("dx", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("dy", orElse: 0)))
         self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
     }
     

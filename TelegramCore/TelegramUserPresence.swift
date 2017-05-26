@@ -90,11 +90,11 @@ public enum UserPresenceStatus: Comparable, Coding {
     }
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("v") as Int32 {
+        switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .none
             case 1:
-                self = .present(until: decoder.decodeInt32ForKey("t"))
+                self = .present(until: decoder.decodeInt32ForKey("t", orElse: 0))
             case 2:
                 self = .recently
             case 3:

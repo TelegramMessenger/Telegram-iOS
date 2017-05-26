@@ -13,7 +13,7 @@ public class ConsumableContentMessageAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.consumed = (decoder.decodeInt32ForKey("c") as Int32) != 0
+        self.consumed = decoder.decodeInt32ForKey("c", orElse: 0) != 0
     }
     
     public func encode(_ encoder: Encoder) {

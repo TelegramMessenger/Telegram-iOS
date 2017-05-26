@@ -30,10 +30,10 @@ public enum TelegramMediaActionType: Coding, Equatable {
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
     
     public init(decoder: Decoder) {
-        let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue")
+        let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
         switch rawValue {
             case 1:
-                self = .groupCreated(title: decoder.decodeStringForKey("title"))
+                self = .groupCreated(title: decoder.decodeStringForKey("title", orElse: ""))
             case 2:
                 self = .addedMembers(peerIds: PeerId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("peerIds")!))
             case 3:
@@ -41,29 +41,29 @@ public enum TelegramMediaActionType: Coding, Equatable {
             case 4:
                 self = .photoUpdated(image: decoder.decodeObjectForKey("image") as? TelegramMediaImage)
             case 5:
-                self = .titleUpdated(title: decoder.decodeStringForKey("title"))
+                self = .titleUpdated(title: decoder.decodeStringForKey("title", orElse: ""))
             case 6:
                 self = .pinnedMessageUpdated
             case 7:
-                self = .joinedByLink(inviter: PeerId(decoder.decodeInt64ForKey("inviter")))
+                self = .joinedByLink(inviter: PeerId(decoder.decodeInt64ForKey("inviter", orElse: 0)))
             case 8:
-                self = .channelMigratedFromGroup(title: decoder.decodeStringForKey("title"), groupId: PeerId(decoder.decodeInt64ForKey("groupId")))
+                self = .channelMigratedFromGroup(title: decoder.decodeStringForKey("title", orElse: ""), groupId: PeerId(decoder.decodeInt64ForKey("groupId", orElse: 0)))
             case 9:
-                self = .groupMigratedToChannel(channelId: PeerId(decoder.decodeInt64ForKey("channelId")))
+                self = .groupMigratedToChannel(channelId: PeerId(decoder.decodeInt64ForKey("channelId", orElse: 0)))
             case 10:
                 self = .historyCleared
             case 11:
                 self = .historyScreenshot
             case 12:
-                self = .messageAutoremoveTimeoutUpdated(decoder.decodeInt32ForKey("t"))
+                self = .messageAutoremoveTimeoutUpdated(decoder.decodeInt32ForKey("t", orElse: 0))
             case 13:
-                self = .gameScore(gameId: decoder.decodeInt64ForKey("i"), score: decoder.decodeInt32ForKey("s"))
+                self = .gameScore(gameId: decoder.decodeInt64ForKey("i", orElse: 0), score: decoder.decodeInt32ForKey("s", orElse: 0))
             case 14:
                 var discardReason: PhoneCallDiscardReason?
-                if let value = (decoder.decodeInt32ForKey("dr") as Int32?) {
+                if let value = decoder.decodeOptionalInt32ForKey("dr") {
                     discardReason = PhoneCallDiscardReason(rawValue: value)
                 }
-                self = .phoneCall(callId: decoder.decodeInt64ForKey("i"), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d"))
+                self = .phoneCall(callId: decoder.decodeInt64ForKey("i", orElse: 0), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d", orElse: 0))
             default:
                 self = .unknown
         }
