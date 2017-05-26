@@ -29,7 +29,9 @@ public final class ActionDisposable : Disposable {
         self.action = nil
         pthread_mutex_unlock(&self.lock)
         
-        freeAction = nil
+        if let freeAction = freeAction {
+            withExtendedLifetime(freeAction, {})
+        }
         
         pthread_mutex_destroy(&self.lock)
     }
@@ -63,7 +65,9 @@ public final class MetaDisposable : Disposable {
             self.disposable = nil
         }
         pthread_mutex_unlock(&self.lock)
-        freeDisposable = nil
+        if let freeDisposable = freeDisposable {
+            withExtendedLifetime(freeDisposable, { })
+        }
         
         pthread_mutex_destroy(&self.lock)
     }
