@@ -25,6 +25,7 @@ public struct Namespaces {
         public static let CloudSecretImage: Int32 = 9
         public static let CloudSecretFile: Int32 = 10
         public static let CloudGame: Int32 = 11
+        public static let CloudInvoice: Int32 = 12
     }
     
     public struct Peer {

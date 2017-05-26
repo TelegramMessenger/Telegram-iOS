@@ -28,7 +28,8 @@ public enum TelegramMediaActionType: Coding, Equatable {
     case messageAutoremoveTimeoutUpdated(Int32)
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
-    
+    case paymentSent(currency:String, totalAmount: Int64)
+
     public init(decoder: Decoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue")
         switch rawValue {
@@ -64,6 +65,8 @@ public enum TelegramMediaActionType: Coding, Equatable {
                     discardReason = PhoneCallDiscardReason(rawValue: value)
                 }
                 self = .phoneCall(callId: decoder.decodeInt64ForKey("i"), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d"))
+            case 15:
+                self = .paymentSent(currency: decoder.decodeStringForKey("currency"), totalAmount: decoder.decodeInt64ForKey("ta"))
             default:
                 self = .unknown
         }
@@ -130,6 +133,10 @@ public enum TelegramMediaActionType: Coding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "d")
                 }
+            case let .paymentSent(currency, totalAmount):
+                encoder.encodeInt32(15, forKey: "_rawValue")
+                encoder.encodeString(currency, forKey: "currency")
+                encoder.encodeInt64(totalAmount, forKey: "ta")
         }
     }
     
@@ -237,6 +244,12 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             } else {
                 return false
             }
+        case let .paymentSent(currency, totalAmount):
+            if case .paymentSent(currency, totalAmount) = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .phoneCall(lhsCallId, lhsDiscardReason, lhsDuration):
             if case let .phoneCall(rhsCallId, rhsDiscardReason, rhsDuration) = rhs, lhsCallId == rhsCallId && lhsDiscardReason == rhsDiscardReason && lhsDuration == rhsDuration {
                 return true
@@ -312,9 +325,11 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         case .messageActionEmpty:
             return nil
         case let .messageActionPaymentSent(currency, totalAmount):
-            return nil
+            return TelegramMediaAction(action: .paymentSent(currency: currency, totalAmount: totalAmount))
         case .messageActionPaymentSentMe:
             return nil
+        //        case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
+
     }
 }
 

@@ -778,7 +778,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         var messageText = text
                         var medias: [Media] = []
                         
-                        let (mediaText, mediaValue) = textAndMediaFromApiMedia(media)
+                        let (mediaText, mediaValue) = textAndMediaFromApiMedia(media, peerId)
                         if let mediaText = mediaText {
                             messageText = mediaText
                         }

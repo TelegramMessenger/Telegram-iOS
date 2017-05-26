@@ -93,6 +93,56 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         } |> retryRequest
     }
     
+    
+    func webFilePart(location: Api.InputWebFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
+        return Signal<Data, MTRpcError> { subscriber in
+            let request = MTRequest()
+            
+            var updatedLength = roundUp(length, to: 4096)
+            while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
+                updatedLength += 1
+            }
+            
+            let data = Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(updatedLength))
+            
+            request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0, tag: nil), responseParser: { response in
+                if let result = data.2(Buffer(data: response)) {
+                    return BoxedMessage(result)
+                }
+                return nil
+            })
+            
+            request.dependsOnPasswordEntry = false
+            
+            request.completed = { (boxedResponse, timestamp, error) -> () in
+                if let error = error {
+                    subscriber.putError(error)
+                } else {
+                    if let result = (boxedResponse as! BoxedMessage).body as? Api.upload.WebFile {
+                        //upload.webFile#21e753bc size:int mime_type:string file_type:storage.FileType mtime:int bytes:bytes = upload.WebFile;
+                        
+                        switch result {
+                        case .webFile(_, _, _, _, let bytes):
+                            subscriber.putNext(bytes.makeData())
+                        }
+                        subscriber.putCompletion()
+                    }
+                    else {
+                        subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                    }
+                }
+            }
+            
+            let internalId: Any! = request.internalId
+            
+            self.requestService.add(request)
+            
+            return ActionDisposable {
+                self.requestService.removeRequest(byInternalId: internalId)
+            }
+            } |> retryRequest
+    }
+    
     func part(location: Api.InputFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()

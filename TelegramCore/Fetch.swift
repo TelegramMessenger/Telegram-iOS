@@ -9,7 +9,7 @@ import SwiftSignalKit
 import Photos
 #endif
 
-private func fetchCloudMediaLocation(account: Account, resource: TelegramCloudMediaResource, size: Int?, range: Range<Int>, tag: MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError> {
+private func fetchCloudMediaLocation(account: Account, resource: TelegramMultipartFetchableResource, size: Int?, range: Range<Int>, tag: MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError> {
     return multipartFetch(account: account, resource: resource, size: size, range: range, tag: tag)
 }
 
@@ -35,7 +35,7 @@ func fetchResource(account: Account, resource: MediaResource, range: Range<Int>,
         return .never()
     } else if let secretFileResource = resource as? SecretFileMediaResource {
         return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchSecretFileResource(account: account, resource: secretFileResource, range: range, tag: tag))
-    } else if let cloudResource = resource as? TelegramCloudMediaResource {
+    } else if let cloudResource = resource as? TelegramMultipartFetchableResource {
         return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, size: resource.size == 0 ? nil : resource.size, range: range, tag: tag))
     } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
         if false {
