@@ -293,7 +293,17 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
     }) |> then(Signal<NetworkUsageStats, NoError>.complete() |> delay(5.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
-func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?) -> Signal<Network, NoError> {
+public struct NetworkInitializationArguments {
+    public let apiId: Int32
+    public let languagesCategory: String
+    
+    public init(apiId: Int32, languagesCategory: String) {
+        self.apiId = apiId
+        self.languagesCategory = languagesCategory
+    }
+}
+
+func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -302,7 +312,8 @@ func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, ke
             
             var apiEnvironment = MTApiEnvironment()
             
-            apiEnvironment.apiId = apiId
+            apiEnvironment.apiId = arguments.apiId
+            apiEnvironment.langPack = arguments.languagesCategory
             apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
             apiEnvironment.disableUpdates = supplementary
             apiEnvironment = apiEnvironment.withUpdatedLangPackCode(languageCode ?? "en")

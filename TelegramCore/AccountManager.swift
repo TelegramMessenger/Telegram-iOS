@@ -14,7 +14,7 @@ private enum AccountKind {
     case unauthorized
 }
 
-public func currentAccount(apiId: Int32, supplementary: Bool, manager: AccountManager, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
+public func currentAccount(networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
     return manager.allocatedCurrentAccountId()
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs == rhs
@@ -23,7 +23,7 @@ public func currentAccount(apiId: Int32, supplementary: Bool, manager: AccountMa
             if let id = id {
                 let reload = ValuePromise<Bool>(true, ignoreRepeated: false)
                 return reload.get() |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
-                    return accountWithId(apiId: apiId, id: id, supplementary: supplementary, appGroupPath: appGroupPath, testingEnvironment: testingEnvironment, auxiliaryMethods: auxiliaryMethods)
+                    return accountWithId(networkArguments: networkArguments, id: id, supplementary: supplementary, appGroupPath: appGroupPath, testingEnvironment: testingEnvironment, auxiliaryMethods: auxiliaryMethods)
                         |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
                             let postbox: Postbox
                             let initialKind: AccountKind
@@ -98,7 +98,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
     }
 }
 
-public func managedCleanupAccounts(apiId: Int32, accountManager: AccountManager, appGroupPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, appGroupPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let loggedOutAccounts = Atomic<[AccountRecordId: MetaDisposable]>(value: [:])
         let disposable = accountManager.accountRecords().start(next: { view in
@@ -141,7 +141,7 @@ public func managedCleanupAccounts(apiId: Int32, accountManager: AccountManager,
                 disposable.dispose()
             }
             for (id, disposable) in beginList {
-                disposable.set(cleanupAccount(apiId: apiId, accountManager: accountManager, id: id, appGroupPath: appGroupPath, auxiliaryMethods: auxiliaryMethods).start())
+                disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, appGroupPath: appGroupPath, auxiliaryMethods: auxiliaryMethods).start())
             }
         })
         
@@ -152,8 +152,8 @@ public func managedCleanupAccounts(apiId: Int32, accountManager: AccountManager,
 }
 
 
-private func cleanupAccount(apiId: Int32, accountManager: AccountManager, id: AccountRecordId, appGroupPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
-    return accountWithId(apiId: apiId, id: id, supplementary: true, appGroupPath: appGroupPath, testingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
+private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, id: AccountRecordId, appGroupPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, appGroupPath: appGroupPath, testingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
         |> mapToSignal { account -> Signal<Void, NoError> in
             switch account {
                 case .upgrading:

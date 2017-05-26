@@ -99,7 +99,7 @@ public func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.St
 }
 
 public class UnauthorizedAccount {
-    public let apiId: Int32
+    public let networkArguments: NetworkInitializationArguments
     public let id: AccountRecordId
     public let appGroupPath: String
     public let basePath: String
@@ -113,8 +113,8 @@ public class UnauthorizedAccount {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     
-    init(apiId: Int32, id: AccountRecordId, appGroupPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
-        self.apiId = apiId
+    init(networkArguments: NetworkInitializationArguments, id: AccountRecordId, appGroupPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
+        self.networkArguments = networkArguments
         self.id = id
         self.appGroupPath = appGroupPath
         self.basePath = basePath
@@ -148,9 +148,9 @@ public class UnauthorizedAccount {
             return self.postbox.modify { modifier -> LocalizationSettings? in
                 return modifier.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings
             } |> mapToSignal { settings -> Signal<UnauthorizedAccount, NoError> in
-                return initializedNetwork(apiId: self.apiId, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: settings?.languageCode)
+                return initializedNetwork(arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: settings?.languageCode)
                 |> map { network in
-                    let updated = UnauthorizedAccount(apiId: self.apiId, id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
+                    let updated = UnauthorizedAccount(networkArguments: self.networkArguments, id: self.id, appGroupPath: self.appGroupPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                     updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
                     return updated
                 }
@@ -247,7 +247,7 @@ public enum AccountResult {
     case authorized(Account)
 }
 
-public func accountWithId(apiId: Int32, id: AccountRecordId, supplementary: Bool, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let _ = declaredEncodables
     
     let path = "\(appGroupPath)/\(accountRecordIdPathName(id))"
@@ -285,12 +285,12 @@ public func accountWithId(apiId: Int32, id: AccountRecordId, supplementary: Bool
                             if let accountState = accountState {
                                 switch accountState {
                                     case let unauthorizedState as UnauthorizedAccountState:
-                                        return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: settings?.languageCode)
+                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: settings?.languageCode)
                                             |> map { network -> AccountResult in
-                                                return .unauthorized(UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                                                return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, appGroupPath: appGroupPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                             }
                                     case let authorizedState as AuthorizedAccountState:
-                                        return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: settings?.languageCode)
+                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: settings?.languageCode)
                                             |> map { network -> AccountResult in
                                                 return .authorized(Account(id: id, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                                         }
@@ -299,9 +299,9 @@ public func accountWithId(apiId: Int32, id: AccountRecordId, supplementary: Bool
                                 }
                             }
                             
-                            return initializedNetwork(apiId: apiId, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: settings?.languageCode)
+                            return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: settings?.languageCode)
                                 |> map { network -> AccountResult in
-                                    return .unauthorized(UnauthorizedAccount(apiId: apiId, id: id, appGroupPath: appGroupPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                                    return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, appGroupPath: appGroupPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                             }
                         }
                     }
