@@ -44,7 +44,7 @@ public struct AccountRecord: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.id = AccountRecordId(rawValue: decoder.decodeInt64ForKey("id"))
+        self.id = AccountRecordId(rawValue: decoder.decodeInt64ForKey("id", orElse: 0))
         self.attributes = (decoder.decodeObjectArrayForKey("attributes") as [Coding]).map { $0 as! AccountRecordAttribute }
     }
     

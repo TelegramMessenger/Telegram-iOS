@@ -8,6 +8,7 @@ public enum PostboxViewKey: Hashable {
     case orderedItemList(id: Int32)
     case accessChallengeData
     case preferences(keys: Set<ValueBoxKey>)
+    case globalMessageTags(globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?)
     
     public var hashValue: Int {
         switch self {
@@ -25,6 +26,8 @@ public enum PostboxViewKey: Hashable {
                 return 2
             case .preferences:
                 return 3
+            case .globalMessageTags:
+                return 4
         }
     }
     
@@ -72,6 +75,12 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case let .globalMessageTags(globalTag, position, count, _):
+                if case .globalMessageTags(globalTag, position, count, _) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -92,5 +101,7 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableAccessChallengeDataView(postbox: postbox)
         case let .preferences(keys):
             return MutablePreferencesView(postbox: postbox, keys: keys)
+        case let .globalMessageTags(globalTag, position, count, groupingPredicate):
+            return MutableGlobalMessageTagsView(postbox: postbox, globalTag: globalTag, position: position, count: count, groupingPredicate: groupingPredicate)
     }
 }

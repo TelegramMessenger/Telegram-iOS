@@ -698,29 +698,29 @@ public final class Decoder {
         return false
     }
     
-    public func decodeInt32ForKey(_ key: StaticString) -> Int32 {
+    public func decodeInt32ForKey(_ key: StaticString, orElse: Int32) -> Int32 {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32) {
             var value: Int32 = 0
             memcpy(&value, self.buffer.memory + self.offset, 4)
             self.offset += 4
             return value
         } else {
-            return 0
+            return orElse
         }
     }
     
-    public func decodeInt32ForKey(_ key: String) -> Int32 {
+    public func decodeInt32ForKey(_ key: String, orElse: Int32) -> Int32 {
         if Decoder.positionOnStringKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32) {
             var value: Int32 = 0
             memcpy(&value, self.buffer.memory + self.offset, 4)
             self.offset += 4
             return value
         } else {
-            return 0
+            return orElse
         }
     }
     
-    public func decodeInt32ForKey(_ key: StaticString) -> Int32? {
+    public func decodeOptionalInt32ForKey(_ key: StaticString) -> Int32? {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32) {
             var value: Int32 = 0
             memcpy(&value, self.buffer.memory + self.offset, 4)
@@ -731,18 +731,29 @@ public final class Decoder {
         }
     }
     
-    public func decodeInt64ForKey(_ key: StaticString) -> Int64 {
+    public func decodeOptionalInt32ForKey(_ key: String) -> Int32? {
+        if Decoder.positionOnStringKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32) {
+            var value: Int32 = 0
+            memcpy(&value, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            return value
+        } else {
+            return nil
+        }
+    }
+    
+    public func decodeInt64ForKey(_ key: StaticString, orElse: Int64) -> Int64 {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int64) {
             var value: Int64 = 0
             memcpy(&value, self.buffer.memory + self.offset, 8)
             self.offset += 8
             return value
         } else {
-            return 0
+            return orElse
         }
     }
     
-    public func decodeInt64ForKey(_ key: StaticString) -> Int64? {
+    public func decodeOptionalInt64ForKey(_ key: StaticString) -> Int64? {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int64) {
             var value: Int64 = 0
             memcpy(&value, self.buffer.memory + self.offset, 8)
@@ -753,18 +764,40 @@ public final class Decoder {
         }
     }
     
-    public func decodeBoolForKey(_ key: StaticString) -> Bool {
+    public func decodeBoolForKey(_ key: StaticString, orElse: Bool) -> Bool {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Bool) {
             var value: Int8 = 0
             memcpy(&value, self.buffer.memory + self.offset, 1)
             self.offset += 1
             return value != 0
         } else {
-            return false
+            return orElse
         }
     }
     
-    public func decodeDoubleForKey(_ key: StaticString) -> Double {
+    public func decodeOptionalBoolForKey(_ key: StaticString) -> Bool? {
+        if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Bool) {
+            var value: Int8 = 0
+            memcpy(&value, self.buffer.memory + self.offset, 1)
+            self.offset += 1
+            return value != 0
+        } else {
+            return nil
+        }
+    }
+    
+    public func decodeDoubleForKey(_ key: StaticString, orElse: Double) -> Double {
+        if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Double) {
+            var value: Double = 0
+            memcpy(&value, self.buffer.memory + self.offset, 8)
+            self.offset += 8
+            return value
+        } else {
+            return orElse
+        }
+    }
+    
+    public func decodeOptionalDoubleForKey(_ key: StaticString) -> Double? {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Double) {
             var value: Double = 0
             memcpy(&value, self.buffer.memory + self.offset, 8)
@@ -775,19 +808,19 @@ public final class Decoder {
         }
     }
     
-    public func decodeStringForKey(_ key: StaticString) -> String {
+    public func decodeStringForKey(_ key: StaticString, orElse: String) -> String {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .String) {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.offset, 4)
             let data = Data(bytes: self.buffer.memory.assumingMemoryBound(to: UInt8.self).advanced(by: self.offset + 4), count: Int(length))
             self.offset += 4 + Int(length)
-            return String(data: data, encoding: .utf8) ?? ""
+            return String(data: data, encoding: .utf8) ?? orElse
         } else {
-            return ""
+            return orElse
         }
     }
     
-    public func decodeStringForKey(_ key: StaticString) -> String? {
+    public func decodeOptionalStringForKey(_ key: StaticString) -> String? {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .String) {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.offset, 4)

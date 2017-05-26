@@ -36,8 +36,8 @@ public struct MediaId: Hashable, Coding, CustomStringConvertible {
     }
     
     public init(decoder: Decoder) {
-        self.namespace = decoder.decodeInt32ForKey("n")
-        self.id = decoder.decodeInt64ForKey("i")
+        self.namespace = decoder.decodeInt32ForKey("n", orElse: 0)
+        self.id = decoder.decodeInt64ForKey("i", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {

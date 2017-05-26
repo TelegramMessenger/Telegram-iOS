@@ -570,15 +570,14 @@ public final class MediaBox {
                         }
                         
                         var offset = currentSize
-                        var fd: Int32?
+                        let file = Atomic<ManagedFile?>(value: nil)
                         let dataQueue = self.dataQueue
                         dataContext.fetchDisposable = ((self.wrappedFetchResource.get() |> take(1) |> mapToSignal { fetch -> Signal<MediaResourceDataFetchResult, NoError> in
                             return fetch(resource, currentSize ..< Int.max, tag)
                         }) |> afterDisposed {
                             dataQueue.async {
-                                if let thisFd = fd {
-                                    close(thisFd)
-                                    fd = nil
+                                let _ = file.modify { current in
+                                    return nil
                                 }
                             }
                         }).start(next: { resultOption in
@@ -587,20 +586,25 @@ public final class MediaBox {
                                 
                                 switch resultOption {
                                     case let .dataPart(data, dataRange, complete):
-                                        if fd == nil {
-                                            let handle = open(paths.partial, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)
-                                            if handle >= 0 {
-                                                fd = handle
+                                        var currentFile: ManagedFile?
+                                        let _ = file.modify { current in
+                                            if let current = current {
+                                                currentFile = current
+                                                return current
+                                            } else {
+                                                let newFile = ManagedFile(queue: self.dataQueue, path: paths.partial, mode: .append)
+                                                currentFile = newFile
+                                                return newFile
                                             }
                                         }
                                         
-                                        if let thisFd = fd {
+                                        if let currentFile = currentFile {
                                             if !dataRange.isEmpty {
                                                 let writeResult = data.withUnsafeBytes { bytes -> Int in
-                                                    return write(thisFd, bytes.advanced(by: dataRange.lowerBound), dataRange.count)
+                                                    return currentFile.write(bytes.advanced(by: dataRange.lowerBound), count: dataRange.count)
                                                 }
                                                 if writeResult != dataRange.count {
-                                                    print("write error \(errno)")
+                                                    assertionFailure("write error \(errno)")
                                                 }
                                             }
                                             
@@ -662,44 +666,39 @@ public final class MediaBox {
                                             }
                                         }
                                     case let .replaceHeader(data, dataRange):
-                                        if let thisFd = fd {
-                                            close(thisFd)
-                                            fd = nil
+                                        let currentFile = ManagedFile(queue: self.dataQueue, path: paths.partial, mode: .readwrite)
+                                        let _ = file.modify { _ in
+                                            return nil
                                         }
                                         
-                                        if fd == nil {
-                                            let handle = open(paths.partial, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR)
-                                            if handle >= 0 {
-                                                fd = handle
-                                            }
-                                        }
-                                        
-                                        if let thisFd = fd {
+                                        if let currentFile = currentFile {
                                             if !dataRange.isEmpty {
-                                                lseek(thisFd, 0, SEEK_SET)
+                                                currentFile.seek(position: 0)
                                                 let writeResult = data.withUnsafeBytes { bytes -> Int in
-                                                    return write(thisFd, bytes.advanced(by: dataRange.lowerBound), dataRange.count)
+                                                    return currentFile.write(bytes.advanced(by: dataRange.lowerBound), count: dataRange.count)
                                                 }
-                                                lseek(thisFd, Int64(offset), SEEK_SET)
+                                                currentFile.seek(position: Int64(offset))
                                                 if writeResult != dataRange.count {
-                                                    print("write error \(errno)")
+                                                    assertionFailure("write error \(errno)")
                                                 }
-                                                
-                                                close(thisFd)
-                                                fd = nil
                                             }
                                         }
                                     case .reset:
-                                        if fd == nil {
-                                            let handle = open(paths.partial, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)
-                                            if handle >= 0 {
-                                                fd = handle
+                                        var currentFile: ManagedFile?
+                                        let _ = file.modify { current in
+                                            if let current = current {
+                                                currentFile = current
+                                                return current
+                                            } else {
+                                                let newFile = ManagedFile(queue: self.dataQueue, path: paths.partial, mode: .append)
+                                                currentFile = newFile
+                                                return newFile
                                             }
                                         }
                                         
-                                        if let fd = fd {
-                                            ftruncate(fd, 0)
-                                            lseek(fd, 0, SEEK_SET)
+                                        if let currentFile = currentFile {
+                                            currentFile.truncate(count: 0)
+                                            currentFile.seek(position: 0)
                                         } else {
                                             assertionFailure()
                                         }
@@ -751,10 +750,10 @@ public final class MediaBox {
                                             }
                                         }
                                     case let .moveLocalFile(tempPath):
-                                        if let thisFd = fd {
-                                            close(thisFd)
-                                            fd = nil
+                                        let _ = file.modify { _ in
+                                            return nil
                                         }
+                                        
                                         unlink(paths.partial)
                                         do {
                                             try FileManager.default.moveItem(atPath: tempPath, toPath: paths.partial)

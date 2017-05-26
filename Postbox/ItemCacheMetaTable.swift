@@ -16,7 +16,7 @@ struct ItemCacheCollectionState: Coding {
     let nextAccessIndex: Int32
     
     init(decoder: Decoder) {
-        self.nextAccessIndex = decoder.decodeInt32ForKey("i")
+        self.nextAccessIndex = decoder.decodeInt32ForKey("i", orElse: 0)
     }
     
     func encode(_ encoder: Encoder) {

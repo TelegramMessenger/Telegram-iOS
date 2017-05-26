@@ -18,8 +18,8 @@ public struct AccessChallengeAttempts: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.count = decoder.decodeInt32ForKey("c")
-        self.timestamp = decoder.decodeInt32ForKey("t")
+        self.count = decoder.decodeInt32ForKey("c", orElse: 0)
+        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {
@@ -38,13 +38,13 @@ public enum PostboxAccessChallengeData: Coding, Equatable {
     case plaintextPassword(value: String, timeout: Int32?, attempts: AccessChallengeAttempts?)
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .none
             case 1:
-                self = .numericalPassword(value: decoder.decodeStringForKey("t"), timeout: decoder.decodeInt32ForKey("a"), attempts: decoder.decodeObjectForKey("att", decoder: { AccessChallengeAttempts(decoder: $0) }) as? AccessChallengeAttempts)
+                self = .numericalPassword(value: decoder.decodeStringForKey("t", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("a"), attempts: decoder.decodeObjectForKey("att", decoder: { AccessChallengeAttempts(decoder: $0) }) as? AccessChallengeAttempts)
             case 2:
-                self = .plaintextPassword(value: decoder.decodeStringForKey("t"), timeout: decoder.decodeInt32ForKey("a"), attempts: decoder.decodeObjectForKey("att", decoder: { AccessChallengeAttempts(decoder: $0) }) as? AccessChallengeAttempts)
+                self = .plaintextPassword(value: decoder.decodeStringForKey("t", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("a"), attempts: decoder.decodeObjectForKey("att", decoder: { AccessChallengeAttempts(decoder: $0) }) as? AccessChallengeAttempts)
             default:
                 assertionFailure()
                 self = .none

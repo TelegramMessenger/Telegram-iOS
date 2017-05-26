@@ -39,7 +39,7 @@ private struct SqlitePreparedStatement {
         sqlite3_clear_bindings(statement)
     }
     
-    func step(_ initial:Bool = false, path:String? = nil) -> Bool {
+    func step(_ initial: Bool = false, path: String? = nil) -> Bool {
         let result = sqlite3_step(statement)
         if result != SQLITE_ROW && result != SQLITE_DONE {
             if initial {
@@ -49,6 +49,7 @@ private struct SqlitePreparedStatement {
                 }
             } else  {
                 assertionFailure("Sqlite error \(result)")
+                return false
             }
         }
         return result == SQLITE_ROW
@@ -79,7 +80,7 @@ private struct SqlitePreparedStatement {
     func int64KeyAt(_ index: Int) -> ValueBoxKey {
         let value = sqlite3_column_int64(statement, Int32(index))
         
-        let key = ValueBoxKey(length: 9)
+        let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: value)
         return key
     }

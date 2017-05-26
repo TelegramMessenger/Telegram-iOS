@@ -25,10 +25,10 @@ enum RenderedMessageHistoryEntry {
     
     var index: MessageIndex {
         switch self {
-        case let .RenderedMessage(message):
-            return MessageIndex(id: message.id, timestamp: message.timestamp)
-        case let .Hole(hole):
-            return hole.maxIndex
+            case let .RenderedMessage(message):
+                return MessageIndex(id: message.id, timestamp: message.timestamp)
+            case let .Hole(hole):
+                return hole.maxIndex
         }
     }
 }
@@ -59,16 +59,18 @@ final class MessageHistoryTable: Table {
     let globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable
     let unsentTable: MessageHistoryUnsentTable
     let tagsTable: MessageHistoryTagsTable
+    let globalTagsTable: GlobalMessageHistoryTagsTable
     let readStateTable: MessageHistoryReadStateTable
     let synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, globalTagsTable: GlobalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable) {
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageMediaTable = messageMediaTable
         self.historyMetadataTable = historyMetadataTable
         self.globallyUniqueMessageIdsTable = globallyUniqueMessageIdsTable
         self.unsentTable = unsentTable
         self.tagsTable = tagsTable
+        self.globalTagsTable = globalTagsTable
         self.readStateTable = readStateTable
         self.synchronizeReadStateTable = synchronizeReadStateTable
         
@@ -125,9 +127,8 @@ final class MessageHistoryTable: Table {
         return dict
     }
     
-    private func processIndexOperationsCommitAccumulatedRemoveIndices(remove: Bool, peerId: PeerId, accumulatedRemoveIndices: inout [(MessageIndex, Bool)], updatedCombinedState: inout CombinedPeerReadState?, invalidateReadState: inout Bool, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], outputOperations: inout [MessageHistoryOperation]) {
+    private func processIndexOperationsCommitAccumulatedRemoveIndices(remove: Bool, peerId: PeerId, accumulatedRemoveIndices: inout [(MessageIndex, Bool)], updatedCombinedState: inout CombinedPeerReadState?, invalidateReadState: inout Bool, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], outputOperations: inout [MessageHistoryOperation], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         if !accumulatedRemoveIndices.isEmpty {
-            
             let (combinedState, invalidate) = self.readStateTable.deleteMessages(peerId, indices: accumulatedRemoveIndices.map { $0.0 }, incomingStatsInIndices: { peerId, namespace, indices in
                 return self.incomingMessageStatsInIndices(peerId, namespace: namespace, indices: indices)
             })
@@ -140,36 +141,51 @@ final class MessageHistoryTable: Table {
             
             if remove {
                 var indicesWithMetadata: [(MessageIndex, Bool, MessageTags)] = []
+                var globalIndicesWithMetadata: [(GlobalMessageTags, MessageIndex)] = []
                 if accumulatedRemoveIndices.count == 1 && accumulatedRemoveIndices[0].0.timestamp == Int32.max {
                     assert(true)
                 }
                 for index in accumulatedRemoveIndices {
-                    let tags = self.justRemove(index.0, unsentMessageOperations: &unsentMessageOperations)
-                    if let tags = tags {
+                    let tagsAndGlobalTags = self.justRemove(index.0, unsentMessageOperations: &unsentMessageOperations)
+                    if let (tags, globalTags) = tagsAndGlobalTags {
                         indicesWithMetadata.append((index.0, index.1, tags))
+                        
+                        if !globalTags.isEmpty {
+                            globalIndicesWithMetadata.append(globalTags, index.0)
+                        }
                     } else {
                         indicesWithMetadata.append((index.0, index.1, MessageTags()))
                     }
                 }
                 assert(accumulatedRemoveIndices.count == indicesWithMetadata.count)
                 outputOperations.append(.Remove(indicesWithMetadata))
+                if !globalIndicesWithMetadata.isEmpty {
+                    globalTagsOperations.append(.remove(globalIndicesWithMetadata))
+                }
             } else {
                 var indicesWithMetadata: [(MessageIndex, Bool, MessageTags)] = []
+                var globalIndicesWithMetadata: [(GlobalMessageTags, MessageIndex)] = []
                 for index in accumulatedRemoveIndices {
-                    let tags = self.tagsForIndex(index.0)
-                    if let tags = tags {
+                    if let (tags, globalTags) = self.tagsForIndex(index.0) {
                         indicesWithMetadata.append((index.0, index.1, tags))
+                        
+                        if !globalTags.isEmpty {
+                            globalIndicesWithMetadata.append(globalTags, index.0)
+                        }
                     }
                 }
                 assert(accumulatedRemoveIndices.count == indicesWithMetadata.count)
                 outputOperations.append(.Remove(indicesWithMetadata))
+                if !globalIndicesWithMetadata.isEmpty {
+                    globalTagsOperations.append(.remove(globalIndicesWithMetadata))
+                }
             }
             
             accumulatedRemoveIndices.removeAll()
         }
     }
     
-    private func processIndexOperations(_ peerId: PeerId, operations: [MessageHistoryIndexOperation], processedOperationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    private func processIndexOperations(_ peerId: PeerId, operations: [MessageHistoryIndexOperation], processedOperationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         let sharedKey = self.key(MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 0))
         let sharedBuffer = WriteBuffer()
         let sharedEncoder = Encoder()
@@ -198,7 +214,7 @@ final class MessageHistoryTable: Table {
         for operation in operations {
             switch operation {
                 case let .InsertHole(hole):
-                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations)
                     commitAccumulatedAddedIndices()
                     
                     self.justInsertHole(hole)
@@ -217,7 +233,7 @@ final class MessageHistoryTable: Table {
                         }
                     }
                 case let .InsertMessage(storeMessage):
-                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations)
                     
                     let message = self.justInsertMessage(storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder)
                     outputOperations.append(.InsertMessage(message))
@@ -238,6 +254,22 @@ final class MessageHistoryTable: Table {
                             }
                         }
                     }
+                    let globalTags = message.globalTags.rawValue
+                    if globalTags != 0 {
+                        for i in 0 ..< 32 {
+                            let currentTags = globalTags >> UInt32(i)
+                            if currentTags == 0 {
+                                break
+                            }
+                            
+                            if (currentTags & 1) != 0 {
+                                let tag = GlobalMessageTags(rawValue: 1 << UInt32(i))
+                                if self.globalTagsTable.addMessage(tag, index: MessageIndex(message)) {
+                                    globalTagsOperations.append(.insertMessage(tag, message))
+                                }
+                            }
+                        }
+                    }
                     if message.flags.contains(.Incoming) {
                         accumulatedAddedIncomingMessageIndices.insert(MessageIndex(message))
                     }
@@ -247,7 +279,7 @@ final class MessageHistoryTable: Table {
                     accumulatedRemoveIndices.append((index, isMessage))
                 case let .Update(index, storeMessage):
                     commitAccumulatedAddedIndices()
-                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations)
                     
                     if let (message, previousTags) = self.justUpdate(index, message: storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder, unsentMessageOperations: &unsentMessageOperations) {
                         outputOperations.append(.Remove([(index, true, previousTags)]))
@@ -262,15 +294,20 @@ final class MessageHistoryTable: Table {
                     }
                 case let .UpdateTimestamp(index, timestamp):
                     commitAccumulatedAddedIndices()
-                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+                    processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations)
                     
-                    self.justUpdateTimestamp(index, timestamp: timestamp)
+                    let tagsAndGlobalTags = self.justUpdateTimestamp(index, timestamp: timestamp)
                     outputOperations.append(.UpdateTimestamp(index, timestamp))
+                    if let (_, globalTags) = tagsAndGlobalTags {
+                        if !globalTags.isEmpty {
+                            globalTagsOperations.append(.updateTimestamp(globalTags, index, timestamp))
+                        }
+                    }
             }
         }
         
         commitAccumulatedAddedIndices()
-        processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations)
+        processIndexOperationsCommitAccumulatedRemoveIndices(remove: true, peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations)
         
         if let updatedCombinedState = updatedCombinedState {
             outputOperations.append(.UpdateReadState(updatedCombinedState))
@@ -301,9 +338,10 @@ final class MessageHistoryTable: Table {
         return internalStoreMessages
     }
     
-    func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [Int64: MessageId] {
+    func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) -> [Int64: MessageId] {
         let messagesByPeerId = self.messagesGroupedByPeerId(messages)
         var globallyUniqueIdToMessageId: [Int64: MessageId] = [:]
+        var globalTagsInitialized = Set<GlobalMessageTags>()
         for (peerId, peerMessages) in messagesByPeerId {
             var operations: [MessageHistoryIndexOperation] = []
             let internalPeerMessages = self.internalStoreMessages(peerMessages)
@@ -311,66 +349,74 @@ final class MessageHistoryTable: Table {
                 if let globallyUniqueId = message.globallyUniqueId {
                     globallyUniqueIdToMessageId[globallyUniqueId] = message.id
                 }
+                if !message.globalTags.isEmpty {
+                    for tag in message.globalTags {
+                        if !globalTagsInitialized.contains(tag) {
+                            self.globalTagsTable.ensureInitialized(tag)
+                            globalTagsInitialized.insert(tag)
+                        }
+                    }
+                }
             }
             self.messageHistoryIndexTable.addMessages(internalPeerMessages, location: location, operations: &operations)
-            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
         return globallyUniqueIdToMessageId
     }
     
-    func addHoles(_ messageIds: [MessageId], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func addHoles(_ messageIds: [MessageId], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         for (peerId, messageIds) in self.messageIdsByPeerId(messageIds) {
             var operations: [MessageHistoryIndexOperation] = []
             for id in messageIds {
                 self.messageHistoryIndexTable.addHole(id, operations: &operations)
             }
-            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
     }
     
-    func removeMessages(_ messageIds: [MessageId], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func removeMessages(_ messageIds: [MessageId], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         for (peerId, messageIds) in self.messageIdsByPeerId(messageIds) {
             var operations: [MessageHistoryIndexOperation] = []
             
             for id in messageIds {
                 self.messageHistoryIndexTable.removeMessage(id, operations: &operations)
             }
-            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
     }
     
-    func clearHistory(peerId: PeerId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func clearHistory(peerId: PeerId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         let indices = self.allIndices(peerId)
-        self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
-    func removeAllMessagesWithAuthor(peerId: PeerId, authorId: PeerId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func removeAllMessagesWithAuthor(peerId: PeerId, authorId: PeerId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         let indices = self.allIndicesWithAuthor(peerId, authorId: authorId)
-        self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
-    func fillHole(_ id: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func fillHole(_ id: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.fillHole(id, fillType: fillType, tagMask: tagMask, messages: self.internalStoreMessages(messages), operations: &operations)
-        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
-    func fillMultipleHoles(mainHoleId: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func fillMultipleHoles(mainHoleId: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.fillMultipleHoles(mainHoleId: mainHoleId, fillType: fillType, tagMask: tagMask, messages: self.internalStoreMessages(messages), operations: &operations)
-        self.processIndexOperations(mainHoleId.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.processIndexOperations(mainHoleId.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
-    func updateMessage(_ id: MessageId, message: StoreMessage, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func updateMessage(_ id: MessageId, message: StoreMessage, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.updateMessage(id, message: self.internalStoreMessages([message]).first!, operations: &operations)
-        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
-    func updateMessageTimestamp(_ id: MessageId, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func updateMessageTimestamp(_ id: MessageId, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.updateTimestamp(id, timestamp: timestamp, operations: &operations)
-        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
     func updateMedia(_ id: MediaId, media: Media?, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?]) {
@@ -559,10 +605,10 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
-    func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation],  updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation],  updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) {
         for messageId in self.unsentTable.get() {
             if messageId.peerId == lowerBound.peerId && messageId.namespace == lowerBound.namespace && messageId.id > lowerBound.id {
-                self.updateMessageTimestamp(messageId, timestamp: timestamp, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+                self.updateMessageTimestamp(messageId, timestamp: timestamp, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
             }
         }
     }
@@ -731,24 +777,25 @@ final class MessageHistoryTable: Table {
         })
     }
     
-    private func tagsForIndex(_ index: MessageIndex) -> MessageTags? {
+    private func tagsForIndex(_ index: MessageIndex) -> (MessageTags, GlobalMessageTags)? {
         let key = self.key(index)
         if let value = self.valueBox.get(self.table, key: key) {
             switch self.readIntermediateEntry(key, value: value) {
                 case let .Message(message):
-                    return message.tags
+                    return (message.tags, message.globalTags)
                 case let .Hole(hole):
-                    return MessageTags(rawValue: hole.tags)
+                    return (MessageTags(rawValue: hole.tags), GlobalMessageTags())
             }
         } else {
             return nil
         }
     }
     
-    private func justRemove(_ index: MessageIndex, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) -> MessageTags? {
+    private func justRemove(_ index: MessageIndex, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) -> (MessageTags, GlobalMessageTags)? {
         let key = self.key(index)
         if let value = self.valueBox.get(self.table, key: key) {
             let resultTags: MessageTags
+            let resultGlobalTags: GlobalMessageTags
             switch self.readIntermediateEntry(key, value: value) {
                 case let .Message(message):
                     let embeddedMediaData = message.embeddedMediaData
@@ -787,12 +834,27 @@ final class MessageHistoryTable: Table {
                             }
                         }
                     }
+                    let globalTags = message.globalTags.rawValue
+                    if globalTags != 0 {
+                        for i in 0 ..< 32 {
+                            let currentTags = globalTags >> UInt32(i)
+                            if currentTags == 0 {
+                                break
+                            }
+                            
+                            if (currentTags & 1) != 0 {
+                                let tag = GlobalMessageTags(rawValue: 1 << UInt32(i))
+                                self.globalTagsTable.remove(tag, index: index)
+                            }
+                        }
+                    }
                     
                     for mediaId in message.referencedMedia {
                         let _ = self.messageMediaTable.removeReference(mediaId)
                     }
                     
                     resultTags = message.tags
+                    resultGlobalTags = message.globalTags
                 case let .Hole(hole):
                     let tags = self.messageHistoryIndexTable.seedConfiguration.existingMessageTags.rawValue & hole.tags
                     if tags != 0 {
@@ -809,10 +871,11 @@ final class MessageHistoryTable: Table {
                         }
                     }
                     resultTags = MessageTags(rawValue: hole.tags)
+                    resultGlobalTags = GlobalMessageTags()
             }
             
             self.valueBox.remove(self.table, key: key)
-            return resultTags
+            return (resultTags, resultGlobalTags)
         } else {
             return nil
         }
@@ -965,6 +1028,19 @@ final class MessageHistoryTable: Table {
             }
             if !message.tags.isEmpty {
                 self.tagsTable.add(message.tags, index: MessageIndex(message))
+            }
+            
+            if previousMessage.globalTags != message.globalTags || (MessageIndex(previousMessage) != index && (!previousMessage.globalTags.isEmpty || !message.globalTags.isEmpty)) {
+                if !previousMessage.globalTags.isEmpty {
+                    for tag in previousMessage.globalTags {
+                        self.globalTagsTable.remove(tag, index: index)
+                    }
+                }
+                if !message.globalTags.isEmpty {
+                    for tag in message.globalTags {
+                        let _ = self.globalTagsTable.addMessage(tag, index: MessageIndex(message))
+                    }
+                }
             }
             
             if message.globallyUniqueId != previousMessage.globallyUniqueId {
@@ -1138,7 +1214,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    private func justUpdateTimestamp(_ index: MessageIndex, timestamp: Int32) {
+    private func justUpdateTimestamp(_ index: MessageIndex, timestamp: Int32) -> (MessageTags, GlobalMessageTags)? {
         if let previousMessage = self.getMessage(index) {
             self.valueBox.remove(self.table, key: self.key(index))
             let updatedMessage = IntermediateMessage(stableId: previousMessage.stableId, stableVersion: previousMessage.stableVersion + 1, id: previousMessage.id, globallyUniqueId: previousMessage.globallyUniqueId, timestamp: timestamp, flags: previousMessage.flags, tags: previousMessage.tags, globalTags: previousMessage.globalTags, forwardInfo: previousMessage.forwardInfo, authorId: previousMessage.authorId, text: previousMessage.text, attributesData: previousMessage.attributesData, embeddedMediaData: previousMessage.embeddedMediaData, referencedMedia: previousMessage.referencedMedia)
@@ -1159,6 +1235,26 @@ final class MessageHistoryTable: Table {
                     }
                 }
             }
+            
+            let globalTags = previousMessage.globalTags.rawValue
+            if globalTags != 0 {
+                for i in 0 ..< 32 {
+                    let currentTags = globalTags >> UInt32(i)
+                    if currentTags == 0 {
+                        break
+                    }
+                    
+                    if (currentTags & 1) != 0 {
+                        let tag = GlobalMessageTags(rawValue: 1 << UInt32(i))
+                        self.globalTagsTable.remove(tag, index: index)
+                        let _ = self.globalTagsTable.addMessage(tag, index: MessageIndex(id: index.id, timestamp: timestamp))
+                    }
+                }
+            }
+            
+            return (previousMessage.tags, previousMessage.globalTags)
+        } else {
+            return nil
         }
     }
     
@@ -1569,11 +1665,11 @@ final class MessageHistoryTable: Table {
         return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages, associatedMessageIds: associatedMessageIds)
     }
     
-    func entriesAround(_ index: MessageIndex, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
+    func entriesAround(_ index: MessageIndex, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
         var indexOperations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.ensureInitialized(index.id.peerId, operations: &indexOperations)
         if !indexOperations.isEmpty {
-            self.processIndexOperations(index.id.peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(index.id.peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
         
         var lowerEntries: [IntermediateMessageHistoryEntry] = []
@@ -1619,11 +1715,11 @@ final class MessageHistoryTable: Table {
         return (entries: entries, lower: lower, upper: upper)
     }
     
-    func entriesAround(_ tagMask: MessageTags, index: MessageIndex, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
+    func entriesAround(_ tagMask: MessageTags, index: MessageIndex, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
         var indexOperations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.ensureInitialized(index.id.peerId, operations: &indexOperations)
         if !indexOperations.isEmpty {
-            self.processIndexOperations(index.id.peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(index.id.peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
         
         let (indices, lower, upper) = self.tagsTable.indicesAround(tagMask, index: index, count: count)
@@ -1662,11 +1758,11 @@ final class MessageHistoryTable: Table {
         return (entries, lowerEntry, upperEntry)
     }
     
-    func earlierEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [IntermediateMessageHistoryEntry] {
+    func earlierEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) -> [IntermediateMessageHistoryEntry] {
         var indexOperations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.ensureInitialized(peerId, operations: &indexOperations)
         if !indexOperations.isEmpty {
-            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
         
         var entries: [IntermediateMessageHistoryEntry] = []
@@ -1683,11 +1779,11 @@ final class MessageHistoryTable: Table {
         return entries
     }
     
-    func earlierEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [IntermediateMessageHistoryEntry] {
+    func earlierEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) -> [IntermediateMessageHistoryEntry] {
         var indexOperations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.ensureInitialized(peerId, operations: &indexOperations)
         if !indexOperations.isEmpty {
-            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
         
         let indices = self.tagsTable.earlierIndices(tagMask, peerId: peerId, index: index, count: count)
@@ -1705,11 +1801,11 @@ final class MessageHistoryTable: Table {
         return entries
     }
 
-    func laterEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [IntermediateMessageHistoryEntry] {
+    func laterEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) -> [IntermediateMessageHistoryEntry] {
         var indexOperations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.ensureInitialized(peerId, operations: &indexOperations)
         if !indexOperations.isEmpty {
-            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
         
         var entries: [IntermediateMessageHistoryEntry] = []
@@ -1726,11 +1822,11 @@ final class MessageHistoryTable: Table {
         return entries
     }
     
-    func laterEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [IntermediateMessageHistoryEntry] {
+    func laterEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation]) -> [IntermediateMessageHistoryEntry] {
         var indexOperations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.ensureInitialized(peerId, operations: &indexOperations)
         if !indexOperations.isEmpty {
-            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
         }
         
         let indices = self.tagsTable.laterIndices(tagMask, peerId: peerId, index: index, count: count)
@@ -1742,6 +1838,96 @@ final class MessageHistoryTable: Table {
                 entries.append(readIntermediateEntry(key, value: value))
             } else {
                 assertionFailure()
+            }
+        }
+        
+        return entries
+    }
+    
+    private func globalTagsIntermediateEntry(_ entry: IntermediateMessageHistoryEntry) -> IntermediateGlobalMessageTagsEntry? {
+        switch entry {
+            case let .Message(message):
+                return .message(message)
+            case .Hole:
+                return nil
+        }
+    }
+    
+    func entriesAround(globalTagMask: GlobalMessageTags, index: MessageIndex, count: Int) -> (entries: [IntermediateGlobalMessageTagsEntry], lower: MessageIndex?, upper: MessageIndex?) {
+        self.globalTagsTable.ensureInitialized(globalTagMask)
+        
+        let (globalEntries, lower, upper) = self.globalTagsTable.entriesAround(globalTagMask, index: index, count: count)
+        
+        var entries: [IntermediateGlobalMessageTagsEntry] = []
+        for entry in globalEntries {
+            switch entry {
+                case let .hole(index):
+                    entries.append(.hole(index))
+                case let .message(index):
+                    let key = self.key(index)
+                    if let value = self.valueBox.get(self.table, key: key) {
+                        if let entry = self.globalTagsIntermediateEntry(readIntermediateEntry(key, value: value)) {
+                            entries.append(entry)
+                        } else {
+                            assertionFailure()
+                        }
+                    } else {
+                        assertionFailure()
+                    }
+            }
+        }
+        
+        return (entries, lower?.index, upper?.index)
+    }
+    
+    func earlierEntries(globalTagMask: GlobalMessageTags, index: MessageIndex?, count: Int) -> [IntermediateGlobalMessageTagsEntry] {
+        self.globalTagsTable.ensureInitialized(globalTagMask)
+        
+        let globalEntries = self.globalTagsTable.earlierEntries(globalTagMask, index: index, count: count)
+        
+        var entries: [IntermediateGlobalMessageTagsEntry] = []
+        for entry in globalEntries {
+            switch entry {
+                case let .hole(index):
+                    entries.append(.hole(index))
+                case let .message(index):
+                    let key = self.key(index)
+                    if let value = self.valueBox.get(self.table, key: key) {
+                        if let entry = self.globalTagsIntermediateEntry(readIntermediateEntry(key, value: value)) {
+                            entries.append(entry)
+                        } else {
+                            assertionFailure()
+                        }
+                    } else {
+                        assertionFailure()
+                    }
+            }
+        }
+        
+        return entries
+    }
+    
+    func laterEntries(globalTagMask: GlobalMessageTags, index: MessageIndex?, count: Int) -> [IntermediateGlobalMessageTagsEntry] {
+        self.globalTagsTable.ensureInitialized(globalTagMask)
+        
+        let globalEntries = self.globalTagsTable.laterEntries(globalTagMask, index: index, count: count)
+        
+        var entries: [IntermediateGlobalMessageTagsEntry] = []
+        for entry in globalEntries {
+            switch entry {
+                case let .hole(index):
+                    entries.append(.hole(index))
+                case let .message(index):
+                    let key = self.key(index)
+                    if let value = self.valueBox.get(self.table, key: key) {
+                        if let entry = self.globalTagsIntermediateEntry(readIntermediateEntry(key, value: value)) {
+                            entries.append(entry)
+                        } else {
+                            assertionFailure()
+                        }
+                    } else {
+                        assertionFailure()
+                    }
             }
         }
         
@@ -1926,8 +2112,9 @@ final class MessageHistoryTable: Table {
         var operationsByPeerId: [PeerId : [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId : PeerReadStateSynchronizationOperation?] = [:]
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
         
-        return self.laterEntries(peerId, index: nil, count: 1000, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations).map({ entry -> RenderedMessageHistoryEntry in
+        return self.laterEntries(peerId, index: nil, count: 1000, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations).map({ entry -> RenderedMessageHistoryEntry in
             switch entry {
                 case let .Hole(hole):
                     return .Hole(hole)
@@ -1941,13 +2128,14 @@ final class MessageHistoryTable: Table {
         var operationsByPeerId: [PeerId : [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId : PeerReadStateSynchronizationOperation?] = [:]
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
         
-        return self.laterEntries(tagMask, peerId: peerId, index: nil, count: 1000, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations).map({ entry -> RenderedMessageHistoryEntry in
+        return self.laterEntries(tagMask, peerId: peerId, index: nil, count: 1000, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations).map({ entry -> RenderedMessageHistoryEntry in
             switch entry {
-            case let .Hole(hole):
-                return .Hole(hole)
-            case let .Message(message):
-                return .RenderedMessage(self.renderMessage(message, peerTable: peerTable))
+                case let .Hole(hole):
+                    return .Hole(hole)
+                case let .Message(message):
+                    return .RenderedMessage(self.renderMessage(message, peerTable: peerTable))
             }
         })
     }

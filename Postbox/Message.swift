@@ -214,7 +214,7 @@ public struct ChatListIndex: Comparable, Hashable {
     }
 }
 
-public struct MessageTags: OptionSet {
+public struct MessageTags: OptionSet, Sequence {
     public var rawValue: UInt32
     
     public init(rawValue: UInt32) {
@@ -226,9 +226,28 @@ public struct MessageTags: OptionSet {
     }
     
     public static let All = MessageTags(rawValue: 0xffffffff)
+    
+    public func makeIterator() -> AnyIterator<MessageTags> {
+        var index = 0
+        return AnyIterator { () -> MessageTags? in
+            while index < 31 {
+                let currentTags = self.rawValue >> UInt32(index)
+                let tag = MessageTags(rawValue: 1 << UInt32(index))
+                index += 1
+                if currentTags == 0 {
+                    break
+                }
+                
+                if (currentTags & 1) != 0 {
+                    return tag
+                }
+            }
+            return nil
+        }
+    }
 }
 
-public struct GlobalMessageTags: OptionSet {
+public struct GlobalMessageTags: OptionSet, Sequence, Hashable {
     public var rawValue: UInt32
     
     public init(rawValue: UInt32) {
@@ -237,6 +256,34 @@ public struct GlobalMessageTags: OptionSet {
     
     public init() {
         self.rawValue = 0
+    }
+    
+    var isSingleTag: Bool {
+        let t = Int32(bitPattern: self.rawValue)
+        return t != 0 && t == (t & (-t))
+    }
+    
+    public func makeIterator() -> AnyIterator<GlobalMessageTags> {
+        var index = 0
+        return AnyIterator { () -> GlobalMessageTags? in
+            while index < 31 {
+                let currentTags = self.rawValue >> UInt32(index)
+                let tag = GlobalMessageTags(rawValue: 1 << UInt32(index))
+                index += 1
+                if currentTags == 0 {
+                    break
+                }
+                
+                if (currentTags & 1) != 0 {
+                    return tag
+                }
+            }
+            return nil
+        }
+    }
+    
+    public var hashValue: Int {
+        return self.rawValue.hashValue
     }
 }
 
@@ -491,6 +538,14 @@ public final class StoreMessage {
         self.text = text
         self.attributes = attributes
         self.media = media
+    }
+    
+    public var index: MessageIndex? {
+        if case let .Id(id) = self.id {
+            return MessageIndex(id: id, timestamp: self.timestamp)
+        } else {
+            return nil
+        }
     }
 }
 
