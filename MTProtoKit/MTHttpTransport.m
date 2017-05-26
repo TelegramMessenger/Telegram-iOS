@@ -107,7 +107,9 @@
             [delegate transportTransactionsMayHaveFailed:self transactionIds:activeTransactionId];
     }];
     
-    [self cleanup];
+    [[MTHttpTransport httpTransportQueue] dispatchOnQueue:^{
+        [self cleanup];
+    }];
     
     [super stop];
 }
@@ -134,7 +136,9 @@
         for (MTHttpWorker *worker in workers)
         {
             worker.delegate = nil;
-            [worker stop];
+            [[MTHttpWorker httpWorkerProcessingQueue] dispatchOnQueue:^{
+                [worker stop];
+            }];
         }
     }];
 }

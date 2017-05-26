@@ -11,7 +11,7 @@
 #import "MTSetClientDhParamsResponseMessage.h"
 #import "MTMsgsAckMessage.h"
 #import "MTMsgsStateReqMessage.h"
-#import "MtMsgsStateInfoMessage.h"
+#import "MTMsgsStateInfoMessage.h"
 #import "MTMsgDetailedInfoMessage.h"
 #import "MTMsgAllInfoMessage.h"
 #import "MTMessage.h"

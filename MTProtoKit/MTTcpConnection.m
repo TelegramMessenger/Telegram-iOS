@@ -147,9 +147,11 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
 
 - (void)setDelegate:(id<MTTcpConnectionDelegate>)delegate
 {
-    _delegate = delegate;
-    
-    _delegateImplementsProgressUpdated = [delegate respondsToSelector:@selector(tcpConnectionProgressUpdated:packetProgressToken:packetLength:progress:)];
+    [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
+        _delegate = delegate;
+        
+        _delegateImplementsProgressUpdated = [delegate respondsToSelector:@selector(tcpConnectionProgressUpdated:packetProgressToken:packetLength:progress:)];
+    }];
 }
 
 - (void)start

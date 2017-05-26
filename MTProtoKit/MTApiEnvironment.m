@@ -33,6 +33,7 @@
 #define IPHONE_6SPlus_NAMESTRING             @"iPhone 6S Plus"
 #define IPHONE_7_NAMESTRING             @"iPhone 7"
 #define IPHONE_7Plus_NAMESTRING             @"iPhone 7 Plus"
+#define IPHONE_SE_NAMESTRING             @"iPhone SE"
 #define IPHONE_UNKNOWN_NAMESTRING       @"Unknown iPhone"
 
 #define IPOD_1G_NAMESTRING              @"iPod touch 1G"
@@ -40,6 +41,7 @@
 #define IPOD_3G_NAMESTRING              @"iPod touch 3G"
 #define IPOD_4G_NAMESTRING              @"iPod touch 4G"
 #define IPOD_5G_NAMESTRING              @"iPod touch 5G"
+#define IPOD_6G_NAMESTRING              @"iPod touch 6G"
 #define IPOD_UNKNOWN_NAMESTRING         @"Unknown iPod"
 
 #define IPAD_1G_NAMESTRING              @"iPad 1G"
@@ -83,12 +85,14 @@ typedef enum {
     UIDevice6SPlusiPhone,
     UIDevice7iPhone,
     UIDevice7PlusiPhone,
+    UIDeviceSEPhone,
     
     UIDevice1GiPod,
     UIDevice2GiPod,
     UIDevice3GiPod,
     UIDevice4GiPod,
     UIDevice5GiPod,
+    UIDevice6GiPod,
     
     UIDevice1GiPad,
     UIDevice2GiPad,
@@ -138,7 +142,10 @@ typedef enum {
         NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@)", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"]];
         _appVersion = versionString;
         
-        _langCode = [[NSLocale preferredLanguages] objectAtIndex:0];
+        _systemLangCode = [[NSLocale preferredLanguages] objectAtIndex:0];
+        
+        _langPack = @"ios";
+        _langPackCode = @"";
         
         [self _updateApiInitializationHash];
     }
@@ -146,7 +153,7 @@ typedef enum {
 }
 
 - (void)_updateApiInitializationHash {
-    _apiInitializationHash = [[NSString alloc] initWithFormat:@"apiId=%" PRId32 "&deviceModel=%@&systemVersion=%@&appVersion=%@&langCode=%@&layer=%@", _apiId, _deviceModel, _systemVersion, _appVersion, _langCode, _layer];
+    _apiInitializationHash = [[NSString alloc] initWithFormat:@"apiId=%" PRId32 "&deviceModel=%@&systemVersion=%@&appVersion=%@&langCode=%@&layer=%@&langPack=%@&langPackCode=%@", _apiId, _deviceModel, _systemVersion, _appVersion, _systemLangCode, _layer, _langPack, _langPackCode];
 }
 
 - (void)setLayer:(NSNumber *)layer {
@@ -157,6 +164,18 @@ typedef enum {
 
 - (void)setAppVersion:(NSString *)appVersion {
     _appVersion = appVersion;
+    
+    [self _updateApiInitializationHash];
+}
+    
+- (void)setLangPack:(NSString *)langPack {
+    _langPack = langPack;
+    
+    [self _updateApiInitializationHash];
+}
+    
+- (void)setLangPackCode:(NSString *)langPackCode {
+    _langPackCode = langPackCode;
     
     [self _updateApiInitializationHash];
 }
@@ -178,6 +197,7 @@ typedef enum {
         case UIDevice6SPlusiPhone: return IPHONE_6SPlus_NAMESTRING;
         case UIDevice7iPhone: return IPHONE_7_NAMESTRING;
         case UIDevice7PlusiPhone: return IPHONE_7Plus_NAMESTRING;
+        case UIDeviceSEPhone: return IPHONE_SE_NAMESTRING;
         case UIDeviceUnknowniPhone: return IPHONE_UNKNOWN_NAMESTRING;
             
         case UIDevice1GiPod: return IPOD_1G_NAMESTRING;
@@ -185,6 +205,7 @@ typedef enum {
         case UIDevice3GiPod: return IPOD_3G_NAMESTRING;
         case UIDevice4GiPod: return IPOD_4G_NAMESTRING;
         case UIDevice5GiPod: return IPOD_5G_NAMESTRING;
+        case UIDevice6GiPod: return IPOD_6G_NAMESTRING;
         case UIDeviceUnknowniPod: return IPOD_UNKNOWN_NAMESTRING;
             
         case UIDevice1GiPad : return IPAD_1G_NAMESTRING;
@@ -234,8 +255,11 @@ typedef enum {
     if ([platform isEqualToString:@"iPhone7,2"])    return UIDevice6iPhone;
     if ([platform isEqualToString:@"iPhone8,1"])    return UIDevice6siPhone;
     if ([platform isEqualToString:@"iPhone8,2"])    return UIDevice6SPlusiPhone;
+    if ([platform isEqualToString:@"iPhone9,1"])    return UIDevice7iPhone;
     if ([platform isEqualToString:@"iPhone9,3"])    return UIDevice7iPhone;
     if ([platform isEqualToString:@"iPhone9,2"])    return UIDevice7PlusiPhone;
+    if ([platform isEqualToString:@"iPhone9,4"])    return UIDevice7PlusiPhone;
+    if ([platform isEqualToString:@"iPhone8,4"])    return UIDeviceSEPhone;
     
     // iPod
     if ([platform hasPrefix:@"iPod1"])              return UIDevice1GiPod;
@@ -243,6 +267,7 @@ typedef enum {
     if ([platform hasPrefix:@"iPod3"])              return UIDevice3GiPod;
     if ([platform hasPrefix:@"iPod4"])              return UIDevice4GiPod;
     if ([platform hasPrefix:@"iPod5"])              return UIDevice5GiPod;
+    if ([platform hasPrefix:@"iPod7"])              return UIDevice6GiPod;
     
     // iPad
     if ([platform hasPrefix:@"iPad1"])              return UIDevice1GiPad;
@@ -290,6 +315,26 @@ typedef enum {
 - (NSString *)platform
 {
     return [self getSysInfoByName:"hw.machine"];
+}
+
+- (MTApiEnvironment *)withUpdatedLangPackCode:(NSString *)langPackCode {
+    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    
+    result.apiId = self.apiId;
+    result.appVersion = self.appVersion;
+    result.layer = self.layer;
+    
+    result.langPack = self.langPack;
+    
+    result->_langPackCode = langPackCode;
+    
+    result.disableUpdates = self.disableUpdates;
+    result.tcpPayloadPrefix = self.tcpPayloadPrefix;
+    result.datacenterAddressOverrides = self.datacenterAddressOverrides;
+    
+    [result _updateApiInitializationHash];
+    
+    return result;
 }
 
 @end

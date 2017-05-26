@@ -11,6 +11,7 @@
 @class MTProto;
 @class MTIncomingMessage;
 @class MTMessageTransaction;
+@class MTApiEnvironment;
 
 @protocol MTMessageService <NSObject>
 
@@ -40,5 +41,7 @@
 - (void)mtProtoServiceTasksStateChanged:(MTProto *)mtProto isPerformingServiceTasks:(bool)isPerformingServiceTasks;
 
 - (void)mtProtoAuthTokenUpdated:(MTProto *)mtProto;
+    
+- (void)mtProtoApiEnvironmentUpdated:(MTProto *)mtProto apiEnvironment:(MTApiEnvironment *)apiEnvironment;
 
 @end
