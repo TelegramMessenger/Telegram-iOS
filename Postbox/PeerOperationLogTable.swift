@@ -3,6 +3,7 @@ import Foundation
 enum PeerMergedOperationLogOperation {
     case append(PeerMergedOperationLogEntry)
     case remove(tag: PeerOperationLogTag, mergedIndices: Set<Int32>)
+    case updateContents(PeerMergedOperationLogEntry)
 }
 
 public struct PeerMergedOperationLogEntry {
@@ -296,9 +297,18 @@ final class PeerOperationLogTable: Table {
             assert(value.length - value.offset == Int(contentLength))
             if let contents = Decoder(buffer: MemoryBuffer(memory: value.memory.advanced(by: value.offset), capacity: Int(contentLength), length: Int(contentLength), freeWhenDone: false)).decodeRootObject() {
                 let entryUpdate = f(PeerOperationLogEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, mergedIndex: mergedIndex, contents: contents))
-                switch entryUpdate.mergedIndex {
+                var updatedContents: Coding?
+                switch entryUpdate.contents {
                     case .none:
                         break
+                    case let .update(contents):
+                        updatedContents = contents
+                }
+                switch entryUpdate.mergedIndex {
+                    case .none:
+                        if let previousMergedIndex = previousMergedIndex, let updatedContents = updatedContents {
+                            operations.append(.updateContents(PeerMergedOperationLogEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, mergedIndex: previousMergedIndex, contents: updatedContents)))
+                        }
                     case .remove:
                         if let mergedIndexValue = mergedIndex {
                             mergedIndex = nil
@@ -312,14 +322,7 @@ final class PeerOperationLogTable: Table {
                         }
                         let updatedMergedIndexValue = self.mergedIndexTable.add(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex)
                         mergedIndex = updatedMergedIndexValue
-                        operations.append(.append(PeerMergedOperationLogEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, mergedIndex: updatedMergedIndexValue, contents: contents)))
-                }
-                var updatedContents: Coding?
-                switch entryUpdate.contents {
-                    case .none:
-                        break
-                    case let .update(contents):
-                        updatedContents = contents
+                        operations.append(.append(PeerMergedOperationLogEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, mergedIndex: updatedMergedIndexValue, contents: updatedContents ?? contents)))
                 }
                 if previousMergedIndex != mergedIndex || updatedContents != nil {
                     let buffer = WriteBuffer()
