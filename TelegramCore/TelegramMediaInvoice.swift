@@ -34,14 +34,14 @@ public final class TelegramMediaInvoice: Media {
     
     
     public init(decoder: Decoder) {
-        self.title = decoder.decodeStringForKey("t")
-        self.description = decoder.decodeStringForKey("d")
-        self.currency = decoder.decodeStringForKey("c")
-        self.totalAmount = decoder.decodeInt64ForKey("ta")
-        self.startParam = decoder.decodeStringForKey("sp")
+        self.title = decoder.decodeStringForKey("t", orElse: "")
+        self.description = decoder.decodeStringForKey("d", orElse: "")
+        self.currency = decoder.decodeStringForKey("c", orElse: "")
+        self.totalAmount = decoder.decodeInt64ForKey("ta", orElse: 0)
+        self.startParam = decoder.decodeStringForKey("sp", orElse: "")
         self.photo = decoder.decodeObjectForKey("p") as? TelegramMediaWebFile
         
-        if let receiptMessageIdPeerId = decoder.decodeInt64ForKey("r.p") as Int64?, let receiptMessageIdNamespace = decoder.decodeInt32ForKey("r.n") as Int32?, let receiptMessageIdId = decoder.decodeInt32ForKey("r.i") as Int32? {
+        if let receiptMessageIdPeerId = decoder.decodeOptionalInt64ForKey("r.p") as Int64?, let receiptMessageIdNamespace = decoder.decodeOptionalInt32ForKey("r.n") as Int32?, let receiptMessageIdId = decoder.decodeOptionalInt32ForKey("r.i") as Int32? {
             self.receiptMessageId = MessageId(peerId: PeerId(receiptMessageIdPeerId), namespace: receiptMessageIdNamespace, id: receiptMessageIdId)
         } else {
             self.receiptMessageId = nil

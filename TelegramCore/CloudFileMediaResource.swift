@@ -395,10 +395,10 @@ public final class WebFileReferenceMediaResource: TelegramMediaResource, Telegra
     }
     
     public required init(decoder: Decoder) {
-        self.url = decoder.decodeStringForKey("u")
-        self.size = decoder.decodeInt32ForKey("s")
-        self._datacenterId = decoder.decodeInt32ForKey("d")
-        self.accessHash = decoder.decodeInt64ForKey("h")
+        self.url = decoder.decodeStringForKey("u", orElse: "")
+        self.size = decoder.decodeInt32ForKey("s", orElse: 0)
+        self._datacenterId = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {

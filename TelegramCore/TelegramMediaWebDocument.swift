@@ -29,8 +29,8 @@ public class TelegramMediaWebFile: Media {
     
     public required init(decoder: Decoder) {
         self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
-        self.mimeType = decoder.decodeStringForKey("mt")
-        self.size = decoder.decodeInt32ForKey("s")
+        self.mimeType = decoder.decodeStringForKey("mt", orElse: "")
+        self.size = decoder.decodeInt32ForKey("s", orElse: 0)
         self.attributes = decoder.decodeObjectArrayForKey("at")
     }
     
