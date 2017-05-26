@@ -118,7 +118,7 @@ public final class Localization: Coding, Equatable {
                         zero = value
                     }
                     
-                    if flags.contains(.hasZero) {
+                    if flags.contains(.hasOne) {
                         length = 0
                         data.read(&length, offset: 0, length: 4)
                         let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
@@ -127,7 +127,7 @@ public final class Localization: Coding, Equatable {
                         one = value
                     }
                     
-                    if flags.contains(.hasZero) {
+                    if flags.contains(.hasTwo) {
                         length = 0
                         data.read(&length, offset: 0, length: 4)
                         let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
@@ -136,7 +136,7 @@ public final class Localization: Coding, Equatable {
                         two = value
                     }
                     
-                    if flags.contains(.hasZero) {
+                    if flags.contains(.hasFew) {
                         length = 0
                         data.read(&length, offset: 0, length: 4)
                         let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
@@ -145,7 +145,7 @@ public final class Localization: Coding, Equatable {
                         few = value
                     }
                     
-                    if flags.contains(.hasZero) {
+                    if flags.contains(.hasMany) {
                         length = 0
                         data.read(&length, offset: 0, length: 4)
                         let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
