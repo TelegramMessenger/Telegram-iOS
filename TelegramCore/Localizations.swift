@@ -7,6 +7,21 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+public func currentlySuggestedLocalization(network: Network, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo?, NoError> {
+    return network.request(Api.functions.help.getConfig())
+        |> retryRequest
+        |> mapToSignal { result -> Signal<SuggestedLocalizationInfo?, NoError> in
+            switch result {
+                case let .config(flags, date, expires, testMode, thisDc, dcOptions, chatSizeMax, megagroupSizeMax, forwardedCountMax, onlineUpdatePeriodMs, offlineBlurTimeoutMs, offlineIdleTimeoutMs, onlineCloudTimeoutMs, notifyCloudDelayMs, notifyDefaultDelayMs, chatBigSize, pushChatPeriodMs, pushChatLimit, savedGifsLimit, editTimeLimit, ratingEDecay, stickersRecentLimit, tmpSessions, pinnedDialogsCountMax, callReceiveTimeoutMs, callRingTimeoutMs, callConnectTimeoutMs, callPacketTimeoutMs, meUrlPrefix, suggestedLangCode, disabledFeatures):
+                    if let suggestedLangCode = suggestedLangCode {
+                        return suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map { Optional($0) }
+                    } else {
+                        return .single(nil)
+                    }
+            }
+        }
+}
+
 public func suggestedLocalizationInfo(network: Network, languageCode: String, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo, NoError> {
     return combineLatest(network.request(Api.functions.langpack.getLanguages()), network.request(Api.functions.langpack.getStrings(langCode: languageCode, keys: extractKeys)))
         |> retryRequest
