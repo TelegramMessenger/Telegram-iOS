@@ -19,11 +19,11 @@ enum SynchronizeSavedGifsOperationContent: Coding {
     case sync
     
     init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SynchronizeSavedGifsOperationContentType.add.rawValue:
-                self = .add(id: decoder.decodeInt64ForKey("i"), accessHash: decoder.decodeInt64ForKey("h"))
+                self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
             case SynchronizeSavedGifsOperationContentType.remove.rawValue:
-                self = .remove(id: decoder.decodeInt64ForKey("i"), accessHash: decoder.decodeInt64ForKey("h"))
+                self = .remove(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
             case SynchronizeSavedGifsOperationContentType.sync.rawValue:
                 self = .sync
             default:

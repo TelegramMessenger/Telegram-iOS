@@ -22,15 +22,15 @@ public enum GroupParticipant: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("v") as Int32 {
+        switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
-                self = .member(id: PeerId(decoder.decodeInt64ForKey("i")), invitedBy: PeerId(decoder.decodeInt64ForKey("b")), invitedAt: decoder.decodeInt32ForKey("t"))
+                self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
             case 1:
-                self = .creator(id: PeerId(decoder.decodeInt64ForKey("i")))
+                self = .creator(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)))
             case 2:
-                self = .admin(id: PeerId(decoder.decodeInt64ForKey("i")), invitedBy: PeerId(decoder.decodeInt64ForKey("b")), invitedAt: decoder.decodeInt32ForKey("t"))
+                self = .admin(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
             default:
-                self = .member(id: PeerId(decoder.decodeInt64ForKey("i")), invitedBy: PeerId(decoder.decodeInt64ForKey("b")), invitedAt: decoder.decodeInt32ForKey("t"))
+                self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
         }
     }
     
@@ -98,7 +98,7 @@ public final class CachedGroupParticipants: Coding, Equatable {
     
     public init(decoder: Decoder) {
         self.participants = decoder.decodeObjectArrayWithDecoderForKey("p")
-        self.version = decoder.decodeInt32ForKey("v")
+        self.version = decoder.decodeInt32ForKey("v", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {

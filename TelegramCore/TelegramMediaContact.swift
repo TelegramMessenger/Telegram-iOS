@@ -26,10 +26,10 @@ public final class TelegramMediaContact: Media {
     }
     
     public init(decoder: Decoder) {
-        self.firstName = decoder.decodeStringForKey("n.f")
-        self.lastName = decoder.decodeStringForKey("n.l")
-        self.phoneNumber = decoder.decodeStringForKey("pn")
-        if let peerIdValue: Int64 = decoder.decodeInt64ForKey("p") {
+        self.firstName = decoder.decodeStringForKey("n.f", orElse: "")
+        self.lastName = decoder.decodeStringForKey("n.l", orElse: "")
+        self.phoneNumber = decoder.decodeStringForKey("pn", orElse: "")
+        if let peerIdValue = decoder.decodeOptionalInt64ForKey("p") {
             self.peerId = PeerId(peerIdValue)
             self.peerIds = [PeerId(peerIdValue)]
         } else {

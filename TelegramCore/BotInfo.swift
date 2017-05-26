@@ -15,8 +15,8 @@ public struct BotCommand: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.text = decoder.decodeStringForKey("t")
-        self.description = decoder.decodeStringForKey("d")
+        self.text = decoder.decodeStringForKey("t", orElse: "")
+        self.description = decoder.decodeStringForKey("d", orElse: "")
     }
     
     public func encode(_ encoder: Encoder) {
@@ -39,7 +39,7 @@ public final class BotInfo: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.description = decoder.decodeStringForKey("d")
+        self.description = decoder.decodeStringForKey("d", orElse: "")
         self.commands = decoder.decodeObjectArrayWithDecoderForKey("c")
     }
     

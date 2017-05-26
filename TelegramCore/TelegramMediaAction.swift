@@ -28,13 +28,12 @@ public enum TelegramMediaActionType: Coding, Equatable {
     case messageAutoremoveTimeoutUpdated(Int32)
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
-    case paymentSent(currency:String, totalAmount: Int64)
-
+    
     public init(decoder: Decoder) {
-        let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue")
+        let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
         switch rawValue {
             case 1:
-                self = .groupCreated(title: decoder.decodeStringForKey("title"))
+                self = .groupCreated(title: decoder.decodeStringForKey("title", orElse: ""))
             case 2:
                 self = .addedMembers(peerIds: PeerId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("peerIds")!))
             case 3:
@@ -42,31 +41,29 @@ public enum TelegramMediaActionType: Coding, Equatable {
             case 4:
                 self = .photoUpdated(image: decoder.decodeObjectForKey("image") as? TelegramMediaImage)
             case 5:
-                self = .titleUpdated(title: decoder.decodeStringForKey("title"))
+                self = .titleUpdated(title: decoder.decodeStringForKey("title", orElse: ""))
             case 6:
                 self = .pinnedMessageUpdated
             case 7:
-                self = .joinedByLink(inviter: PeerId(decoder.decodeInt64ForKey("inviter")))
+                self = .joinedByLink(inviter: PeerId(decoder.decodeInt64ForKey("inviter", orElse: 0)))
             case 8:
-                self = .channelMigratedFromGroup(title: decoder.decodeStringForKey("title"), groupId: PeerId(decoder.decodeInt64ForKey("groupId")))
+                self = .channelMigratedFromGroup(title: decoder.decodeStringForKey("title", orElse: ""), groupId: PeerId(decoder.decodeInt64ForKey("groupId", orElse: 0)))
             case 9:
-                self = .groupMigratedToChannel(channelId: PeerId(decoder.decodeInt64ForKey("channelId")))
+                self = .groupMigratedToChannel(channelId: PeerId(decoder.decodeInt64ForKey("channelId", orElse: 0)))
             case 10:
                 self = .historyCleared
             case 11:
                 self = .historyScreenshot
             case 12:
-                self = .messageAutoremoveTimeoutUpdated(decoder.decodeInt32ForKey("t"))
+                self = .messageAutoremoveTimeoutUpdated(decoder.decodeInt32ForKey("t", orElse: 0))
             case 13:
-                self = .gameScore(gameId: decoder.decodeInt64ForKey("i"), score: decoder.decodeInt32ForKey("s"))
+                self = .gameScore(gameId: decoder.decodeInt64ForKey("i", orElse: 0), score: decoder.decodeInt32ForKey("s", orElse: 0))
             case 14:
                 var discardReason: PhoneCallDiscardReason?
-                if let value = (decoder.decodeInt32ForKey("dr") as Int32?) {
+                if let value = decoder.decodeOptionalInt32ForKey("dr") {
                     discardReason = PhoneCallDiscardReason(rawValue: value)
                 }
-                self = .phoneCall(callId: decoder.decodeInt64ForKey("i"), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d"))
-            case 15:
-                self = .paymentSent(currency: decoder.decodeStringForKey("currency"), totalAmount: decoder.decodeInt64ForKey("ta"))
+                self = .phoneCall(callId: decoder.decodeInt64ForKey("i", orElse: 0), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d", orElse: 0))
             default:
                 self = .unknown
         }
@@ -133,10 +130,6 @@ public enum TelegramMediaActionType: Coding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "d")
                 }
-            case let .paymentSent(currency, totalAmount):
-                encoder.encodeInt32(15, forKey: "_rawValue")
-                encoder.encodeString(currency, forKey: "currency")
-                encoder.encodeInt64(totalAmount, forKey: "ta")
         }
     }
     
@@ -244,12 +237,6 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             } else {
                 return false
             }
-        case let .paymentSent(currency, totalAmount):
-            if case .paymentSent(currency, totalAmount) = rhs {
-                return true
-            } else {
-                return false
-            }
         case let .phoneCall(lhsCallId, lhsDiscardReason, lhsDuration):
             if case let .phoneCall(rhsCallId, rhsDiscardReason, rhsDuration) = rhs, lhsCallId == rhsCallId && lhsDiscardReason == rhsDiscardReason && lhsDuration == rhsDuration {
                 return true
@@ -325,11 +312,9 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         case .messageActionEmpty:
             return nil
         case let .messageActionPaymentSent(currency, totalAmount):
-            return TelegramMediaAction(action: .paymentSent(currency: currency, totalAmount: totalAmount))
+            return nil
         case .messageActionPaymentSentMe:
             return nil
-        //        case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
-
     }
 }
 

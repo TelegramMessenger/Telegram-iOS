@@ -39,7 +39,7 @@ public final class FeaturedStickerPackItem: OrderedItemListEntryContents {
     public init(decoder: Decoder) {
         self.info = decoder.decodeObjectForKey("i") as! StickerPackCollectionInfo
         self.topItems = decoder.decodeObjectArrayForKey("t")
-        self.unread = (decoder.decodeInt32ForKey("u") as Int32) != 0
+        self.unread = decoder.decodeInt32ForKey("u", orElse: 0) != 0
     }
     
     public func encode(_ encoder: Encoder) {

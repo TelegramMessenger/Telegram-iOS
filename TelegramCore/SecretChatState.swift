@@ -44,9 +44,9 @@ public struct SecretChatKeySha1Fingerprint: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.k0 = decoder.decodeInt64ForKey("k0")
-        self.k1 = decoder.decodeInt64ForKey("k1")
-        self.k2 = decoder.decodeInt32ForKey("k2")
+        self.k0 = decoder.decodeInt64ForKey("k0", orElse: 0)
+        self.k1 = decoder.decodeInt64ForKey("k1", orElse: 0)
+        self.k2 = decoder.decodeInt32ForKey("k2", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {
@@ -114,10 +114,10 @@ public struct SecretChatKeySha256Fingerprint: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.k0 = decoder.decodeInt64ForKey("k0")
-        self.k1 = decoder.decodeInt64ForKey("k1")
-        self.k2 = decoder.decodeInt64ForKey("k2")
-        self.k3 = decoder.decodeInt64ForKey("k3")
+        self.k0 = decoder.decodeInt64ForKey("k0", orElse: 0)
+        self.k1 = decoder.decodeInt64ForKey("k1", orElse: 0)
+        self.k2 = decoder.decodeInt64ForKey("k2", orElse: 0)
+        self.k3 = decoder.decodeInt64ForKey("k3", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {
@@ -198,11 +198,11 @@ enum SecretChatHandshakeState: Coding, Equatable {
     case requested(g: Int32, p: MemoryBuffer, a: MemoryBuffer)
     
     init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .accepting
             case 1:
-                self = .requested(g: decoder.decodeInt32ForKey("g"), p: decoder.decodeBytesForKey("p")!, a: decoder.decodeBytesForKey("a")!)
+                self = .requested(g: decoder.decodeInt32ForKey("g", orElse: 0), p: decoder.decodeBytesForKey("p")!, a: decoder.decodeBytesForKey("a")!)
             default:
                 self = .accepting
                 assertionFailure()
@@ -251,9 +251,9 @@ struct SecretChatLayerNegotiationState: Coding, Equatable {
     }
     
     init(decoder: Decoder) {
-        self.activeLayer = decoder.decodeInt32ForKey("a")
-        self.locallyRequestedLayer = decoder.decodeInt32ForKey("lr")
-        self.remotelyRequestedLayer = decoder.decodeInt32ForKey("rr")
+        self.activeLayer = decoder.decodeInt32ForKey("a", orElse: 0)
+        self.locallyRequestedLayer = decoder.decodeOptionalInt32ForKey("lr")
+        self.remotelyRequestedLayer = decoder.decodeOptionalInt32ForKey("rr")
     }
     
     func encode(_ encoder: Encoder) {
@@ -302,7 +302,7 @@ enum SecretChatRekeySessionData: Coding, Equatable {
     case accepted(key: MemoryBuffer, keyFingerprint: Int64)
     
     init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SecretChatRekeySessionDataValue.requesting.rawValue:
                 self = .requesting
             case SecretChatRekeySessionDataValue.requested.rawValue:
@@ -310,7 +310,7 @@ enum SecretChatRekeySessionData: Coding, Equatable {
             case SecretChatRekeySessionDataValue.accepting.rawValue:
                 self = .accepting
             case SecretChatRekeySessionDataValue.accepted.rawValue:
-                self = .accepted(key: decoder.decodeBytesForKey("k")!, keyFingerprint: decoder.decodeInt64ForKey("f"))
+                self = .accepted(key: decoder.decodeBytesForKey("k")!, keyFingerprint: decoder.decodeInt64ForKey("f", orElse: 0))
             default:
                 preconditionFailure()
         }
@@ -373,7 +373,7 @@ struct SecretChatRekeySessionState: Coding, Equatable {
     }
     
     init(decoder: Decoder) {
-        self.id = decoder.decodeInt64ForKey("i")
+        self.id = decoder.decodeInt64ForKey("i", orElse: 0)
         self.data = decoder.decodeObjectForKey("d", decoder: { SecretChatRekeySessionData(decoder: $0) }) as! SecretChatRekeySessionData
     }
     
@@ -411,9 +411,9 @@ struct SecretChatSequenceBasedLayerState: Coding, Equatable {
     init(decoder: Decoder) {
         self.layerNegotiationState = decoder.decodeObjectForKey("ln", decoder: { SecretChatLayerNegotiationState(decoder: $0) }) as! SecretChatLayerNegotiationState
         self.rekeyState = decoder.decodeObjectForKey("rs", decoder: { SecretChatRekeySessionState(decoder: $0) }) as? SecretChatRekeySessionState
-        self.baseIncomingOperationIndex = decoder.decodeInt32ForKey("bi")
-        self.baseOutgoingOperationIndex = decoder.decodeInt32ForKey("bo")
-        if let topProcessedCanonicalIncomingOperationIndex = decoder.decodeInt32ForKey("pi") as Int32? {
+        self.baseIncomingOperationIndex = decoder.decodeInt32ForKey("bi", orElse: 0)
+        self.baseOutgoingOperationIndex = decoder.decodeInt32ForKey("bo", orElse: 0)
+        if let topProcessedCanonicalIncomingOperationIndex = decoder.decodeOptionalInt32ForKey("pi") {
             self.topProcessedCanonicalIncomingOperationIndex = topProcessedCanonicalIncomingOperationIndex
         } else {
             self.topProcessedCanonicalIncomingOperationIndex = nil
@@ -495,7 +495,7 @@ enum SecretChatEmbeddedState: Coding, Equatable {
     }
     
     init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SecretChatEmbeddedStateValue.terminated.rawValue:
                 self = .terminated
             case SecretChatEmbeddedStateValue.handshake.rawValue:
@@ -575,11 +575,11 @@ final class SecretChatState: PeerChatState, SecretChatKeyState, Equatable {
     }
     
     init(decoder: Decoder) {
-        self.role = SecretChatRole(rawValue: decoder.decodeInt32ForKey("r"))!
+        self.role = SecretChatRole(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
         self.embeddedState = decoder.decodeObjectForKey("s", decoder: { return SecretChatEmbeddedState(decoder: $0) }) as! SecretChatEmbeddedState
         self.keychain = decoder.decodeObjectForKey("k", decoder: { return SecretChatKeychain(decoder: $0) }) as! SecretChatKeychain
         self.keyFingerprint = decoder.decodeObjectForKey("f", decoder: { return SecretChatKeyFingerprint(decoder: $0) }) as? SecretChatKeyFingerprint
-        self.messageAutoremoveTimeout = decoder.decodeInt32ForKey("a")
+        self.messageAutoremoveTimeout = decoder.decodeOptionalInt32ForKey("a")
     }
     
     func encode(_ encoder: Encoder) {

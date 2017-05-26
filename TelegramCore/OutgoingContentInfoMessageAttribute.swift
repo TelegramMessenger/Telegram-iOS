@@ -27,7 +27,7 @@ public class OutgoingContentInfoMessageAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.flags = OutgoingContentInfoFlags(rawValue: decoder.decodeInt32ForKey("f"))
+        self.flags = OutgoingContentInfoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {

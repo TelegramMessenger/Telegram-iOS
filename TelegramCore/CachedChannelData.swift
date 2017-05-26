@@ -32,17 +32,17 @@ public struct CachedChannelParticipantsSummary: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        if let memberCount = decoder.decodeInt32ForKey("p.m") as Int32? {
+        if let memberCount = decoder.decodeOptionalInt32ForKey("p.m") {
             self.memberCount = memberCount
         } else {
             self.memberCount = 0
         }
-        if let adminCount = decoder.decodeInt32ForKey("p.a") as Int32? {
+        if let adminCount = decoder.decodeOptionalInt32ForKey("p.a") {
             self.adminCount = adminCount
         } else {
             self.adminCount = 0
         }
-        if let bannedCount = decoder.decodeInt32ForKey("p.b") as Int32? {
+        if let bannedCount = decoder.decodeOptionalInt32ForKey("p.b") {
             self.bannedCount = bannedCount
         } else {
             self.bannedCount = 0
@@ -163,15 +163,15 @@ public final class CachedChannelData: CachedPeerData {
     }
     
     public init(decoder: Decoder) {
-        self.flags = CachedChannelFlags(rawValue: decoder.decodeInt32ForKey("f"))
-        self.about = decoder.decodeStringForKey("a")
+        self.flags = CachedChannelFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.about = decoder.decodeOptionalStringForKey("a")
         self.participantsSummary = CachedChannelParticipantsSummary(decoder: decoder)
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
         var peerIds = Set<PeerId>()
         self.topParticipants = decoder.decodeObjectForKey("p", decoder: { CachedChannelParticipants(decoder: $0) }) as? CachedChannelParticipants
-        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r"))!
-        if let pinnedMessagePeerId = (decoder.decodeInt64ForKey("pm.p") as Int64?), let pinnedMessageNamespace = (decoder.decodeInt32ForKey("pm.n") as Int32?), let pinnedMessageId = (decoder.decodeInt32ForKey("pm.i") as Int32?) {
+        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
+        if let pinnedMessagePeerId = decoder.decodeOptionalInt64ForKey("pm.p"), let pinnedMessageNamespace = decoder.decodeOptionalInt32ForKey("pm.n"), let pinnedMessageId = decoder.decodeOptionalInt32ForKey("pm.i") {
             self.pinnedMessageId = MessageId(peerId: PeerId(pinnedMessagePeerId), namespace: pinnedMessageNamespace, id: pinnedMessageId)
         } else {
             self.pinnedMessageId = nil

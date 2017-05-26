@@ -74,22 +74,22 @@ public final class TelegramGroup: Peer {
     }
     
     public init(decoder: Decoder) {
-        self.id = PeerId(decoder.decodeInt64ForKey("i"))
-        self.title = decoder.decodeStringForKey("t")
+        self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
+        self.title = decoder.decodeStringForKey("t", orElse: "")
         self.photo = decoder.decodeObjectArrayForKey("ph")
-        self.participantCount = Int(decoder.decodeInt32ForKey("pc"))
-        self.role = TelegramGroupRole(rawValue: decoder.decodeInt32ForKey("r"))!
-        self.membership = TelegramGroupMembership(rawValue: decoder.decodeInt32ForKey("m"))!
-        self.flags = TelegramGroupFlags(rawValue: decoder.decodeInt32ForKey("f"))
-        let migrationPeerId: Int64? = decoder.decodeInt64ForKey("mr.i")
-        let migrationAccessHash: Int64? = decoder.decodeInt64ForKey("mr.a")
+        self.participantCount = Int(decoder.decodeInt32ForKey("pc", orElse: 0))
+        self.role = TelegramGroupRole(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
+        self.membership = TelegramGroupMembership(rawValue: decoder.decodeInt32ForKey("m", orElse: 0))!
+        self.flags = TelegramGroupFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        let migrationPeerId: Int64? = decoder.decodeOptionalInt64ForKey("mr.i")
+        let migrationAccessHash: Int64? = decoder.decodeOptionalInt64ForKey("mr.a")
         if let migrationPeerId = migrationPeerId, let migrationAccessHash = migrationAccessHash {
             self.migrationReference = TelegramGroupToChannelMigrationReference(peerId: PeerId(migrationPeerId), accessHash: migrationAccessHash)
         } else {
             self.migrationReference = nil
         }
-        self.creationDate = decoder.decodeInt32ForKey("d")
-        self.version = Int(decoder.decodeInt32ForKey("v"))
+        self.creationDate = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.version = Int(decoder.decodeInt32ForKey("v", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {

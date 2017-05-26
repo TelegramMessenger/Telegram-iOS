@@ -13,7 +13,7 @@ public struct ExportedInvitation: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.link = decoder.decodeStringForKey("l")
+        self.link = decoder.decodeStringForKey("l", orElse: "")
     }
     
     public func encode(_ encoder: Encoder) {

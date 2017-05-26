@@ -31,11 +31,11 @@ public final class CachedUserData: CachedPeerData {
     }
     
     public init(decoder: Decoder) {
-        self.about = decoder.decodeStringForKey("a")
+        self.about = decoder.decodeOptionalStringForKey("a")
         self.botInfo = decoder.decodeObjectForKey("bi") as? BotInfo
-        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r"))!
-        self.isBlocked = decoder.decodeInt32ForKey("b") != 0
-        self.commonGroupCount = decoder.decodeInt32ForKey("cg")
+        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
+        self.isBlocked = decoder.decodeInt32ForKey("b", orElse: 0) != 0
+        self.commonGroupCount = decoder.decodeInt32ForKey("cg", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {

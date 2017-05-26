@@ -63,9 +63,17 @@ public extension MessageTags {
     static let Music = MessageTags(rawValue: 1 << 2)
     static let WebPage = MessageTags(rawValue: 1 << 3)
     static let VoiceOrInstantVideo = MessageTags(rawValue: 1 << 4)
+    
+    static let all: MessageTags = [.PhotoOrVideo, .File, .Music, .WebPage, .VoiceOrInstantVideo]
 }
 
-let allMessageTags: MessageTags = [.PhotoOrVideo, .File, .Music, .WebPage, .VoiceOrInstantVideo]
+public extension GlobalMessageTags {
+    static let Calls = GlobalMessageTags(rawValue: 1 << 0)
+    static let MissedCalls = GlobalMessageTags(rawValue: 1 << 1)
+    
+    static let all: GlobalMessageTags = [.Calls, .MissedCalls]
+}
+
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
 
 struct OperationLogTags {
@@ -87,6 +95,8 @@ struct OperationLogTags {
 private enum PreferencesKeyValues: Int32 {
     case globalNotifications = 0
     case cacheStorageSettings = 1
+    case localizationSettings = 2
+    case suggestedLocalization = 3
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -105,6 +115,18 @@ public struct PreferencesKeys {
     public static let cacheStorageSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.cacheStorageSettings.rawValue)
+        return key
+    }()
+    
+    public static let localizationSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.localizationSettings.rawValue)
+        return key
+    }()
+    
+    public static let suggestedLocalization: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.suggestedLocalization.rawValue)
         return key
     }()
 }

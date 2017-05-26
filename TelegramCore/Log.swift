@@ -2,8 +2,10 @@ import Foundation
 import TelegramCorePrivateModule
 #if os(macOS)
     import SwiftSignalKitMac
+    import PostboxMac
 #else
     import SwiftSignalKit
+    import Postbox
 #endif
 
 private let queue = DispatchQueue(label: "org.telegram.Telegram.trace", qos: .utility)
@@ -59,13 +61,13 @@ public func registerLoggingFunctions() {
 private var sharedLogger: Logger?
 
 public final class Logger {
-    private let queue = DispatchQueue(label: "org.telegram.Telegram.log", qos: .utility)
+    private let queue = Queue(name: "org.telegram.Telegram.log", qos: .utility)
     private let maxLength: Int = 2 * 1024 * 1024
     //private let maxLength: Int = 4 * 1024
     private let maxFiles: Int = 20
     
     private let basePath: String
-    private var file: (Int32, Int)?
+    private var file: (ManagedFile, Int)?
     
     public var logToFile: Bool = true
     public var logToConsole: Bool = true
@@ -133,14 +135,14 @@ public final class Logger {
                     content = String(format: "[%@] %d-%d-%d %02d:%02d:%02d.%03d %@", arguments: [tag, Int(timeinfo.tm_year) + 1900, Int(timeinfo.tm_mon + 1), Int(timeinfo.tm_mday), Int(timeinfo.tm_hour), Int(timeinfo.tm_min), Int(timeinfo.tm_sec), Int(milliseconds), string])
                 }
                 
-                var fd: Int32?
+                var currentFile: ManagedFile?
                 var openNew = false
                 if let (file, length) = self.file {
                     if length >= self.maxLength {
-                        close(file)
+                        self.file = nil
                         openNew = true
                     } else {
-                        fd = file
+                        currentFile = file
                     }
                 } else {
                     openNew = true
@@ -172,10 +174,9 @@ public final class Logger {
                         if let (_, url) = maxCreationDate {
                             var value = stat()
                             if stat(url.path, &value) == 0 && Int(value.st_size) < self.maxLength {
-                                let handle = open(url.path, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)
-                                if handle >= 0 {
-                                    fd = handle
-                                    self.file = (handle, Int(value.st_size))
+                                if let file = ManagedFile(queue: self.queue, path: url.path, mode: .append) {
+                                    self.file = (file, Int(value.st_size))
+                                    currentFile = file
                                 }
                             } else {
                                 createNew = true
@@ -190,23 +191,22 @@ public final class Logger {
                         
                         let path = self.basePath + "/" + fileName
                         
-                        let handle = open(path, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)
-                        if handle >= 0 {
-                            fd = handle
-                            self.file = (handle, 0)
+                        if let file = ManagedFile(queue: self.queue, path: path, mode: .append) {
+                            self.file = (file, 0)
+                            currentFile = file
                         }
                     }
                 }
                 
-                if let fd = fd {
+                if let currentFile = currentFile {
                     if let data = content.data(using: .utf8) {
                         data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                            write(fd, bytes, data.count)
+                            currentFile.write(bytes, count: data.count)
                         }
                         var newline: UInt8 = 0x0a
-                        write(fd, &newline, 1)
+                        currentFile.write(&newline, count: 1)
                         if let file = self.file {
-                            self.file = (file.0, file.1 + data.count)
+                            self.file = (file.0, file.1 + data.count + 1)
                         } else {
                             assertionFailure()
                         }

@@ -18,11 +18,11 @@ public enum StickerPackReference: Coding {
     case name(String)
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
-                self = .id(id: decoder.decodeInt64ForKey("i"), accessHash: decoder.decodeInt64ForKey("h"))
+                self = .id(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
             case 1:
-                self = .name(decoder.decodeStringForKey("n"))
+                self = .name(decoder.decodeStringForKey("n", orElse: ""))
             default:
                 self = .name("")
                 assertionFailure()
@@ -66,25 +66,25 @@ public enum TelegramMediaFileAttribute: Coding {
     case HasLinkedStickers
     
     public init(decoder: Decoder) {
-        let type: Int32 = decoder.decodeInt32ForKey("t")
+        let type: Int32 = decoder.decodeInt32ForKey("t", orElse: 0)
         switch type {
             case typeFileName:
-                self = .FileName(fileName: decoder.decodeStringForKey("fn"))
+                self = .FileName(fileName: decoder.decodeStringForKey("fn", orElse: ""))
             case typeSticker:
-                self = .Sticker(displayText: decoder.decodeStringForKey("dt"), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference)
+                self = .Sticker(displayText: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference)
             case typeImageSize:
-                self = .ImageSize(size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w")), height: CGFloat(decoder.decodeInt32ForKey("h"))))
+                self = .ImageSize(size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("h", orElse: 0))))
             case typeAnimated:
                 self = .Animated
             case typeVideo:
-                self = .Video(duration: Int(decoder.decodeInt32ForKey("du")), size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w")), height: CGFloat(decoder.decodeInt32ForKey("h"))), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f")))
+                self = .Video(duration: Int(decoder.decodeInt32ForKey("du", orElse: 0)), size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("h", orElse: 0))), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)))
             case typeAudio:
                 let waveformBuffer = decoder.decodeBytesForKeyNoCopy("wf")
                 var waveform: MemoryBuffer?
                 if let waveformBuffer = waveformBuffer {
                     waveform = MemoryBuffer(copyOf: waveformBuffer)
                 }
-                self = .Audio(isVoice: decoder.decodeInt32ForKey("iv") != 0, duration: Int(decoder.decodeInt32ForKey("du")), title: decoder.decodeStringForKey("ti"), performer: decoder.decodeStringForKey("pe"), waveform: waveform)
+                self = .Audio(isVoice: decoder.decodeInt32ForKey("iv", orElse: 0) != 0, duration: Int(decoder.decodeInt32ForKey("du", orElse: 0)), title: decoder.decodeOptionalStringForKey("ti"), performer: decoder.decodeOptionalStringForKey("pe"), waveform: waveform)
             case typeHasLinkedStickers:
                 self = .HasLinkedStickers
             default:
@@ -162,8 +162,8 @@ public final class TelegramMediaFile: Media, Equatable {
         self.fileId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
         self.previewRepresentations = decoder.decodeObjectArrayForKey("pr")
-        self.mimeType = decoder.decodeStringForKey("mt")
-        if let size = (decoder.decodeInt32ForKey("s") as Int32?) {
+        self.mimeType = decoder.decodeStringForKey("mt", orElse: "")
+        if let size = decoder.decodeOptionalInt32ForKey("s") {
             self.size = Int(size)
         } else {
             self.size = nil

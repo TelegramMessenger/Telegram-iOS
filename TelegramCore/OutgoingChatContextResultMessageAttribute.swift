@@ -15,8 +15,8 @@ public class OutgoingChatContextResultMessageAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.queryId = decoder.decodeInt64ForKey("q")
-        self.id = decoder.decodeStringForKey("i")
+        self.queryId = decoder.decodeInt64ForKey("q", orElse: 0)
+        self.id = decoder.decodeStringForKey("i", orElse: "")
     }
     
     public func encode(_ encoder: Encoder) {

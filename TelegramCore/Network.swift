@@ -293,18 +293,19 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
     }) |> then(Signal<NetworkUsageStats, NoError>.complete() |> delay(5.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
-func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool) -> Signal<Network, NoError> {
+func initializedNetwork(apiId: Int32, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
             
             let serialization = Serialization()
             
-            let apiEnvironment = MTApiEnvironment()
+            var apiEnvironment = MTApiEnvironment()
             
             apiEnvironment.apiId = apiId
             apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
             apiEnvironment.disableUpdates = supplementary
+            apiEnvironment = apiEnvironment.withUpdatedLangPackCode(languageCode ?? "en")
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
             

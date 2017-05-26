@@ -55,13 +55,13 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.id = ItemCollectionId(namespace: decoder.decodeInt32ForKey("i.n"), id: decoder.decodeInt64ForKey("i.i"))
-        self.accessHash = decoder.decodeInt64ForKey("a")
-        self.title = decoder.decodeStringForKey("t")
-        self.shortName = decoder.decodeStringForKey("s")
-        self.hash = decoder.decodeInt32ForKey("h")
-        self.flags = StickerPackCollectionInfoFlags(rawValue: decoder.decodeInt32ForKey("f"))
-        self.count = decoder.decodeInt32ForKey("n")
+        self.id = ItemCollectionId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0))
+        self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
+        self.title = decoder.decodeStringForKey("t", orElse: "")
+        self.shortName = decoder.decodeStringForKey("s", orElse: "")
+        self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
+        self.flags = StickerPackCollectionInfoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.count = decoder.decodeInt32ForKey("n", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {
@@ -116,7 +116,7 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.index = ItemCollectionItemIndex(index: decoder.decodeInt32ForKey("i.n"), id: decoder.decodeInt64ForKey("i.i"))
+        self.index = ItemCollectionItemIndex(index: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0))
         self.file = decoder.decodeObjectForKey("f") as! TelegramMediaFile
         self.indexKeys = decoder.decodeBytesArrayForKey("s")
     }

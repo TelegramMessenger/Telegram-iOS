@@ -15,8 +15,8 @@ struct SecretChatOperationSequenceInfo: Coding {
     }
     
     init(decoder: Decoder) {
-        self.topReceivedOperationIndex = decoder.decodeInt32ForKey("r")
-        self.operationIndex = decoder.decodeInt32ForKey("o")
+        self.topReceivedOperationIndex = decoder.decodeInt32ForKey("r", orElse: 0)
+        self.operationIndex = decoder.decodeInt32ForKey("o", orElse: 0)
     }
     
     func encode(_ encoder: Encoder) {
@@ -41,8 +41,8 @@ final class SecretChatIncomingDecryptedOperation: Coding {
     }
     
     init(decoder: Decoder) {
-        self.timestamp = decoder.decodeInt32ForKey("t")
-        self.layer = decoder.decodeInt32ForKey("l")
+        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
+        self.layer = decoder.decodeInt32ForKey("l", orElse: 0)
         self.sequenceInfo = decoder.decodeObjectForKey("s", decoder: { SecretChatOperationSequenceInfo(decoder: $0) }) as? SecretChatOperationSequenceInfo
         self.contents = decoder.decodeBytesForKey("c")!
         self.file = decoder.decodeObjectForKey("f", decoder: { SecretChatFileReference(decoder: $0) }) as? SecretChatFileReference

@@ -17,7 +17,7 @@ public class InlineBotMessageAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.peerId = PeerId(decoder.decodeInt64ForKey("i"))
+        self.peerId = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {

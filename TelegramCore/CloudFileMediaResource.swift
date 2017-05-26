@@ -68,11 +68,11 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
     }
     
     public required init(decoder: Decoder) {
-        self.datacenterId = Int(decoder.decodeInt32ForKey("d") as Int32)
-        self.volumeId = decoder.decodeInt64ForKey("v")
-        self.localId = decoder.decodeInt32ForKey("l")
-        self.secret = decoder.decodeInt64ForKey("s")
-        if let size = decoder.decodeInt32ForKey("n") as Int32? {
+        self.datacenterId = Int(decoder.decodeInt32ForKey("d", orElse: 0))
+        self.volumeId = decoder.decodeInt64ForKey("v", orElse: 0)
+        self.localId = decoder.decodeInt32ForKey("l", orElse: 0)
+        self.secret = decoder.decodeInt64ForKey("s", orElse: 0)
+        if let size = decoder.decodeOptionalInt32ForKey("n") {
             self.size = Int(size)
         } else {
             self.size = nil
@@ -150,10 +150,10 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMul
     }
     
     public required init(decoder: Decoder) {
-        self.datacenterId = Int(decoder.decodeInt32ForKey("d") as Int32)
-        self.fileId = decoder.decodeInt64ForKey("f")
-        self.accessHash = decoder.decodeInt64ForKey("a")
-        if let size = (decoder.decodeInt32ForKey("n") as Int32?) {
+        self.datacenterId = Int(decoder.decodeInt32ForKey("d", orElse: 0))
+        self.fileId = decoder.decodeInt64ForKey("f", orElse: 0)
+        self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
+        if let size = decoder.decodeOptionalInt32ForKey("n") {
             self.size = Int(size)
         } else {
             self.size = nil
@@ -208,7 +208,7 @@ public class LocalFileMediaResource: TelegramMediaResource {
     }
     
     public required init(decoder: Decoder) {
-        self.fileId = decoder.decodeInt64ForKey("f")
+        self.fileId = decoder.decodeInt64ForKey("f", orElse: 0)
     }
     
     public func encode(_ encoder: Encoder) {
@@ -262,10 +262,10 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
     }
     
     public required init(decoder: Decoder) {
-        self.localFilePath = decoder.decodeStringForKey("p")
-        self.randomId = decoder.decodeInt64ForKey("r")
-        self.isUniquelyReferencedTemporaryFile = (decoder.decodeInt32ForKey("t") as Int32) != 0
-        self.size = decoder.decodeInt32ForKey("s")
+        self.localFilePath = decoder.decodeStringForKey("p", orElse: "")
+        self.randomId = decoder.decodeInt64ForKey("r", orElse: 0)
+        self.isUniquelyReferencedTemporaryFile = decoder.decodeInt32ForKey("t", orElse: 0) != 0
+        self.size = decoder.decodeOptionalInt32ForKey("s")
     }
     
     public func encode(_ encoder: Encoder) {
@@ -322,8 +322,8 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
     }
     
     public required init(decoder: Decoder) {
-        self.url = decoder.decodeStringForKey("u")
-        if let size = (decoder.decodeInt32ForKey("s") as Int32?) {
+        self.url = decoder.decodeStringForKey("u", orElse: "")
+        if let size = decoder.decodeOptionalInt32ForKey("s") {
             self.size = Int(size)
         } else {
             self.size = nil
@@ -470,15 +470,15 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
     }
     
     public init(decoder: Decoder) {
-        self.fileId = decoder.decodeInt64ForKey("i")
-        self.accessHash = decoder.decodeInt64ForKey("a")
-        if let size = decoder.decodeInt32ForKey("s") as Int32? {
+        self.fileId = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
+        if let size = decoder.decodeOptionalInt32ForKey("s") {
             self.size = Int(size)
         } else {
             self.size = nil
         }
-        self.decryptedSize = decoder.decodeInt32ForKey("ds")
-        self.datacenterId = Int(decoder.decodeInt32ForKey("d"))
+        self.decryptedSize = decoder.decodeInt32ForKey("ds", orElse: 0)
+        self.datacenterId = Int(decoder.decodeInt32ForKey("d", orElse: 0))
         self.key = decoder.decodeObjectForKey("k", decoder: { SecretFileEncryptionKey(decoder: $0) }) as! SecretFileEncryptionKey
     }
     

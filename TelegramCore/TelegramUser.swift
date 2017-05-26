@@ -45,8 +45,8 @@ public struct BotUserInfo: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.flags = BotUserInfoFlags(rawValue: decoder.decodeInt32ForKey("f"))
-        self.inlinePlaceholder = decoder.decodeStringForKey("ip")
+        self.flags = BotUserInfoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.inlinePlaceholder = decoder.decodeOptionalStringForKey("ip")
     }
     
     public func encode(_ encoder: Encoder) {
@@ -108,20 +108,20 @@ public final class TelegramUser: Peer {
     }
     
     public init(decoder: Decoder) {
-        self.id = PeerId(decoder.decodeInt64ForKey("i"))
+        self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
         
-        let accessHash: Int64 = decoder.decodeInt64ForKey("ah")
+        let accessHash: Int64 = decoder.decodeInt64ForKey("ah", orElse: 0)
         if accessHash != 0 {
             self.accessHash = accessHash
         } else {
             self.accessHash = nil
         }
         
-        self.firstName = decoder.decodeStringForKey("fn")
-        self.lastName = decoder.decodeStringForKey("ln")
+        self.firstName = decoder.decodeOptionalStringForKey("fn")
+        self.lastName = decoder.decodeOptionalStringForKey("ln")
         
-        self.username = decoder.decodeStringForKey("un")
-        self.phone = decoder.decodeStringForKey("p")
+        self.username = decoder.decodeOptionalStringForKey("un")
+        self.phone = decoder.decodeOptionalStringForKey("p")
         
         self.photo = decoder.decodeObjectArrayForKey("ph")
         
@@ -131,7 +131,7 @@ public final class TelegramUser: Peer {
             self.botInfo = nil
         }
         
-        self.flags = UserInfoFlags(rawValue: decoder.decodeInt32ForKey("fl"))
+        self.flags = UserInfoFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {

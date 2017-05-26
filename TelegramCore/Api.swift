@@ -82,8 +82,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1343524562] = { return Api.InputChannel.parse_inputChannel($0) }
     dict[98092748] = { return Api.DcOption.parse_dcOption($0) }
     dict[-1212732749] = { return Api.account.PasswordSettings.parse_passwordSettings($0) }
+    dict[292985073] = { return Api.LangPackLanguage.parse_langPackLanguage($0) }
     dict[-1987579119] = { return Api.help.AppUpdate.parse_appUpdate($0) }
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
+    dict[-209337866] = { return Api.LangPackDifference.parse_langPackDifference($0) }
     dict[-791039645] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1299865402] = { return Api.ChannelParticipantRole.parse_channelRoleEmpty($0) }
     dict[-1776756363] = { return Api.ChannelParticipantRole.parse_channelRoleModerator($0) }
@@ -196,6 +198,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-523384512] = { return Api.Update.parse_updateBotShippingQuery($0) }
     dict[1563376297] = { return Api.Update.parse_updateBotPrecheckoutQuery($0) }
     dict[-1425052898] = { return Api.Update.parse_updatePhoneCall($0) }
+    dict[281165899] = { return Api.Update.parse_updateLangPackTooLong($0) }
+    dict[1442983757] = { return Api.Update.parse_updateLangPack($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
     dict[-1861910545] = { return Api.ChannelParticipant.parse_channelParticipantModerator($0) }
@@ -340,7 +344,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
-    dict[-882895228] = { return Api.Config.parse_config($0) }
+    dict[-163699244] = { return Api.Config.parse_config($0) }
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
@@ -442,6 +446,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-326966976] = { return Api.phone.PhoneCall.parse_phoneCall($0) }
     dict[-1132882121] = { return Api.Bool.parse_boolFalse($0) }
     dict[-1720552011] = { return Api.Bool.parse_boolTrue($0) }
+    dict[-892239370] = { return Api.LangPackString.parse_langPackString($0) }
+    dict[1816636575] = { return Api.LangPackString.parse_langPackStringPluralized($0) }
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
     dict[-947462709] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
@@ -654,7 +660,11 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.account.PasswordSettings:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.LangPackLanguage:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.help.AppUpdate:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.LangPackDifference:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipant:
                 return _1.serialize(buffer, boxed)
@@ -913,6 +923,8 @@ public struct Api {
             case let _1 as Api.phone.PhoneCall:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.Bool:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.LangPackString:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.InputWebFileLocation:
                 return _1.serialize(buffer, boxed)
@@ -4296,6 +4308,106 @@ public struct Api {
         }
     }
 
+    public enum LangPackLanguage: CustomStringConvertible {
+        case langPackLanguage(name: String, nativeName: String, langCode: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .langPackLanguage(let name, let nativeName, let langCode):
+                    if boxed {
+                        buffer.appendInt32(292985073)
+                    }
+                    serializeString(name, buffer: buffer, boxed: false)
+                    serializeString(nativeName, buffer: buffer, boxed: false)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_langPackLanguage(_ reader: BufferReader) -> LangPackLanguage? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.LangPackLanguage.langPackLanguage(name: _1!, nativeName: _2!, langCode: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .langPackLanguage(let name, let nativeName, let langCode):
+                        return "(langPackLanguage name: \(name), nativeName: \(nativeName), langCode: \(langCode))"
+                }
+            }
+        }
+    }
+
+    public enum LangPackDifference: CustomStringConvertible {
+        case langPackDifference(langCode: String, fromVersion: Int32, version: Int32, strings: [Api.LangPackString])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .langPackDifference(let langCode, let fromVersion, let version, let strings):
+                    if boxed {
+                        buffer.appendInt32(-209337866)
+                    }
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    serializeInt32(fromVersion, buffer: buffer, boxed: false)
+                    serializeInt32(version, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(strings.count))
+                    for item in strings {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_langPackDifference(_ reader: BufferReader) -> LangPackDifference? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: [Api.LangPackString]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackString.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.LangPackDifference.langPackDifference(langCode: _1!, fromVersion: _2!, version: _3!, strings: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .langPackDifference(let langCode, let fromVersion, let version, let strings):
+                        return "(langPackDifference langCode: \(langCode), fromVersion: \(fromVersion), version: \(version), strings: \(strings))"
+                }
+            }
+        }
+    }
+
     public enum ChannelParticipantRole: CustomStringConvertible {
         case channelRoleEmpty
         case channelRoleModerator
@@ -5207,6 +5319,8 @@ public struct Api {
         case updateBotShippingQuery(queryId: Int64, userId: Int32, payload: Buffer, shippingAddress: Api.PostAddress)
         case updateBotPrecheckoutQuery(flags: Int32, queryId: Int64, userId: Int32, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, currency: String, totalAmount: Int64)
         case updatePhoneCall(phoneCall: Api.PhoneCall)
+        case updateLangPackTooLong
+        case updateLangPack(difference: Api.LangPackDifference)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -5711,6 +5825,18 @@ public struct Api {
                         buffer.appendInt32(-1425052898)
                     }
                     phoneCall.serialize(buffer, true)
+                    break
+                case .updateLangPackTooLong:
+                    if boxed {
+                        buffer.appendInt32(281165899)
+                    }
+                    
+                    break
+                case .updateLangPack(let difference):
+                    if boxed {
+                        buffer.appendInt32(1442983757)
+                    }
+                    difference.serialize(buffer, true)
                     break
     }
     return true
@@ -6752,6 +6878,22 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_updateLangPackTooLong(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateLangPackTooLong
+        }
+        fileprivate static func parse_updateLangPack(_ reader: BufferReader) -> Update? {
+            var _1: Api.LangPackDifference?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.LangPackDifference
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateLangPack(difference: _1!)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -6876,6 +7018,10 @@ public struct Api {
                         return "(updateBotPrecheckoutQuery flags: \(flags), queryId: \(queryId), userId: \(userId), payload: \(payload), info: \(info), shippingOptionId: \(shippingOptionId), currency: \(currency), totalAmount: \(totalAmount))"
                     case .updatePhoneCall(let phoneCall):
                         return "(updatePhoneCall phoneCall: \(phoneCall))"
+                    case .updateLangPackTooLong:
+                        return "(updateLangPackTooLong)"
+                    case .updateLangPack(let difference):
+                        return "(updateLangPack difference: \(difference))"
                 }
             }
         }
@@ -10326,13 +10472,13 @@ public struct Api {
     }
 
     public enum Config: CustomStringConvertible {
-        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, disabledFeatures: [Api.DisabledFeature])
+        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, suggestedLangCode: String?, disabledFeatures: [Api.DisabledFeature])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let disabledFeatures):
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let suggestedLangCode, let disabledFeatures):
                     if boxed {
-                        buffer.appendInt32(-882895228)
+                        buffer.appendInt32(-163699244)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -10367,6 +10513,7 @@ public struct Api {
                     serializeInt32(callConnectTimeoutMs, buffer: buffer, boxed: false)
                     serializeInt32(callPacketTimeoutMs, buffer: buffer, boxed: false)
                     serializeString(meUrlPrefix, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(suggestedLangCode!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(disabledFeatures.count))
                     for item in disabledFeatures {
@@ -10440,9 +10587,11 @@ public struct Api {
             _28 = reader.readInt32()
             var _29: String?
             _29 = parseString(reader)
-            var _30: [Api.DisabledFeature]?
+            var _30: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_30 = parseString(reader) }
+            var _31: [Api.DisabledFeature]?
             if let _ = reader.readInt32() {
-                _30 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DisabledFeature.self)
+                _31 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DisabledFeature.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -10473,9 +10622,10 @@ public struct Api {
             let _c27 = _27 != nil
             let _c28 = _28 != nil
             let _c29 = _29 != nil
-            let _c30 = _30 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 {
-                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, chatBigSize: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, ratingEDecay: _21!, stickersRecentLimit: _22!, tmpSessions: _23, pinnedDialogsCountMax: _24!, callReceiveTimeoutMs: _25!, callRingTimeoutMs: _26!, callConnectTimeoutMs: _27!, callPacketTimeoutMs: _28!, meUrlPrefix: _29!, disabledFeatures: _30!)
+            let _c30 = (Int(_1!) & Int(1 << 2) == 0) || _30 != nil
+            let _c31 = _31 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 {
+                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, chatBigSize: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, ratingEDecay: _21!, stickersRecentLimit: _22!, tmpSessions: _23, pinnedDialogsCountMax: _24!, callReceiveTimeoutMs: _25!, callRingTimeoutMs: _26!, callConnectTimeoutMs: _27!, callPacketTimeoutMs: _28!, meUrlPrefix: _29!, suggestedLangCode: _30, disabledFeatures: _31!)
             }
             else {
                 return nil
@@ -10485,8 +10635,8 @@ public struct Api {
         public var description: String {
             get {
                 switch self {
-                    case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let disabledFeatures):
-                        return "(config flags: \(flags), date: \(date), expires: \(expires), testMode: \(testMode), thisDc: \(thisDc), dcOptions: \(dcOptions), chatSizeMax: \(chatSizeMax), megagroupSizeMax: \(megagroupSizeMax), forwardedCountMax: \(forwardedCountMax), onlineUpdatePeriodMs: \(onlineUpdatePeriodMs), offlineBlurTimeoutMs: \(offlineBlurTimeoutMs), offlineIdleTimeoutMs: \(offlineIdleTimeoutMs), onlineCloudTimeoutMs: \(onlineCloudTimeoutMs), notifyCloudDelayMs: \(notifyCloudDelayMs), notifyDefaultDelayMs: \(notifyDefaultDelayMs), chatBigSize: \(chatBigSize), pushChatPeriodMs: \(pushChatPeriodMs), pushChatLimit: \(pushChatLimit), savedGifsLimit: \(savedGifsLimit), editTimeLimit: \(editTimeLimit), ratingEDecay: \(ratingEDecay), stickersRecentLimit: \(stickersRecentLimit), tmpSessions: \(tmpSessions), pinnedDialogsCountMax: \(pinnedDialogsCountMax), callReceiveTimeoutMs: \(callReceiveTimeoutMs), callRingTimeoutMs: \(callRingTimeoutMs), callConnectTimeoutMs: \(callConnectTimeoutMs), callPacketTimeoutMs: \(callPacketTimeoutMs), meUrlPrefix: \(meUrlPrefix), disabledFeatures: \(disabledFeatures))"
+                    case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let suggestedLangCode, let disabledFeatures):
+                        return "(config flags: \(flags), date: \(date), expires: \(expires), testMode: \(testMode), thisDc: \(thisDc), dcOptions: \(dcOptions), chatSizeMax: \(chatSizeMax), megagroupSizeMax: \(megagroupSizeMax), forwardedCountMax: \(forwardedCountMax), onlineUpdatePeriodMs: \(onlineUpdatePeriodMs), offlineBlurTimeoutMs: \(offlineBlurTimeoutMs), offlineIdleTimeoutMs: \(offlineIdleTimeoutMs), onlineCloudTimeoutMs: \(onlineCloudTimeoutMs), notifyCloudDelayMs: \(notifyCloudDelayMs), notifyDefaultDelayMs: \(notifyDefaultDelayMs), chatBigSize: \(chatBigSize), pushChatPeriodMs: \(pushChatPeriodMs), pushChatLimit: \(pushChatLimit), savedGifsLimit: \(savedGifsLimit), editTimeLimit: \(editTimeLimit), ratingEDecay: \(ratingEDecay), stickersRecentLimit: \(stickersRecentLimit), tmpSessions: \(tmpSessions), pinnedDialogsCountMax: \(pinnedDialogsCountMax), callReceiveTimeoutMs: \(callReceiveTimeoutMs), callRingTimeoutMs: \(callRingTimeoutMs), callConnectTimeoutMs: \(callConnectTimeoutMs), callPacketTimeoutMs: \(callPacketTimeoutMs), meUrlPrefix: \(meUrlPrefix), suggestedLangCode: \(suggestedLangCode), disabledFeatures: \(disabledFeatures))"
                 }
             }
         }
@@ -13331,6 +13481,95 @@ public struct Api {
                         return "(boolFalse)"
                     case .boolTrue:
                         return "(boolTrue)"
+                }
+            }
+        }
+    }
+
+    public enum LangPackString: CustomStringConvertible {
+        case langPackString(key: String, value: String)
+        case langPackStringPluralized(flags: Int32, key: String, zeroValue: String?, oneValue: String?, twoValue: String?, fewValue: String?, manyValue: String?, otherValue: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .langPackString(let key, let value):
+                    if boxed {
+                        buffer.appendInt32(-892239370)
+                    }
+                    serializeString(key, buffer: buffer, boxed: false)
+                    serializeString(value, buffer: buffer, boxed: false)
+                    break
+                case .langPackStringPluralized(let flags, let key, let zeroValue, let oneValue, let twoValue, let fewValue, let manyValue, let otherValue):
+                    if boxed {
+                        buffer.appendInt32(1816636575)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(key, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(zeroValue!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(oneValue!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(twoValue!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(fewValue!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(manyValue!, buffer: buffer, boxed: false)}
+                    serializeString(otherValue, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_langPackString(_ reader: BufferReader) -> LangPackString? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.LangPackString.langPackString(key: _1!, value: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_langPackStringPluralized(_ reader: BufferReader) -> LangPackString? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            var _5: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = parseString(reader) }
+            var _6: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_6 = parseString(reader) }
+            var _7: String?
+            if Int(_1!) & Int(1 << 4) != 0 {_7 = parseString(reader) }
+            var _8: String?
+            _8 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.LangPackString.langPackStringPluralized(flags: _1!, key: _2!, zeroValue: _3, oneValue: _4, twoValue: _5, fewValue: _6, manyValue: _7, otherValue: _8!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .langPackString(let key, let value):
+                        return "(langPackString key: \(key), value: \(value))"
+                    case .langPackStringPluralized(let flags, let key, let zeroValue, let oneValue, let twoValue, let fewValue, let manyValue, let otherValue):
+                        return "(langPackStringPluralized flags: \(flags), key: \(key), zeroValue: \(zeroValue), oneValue: \(oneValue), twoValue: \(twoValue), fewValue: \(fewValue), manyValue: \(manyValue), otherValue: \(otherValue))"
                 }
             }
         }
@@ -22212,6 +22451,68 @@ public struct Api {
                         var result: Api.account.TmpPassword?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.TmpPassword
+                        }
+                        return result
+                    })
+                }
+            }
+            public struct langpack {
+                public static func getLangPack(langCode langCode: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.LangPackDifference?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1699363442)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(langpack.getLangPack langCode: \(langCode))"}), buffer, { (buffer: Buffer) -> Api.LangPackDifference? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.LangPackDifference?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.LangPackDifference
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getStrings(langCode langCode: String, keys: [String]) -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.LangPackString]?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(773776152)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(keys.count))
+                    for item in keys {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription({return "(langpack.getStrings langCode: \(langCode), keys: \(keys))"}), buffer, { (buffer: Buffer) -> [Api.LangPackString]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.LangPackString]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackString.self)
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getDifference(fromVersion fromVersion: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.LangPackDifference?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(187583869)
+                    serializeInt32(fromVersion, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(langpack.getDifference fromVersion: \(fromVersion))"}), buffer, { (buffer: Buffer) -> Api.LangPackDifference? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.LangPackDifference?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.LangPackDifference
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getLanguages() -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.LangPackLanguage]?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2146445955)
+                    
+                    return (FunctionDescription({return "(langpack.getLanguages )"}), buffer, { (buffer: Buffer) -> [Api.LangPackLanguage]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.LangPackLanguage]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackLanguage.self)
                         }
                         return result
                     })

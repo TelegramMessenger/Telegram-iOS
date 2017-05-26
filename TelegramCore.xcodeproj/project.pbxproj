@@ -295,6 +295,16 @@
 		D07827CB1E02F5B200071108 /* RichText.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827CA1E02F5B200071108 /* RichText.swift */; };
 		D08774FC1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */; };
 		D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */; };
+		D08CAA7D1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */; };
+		D08CAA7E1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */; };
+		D08CAA801ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */; };
+		D08CAA811ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */; };
+		D08CAA841ED8164B0000FDA8 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA831ED8164B0000FDA8 /* Localization.swift */; };
+		D08CAA851ED8164B0000FDA8 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA831ED8164B0000FDA8 /* Localization.swift */; };
+		D08CAA871ED81DD40000FDA8 /* LocalizationInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA861ED81DD40000FDA8 /* LocalizationInfo.swift */; };
+		D08CAA881ED81DD40000FDA8 /* LocalizationInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA861ED81DD40000FDA8 /* LocalizationInfo.swift */; };
+		D08CAA8C1ED81EDF0000FDA8 /* Localizations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */; };
+		D08CAA8D1ED81EDF0000FDA8 /* Localizations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */; };
 		D08F4A661E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A671E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A691E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */; };
@@ -685,6 +695,11 @@
 		D07827CA1E02F5B200071108 /* RichText.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RichText.swift; sourceTree = "<group>"; };
 		D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedGlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalNotificationSettings.swift; sourceTree = "<group>"; };
+		D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationSettings.swift; sourceTree = "<group>"; };
+		D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SuggestedLocalizationEntry.swift; sourceTree = "<group>"; };
+		D08CAA831ED8164B0000FDA8 /* Localization.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		D08CAA861ED81DD40000FDA8 /* LocalizationInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationInfo.swift; sourceTree = "<group>"; };
+		D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Localizations.swift; sourceTree = "<group>"; };
 		D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
 		D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
 		D099EA1B1DE72867001AF5A8 /* PeerCommands.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerCommands.swift; sourceTree = "<group>"; };
@@ -851,6 +866,7 @@
 				D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */,
 				D05A32E61E6F0B5C002760B4 /* RecentAccountSession.swift */,
 				D0FA35041EA6135D00E56FFA /* CacheStorageSettings.swift */,
+				D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -954,6 +970,7 @@
 				D0FA8B961E1E952D001E855B /* Secret Chats */,
 				D021E0DD1DB539E800C6B04F /* Item Collections */,
 				D01B27A01E394D7B0022A4C0 /* Settings */,
+				D08CAA821ED816290000FDA8 /* Localization */,
 			);
 			name = Objects;
 			sourceTree = "<group>";
@@ -1219,6 +1236,24 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		D08CAA821ED816290000FDA8 /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */,
+				D08CAA831ED8164B0000FDA8 /* Localization.swift */,
+				D08CAA861ED81DD40000FDA8 /* LocalizationInfo.swift */,
+			);
+			name = Localization;
+			sourceTree = "<group>";
+		};
+		D08CAA8A1ED81EA10000FDA8 /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */,
+			);
+			name = Localization;
+			sourceTree = "<group>";
+		};
 		D09D8BF71D4FAB1D0081DBEC = {
 			isa = PBXGroup;
 			children = (
@@ -1258,6 +1293,7 @@
 				D0C50E2F1E93A83B00F62E39 /* Calls */,
 				D021E0E01DB5400200C6B04F /* Sticker Management */,
 				D05A32DF1E6F096B002760B4 /* Settings */,
+				D08CAA8A1ED81EA10000FDA8 /* Localization */,
 				D03B0E3A1D631E4400955575 /* Supporting Files */,
 				D09D8C041D4FAB1D0081DBEC /* TelegramCore.h */,
 				D09D8C051D4FAB1D0081DBEC /* Info.plist */,
@@ -1604,6 +1640,7 @@
 				D0E23DD51E8042F500B9B6D2 /* FeaturedStickerPack.swift in Sources */,
 				D0FA8B981E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */,
 				D0DF0C911D81A857008AEB01 /* ImageRepresentationsUtils.swift in Sources */,
+				D08CAA8C1ED81EDF0000FDA8 /* Localizations.swift in Sources */,
 				D0E6521F1E3A364A004EEA91 /* UpdateAccountPeerName.swift in Sources */,
 				D0F3A8A21E82C65E00B4C64C /* ManagedSynchronizeChatInputStateOperations.swift in Sources */,
 				D03B0D5A1D631A6900955575 /* Api.swift in Sources */,
@@ -1614,6 +1651,7 @@
 				D0B843B21DA7FF30005F29E1 /* NBAsYouTypeFormatter.m in Sources */,
 				D03B0CDB1D62245F00955575 /* ApiUtils.swift in Sources */,
 				D0B843C91DA7FF30005F29E1 /* NBPhoneNumberDesc.m in Sources */,
+				D08CAA801ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift in Sources */,
 				D03B0CE61D6224A700955575 /* ReplyMessageAttribute.swift in Sources */,
 				D0BEAF601E54ACF900BD963D /* AccountManager.swift in Sources */,
 				D0FA0ABD1E76C908005BB9B7 /* TwoStepVerification.swift in Sources */,
@@ -1678,6 +1716,7 @@
 				D0F7AB2F1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
 				D0B843971DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift in Sources */,
 				D0448CA21E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,
+				D08CAA871ED81DD40000FDA8 /* LocalizationInfo.swift in Sources */,
 				D033FEB61E61F3F900644997 /* BlockedPeers.swift in Sources */,
 				D00C7CCC1E3620C30080C3D5 /* CachedChannelParticipants.swift in Sources */,
 				D09BB6B41DB02C2B00A905C0 /* PendingMessageManager.swift in Sources */,
@@ -1697,6 +1736,7 @@
 				D0B843831DA6EDB8005F29E1 /* CachedGroupData.swift in Sources */,
 				D0E35A121DE4A25E00BC6096 /* OutgoingChatContextResultMessageAttribute.swift in Sources */,
 				C239BE9C1E630CA700C2C453 /* UpdatePinnedMessage.swift in Sources */,
+				D08CAA7D1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */,
 				D0B844531DAC0773005F29E1 /* TelegramUserPresence.swift in Sources */,
 				D08F4A661E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */,
 				D05A32E71E6F0B5C002760B4 /* RecentAccountSession.swift in Sources */,
@@ -1757,6 +1797,7 @@
 				C2366C861E4F403C0097CCFF /* AddressNames.swift in Sources */,
 				D0B843C11DA7FF30005F29E1 /* NBPhoneMetaData.m in Sources */,
 				D0528E601E65B94E00E2FEF5 /* SingleMessageView.swift in Sources */,
+				D08CAA841ED8164B0000FDA8 /* Localization.swift in Sources */,
 				D0528E5A1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */,
 				D0FA8BA41E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */,
@@ -1885,6 +1926,7 @@
 				D0B844131DAB91CD005F29E1 /* StringFormat.swift in Sources */,
 				D0E35A131DE4C69100BC6096 /* OutgoingChatContextResultMessageAttribute.swift in Sources */,
 				D0B418961D7E0580004562A4 /* TelegramMediaFile.swift in Sources */,
+				D08CAA881ED81DD40000FDA8 /* LocalizationInfo.swift in Sources */,
 				D001F3EC1E128A1C007A8C60 /* Holes.swift in Sources */,
 				D0B4189B1D7E0580004562A4 /* TelegramMediaWebpage.swift in Sources */,
 				D00C7CE11E3785710080C3D5 /* MarkMessageContentAsConsumedInteractively.swift in Sources */,
@@ -1897,6 +1939,7 @@
 				D0613FD01E60520700202CDB /* ChannelMembers.swift in Sources */,
 				D001F3E81E128A1C007A8C60 /* ChannelState.swift in Sources */,
 				C2366C8A1E4F40480097CCFF /* SupportPeerId.swift in Sources */,
+				D08CAA811ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift in Sources */,
 				D0B844451DAB91FD005F29E1 /* AccountViewTracker.swift in Sources */,
 				D0C48F3D1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */,
 				D0F3A8A01E82C65400B4C64C /* SynchronizeChatInputStateOperation.swift in Sources */,
@@ -1935,6 +1978,7 @@
 				D050F2611E4A5AE700988324 /* PrivacySettings.swift in Sources */,
 				D0B8440F1DAB91CD005F29E1 /* Either.swift in Sources */,
 				D0DC35511DE36908000195EB /* RequestChatContextResults.swift in Sources */,
+				D08CAA8D1ED81EDF0000FDA8 /* Localizations.swift in Sources */,
 				D0F7B1EC1E045C87007EB8A5 /* SearchPeers.swift in Sources */,
 				D001F3EF1E128A1C007A8C60 /* AccountIntermediateState.swift in Sources */,
 				D0223A991EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift in Sources */,
@@ -2005,6 +2049,7 @@
 				C2366C871E4F403C0097CCFF /* AddressNames.swift in Sources */,
 				D02ABC7F1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */,
 				D0528E611E65B94E00E2FEF5 /* SingleMessageView.swift in Sources */,
+				D08CAA851ED8164B0000FDA8 /* Localization.swift in Sources */,
 				D0528E5B1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */,
 				D0FA8BA51E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D0F7B1E71E045C87007EB8A5 /* JoinChannel.swift in Sources */,
@@ -2020,6 +2065,7 @@
 				D0E305A81E5B5CBE00D7A3A2 /* PeerAdmins.swift in Sources */,
 				D073CE6F1DCBCF17007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
 				D0B844431DAB91FD005F29E1 /* Account.swift in Sources */,
+				D08CAA7E1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */,
 				D0448CA01E27F5EB005A61A7 /* Random.swift in Sources */,
 				C251D7441E65E50500283EDE /* StickerSetInstallation.swift in Sources */,
 			);

@@ -211,7 +211,9 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         authorId = account.peerId
                     }
                     
-                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(media: mediaList, textEntities: entitiesAttribute?.entities), globalTags: globalTagsForStoreMessage(media: mediaList), forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
+                    let (tags, globalTags) = tagsForStoreMessage(incoming: false, media: mediaList, textEntities: entitiesAttribute?.entities)
+                    
+                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source):
                     if let sourceMessage = modifier.getMessage(source), let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {
@@ -255,14 +257,9 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                             }
                         }
                         
-                        let authorId:PeerId?
-                        if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info, !info.flags.contains(.messagesShouldHaveSignatures) {
-                            authorId = peer.id
-                        }  else {
-                            authorId = account.peerId
-                        }
+                        let (tags, globalTags) = tagsForStoreMessage(incoming: false, media: sourceMessage.media, textEntities: entitiesAttribute?.entities)
                         
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tagsForStoreMessage(media: sourceMessage.media, textEntities: entitiesAttribute?.entities), globalTags: globalTagsForStoreMessage(media: sourceMessage.media), forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: account.peerId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                     }
             }
         }

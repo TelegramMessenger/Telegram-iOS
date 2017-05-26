@@ -5,13 +5,14 @@ import Foundation
     import Postbox
 #endif
 
-public func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity]?) -> MessageTags {
+public func tagsForStoreMessage(incoming: Bool, media: [Media], textEntities: [MessageTextEntity]?) -> (MessageTags, GlobalMessageTags) {
     var tags = MessageTags()
+    var globalTags = GlobalMessageTags()
     for attachment in media {
         if let _ = attachment as? TelegramMediaImage {
             tags.insert(.PhotoOrVideo)
         } else if let file = attachment as? TelegramMediaFile {
-            var refinedTag: MessageTags?
+            var refinedTag: MessageTags? = .File
             inner: for attribute in file.attributes {
                 switch attribute {
                     case let .Video(_, _, flags):
@@ -28,17 +29,28 @@ public func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity
                             refinedTag = .Music
                         }
                         break inner
+                    case .Sticker:
+                        refinedTag = nil
+                        break inner
                     default:
                         break
                 }
             }
             if let refinedTag = refinedTag {
                 tags.insert(refinedTag)
-            } else {
-                tags.insert(.File)
             }
         } else if let webpage = attachment as? TelegramMediaWebpage, case .Loaded = webpage.content {
             tags.insert(.WebPage)
+        } else if let action = attachment as? TelegramMediaAction {
+            switch action.action {
+                case let .phoneCall(_, discardReason, _):
+                    globalTags.insert(.Calls)
+                    if incoming, let discardReason = discardReason, case .missed = discardReason {
+                        globalTags.insert(.MissedCalls)
+                    }
+                default:
+                    break
+            }
         }
     }
     if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.WebPage) {
@@ -51,11 +63,7 @@ public func tagsForStoreMessage(media: [Media], textEntities: [MessageTextEntity
             }
         }
     }
-    return tags
-}
-
-public func globalTagsForStoreMessage(media: [Media]) -> GlobalMessageTags {
-    return []
+    return (tags, globalTags)
 }
 
 extension Api.Message {
@@ -425,7 +433,9 @@ extension StoreMessage {
                     storeFlags.insert(.Personal)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(media: medias, textEntities: entitiesAttribute?.entities), globalTags: globalTagsForStoreMessage(media: medias), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), media: medias, textEntities: entitiesAttribute?.entities)
+                
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
@@ -474,7 +484,9 @@ extension StoreMessage {
                     media.append(action)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: [], globalTags: globalTagsForStoreMessage(media: media), forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), media: media, textEntities: nil)
+                
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }

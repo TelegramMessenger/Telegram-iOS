@@ -29,8 +29,8 @@ public class OutgoingMessageInfoAttribute: MessageAttribute {
     }
     
     required public init(decoder: Decoder) {
-        self.uniqueId = decoder.decodeInt64ForKey("u")
-        self.flags = OutgoingMessageInfoFlags(rawValue: decoder.decodeInt32ForKey("f"))
+        self.uniqueId = decoder.decodeInt64ForKey("u", orElse: 0)
+        self.flags = OutgoingMessageInfoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {

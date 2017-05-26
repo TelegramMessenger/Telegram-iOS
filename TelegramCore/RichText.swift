@@ -31,11 +31,11 @@ public indirect enum RichText: Coding, Equatable {
     case concat([RichText])
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("r") as Int32 {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case RichTextTypes.empty.rawValue:
                 self = .empty
             case RichTextTypes.plain.rawValue:
-                self = .plain(decoder.decodeStringForKey("s"))
+                self = .plain(decoder.decodeStringForKey("s", orElse: ""))
             case RichTextTypes.bold.rawValue:
                 self = .bold(decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
             case RichTextTypes.italic.rawValue:
@@ -47,15 +47,15 @@ public indirect enum RichText: Coding, Equatable {
             case RichTextTypes.fixed.rawValue:
                 self = .fixed(decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
             case RichTextTypes.url.rawValue:
-                let webpageIdNamespace: Int32? = decoder.decodeInt32ForKey("w.n")
-                let webpageIdId: Int64? = decoder.decodeInt64ForKey("w.i")
+                let webpageIdNamespace: Int32? = decoder.decodeOptionalInt32ForKey("w.n")
+                let webpageIdId: Int64? = decoder.decodeOptionalInt64ForKey("w.i")
                 var webpageId: MediaId?
                 if let webpageIdNamespace = webpageIdNamespace, let webpageIdId = webpageIdId {
                     webpageId = MediaId(namespace: webpageIdNamespace, id: webpageIdId)
                 }
-                self = .url(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, url: decoder.decodeStringForKey("u"), webpageId: webpageId)
+                self = .url(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, url: decoder.decodeStringForKey("u", orElse: ""), webpageId: webpageId)
             case RichTextTypes.email.rawValue:
-                self = .email(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, email: decoder.decodeStringForKey("e"))
+                self = .email(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, email: decoder.decodeStringForKey("e", orElse: ""))
             case RichTextTypes.concat.rawValue:
                 self = .concat(decoder.decodeObjectArrayWithDecoderForKey("a"))
             default:

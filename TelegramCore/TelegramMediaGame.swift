@@ -30,11 +30,11 @@ public final class TelegramMediaGame: Media {
     }
     
     public init(decoder: Decoder) {
-        self.gameId = decoder.decodeInt64ForKey("i")
-        self.accessHash = decoder.decodeInt64ForKey("h")
-        self.name = decoder.decodeStringForKey("n")
-        self.title = decoder.decodeStringForKey("t")
-        self.description = decoder.decodeStringForKey("d")
+        self.gameId = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
+        self.name = decoder.decodeStringForKey("n", orElse: "")
+        self.title = decoder.decodeStringForKey("t", orElse: "")
+        self.description = decoder.decodeStringForKey("d", orElse: "")
         self.image = decoder.decodeObjectForKey("p") as? TelegramMediaImage
         self.file = decoder.decodeObjectForKey("f") as? TelegramMediaFile
     }

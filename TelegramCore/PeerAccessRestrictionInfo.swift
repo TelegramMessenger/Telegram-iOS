@@ -13,7 +13,7 @@ public final class PeerAccessRestrictionInfo: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.reason = decoder.decodeStringForKey("rsn")
+        self.reason = decoder.decodeStringForKey("rsn", orElse: "")
     }
     
     public func encode(_ encoder: Encoder) {

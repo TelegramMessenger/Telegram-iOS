@@ -20,15 +20,15 @@ public enum SentAuthorizationCodeType: Coding, Equatable {
     case flashCall(pattern: String)
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("v") as Int32 {
+        switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case SentAuthorizationCodeTypeValue.otherSession.rawValue:
-                self = .otherSession(length: decoder.decodeInt32ForKey("l"))
+                self = .otherSession(length: decoder.decodeInt32ForKey("l", orElse: 0))
             case SentAuthorizationCodeTypeValue.sms.rawValue:
-                self = .sms(length: decoder.decodeInt32ForKey("l"))
+                self = .sms(length: decoder.decodeInt32ForKey("l", orElse: 0))
             case SentAuthorizationCodeTypeValue.call.rawValue:
-                self = .call(length: decoder.decodeInt32ForKey("l"))
+                self = .call(length: decoder.decodeInt32ForKey("l", orElse: 0))
             case SentAuthorizationCodeTypeValue.flashCall.rawValue:
-                self = .flashCall(pattern: decoder.decodeStringForKey("p"))
+                self = .flashCall(pattern: decoder.decodeStringForKey("p", orElse: ""))
             default:
                 preconditionFailure()
         }
@@ -99,25 +99,25 @@ public enum UnauthorizedAccountStateContents: Coding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
     case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?)
-    case passwordEntry(hint: String, number:String?, code:String?)
+    case passwordEntry(hint: String, number: String?, code: String?)
     case signUp(number: String, codeHash: String, code: String, firstName: String, lastName: String)
     
     public init(decoder: Decoder) {
-        switch decoder.decodeInt32ForKey("v") as Int32 {
+        switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case UnauthorizedAccountStateContentsValue.empty.rawValue:
                 self = .empty
             case UnauthorizedAccountStateContentsValue.phoneEntry.rawValue:
-                self = .phoneEntry(countryCode: decoder.decodeInt32ForKey("cc"), number: decoder.decodeStringForKey("n"))
+                self = .phoneEntry(countryCode: decoder.decodeInt32ForKey("cc", orElse: 1), number: decoder.decodeStringForKey("n", orElse: ""))
             case UnauthorizedAccountStateContentsValue.confirmationCodeEntry.rawValue:
                 var nextType: AuthorizationCodeNextType?
-                if let value = decoder.decodeInt32ForKey("nt") as Int32? {
+                if let value = decoder.decodeOptionalInt32ForKey("nt") {
                     nextType = AuthorizationCodeNextType(rawValue: value)
                 }
-                self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num"), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h"), timeout: decoder.decodeInt32ForKey("tm"), nextType: nextType)
+                self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType)
             case UnauthorizedAccountStateContentsValue.passwordEntry.rawValue:
-                self = .passwordEntry(hint: decoder.decodeStringForKey("h"), number: decoder.decodeStringForKey("n"), code: decoder.decodeStringForKey("c"))
+                self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: decoder.decodeOptionalStringForKey("c"))
             case UnauthorizedAccountStateContentsValue.signUp.rawValue:
-                self = .signUp(number: decoder.decodeStringForKey("n"), codeHash: decoder.decodeStringForKey("h"), code: decoder.decodeStringForKey("c"), firstName: decoder.decodeStringForKey("f"), lastName: decoder.decodeStringForKey("l"))
+                self = .signUp(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), code: decoder.decodeStringForKey("c", orElse: ""), firstName: decoder.decodeStringForKey("f", orElse: ""), lastName: decoder.decodeStringForKey("l", orElse: ""))
             default:
                 assertionFailure()
                 self = .empty
@@ -231,7 +231,7 @@ public final class UnauthorizedAccountState: AccountState {
     }
     
     public init(decoder: Decoder) {
-        self.masterDatacenterId = decoder.decodeInt32ForKey("dc")
+        self.masterDatacenterId = decoder.decodeInt32ForKey("dc", orElse: 0)
         self.contents = decoder.decodeObjectForKey("c", decoder: { UnauthorizedAccountStateContents(decoder: $0) }) as! UnauthorizedAccountStateContents
     }
     

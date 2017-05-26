@@ -15,7 +15,7 @@ public final class CachedPeerBotInfo: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.peerId = PeerId(decoder.decodeInt64ForKey("p"))
+        self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.botInfo = decoder.decodeObjectForKey("i", decoder: { return BotInfo(decoder: $0) }) as! BotInfo
     }
     
@@ -68,7 +68,7 @@ public final class CachedGroupData: CachedPeerData {
         self.participants = participants
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
-        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r"))!
+        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
         
         var peerIds = Set<PeerId>()
         if let participants = participants {

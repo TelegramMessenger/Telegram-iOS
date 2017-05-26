@@ -21,9 +21,9 @@ final class SecretChatEncryptionConfig: Coding {
     }
     
     init(decoder: Decoder) {
-        self.g = decoder.decodeInt32ForKey("g")
+        self.g = decoder.decodeInt32ForKey("g", orElse: 0)
         self.p = decoder.decodeBytesForKey("p")!
-        self.version = decoder.decodeInt32ForKey("v")
+        self.version = decoder.decodeInt32ForKey("v", orElse: 0)
     }
     
     func encode(_ encoder: Encoder) {

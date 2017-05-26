@@ -32,7 +32,7 @@ final class CloudChatRemoveMessagesOperation: Coding {
     
     init(decoder: Decoder) {
         self.messageIds = MessageId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("i")!)
-        self.type = CloudChatRemoveMessagesType(rawValue: decoder.decodeInt32ForKey("t"))!
+        self.type = CloudChatRemoveMessagesType(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!
     }
     
     func encode(_ encoder: Encoder) {
@@ -55,9 +55,9 @@ final class CloudChatRemoveChatOperation: Coding {
     }
     
     init(decoder: Decoder) {
-        self.peerId = PeerId(decoder.decodeInt64ForKey("p"))
-        self.reportChatSpam = (decoder.decodeInt32ForKey("r") as Int32) != 0
-        if let messageIdPeerId = (decoder.decodeInt64ForKey("m.p") as Int64?), let messageIdNamespace = (decoder.decodeInt32ForKey("m.n") as Int32?), let messageIdId = (decoder.decodeInt32ForKey("m.i") as Int32?) {
+        self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+        self.reportChatSpam = decoder.decodeInt32ForKey("r", orElse: 0) != 0
+        if let messageIdPeerId = decoder.decodeOptionalInt64ForKey("m.p"), let messageIdNamespace = decoder.decodeOptionalInt32ForKey("m.n"), let messageIdId = decoder.decodeOptionalInt32ForKey("m.i") {
             self.topMessageId = MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId)
         } else {
             self.topMessageId = nil
@@ -89,8 +89,8 @@ final class CloudChatClearHistoryOperation: Coding {
     }
     
     init(decoder: Decoder) {
-        self.peerId = PeerId(decoder.decodeInt64ForKey("p"))
-        self.topMessageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p")), namespace: decoder.decodeInt32ForKey("m.n"), id: decoder.decodeInt32ForKey("m.i"))
+        self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+        self.topMessageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0))
     }
     
     func encode(_ encoder: Encoder) {

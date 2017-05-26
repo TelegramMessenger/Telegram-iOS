@@ -9,6 +9,28 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
+public enum CallListViewType {
+    case all
+    case missed
+}
+
+public enum CallListViewEntry {
+    case message(Message, [Message])
+    case hole(MessageIndex)
+}
+
+public final class CallListView {
+    public let entries: [CallListViewEntry]
+    public let earlier: MessageIndex?
+    public let later: MessageIndex?
+    
+    init(entries: [CallListViewEntry], earlier: MessageIndex?, later: MessageIndex?) {
+        self.entries = entries
+        self.earlier = earlier
+        self.later = later
+    }
+}
+
 private func pendingWebpages(entries: [MessageHistoryEntry]) -> Set<MessageId> {
     var messageIds = Set<MessageId>()
     for case let .MessageEntry(message, _, _, _) in entries {
@@ -160,6 +182,10 @@ public final class AccountViewTracker {
     private var pendingWebpageMessageIds: [MessageId: Int] = [:]
     private var webpageDisposables: [MessageId: Disposable] = [:]
     
+    private var viewVisibleCallListHoleIds: [Int32: Set<MessageIndex>] = [:]
+    private var visibleCallListHoleIds: [MessageIndex: Int] = [:]
+    private var visibleCallListHoleDisposables: [MessageIndex: Disposable] = [:]
+    
     private var updatedViewCountMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextUpdatedViewCountDisposableId: Int32 = 0
     private var updatedViewCountDisposables = DisposableDict<Int32>()
@@ -227,6 +253,66 @@ public final class AccountViewTracker {
                             if let strongSelf = self {
                                 strongSelf.queue.async {
                                     strongSelf.webpageDisposables.removeValue(forKey: messageId)
+                                }
+                            }
+                        })
+                    } else {
+                        assertionFailure()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func updateVisibleCallListHoles(viewId: Int32, holeIds: Set<MessageIndex>) {
+        self.queue.async {
+            var addedHoleIds: [MessageIndex] = []
+            var removedHoleIds: [MessageIndex] = []
+            
+            let viewHoleIds: Set<MessageIndex> = self.viewVisibleCallListHoleIds[viewId] ?? Set()
+            
+            let viewAddedHoleIds = holeIds.subtracting(viewHoleIds)
+            let viewRemovedHoleIds = viewHoleIds.subtracting(holeIds)
+            for holeId in viewAddedHoleIds {
+                if let count = self.visibleCallListHoleIds[holeId] {
+                    self.visibleCallListHoleIds[holeId] = count + 1
+                } else {
+                    self.visibleCallListHoleIds[holeId] = 1
+                    addedHoleIds.append(holeId)
+                }
+            }
+            for holeId in viewRemovedHoleIds {
+                if let count = self.visibleCallListHoleIds[holeId] {
+                    if count == 1 {
+                        self.visibleCallListHoleIds.removeValue(forKey: holeId)
+                        removedHoleIds.append(holeId)
+                    } else {
+                        self.visibleCallListHoleIds[holeId] = count - 1
+                    }
+                } else {
+                    assertionFailure()
+                }
+            }
+            
+            if holeIds.isEmpty {
+                self.viewVisibleCallListHoleIds.removeValue(forKey: viewId)
+            } else {
+                self.viewVisibleCallListHoleIds[viewId] = holeIds
+            }
+            
+            for holeId in removedHoleIds {
+                if let disposable = self.visibleCallListHoleDisposables.removeValue(forKey: holeId) {
+                    disposable.dispose()
+                }
+            }
+            
+            if let account = self.account {
+                for holeId in addedHoleIds {
+                    if self.visibleCallListHoleDisposables[holeId] == nil {
+                        self.visibleCallListHoleDisposables[holeId] = fetchCallListHole(network: account.network, postbox: account.postbox, holeIndex: holeId).start(completed: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.queue.async {
+                                    strongSelf.visibleCallListHoleDisposables.removeValue(forKey: holeId)
                                 }
                             }
                         })
@@ -567,6 +653,125 @@ public final class AccountViewTracker {
                 subscriber.putCompletion()
                 return EmptyDisposable
             }
+        }
+    }
+    
+    public func callListView(type: CallListViewType, index: MessageIndex, count: Int) -> Signal<CallListView, NoError> {
+        if let account = self.account {
+            let granularity: Int32 = 60 * 60 * 24
+            let timezoneOffset: Int32 = {
+                let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                var now: time_t = time_t(nowTimestamp)
+                var timeinfoNow: tm = tm()
+                localtime_r(&now, &timeinfoNow)
+                return Int32(timeinfoNow.tm_gmtoff)
+            }()
+            
+            let groupingPredicate: (Message, Message) -> Bool = { lhs, rhs in
+                if lhs.id.peerId != rhs.id.peerId {
+                    return false
+                }
+                let lhsTimestamp = ((lhs.timestamp + timezoneOffset) / (granularity)) * (granularity)
+                let rhsTimestamp = ((rhs.timestamp + timezoneOffset) / (granularity)) * (granularity)
+                if lhsTimestamp != rhsTimestamp {
+                    return false
+                }
+                var lhsMissed = false
+                var lhsOther = false
+                inner: for media in lhs.media {
+                    if let action = media as? TelegramMediaAction {
+                        if case let .phoneCall(_, discardReason, _) = action.action {
+                            if lhs.flags.contains(.Incoming), let discardReason = discardReason, case .missed = discardReason {
+                                lhsMissed = true
+                            } else {
+                                lhsOther = true
+                            }
+                            break inner
+                        }
+                    }
+                }
+                var rhsMissed = false
+                var rhsOther = false
+                inner: for media in rhs.media {
+                    if let action = media as? TelegramMediaAction {
+                        if case let .phoneCall(_, discardReason, _) = action.action {
+                            if rhs.flags.contains(.Incoming), let discardReason = discardReason, case .missed = discardReason {
+                                rhsMissed = true
+                            } else {
+                                rhsOther = true
+                            }
+                            break inner
+                        }
+                    }
+                }
+                if lhsMissed != rhsMissed || lhsOther != rhsOther {
+                    return false
+                }
+                return true
+            }
+            
+            let key = PostboxViewKey.globalMessageTags(globalTag: type == .all ? GlobalMessageTags.Calls : GlobalMessageTags.MissedCalls, position: index, count: 200, groupingPredicate: groupingPredicate)
+            let signal = account.postbox.combinedView(keys: [key]) |> map { view -> GlobalMessageTagsView in
+                let messageView = view.views[key] as! GlobalMessageTagsView
+                return messageView
+            }
+            
+            let managed = withState(signal, { [weak self] () -> Int32 in
+                if let strongSelf = self {
+                    return OSAtomicIncrement32(&strongSelf.nextViewId)
+                } else {
+                    return -1
+                }
+            }, next: { [weak self] next, viewId in
+                if let strongSelf = self {
+                    var holes = Set<MessageIndex>()
+                    for entry in next.entries {
+                        if case let .hole(index) = entry {
+                            holes.insert(index)
+                        }
+                    }
+                    strongSelf.updateVisibleCallListHoles(viewId: viewId, holeIds: holes)
+                }
+            }, disposed: { [weak self] viewId in
+                if let strongSelf = self {
+                    strongSelf.updateVisibleCallListHoles(viewId: viewId, holeIds: Set())
+                }
+            })
+            
+            return managed
+                |> map { view -> CallListView in
+                    var entries: [CallListViewEntry] = []
+                    if !view.entries.isEmpty {
+                        var currentMessages: [Message] = []
+                        for entry in view.entries {
+                            switch entry {
+                                case let .hole(index):
+                                    if !currentMessages.isEmpty {
+                                        entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
+                                        currentMessages.removeAll()
+                                    }
+                                    //entries.append(.hole(index))
+                                case let .message(message):
+                                    if currentMessages.isEmpty || groupingPredicate(message, currentMessages[currentMessages.count - 1]) {
+                                        currentMessages.append(message)
+                                    } else {
+                                        if !currentMessages.isEmpty {
+                                            entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
+                                            currentMessages.removeAll()
+                                        }
+                                        currentMessages.append(message)
+                                    }
+                            }
+                        }
+                        if !currentMessages.isEmpty {
+                            entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
+                            currentMessages.removeAll()
+                        }
+                    }
+                    return CallListView(entries: entries, earlier: view.earlier, later: view.later)
+                }
+        } else {
+            return .never()
         }
     }
 }
