@@ -41,16 +41,18 @@
         _queue = [[MTQueue alloc] init];
         _info = info;
         
-        NSString *path = info.filePath;
-        int32_t fd = open([path UTF8String], O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-        if (fd >= 0) {
-            _fd = fd;
-            ftruncate(fd, 4096);
-            void *map = mmap(0, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-            if (map != MAP_FAILED) {
-                _map = map;
+        [_queue dispatchOnQueue:^{
+            NSString *path = info.filePath;
+            int32_t fd = open([path UTF8String], O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+            if (fd >= 0) {
+                _fd = fd;
+                ftruncate(fd, 4096);
+                void *map = mmap(0, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+                if (map != MAP_FAILED) {
+                    _map = map;
+                }
             }
-        }
+        }];
     }
     return self;
 }

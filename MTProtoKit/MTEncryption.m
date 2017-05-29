@@ -44,12 +44,22 @@ NSData *MTSubdataSha1(NSData *data, NSUInteger offset, NSUInteger length)
     return [[NSData alloc] initWithBytes:digest length:20];
 }
 
+void MTRawSha1(void const *inData, NSUInteger length, void *outData)
+{
+    CC_SHA1(inData, (CC_LONG)length, outData);
+}
+
 NSData *MTSha256(NSData *data)
 {
     uint8_t digest[CC_SHA256_DIGEST_LENGTH];
     CC_SHA256(data.bytes, (CC_LONG)data.length, digest);
     
     return [[NSData alloc] initWithBytes:digest length:CC_SHA256_DIGEST_LENGTH];
+}
+
+void MTRawSha256(void const *inData, NSUInteger length, void *outData)
+{
+    CC_SHA256(inData, (CC_LONG)length, outData);
 }
 
 #if defined(_MSC_VER)
@@ -204,6 +214,20 @@ void MTAesEncryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *k
     memcpy(iv, aesIv, 32);
 }
 
+void MTAesEncryptRaw(void const *data, void *outData, NSInteger length, void const *key, void const *iv) {
+    unsigned char aesIv[32];
+    memcpy(aesIv, iv, 32);
+    
+    MyAesIgeEncrypt(data, (int)length, outData, key, 32, aesIv);
+}
+
+void MTAesDecryptRaw(void const *data, void *outData, NSInteger length, void const *key, void const *iv) {
+    unsigned char aesIv[32];
+    memcpy(aesIv, iv, 32);
+    
+    MyAesIgeDecrypt(data, (int)length, outData, key, 32, aesIv);
+}
+
 void MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv)
 {
     unsigned char aesIv[16 * 2];
@@ -223,6 +247,18 @@ void MTAesDecryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *k
     
     void *outData = malloc(length);
     MyAesIgeDecrypt(data, (int)length, outData, key.bytes, (int)key.length, aesIv);
+    memcpy(data, outData, length);
+    free(outData);
+    
+    memcpy(iv, aesIv, 16 * 2);
+}
+
+void MTAesDecryptRawInplaceAndModifyIv(void *data, NSInteger length, void *key, void *iv) {
+    unsigned char aesIv[16 * 2];
+    memcpy(aesIv, iv, 16 * 2);
+    
+    void *outData = malloc(length);
+    MyAesIgeDecrypt(data, (int)length, outData, key, 32, aesIv);
     memcpy(data, outData, length);
     free(outData);
     
