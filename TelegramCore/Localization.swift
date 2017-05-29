@@ -9,6 +9,15 @@ public enum LocalizationEntry: Equatable {
     case string(key: String, value: String)
     case pluralizedString(key: String, zero: String?, one: String?, two: String?, few: String?, many: String?, other: String)
     
+    public var key: String {
+        switch self {
+            case let .string(key, _):
+                return key
+            case let .pluralizedString(key, _, _, _, _, _, _):
+                return key
+        }
+    }
+    
     public static func ==(lhs: LocalizationEntry, rhs: LocalizationEntry) -> Bool {
         switch lhs {
             case let .string(key, value):
@@ -25,19 +34,19 @@ public enum LocalizationEntry: Equatable {
                     if lhsZero != rhsZero {
                         return false
                     }
-                    if lhsOne != lhsOne {
+                    if lhsOne != rhsOne {
                         return false
                     }
-                    if lhsTwo != lhsTwo {
+                    if lhsTwo != rhsTwo {
                         return false
                     }
-                    if lhsFew != lhsFew {
+                    if lhsFew != rhsFew {
                         return false
                     }
-                    if lhsMany != lhsMany {
+                    if lhsMany != rhsMany {
                         return false
                     }
-                    if lhsOther != lhsOther {
+                    if lhsOther != rhsOther {
                         return false
                     }
                     return true
@@ -79,13 +88,16 @@ private func writeString(_ buffer: WriteBuffer, _ string: String) {
 }
 
 public final class Localization: Coding, Equatable {
+    public let version: Int32
     public let entries: [LocalizationEntry]
     
-    init(entries: [LocalizationEntry]) {
+    init(version: Int32, entries: [LocalizationEntry]) {
+        self.version = version
         self.entries = entries
     }
     
     public init(decoder: Decoder) {
+        self.version = decoder.decodeInt32ForKey("v", orElse: 0)
         let count = decoder.decodeInt32ForKey("c", orElse: 0)
         var entries: [LocalizationEntry] = []
         if let data = decoder.decodeBytesForKey("d") {

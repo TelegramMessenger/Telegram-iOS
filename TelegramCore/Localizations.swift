@@ -65,9 +65,11 @@ public func downloadLocalization(network: Network, languageCode: String) -> Sign
     return network.request(Api.functions.langpack.getLangPack(langCode: languageCode))
         |> retryRequest
         |> map { result -> Localization in
+            let version: Int32
             var entries: [LocalizationEntry] = []
             switch result {
-                case let .langPackDifference(_, _, _, strings):
+                case let .langPackDifference(_, _, versionValue, strings):
+                    version = versionValue
                     for string in strings {
                         switch string {
                             case let .langPackString(key, value):
@@ -78,7 +80,7 @@ public func downloadLocalization(network: Network, languageCode: String) -> Sign
                     }
             }
             
-            return Localization(entries: entries)
+            return Localization(version: version, entries: entries)
         }
 }
 

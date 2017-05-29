@@ -70,6 +70,7 @@ enum AccountStateMutationOperation {
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
     case UpdateChatInputState(PeerId, SynchronizeableChatInputState?)
     case UpdateCall(Api.PhoneCall)
+    case UpdateLangPack(Api.LangPackDifference?)
 }
 
 struct AccountMutableState {
@@ -194,6 +195,10 @@ struct AccountMutableState {
         self.addOperation(.UpdateCachedPeerData(id, f))
     }
     
+    mutating func updateLangPack(_ difference: Api.LangPackDifference?) {
+        self.addOperation(.UpdateLangPack(difference))
+    }
+    
     mutating func mergeUsers(_ users: [Api.User]) {
         self.addOperation(.MergeApiUsers(users))
         
@@ -260,7 +265,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {

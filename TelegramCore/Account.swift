@@ -226,6 +226,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CacheStorageSettings.self, f: { CacheStorageSettings(decoder: $0) })
     declareEncodable(LocalizationSettings.self, f: { LocalizationSettings(decoder: $0) })
     declareEncodable(SuggestedLocalizationEntry.self, f: { SuggestedLocalizationEntry(decoder: $0) })
+    declareEncodable(SynchronizeLocalizationUpdatesOperation.self, f: { SynchronizeLocalizationUpdatesOperation(decoder: $0) })
     
     return
 }()
@@ -592,6 +593,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged

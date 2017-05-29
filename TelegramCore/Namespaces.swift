@@ -89,6 +89,7 @@ struct OperationLogTags {
     static let SynchronizeMarkFeaturedStickerPacksAsSeen = PeerOperationLogTag(value: 10)
     static let SynchronizeChatInputStates = PeerOperationLogTag(value: 11)
     static let SynchronizeSavedGifs = PeerOperationLogTag(value: 12)
+    static let SynchronizeLocalizationUpdates = PeerOperationLogTag(value: 13)
 }
 
 private enum PreferencesKeyValues: Int32 {

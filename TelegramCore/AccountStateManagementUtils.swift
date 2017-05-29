@@ -9,12 +9,6 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-private enum Event<T, E> {
-    case Next(T)
-    case Error(E)
-    case Completion
-}
-
 private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
     var peerIds = Set<PeerId>()
     
@@ -997,6 +991,10 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.addUpdateChatInputState(peerId: peer.peerId, state: inputState)
             case let .updatePhoneCall(phoneCall):
                 updatedState.addUpdateCall(phoneCall)
+            case .updateLangPackTooLong:
+                updatedState.updateLangPack(nil)
+            case let .updateLangPack(difference):
+                updatedState.updateLangPack(difference)
             default:
                     break
         }
@@ -1371,7 +1369,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1419,8 +1417,9 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     var updatedSecretChatTypingActivities = Set<PeerId>()
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
-    
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
+    var langPackDifferences: [Api.LangPackDifference] = []
+    var pollLangPack = false
     
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
@@ -1574,6 +1573,12 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 })
             case let .UpdateCall(call):
                 updatedCalls.append(call)
+            case let .UpdateLangPack(difference):
+                if let difference = difference {
+                    langPackDifferences.append(difference)
+                } else {
+                    pollLangPack = false
+                }
         }
     }
     
@@ -1744,6 +1749,31 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
             updatedTypingActivities[chatPeerId] = [authorId: activityValue]
         } else {
             updatedTypingActivities[chatPeerId]![authorId] = activityValue
+        }
+    }
+    
+    if pollLangPack {
+        addSynchronizeLocalizationUpdatesOperation(modifier: modifier)
+    } else if !langPackDifferences.isEmpty {
+        langPackDifferences.sort(by: { lhs, rhs in
+            let lhsVersion: Int32
+            switch lhs {
+                case let .langPackDifference(_, fromVersion, _, _):
+                    lhsVersion = fromVersion
+            }
+            let rhsVersion: Int32
+            switch rhs {
+                case let .langPackDifference(_, fromVersion, _, _):
+                    rhsVersion = fromVersion
+            }
+            return lhsVersion < rhsVersion
+        })
+        
+        for difference in langPackDifferences {
+            if !tryApplyingLanguageDifference(modifier: modifier, difference: difference) {
+                addSynchronizeLocalizationUpdatesOperation(modifier: modifier)
+                break
+            }
         }
     }
     
