@@ -6,8 +6,12 @@ import Foundation
 #endif
 
 protocol TelegramCloudMediaResource: TelegramMediaResource {
-    var datacenterId: Int { get }
+    
     var apiInputLocation: Api.InputFileLocation { get }
+}
+
+protocol TelegramMultipartFetchableResource: TelegramMediaResource {
+    var datacenterId: Int { get }
 }
 
 public struct CloudFileMediaResourceId: MediaResourceId {
@@ -40,7 +44,7 @@ public struct CloudFileMediaResourceId: MediaResourceId {
     }
 }
 
-public class CloudFileMediaResource: TelegramCloudMediaResource {
+public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipartFetchableResource {
     public let datacenterId: Int
     let volumeId: Int64
     let localId: Int32
@@ -124,7 +128,7 @@ public struct CloudDocumentMediaResourceId: MediaResourceId {
     }
 }
 
-public class CloudDocumentMediaResource: TelegramCloudMediaResource {
+public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMultipartFetchableResource {
     public let datacenterId: Int
     let fileId: Int64
     let accessHash: Int64
@@ -348,6 +352,76 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
     }
 }
 
+public struct WebFileReferenceMediaResourceId: MediaResourceId {
+    public let url: String
+    public let datacenterId:Int32
+    public let accessHash:Int64
+    public let size:Int32
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? WebFileReferenceMediaResourceId {
+            return self.url == to.url && datacenterId == to.datacenterId && size == to.size && accessHash == to.accessHash
+        } else {
+            return false
+        }
+    }
+    
+    public var hashValue: Int {
+        return self.url.hashValue
+    }
+    
+    public var uniqueId: String {
+        return "proxy-\(persistentHash32(self.url))-\(datacenterId)-\(size)-\(accessHash)"
+    }
+}
+
+public final class WebFileReferenceMediaResource: TelegramMediaResource, TelegramMultipartFetchableResource {
+    var datacenterId: Int {
+        return Int(_datacenterId)
+    }
+
+    public let url: String
+    public let size: Int32
+    private let _datacenterId:Int32
+    public let accessHash:Int64
+    public init(url: String, size: Int32, datacenterId:Int32, accessHash:Int64) {
+        self.url = url
+        self.size = size
+        self._datacenterId = datacenterId
+        self.accessHash = accessHash
+    }
+    
+    var apiInputLocation: Api.InputWebFileLocation {
+        return Api.InputWebFileLocation.inputWebFileLocation(url: url, accessHash: accessHash)
+    }
+    
+    public required init(decoder: Decoder) {
+        self.url = decoder.decodeStringForKey("u", orElse: "")
+        self.size = decoder.decodeInt32ForKey("s", orElse: 0)
+        self._datacenterId = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeString(self.url, forKey: "u")
+        encoder.encodeInt32(self.size, forKey: "s")
+        encoder.encodeInt32(self._datacenterId, forKey: "d")
+        encoder.encodeInt64(self.accessHash, forKey: "h")
+    }
+    
+    public var id: MediaResourceId {
+        return WebFileReferenceMediaResourceId(url: self.url, datacenterId: self._datacenterId, accessHash: accessHash, size: self.size)
+    }
+    
+    public func isEqual(to: TelegramMediaResource) -> Bool {
+        if let to = to as? WebFileReferenceMediaResource {
+            return to.url == self.url && to.datacenterId == self.datacenterId && to.size == self.size && to.accessHash == self.accessHash
+        } else {
+            return false
+        }
+    }
+}
+
+
 public struct SecretFileMediaResourceId: MediaResourceId {
     public let fileId: Int64
     public let datacenterId: Int32
@@ -374,7 +448,7 @@ public struct SecretFileMediaResourceId: MediaResourceId {
     }
 }
 
-public struct SecretFileMediaResource: TelegramCloudMediaResource {
+public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMultipartFetchableResource {
     public let fileId: Int64
     public let accessHash: Int64
     public let size: Int?

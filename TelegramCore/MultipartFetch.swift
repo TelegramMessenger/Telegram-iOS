@@ -192,13 +192,19 @@ private final class MultipartFetchManager {
     }
 }
 
-func multipartFetch(account: Account, resource: TelegramCloudMediaResource, size: Int?, range: Range<Int>, tag: MediaResourceFetchTag?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
+func multipartFetch(account: Account, resource: TelegramMultipartFetchableResource, size: Int?, range: Range<Int>, tag: MediaResourceFetchTag?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
     return account.network.download(datacenterId: resource.datacenterId, tag: tag)
         |> mapToSignal { download -> Signal<MediaResourceDataFetchResult, NoError> in
             return Signal { subscriber in
-                let inputLocation = resource.apiInputLocation
+                
                 let manager = MultipartFetchManager(size: size, range: range, encryptionKey: encryptionKey, decryptedSize: decryptedSize, fetchPart: { offset, size in
-                    return download.part(location: inputLocation, offset: offset, length: size)
+                    if let resource = resource as? TelegramCloudMediaResource {
+                        return download.part(location: resource.apiInputLocation, offset: offset, length: size)
+                    } else if let resource = resource as? WebFileReferenceMediaResource {
+                        return download.webFilePart(location: resource.apiInputLocation, offset: offset, length: size)
+                    } else {
+                        fatalError("multipart fetch allos only TelegramCloudMediaResource and WebFileReferenceMediaResource")
+                    }
                 }, partReady: { data in
                     subscriber.putNext(.dataPart(data: data, range: 0 ..< data.count, complete: false))
                 }, completed: {

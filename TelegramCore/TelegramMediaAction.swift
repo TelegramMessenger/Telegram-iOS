@@ -28,7 +28,7 @@ public enum TelegramMediaActionType: Coding, Equatable {
     case messageAutoremoveTimeoutUpdated(Int32)
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
-    
+    case paymentSent(currency: String, totalAmount: Int64)
     public init(decoder: Decoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
         switch rawValue {
@@ -64,6 +64,9 @@ public enum TelegramMediaActionType: Coding, Equatable {
                     discardReason = PhoneCallDiscardReason(rawValue: value)
                 }
                 self = .phoneCall(callId: decoder.decodeInt64ForKey("i", orElse: 0), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d", orElse: 0))
+            case 15:
+                self = .paymentSent(currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("ta", orElse: 0))
+
             default:
                 self = .unknown
         }
@@ -117,6 +120,10 @@ public enum TelegramMediaActionType: Coding, Equatable {
                 encoder.encodeInt32(13, forKey: "_rawValue")
                 encoder.encodeInt64(gameId, forKey: "i")
                 encoder.encodeInt32(score, forKey: "s")
+            case let .paymentSent(currency, totalAmount):
+                encoder.encodeInt32(15, forKey: "_rawValue")
+                encoder.encodeString(currency, forKey: "currency")
+                encoder.encodeInt64(totalAmount, forKey: "ta")
             case let .phoneCall(callId, discardReason, duration):
                 encoder.encodeInt32(14, forKey: "_rawValue")
                 encoder.encodeInt64(callId, forKey: "i")
@@ -237,6 +244,12 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             } else {
                 return false
             }
+        case let .paymentSent(currency, totalAmount):
+            if case .paymentSent(currency, totalAmount) = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .phoneCall(lhsCallId, lhsDiscardReason, lhsDuration):
             if case let .phoneCall(rhsCallId, rhsDiscardReason, rhsDuration) = rhs, lhsCallId == rhsCallId && lhsDiscardReason == rhsDiscardReason && lhsDuration == rhsDuration {
                 return true
@@ -312,7 +325,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         case .messageActionEmpty:
             return nil
         case let .messageActionPaymentSent(currency, totalAmount):
-            return nil
+            return TelegramMediaAction(action: .paymentSent(currency: currency, totalAmount: totalAmount))
         case .messageActionPaymentSentMe:
             return nil
     }
