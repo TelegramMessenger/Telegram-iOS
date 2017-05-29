@@ -344,7 +344,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
-    dict[-163699244] = { return Api.Config.parse_config($0) }
+    dict[2146355336] = { return Api.Config.parse_config($0) }
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
@@ -10472,13 +10472,13 @@ public struct Api {
     }
 
     public enum Config: CustomStringConvertible {
-        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, suggestedLangCode: String?, disabledFeatures: [Api.DisabledFeature])
+        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, suggestedLangCode: String?, langPackVersion: Int32?, disabledFeatures: [Api.DisabledFeature])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let suggestedLangCode, let disabledFeatures):
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let suggestedLangCode, let langPackVersion, let disabledFeatures):
                     if boxed {
-                        buffer.appendInt32(-163699244)
+                        buffer.appendInt32(2146355336)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -10514,6 +10514,7 @@ public struct Api {
                     serializeInt32(callPacketTimeoutMs, buffer: buffer, boxed: false)
                     serializeString(meUrlPrefix, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(suggestedLangCode!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(langPackVersion!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(disabledFeatures.count))
                     for item in disabledFeatures {
@@ -10589,9 +10590,11 @@ public struct Api {
             _29 = parseString(reader)
             var _30: String?
             if Int(_1!) & Int(1 << 2) != 0 {_30 = parseString(reader) }
-            var _31: [Api.DisabledFeature]?
+            var _31: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_31 = reader.readInt32() }
+            var _32: [Api.DisabledFeature]?
             if let _ = reader.readInt32() {
-                _31 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DisabledFeature.self)
+                _32 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DisabledFeature.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -10623,9 +10626,10 @@ public struct Api {
             let _c28 = _28 != nil
             let _c29 = _29 != nil
             let _c30 = (Int(_1!) & Int(1 << 2) == 0) || _30 != nil
-            let _c31 = _31 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 {
-                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, chatBigSize: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, ratingEDecay: _21!, stickersRecentLimit: _22!, tmpSessions: _23, pinnedDialogsCountMax: _24!, callReceiveTimeoutMs: _25!, callRingTimeoutMs: _26!, callConnectTimeoutMs: _27!, callPacketTimeoutMs: _28!, meUrlPrefix: _29!, suggestedLangCode: _30, disabledFeatures: _31!)
+            let _c31 = (Int(_1!) & Int(1 << 2) == 0) || _31 != nil
+            let _c32 = _32 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 {
+                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, chatBigSize: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, ratingEDecay: _21!, stickersRecentLimit: _22!, tmpSessions: _23, pinnedDialogsCountMax: _24!, callReceiveTimeoutMs: _25!, callRingTimeoutMs: _26!, callConnectTimeoutMs: _27!, callPacketTimeoutMs: _28!, meUrlPrefix: _29!, suggestedLangCode: _30, langPackVersion: _31, disabledFeatures: _32!)
             }
             else {
                 return nil
@@ -10635,8 +10639,8 @@ public struct Api {
         public var description: String {
             get {
                 switch self {
-                    case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let suggestedLangCode, let disabledFeatures):
-                        return "(config flags: \(flags), date: \(date), expires: \(expires), testMode: \(testMode), thisDc: \(thisDc), dcOptions: \(dcOptions), chatSizeMax: \(chatSizeMax), megagroupSizeMax: \(megagroupSizeMax), forwardedCountMax: \(forwardedCountMax), onlineUpdatePeriodMs: \(onlineUpdatePeriodMs), offlineBlurTimeoutMs: \(offlineBlurTimeoutMs), offlineIdleTimeoutMs: \(offlineIdleTimeoutMs), onlineCloudTimeoutMs: \(onlineCloudTimeoutMs), notifyCloudDelayMs: \(notifyCloudDelayMs), notifyDefaultDelayMs: \(notifyDefaultDelayMs), chatBigSize: \(chatBigSize), pushChatPeriodMs: \(pushChatPeriodMs), pushChatLimit: \(pushChatLimit), savedGifsLimit: \(savedGifsLimit), editTimeLimit: \(editTimeLimit), ratingEDecay: \(ratingEDecay), stickersRecentLimit: \(stickersRecentLimit), tmpSessions: \(tmpSessions), pinnedDialogsCountMax: \(pinnedDialogsCountMax), callReceiveTimeoutMs: \(callReceiveTimeoutMs), callRingTimeoutMs: \(callRingTimeoutMs), callConnectTimeoutMs: \(callConnectTimeoutMs), callPacketTimeoutMs: \(callPacketTimeoutMs), meUrlPrefix: \(meUrlPrefix), suggestedLangCode: \(suggestedLangCode), disabledFeatures: \(disabledFeatures))"
+                    case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let suggestedLangCode, let langPackVersion, let disabledFeatures):
+                        return "(config flags: \(flags), date: \(date), expires: \(expires), testMode: \(testMode), thisDc: \(thisDc), dcOptions: \(dcOptions), chatSizeMax: \(chatSizeMax), megagroupSizeMax: \(megagroupSizeMax), forwardedCountMax: \(forwardedCountMax), onlineUpdatePeriodMs: \(onlineUpdatePeriodMs), offlineBlurTimeoutMs: \(offlineBlurTimeoutMs), offlineIdleTimeoutMs: \(offlineIdleTimeoutMs), onlineCloudTimeoutMs: \(onlineCloudTimeoutMs), notifyCloudDelayMs: \(notifyCloudDelayMs), notifyDefaultDelayMs: \(notifyDefaultDelayMs), chatBigSize: \(chatBigSize), pushChatPeriodMs: \(pushChatPeriodMs), pushChatLimit: \(pushChatLimit), savedGifsLimit: \(savedGifsLimit), editTimeLimit: \(editTimeLimit), ratingEDecay: \(ratingEDecay), stickersRecentLimit: \(stickersRecentLimit), tmpSessions: \(tmpSessions), pinnedDialogsCountMax: \(pinnedDialogsCountMax), callReceiveTimeoutMs: \(callReceiveTimeoutMs), callRingTimeoutMs: \(callRingTimeoutMs), callConnectTimeoutMs: \(callConnectTimeoutMs), callPacketTimeoutMs: \(callPacketTimeoutMs), meUrlPrefix: \(meUrlPrefix), suggestedLangCode: \(suggestedLangCode), langPackVersion: \(langPackVersion), disabledFeatures: \(disabledFeatures))"
                 }
             }
         }

@@ -120,7 +120,7 @@ private enum SynchronizeLocalizationUpdatesError {
     case reset
 }
 
-private func getLocalization(_ modifier: Modifier) -> (String, Int32, [LocalizationEntry]) {
+func getLocalization(_ modifier: Modifier) -> (String, Int32, [LocalizationEntry]) {
     let localizationSettings: LocalizationSettings?
     if let current = modifier.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
         localizationSettings = current
