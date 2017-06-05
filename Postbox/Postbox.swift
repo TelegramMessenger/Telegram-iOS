@@ -587,11 +587,34 @@ public enum PostboxResult {
     case postbox(Postbox)
 }
 
+func debugSaveState(basePath:String, name: String) {
+    let path = basePath + name
+    let _ = try? FileManager.default.removeItem(atPath: path)
+    do {
+        try FileManager.default.copyItem(atPath: basePath, toPath: path)
+    } catch (let e) {
+        print("(Postbox debugSaveState: error \(e))")
+    }
+}
+
+func debugRestoreState(basePath:String, name: String) {
+    let path = basePath + name
+    let _ = try? FileManager.default.removeItem(atPath: basePath)
+    do {
+        try FileManager.default.copyItem(atPath: path, toPath: basePath)
+    } catch (let e) {
+        print("(Postbox debugRestoreState: error \(e))")
+    }
+}
+
 public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration) -> Signal<PostboxResult, NoError> {
     let queue = Queue(name: "org.telegram.postbox.Postbox")
     return Signal { subscriber in
         queue.async {
             let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+            
+            //debugSaveState(basePath: basePath, name: "beforeHoles")
+            //debugRestoreState(basePath: basePath, name: "beforeHoles")
             
             loop: while true {
                 let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
@@ -873,25 +896,7 @@ public final class Postbox {
         assert(true)
     }
     
-    private func debugSaveState(name: String) {
-        let path = self.basePath + name
-        let _ = try? FileManager.default.removeItem(atPath: path)
-        do {
-            try FileManager.default.copyItem(atPath: self.basePath, toPath: path)
-        } catch (let e) {
-            print("(Postbox debugSaveState: error \(e))")
-        }
-    }
-    
-    private func debugRestoreState(name: String) {
-        let path = self.basePath + name
-        let _ = try? FileManager.default.removeItem(atPath: self.basePath)
-        do {
-            try FileManager.default.copyItem(atPath: path, toPath: self.basePath)
-        } catch (let e) {
-            print("(Postbox debugRestoreState: error \(e))")
-        }
-    }
+   
     
     private func takeNextViewId() -> Int {
         let nextId = self.nextViewId
