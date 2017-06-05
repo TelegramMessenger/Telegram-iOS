@@ -33,6 +33,8 @@ public func suggestedLocalizationInfo(network: Network, languageCode: String, ex
                         entries.append(.string(key: key, value: value))
                     case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
                         entries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
+                    case let .langPackStringDeleted(key):
+                        entries.append(.string(key: key, value: ""))
                 }
             }
             var infos: [LocalizationInfo] = []
@@ -76,6 +78,8 @@ public func downloadLocalization(network: Network, languageCode: String) -> Sign
                                 entries.append(.string(key: key, value: value))
                             case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
                                 entries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
+                            case let .langPackStringDeleted(key):
+                                entries.append(.string(key: key, value: ""))
                         }
                     }
             }

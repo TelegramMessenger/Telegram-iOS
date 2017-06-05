@@ -159,6 +159,8 @@ private func synchronizeLocalizationUpdates(modifier: Modifier, postbox: Postbox
                                         updatedEntries.append(.string(key: key, value: value))
                                     case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
                                         updatedEntries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
+                                    case let .langPackStringDeleted(key):
+                                        updatedEntries.append(.string(key: key, value: ""))
                                 }
                             }
                     }
@@ -224,6 +226,8 @@ func tryApplyingLanguageDifference(modifier: Modifier, difference: Api.LangPackD
                             updatedEntries.append(.string(key: key, value: value))
                         case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
                             updatedEntries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
+                        case let .langPackStringDeleted(key):
+                            updatedEntries.append(.string(key: key, value: ""))
                     }
                 }
                 

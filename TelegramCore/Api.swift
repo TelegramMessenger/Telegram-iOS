@@ -448,6 +448,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1720552011] = { return Api.Bool.parse_boolTrue($0) }
     dict[-892239370] = { return Api.LangPackString.parse_langPackString($0) }
     dict[1816636575] = { return Api.LangPackString.parse_langPackStringPluralized($0) }
+    dict[695856818] = { return Api.LangPackString.parse_langPackStringDeleted($0) }
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
     dict[-947462709] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
@@ -13493,6 +13494,7 @@ public struct Api {
     public enum LangPackString: CustomStringConvertible {
         case langPackString(key: String, value: String)
         case langPackStringPluralized(flags: Int32, key: String, zeroValue: String?, oneValue: String?, twoValue: String?, fewValue: String?, manyValue: String?, otherValue: String)
+        case langPackStringDeleted(key: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -13515,6 +13517,12 @@ public struct Api {
                     if Int(flags) & Int(1 << 3) != 0 {serializeString(fewValue!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeString(manyValue!, buffer: buffer, boxed: false)}
                     serializeString(otherValue, buffer: buffer, boxed: false)
+                    break
+                case .langPackStringDeleted(let key):
+                    if boxed {
+                        buffer.appendInt32(695856818)
+                    }
+                    serializeString(key, buffer: buffer, boxed: false)
                     break
     }
     return true
@@ -13566,6 +13574,17 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_langPackStringDeleted(_ reader: BufferReader) -> LangPackString? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.LangPackString.langPackStringDeleted(key: _1!)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -13574,6 +13593,8 @@ public struct Api {
                         return "(langPackString key: \(key), value: \(value))"
                     case .langPackStringPluralized(let flags, let key, let zeroValue, let oneValue, let twoValue, let fewValue, let manyValue, let otherValue):
                         return "(langPackStringPluralized flags: \(flags), key: \(key), zeroValue: \(zeroValue), oneValue: \(oneValue), twoValue: \(twoValue), fewValue: \(fewValue), manyValue: \(manyValue), otherValue: \(otherValue))"
+                    case .langPackStringDeleted(let key):
+                        return "(langPackStringDeleted key: \(key))"
                 }
             }
         }

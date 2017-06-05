@@ -20,8 +20,8 @@ public enum LocalizationEntry: Equatable {
     
     public static func ==(lhs: LocalizationEntry, rhs: LocalizationEntry) -> Bool {
         switch lhs {
-            case let .string(key, value):
-                if case .string(key, value) = rhs {
+            case let .string(lhsKey, lhsValue):
+                if case let .string(rhsKey, rhsValue) = rhs, lhsKey == rhsKey, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
