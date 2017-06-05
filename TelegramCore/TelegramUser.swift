@@ -92,7 +92,7 @@ public final class TelegramUser: Peer {
         return .personName(first: self.firstName ?? "", last: self.lastName ?? "", addressName: self.username)
     }
     
-    public let associatedPeerIds: [PeerId]? = nil
+    public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
     public init(id: PeerId, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, flags: UserInfoFlags) {

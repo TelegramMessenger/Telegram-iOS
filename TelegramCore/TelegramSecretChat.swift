@@ -18,7 +18,7 @@ public final class TelegramSecretChat: Peer {
         return .title(title: "", addressName: nil)
     }
     
-    public let associatedPeerIds: [PeerId]?
+    public let associatedPeerId: PeerId?
     public let notificationSettingsPeerId: PeerId?
     
     public init(id: PeerId, creationDate: Int32, regularPeerId: PeerId, accessHash: Int64, role: SecretChatRole, embeddedState: SecretChatEmbeddedPeerState, messageAutoremoveTimeout: Int32?) {
@@ -28,7 +28,7 @@ public final class TelegramSecretChat: Peer {
         self.creationDate = creationDate
         self.role = role
         self.embeddedState = embeddedState
-        self.associatedPeerIds = [regularPeerId]
+        self.associatedPeerId = regularPeerId
         self.notificationSettingsPeerId = regularPeerId
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
     }
@@ -41,7 +41,7 @@ public final class TelegramSecretChat: Peer {
         self.creationDate = decoder.decodeInt32ForKey("d", orElse: 0)
         self.role = SecretChatRole(rawValue: decoder.decodeInt32ForKey("o", orElse: 0))!
         self.embeddedState = SecretChatEmbeddedPeerState(rawValue: decoder.decodeInt32ForKey("s", orElse: 0))!
-        self.associatedPeerIds = [self.regularPeerId]
+        self.associatedPeerId = self.regularPeerId
         self.messageAutoremoveTimeout = decoder.decodeOptionalInt32ForKey("at")
     }
     

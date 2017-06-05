@@ -148,3 +148,33 @@ public func downloadMessage(account: Account, message: MessageId) -> Signal<Mess
             }
         }
 }
+
+public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timestamp: Int32) -> Signal<MessageId?, NoError> {
+    return account.postbox.modify { modifier -> Signal<MessageId?, NoError> in
+        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0))
+                |> map { result -> MessageId? in
+                    let messages: [Api.Message]
+                    switch result {
+                        case let .messages(apiMessages, _, _):
+                            messages = apiMessages
+                        case let .channelMessages(_, _, _, apiMessages, _, _):
+                            messages = apiMessages
+                        case let.messagesSlice(_, apiMessages, _, _):
+                            messages = apiMessages
+                    }
+                    for message in messages {
+                        if let message = StoreMessage(apiMessage: message), case let .Id(id) = message.id {
+                            return id
+                        }
+                    }
+                    return nil
+                }
+                |> `catch` { _ -> Signal<MessageId?, NoError> in
+                    return .single(nil)
+                }
+        } else {
+            return .single(nil)
+        }
+    } |> switchToLatest
+}
