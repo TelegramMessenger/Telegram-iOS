@@ -9,6 +9,7 @@ public enum PostboxViewKey: Hashable {
     case accessChallengeData
     case preferences(keys: Set<ValueBoxKey>)
     case globalMessageTags(globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?)
+    case peer(peerId: PeerId)
     
     public var hashValue: Int {
         switch self {
@@ -28,6 +29,8 @@ public enum PostboxViewKey: Hashable {
                 return 3
             case .globalMessageTags:
                 return 4
+            case let .peer(peerId):
+                return peerId.hashValue
         }
     }
     
@@ -81,6 +84,12 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case let .peer(peerId):
+                if case .peer(peerId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -103,5 +112,7 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePreferencesView(postbox: postbox, keys: keys)
         case let .globalMessageTags(globalTag, position, count, groupingPredicate):
             return MutableGlobalMessageTagsView(postbox: postbox, globalTag: globalTag, position: position, count: count, groupingPredicate: groupingPredicate)
+        case let .peer(peerId):
+            return MutablePeerView(postbox: postbox, peerId: peerId)
     }
 }

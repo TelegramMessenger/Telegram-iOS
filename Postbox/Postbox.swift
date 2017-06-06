@@ -716,6 +716,7 @@ public final class Postbox {
     let itemCacheTable: ItemCacheTable
     let peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>
     let peerNameIndexTable: PeerNameIndexTable
+    let reverseAssociatedPeerTable: ReverseAssociatedPeerTable
     let peerChatTopTaggedMessageIdsTable: PeerChatTopTaggedMessageIdsTable
     let peerOperationLogMetadataTable: PeerOperationLogMetadataTable
     let peerMergedOperationLogIndexTable: PeerMergedOperationLogIndexTable
@@ -759,7 +760,8 @@ public final class Postbox {
         self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
         
         self.keychainTable = KeychainTable(valueBox: self.valueBox, table: KeychainTable.tableSpec(1))
-        self.peerTable = PeerTable(valueBox: self.valueBox, table: PeerTable.tableSpec(2))
+        self.reverseAssociatedPeerTable = ReverseAssociatedPeerTable(valueBox: self.valueBox, table:ReverseAssociatedPeerTable.tableSpec(40))
+        self.peerTable = PeerTable(valueBox: self.valueBox, table: PeerTable.tableSpec(2), reverseAssociatedTable: self.reverseAssociatedPeerTable)
         self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox, table: GlobalMessageIdsTable.tableSpec(3), namespace: self.globalMessageIdsNamespace)
         self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox, table: MessageGloballyUniqueIdTable.tableSpec(32))
         self.messageHistoryMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox, table: MessageHistoryMetadataTable.tableSpec(10))
@@ -827,6 +829,7 @@ public final class Postbox {
         tables.append(self.itemCacheMetaTable)
         tables.append(self.itemCacheTable)
         tables.append(self.peerNameIndexTable)
+        tables.append(self.reverseAssociatedPeerTable)
         tables.append(self.peerNameTokenIndexTable)
         tables.append(self.peerChatTopTaggedMessageIdsTable)
         tables.append(self.peerOperationLogMetadataTable)
@@ -1252,7 +1255,7 @@ public final class Postbox {
             for table in self.tables {
                 table.clearMemoryCache()
             }
-            self.viewTracker.refreshViewsDueToExternalTransaction(fetchAroundChatEntries: self.fetchAroundChatEntries, fetchAroundHistoryEntries: self.fetchAroundHistoryEntries, fetchUnsentMessageIds: {
+            self.viewTracker.refreshViewsDueToExternalTransaction(postbox: self, fetchAroundChatEntries: self.fetchAroundChatEntries, fetchAroundHistoryEntries: self.fetchAroundHistoryEntries, fetchUnsentMessageIds: {
                 return self.messageHistoryUnsentTable.get()
             }, fetchSynchronizePeerReadStateOperations: {
                 return self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
@@ -1776,7 +1779,7 @@ public final class Postbox {
     
     public func searchContacts(query: String) -> Signal<[Peer], NoError> {
         return self.modify { modifier -> Signal<[Peer], NoError> in
-            let (_, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
+            let (_, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable, reverseAssociatedPeerTable: self.reverseAssociatedPeerTable)
             
             var contactPeers: [Peer] = []
             for peerId in contactPeerIds {
@@ -1795,7 +1798,7 @@ public final class Postbox {
             var peerIds = Set<PeerId>()
             var chatPeers: [Peer] = []
             
-            let (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
+            let (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable, reverseAssociatedPeerTable: self.reverseAssociatedPeerTable)
             
             for peerId in chatPeerIds {
                 if let peer = self.peerTable.get(peerId) {
@@ -1820,7 +1823,7 @@ public final class Postbox {
     
     public func peerView(id: PeerId) -> Signal<PeerView, NoError> {
         return self.modify { modifier -> Signal<PeerView, NoError> in
-            let view = MutablePeerView(peerId: id, notificationSettings: self.peerNotificationSettingsTable.get(id), cachedData: self.cachedPeerDataTable.get(id), peerIsContact: self.contactsTable.isContact(peerId: id), getPeer: { self.peerTable.get($0) }, getPeerPresence: { self.peerPresenceTable.get($0) })
+            let view = MutablePeerView(postbox: self, peerId: id)
             let (index, signal) = self.viewTracker.addPeerView(view)
             
             return (.single(PeerView(view))
