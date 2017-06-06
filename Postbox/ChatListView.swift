@@ -444,11 +444,9 @@ final class MutableChatListView {
                     var peers = SimpleDictionary<PeerId, Peer>()
                     if let peer = getPeer(index.messageIndex.id.peerId) {
                         peers[peer.id] = peer
-                        if let associatedPeerIds = peer.associatedPeerIds {
-                            for associatedPeerId in associatedPeerIds {
-                                if let associatedPeer = getPeer(associatedPeerId) {
-                                    peers[associatedPeer.id] = associatedPeer
-                                }
+                        if let associatedPeerId = peer.associatedPeerId {
+                            if let associatedPeer = getPeer(associatedPeerId) {
+                                peers[associatedPeer.id] = associatedPeer
                             }
                         }
                     }

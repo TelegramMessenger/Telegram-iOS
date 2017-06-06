@@ -1,6 +1,6 @@
 import Foundation
 
-final class MutablePeerView {
+final class MutablePeerView: MutablePostboxView {
     let peerId: PeerId
     var notificationSettings: PeerNotificationSettings?
     var cachedData: CachedPeerData?
@@ -8,17 +8,27 @@ final class MutablePeerView {
     var peerPresences: [PeerId: PeerPresence] = [:]
     var peerIsContact: Bool
     
-    init(peerId: PeerId, notificationSettings: PeerNotificationSettings?, cachedData: CachedPeerData?, peerIsContact: Bool, getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) {
+    init(postbox: Postbox, peerId: PeerId) {
+        let notificationSettings = postbox.peerNotificationSettingsTable.get(peerId)
+        let cachedData = postbox.cachedPeerDataTable.get(peerId)
+        let peerIsContact = postbox.contactsTable.isContact(peerId: peerId)
+        
+        let getPeer: (PeerId) -> Peer? = { peerId in
+            return postbox.peerTable.get(peerId)
+        }
+        
+        let getPeerPresence: (PeerId) -> PeerPresence? = { peerId in
+            return postbox.peerPresenceTable.get(peerId)
+        }
+        
         self.peerId = peerId
         self.notificationSettings = notificationSettings
         self.cachedData = cachedData
         self.peerIsContact = peerIsContact
         var peerIds = Set<PeerId>()
         peerIds.insert(peerId)
-        if let peer = getPeer(peerId), let associatedPeerIds = peer.associatedPeerIds {
-            for peerId in associatedPeerIds {
-                peerIds.insert(peerId)
-            }
+        if let peer = getPeer(peerId), let associatedPeerId = peer.associatedPeerId {
+            peerIds.insert(associatedPeerId)
         }
         if let cachedData = cachedData {
             peerIds.formUnion(cachedData.peerIds)
@@ -31,19 +41,35 @@ final class MutablePeerView {
                 self.peerPresences[id] = presence
             }
         }
-        if let peer = self.peers[peerId], let associatedPeerIds = peer.associatedPeerIds {
-            for id in associatedPeerIds {
-                if let peer = getPeer(id) {
-                    self.peers[id] = peer
-                }
-                if let presence = getPeerPresence(id) {
-                    self.peerPresences[id] = presence
-                }
+        if let peer = self.peers[peerId], let associatedPeerId = peer.associatedPeerId {
+            if let peer = getPeer(associatedPeerId) {
+                self.peers[associatedPeerId] = peer
+            }
+            if let presence = getPeerPresence(associatedPeerId) {
+                self.peerPresences[associatedPeerId] = presence
             }
         }
     }
     
-    func replay(updatedPeers: [PeerId: Peer], updatedNotificationSettings: [PeerId: PeerNotificationSettings], updatedCachedPeerData: [PeerId: CachedPeerData], updatedPeerPresences: [PeerId: PeerPresence], replaceContactPeerIds: Set<PeerId>?, getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) -> Bool {
+    func reset(postbox: Postbox) -> Bool {
+        return false
+    }
+    
+    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+        let updatedPeers = transaction.currentUpdatedPeers
+        let updatedNotificationSettings = transaction.currentUpdatedPeerNotificationSettings
+        let updatedCachedPeerData = transaction.currentUpdatedCachedPeerData
+        let updatedPeerPresences = transaction.currentUpdatedPeerPresences
+        let replaceContactPeerIds = transaction.replaceContactPeerIds
+        
+        let getPeer: (PeerId) -> Peer? = { peerId in
+            return postbox.peerTable.get(peerId)
+        }
+        
+        let getPeerPresence: (PeerId) -> PeerPresence? = { peerId in
+            return postbox.peerPresenceTable.get(peerId)
+        }
+        
         var updated = false
         
         if let cachedData = updatedCachedPeerData[self.peerId], self.cachedData == nil || !self.cachedData!.isEqual(to: cachedData) {
@@ -52,10 +78,8 @@ final class MutablePeerView {
             
             var peerIds = Set<PeerId>()
             peerIds.insert(self.peerId)
-            if let peer = getPeer(self.peerId), let associatedPeerIds = peer.associatedPeerIds {
-                for peerId in associatedPeerIds {
-                    peerIds.insert(peerId)
-                }
+            if let peer = getPeer(self.peerId), let associatedPeerId = peer.associatedPeerId {
+                peerIds.insert(associatedPeerId)
             }
             peerIds.formUnion(cachedData.peerIds)
             
@@ -97,10 +121,8 @@ final class MutablePeerView {
         } else {
             var peerIds = Set<PeerId>()
             peerIds.insert(self.peerId)
-            if let peer = getPeer(self.peerId), let associatedPeerIds = peer.associatedPeerIds {
-                for peerId in associatedPeerIds {
-                    peerIds.insert(peerId)
-                }
+            if let peer = getPeer(self.peerId), let associatedPeerId = peer.associatedPeerId {
+                peerIds.insert(associatedPeerId)
             }
             if let cachedData = self.cachedData {
                 peerIds.formUnion(cachedData.peerIds)
@@ -139,9 +161,13 @@ final class MutablePeerView {
         
         return updated
     }
+    
+    func immutableView() -> PostboxView {
+        return PeerView(self)
+    }
 }
 
-public final class PeerView {
+public final class PeerView: PostboxView {
     public let peerId: PeerId
     public let cachedData: CachedPeerData?
     public let notificationSettings: PeerNotificationSettings?

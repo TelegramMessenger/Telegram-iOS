@@ -1625,11 +1625,9 @@ final class MessageHistoryTable: Table {
         if let chatPeer = peerTable.get(message.id.peerId) {
             peers[chatPeer.id] = chatPeer
             
-            if let associatedPeerIds = chatPeer.associatedPeerIds {
-                for peerId in associatedPeerIds {
-                    if let peer = peerTable.get(peerId) {
-                        peers[peer.id] = peer
-                    }
+            if let associatedPeerId = chatPeer.associatedPeerId {
+                if let peer = peerTable.get(associatedPeerId) {
+                    peers[peer.id] = peer
                 }
             }
         }

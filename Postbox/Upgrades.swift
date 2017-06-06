@@ -7,5 +7,6 @@ enum PostboxUpgradeOperation {
 func registeredUpgrades() -> [Int32: PostboxUpgradeOperation] {
     var dict: [Int32: PostboxUpgradeOperation] = [:]
     dict[12] = .inplace(postboxUpgrade_12to13)
+    dict[13] = .inplace(postboxUpgrade_13to14)
     return dict
 }
