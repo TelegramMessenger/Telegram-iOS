@@ -123,7 +123,7 @@ public enum UserPresenceStatus: Comparable, Coding {
     }
 }
 
-public final class TelegramUserPresence: PeerPresence {
+public final class TelegramUserPresence: PeerPresence, Equatable {
     public let status: UserPresenceStatus
     
     public init(status: UserPresenceStatus) {
@@ -138,9 +138,13 @@ public final class TelegramUserPresence: PeerPresence {
         self.status.encode(encoder)
     }
     
+    public static func ==(lhs: TelegramUserPresence, rhs: TelegramUserPresence) -> Bool {
+        return lhs.status == rhs.status
+    }
+    
     public func isEqual(to: PeerPresence) -> Bool {
-        if let to = to as? TelegramUserPresence, to.status == self.status {
-            return true
+        if let to = to as? TelegramUserPresence {
+            return self == to
         } else {
             return false
         }

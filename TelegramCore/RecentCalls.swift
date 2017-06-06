@@ -12,7 +12,7 @@ import Foundation
 public func recentCalls(account: Account, limit: Int) -> Signal<[Message], NoError> {
     let filter: Api.MessagesFilter = .inputMessagesFilterPhoneCalls(flags: 0)
     
-    let searchResult = account.network.request(Api.functions.messages.search(flags: 0, peer: .inputPeerEmpty, q: "", filter: filter, minDate: 0, maxDate: Int32.max, offset: 0, maxId: Int32.max, limit: Int32(limit)))
+    let searchResult = account.network.request(Api.functions.messages.search(flags: 0, peer: .inputPeerEmpty, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: Int32.max, offset: 0, maxId: Int32.max, limit: Int32(limit)))
         |> retryRequest
     
     let processedSearchResult = searchResult

@@ -116,7 +116,7 @@ extension Api.Chat {
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: id)
             case let .chatForbidden(id, _):
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: id)
-            case let .channel(_, id, _, _, _, _, _, _, _):
+            case let .channel(_, id, _, _, _, _, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)
             case let .channelForbidden(_, id, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)

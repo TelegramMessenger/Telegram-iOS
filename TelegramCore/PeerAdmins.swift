@@ -58,7 +58,7 @@ public func removePeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -
     return account.postbox.modify { modifier -> Signal<Void, RemovePeerAdminError> in
         if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-                return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, role: .channelRoleEmpty))
+                return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: TelegramChannelAdminRights(flags: []).apiAdminRights))
                     |> mapError { _ -> RemovePeerAdminError in
                         return .generic
                     }
@@ -120,7 +120,7 @@ public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> S
     return account.postbox.modify { modifier -> Signal<Void, AddPeerAdminError> in
         if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-                return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, role: .channelRoleEditor))
+                return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: TelegramChannelAdminRights(flags: [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canChangeInviteLink, .canPinMessages]).apiAdminRights))
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], AddPeerAdminError> in
                         if error.errorDescription == "USER_NOT_PARTICIPANT" {
@@ -131,7 +131,7 @@ public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> S
                                 |> mapError { error -> AddPeerAdminError in
                                     return .addMemberError(error)
                                 }
-                                |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, role: .channelRoleEditor))
+                                |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: TelegramChannelAdminRights(flags: [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canChangeInviteLink, .canPinMessages]).apiAdminRights))
                                     |> mapError { error -> AddPeerAdminError in
                                         return .generic
                                     }
@@ -191,7 +191,62 @@ public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> S
         } else {
             return .fail(.generic)
         }
-        } |> mapError { _ -> AddPeerAdminError in return .generic } |> switchToLatest
+    } |> mapError { _ -> AddPeerAdminError in return .generic } |> switchToLatest
 }
 
+public enum UpdatePeerAdminRightsError {
+    case generic
+    case addMemberError(AddPeerMemberError)
+}
+
+public func updatePeerAdminRights(account: Account, peerId: PeerId, adminId: PeerId, rights: TelegramChannelAdminRights) -> Signal<Void, UpdatePeerAdminRightsError> {
+    return account.postbox.modify { modifier -> Signal<Void, UpdatePeerAdminRightsError> in
+        if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
+            if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
+                return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
+                    |> map { [$0] }
+                    |> `catch` { error -> Signal<[Api.Updates], UpdatePeerAdminRightsError> in
+                        if error.errorDescription == "USER_NOT_PARTICIPANT" {
+                            return addPeerMember(account: account, peerId: peerId, memberId: adminId)
+                                |> map { _ -> [Api.Updates] in
+                                    return []
+                                }
+                                |> mapError { error -> UpdatePeerAdminRightsError in
+                                    return .addMemberError(error)
+                                }
+                                |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
+                                    |> mapError { error -> UpdatePeerAdminRightsError in
+                                        return .generic
+                                    }
+                                |> map { [$0] })
+                        }
+                        return .fail(.generic)
+                    }
+                    |> mapToSignal { result -> Signal<Void, UpdatePeerAdminRightsError> in
+                        for updates in result {
+                            account.stateManager.addUpdates(updates)
+                            
+                        }
+                        return account.postbox.modify { modifier -> Void in
+                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                                if let cachedData = cachedData as? CachedChannelData {
+                                    var updatedAdminCount: Int32?
+                                    if let adminCount = cachedData.participantsSummary.adminCount {
+                                        //updatedAdminCount = adminCount + 1
+                                    }
+                                    return cachedData.withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedAdminCount(updatedAdminCount))
+                                } else {
+                                    return cachedData
+                                }
+                            })
+                        } |> mapError { _ -> UpdatePeerAdminRightsError in return .generic }
+                }
+            } else {
+                return .fail(.generic)
+            }
+        } else {
+            return .fail(.generic)
+        }
+    } |> mapError { _ -> UpdatePeerAdminRightsError in return .generic } |> switchToLatest
+}
 

@@ -44,7 +44,7 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                             assertionFailure(".AroundIndex not supported")
                     }
                     //request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: hole.maxIndex.id.id + 1, limit: Int32(limit)))
-                    request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: Int32.max, limit: Int32(limit)))
+                    request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: Int32.max, limit: Int32(limit)))
                 } else {
                     let offsetId: Int32
                     let addOffset: Int32
@@ -415,7 +415,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageInd
     }
     return offset
         |> mapToSignal { (timestamp, id, peer) -> Signal<Void, NoError> in
-            let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: peer, q: "", filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offset: 0, maxId: holeIndex.id.id, limit: limit))
+            let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: peer, q: "", fromId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offset: 0, maxId: holeIndex.id.id, limit: limit))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<Void, NoError> in
                     let messages: [Api.Message]

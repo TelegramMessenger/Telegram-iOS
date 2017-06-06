@@ -12,7 +12,7 @@ import Foundation
 public func channelBlacklist(account: Account, peerId: PeerId) -> Signal<[RenderedChannelParticipant], NoError> {
     return account.postbox.modify { modifier -> Signal<[RenderedChannelParticipant], NoError> in
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsKicked, offset: 0, limit: 100))
+            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsKicked(q: ""), offset: 0, limit: 100))
                 |> retryRequest
                 |> map { result -> [RenderedChannelParticipant] in
                     var items: [RenderedChannelParticipant] = []

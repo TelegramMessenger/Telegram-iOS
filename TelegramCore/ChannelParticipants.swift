@@ -28,7 +28,7 @@ func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signa
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             let admins = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 0))
             let members = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsRecent, offset: 0, limit: 0))
-            let banned = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsKicked, offset: 0, limit: 0))
+            let banned = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsKicked(q: ""), offset: 0, limit: 0))
             return combineLatest(admins, members, banned)
                 |> mapToSignal { admins, members, banned -> Signal<Void, MTRpcError> in
                     return account.postbox.modify { modifier -> Void in

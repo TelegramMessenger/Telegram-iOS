@@ -1577,7 +1577,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 if let difference = difference {
                     langPackDifferences.append(difference)
                 } else {
-                    pollLangPack = false
+                    pollLangPack = true
                 }
         }
     }

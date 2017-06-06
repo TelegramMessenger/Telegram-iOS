@@ -185,14 +185,14 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                             switch result {
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
-                                        case let .channelFull(_, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _):
+                                        case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _):
                                             modifier.updatePeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                         case .chatFull:
                                             break
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, _, pinnedMsgId):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
