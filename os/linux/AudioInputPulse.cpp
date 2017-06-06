@@ -169,7 +169,7 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 
 	pa_buffer_attr bufferAttr={
 		.maxlength=960*6,
-		.tlength=960*4,
+		.tlength=960*6,
 		.prebuf=0,
 		.minreq=960*2
 	};

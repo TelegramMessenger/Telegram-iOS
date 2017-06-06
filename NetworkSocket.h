@@ -9,6 +9,19 @@
 #include <string>
 
 namespace tgvoip {
+
+	enum NetworkProtocol{
+		PROTO_UDP=0,
+		PROTO_TCP
+	};
+
+	struct TCPO2State{
+		unsigned char key[32];
+		unsigned char iv[16];
+		unsigned char ecount[16];
+		uint32_t num;
+	};
+
 	class NetworkAddress{
 	public:
 		virtual std::string ToString()=0;
@@ -21,6 +34,7 @@ namespace tgvoip {
 	public:
 		IPv4Address(std::string addr);
 		IPv4Address(uint32_t addr);
+		IPv4Address();
 		virtual std::string ToString();
 		//virtual sockaddr& ToSockAddr(uint16_t port);
 		uint32_t GetAddress();
@@ -33,6 +47,7 @@ namespace tgvoip {
 	public:
 		IPv6Address(std::string addr);
 		IPv6Address(uint8_t addr[16]);
+		IPv6Address();
 		virtual std::string ToString();
 		//virtual sockaddr& ToSockAddr(uint16_t port);
 		const uint8_t* GetAddress();
@@ -45,6 +60,7 @@ namespace tgvoip {
 		size_t length;
 		NetworkAddress* address;
 		uint16_t port;
+		NetworkProtocol protocol;
 	};
 	typedef struct NetworkPacket NetworkPacket;
 
@@ -66,6 +82,8 @@ namespace tgvoip {
 	protected:
 		virtual uint16_t GenerateLocalPort();
 		virtual void SetMaxPriority();
+		static void GenerateTCPO2States(unsigned char* buffer, TCPO2State* recvState, TCPO2State* sendState);
+		static void EncryptForTCPO2(unsigned char* buffer, size_t len, TCPO2State* state);
 		double ipv6Timeout;
 		unsigned char nat64Prefix[12];
 		bool failed;

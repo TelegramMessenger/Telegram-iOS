@@ -1,13 +1,26 @@
 //
-// Created by Grishka on 10.04.17.
+// libtgvoip is free and unencumbered public domain software.
+// For more information, see http://unlicense.org or the UNLICENSE file
+// you should have received with this source code distribution.
 //
 
 #ifndef LIBTGVOIP_NETWORKSOCKETPOSIX_H
 #define LIBTGVOIP_NETWORKSOCKETPOSIX_H
 
 #include "../../NetworkSocket.h"
+#include <vector>
+#include <sys/select.h>
+#include <pthread.h>
 
 namespace tgvoip {
+
+struct TCPSocket{
+	int fd;
+	IPv4Address address;
+	uint16_t port;
+	TCPO2State recvState;
+	TCPO2State sendState;
+};
 
 class NetworkSocketPosix : public NetworkSocket{
 public:
@@ -31,12 +44,17 @@ protected:
 
 private:
 	int fd;
+	std::vector<TCPSocket> tcpSockets;
 	bool needUpdateNat64Prefix;
 	bool nat64Present;
 	double switchToV6at;
 	bool isV4Available;
+	bool useTCP;
+	bool closing;
 	IPv4Address lastRecvdV4;
 	IPv6Address lastRecvdV6;
+	int pipeRead;
+	int pipeWrite;
 };
 
 }

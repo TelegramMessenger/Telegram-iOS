@@ -9,8 +9,17 @@
 
 #include "../../NetworkSocket.h"
 #include <stdint.h>
+#include <vector>
 
 namespace tgvoip {
+
+struct TCPSocket{
+	uintptr_t fd;
+	IPv4Address address;
+	uint16_t port;
+	TCPO2State recvState;
+	TCPO2State sendState;
+};
 
 class NetworkSocketWinsock : public NetworkSocket{
 public:
@@ -41,6 +50,8 @@ private:
 	IPv4Address lastRecvdV4;
 	IPv6Address lastRecvdV6;
 	bool isAtLeastVista;
+	std::vector<TCPSocket> tcpSockets;
+	bool closing;
 
 };
 

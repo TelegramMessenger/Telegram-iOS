@@ -16,7 +16,7 @@
 void tgvoip_log_file_printf(char level, const char* msg, ...);
 void tgvoip_log_file_write_header();
 
-#if !defined(snprintf) && defined(_WIN32)
+#if !defined(snprintf) && defined(_WIN32) && defined(__cplusplus_winrt)
 #define snprintf _snprintf
 #endif
 

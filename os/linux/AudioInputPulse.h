@@ -46,7 +46,7 @@ private:
 	bool isConnected;
 	bool didStart;
 	bool isLocked;
-	unsigned char remainingData[10240];
+	unsigned char remainingData[960*8*2];
 	size_t remainingDataSize;
 };
 

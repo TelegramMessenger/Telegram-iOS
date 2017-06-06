@@ -8,11 +8,16 @@
 #include "WindowsSandboxUtils.h"
 #include <audioclient.h>
 #include <windows.h>
+#ifdef TGVOIP_WP_SILVERLIGHT
+#include <phoneaudioclient.h>
+#endif
 
 using namespace tgvoip;
 using namespace Microsoft::WRL;
 
+
 IAudioClient2* WindowsSandboxUtils::ActivateAudioDevice(const wchar_t* devID, HRESULT* callRes, HRESULT* actRes) {
+#ifndef TGVOIP_WP_SILVERLIGHT
 	// Did I say that I hate pointlessly asynchronous things?
 	HANDLE event = CreateEventEx(NULL, NULL, 0, EVENT_ALL_ACCESS);
 	ActivationHandler activationHandler(event);
@@ -26,8 +31,18 @@ IAudioClient2* WindowsSandboxUtils::ActivateAudioDevice(const wchar_t* devID, HR
 	if (actRes)
 		*actRes = activationHandler.actResult;
 	return activationHandler.client;
+#else
+	IAudioClient2* client;
+	HRESULT res=ActivateAudioInterface(devID, __uuidof(IAudioClient2), (void**)&client);
+	if(callRes)
+		*callRes=S_OK;
+	if(actRes)
+		*actRes=res;
+	return client;
+#endif
 }
 
+#ifndef TGVOIP_WP_SILVERLIGHT
 ActivationHandler::ActivationHandler(HANDLE _event) : event(_event)
 {
 
@@ -49,3 +64,5 @@ STDMETHODIMP ActivationHandler::ActivateCompleted(IActivateAudioInterfaceAsyncOp
 
 	return hr;
 }
+
+#endif

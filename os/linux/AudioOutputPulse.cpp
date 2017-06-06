@@ -171,7 +171,7 @@ void AudioOutputPulse::SetCurrentDevice(std::string devID){
 
 	pa_buffer_attr bufferAttr={
 		.maxlength=960*6,
-		.tlength=960*4,
+		.tlength=960*6,
 		.prebuf=0,
 		.minreq=960*2
 	};
@@ -283,6 +283,7 @@ void AudioOutputPulse::StreamWriteCallback(pa_stream *stream, size_t requestedBy
 				if(remainingDataSize+960*2>=sizeof(remainingData)){
 					LOGE("Can't provide %d bytes of audio data at a time", (int)bytesToFill);
 					failed=true;
+					pa_threaded_mainloop_unlock(mainloop);
 					return;
 				}
 				InvokeCallback(remainingData+remainingDataSize, 960*2);

@@ -29,7 +29,7 @@
 #include "CongestionControl.h"
 #include "NetworkSocket.h"
 
-#define LIBTGVOIP_VERSION "0.4.1"
+#define LIBTGVOIP_VERSION "0.4.2"
 
 #define PKT_INIT 1
 #define PKT_INIT_ACK 2
@@ -180,6 +180,7 @@ struct voip_crypto_functions_t{
 	void (*sha256)(uint8_t* msg, size_t length, uint8_t* output);
 	void (*aes_ige_encrypt)(uint8_t* in, uint8_t* out, size_t length, uint8_t* key, uint8_t* iv);
 	void (*aes_ige_decrypt)(uint8_t* in, uint8_t* out, size_t length, uint8_t* key, uint8_t* iv);
+	void (*aes_ctr_encrypt)(uint8_t* inout, size_t length, uint8_t* key, uint8_t* iv, uint8_t* ecount, uint32_t* num);
 };
 typedef struct voip_crypto_functions_t voip_crypto_functions_t;
 
@@ -362,6 +363,9 @@ private:
 	FILE* statsDump;
 	std::string currentAudioInput;
 	std::string currentAudioOutput;
+	bool useTCP;
+	bool didAddTcpRelays;
+	double enableTcpAt;
 	
 	/*** server config values ***/
 	uint32_t maxAudioBitrate;

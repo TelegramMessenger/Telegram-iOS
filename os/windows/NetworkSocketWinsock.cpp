@@ -23,6 +23,7 @@ NetworkSocketWinsock::NetworkSocketWinsock() : lastRecvdV4(0), lastRecvdV6("::0"
 	nat64Present=false;
 	switchToV6at=0;
 	isV4Available=false;
+	closing=false;
 
 #ifdef TGVOIP_WINXP_COMPAT
 	DWORD version=GetVersion();
@@ -45,6 +46,70 @@ void NetworkSocketWinsock::SetMaxPriority(){
 }
 
 void NetworkSocketWinsock::Send(NetworkPacket *packet){
+	if(packet->protocol==PROTO_TCP){
+		//LOGV("Sending TCP packet to %s:%u", packet->address->ToString().c_str(), packet->port);
+		IPv4Address* v4addr=dynamic_cast<IPv4Address*>(packet->address);
+		if(v4addr){
+			TCPSocket* _socket=NULL;
+			for(std::vector<TCPSocket>::iterator itr=tcpSockets.begin();itr!=tcpSockets.end();++itr){
+				if(itr->address==*v4addr && itr->port==packet->port){
+					_socket=&*itr;
+					break;
+				}
+			}
+			if(!_socket){
+				TCPSocket s;
+				s.fd=socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+				s.port=packet->port;
+				s.address=IPv4Address(*v4addr);
+				int opt=1;
+				setsockopt(s.fd, IPPROTO_TCP, TCP_NODELAY, (const char*)&opt, sizeof(opt));
+				timeval timeout;
+				timeout.tv_sec=1;
+				timeout.tv_usec=0;
+				setsockopt(s.fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+				timeout.tv_sec=60;
+				setsockopt(s.fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+				sockaddr_in addr;
+				addr.sin_family=AF_INET;
+				addr.sin_addr.s_addr=s.address.GetAddress();
+				addr.sin_port=htons(s.port);
+				int res=connect(s.fd, (const sockaddr*) &addr, sizeof(addr));
+				if(res!=0){
+					LOGW("error connecting TCP socket to %s:%u: %d / %s; %d / %s", s.address.ToString().c_str(), s.port, res, strerror(res), errno, strerror(errno));
+					closesocket(s.fd);
+					return;
+				}
+				unsigned char buf[64];
+				GenerateTCPO2States(buf, &s.recvState, &s.sendState);
+				send(s.fd, (const char*)buf, sizeof(buf), 0);
+				tcpSockets.push_back(s);
+				_socket=&tcpSockets[tcpSockets.size()-1];
+			}
+			if(_socket){
+				//LOGV("sending to %s:%u, fd=%d, size=%d (%d)", _socket->address.ToString().c_str(), _socket->port, _socket->fd, packet->length, packet->length%4);
+				BufferOutputStream os(packet->length+4);
+				size_t len=packet->length/4;
+				if(len<0x7F){
+					os.WriteByte((unsigned char)len);
+				}else{
+					os.WriteByte(0x7F);
+					os.WriteByte((unsigned char)(len & 0xFF));
+					os.WriteByte((unsigned char)((len >> 8) & 0xFF));
+					os.WriteByte((unsigned char)((len >> 16) & 0xFF));
+				}
+				os.WriteBytes(packet->data, packet->length);
+				EncryptForTCPO2(os.GetBuffer(), os.GetLength(), &_socket->sendState);
+				int res=send(_socket->fd, (const char*)os.GetBuffer(), os.GetLength(), 0);
+				if(res<0){
+					LOGW("error sending to TCP: %d / %s; %d / %s", res, strerror(res), errno, strerror(errno));
+				}
+			}
+		}else{
+			LOGW("TCP over IPv6 isn't supported yet");
+		}
+		return;
+	}
 	sockaddr_in6 addr;
 	IPv4Address* v4addr=dynamic_cast<IPv4Address*>(packet->address);
 	if(v4addr){
@@ -130,49 +195,131 @@ void NetworkSocketWinsock::Send(NetworkPacket *packet){
 }
 
 void NetworkSocketWinsock::Receive(NetworkPacket *packet){
-	sockaddr_in6 srcAddr;
-	sockaddr_in srcAddr4;
-	sockaddr* addr;
-	int addrLen;
-	if(isAtLeastVista){
-		addr=(sockaddr*)&srcAddr;
-		addrLen=sizeof(srcAddr);
-	}else{
-		addr=(sockaddr*)&srcAddr4;
-		addrLen=sizeof(srcAddr4);
-	}
-	//DWORD len;
-	//WSABUF buf;
-	//buf.buf=(char*) packet->data;
-	//buf.len=packet->length;
-	//int res=WSARecvFrom(fd, &buf, 1, &len, 0, (sockaddr*) &srcAddr, &addrLen, NULL, NULL);
-	int res=recvfrom(fd, (char*)packet->data, packet->length, 0, addr, &addrLen);
-	if(res!=SOCKET_ERROR)
-		packet->length=(size_t) res;
-	else{
-		packet->length=0;
-		int error=WSAGetLastError();
-		LOGE("error receiving: %d", error);
-		return;
-	}
-	//LOGV("Received %d bytes from %s:%d at %.5lf", len, inet_ntoa(srcAddr.sin_addr), ntohs(srcAddr.sin_port), GetCurrentTime());
-	if(addr->sa_family==AF_INET){
-		packet->port=ntohs(srcAddr4.sin_port);
-		lastRecvdV4=IPv4Address(srcAddr4.sin_addr.s_addr);
-		packet->address=&lastRecvdV4;
-	}else{
-		packet->port=ntohs(srcAddr.sin6_port);
-		if(!isV4Available && IN6_IS_ADDR_V4MAPPED(&srcAddr.sin6_addr)){
-			isV4Available=true;
-			LOGI("Detected IPv4 connectivity, will not try IPv6");
+
+	fd_set readSet;
+	fd_set errSet;
+	timeval timeout={0, 500000};
+
+	while(true){
+
+		do{
+			FD_ZERO(&readSet);
+			FD_ZERO(&errSet);
+			FD_SET(fd, &readSet);
+			FD_SET(fd, &errSet);
+			for(std::vector<TCPSocket>::iterator itr=tcpSockets.begin(); itr!=tcpSockets.end(); ++itr){
+				FD_SET(itr->fd, &readSet);
+				FD_SET(itr->fd, &errSet);
+			}
+		}while(select(0, &readSet, NULL, &errSet, &timeout)==0);
+
+		if(closing){
+			packet->length=0;
+			return;
 		}
-		if(IN6_IS_ADDR_V4MAPPED(&srcAddr.sin6_addr) || (nat64Present && memcmp(nat64Prefix, srcAddr.sin6_addr.s6_addr, 12)==0)){
-			in_addr v4addr=*((in_addr *)&srcAddr.sin6_addr.s6_addr[12]);
-			lastRecvdV4=IPv4Address(v4addr.s_addr);
-			packet->address=&lastRecvdV4;
-		}else{
-			lastRecvdV6=IPv6Address(srcAddr.sin6_addr.s6_addr);
-			packet->address=&lastRecvdV6;
+
+		if(FD_ISSET(fd, &readSet) || FD_ISSET(fd, &errSet)){
+			sockaddr_in6 srcAddr;
+			sockaddr_in srcAddr4;
+			sockaddr* addr;
+			int addrLen;
+			if(isAtLeastVista){
+				addr=(sockaddr*)&srcAddr;
+				addrLen=sizeof(srcAddr);
+			}else{
+				addr=(sockaddr*)&srcAddr4;
+				addrLen=sizeof(srcAddr4);
+			}
+			//DWORD len;
+			//WSABUF buf;
+			//buf.buf=(char*) packet->data;
+			//buf.len=packet->length;
+			//int res=WSARecvFrom(fd, &buf, 1, &len, 0, (sockaddr*) &srcAddr, &addrLen, NULL, NULL);
+			int res=recvfrom(fd, (char*)packet->data, packet->length, 0, addr, &addrLen);
+			if(res!=SOCKET_ERROR)
+				packet->length=(size_t) res;
+			else{
+				packet->length=0;
+				int error=WSAGetLastError();
+				LOGE("error receiving: %d", error);
+				return;
+			}
+			//LOGV("Received %d bytes from %s:%d at %.5lf", len, inet_ntoa(srcAddr.sin_addr), ntohs(srcAddr.sin_port), GetCurrentTime());
+			if(addr->sa_family==AF_INET){
+				packet->port=ntohs(srcAddr4.sin_port);
+				lastRecvdV4=IPv4Address(srcAddr4.sin_addr.s_addr);
+				packet->address=&lastRecvdV4;
+			}else{
+				packet->port=ntohs(srcAddr.sin6_port);
+				if(!isV4Available && IN6_IS_ADDR_V4MAPPED(&srcAddr.sin6_addr)){
+					isV4Available=true;
+					LOGI("Detected IPv4 connectivity, will not try IPv6");
+				}
+				if(IN6_IS_ADDR_V4MAPPED(&srcAddr.sin6_addr) || (nat64Present && memcmp(nat64Prefix, srcAddr.sin6_addr.s6_addr, 12)==0)){
+					in_addr v4addr=*((in_addr *)&srcAddr.sin6_addr.s6_addr[12]);
+					lastRecvdV4=IPv4Address(v4addr.s_addr);
+					packet->address=&lastRecvdV4;
+				}else{
+					lastRecvdV6=IPv6Address(srcAddr.sin6_addr.s6_addr);
+					packet->address=&lastRecvdV6;
+				}
+			}
+			return;
+		}
+
+		for(std::vector<TCPSocket>::iterator itr=tcpSockets.begin(); itr!=tcpSockets.end();){
+			if(FD_ISSET(itr->fd, &readSet)){
+				unsigned char len1;
+				size_t packetLen=0;
+				size_t offset=0;
+				int len=recv(itr->fd, (char*)&len1, 1, 0);
+				if(len<=0)
+					goto failed;
+				EncryptForTCPO2(&len1, 1, &itr->recvState);
+
+				if(len1<0x7F){
+					packetLen=(size_t)len1*4;
+				}else{
+					unsigned char len2[3];
+					len=recv(itr->fd, (char*)len2, 3, 0);
+					if(len<=0)
+						goto failed;
+					EncryptForTCPO2(len2, 3, &itr->recvState);
+					packetLen=((size_t)len2[0] | ((size_t)len2[1] << 8) | ((size_t)len2[2] << 16))*4;
+				}
+
+				if(packetLen>packet->length){
+					LOGW("packet too big to fit into buffer");
+					packet->length=0;
+					return;
+				}
+
+				while(offset<packetLen){
+					len=recv(itr->fd, (char*)packet->data+offset, packetLen-offset, 0);
+					if(len<=0)
+						goto failed;
+					offset+=len;
+				}
+				EncryptForTCPO2(packet->data, packetLen, &itr->recvState);
+				packet->address=&itr->address;
+				packet->length=packetLen;
+				packet->port=itr->port;
+				packet->protocol=PROTO_TCP;
+
+				return;
+
+				failed:
+				packet->length=0;
+				closesocket(itr->fd);
+				itr=tcpSockets.erase(itr);
+				continue;
+			}
+			if(FD_ISSET(itr->fd, &errSet)){
+				closesocket(itr->fd);
+				itr=tcpSockets.erase(itr);
+				continue;
+			}
+			++itr;
 		}
 	}
 }
@@ -258,7 +405,12 @@ void NetworkSocketWinsock::Open(){
 }
 
 void NetworkSocketWinsock::Close(){
+	closing=true;
 	closesocket(fd);
+	for(std::vector<TCPSocket>::iterator itr=tcpSockets.begin(); itr!=tcpSockets.end();++itr){
+		//shutdown(itr->fd, SHUT_RDWR);
+		closesocket(itr->fd);
+	}
 }
 
 void NetworkSocketWinsock::OnActiveInterfaceChanged(){
