@@ -32,6 +32,7 @@ public func channelMembers(account: Account, peerId: PeerId, filter: ChannelMemb
                     case let .channelParticipants(_, participants, users):
                         var peers: [PeerId: Peer] = [:]
                         for user in users {
+                            
                             let peer = TelegramUser(user: user)
                             peers[peer.id] = peer
                         }
