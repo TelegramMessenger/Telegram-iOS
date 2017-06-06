@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 
 final class ListMessageItem: ListViewItem {
+    let theme: PresentationTheme
     let account: Account
     let peerId: PeerId
     let controllerInteraction: ChatControllerInteraction
@@ -13,7 +14,8 @@ final class ListMessageItem: ListViewItem {
     
     let selectable: Bool = true
     
-    public init(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message) {
+    public init(theme: PresentationTheme, account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message) {
+        self.theme = theme
         self.account = account
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction

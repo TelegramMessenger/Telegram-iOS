@@ -76,7 +76,7 @@ enum ChatMessageReplyInfoType {
     case standalone
 }
 
-class ChatMessageReplyInfoNode: ASTransformLayerNode {
+class ChatMessageReplyInfoNode: ASDisplayNode {
     private let contentNode: ASDisplayNode
     private let lineNode: ASDisplayNode
     private var titleNode: TextNode?
@@ -101,14 +101,14 @@ class ChatMessageReplyInfoNode: ASTransformLayerNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ account: Account, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: PresentationTheme, _ account: Account, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
         
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
         let previousMedia = maybeNode?.previousMedia
         
-        return { account, type, message, constrainedSize in
+        return { theme, account, type, message, constrainedSize in
             let titleString = message.author?.displayTitle ?? ""
             let (textString, textMedia) = textStringForReplyMessage(message)
             
@@ -118,13 +118,13 @@ class ChatMessageReplyInfoNode: ASTransformLayerNode {
                 
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? UIColor(0x007bff) : UIColor(0x00a516)
-                    lineColor = incoming ? UIColor(0x3ca7fe) : UIColor(0x29cc10)
-                    textColor = .black
+                    titleColor = incoming ? theme.chat.bubble.incomingAccentColor : theme.chat.bubble.outgoingAccentColor
+                    lineColor = incoming ? theme.chat.bubble.incomingAccentColor : theme.chat.bubble.outgoingAccentColor
+                    textColor = incoming ? theme.chat.bubble.incomingPrimaryTextColor : theme.chat.bubble.outgoingPrimaryTextColor
                 case .standalone:
-                    titleColor = .white
-                    lineColor = .white
-                    textColor = .white
+                    titleColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
+                    lineColor = titleColor
+                    textColor = titleColor
             }
             
             var leftInset: CGFloat = 10.0

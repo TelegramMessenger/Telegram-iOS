@@ -30,11 +30,11 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     override init() {
         self.navigationBackgroundNode = ASDisplayNode()
         self.navigationBackgroundNode.isLayerBacked = true
-        self.navigationBackgroundNode.backgroundColor = UIColor(0xefefef)
+        self.navigationBackgroundNode.backgroundColor = UIColor(rgb: 0xefefef)
         
         self.stripeNode = ASDisplayNode()
         self.stripeNode.isLayerBacked = true
-        self.stripeNode.backgroundColor = UIColor(0xbcbbc1)
+        self.stripeNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
         
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
@@ -49,11 +49,11 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.nextOptionNode = ASTextNode()
         self.nextOptionNode.isLayerBacked = true
         self.nextOptionNode.displaysAsynchronously = false
-        self.nextOptionNode.attributedText = NSAttributedString(string: "Forgot password?", font: Font.regular(16.0), textColor: UIColor(0x007ee5), paragraphAlignment: .center)
+        self.nextOptionNode.attributedText = NSAttributedString(string: "Forgot password?", font: Font.regular(16.0), textColor: UIColor(rgb: 0x007ee5), paragraphAlignment: .center)
         
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
-        self.codeSeparatorNode.backgroundColor = UIColor(0xbcbbc1)
+        self.codeSeparatorNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
         
         self.codeField = TextFieldNode()
         self.codeField.textField.font = Font.regular(20.0)
@@ -79,7 +79,7 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     }
     
     func updateData(hint: String) {
-        self.codeField.textField.attributedPlaceholder = NSAttributedString(string: hint, font: Font.regular(20.0), textColor: UIColor(0xbcbcc3))
+        self.codeField.textField.attributedPlaceholder = NSAttributedString(string: hint, font: Font.regular(20.0), textColor: UIColor(rgb: 0xbcbcc3))
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

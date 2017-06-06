@@ -1291,9 +1291,8 @@ func chatMessageFileCancelInteractiveFetch(account: Account, file: TelegramMedia
     account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
 }
 
-private func avatarGalleryPhotoDatas(account: Account, representations: [TelegramMediaImageRepresentation]) -> Signal<(Data?, Data?, Bool), NoError> {
+private func avatarGalleryPhotoDatas(account: Account, representations: [TelegramMediaImageRepresentation], autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations), let largestRepresentation = largestImageRepresentation(representations) {
-        let autoFetchFullSize = false
         let maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
         
         let signal = maybeFullSize |> take(1) |> mapToSignal { maybeData -> Signal<(Data?, Data?, Bool), NoError> in
@@ -1352,8 +1351,8 @@ private func avatarGalleryPhotoDatas(account: Account, representations: [Telegra
     }
 }
 
-func chatAvatarGalleryPhoto(account: Account, representations: [TelegramMediaImageRepresentation]) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = avatarGalleryPhotoDatas(account: account, representations: representations)
+func chatAvatarGalleryPhoto(account: Account, representations: [TelegramMediaImageRepresentation], autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = avatarGalleryPhotoDatas(account: account, representations: representations, autoFetchFullSize: autoFetchFullSize)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
@@ -1441,3 +1440,46 @@ func chatAvatarGalleryPhoto(account: Account, representations: [TelegramMediaIma
         }
     }
 }
+
+private func builtinWallpaperData() -> Signal<UIImage, NoError> {
+    return Signal { subscriber in
+        if let image = UIImage(bundleImageName: "Chat/Wallpapers/Builtin0") {
+            subscriber.putNext(image)
+        }
+        subscriber.putCompletion()
+        
+        return EmptyDisposable
+    } |> runOn(Queue.concurrentDefaultQueue())
+}
+
+func settingsBuiltinWallpaperImage(account: Account) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return builtinWallpaperData() |> map { fullSizeImage in
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            
+            let drawingRect = arguments.drawingRect
+            var fittedSize = fullSizeImage.size.aspectFilled(drawingRect.size)
+            if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                fittedSize.width = arguments.boundingSize.width
+            }
+            if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                fittedSize.height = arguments.boundingSize.height
+            }
+            
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            
+            context.withFlippedContext { c in
+                c.setBlendMode(.copy)
+                if let fullSizeImage = fullSizeImage.cgImage {
+                    c.interpolationQuality = .medium
+                    c.draw(fullSizeImage, in: fittedRect)
+                }
+            }
+            
+            addCorners(context, arguments: arguments)
+            
+            return context
+        }
+    }
+}
+

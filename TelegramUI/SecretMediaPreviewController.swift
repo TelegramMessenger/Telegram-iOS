@@ -24,12 +24,14 @@ public final class SecretMediaPreviewController: ViewController {
     private var messageView: MessageView?
     private var currentNodeMessageId: MessageId?
     
+    private let presentationData: PresentationData
+    
     public init(account: Account, messageId: MessageId) {
         self.account = account
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init()
+        super.init(navigationBarTheme: nil)
         
-        self.navigationBar.isHidden = true
         self.statusBar.alpha = 0.0
         
         self.disposable.set((account.postbox.messageView(messageId) |> deliverOnMainQueue).start(next: { [weak self] view in
@@ -68,7 +70,7 @@ public final class SecretMediaPreviewController: ViewController {
         if let messageView = self.messageView, let message = messageView.message {
             if self.currentNodeMessageId != message.id {
                 self.currentNodeMessageId = message.id
-                let item = galleryItemForEntry(account: account, entry: .MessageEntry(message, false, nil, nil))
+                let item = galleryItemForEntry(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: .MessageEntry(message, false, nil, nil))
                 let itemNode = item.node()
                 self.controllerNode.setItemNode(itemNode)
             

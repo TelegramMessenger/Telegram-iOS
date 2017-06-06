@@ -37,6 +37,8 @@ enum ItemListPeerItemLabel {
 }
 
 final class ItemListPeerItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let account: Account
     let peer: Peer
     let presence: PeerPresence?
@@ -51,7 +53,17 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let removePeer: (PeerId) -> Void
     let toggleUpdated: ((Bool) -> Void)?
     
-    init(account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, switchValue: Bool?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
+    init(theme: PresentationTheme? = nil, strings: PresentationStrings? = nil, account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, switchValue: Bool?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
+        if let theme = theme {
+            self.theme = theme
+        } else {
+            self.theme = defaultPresentationTheme
+        }
+        if let strings = strings {
+            self.strings = strings
+        } else {
+            self.strings = defaultPresentationStrings
+        }
         self.account = account
         self.peer = peer
         self.presence = presence
@@ -118,8 +130,6 @@ private let labelFont = Font.regular(13.0)
 private let labelDisclosureFont = Font.regular(17.0)
 private let avatarFont = Font.regular(17.0)
 
-private let arrowImage = UIImage(bundleImageName: "Peer Info/DisclosureArrow")?.precomposed()
-
 class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -153,14 +163,11 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.avatarNode = AvatarNode(font: avatarFont)
@@ -182,10 +189,9 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         self.labelNode.contentsScale = UIScreen.main.scale
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false)
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
@@ -212,14 +218,24 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         
         var currentLabelArrowNode = self.labelArrowNode
         
+        let currentItem = self.layoutParams?.0
+        
         return { item, width, neighbors in
+            var updateArrowImage: UIImage?
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
+            }
+            
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             var labelAttributedString: NSAttributedString?
             
             let peerRevealOptions: [ItemListRevealOption]
             if item.editing.editable && item.enabled {
-                peerRevealOptions = [ItemListRevealOption(key: 0, title: "Remove", icon: nil, color: UIColor(0xff3824))]
+                peerRevealOptions = [ItemListRevealOption(key: 0, title: "Remove", icon: nil, color: UIColor(rgb: 0xff3824))]
             } else {
                 peerRevealOptions = []
             }
@@ -239,34 +255,34 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             if let user = item.peer as? TelegramUser {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     let string = NSMutableAttributedString()
-                    string.append(NSAttributedString(string: firstName, font: titleFont, textColor: .black))
-                    string.append(NSAttributedString(string: " ", font: titleFont, textColor: .black))
-                    string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: .black))
+                    string.append(NSAttributedString(string: firstName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
+                    string.append(NSAttributedString(string: " ", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
+                    string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor))
                     titleAttributedString = string
                 } else if let firstName = user.firstName, !firstName.isEmpty {
-                    titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: UIColor.black)
+                    titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
                 } else if let lastName = user.lastName, !lastName.isEmpty {
-                    titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: UIColor.black)
+                    titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
                 } else {
-                    titleAttributedString = NSAttributedString(string: "Deleted User", font: titleBoldFont, textColor: UIColor(0xa6a6a6))
+                    titleAttributedString = NSAttributedString(string: "Deleted User", font: titleBoldFont, textColor: item.theme.list.itemDisabledTextColor)
                 }
             } else if let group = item.peer as? TelegramGroup {
-                titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: UIColor.black)
+                titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
             } else if let channel = item.peer as? TelegramChannel {
-                titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: UIColor.black)
+                titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
             }
             
             switch item.text {
                 case .presence:
                     if let presence = item.presence as? TelegramUserPresence {
                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                        let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
-                        statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? UIColor(0x007ee5) : UIColor(0xa6a6a6))
+                        let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, presence: presence, relativeTo: Int32(timestamp))
+                        statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
                     } else {
-                        statusAttributedString = NSAttributedString(string: "last seen recently", font: statusFont, textColor: UIColor(0xa6a6a6))
+                        statusAttributedString = NSAttributedString(string: "last seen recently", font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                     }
                 case let .text(text):
-                    statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: UIColor(0xa6a6a6))
+                    statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                 case .none:
                     break
             }
@@ -290,7 +306,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                 case .none:
                     break
                 case let .text(text):
-                    labelAttributedString = NSAttributedString(string: text, font: labelFont, textColor: UIColor(0xa6a6a6))
+                    labelAttributedString = NSAttributedString(string: text, font: labelFont, textColor: item.theme.list.itemSecondaryTextColor)
                     rightInset += 10.0
                 case let .disclosure(text):
                     if let currentLabelArrowNode = currentLabelArrowNode {
@@ -300,11 +316,11 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         arrowNode.isLayerBacked = true
                         arrowNode.displayWithoutProcessing = true
                         arrowNode.displaysAsynchronously = false
-                        arrowNode.image = arrowImage
+                        arrowNode.image = PresentationResourcesItemList.disclosureArrowImage(item.theme)
                         updatedLabelArrowNode = arrowNode
                     }
                     labelInset += 30.0
-                    labelAttributedString = NSAttributedString(string: text, font: labelDisclosureFont, textColor: UIColor(0x8e8e93))
+                    labelAttributedString = NSAttributedString(string: text, font: labelDisclosureFont, textColor: item.theme.list.itemSecondaryTextColor)
             }
             
             let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
@@ -322,7 +338,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = UIColor(white: 1.0, alpha: 0.5)
+                    currentDisabledOverlayNode?.backgroundColor = item.theme.list.itemBackgroundColor.withAlphaComponent(0.5)
                 }
             } else {
                 currentDisabledOverlayNode = nil
@@ -331,6 +347,17 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, width, neighbors)
+                    
+                    if let updateArrowImage = updateArrowImage {
+                        strongSelf.labelArrowNode?.image = updateArrowImage
+                    }
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
                     
                     let revealOffset = strongSelf.revealOffset
                     

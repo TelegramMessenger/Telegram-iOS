@@ -123,16 +123,16 @@ public func convertToSupergroupController(account: Account, peerId: PeerId) -> V
         }
     })
     
-    let signal = statePromise.get()
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
         |> deliverOnMainQueue
-        |> map { state -> (ItemListControllerState, (ItemListNodeState<ConvertToSupergroupEntry>, ConvertToSupergroupEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ConvertToSupergroupEntry>, ConvertToSupergroupEntry.ItemGenerationArguments)) in
             
             var rightNavigationButton: ItemListNavigationButton?
             if state.isConverting {
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             }
             
-            let controllerState = ItemListControllerState(title: .text("Supergroup"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Supergroup"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"))
             let listState = ItemListNodeState(entries: convertToSupergroupEntries(), style: .blocks)
             
             return (controllerState, (listState, arguments))
@@ -141,7 +141,7 @@ public func convertToSupergroupController(account: Account, peerId: PeerId) -> V
             actionsDisposable.dispose()
         }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     replaceControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.replaceAllButRootController(c, animated: true)

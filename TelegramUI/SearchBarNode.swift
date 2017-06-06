@@ -4,17 +4,15 @@ import UIKit
 import AsyncDisplayKit
 import Display
 
-private func generateBackground() -> UIImage? {
+private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
     let diameter: CGFloat = 8.0
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
-        context.setFillColor(UIColor.white.cgColor)
+        context.setFillColor(backgroundColor.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor(0xededed).cgColor)
+        context.setFillColor(foregroundColor.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        }, opaque: true)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
+    }, opaque: true)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
-
-private let searchBarBackground = generateBackground()
 
 private class SearchBarTextField: UITextField {
     fileprivate let placeholderLabel: UILabel
@@ -74,29 +72,43 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    override init() {
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
+    
+    init(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = UIColor.white
+        self.backgroundNode.backgroundColor = theme.rootController.activeNavigationSearchBar.backgroundColor
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
+        self.separatorNode.backgroundColor = theme.rootController.activeNavigationSearchBar.separatorColor
         
         self.textBackgroundNode = ASImageNode()
         self.textBackgroundNode.isLayerBacked = false
         self.textBackgroundNode.displaysAsynchronously = false
         self.textBackgroundNode.displayWithoutProcessing = true
-        self.textBackgroundNode.image = searchBarBackground
+        self.textBackgroundNode.image = generateBackground(backgroundColor: theme.rootController.activeNavigationSearchBar.backgroundColor, foregroundColor: theme.rootController.activeNavigationSearchBar.inputFillColor)
         
         self.textField = SearchBarTextField()
-        self.textField.font = Font.regular(15.0)
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .done
+        self.textField.font = Font.regular(15.0)
+        self.textField.textColor = theme.rootController.activeNavigationSearchBar.inputTextColor
+        
+        switch theme.chatList.searchBarKeyboardColor {
+            case .light:
+                self.textField.keyboardAppearance = .default
+            case .dark:
+                self.textField.keyboardAppearance = .dark
+        }
         
         self.cancelButton = ASButtonNode()
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
-        self.cancelButton.setAttributedTitle(NSAttributedString(string: "Cancel", font: Font.regular(17.0), textColor: UIColor(0x007ee5)), for: [])
+        self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.activeNavigationSearchBar.accentColor), for: [])
         self.cancelButton.displaysAsynchronously = false
         
         super.init()
@@ -104,7 +116,6 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
         
-        self.backgroundColor = UIColor.white.withAlphaComponent(0.5)
         self.addSubnode(self.textBackgroundNode)
         self.view.addSubview(self.textField)
         self.addSubnode(self.cancelButton)
@@ -113,6 +124,19 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.addTarget(self, action: #selector(self.textFieldDidChange(_:)), for: .editingChanged)
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        if self.theme !== theme {
+            self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.activeNavigationSearchBar.accentColor), for: [])
+            self.backgroundNode.backgroundColor = theme.rootController.activeNavigationSearchBar.backgroundColor
+            self.separatorNode.backgroundColor = theme.rootController.activeNavigationSearchBar.separatorColor
+            self.textBackgroundNode.image = generateBackground(backgroundColor: theme.rootController.activeNavigationSearchBar.backgroundColor, foregroundColor: theme.rootController.activeNavigationSearchBar.inputFillColor)
+            
+        }
+        
+        self.theme = theme
+        self.strings = strings
     }
     
     override func layout() {
@@ -161,10 +185,12 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         node.isHidden = true
     }
     
-    func deactivate() {
+    func deactivate(clear: Bool = true) {
         self.textField.resignFirstResponder()
-        self.textField.text = nil
-        self.textField.placeholderLabel.isHidden = false
+        if clear {
+            self.textField.text = nil
+            self.textField.placeholderLabel.isHidden = false
+        }
     }
     
     func transitionOut(to node: SearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: () -> Void) {

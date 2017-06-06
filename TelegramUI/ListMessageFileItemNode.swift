@@ -40,7 +40,7 @@ private func generateExtensionImage(colors: (UInt32, UInt32)) -> UIImage? {
         let cornerSize: CGFloat = 10.0
         let size = CGSize(width: 42.0, height: 42.0)
         
-        context.setFillColor(UIColor(colors.0).cgColor)
+        context.setFillColor(UIColor(rgb: colors.0).cgColor)
         context.beginPath()
         context.move(to: CGPoint(x: 0.0, y: radius))
         if !radius.isZero {
@@ -61,7 +61,7 @@ private func generateExtensionImage(colors: (UInt32, UInt32)) -> UIImage? {
         context.closePath()
         context.fillPath()
         
-        context.setFillColor(UIColor(colors.1).cgColor)
+        context.setFillColor(UIColor(rgb: colors.1).cgColor)
         context.beginPath()
         context.move(to: CGPoint(x: size.width - cornerSize, y: 0.0))
         context.addLine(to: CGPoint(x: size.width, y: cornerSize))
@@ -108,16 +108,6 @@ private let titleFont = Font.medium(16.0)
 private let descriptionFont = Font.regular(13.0)
 private let extensionFont = Font.medium(13.0)
 
-private let downloadFileStartIcon = generateTintedImage(image: UIImage(bundleImageName: "List Menu/ListDownloadStartIcon"), color: UIColor(0x007ee5))
-private let downloadFilePauseIcon = generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    
-    context.setFillColor(UIColor(0x007ee5).cgColor)
-
-    context.fill(CGRect(x: 2.0, y: 0.0, width: 2.0, height: 11.0 - 1.0))
-    context.fill(CGRect(x: 2.0 + 2.0 + 2.0, y: 0.0, width: 2.0, height: 11.0 - 1.0))
-})
-
 private struct FetchControls {
     let fetch: () -> Void
     let cancel: () -> Void
@@ -149,14 +139,14 @@ final class ListMessageFileItemNode: ListMessageNode {
     private var account: Account?
     private (set) var message: Message?
     
+    private var appliedItem: ListMessageItem?
+    
     public required init() {
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
         self.separatorNode.displaysAsynchronously = false
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -181,11 +171,10 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.downloadStatusIconNode.displaysAsynchronously = false
         self.downloadStatusIconNode.displayWithoutProcessing = true
         
-        self.progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(0x007ee5), foregroundColor: UIColor.white, icon: nil))
+        self.progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: .black, foregroundColor: .white, icon: nil))
         self.progressNode.isLayerBacked = true
         
         self.linearProgressNode = ASDisplayNode()
-        self.linearProgressNode.backgroundColor = UIColor(0x007ee5)
         self.linearProgressNode.isLayerBacked = true
         
         super.init()
@@ -239,7 +228,15 @@ final class ListMessageFileItemNode: ListMessageNode {
         let currentMessage = self.message
         let currentIconImageRepresentation = self.currentIconImageRepresentation
         
+        let currentItem = self.appliedItem
+        
         return { [weak self] item, width, mergedTop, _, _ in
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let leftInset: CGFloat = 65.0
             
             var extensionIconImage: UIImage?
@@ -265,7 +262,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         if case let .Audio(voice, duration, title, performer, waveform) = attribute {
                             isAudio = true
                             
-                            titleText = NSAttributedString(string: title ?? "Unknown Track", font: titleFont, textColor: UIColor.black)
+                            titleText = NSAttributedString(string: title ?? "Unknown Track", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                             
                             let descriptionString: String
                             if let performer = performer {
@@ -276,13 +273,13 @@ final class ListMessageFileItemNode: ListMessageNode {
                                 descriptionString = ""
                             }
                             
-                            descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: UIColor(0xa8a8a8))
+                            descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
                         }
                     }
                     
                     if !isAudio {
                         let fileName: String = file.fileName ?? ""
-                        titleText = NSAttributedString(string: fileName, font: titleFont, textColor: UIColor.black)
+                        titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                         
                         var fileExtension: String?
                         if let range = fileName.range(of: ".", options: [.backwards]) {
@@ -307,7 +304,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                             descriptionString = "\(dateString)"
                         }
                     
-                        descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: UIColor(0xa8a8a8))
+                        descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
                     }
                     
                     break
@@ -390,6 +387,15 @@ final class ListMessageFileItemNode: ListMessageNode {
                     strongSelf.currentMedia = selectedMedia
                     strongSelf.message = message
                     strongSelf.account = item.account
+                    strongSelf.appliedItem = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        
+                        strongSelf.progressNode.updateTheme(RadialProgressTheme(backgroundColor: item.theme.list.itemAccentColor, foregroundColor: item.theme.list.itemBackgroundColor, icon: nil))
+                        strongSelf.linearProgressNode.backgroundColor = item.theme.list.itemAccentColor
+                    }
                     
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - nodeLayout.insets.top), size: CGSize(width: width, height: nodeLayout.size.height + UIScreenPixel))
@@ -562,7 +568,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     private func updateProgressFrame(size: CGSize) {
         var descriptionOffset: CGFloat = 0.0
         
-        if let resourceStatus = self.resourceStatus {
+        if let resourceStatus = self.resourceStatus, let item = self.appliedItem {
             var maybeFetchStatus: MediaResourceStatus = .Local
             switch resourceStatus {
                 case .playbackStatus:
@@ -589,7 +595,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     if self.downloadStatusIconNode.supernode == nil {
                         self.addSubnode(self.downloadStatusIconNode)
                     }
-                    self.downloadStatusIconNode.image = downloadFilePauseIcon
+                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadPauseIcon(item.theme)
                 case .Local:
                     if self.linearProgressNode.supernode != nil {
                         self.linearProgressNode.removeFromSupernode()
@@ -605,7 +611,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     if self.downloadStatusIconNode.supernode == nil {
                         self.addSubnode(self.downloadStatusIconNode)
                     }
-                    self.downloadStatusIconNode.image = downloadFileStartIcon
+                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadStartIcon(item.theme)
                 }
         } else {
             if self.linearProgressNode.supernode != nil {

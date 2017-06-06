@@ -23,16 +23,16 @@ private class AvatarNodeParameters: NSObject {
 }
 
 private let gradientColors: [NSArray] = [
-    [UIColor(0xff516a).cgColor, UIColor(0xff885e).cgColor],
-    [UIColor(0xffa85c).cgColor, UIColor(0xffcd6a).cgColor],
-    [UIColor(0x54cb68).cgColor, UIColor(0xa0de7e).cgColor],
-    [UIColor(0x2a9ef1).cgColor, UIColor(0x72d5fd).cgColor],
-    [UIColor(0x665fff).cgColor, UIColor(0x82b1ff).cgColor],
-    [UIColor(0xd669ed).cgColor, UIColor(0xe0a2f3).cgColor]
+    [UIColor(rgb: 0xff516a).cgColor, UIColor(rgb: 0xff885e).cgColor],
+    [UIColor(rgb: 0xffa85c).cgColor, UIColor(rgb: 0xffcd6a).cgColor],
+    [UIColor(rgb: 0x54cb68).cgColor, UIColor(rgb: 0xa0de7e).cgColor],
+    [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor],
+    [UIColor(rgb: 0x665fff).cgColor, UIColor(rgb: 0x82b1ff).cgColor],
+    [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor]
 ]
 
 private let grayscaleColors: NSArray = [
-    UIColor(0xefefef).cgColor, UIColor(0xeeeeee).cgColor
+    UIColor(rgb: 0xefefef).cgColor, UIColor(rgb: 0xeeeeee).cgColor
 ]
 
 private enum AvatarNodeState: Equatable {

@@ -80,12 +80,7 @@ class AvatarGalleryController: ViewController {
         self.account = account
         self.replaceRootController = replaceRootController
         
-        super.init()
-        
-        self.navigationBar.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
-        self.navigationBar.stripeColor = UIColor.clear
-        self.navigationBar.foregroundColor = UIColor.white
-        self.navigationBar.accentColor = UIColor.white
+        super.init(navigationBarTheme: GalleryController.darkNavigationTheme)
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.donePressed))
         
@@ -146,29 +141,6 @@ class AvatarGalleryController: ViewController {
             self?.galleryNode.updatePresentationState({
                 $0.withUpdatedFooterContentNode(footerContentNode)
             }, transition: .immediate)
-        }))
-        
-        self.centralItemAttributesDisposable.add(self.centralItemNavigationStyle.get().start(next: { [weak self] style in
-            if let strongSelf = self {
-                switch style {
-                case .dark:
-                    strongSelf.statusBar.statusBarStyle = .White
-                    strongSelf.navigationBar.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
-                    strongSelf.navigationBar.stripeColor = UIColor.clear
-                    strongSelf.navigationBar.foregroundColor = UIColor.white
-                    strongSelf.navigationBar.accentColor = UIColor.white
-                    strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor.black
-                    strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = true
-                case .light:
-                    strongSelf.statusBar.statusBarStyle = .Black
-                    strongSelf.navigationBar.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
-                    strongSelf.navigationBar.foregroundColor = UIColor.black
-                    strongSelf.navigationBar.accentColor = UIColor(0x007ee5)
-                    strongSelf.navigationBar.stripeColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
-                    strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor(0xbdbdc2)
-                    strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = false
-                }
-            }
         }))
     }
     

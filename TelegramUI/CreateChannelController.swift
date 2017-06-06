@@ -18,11 +18,11 @@ private enum CreateChannelSection: Int32 {
 }
 
 private enum CreateChannelEntry: ItemListNodeEntry {
-    case channelInfo(Peer?, ItemListAvatarAndNameInfoItemState)
-    case setProfilePhoto
+    case channelInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState)
+    case setProfilePhoto(PresentationTheme, String)
     
-    case descriptionSetup(text: String)
-    case descriptionInfo
+    case descriptionSetup(PresentationTheme, String, String)
+    case descriptionInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -48,8 +48,14 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     
     static func ==(lhs: CreateChannelEntry, rhs: CreateChannelEntry) -> Bool {
         switch lhs {
-            case let .channelInfo(lhsPeer, lhsEditingState):
-                if case let .channelInfo(rhsPeer, rhsEditingState) = rhs {
+            case let .channelInfo(lhsTheme, lhsStrings, lhsPeer, lhsEditingState):
+                if case let .channelInfo(rhsTheme, rhsStrings, rhsPeer, rhsEditingState) = rhs {
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
+                        return false
+                    }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                         if !lhsPeer.isEqual(rhsPeer) {
                             return false
@@ -64,20 +70,20 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case .setProfilePhoto:
-                if case .setProfilePhoto = rhs {
+            case let .setProfilePhoto(lhsTheme, lhsText):
+                if case let .setProfilePhoto(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .descriptionSetup(text):
-                if case .descriptionSetup(text) = rhs {
+            case let .descriptionSetup(lhsTheme, lhsText, lhsValue):
+                if case let .descriptionSetup(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case .descriptionInfo:
-                if case .descriptionInfo = rhs {
+            case let .descriptionInfo(lhsTheme, lhsText):
+                if case let .descriptionInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -91,23 +97,23 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     
     func item(_ arguments: CreateChannelArguments) -> ListViewItem {
         switch self {
-            case let .channelInfo(peer, state):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
+            case let .channelInfo(theme, strings, peer, state):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 })
-            case .setProfilePhoto:
-                return ItemListActionItem(title: "Set Profile Photo", kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .setProfilePhoto(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     
                 })
-            case let .descriptionSetup(text):
-                return ItemListMultilineInputItem(text: text, placeholder: "Description", sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+            case let .descriptionSetup(theme, text, value):
+                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
                 })
-            case .descriptionInfo:
-                return ItemListTextItem(text: .plain("You can provide an optional description for your channel."), sectionId: self.section)
+            case let .descriptionInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -143,18 +149,18 @@ private struct CreateChannelState: Equatable {
     }
 }
 
-private func CreateChannelEntries(state: CreateChannelState) -> [CreateChannelEntry] {
+private func CreateChannelEntries(presentationData: PresentationData, state: CreateChannelState) -> [CreateChannelEntry] {
     var entries: [CreateChannelEntry] = []
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
     
     let peer = TelegramGroup(id: PeerId(namespace: 100, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
     
-    entries.append(.channelInfo(peer, groupInfoState))
-    entries.append(.setProfilePhoto)
+    entries.append(.channelInfo(presentationData.theme, presentationData.strings, peer, groupInfoState))
+    entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Settings_SetProfilePhoto))
     
-    entries.append(.descriptionSetup(text: state.editingDescriptionText))
-    entries.append(.descriptionInfo)
+    entries.append(.descriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, state.editingDescriptionText))
+    entries.append(.descriptionInfo(presentationData.theme, presentationData.strings.Channel_About_Help))
     
     return entries
 }
@@ -206,8 +212,8 @@ public func createChannelController(account: Account) -> ViewController {
         }
     })
     
-    let signal = statePromise.get()
-        |> map { state -> (ItemListControllerState, (ItemListNodeState<CreateChannelEntry>, CreateChannelEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CreateChannelEntry>, CreateChannelEntry.ItemGenerationArguments)) in
             
             let rightNavigationButton: ItemListNavigationButton
             if state.creating {
@@ -218,16 +224,15 @@ public func createChannelController(account: Account) -> ViewController {
                 })
             }
             
-            let controllerState = ItemListControllerState(title: .text("Create Channel"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
-            let listState = ItemListNodeState(entries: CreateChannelEntries(state: state), style: .blocks)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Create Channel"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"))
+            let listState = ItemListNodeState(entries: CreateChannelEntries(presentationData: presentationData, state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
         }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
     }

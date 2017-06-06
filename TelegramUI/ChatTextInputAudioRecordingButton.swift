@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 
-private let micIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: UIColor(0x9099A2))
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0
 
@@ -28,7 +27,9 @@ final class ChatTextInputAudioRecordingButton: UIButton {
                 }
                 if let audioRecorder = self.audioRecorder {
                     self.micLevelDisposable?.set(audioRecorder.micLevel.start(next: { [weak self] level in
-                        self?.recordingOverlay?.addImmediateMicLevel(CGFloat(level))
+                        Queue.mainQueue().async {
+                            self?.recordingOverlay?.addImmediateMicLevel(CGFloat(level))
+                        }
                     }))
                 } else {
                     self.micLevelDisposable?.set(nil)
@@ -41,7 +42,6 @@ final class ChatTextInputAudioRecordingButton: UIButton {
         super.init(frame: CGRect())
         
         self.isExclusiveTouch = true
-        self.setImage(micIcon, for: [])
         self.adjustsImageWhenHighlighted = false
         self.adjustsImageWhenDisabled = false
         self.disablesInteractiveTransitionGestureRecognizer = true
@@ -49,6 +49,10 @@ final class ChatTextInputAudioRecordingButton: UIButton {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    func updateTheme(theme: PresentationTheme) {
+        self.setImage(PresentationResourcesChat.chatInputPanelVoiceButtonImage(theme), for: [])
     }
     
     deinit {
@@ -78,7 +82,7 @@ final class ChatTextInputAudioRecordingButton: UIButton {
                 recordingOverlay = ChatTextInputAudioRecordingOverlay(anchorView: self)
                 self.recordingOverlay = recordingOverlay
             }
-            if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext, let topWindow = applicationContext.getTopWindow() {
+            if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext, let topWindow = applicationContext.applicationBindings.getTopWindow() {
                 recordingOverlay.present(in: topWindow)
             }
             return true

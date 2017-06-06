@@ -43,10 +43,14 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     var requestLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     var requestUpdateMediaCollectionInterfaceState: (Bool, (PeerMediaCollectionInterfaceState) -> PeerMediaCollectionInterfaceState) -> Void = { _ in }
     
-    private var mediaCollectionInterfaceState = PeerMediaCollectionInterfaceState()
+    private var mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState
     
     private var modeSelectionNode: PeerMediaCollectionModeSelectionNode?
     private var selectionPanel: ChatMessageSelectionInputPanelNode?
+    
+    private var chatPresentationInterfaceState: ChatPresentationInterfaceState
+    
+    private var presentationData: PresentationData
     
     init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) {
         self.account = account
@@ -54,13 +58,18 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         self.controllerInteraction = controllerInteraction
         self.interfaceInteraction = interfaceInteraction
         
+        self.presentationData = (account.applicationContext as! TelegramApplicationContext).currentPresentationData.with { $0 }
+        self.mediaCollectionInterfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        
         self.historyNodeImpl = historyNodeImplForMode(self.mediaCollectionInterfaceState.mode, account: account, peerId: peerId, messageId: messageId, controllerInteraction: controllerInteraction)
+        
+        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
         self.addSubnode(self.historyNodeImpl)
     }
@@ -76,17 +85,17 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         insets.top += navigationBarHeight
         
         if let selectionState = self.mediaCollectionInterfaceState.selectionState {
-            let interfaceState = ChatPresentationInterfaceState().updatedPeer({ _ in self.mediaCollectionInterfaceState.peer })
+            let interfaceState = self.chatPresentationInterfaceState.updatedPeer({ _ in self.mediaCollectionInterfaceState.peer })
             
             if let selectionPanel = self.selectionPanel {
                 selectionPanel.selectedMessageCount = selectionState.selectedIds.count
                 let panelHeight = selectionPanel.updateLayout(width: layout.size.width, transition: transition, interfaceState: interfaceState)
                 transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
             } else {
-                let selectionPanel = ChatMessageSelectionInputPanelNode()
+                let selectionPanel = ChatMessageSelectionInputPanelNode(theme: self.chatPresentationInterfaceState.theme)
                 selectionPanel.interfaceInteraction = self.interfaceInteraction
                 selectionPanel.selectedMessageCount = selectionState.selectedIds.count
-                selectionPanel.backgroundColor = UIColor(0xfafafa)
+                selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
                 let panelHeight = selectionPanel.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: interfaceState)
                 self.selectionPanel = selectionPanel
                 self.addSubnode(selectionPanel)
@@ -149,7 +158,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 modeSelectionNode.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
                 modeSelectionNode.mediaCollectionInterfaceState = self.mediaCollectionInterfaceState
             } else {
-                let modeSelectionNode = PeerMediaCollectionModeSelectionNode()
+                let modeSelectionNode = PeerMediaCollectionModeSelectionNode(mediaCollectionInterfaceState: self.mediaCollectionInterfaceState)
                 modeSelectionNode.selectedMode = { [weak self] mode in
                     if let requestUpdateMediaCollectionInterfaceState = self?.requestUpdateMediaCollectionInterfaceState {
                         requestUpdateMediaCollectionInterfaceState(true, { $0.withToggledSelectingMode().withMode(mode) })

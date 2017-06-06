@@ -5,23 +5,19 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 
-private func backgroundImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context -> Void in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor(0x748391, 0.45).cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-    })?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
-}
-
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
 class ChatHoleItem: ListViewItem {
     let index: MessageIndex
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let header: ChatMessageDateHeader
     
-    init(index: MessageIndex) {
+    init(index: MessageIndex, theme: PresentationTheme, strings: PresentationStrings) {
         self.index = index
-        self.header = ChatMessageDateHeader(timestamp: index.timestamp)
+        self.theme = theme
+        self.strings = strings
+        self.header = ChatMessageDateHeader(timestamp: index.timestamp, theme: theme, strings: strings)
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -58,12 +54,11 @@ class ChatHoleItemNode: ListViewItemNode {
         
         super.init(layerBacked: true)
         
-        self.backgroundNode.image = backgroundImage(color: UIColor(0x007ee5))
         self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.labelNode)
         
-        self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
+        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
     }
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -79,14 +74,24 @@ class ChatHoleItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ChatHoleItem, _ width: CGFloat, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let layoutConstants = self.layoutConstants
+        let currentItem = self.item
         return { item, width, dateAtBottom in
-            let (size, apply) = labelLayout(NSAttributedString(string: "Loading", font: titleFont, textColor: UIColor.white), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            var updatedBackground: UIImage?
+            if item.theme !== currentItem?.theme {
+                updatedBackground = PresentationResourcesChat.chatServiceBubbleFillImage(item.theme)
+            }
+            
+            let (size, apply) = labelLayout(NSAttributedString(string: item.strings.Channel_NotificationLoading, font: titleFont, textColor: item.theme.chat.serviceMessage.serviceMessagePrimaryTextColor), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let backgroundSize = CGSize(width: size.size.width + 8.0 + 8.0, height: 20.0)
             
             return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 20.0), insets: UIEdgeInsets(top: 4.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 4.0, right: 0.0)), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    if let updatedBackground = updatedBackground {
+                        strongSelf.backgroundNode.image = updatedBackground
+                    }
                     
                     let _ = apply()
                     

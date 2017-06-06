@@ -4,12 +4,18 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let text: String
     let sectionId: ItemListSectionId
     
     let isAlwaysPlain: Bool = true
     
-    init(text: String, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme? = nil, text: String, sectionId: ItemListSectionId) {
+        if let theme = theme {
+            self.theme = theme
+        } else {
+            self.theme = defaultPresentationTheme
+        }
         self.text = text
         self.sectionId = sectionId
     }
@@ -71,11 +77,10 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         return { item, width, neighbors in
             let leftInset: CGFloat = 15.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.text, font: titleFont, textColor: UIColor(0x6d6d72)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let contentSize: CGSize
             var insets = UIEdgeInsets()
-            let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: width, height: 30.0)
             switch neighbors.top {
@@ -88,7 +93,6 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            let layoutSize = layout.size
             
             return (layout, { [weak self] in
                 if let strongSelf = self {

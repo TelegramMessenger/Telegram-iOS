@@ -159,22 +159,14 @@ private func channelBlacklistControllerEntries(view: PeerView, state: ChannelBla
             switch lhs.participant {
                 case .creator:
                     lhsInvitedAt = Int32.min
-                case let .editor(_, _, invitedAt):
-                    lhsInvitedAt = invitedAt
-                case let .moderator(_, _, invitedAt):
-                    lhsInvitedAt = invitedAt
-                case let .member(_, invitedAt):
+                case let .member(_, invitedAt, _, _):
                     lhsInvitedAt = invitedAt
             }
             let rhsInvitedAt: Int32
             switch rhs.participant {
                 case .creator:
                     rhsInvitedAt = Int32.min
-                case let .editor(_, _, invitedAt):
-                    rhsInvitedAt = invitedAt
-                case let .moderator(_, _, invitedAt):
-                    rhsInvitedAt = invitedAt
-                case let .member(_, invitedAt):
+                case let .member(_, invitedAt, _, _):
                     rhsInvitedAt = invitedAt
             }
             return lhsInvitedAt < rhsInvitedAt
@@ -262,9 +254,9 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest(statePromise.get(), peerView, peersPromise.get())
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, peersPromise.get())
         |> deliverOnMainQueue
-        |> map { state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelBlacklistEntry>, ChannelBlacklistEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelBlacklistEntry>, ChannelBlacklistEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
             if let peers = peers, !peers.isEmpty {
                 if state.editing {
@@ -300,7 +292,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: .text("Blacklist"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Blacklist"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: true)
             let listState = ItemListNodeState(entries: channelBlacklistControllerEntries(view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))
@@ -308,7 +300,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

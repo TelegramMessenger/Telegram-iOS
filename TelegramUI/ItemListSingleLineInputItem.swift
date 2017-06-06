@@ -11,6 +11,7 @@ enum ItemListSingleLineInputItemType {
 }
 
 class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let title: NSAttributedString
     let text: String
     let placeholder: String
@@ -21,7 +22,8 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let textUpdated: (String) -> Void
     let tag: ItemListItemTag?
     
-    init(title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular, spacing: CGFloat = 0.0, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular, spacing: CGFloat = 0.0, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+        self.theme = theme
         self.title = title
         self.text = text
         self.placeholder = placeholder
@@ -84,14 +86,11 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -108,7 +107,10 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         
         self.textNode.textField.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
         self.textNode.textField.font = Font.regular(17.0)
-        self.textNode.textField.textColor = .black
+        if let item = self.item {
+            self.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
+            self.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        }
         self.textNode.clipsToBounds = true
         self.textNode.textField.delegate = self
         self.textNode.textField.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
@@ -118,7 +120,15 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     func asyncLayout() -> (_ item: ItemListSingleLineInputItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
+        let currentItem = self.item
+        
         return { item, width, neighbors in
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let leftInset: CGFloat = 16.0
             
             let titleString = NSMutableAttributedString(attributedString: item.title)
@@ -135,11 +145,20 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(17.0), textColor: UIColor(0x878787))
+            let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        
+                        strongSelf.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
+                        strongSelf.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+                    }
                     
                     let _ = titleApply()
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((layout.contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)

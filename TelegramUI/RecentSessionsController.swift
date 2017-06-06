@@ -56,13 +56,13 @@ private enum RecentSessionsEntryStableId: Hashable {
 }
 
 private enum RecentSessionsEntry: ItemListNodeEntry {
-    case currentSessionHeader
-    case currentSession(RecentAccountSession)
-    case terminateOtherSessions
-    case currentSessionInfo
+    case currentSessionHeader(PresentationTheme, String)
+    case currentSession(PresentationTheme, PresentationStrings, RecentAccountSession)
+    case terminateOtherSessions(PresentationTheme, String)
+    case currentSessionInfo(PresentationTheme, String)
     
-    case otherSessionsHeader
-    case session(index: Int32, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
+    case otherSessionsHeader(PresentationTheme, String)
+    case session(index: Int32, theme: PresentationTheme, strings: PresentationStrings, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -85,23 +85,45 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return .index(3)
             case .otherSessionsHeader:
                 return .index(4)
-            case let .session(_, session, _, _, _):
+            case let .session(_, _, _, session, _, _, _):
                 return .session(session.hash)
         }
     }
     
     static func ==(lhs: RecentSessionsEntry, rhs: RecentSessionsEntry) -> Bool {
         switch lhs {
-            case .currentSessionHeader, .terminateOtherSessions, .currentSessionInfo, .otherSessionsHeader:
-                return lhs.stableId == rhs.stableId
-            case let .currentSession(session):
-                if case .currentSession(session) = rhs {
+            case let .currentSessionHeader(lhsTheme, lhsText):
+                if case let .currentSessionHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .session(index, session, enabled, editing, revealed):
-                if case .session(index, session, enabled, editing, revealed) = rhs {
+            case let .terminateOtherSessions(lhsTheme, lhsText):
+                if case let .terminateOtherSessions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .currentSessionInfo(lhsTheme, lhsText):
+                if case let .currentSessionInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .otherSessionsHeader(lhsTheme, lhsText):
+                if case let .otherSessionsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .currentSession(lhsTheme, lhsStrings, lhsSession):
+                if case let .currentSession(rhsTheme, rhsStrings, rhsSession) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSession == rhsSession {
+                    return true
+                } else {
+                    return false
+                }
+            case let .session(lhsIndex, lhsTheme, lhsStrings, lhsSession, lhsEnabled, lhsEditing, lhsRevealed):
+                if case let .session(rhsIndex, rhsTheme, rhsStrings, rhsSession, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSession == rhsSession, lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
                     return true
                 } else {
                     return false
@@ -119,8 +141,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 }
             case .session:
                 switch lhs {
-                    case let .session(lhsIndex, _, _, _, _):
-                        if case let .session(rhsIndex, _, _, _, _) = rhs {
+                    case let .session(lhsIndex, _, _, _, _, _, _):
+                        if case let .session(rhsIndex, _, _, _, _, _, _) = rhs {
                             return lhsIndex <= rhsIndex
                         } else {
                             return false
@@ -133,22 +155,22 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     
     func item(_ arguments: RecentSessionsControllerArguments) -> ListViewItem {
         switch self {
-            case .currentSessionHeader:
-                return ItemListSectionHeaderItem(text: "CURRENT SESSION", sectionId: self.section)
-            case let .currentSession(session):
-                return ItemListRecentSessionItem(session: session, enabled: true, editable: false, editing: false, revealed: false, sectionId: self.section, setSessionIdWithRevealedOptions: { _, _ in
+            case let .currentSessionHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .currentSession(theme, strings, session):
+                return ItemListRecentSessionItem(theme: theme, strings: strings, session: session, enabled: true, editable: false, editing: false, revealed: false, sectionId: self.section, setSessionIdWithRevealedOptions: { _, _ in
                 }, removeSession: { _ in
                 })
-            case .terminateOtherSessions:
-                return ItemListActionItem(title: "Terminate all other sessions", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .terminateOtherSessions(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.terminateOtherSessions()
                 })
-            case .currentSessionInfo:
-                return ItemListTextItem(text: .plain("Logs out all devices except for this one."), sectionId: self.section)
-            case .otherSessionsHeader:
-                return ItemListSectionHeaderItem(text: "ACTIVE SESSIONS", sectionId: self.section)
-            case let .session(_, session, enabled, editing, revealed):
-                return ItemListRecentSessionItem(session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
+            case let .currentSessionInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .otherSessionsHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .session(_, theme, strings, session, enabled, editing, revealed):
+                return ItemListRecentSessionItem(theme: theme, strings: strings, session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                     arguments.setSessionIdWithRevealedOptions(previousId, id)
                 }, removeSession: { id in
                     arguments.removeSession(id)
@@ -211,22 +233,22 @@ private struct RecentSessionsControllerState: Equatable {
     }
 }
 
-private func recentSessionsControllerEntries(state: RecentSessionsControllerState, sessions: [RecentAccountSession]?) -> [RecentSessionsEntry] {
+private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessions: [RecentAccountSession]?) -> [RecentSessionsEntry] {
     var entries: [RecentSessionsEntry] = []
     
     if let sessions = sessions {
         var existingSessionIds = Set<Int64>()
-        entries.append(.currentSessionHeader)
+        entries.append(.currentSessionHeader(presentationData.theme, presentationData.strings.AuthSessions_CurrentSession))
         if let index = sessions.index(where: { $0.hash == 0 }) {
             existingSessionIds.insert(sessions[index].hash)
-            entries.append(.currentSession(sessions[index]))
+            entries.append(.currentSession(presentationData.theme, presentationData.strings, sessions[index]))
         }
         
         if sessions.count > 1 {
-            entries.append(.terminateOtherSessions)
-            entries.append(.currentSessionInfo)
+            entries.append(.terminateOtherSessions(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessions))
+            entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
         
-            entries.append(.otherSessionsHeader)
+            entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
             
             let filteredSessions: [RecentAccountSession] = sessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
@@ -235,7 +257,7 @@ private func recentSessionsControllerEntries(state: RecentSessionsControllerStat
             for i in 0 ..< filteredSessions.count {
                 if !existingSessionIds.contains(sessions[i].hash) {
                     existingSessionIds.insert(sessions[i].hash)
-                    entries.append(.session(index: Int32(i), session: sessions[i], enabled: state.removingSessionId != sessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == sessions[i].hash))
+                    entries.append(.session(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, session: sessions[i], enabled: state.removingSessionId != sessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == sessions[i].hash))
                 }
             }
         }
@@ -353,21 +375,21 @@ public func recentSessionsController(account: Account) -> ViewController {
     
     var previousSessions: [RecentAccountSession]?
     
-    let signal = combineLatest(statePromise.get(), sessionsPromise.get())
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), sessionsPromise.get())
         |> deliverOnMainQueue
-        |> map { state, sessions -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, sessions -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
             if let sessions = sessions, sessions.count > 1 {
                 if state.terminatingOtherSessions {
                     rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
                 } else if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }
@@ -383,15 +405,15 @@ public func recentSessionsController(account: Account) -> ViewController {
             let previous = previousSessions
             previousSessions = sessions
             
-            let controllerState = ItemListControllerState(title: .text("Active Sessions"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
-            let listState = ItemListNodeState(entries: recentSessionsControllerEntries(state: state, sessions: sessions), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && sessions != nil && previous!.count >= sessions!.count)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AuthSessions_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+            let listState = ItemListNodeState(entries: recentSessionsControllerEntries(presentationData: presentationData, state: state, sessions: sessions), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && sessions != nil && previous!.count >= sessions!.count)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

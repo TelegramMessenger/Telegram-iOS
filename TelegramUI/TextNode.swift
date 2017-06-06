@@ -1,6 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import Postbox
 
 private let defaultFont = UIFont.systemFont(ofSize: 15.0)
 
@@ -40,9 +41,10 @@ final class TextNodeLayout: NSObject {
     fileprivate let cutout: TextNodeCutout?
     fileprivate let insets: UIEdgeInsets
     let size: CGSize
+    fileprivate let firstLineOffset: CGFloat
     fileprivate let lines: [TextNodeLine]
     
-    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, lines: [TextNodeLine], backgroundColor: UIColor?) {
+    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, firstLineOffset: CGFloat, lines: [TextNodeLine], backgroundColor: UIColor?) {
         self.attributedString = attributedString
         self.maximumNumberOfLines = maximumNumberOfLines
         self.truncationType = truncationType
@@ -51,6 +53,7 @@ final class TextNodeLayout: NSObject {
         self.cutout = cutout
         self.insets = insets
         self.size = size
+        self.firstLineOffset = firstLineOffset
         self.lines = lines
         self.backgroundColor = backgroundColor
     }
@@ -67,30 +70,78 @@ final class TextNodeLayout: NSObject {
         }
     }
     
-    func attributesAtPoint(_ point: CGPoint) -> [String: Any] {
+    func attributesAtPoint(_ point: CGPoint) -> (Int, [String: Any])? {
         if let attributedString = self.attributedString {
+            let transformedPoint = CGPoint(x: point.x - self.insets.left, y: point.y - self.insets.top)
             for line in self.lines {
-                let lineFrame = line.frame.offsetBy(dx: 0.0, dy: -line.frame.size.height)
-                if lineFrame.contains(point) {
-                    let index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: point.x - lineFrame.minX, y: point.y - lineFrame.minY))
+                let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                if lineFrame.contains(transformedPoint) {
+                    var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
+                    if index == attributedString.length {
+                        index -= 1
+                    } else if index != 0 {
+                        var glyphStart: CGFloat = 0.0
+                        CTLineGetOffsetForStringIndex(line.line, index, &glyphStart)
+                        if transformedPoint.x < glyphStart {
+                            index -= 1
+                        }
+                    }
                     if index >= 0 && index < attributedString.length {
-                        return attributedString.attributes(at: index, effectiveRange: nil)
+                        return (index, attributedString.attributes(at: index, effectiveRange: nil))
                     }
                     break
                 }
             }
             for line in self.lines {
-                let lineFrame = line.frame.offsetBy(dx: 0.0, dy: -line.frame.size.height)
-                if lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.size.height).insetBy(dx: -3.0, dy: -3.0).contains(point) {
-                    let index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: point.x - lineFrame.minX, y: point.y - lineFrame.minY))
+                let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                if lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.size.height).insetBy(dx: -3.0, dy: -3.0).contains(transformedPoint) {
+                    var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
+                    if index == attributedString.length {
+                        index -= 1
+                    } else if index != 0 {
+                        var glyphStart: CGFloat = 0.0
+                        CTLineGetOffsetForStringIndex(line.line, index, &glyphStart)
+                        if transformedPoint.x < glyphStart {
+                            index -= 1
+                        }
+                    }
                     if index >= 0 && index < attributedString.length {
-                        return attributedString.attributes(at: index, effectiveRange: nil)
+                        return (index, attributedString.attributes(at: index, effectiveRange: nil))
                     }
                     break
                 }
             }
         }
-        return [:]
+        return nil
+    }
+    
+    func attributeRects(name: String, at index: Int) -> [CGRect]? {
+        if let attributedString = self.attributedString {
+            var range = NSRange()
+            let _ = attributedString.attribute(name, at: index, effectiveRange: &range)
+            if range.length != 0 {
+                var rects: [CGRect] = []
+                for line in self.lines {
+                    let lineRange = NSIntersectionRange(range, line.range)
+                    if lineRange.length != 0 {
+                        var leftOffset: CGFloat = 0.0
+                        if lineRange.location != line.range.location {
+                            leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                        }
+                        var rightOffset: CGFloat = line.frame.width
+                        if lineRange.location + lineRange.length != line.range.length {
+                            rightOffset = ceil(CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, nil))
+                        }
+                        let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                        rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height)))
+                    }
+                }
+                if !rects.isEmpty {
+                    return rects
+                }
+            }
+        }
+        return nil
     }
 }
 
@@ -101,6 +152,16 @@ final class TelegramHashtag {
     init(peerName: String?, hashtag: String) {
         self.peerName = peerName
         self.hashtag = hashtag
+    }
+}
+
+final class TelegramPeerMention {
+    let peerId: PeerId
+    let mention: String
+    
+    init(peerId: PeerId, mention: String) {
+        self.peerId = peerId
+        self.mention = mention
     }
 }
 
@@ -121,11 +182,19 @@ final class TextNode: ASDisplayNode {
         self.clipsToBounds = false
     }
     
-    func attributesAtPoint(_ point: CGPoint) -> [String: Any] {
+    func attributesAtPoint(_ point: CGPoint) -> (Int, [String: Any])? {
         if let cachedLayout = self.cachedLayout {
             return cachedLayout.attributesAtPoint(point)
         } else {
-            return [:]
+            return nil
+        }
+    }
+    
+    func attributeRects(name: String, at index: Int) -> [CGRect]? {
+        if let cachedLayout = self.cachedLayout {
+            return cachedLayout.attributeRects(name: name, at: index)
+        } else {
+            return nil
         }
     }
     
@@ -154,7 +223,7 @@ final class TextNode: ASDisplayNode {
             var maybeTypesetter: CTTypesetter?
             maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
             if maybeTypesetter == nil {
-                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, cutout: cutout, insets: insets, size: CGSize(), lines: [], backgroundColor: backgroundColor)
+                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, cutout: cutout, insets: insets, size: CGSize(), firstLineOffset: 0.0, lines: [], backgroundColor: backgroundColor)
             }
             
             let typesetter = maybeTypesetter!
@@ -176,6 +245,8 @@ final class TextNode: ASDisplayNode {
                 }
                 cutoutEnabled = true
             }
+            
+            let firstLineOffset = floorToScreenPixels(fontLineSpacing * 2.0)
             
             var first = true
             while true {
@@ -257,9 +328,9 @@ final class TextNode: ASDisplayNode {
                 }
             }
             
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), lines: lines, backgroundColor: backgroundColor)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), firstLineOffset: firstLineOffset, lines: lines, backgroundColor: backgroundColor)
         } else {
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, cutout: cutout, insets: insets, size: CGSize(), lines: [], backgroundColor: backgroundColor)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, cutout: cutout, insets: insets, size: CGSize(), firstLineOffset: 0.0, lines: [], backgroundColor: backgroundColor)
         }
     }
 

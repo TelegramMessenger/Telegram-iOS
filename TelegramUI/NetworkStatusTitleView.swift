@@ -21,7 +21,7 @@ final class NetworkStatusTitleView: UIView {
     var title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false) {
         didSet {
             if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: title.text, font: Font.medium(17.0), textColor: .black)
+                self.titleNode.attributedText = NSAttributedString(string: title.text, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 if self.title.activity != oldValue.activity {
                     if self.title.activity {
                         self.activityIndicator.isHidden = false
@@ -41,7 +41,21 @@ final class NetworkStatusTitleView: UIView {
     private var isPasscodeSet = false
     private var isManuallyLocked = false
     
-    override init(frame: CGRect) {
+    var theme: PresentationTheme {
+        didSet {
+            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+            
+            if self.isPasscodeSet {
+                self.lockView.setIsLocked(self.isManuallyLocked, theme: self.theme, animated: false)
+            } else {
+                self.lockView.setIsLocked(false, theme: self.theme, animated: false)
+            }
+        }
+    }
+    
+    init(theme: PresentationTheme) {
+        self.theme = theme
+        
         self.titleNode = ASTextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
@@ -58,7 +72,7 @@ final class NetworkStatusTitleView: UIView {
         
         self.buttonView = HighlightTrackingButton()
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         self.addSubview(self.buttonView)
         self.addSubnode(self.titleNode)
@@ -126,11 +140,11 @@ final class NetworkStatusTitleView: UIView {
         if isPasscodeSet {
             self.buttonView.isHidden = false
             self.lockView.isHidden = false
-            self.lockView.setIsLocked(isManuallyLocked, animated: !self.bounds.size.width.isZero)
+            self.lockView.setIsLocked(isManuallyLocked, theme: self.theme, animated: !self.bounds.size.width.isZero)
         } else {
             self.buttonView.isHidden = true
             self.lockView.isHidden = true
-            self.lockView.setIsLocked(false, animated: false)
+            self.lockView.setIsLocked(false, theme: self.theme, animated: false)
         }
     }
     

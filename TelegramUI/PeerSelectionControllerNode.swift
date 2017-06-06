@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SwiftSignalKit
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let account: Account
@@ -19,16 +20,42 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     init(account: Account, dismiss: @escaping () -> Void) {
         self.account = account
         self.dismiss = dismiss
-        self.chatListNode = ChatListNode(account: account, mode: .peers)
+        
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        self.chatListNode = ChatListNode(account: account, mode: .peers, theme: presentationData.theme, strings: presentationData.strings)
         
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
         
         self.addSubnode(self.chatListNode)
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    strongSelf.presentationData = presentationData
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -89,7 +116,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(contentNode: ChatListSearchContainerNode(account: self.account, openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatListSearchContainerNode(account: self.account, openPeer: { [weak self] peer in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peer)
                 }

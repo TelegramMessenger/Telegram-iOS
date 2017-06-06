@@ -4,11 +4,13 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 class ContactListActionItem: ListViewItem {
+    let theme: PresentationTheme
     let title: String
     let icon: UIImage?
     let action: () -> Void
     
-    init(title: String, icon: UIImage?, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, icon: UIImage?, action: @escaping () -> Void) {
+        self.theme = theme
         self.title = title
         self.icon = icon
         self.action = action
@@ -64,17 +66,17 @@ class ContactListActionItemNode: ListViewItemNode {
     private let iconNode: ASImageNode
     private let titleNode: TextNode
     
+    private var theme: PresentationTheme?
+    
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -88,7 +90,6 @@ class ContactListActionItemNode: ListViewItemNode {
         self.iconNode.displaysAsynchronously = false
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -99,11 +100,18 @@ class ContactListActionItemNode: ListViewItemNode {
     
     func asyncLayout() -> (_ item: ContactListActionItem, _ width: CGFloat) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let currentTheme = self.theme
         
         return { item, width in
+            var updatedTheme: PresentationTheme?
+            
+            if currentTheme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let leftInset: CGFloat = 65.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - 10.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor), nil, 1, .end, CGSize(width: width - 10.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let contentSize = CGSize(width: width, height: 48.0)
             let insets = UIEdgeInsets()
@@ -113,6 +121,15 @@ class ContactListActionItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.theme = item.theme
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
+                    
                     let _ = titleApply()
                     
                     strongSelf.iconNode.image = item.icon

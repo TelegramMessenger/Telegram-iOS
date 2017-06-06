@@ -5,11 +5,12 @@ import Postbox
 import TelegramCore
 
 class ManagedVideoNode: ASDisplayNode {
-    private var videoContext: ManagedVideoContext?
+    private var videoPlayer: MediaPlayer?
+    private var playerNode: MediaPlayerNode?
     private let videoContextDisposable = MetaDisposable()
     var transformArguments: TransformImageArguments? {
         didSet {
-            self.videoContext?.playerNode.transformArguments = self.transformArguments
+            self.playerNode?.transformArguments = self.transformArguments
         }
     }
     
@@ -36,34 +37,51 @@ class ManagedVideoNode: ASDisplayNode {
         self.videoContextDisposable.set(nil)
     }
     
-    func acquireContext(account: Account, mediaManager: MediaManager, id: ManagedMediaId, resource: MediaResource) {
-        self.videoContextDisposable.set((mediaManager.videoContext(account: account, id: id, resource: resource, preferSoftwareDecoding: self.preferSoftwareDecoding, backgroundThread: self.backgroundThread) |> deliverOnMainQueue).start(next: { [weak self] videoContext in
+    func acquireContext(account: Account, mediaManager: MediaManager, id: ManagedMediaId, resource: MediaResource, priority: Int32) {
+        let (player, disposable) = mediaManager.videoContext(postbox: account.postbox, id: id, resource: resource, preferSoftwareDecoding: false, backgroundThread: false, priority: priority, initiatePlayback: true, activate: { [weak self] playerNode in
             if let strongSelf = self {
-                if strongSelf.videoContext !== videoContext {
-                    if let videoContext = strongSelf.videoContext {
-                        if videoContext.playerNode.supernode == self {
-                            videoContext.playerNode.removeFromSupernode()
-                        }
+                if strongSelf.playerNode !== playerNode {
+                    if strongSelf.playerNode?.supernode === self {
+                        strongSelf.playerNode?.removeFromSupernode()
                     }
-                    
-                    strongSelf.videoContext = videoContext
-                    strongSelf._player.set(.single(videoContext?.mediaPlayer))
-                    if let videoContext = videoContext {
-                        strongSelf.addSubnode(videoContext.playerNode)
-                        videoContext.playerNode.transformArguments = strongSelf.transformArguments
-                        strongSelf.setNeedsLayout()
-                        //videoContext.mediaPlayer.play()
-                    }
+                    strongSelf.playerNode = playerNode
+                    strongSelf.addSubnode(playerNode)
+                    playerNode.transformArguments = strongSelf.transformArguments
+                    strongSelf.setNeedsLayout()
                 }
             }
-        }))
+        }, deactivate: { [weak self] in
+            if let strongSelf = self {
+                if let playerNode = strongSelf.playerNode {
+                    strongSelf.playerNode = nil
+                    if playerNode.supernode === strongSelf {
+                        playerNode.removeFromSupernode()
+                    }
+                }
+                return .complete()
+            } else {
+                return .complete()
+            }
+        })
+        
+        self._player.set(.single(player))
+        self.videoContextDisposable.set(disposable)
+    }
+    
+    func discardContext() {
+        self._player.set(.single(nil))
+        if let playerNode = self.playerNode {
+            self.playerNode = nil
+            if playerNode.supernode === self {
+                playerNode.removeFromSupernode()
+            }
+        }
+        self.videoContextDisposable.set(nil)
     }
     
     override func layout() {
         super.layout()
         
-        if let videoContext = videoContext {
-            videoContext.playerNode.frame = self.bounds
-        }
+        self.playerNode?.frame = self.bounds
     }
 }

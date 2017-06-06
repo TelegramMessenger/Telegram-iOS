@@ -10,16 +10,16 @@ private enum ChatInfoTitleButton {
     case mute
     case unmute
     
-    var title: String {
+    func title(_ strings: PresentationStrings) -> String {
         switch self {
             case .search:
-                return "Search"
+                return strings.Common_Search
             case .info:
-                return "Info"
+                return strings.Conversation_Info
             case .mute:
-                return "Mute"
+                return strings.Conversation_Mute
             case .unmute:
-                return "Unmute"
+                return strings.Conversation_Unmute
         }
     }
 }
@@ -33,24 +33,30 @@ private func peerButtons(_ peer: Peer) -> [ChatInfoTitleButton] {
 }
 
 final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
-    private let separatorNode: ASDisplayNode
+    private var theme: PresentationTheme?
     
+    private let separatorNode: ASDisplayNode
     private var buttons: [(ChatInfoTitleButton, UIButton)] = []
     
     override init() {
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
         self.separatorNode.isLayerBacked = true
         
         super.init()
-        
-        self.backgroundColor = UIColor(0xF5F6F8)
         
         self.addSubnode(self.separatorNode)
     }
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        let themeUpdated = self.theme !== interfaceState.theme
+        self.theme = interfaceState.theme
+        
         let panelHeight: CGFloat = 44.0
+        
+        if themeUpdated {
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+            self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
+        }
         
         let updatedButtons: [ChatInfoTitleButton]
         if let peer = interfaceState.peer {
@@ -71,17 +77,17 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }
         
-        if buttonsUpdated {
+        if buttonsUpdated || themeUpdated {
             for (_, view) in self.buttons {
                 view.removeFromSuperview()
             }
             self.buttons.removeAll()
             for button in updatedButtons {
                 let view = UIButton()
-                view.setTitle(button.title, for: [])
+                view.setTitle(button.title(interfaceState.strings), for: [])
                 view.titleLabel?.font = Font.regular(17.0)
-                view.setTitleColor(UIColor(0x007ee5), for: [])
-                view.setTitleColor(UIColor(0x007ee5).withAlphaComponent(0.7), for: [.highlighted])
+                view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor, for: [])
+                view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7), for: [.highlighted])
                 view.addTarget(self, action: #selector(self.buttonPressed(_:)), for: [.touchUpInside])
                 self.view.addSubview(view)
                 self.buttons.append((button, view))

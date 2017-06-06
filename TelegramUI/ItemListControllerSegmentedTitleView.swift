@@ -2,7 +2,20 @@ import Foundation
 import UIKit
 
 final class ItemListControllerSegmentedTitleView: UIView {
-    let segments: [String]
+    var segments: [String] {
+        didSet {
+            if self.segments != oldValue {
+                self.control.removeAllSegments()
+                var index = 0
+                for segment in self.segments {
+                    self.control.insertSegment(withTitle: segment, at: index, animated: false)
+                    index += 1
+                }
+                self.setNeedsLayout()
+            }
+        }
+    }
+    
     var index: Int {
         didSet {
             self.control.selectedSegmentIndex = self.index
@@ -13,12 +26,20 @@ final class ItemListControllerSegmentedTitleView: UIView {
     
     var indexUpdated: ((Int) -> Void)?
     
-    init(segments: [String], index: Int) {
+    var color: UIColor {
+        didSet {
+            self.control.tintColor = self.color
+        }
+    }
+    
+    init(segments: [String], index: Int, color: UIColor) {
         self.segments = segments
         self.index = index
+        self.color = color
         
         self.control = UISegmentedControl(items: segments)
         self.control.selectedSegmentIndex = index
+        self.control.tintColor = color
         
         super.init(frame: CGRect())
         

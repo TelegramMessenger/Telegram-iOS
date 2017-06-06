@@ -10,12 +10,16 @@ private let titleFont = Font.regular(20.0)
 private let statusFont = Font.regular(14.0)
 
 class ContactsVCardItem: ListViewItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let account: Account
     let peer: Peer
     let action: (Peer) -> Void
     let selectable: Bool = true
     
-    init(account: Account, peer: Peer, action: @escaping (Peer) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, action: @escaping (Peer) -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.account = account
         self.peer = peer
         self.action = action
@@ -25,7 +29,7 @@ class ContactsVCardItem: ListViewItem {
         async {
             let node = ContactsVCardItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self.account, self.peer, width, previousItem != nil, nextItem != nil)
+            let (nodeLayout, nodeApply) = makeLayout(self.account, self.peer, self, width, previousItem != nil, nextItem != nil)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -43,7 +47,7 @@ class ContactsVCardItem: ListViewItem {
                     let first = previousItem == nil
                     let last = nextItem == nil
                     
-                    let (nodeLayout, apply) = layout(self.account, self.peer, width, first, last)
+                    let (nodeLayout, apply) = layout(self.account, self.peer, self, width, first, last)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply()
@@ -72,14 +76,13 @@ class ContactsVCardItemNode: ListViewItemNode {
     private var account: Account?
     private var peer: Peer?
     private var avatarState: (Account, Peer)?
+    private var item: ContactsVCardItem?
     
     required init() {
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.avatarNode = AvatarNode(font: Font.regular(15.0))
@@ -98,7 +101,7 @@ class ContactsVCardItemNode: ListViewItemNode {
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         let makeLayout = self.asyncLayout()
-        let (nodeLayout, nodeApply) = makeLayout(self.account, self.peer, width, previousItem != nil, nextItem != nil)
+        let (nodeLayout, nodeApply) = makeLayout(self.account, self.peer, item as! ContactsVCardItem, width, previousItem != nil, nextItem != nil)
         self.contentSize = nodeLayout.contentSize
         self.insets = nodeLayout.insets
         nodeApply()
@@ -113,10 +116,6 @@ class ContactsVCardItemNode: ListViewItemNode {
         super.setHighlighted(highlighted, animated: animated)
         
         if highlighted {
-            /*self.contentNode.displaysAsynchronously = false
-             self.contentNode.backgroundColor = UIColor.clear
-             self.contentNode.isOpaque = false*/
-            
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
@@ -128,28 +127,30 @@ class ContactsVCardItemNode: ListViewItemNode {
                         if let strongSelf = self {
                             if completed {
                                 strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                                /*strongSelf.contentNode.backgroundColor = UIColor.white
-                                 strongSelf.contentNode.isOpaque = true
-                                 strongSelf.contentNode.displaysAsynchronously = true*/
                             }
                         }
                         })
                     self.highlightedBackgroundNode.alpha = 0.0
                 } else {
                     self.highlightedBackgroundNode.removeFromSupernode()
-                    /*self.contentNode.backgroundColor = UIColor.white
-                     self.contentNode.isOpaque = true
-                     self.contentNode.displaysAsynchronously = true*/
                 }
             }
         }
     }
     
-    func asyncLayout() -> (_ account: Account?, _ peer: Peer?, _ width: CGFloat, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ account: Account?, _ peer: Peer?, _ item: ContactsVCardItem, _ width: CGFloat, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         
-        return { [weak self] account, peer, width, first, last in
+        let currentItem = self.item
+        
+        return { [weak self] account, peer, item, width, first, last in
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let leftInset: CGFloat = 91.0
             let rightInset: CGFloat = 10.0
             
@@ -158,17 +159,17 @@ class ContactsVCardItemNode: ListViewItemNode {
             
             if let peer = peer {
                 if let user = peer as? TelegramUser {
-                    titleAttributedString = NSAttributedString(string: user.displayTitle, font: titleFont, textColor: UIColor.black)
+                    titleAttributedString = NSAttributedString(string: user.displayTitle, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                     
                     if let phone = user.phone {
-                        statusAttributedString = NSAttributedString(string: formatPhoneNumber(phone), font: statusFont, textColor: UIColor(0xa6a6a6))
+                        statusAttributedString = NSAttributedString(string: formatPhoneNumber(phone), font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                     }
                 } else if let group = peer as? TelegramGroup {
-                    titleAttributedString = NSAttributedString(string: group.title, font: titleFont, textColor: UIColor.black)
-                    statusAttributedString = NSAttributedString(string: "group", font: statusFont, textColor: UIColor(0xa6a6a6))
+                    titleAttributedString = NSAttributedString(string: group.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                    statusAttributedString = NSAttributedString(string: item.strings.Group_Status, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                 } else if let channel = peer as? TelegramChannel {
-                    titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: UIColor.black)
-                    statusAttributedString = NSAttributedString(string: "channel", font: statusFont, textColor: UIColor(0xa6a6a6))
+                    titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                    statusAttributedString = NSAttributedString(string: item.strings.Channel_Status, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                 }
             }
             
@@ -180,8 +181,15 @@ class ContactsVCardItemNode: ListViewItemNode {
             
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.item = item
                     strongSelf.peer = peer
                     strongSelf.account = account
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        //strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
                     
                     if let peer = peer, let account = account, strongSelf.avatarState == nil || strongSelf.avatarState!.0 !== account || !strongSelf.avatarState!.1.isEqual(peer) {
                         strongSelf.avatarNode.setPeer(account: account, peer: peer)

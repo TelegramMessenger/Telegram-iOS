@@ -1,0 +1,3 @@
+[submodule "submodules/libtgvoip"]
+	path = submodules/libtgvoip
+	url = https://bitbucket.org/grishka/libtgvoip.git

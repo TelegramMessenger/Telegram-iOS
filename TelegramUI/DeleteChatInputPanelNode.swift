@@ -8,7 +8,7 @@ import SwiftSignalKit
 final class DeleteChatInputPanelNode: ChatInputPanelNode {
     private let button: HighlightableButtonNode
     
-    private var presentationInterfaceState = ChatPresentationInterfaceState()
+    private var presentationInterfaceState: ChatPresentationInterfaceState?
     
     override init() {
         self.button = HighlightableButtonNode()
@@ -37,7 +37,7 @@ final class DeleteChatInputPanelNode: ChatInputPanelNode {
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
             
-            self.button.setAttributedTitle(NSAttributedString(string: "Delete and Exit", font: Font.regular(17.0), textColor: UIColor(0xff3b30)), for: [])
+            self.button.setAttributedTitle(NSAttributedString(string: interfaceState.strings.GroupInfo_DeleteAndExit, font: Font.regular(17.0), textColor: interfaceState.theme.chat.inputPanel.panelControlDestructiveColor), for: [])
         }
         
         let buttonSize = self.button.measure(CGSize(width: width - 10.0, height: 100.0))

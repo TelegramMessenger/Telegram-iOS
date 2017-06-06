@@ -7,17 +7,21 @@ import TelegramCore
 
 class ChatImageGalleryItem: GalleryItem {
     let account: Account
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(account: Account, message: Message, location: MessageHistoryEntryLocation?) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, message: Message, location: MessageHistoryEntryLocation?) {
         self.account = account
+        self.theme = theme
+        self.strings = strings
         self.message = message
         self.location = location
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatImageGalleryItemNode(account: self.account)
+        let node = ChatImageGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
         
         for media in self.message.media {
             if let image = media as? TelegramMediaImage {
@@ -68,11 +72,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var fetchDisposable = MetaDisposable()
     
-    init(account: Account) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
         
         super.init()
         
@@ -122,7 +126,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.alphaTransitionOnFirstUpdate = false
                 let displaySize = largestSize.dividedByScreenScale()
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(account: account, signal: chatMessageImageFile(account: account, file: file, progressive: true), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(account: account, signal: chatMessageImageFile(account: account, file: file, progressive: false), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize, self.imageNode)
             } else {
                 self._ready.set(.single(Void()))

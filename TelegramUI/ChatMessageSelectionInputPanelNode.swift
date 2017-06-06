@@ -8,7 +8,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: UIButton
     private let forwardButton: UIButton
     
-    private var presentationInterfaceState = ChatPresentationInterfaceState()
+    private var presentationInterfaceState: ChatPresentationInterfaceState?
+    
+    private var theme: PresentationTheme
     
     var selectedMessageCount: Int = 0 {
         didSet {
@@ -17,14 +19,16 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override init() {
+    init(theme: PresentationTheme) {
+        self.theme = theme
+        
         self.deleteButton = UIButton()
         self.forwardButton = UIButton()
         
-        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: UIColor(0x007ee5)), for: [.normal])
-        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: UIColor(0xdededf)), for: [.disabled])
-        self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: UIColor(0x007ee5)), for: [.normal])
-        self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: UIColor(0xdededf)), for: [.disabled])
+        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+        self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+        self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
         
         super.init()
         
@@ -36,6 +40,17 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
         self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), for: [.touchUpInside])
+    }
+    
+    func updateTheme(theme: PresentationTheme) {
+        if self.theme !== theme {
+            self.theme = theme
+            
+            self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+        }
     }
     
     @objc func deleteButtonPressed() {
@@ -54,19 +69,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             if let channel = interfaceState.peer as? TelegramChannel {
                 switch channel.info {
                     case .broadcast:
-                        switch channel.role {
-                            case .creator, .editor, .moderator:
-                                canDelete = true
-                            case .member:
-                                canDelete = false
-                        }
+                        canDelete = channel.hasAdminRights(.canDeleteMessages)
                     case .group:
-                        switch channel.role {
-                            case .creator, .editor, .moderator:
-                                canDelete = true
-                            case .member:
-                                canDelete = false
-                        }
+                        canDelete = channel.hasAdminRights(.canDeleteMessages)
                 }
             } else {
                 canDelete = true

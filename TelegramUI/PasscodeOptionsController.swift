@@ -27,12 +27,12 @@ private enum PasscodeOptionsSection: Int32 {
 }
 
 private enum PasscodeOptionsEntry: ItemListNodeEntry {
-    case togglePasscode(String, Bool)
-    case changePasscode(String)
-    case settingInfo(String)
+    case togglePasscode(PresentationTheme, String, Bool)
+    case changePasscode(PresentationTheme, String)
+    case settingInfo(PresentationTheme, String)
     
-    case autoLock(String, String)
-    case touchId(String, Bool)
+    case autoLock(PresentationTheme, String, String)
+    case touchId(PresentationTheme, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -60,32 +60,32 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
     
     static func ==(lhs: PasscodeOptionsEntry, rhs: PasscodeOptionsEntry) -> Bool {
         switch lhs {
-            case let .togglePasscode(text, value):
-                if case .togglePasscode(text, value) = rhs {
+            case let .togglePasscode(lhsTheme, lhsText, lhsValue):
+                if case let .togglePasscode(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .changePasscode(text):
-                if case .changePasscode(text) = rhs {
+            case let .changePasscode(lhsTheme, lhsText):
+                if case let .changePasscode(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .settingInfo(text):
-                if case .settingInfo(text) = rhs {
+            case let .settingInfo(lhsTheme, lhsText):
+                if case let .settingInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .autoLock(text, value):
-                if case .autoLock(text, value) = rhs {
+            case let .autoLock(lhsTheme, lhsText, lhsValue):
+                if case let .autoLock(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .touchId(text, value):
-                if case .touchId(text, value) = rhs {
+            case let .touchId(lhsTheme, lhsText, lhsValue):
+                if case let .touchId(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -99,26 +99,26 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
     
     func item(_ arguments: PasscodeOptionsControllerArguments) -> ListViewItem {
         switch self {
-            case let .togglePasscode(title, value):
-                return ItemListActionItem(title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .togglePasscode(theme, title, value):
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     if value {
                         arguments.turnPasscodeOff()
                     } else {
                         arguments.turnPasscodeOn()
                     }
                 })
-            case let .changePasscode(title):
-                return ItemListActionItem(title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .changePasscode(theme, title):
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.changePasscode()
                 })
-            case let .settingInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
-            case let .autoLock(title, value):
-                return ItemListDisclosureItem(title: title, label: value, sectionId: self.section, style: .blocks, action: {
+            case let .settingInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .autoLock(theme, title, value):
+                return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.changePasscodeTimeout()
                 })
-            case let .touchId(title, value):
-                return ItemListSwitchItem(title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .touchId(theme, title, value):
+                return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.changeTouchId(value)
                 })
         }
@@ -173,19 +173,19 @@ private func autolockStringForTimeout(_ timeout: Int32?) -> String {
     }
 }
 
-private func passcodeOptionsControllerEntries(state: PasscodeOptionsControllerState, passcodeOptionsData: PasscodeOptionsData) -> [PasscodeOptionsEntry] {
+private func passcodeOptionsControllerEntries(presentationData: PresentationData, state: PasscodeOptionsControllerState, passcodeOptionsData: PasscodeOptionsData) -> [PasscodeOptionsEntry] {
     var entries: [PasscodeOptionsEntry] = []
     
     switch passcodeOptionsData.accessChallenge {
         case .none:
-            entries.append(.togglePasscode("Turn Passcode On", false))
-            entries.append(.settingInfo("When you set up an additional passcode, a lock icon will appear on the chats page. Tap it to lock and unlock the app.\n\nNote: if you forget the passcode, you'll need to delete and reinstall the app. All secret chats will be lost."))
+            entries.append(.togglePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_TurnPasscodeOn, false))
+            entries.append(.settingInfo(presentationData.theme, presentationData.strings.PasscodeSettings_Help))
         case .numericalPassword, .plaintextPassword:
-            entries.append(.togglePasscode("Turn Passcode Off", true))
-            entries.append(.changePasscode("Change Passcode"))
-            entries.append(.settingInfo("When you set up an additional passcode, a lock icon will appear on the chats page. Tap it to lock and unlock the app.\n\nNote: if you forget the passcode, you'll need to delete and reinstall the app. All secret chats will be lost."))
-            entries.append(.autoLock("Auto-Lock", autolockStringForTimeout(passcodeOptionsData.presentationSettings.autolockTimeout)))
-            entries.append(.touchId("Unlock with Touch ID", passcodeOptionsData.presentationSettings.enableBiometrics))
+            entries.append(.togglePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_TurnPasscodeOff, true))
+            entries.append(.changePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_ChangePasscode))
+            entries.append(.settingInfo(presentationData.theme, presentationData.strings.PasscodeSettings_Help))
+            entries.append(.autoLock(presentationData.theme, presentationData.strings.PasscodeSettings_AutoLock, autolockStringForTimeout(passcodeOptionsData.presentationSettings.autolockTimeout)))
+            entries.append(.touchId(presentationData.theme, presentationData.strings.PasscodeSettings_UnlockWithTouchId, passcodeOptionsData.presentationSettings.enableBiometrics))
     }
     
     return entries
@@ -330,20 +330,18 @@ func passcodeOptionsController(account: Account) -> ViewController {
         })
     })
     
-    let signal = combineLatest(statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
-        |> map { state, passcodeOptionsData -> (ItemListControllerState, (ItemListNodeState<PasscodeOptionsEntry>, PasscodeOptionsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, state, passcodeOptionsData -> (ItemListControllerState, (ItemListNodeState<PasscodeOptionsEntry>, PasscodeOptionsEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(title: .text("Passcode Lock"), leftNavigationButton: nil, rightNavigationButton: nil, animateChanges: false)
-            let listState = ItemListNodeState(entries: passcodeOptionsControllerEntries(state: state, passcodeOptionsData: passcodeOptionsData), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PasscodeSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: passcodeOptionsControllerEntries(presentationData: presentationData, state: state, passcodeOptionsData: passcodeOptionsData), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
-    
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

@@ -6,12 +6,18 @@ import SwiftSignalKit
 import Photos
 
 final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetController {
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
         return self._ready
     }
     
-    init(currentValue: Int32, applyValue: @escaping (Int32) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, applyValue: @escaping (Int32) -> Void) {
+        self.theme = theme
+        self.strings = strings
+        
         super.init()
         
         self._ready.set(.single(true))
@@ -19,18 +25,16 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
         var updatedValue = currentValue
         self.setItemGroups([
             ActionSheetItemGroup(items: [
-                AutoremoveTimeoutSelectorItem(currentValue: currentValue, valueChanged: { value in
+                AutoremoveTimeoutSelectorItem(theme: theme, strings: strings, currentValue: currentValue, valueChanged: { value in
                     updatedValue = value
                 }),
-                ActionSheetButtonItem(title: "Set", action: { [weak self] in
-                    if let strongSelf = self {
-                        self?.dismissAnimated()
-                    }
+                ActionSheetButtonItem(title: strings.Wallpaper_Set, action: { [weak self] in
+                    self?.dismissAnimated()
                     applyValue(updatedValue)
                 })
             ]),
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Cancel", action: { [weak self] in
+                ActionSheetButtonItem(title: strings.Common_Cancel, action: { [weak self] in
                     self?.dismissAnimated()
                 }),
             ])
@@ -43,51 +47,61 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
 }
 
 private final class AutoremoveTimeoutSelectorItem: ActionSheetItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    
     let currentValue: Int32
     let valueChanged: (Int32) -> Void
     
-    init(currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.currentValue = currentValue
         self.valueChanged = valueChanged
     }
     
     func node() -> ActionSheetItemNode {
-        return AutoremoveTimeoutSelectorItemNode(currentValue: self.currentValue, valueChanged: self.valueChanged)
+        return AutoremoveTimeoutSelectorItemNode(theme: self.theme, strings: self.strings, currentValue: self.currentValue, valueChanged: self.valueChanged)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
     }
 }
 
-private let timeoutValues: [(Int32, String)] = [
-    (0, "Off"),
-    (1, "1 second"),
-    (2, "2 seconds"),
-    (3, "3 seconds"),
-    (4, "4 seconds"),
-    (5, "5 seconds"),
-    (6, "6 seconds"),
-    (7, "7 seconds"),
-    (8, "8 seconds"),
-    (9, "9 seconds"),
-    (10, "10 seconds"),
-    (11, "11 seconds"),
-    (12, "12 seconds"),
-    (13, "13 seconds"),
-    (14, "14 seconds"),
-    (15, "15 seconds"),
-    (30, "30 seconds"),
-    (1 * 60, "1 minute"),
-    (1 * 60 * 60, "1 hour"),
-    (24 * 60 * 60, "1 day"),
-    (7 * 24 * 60 * 60, "1 week"),
+private let timeoutValues: [Int32] = [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    30,
+    1 * 60,
+    1 * 60 * 60,
+    24 * 60 * 60,
+    7 * 24 * 60 * 60
 ]
 
 private final class AutoremoveTimeoutSelectorItemNode: ActionSheetItemNode, UIPickerViewDelegate, UIPickerViewDataSource {
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    
     private let valueChanged: (Int32) -> Void
     private let pickerView: UIPickerView
     
-    init(currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.valueChanged = valueChanged
         
         self.pickerView = UIPickerView()
@@ -101,7 +115,7 @@ private final class AutoremoveTimeoutSelectorItemNode: ActionSheetItemNode, UIPi
         self.pickerView.reloadAllComponents()
         var index: Int = 0
         for i in 0 ..< timeoutValues.count {
-            if currentValue <= timeoutValues[i].0 {
+            if currentValue <= timeoutValues[i] {
                 index = i
                 break
             }
@@ -122,11 +136,11 @@ private final class AutoremoveTimeoutSelectorItemNode: ActionSheetItemNode, UIPi
     }
     
     func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
-        return NSAttributedString(string: timeoutValues[row].1, font: Font.medium(15.0), textColor: UIColor.black)
+        return NSAttributedString(string: timeIntervalString(strings: self.strings, value: timeoutValues[row]), font: Font.medium(15.0), textColor: UIColor.black)
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        self.valueChanged(timeoutValues[row].0)
+        self.valueChanged(timeoutValues[row])
     }
     
     override func layout() {

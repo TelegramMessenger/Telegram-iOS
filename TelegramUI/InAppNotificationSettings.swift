@@ -18,9 +18,9 @@ struct InAppNotificationSettings: PreferencesEntry, Equatable {
     }
     
     init(decoder: Decoder) {
-        self.playSounds = (decoder.decodeInt32ForKey("s") as Int32) != 0
-        self.vibrate = (decoder.decodeInt32ForKey("v") as Int32) != 0
-        self.displayPreviews = (decoder.decodeInt32ForKey("p") as Int32) != 0
+        self.playSounds = decoder.decodeInt32ForKey("s", orElse: 0) != 0
+        self.vibrate = decoder.decodeInt32ForKey("v", orElse: 0) != 0
+        self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
     }
     
     func encode(_ encoder: Encoder) {

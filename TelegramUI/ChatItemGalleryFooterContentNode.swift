@@ -15,6 +15,8 @@ private let dateFont = Font.regular(14.0)
 
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let account: Account
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
     
     private let deleteButton: UIButton
     private let actionButton: UIButton
@@ -30,8 +32,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     private let messageContextDisposable = MetaDisposable()
     
-    init(account: Account) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
+        self.theme = theme
+        self.strings = strings
         
         self.deleteButton = UIButton()
         self.actionButton = UIButton()
@@ -72,12 +76,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                 canDelete = true
             } else if let channel = peer as? TelegramChannel {
                 if message.flags.contains(.Incoming) {
-                    switch channel.role {
-                        case .creator, .moderator, .editor:
-                            canDelete = true
-                        case .member:
-                            canDelete = false
-                    }
+                    canDelete = channel.hasAdminRights(.canDeleteMessages)
                 } else {
                     canDelete = true
                 }
@@ -96,7 +95,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             authorNameText = peer.displayTitle
         }
         
-        let dateText = humanReadableStringForTimestamp(timestamp: message.timestamp)
+        let dateText = humanReadableStringForTimestamp(strings: self.strings, timestamp: message.timestamp)
         
         if self.currentMessageText != message.text || canDelete != !self.deleteButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
             self.currentMessageText = message.text

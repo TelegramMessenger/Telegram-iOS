@@ -29,32 +29,32 @@ private enum NetworkUsageStatsSection: Int32 {
 }
 
 private enum NetworkUsageStatsEntry: ItemListNodeEntry {
-    case messagesHeader(String)
-    case messagesSent(String, String)
-    case messagesReceived(String, String)
+    case messagesHeader(PresentationTheme, String)
+    case messagesSent(PresentationTheme, String, String)
+    case messagesReceived(PresentationTheme, String, String)
     
-    case imageHeader(String)
-    case imageSent(String, String)
-    case imageReceived(String, String)
+    case imageHeader(PresentationTheme, String)
+    case imageSent(PresentationTheme, String, String)
+    case imageReceived(PresentationTheme, String, String)
     
-    case videoHeader(String)
-    case videoSent(String, String)
-    case videoReceived(String, String)
+    case videoHeader(PresentationTheme, String)
+    case videoSent(PresentationTheme, String, String)
+    case videoReceived(PresentationTheme, String, String)
     
-    case audioHeader(String)
-    case audioSent(String, String)
-    case audioReceived(String, String)
+    case audioHeader(PresentationTheme, String)
+    case audioSent(PresentationTheme, String, String)
+    case audioReceived(PresentationTheme, String, String)
     
-    case fileHeader(String)
-    case fileSent(String, String)
-    case fileReceived(String, String)
+    case fileHeader(PresentationTheme, String)
+    case fileSent(PresentationTheme, String, String)
+    case fileReceived(PresentationTheme, String, String)
     
-    case callHeader(String)
-    case callSent(String, String)
-    case callReceived(String, String)
+    case callHeader(PresentationTheme, String)
+    case callSent(PresentationTheme, String, String)
+    case callReceived(PresentationTheme, String, String)
     
-    case reset(NetworkUsageControllerSection, String)
-    case resetTimestamp(String)
+    case reset(PresentationTheme, NetworkUsageControllerSection, String)
+    case resetTimestamp(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -122,122 +122,122 @@ private enum NetworkUsageStatsEntry: ItemListNodeEntry {
     
     static func ==(lhs: NetworkUsageStatsEntry, rhs: NetworkUsageStatsEntry) -> Bool {
         switch lhs {
-            case let .messagesHeader(text):
-                if case .messagesHeader(text) = rhs {
+            case let .messagesHeader(lhsTheme, lhsText):
+                if case let .messagesHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .messagesSent(text, value):
-                if case .messagesSent(text, value) = rhs {
+            case let .messagesSent(lhsTheme, lhsText, lhsValue):
+                if case let .messagesSent(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .messagesReceived(text, value):
-                if case .messagesReceived(text, value) = rhs {
+            case let .messagesReceived(lhsTheme, lhsText, lhsValue):
+                if case let .messagesReceived(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .imageHeader(text):
-                if case .imageHeader(text) = rhs {
+            case let .imageHeader(lhsTheme, lhsText):
+                if case let .imageHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .imageSent(text, value):
-                if case .imageSent(text, value) = rhs {
+            case let .imageSent(lhsTheme, lhsText, lhsValue):
+                if case let .imageSent(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .imageReceived(text, value):
-                if case .imageReceived(text, value) = rhs {
+            case let .imageReceived(lhsTheme, lhsText, lhsValue):
+                if case let .imageReceived(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .videoHeader(text):
-                if case .videoHeader(text) = rhs {
+            case let .videoHeader(lhsTheme, lhsText):
+                if case let .videoHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .videoSent(text, value):
-                if case .videoSent(text, value) = rhs {
+            case let .videoSent(lhsTheme, lhsText, lhsValue):
+                if case let .videoSent(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .videoReceived(text, value):
-                if case .videoReceived(text, value) = rhs {
+            case let .videoReceived(lhsTheme, lhsText, lhsValue):
+                if case let .videoReceived(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .audioHeader(text):
-                if case .audioHeader(text) = rhs {
+            case let .audioHeader(lhsTheme, lhsText):
+                if case let .audioHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .audioSent(text, value):
-                if case .audioSent(text, value) = rhs {
+            case let .audioSent(lhsTheme, lhsText, lhsValue):
+                if case let .audioSent(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .audioReceived(text, value):
-                if case .audioReceived(text, value) = rhs {
+            case let .audioReceived(lhsTheme, lhsText, lhsValue):
+                if case let .audioReceived(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .fileHeader(text):
-                if case .fileHeader(text) = rhs {
+            case let .fileHeader(lhsTheme, lhsText):
+                if case let .fileHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .fileSent(text, value):
-                if case .fileSent(text, value) = rhs {
+            case let .fileSent(lhsTheme, lhsText, lhsValue):
+                if case let .fileSent(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .fileReceived(text, value):
-                if case .fileReceived(text, value) = rhs {
+            case let .fileReceived(lhsTheme, lhsText, lhsValue):
+                if case let .fileReceived(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .callHeader(text):
-                if case .callHeader(text) = rhs {
+            case let .callHeader(lhsTheme, lhsText):
+                if case let .callHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .callSent(text, value):
-                if case .callSent(text, value) = rhs {
+            case let .callSent(lhsTheme, lhsText, lhsValue):
+                if case let .callSent(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .callReceived(text, value):
-                if case .callReceived(text, value) = rhs {
+            case let .callReceived(lhsTheme, lhsText, lhsValue):
+                if case let .callReceived(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .reset(section, text):
-                if case .reset(section, text) = rhs {
+            case let .reset(lhsTheme, lhsSection, lhsText):
+                if case let .reset(rhsTheme, rhsSection, rhsText) = rhs, lhsTheme === rhsTheme, lhsSection == rhsSection, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .resetTimestamp(text):
-                if case .resetTimestamp(text) = rhs {
+            case let .resetTimestamp(lhsTheme, lhsText):
+                if case let .resetTimestamp(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -251,122 +251,122 @@ private enum NetworkUsageStatsEntry: ItemListNodeEntry {
     
     func item(_ arguments: NetworkUsageStatsControllerArguments) -> ListViewItem {
         switch self {
-            case let .messagesHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .messagesSent(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .messagesReceived(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .imageHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .imageSent(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .imageReceived(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .videoHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .videoSent(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .videoReceived(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .audioHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .audioSent(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .audioReceived(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .fileHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .fileSent(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .fileReceived(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .callHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .callSent(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .callReceived(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .reset(section, text):
-                return ItemListActionItem(title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .messagesHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .messagesSent(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .messagesReceived(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .imageHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .imageSent(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .imageReceived(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .videoHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .videoSent(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .videoReceived(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .audioHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .audioSent(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .audioReceived(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .fileHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .fileSent(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .fileReceived(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .callHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .callSent(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .callReceived(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
+            case let .reset(theme, section, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetStatistics(section)
                 })
-            case let .resetTimestamp(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
+            case let .resetTimestamp(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
 
-private func networkUsageStatsControllerEntries(section: NetworkUsageControllerSection, stats: NetworkUsageStats) -> [NetworkUsageStatsEntry] {
+private func networkUsageStatsControllerEntries(presentationData: PresentationData, section: NetworkUsageControllerSection, stats: NetworkUsageStats) -> [NetworkUsageStatsEntry] {
     var entries: [NetworkUsageStatsEntry] = []
     
     switch section {
         case .cellular:
-            entries.append(.messagesHeader("MESSAGES"))
-            entries.append(.messagesSent("Bytes Sent", dataSizeString(Int(stats.generic.cellular.outgoing))))
-            entries.append(.messagesReceived("Bytes Received", dataSizeString(Int(stats.generic.cellular.incoming))))
+            entries.append(.messagesHeader(presentationData.theme, "MESSAGES"))
+            entries.append(.messagesSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.generic.cellular.outgoing))))
+            entries.append(.messagesReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.generic.cellular.incoming))))
             
-            entries.append(.imageHeader("PHOTOS"))
-            entries.append(.imageSent("Bytes Sent", dataSizeString(Int(stats.image.cellular.outgoing))))
-            entries.append(.imageReceived("Bytes Received", dataSizeString(Int(stats.image.cellular.incoming))))
+            entries.append(.imageHeader(presentationData.theme, "PHOTOS"))
+            entries.append(.imageSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.image.cellular.outgoing))))
+            entries.append(.imageReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.image.cellular.incoming))))
             
-            entries.append(.videoHeader("VIDEOS"))
-            entries.append(.videoSent("Bytes Sent", dataSizeString(Int(stats.video.cellular.outgoing))))
-            entries.append(.videoReceived("Bytes Received", dataSizeString(Int(stats.video.cellular.incoming))))
+            entries.append(.videoHeader(presentationData.theme, "VIDEOS"))
+            entries.append(.videoSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.video.cellular.outgoing))))
+            entries.append(.videoReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.video.cellular.incoming))))
             
-            entries.append(.audioHeader("AUDIO"))
-            entries.append(.audioSent("Bytes Sent", dataSizeString(Int(stats.audio.cellular.outgoing))))
-            entries.append(.audioReceived("Bytes Received", dataSizeString(Int(stats.audio.cellular.incoming))))
+            entries.append(.audioHeader(presentationData.theme, "AUDIO"))
+            entries.append(.audioSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.audio.cellular.outgoing))))
+            entries.append(.audioReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.audio.cellular.incoming))))
             
-            entries.append(.fileHeader("DOCUMENTS"))
-            entries.append(.fileSent("Bytes Sent", dataSizeString(Int(stats.file.cellular.outgoing))))
-            entries.append(.fileReceived("Bytes Received", dataSizeString(Int(stats.file.cellular.incoming))))
+            entries.append(.fileHeader(presentationData.theme, "DOCUMENTS"))
+            entries.append(.fileSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.file.cellular.outgoing))))
+            entries.append(.fileReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.file.cellular.incoming))))
             
-            entries.append(.callHeader("CALLS"))
-            entries.append(.callSent("Bytes Sent", dataSizeString(0)))
-            entries.append(.callReceived("Bytes Received", dataSizeString(0)))
+            entries.append(.callHeader(presentationData.theme, "CALLS"))
+            entries.append(.callSent(presentationData.theme, "Bytes Sent", dataSizeString(0)))
+            entries.append(.callReceived(presentationData.theme, "Bytes Received", dataSizeString(0)))
             
-            entries.append(.reset(section, "Reset Statistics"))
+            entries.append(.reset(presentationData.theme, section, "Reset Statistics"))
         
             if stats.resetCellularTimestamp != 0 {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "E, d MMM yyyy HH:mm"
                 let dateStringPlain = formatter.string(from: Date(timeIntervalSince1970: Double(stats.resetCellularTimestamp)))
                 
-                entries.append(.resetTimestamp("Cellular usage since \(dateStringPlain)"))
+                entries.append(.resetTimestamp(presentationData.theme, "Cellular usage since \(dateStringPlain)"))
             }
         case .wifi:
-            entries.append(.messagesHeader("MESSAGES"))
-            entries.append(.messagesSent("Bytes Sent", dataSizeString(Int(stats.generic.wifi.outgoing))))
-            entries.append(.messagesReceived("Bytes Received", dataSizeString(Int(stats.generic.wifi.incoming))))
+            entries.append(.messagesHeader(presentationData.theme, "MESSAGES"))
+            entries.append(.messagesSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.generic.wifi.outgoing))))
+            entries.append(.messagesReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.generic.wifi.incoming))))
             
-            entries.append(.imageHeader("PHOTOS"))
-            entries.append(.imageSent("Bytes Sent", dataSizeString(Int(stats.image.wifi.outgoing))))
-            entries.append(.imageReceived("Bytes Received", dataSizeString(Int(stats.image.wifi.incoming))))
+            entries.append(.imageHeader(presentationData.theme, "PHOTOS"))
+            entries.append(.imageSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.image.wifi.outgoing))))
+            entries.append(.imageReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.image.wifi.incoming))))
             
-            entries.append(.videoHeader("VIDEOS"))
-            entries.append(.videoSent("Bytes Sent", dataSizeString(Int(stats.video.wifi.outgoing))))
-            entries.append(.videoReceived("Bytes Received", dataSizeString(Int(stats.video.wifi.incoming))))
+            entries.append(.videoHeader(presentationData.theme, "VIDEOS"))
+            entries.append(.videoSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.video.wifi.outgoing))))
+            entries.append(.videoReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.video.wifi.incoming))))
             
-            entries.append(.audioHeader("AUDIO"))
-            entries.append(.audioSent("Bytes Sent", dataSizeString(Int(stats.audio.wifi.outgoing))))
-            entries.append(.audioReceived("Bytes Received", dataSizeString(Int(stats.audio.wifi.incoming))))
+            entries.append(.audioHeader(presentationData.theme, "AUDIO"))
+            entries.append(.audioSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.audio.wifi.outgoing))))
+            entries.append(.audioReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.audio.wifi.incoming))))
             
-            entries.append(.fileHeader("DOCUMENTS"))
-            entries.append(.fileSent("Bytes Sent", dataSizeString(Int(stats.file.wifi.outgoing))))
-            entries.append(.fileReceived("Bytes Received", dataSizeString(Int(stats.file.wifi.incoming))))
+            entries.append(.fileHeader(presentationData.theme, "DOCUMENTS"))
+            entries.append(.fileSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.file.wifi.outgoing))))
+            entries.append(.fileReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.file.wifi.incoming))))
             
-            entries.append(.callHeader("CALLS"))
-            entries.append(.callSent("Bytes Sent", dataSizeString(0)))
-            entries.append(.callReceived("Bytes Received", dataSizeString(0)))
+            entries.append(.callHeader(presentationData.theme, "CALLS"))
+            entries.append(.callSent(presentationData.theme, "Bytes Sent", dataSizeString(0)))
+            entries.append(.callReceived(presentationData.theme, "Bytes Received", dataSizeString(0)))
             
-            entries.append(.reset(section, "Reset Statistics"))
+            entries.append(.reset(presentationData.theme, section, "Reset Statistics"))
             if stats.resetWifiTimestamp != 0 {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "E, d MMM yyyy HH:mm"
                 let dateStringPlain = formatter.string(from: Date(timeIntervalSince1970: Double(stats.resetWifiTimestamp)))
                 
-                entries.append(.resetTimestamp("Wifi usage since \(dateStringPlain)"))
+                entries.append(.resetTimestamp(presentationData.theme, "Wifi usage since \(dateStringPlain)"))
             }
     }
     
@@ -405,18 +405,16 @@ func networkUsageStatsController(account: Account) -> ViewController {
         presentControllerImpl?(controller)
     })
     
-    let signal = combineLatest(section.get(), stats.get()) |> deliverOnMainQueue
-        |> map { section, stats -> (ItemListControllerState, (ItemListNodeState<NetworkUsageStatsEntry>, NetworkUsageStatsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, section.get(), stats.get()) |> deliverOnMainQueue
+        |> map { presentationData, section, stats -> (ItemListControllerState, (ItemListNodeState<NetworkUsageStatsEntry>, NetworkUsageStatsEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(title: .sectionControl(["Cellular", "Wifi"], 0), leftNavigationButton: nil, rightNavigationButton: nil, animateChanges: false)
-            let listState = ItemListNodeState(entries: networkUsageStatsControllerEntries(section: section, stats: stats), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .sectionControl(["Cellular", "Wifi"], 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let listState = ItemListNodeState(entries: networkUsageStatsControllerEntries(presentationData: presentationData, section: section, stats: stats), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
-    
+    let controller = ItemListController(account: account, state: signal)
     controller.titleControlValueChanged = { [weak section] index in
         section?.set(index == 0 ? .cellular : .wifi)
     }

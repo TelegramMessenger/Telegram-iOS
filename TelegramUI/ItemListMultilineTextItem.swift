@@ -4,11 +4,13 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 class ItemListMultilineTextItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let text: String
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(text: String, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId, style: ItemListStyle) {
+        self.theme = theme
         self.text = text
         self.sectionId = sectionId
         self.style = style
@@ -56,17 +58,19 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
     
     private let textNode: TextNode
     
+    private var item: ItemListMultilineTextItem?
+    
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
+        self.topStripeNode.backgroundColor = UIColor(rgb: 0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
+        self.bottomStripeNode.backgroundColor = UIColor(rgb: 0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.textNode = TextNode()
@@ -75,7 +79,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
         self.textNode.contentsScale = UIScreen.main.scale
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
+        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -86,8 +90,16 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ItemListMultilineTextItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
+        let currentItem = self.item
+        
         return { item, width, neighbors in
-            let textColor: UIColor = .black
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
+            let textColor: UIColor = item.theme.list.itemPrimaryTextColor
             
             let leftInset: CGFloat
             
@@ -118,6 +130,15 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
+                    
                     let _ = titleApply()
                     
                     switch item.style {

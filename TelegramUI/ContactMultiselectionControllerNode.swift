@@ -42,16 +42,21 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     
     var dismiss: (() -> Void)?
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     init(account: Account) {
         self.account = account
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
         self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: false, options: []), selectionState: ContactListNodeGroupSelectionState())
-        self.tokenListNode = EditableTokenListNode()
+        self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.chatList.searchBarKeyboardColor), placeholder: self.presentationData.strings.Compose_TokenListPlaceholder)
         
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.contactListNode)
         self.addSubnode(self.tokenListNode)
@@ -88,12 +93,12 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         }
                         strongSelf.searchResultsNode = searchResultsNode
                         searchResultsNode.enableUpdates = true
-                        searchResultsNode.backgroundColor = .white
+                        searchResultsNode.backgroundColor = strongSelf.presentationData.theme.chatList.backgroundColor
                         if let (layout, navigationBarHeight) = strongSelf.containerLayout {
                             var insets = layout.insets(options: [.input])
                             insets.top += navigationBarHeight
                             insets.top += strongSelf.tokenListNode.bounds.size.height
-                            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: .immediate)
+                            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: .immediate)
                             searchResultsNode.frame = CGRect(origin: CGPoint(), size: layout.size)
                         }
                         
@@ -106,10 +111,28 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
     }
     
     deinit {
         self.searchResultsReadyDisposable.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -124,11 +147,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         insets.top += tokenListHeight
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
+        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         if let searchResultsNode = self.searchResultsNode {
-            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
+            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
             searchResultsNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         }
     }

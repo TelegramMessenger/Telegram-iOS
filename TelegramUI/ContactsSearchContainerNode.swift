@@ -6,7 +6,7 @@ import Postbox
 import TelegramCore
 
 private enum ContactListSearchEntry {
-    case peer(Peer)
+    case peer(Peer, PresentationTheme, PresentationStrings)
 }
 
 final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
@@ -18,26 +18,34 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private let searchQuery = Promise<String?>()
     private let searchDisposable = MetaDisposable()
     
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
+    
     init(account: Account, openPeer: @escaping (PeerId) -> Void) {
         self.account = account
         self.openPeer = openPeer
+        
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        self.themeAndStringsPromise = Promise((presentationData.theme, presentationData.strings))
         
         self.listNode = ListView()
         
         super.init()
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = presentationData.theme.chatList.backgroundColor
         self.addSubnode(self.listNode)
         
         self.listNode.isHidden = true
         
+        let themeAndStringsPromise = self.themeAndStringsPromise
+        
         let searchItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ContactListSearchEntry], NoError> in
                 if let query = query, !query.isEmpty {
-                    return account.postbox.searchContacts(query: query.lowercased())
+                    return combineLatest(account.postbox.searchContacts(query: query.lowercased()), themeAndStringsPromise.get())
                         |> delay(0.1, queue: Queue.concurrentDefaultQueue())
-                        |> map { peers -> [ContactListSearchEntry] in
-                            return peers.map({ .peer($0) })
+                        |> map { peers, themeAndStrings -> [ContactListSearchEntry] in
+                            return peers.map({ .peer($0, themeAndStrings.0, themeAndStrings.1) })
                         }
                 } else {
                     return .single([])
@@ -54,8 +62,8 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                     var listItems: [ListViewItem] = []
                     for item in items {
                         switch item {
-                            case let .peer(peer):
-                                listItems.append(ContactsPeerItem(account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: nil, action: { [weak self] peer in
+                            case let .peer(peer, theme, strings):
+                                listItems.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: nil, action: { [weak self] peer in
                                     if let openPeer = self?.openPeer {
                                         self?.listNode.clearHighlightAnimated(true)
                                         openPeer(peer.id)

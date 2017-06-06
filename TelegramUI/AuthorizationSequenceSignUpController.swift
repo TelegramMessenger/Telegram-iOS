@@ -24,12 +24,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
         }
     }
     
-    override init(navigationBar: NavigationBar = NavigationBar()) {
-        super.init(navigationBar: navigationBar)
-        
-        self.navigationBar.backgroundColor = nil
-        self.navigationBar.isOpaque = false
-        self.navigationBar.stripeColor = UIColor.clear
+    init() {
+        super.init(navigationBarTheme: AuthorizationSequenceController.navigationBarTheme)
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
     }

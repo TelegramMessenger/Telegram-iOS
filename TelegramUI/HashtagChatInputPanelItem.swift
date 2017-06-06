@@ -79,15 +79,15 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
         self.textNode = TextNode()
         
         self.topSeparatorNode = ASDisplayNode()
-        self.topSeparatorNode.backgroundColor = UIColor(0xC9CDD1)
+        self.topSeparatorNode.backgroundColor = UIColor(rgb: 0xC9CDD1)
         self.topSeparatorNode.isLayerBacked = true
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xD6D6DA)
+        self.separatorNode.backgroundColor = UIColor(rgb: 0xD6D6DA)
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
+        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)

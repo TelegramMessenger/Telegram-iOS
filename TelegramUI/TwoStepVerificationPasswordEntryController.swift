@@ -38,14 +38,14 @@ private enum TwoStepVerificationPasswordEntryTag: ItemListItemTag {
 }
 
 private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
-    case passwordEntryTitle(String)
-    case passwordEntry(String)
+    case passwordEntryTitle(PresentationTheme, String)
+    case passwordEntry(PresentationTheme, String)
     
-    case hintTitle(String)
-    case hintEntry(String)
+    case hintTitle(PresentationTheme, String)
+    case hintEntry(PresentationTheme, String)
     
-    case emailEntry(String)
-    case emailInfo(String)
+    case emailEntry(PresentationTheme, String)
+    case emailInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         return TwoStepVerificationPasswordEntrySection.password.rawValue
@@ -70,38 +70,38 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
     
     static func ==(lhs: TwoStepVerificationPasswordEntryEntry, rhs: TwoStepVerificationPasswordEntryEntry) -> Bool {
         switch lhs {
-            case let .passwordEntryTitle(text):
-                if case .passwordEntryTitle(text) = rhs {
+            case let .passwordEntryTitle(lhsTheme, lhsText):
+                if case let .passwordEntryTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .passwordEntry(text):
-                if case .passwordEntry(text) = rhs {
+            case let .passwordEntry(lhsTheme, lhsText):
+                if case let .passwordEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .hintTitle(text):
-                if case .hintTitle(text) = rhs {
+            case let .hintTitle(lhsTheme, lhsText):
+                if case let .hintTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .hintEntry(text):
-                if case .hintEntry(text) = rhs {
+            case let .hintEntry(lhsTheme, lhsText):
+                if case let .hintEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .emailEntry(text):
-                if case .emailEntry(text) = rhs {
+            case let .emailEntry(lhsTheme, lhsText):
+                if case let .emailEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .emailInfo(text):
-                if case .emailInfo(text) = rhs {
+            case let .emailInfo(lhsTheme, lhsText):
+                if case let .emailInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -115,30 +115,30 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
     
     func item(_ arguments: TwoStepVerificationPasswordEntryControllerArguments) -> ListViewItem {
         switch self {
-            case let .passwordEntryTitle(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .passwordEntry(text):
-                return ItemListSingleLineInputItem(title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .passwordEntryTitle(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .passwordEntry(theme, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .hintTitle(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .hintEntry(text):
-                return ItemListSingleLineInputItem(title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .hintTitle(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .hintEntry(theme, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .emailEntry(text):
-                return ItemListSingleLineInputItem(title: NSAttributedString(string: "E-Mail", textColor: .black), text: text, placeholder: "", type: .email, spacing: 10.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .emailEntry(theme, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "E-Mail", textColor: .black), text: text, placeholder: "", type: .email, spacing: 10.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .emailInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
+            case let .emailInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -221,22 +221,22 @@ private struct TwoStepVerificationPasswordEntryControllerState: Equatable {
     }
 }
 
-private func twoStepVerificationPasswordEntryControllerEntries(state: TwoStepVerificationPasswordEntryControllerState, mode: TwoStepVerificationPasswordEntryMode) -> [TwoStepVerificationPasswordEntryEntry] {
+private func twoStepVerificationPasswordEntryControllerEntries(presentationData: PresentationData, state: TwoStepVerificationPasswordEntryControllerState, mode: TwoStepVerificationPasswordEntryMode) -> [TwoStepVerificationPasswordEntryEntry] {
     var entries: [TwoStepVerificationPasswordEntryEntry] = []
     
     switch state.stage {
         case let .entry(text):
-            entries.append(.passwordEntryTitle("Enter a password"))
-            entries.append(.passwordEntry(text))
+            entries.append(.passwordEntryTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPasswordEnterPasswordNew))
+            entries.append(.passwordEntry(presentationData.theme, text))
         case let .reentry(_, text):
-            entries.append(.passwordEntryTitle("Please re-enter your password"))
-            entries.append(.passwordEntry(text))
+            entries.append(.passwordEntryTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPasswordEnterPasswordChange))
+            entries.append(.passwordEntry(presentationData.theme, text))
         case let .hint(_, text):
-            entries.append(.hintTitle("Please create a hint for your password"))
-            entries.append(.hintEntry(text))
+            entries.append(.hintTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupHint))
+            entries.append(.hintEntry(presentationData.theme, text))
         case let .email(_, _, text):
-            entries.append(.emailEntry(text))
-            entries.append(.emailInfo("Please add your valid e-mail. It is the only way to recover a forgotten password."))
+            entries.append(.emailEntry(presentationData.theme, text))
+            entries.append(.emailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailHelp))
     }
     
     return entries
@@ -384,10 +384,10 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
         checkPassword()
     })
     
-    let signal = statePromise.get() |> deliverOnMainQueue
-        |> map { state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationPasswordEntryEntry>, TwoStepVerificationPasswordEntryEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationPasswordEntryEntry>, TwoStepVerificationPasswordEntryEntry.ItemGenerationArguments)) in
             
-            let leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
+            let leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
             
@@ -408,22 +408,20 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                     case .hint, .email:
                         break
                 }
-                rightNavigationButton = ItemListNavigationButton(title: "Next", style: .bold, enabled: nextEnabled, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: nextEnabled, action: {
                     checkPassword()
                 })
             }
             
-            let controllerState = ItemListControllerState(title: .text("Password"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
-            let listState = ItemListNodeState(entries: twoStepVerificationPasswordEntryControllerEntries(state: state, mode: mode), style: .blocks, focusItemTag: TwoStepVerificationPasswordEntryTag.input, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.TwoStepAuth_EnterPasswordTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: twoStepVerificationPasswordEntryControllerEntries(presentationData: presentationData, state: state, mode: mode), style: .blocks, focusItemTag: TwoStepVerificationPasswordEntryTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
-    
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

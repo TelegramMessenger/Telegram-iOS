@@ -16,8 +16,8 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.enableBiometrics = (decoder.decodeInt32ForKey("b") as Int32) != 0
-        self.autolockTimeout = decoder.decodeInt32ForKey("al") as Int32?
+        self.enableBiometrics = decoder.decodeInt32ForKey("b", orElse: 0) != 0
+        self.autolockTimeout = decoder.decodeOptionalInt32ForKey("al")
     }
     
     public func encode(_ encoder: Encoder) {

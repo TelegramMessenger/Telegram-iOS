@@ -5,8 +5,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private let backgroundImage = generateInstantVideoBackground(incoming: true)
-
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     let backgroundNode: ASImageNode
     let videoNode: ManagedVideoNode
@@ -15,12 +13,30 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     private var selectionNode: ChatMessageSelectionNode?
     
+    private var appliedItem: ChatMessageItem?
     var telegramFile: TelegramMediaFile?
     
     private let fetchDisposable = MetaDisposable()
     
     private var replyInfoNode: ChatMessageReplyInfoNode?
     private var replyBackgroundNode: ASImageNode?
+    
+    private let dateAndStatusNode: ChatMessageDateAndStatusNode
+    private let muteIconNode: ASImageNode
+    
+    private let playbackStatusDisposable = MetaDisposable()
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            if self.visibility != oldValue {
+                if let item = self.item, let telegramFile = self.telegramFile, case .visible = self.visibility {
+                    self.videoNode.acquireContext(account: item.account, mediaManager: item.account.telegramApplicationContext.mediaManager, id: PeerMessageManagedMediaId(messageId: item.message.id), resource: telegramFile.resource, priority: 1)
+                } else {
+                    self.videoNode.discardContext()
+                }
+            }
+        }
+    }
     
     required init() {
         self.backgroundNode = ASImageNode()
@@ -29,12 +45,18 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         
         self.videoNode = ManagedVideoNode()
         
-        super.init(layerBacked: false)
+        self.dateAndStatusNode = ChatMessageDateAndStatusNode()
+        self.muteIconNode = ASImageNode()
+        self.muteIconNode.isLayerBacked = true
+        self.muteIconNode.displayWithoutProcessing = true
+        self.muteIconNode.displaysAsynchronously = false
         
-        self.backgroundNode.image = backgroundImage
+        super.init(layerBacked: false)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.videoNode)
+        self.addSubnode(self.dateAndStatusNode)
+        self.addSubnode(self.muteIconNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -43,6 +65,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     deinit {
         self.fetchDisposable.dispose()
+        self.playbackStatusDisposable.dispose()
     }
     
     override func didLoad() {
@@ -56,14 +79,28 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
-        let displaySize = CGSize(width: 210.0, height: 210.0)
+        let displaySize = CGSize(width: 212.0, height: 212.0)
         let previousFile = self.telegramFile
         let layoutConstants = self.layoutConstants
         
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentReplyBackgroundNode = self.replyBackgroundNode
         
+        let currentItem = self.appliedItem
+        
+        let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
+        
         return { item, width, mergedTop, mergedBottom, dateHeaderAtBottom in
+            var updatedTheme: PresentationTheme?
+            
+            var updatedBackgroundImage: UIImage?
+            var updatedMuteIconImage: UIImage?
+            if item.theme !== currentItem?.theme {
+                updatedTheme = item.theme
+                updatedBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(item.theme)
+                updatedMuteIconImage = PresentationResourcesChat.chatInstantMessageMuteIconImage(item.theme)
+            }
+            
             let incoming = item.message.effectivelyIncoming
             let imageSize = displaySize
             
@@ -80,7 +117,30 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
             }
             
-            let avatarInset: CGFloat = (item.peerId.isGroupOrChannel && item.message.author != nil) ? layoutConstants.avatarDiameter : 0.0
+            var updatedPlaybackStatus: Signal<FileMediaResourceStatus, NoError>?
+            if let updatedFile = updatedFile, updatedMedia {
+                updatedPlaybackStatus = fileMediaResourceStatus(account: item.account, file: updatedFile, message: item.message)
+            }
+            
+            let avatarInset: CGFloat
+            var hasAvatar = false
+            
+            if item.peerId.isGroupOrChannel && item.message.author != nil {
+                var isBroadcastChannel = false
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    isBroadcastChannel = true
+                }
+                
+                if !isBroadcastChannel {
+                    hasAvatar = true
+                }
+            }
+            
+            if hasAvatar {
+                avatarInset = layoutConstants.avatarDiameter
+            } else {
+                avatarInset = 0.0
+            }
             
             var layoutInsets = layoutConstants.instantVideo.insets
             if dateHeaderAtBottom {
@@ -97,20 +157,73 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             for attribute in item.message.attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     let availableWidth = max(60.0, width - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-                    replyInfoApply = makeReplyInfoLayout(item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    replyInfoApply = makeReplyInfoLayout(item.theme, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     
                     if let currentReplyBackgroundNode = currentReplyBackgroundNode {
                         updatedReplyBackgroundNode = currentReplyBackgroundNode
                     } else {
                         updatedReplyBackgroundNode = ASImageNode()
                     }
-                    replyBackgroundImage = backgroundImage
+                    replyBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.theme)
                     break
                 }
             }
             
+            let statusType: ChatMessageDateAndStatusType
+            if item.message.effectivelyIncoming {
+                statusType = .FreeIncoming
+            } else {
+                if item.message.flags.contains(.Failed) {
+                    statusType = .FreeOutgoing(.Failed)
+                } else if item.message.flags.isSending {
+                    statusType = .FreeOutgoing(.Sending)
+                } else {
+                    statusType = .FreeOutgoing(.Sent(read: item.read))
+                }
+            }
+            
+            var t = Int(item.message.timestamp)
+            var timeinfo = tm()
+            localtime_r(&t, &timeinfo)
+            
+            var edited = false
+            var sentViaBot = false
+            var viewCount: Int?
+            for attribute in item.message.attributes {
+                if let _ = attribute as? EditedMessageAttribute {
+                    edited = true
+                } else if let attribute = attribute as? ViewCountMessageAttribute {
+                    viewCount = attribute.count
+                } else if let _ = attribute as? InlineBotMessageAttribute {
+                    sentViaBot = true
+                }
+            }
+            
+            var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+            
+            if let author = item.message.author as? TelegramUser {
+                if author.botInfo != nil {
+                    sentViaBot = true
+                }
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    dateText = "\(author.displayTitle), \(dateText)"
+                }
+            }
+            
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.theme, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
+            
             return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: imageSize.height), insets: layoutInsets), { [weak self] animation in
                 if let strongSelf = self {
+                    strongSelf.appliedItem = item
+                    
+                    if let updatedBackgroundImage = updatedBackgroundImage {
+                        strongSelf.backgroundNode.image = updatedBackgroundImage
+                    }
+                    
+                    if let updatedMuteIconImage = updatedMuteIconImage {
+                        strongSelf.muteIconNode.image = updatedMuteIconImage
+                    }
+                    
                     strongSelf.telegramFile = updatedFile
                     
                     strongSelf.videoNode.frame = videoFrame
@@ -118,8 +231,45 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     
                     strongSelf.backgroundNode.frame = videoFrame.insetBy(dx: -2.0, dy: -2.0)
                     
-                    if let telegramFile = updatedFile, updatedMedia, let context = item.account.applicationContext as? TelegramApplicationContext {
-                        strongSelf.videoNode.acquireContext(account: item.account, mediaManager: context.mediaManager, id: PeerMessageManagedMediaId(messageId: item.message.id), resource: telegramFile.resource)
+                    if let image = strongSelf.muteIconNode.image {
+                        strongSelf.muteIconNode.frame = CGRect(origin: CGPoint(x: floor(videoFrame.minX + (videoFrame.size.width - image.size.width) / 2.0), y: videoFrame.maxY - image.size.height - 8.0), size: image.size)
+                    }
+                    
+                    if let updatedPlaybackStatus = updatedPlaybackStatus {
+                        strongSelf.playbackStatusDisposable.set((updatedPlaybackStatus |> deliverOnMainQueue).start(next: { status in
+                            if let strongSelf = self {
+                                let displayMute: Bool
+                                switch status {
+                                    case let .fetchStatus(fetchStatus):
+                                        switch fetchStatus {
+                                            case .Local:
+                                                displayMute = true
+                                            default:
+                                                displayMute = false
+                                        }
+                                    case .playbackStatus:
+                                        displayMute = false
+                                }
+                                if displayMute != (!strongSelf.muteIconNode.alpha.isZero) {
+                                    if displayMute {
+                                        strongSelf.muteIconNode.alpha = 1.0
+                                        strongSelf.muteIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                        strongSelf.muteIconNode.layer.animateScale(from: 0.4, to: 1.0, duration: 0.15)
+                                    } else {
+                                        strongSelf.muteIconNode.alpha = 0.0
+                                        strongSelf.muteIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+                                        strongSelf.muteIconNode.layer.animateScale(from: 1.0, to: 0.4, duration: 0.15)
+                                    }
+                                }
+                            }
+                        }))
+                    }
+                    
+                    dateAndStatusApply(false)
+                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 70.0, width - dateAndStatusSize.width - 4.0), y: videoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
+                    
+                    if let telegramFile = updatedFile, updatedMedia, let context = item.account.applicationContext as? TelegramApplicationContext, strongSelf.visibility == .visible {
+                        strongSelf.videoNode.acquireContext(account: item.account, mediaManager: context.mediaManager, id: PeerMessageManagedMediaId(messageId: item.message.id), resource: telegramFile.resource, priority: 1)
                     }
                     
                     strongSelf.progressNode?.position = strongSelf.videoNode.position
@@ -171,6 +321,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .tap:
+                    if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
+                        if let item = self.item, let author = item.message.author {
+                            self.controllerInteraction?.openPeer(author.id, .info, item.message.id)
+                        }
+                        return
+                    }
+                    
                     if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
                         if let item = self.item {
                             for attribute in item.message.attributes {

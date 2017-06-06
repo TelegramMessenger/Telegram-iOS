@@ -14,19 +14,6 @@ private let titleFont = Font.regular(16.0)
 private let descriptionFont = Font.regular(13.0)
 private let durationFont = Font.regular(11.0)
 
-private let incomingTitleColor = UIColor(0x0b8bed)
-private let outgoingTitleColor = UIColor(0x3faa3c)
-private let incomingDescriptionColor = UIColor(0x999999)
-private let outgoingDescriptionColor = UIColor(0x6fb26a)
-private let incomingDurationColor = UIColor(0x525252, 0.6)
-private let outgoingDurationColor = UIColor(0x008c09, 0.8)
-
-private let consumableContentIncomingIcon = generateFilledCircleImage(diameter: 4.0, color: UIColor(0x1581e2))
-private let consumableContentOutgoingIcon = generateFilledCircleImage(diameter: 4.0, color: UIColor(0x19c700))
-
-private let fileIconIncomingImage = UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming")?.precomposed()
-private let fileIconOutgoingImage = UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentOutgoing")?.precomposed()
-
 final class ChatMessageInteractiveFileNode: ASTransformNode {
     private let titleNode: TextNode
     private let descriptionNode: TextNode
@@ -46,7 +33,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
     var activateLocalContent: () -> Void = { }
     
     private var account: Account?
-    private var message: Message?
+    private var item: ChatMessageItem?
     private var file: TelegramMediaFile?
     
     init() {
@@ -85,7 +72,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         if let resourceStatus = self.resourceStatus {
             switch resourceStatus {
                 case let .fetchStatus(fetchStatus):
-                    if let account = self.account, let message = self.message, message.flags.isSending {
+                    if let account = self.account, let message = self.item?.message, message.flags.isSending {
                         let _ = account.postbox.modify({ modifier -> Void in
                             modifier.deleteMessages([message.id])
                         }).start()
@@ -117,15 +104,24 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    func asyncLayout() -> (_ account: Account, _ item: ChatMessageItem, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionAsyncLayout = TextNode.asyncLayout(self.descriptionNode)
-        let currentMessage = self.message
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         
-        return { account, message, file, automaticDownload, incoming, dateAndStatusType, constrainedSize in
+        let currentItem = self.item
+        
+        return { account, item, file, automaticDownload, incoming, dateAndStatusType, constrainedSize in
+            let message = item.message
+            
+            var updatedTheme: PresentationTheme?
+            
+            if item.theme !== currentItem?.theme {
+                updatedTheme = item.theme
+            }
+            
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 //var updateImageSignal: Signal<TransformImageArguments -> DrawingContext, NoError>?
                 var updatedStatusSignal: Signal<FileMediaResourceStatus, NoError>?
@@ -137,6 +133,8 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 } else {
                     mediaUpdated = true
                 }
+                
+                let currentMessage = currentItem?.message
                 
                 var statusUpdated = mediaUpdated
                 if currentMessage?.id != message.id || currentMessage?.flags != message.flags {
@@ -165,9 +163,9 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
                         if !attribute.consumed {
                             if incoming {
-                                consumableContentIcon = consumableContentIncomingIcon
+                                consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentIncomingIcon(item.theme)
                             } else {
-                                consumableContentIcon = consumableContentOutgoingIcon
+                                consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(item.theme)
                             }
                         }
                         break
@@ -191,12 +189,19 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                             sentViaBot = true
                         }
                     }
-                    if let author = message.author as? TelegramUser, author.botInfo != nil {
-                        sentViaBot = true
-                    }
-                    let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
                     
-                    let (size, apply) = statusLayout(edited && !sentViaBot, viewCount, dateText, statusType, constrainedSize)
+                    var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                    
+                    if let author = item.message.author as? TelegramUser {
+                        if author.botInfo != nil {
+                            sentViaBot = true
+                        }
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            dateText = "\(author.displayTitle), \(dateText)"
+                        }
+                    }
+                    
+                    let (size, apply) = statusLayout(item.theme, edited && !sentViaBot, viewCount, dateText, statusType, constrainedSize)
                     statusSize = size
                     statusApply = apply
                 }
@@ -208,6 +213,8 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 var audioWaveform: AudioWaveform?
                 var isVoice = false
                 var audioDuration: Int32 = 0
+                
+                let bubbleTheme = item.theme.chat.bubble
                 
                 for attribute in file.attributes {
                     if case let .Audio(voice, duration, title, performer, waveform) = attribute {
@@ -226,14 +233,14 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                         audioDuration = Int32(duration)
                         if voice {
                             isVoice = true
-                            candidateDescriptionString = NSAttributedString(string: String(format: "%d:%02d", duration / 60, duration % 60), font: durationFont, textColor:incoming ? incomingDurationColor : outgoingDurationColor)
+                            candidateDescriptionString = NSAttributedString(string: String(format: "%d:%02d", duration / 60, duration % 60), font: durationFont, textColor:incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
                             if let waveform = waveform {
                                 waveform.withDataNoCopy { data in
                                     audioWaveform = AudioWaveform(bitstream: data, bitsPerSample: 5)
                                 }
                             }
                         } else {
-                            candidateTitleString = NSAttributedString(string: title ?? "Unknown Track", font: titleFont, textColor: incoming ? incomingTitleColor : outgoingTitleColor)
+                            candidateTitleString = NSAttributedString(string: title ?? "Unknown Track", font: titleFont, textColor: incoming ? bubbleTheme.incomingFileTitleColor : bubbleTheme.outgoingFileTitleColor)
                             let descriptionText: String
                             if let performer = performer {
                                 descriptionText = performer
@@ -242,7 +249,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                             } else {
                                 descriptionText = ""
                             }
-                            candidateDescriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor:incoming ? incomingDescriptionColor : outgoingDescriptionColor)
+                            candidateDescriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor:incoming ? bubbleTheme.incomingFileDescriptionColor : bubbleTheme.outgoingFileDescriptionColor)
                         }
                         break
                     }
@@ -254,7 +261,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 if let candidateTitleString = candidateTitleString {
                     titleString = candidateTitleString
                 } else if !isVoice {
-                    titleString = NSAttributedString(string: file.fileName ?? "File", font: titleFont, textColor: incoming ? incomingTitleColor : outgoingTitleColor)
+                    titleString = NSAttributedString(string: file.fileName ?? "File", font: titleFont, textColor: incoming ? bubbleTheme.incomingFileTitleColor : bubbleTheme.outgoingFileTitleColor)
                 }
                 
                 if let candidateDescriptionString = candidateDescriptionString {
@@ -266,7 +273,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     } else {
                         descriptionText = ""
                     }
-                    descriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor:incoming ? incomingDescriptionColor : outgoingDescriptionColor)
+                    descriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor:incoming ? bubbleTheme.incomingFileDescriptionColor : bubbleTheme.outgoingFileDescriptionColor)
                 }
                 
                 let textConstrainedSize = CGSize(width: constrainedSize.width - 44.0 - 8.0, height: constrainedSize.height)
@@ -294,6 +301,8 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     minLayoutWidth = max(titleLayout.size.width, descriptionLayout.size.width) + 44.0 + 8.0
                 }
                 
+                let fileIconImage = incoming ? PresentationResourcesChat.chatBubbleRadialIndicatorFileIconIncoming(item.theme) : PresentationResourcesChat.chatBubbleRadialIndicatorFileIconOutgoing(item.theme)
+                
                 return (minLayoutWidth, { boundingWidth in
                     let progressDiameter: CGFloat = isVoice ? 37.0 : 44.0
                     let progressFrame = CGRect(origin: CGPoint(x: 0.0, y: isVoice ? -5.0 : 0.0), size: CGSize(width: progressDiameter, height: progressDiameter))
@@ -319,7 +328,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     return (fittedLayoutSize, { [weak self] in
                         if let strongSelf = self {
                             strongSelf.account = account
-                            strongSelf.message = message
+                            strongSelf.item = item
                             strongSelf.file = file
                             
                             let _ = titleApply()
@@ -356,7 +365,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                     strongSelf.addSubnode(strongSelf.waveformNode)
                                 }
                                 strongSelf.waveformNode.frame = CGRect(origin: CGPoint(x: 43.0, y: -1.0), size: CGSize(width: boundingWidth - 41.0, height: 12.0))
-                                strongSelf.waveformNode.setup(color: UIColor(incoming ? 0x007ee5 : 0x3fc33b), waveform: audioWaveform)
+                                strongSelf.waveformNode.setup(color: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor, waveform: audioWaveform)
                             } else if strongSelf.waveformNode.supernode != nil {
                                 strongSelf.waveformNode.removeFromSupernode()
                             }
@@ -372,10 +381,12 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                             strongSelf.resourceStatus = status
                                             
                                             if strongSelf.progressNode == nil {
-                                                let progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(incoming ? 0x007ee5 : 0x3fc33b), foregroundColor: incoming ? UIColor.white : UIColor(0xe1ffc7), icon: incoming ? fileIconIncomingImage : fileIconOutgoingImage))
+                                                let progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor, foregroundColor: incoming ? bubbleTheme.incomingFillColor : bubbleTheme.outgoingFillColor, icon: fileIconImage))
                                                 strongSelf.progressNode = progressNode
                                                 progressNode.frame = progressFrame
                                                 strongSelf.addSubnode(progressNode)
+                                            } else if let _ = updatedTheme {
+                                                strongSelf.progressNode?.updateTheme(RadialProgressTheme(backgroundColor: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor, foregroundColor: incoming ? bubbleTheme.incomingFillColor : bubbleTheme.outgoingFillColor, icon: fileIconImage))
                                             }
                                             
                                             switch status {
@@ -424,12 +435,12 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ account: Account, _ item: ChatMessageItem, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { account, message, file, automaticDownload, incoming, dateAndStatusType, constrainedSize in
+        return { account, item, file, automaticDownload, incoming, dateAndStatusType, constrainedSize in
             var fileNode: ChatMessageInteractiveFileNode
-            var fileLayout: (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAnsStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
+            var fileLayout: (_ account: Account, _ item: ChatMessageItem, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ dateAnsStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 fileNode = node
@@ -439,7 +450,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 fileLayout = fileNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = fileLayout(account, message, file, automaticDownload, incoming, dateAndStatusType, constrainedSize)
+            let (initialWidth, continueLayout) = fileLayout(account, item, file, automaticDownload, incoming, dateAndStatusType, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)

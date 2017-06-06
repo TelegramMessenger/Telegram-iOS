@@ -20,13 +20,14 @@ struct ChatMediaInputGridEntry: Comparable, Identifiable {
     let index: ItemCollectionViewEntryIndex
     let stickerItem: StickerPackItem
     let stickerPackInfo: StickerPackCollectionInfo?
+    let theme: PresentationTheme
     
     var stableId: ChatMediaInputGridEntryStableId {
         return ChatMediaInputGridEntryStableId(collectionId: self.index.collectionId, itemId: self.stickerItem.index.id)
     }
     
     static func ==(lhs: ChatMediaInputGridEntry, rhs: ChatMediaInputGridEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.stickerItem == rhs.stickerItem
+        return lhs.index == rhs.index && lhs.stickerItem == rhs.stickerItem && lhs.theme === rhs.theme
     }
     
     static func <(lhs: ChatMediaInputGridEntry, rhs: ChatMediaInputGridEntry) -> Bool {
@@ -34,6 +35,6 @@ struct ChatMediaInputGridEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interfaceInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> GridItem {
-        return ChatMediaInputStickerGridItem(account: account, collectionId: self.index.collectionId, stickerPackInfo: self.stickerPackInfo, index: self.index, stickerItem: self.stickerItem, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction, selected: {  })
+        return ChatMediaInputStickerGridItem(account: account, collectionId: self.index.collectionId, stickerPackInfo: self.stickerPackInfo, index: self.index, stickerItem: self.stickerItem, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction, theme: self.theme, selected: {  })
     }
 }

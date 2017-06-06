@@ -69,20 +69,20 @@ private func mediaForMessage(message: Message) -> Media? {
     return nil
 }
 
-func galleryItemForEntry(account: Account, entry: MessageHistoryEntry) -> GalleryItem {
+func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: PresentationStrings, entry: MessageHistoryEntry) -> GalleryItem {
     switch entry {
         case let .MessageEntry(message, _, location, _):
             if let media = mediaForMessage(message: message) {
                 if let _ = media as? TelegramMediaImage {
-                    return ChatImageGalleryItem(account: account, message: message, location: location)
+                    return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo || file.mimeType.hasPrefix("video/") {
-                        return ChatVideoGalleryItem(account: account, message: message, location: location)
+                        return ChatVideoGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                     } else {
                         if file.mimeType.hasPrefix("image/") {
-                            return ChatImageGalleryItem(account: account, message: message, location: location)
+                            return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                         } else {
-                            return ChatDocumentGalleryItem(account: account, message: message, location: location)
+                            return ChatDocumentGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                         }
                     }
                 }
@@ -128,11 +128,15 @@ private enum GalleryMessageHistoryView {
 }
 
 class GalleryController: ViewController {
+    static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), separatorColor: UIColor(white: 0.0, alpha: 0.8))
+    static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0))
+    
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
     }
     
     private let account: Account
+    private var presentationData: PresentationData
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -162,14 +166,11 @@ class GalleryController: ViewController {
         self.account = account
         self.replaceRootController = replaceRootController
         
-        super.init()
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.navigationBar.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
-        self.navigationBar.stripeColor = UIColor.clear
-        self.navigationBar.foregroundColor = UIColor.white
-        self.navigationBar.accentColor = UIColor.white
+        super.init(navigationBarTheme: GalleryController.darkNavigationTheme)
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.donePressed))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
         
         self.statusBar.statusBarStyle = .White
         
@@ -207,7 +208,7 @@ class GalleryController: ViewController {
                         }
                     }
                     if strongSelf.isViewLoaded {
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ galleryItemForEntry(account: account, entry: $0) }), centralItemIndex: strongSelf.centralEntryIndex)
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ galleryItemForEntry(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, entry: $0) }), centralItemIndex: strongSelf.centralEntryIndex)
                         
                         let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                             strongSelf?.didSetReady = true
@@ -237,19 +238,13 @@ class GalleryController: ViewController {
                 switch style {
                     case .dark:
                         strongSelf.statusBar.statusBarStyle = .White
-                        strongSelf.navigationBar.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
-                        strongSelf.navigationBar.stripeColor = UIColor.clear
-                        strongSelf.navigationBar.foregroundColor = UIColor.white
-                        strongSelf.navigationBar.accentColor = UIColor.white
+                        strongSelf.navigationBar?.updateTheme(GalleryController.darkNavigationTheme)
                         strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor.black
                         strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = true
                     case .light:
                         strongSelf.statusBar.statusBarStyle = .Black
-                        strongSelf.navigationBar.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
-                        strongSelf.navigationBar.foregroundColor = UIColor.black
-                        strongSelf.navigationBar.accentColor = UIColor(0x007ee5)
-                        strongSelf.navigationBar.stripeColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
-                        strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor(0xbdbdc2)
+                        strongSelf.navigationBar?.updateTheme(GalleryController.lightNavigationTheme)
+                        strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor(rgb: 0xbdbdc2)
                         strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = false
                 }
             }
@@ -333,7 +328,7 @@ class GalleryController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.galleryNode.pager.replaceItems(self.entries.map({ galleryItemForEntry(account: self.account, entry: $0) }), centralItemIndex: self.centralEntryIndex)
+        self.galleryNode.pager.replaceItems(self.entries.map({ galleryItemForEntry(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: $0) }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {

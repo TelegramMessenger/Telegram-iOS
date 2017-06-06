@@ -159,7 +159,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 if case let .contextRequest(addressName, query) = inputQuery, query.isEmpty {
                     let string = NSMutableAttributedString()
                     string.append(NSAttributedString(string: "@" + addressName, font: Font.regular(17.0), textColor: UIColor.clear))
-                    string.append(NSAttributedString(string: " " + inlinePlaceholder, font: Font.regular(17.0), textColor: UIColor(0xC8C8CE)))
+                    string.append(NSAttributedString(string: " " + inlinePlaceholder, font: Font.regular(17.0), textColor: UIColor(rgb: 0xC8C8CE)))
                     contextPlaceholder = string
                 }
             }

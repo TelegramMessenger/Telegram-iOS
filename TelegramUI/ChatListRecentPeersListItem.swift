@@ -7,13 +7,17 @@ import SwiftSignalKit
 import TelegramCore
 
 class ChatListRecentPeersListItem: ListViewItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let account: Account
     let peers: [Peer]
     let peerSelected: (Peer) -> Void
     
     let header: ListViewItemHeader?
     
-    init(account: Account, peers: [Peer], peerSelected: @escaping (Peer) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peers: [Peer], peerSelected: @escaping (Peer) -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.account = account
         self.peers = peers
         self.peerSelected = peerSelected
@@ -60,11 +64,9 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
     
     required init() {
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = .white
         self.backgroundNode.isLayerBacked = true
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
         self.separatorNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -84,19 +86,32 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: ChatListRecentPeersListItem, _ width: CGFloat, _ last: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, () -> Void)) {
+        let currentItem = self.item
+        
         return { [weak self] item, width, last in
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 130.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             return (nodeLayout, { [weak self] in
+                var updatedTheme: PresentationTheme?
+                if currentItem?.theme !== item.theme {
+                    updatedTheme = item.theme
+                }
+                
                 return (nil, {
                     if let strongSelf = self {
                         strongSelf.item = item
                         
+                        if let _ = updatedTheme {
+                            strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
+                            strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        }
+                        
                         let peersNode: ChatListSearchRecentPeersNode
                         if let currentPeersNode = strongSelf.peersNode {
                             peersNode = currentPeersNode
+                            peersNode.updateThemeAndStrings(theme: item.theme, strings: item.strings)
                         } else {
-                            peersNode = ChatListSearchRecentPeersNode(account: item.account, peerSelected: { peer in
+                            peersNode = ChatListSearchRecentPeersNode(account: item.account, theme: item.theme, strings: item.strings, peerSelected: { peer in
                                 self?.item?.peerSelected(peer)
                             })
                             strongSelf.peersNode = peersNode

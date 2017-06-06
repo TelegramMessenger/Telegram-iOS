@@ -7,6 +7,8 @@ import SwiftSignalKit
 import MtProtoKitDynamic
 
 public final class AuthorizationSequenceController: NavigationController {
+    static let navigationBarTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), primaryTextColor: .black, backgroundColor: .clear, separatorColor: .clear)
+    
     private var account: UnauthorizedAccount
     
     private var stateDisposable: Disposable?

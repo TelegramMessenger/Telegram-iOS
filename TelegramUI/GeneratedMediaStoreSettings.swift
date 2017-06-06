@@ -14,7 +14,7 @@ public struct GeneratedMediaStoreSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.storeEditedPhotos = (decoder.decodeInt32ForKey("eph") as Int32) != 0
+        self.storeEditedPhotos = decoder.decodeInt32ForKey("eph", orElse: 0) != 0
     }
     
     public func encode(_ encoder: Encoder) {

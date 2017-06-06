@@ -111,13 +111,11 @@ public class LegacyController: ViewController {
         self.legacyController = legacyController
         self.presentation = presentation
         
-        super.init()
+        super.init(navigationBarTheme: nil)
         
         if let legacyController = legacyController as? TGLegacyApplicationInterfaceHolder {
             legacyController.applicationInterface = self.applicationInterface
         }
-        
-        self.navigationBar.isHidden = true
     }
     
     required public init(coder aDecoder: NSCoder) {

@@ -38,7 +38,7 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         
-        self.foregroundColor = UIColor(0xededed)
+        self.foregroundColor = UIColor(rgb: 0xededed)
         
         self.backgroundNode.image = generateBackground(backgroundColor: UIColor.white, foregroundColor: self.foregroundColor)
         
@@ -48,9 +48,6 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.labelNode.backgroundColor = self.foregroundColor
         
         super.init()
-        /*super.init(viewBlock: {
-            return SearchBarPlaceholderNodeView()
-        }, didLoad: nil)*/
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
@@ -64,16 +61,16 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.backgroundNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(backgroundTap(_:))))
     }
     
-    func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ foregoundColor: UIColor) -> (() -> Void) {
+    func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ foregoundColor: UIColor, _ backgroundColor: UIColor) -> (() -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let currentForegroundColor = self.foregroundColor
         
-        return { placeholderString, constrainedSize, foregroundColor in
+        return { placeholderString, constrainedSize, foregroundColor, backgroundColor in
             let (labelLayoutResult, labelApply) = labelLayout(placeholderString, foregroundColor, 1, .end, constrainedSize, .natural, nil, UIEdgeInsets())
             
             var updatedBackgroundImage: UIImage?
             if !currentForegroundColor.isEqual(foregroundColor) {
-                updatedBackgroundImage = generateBackground(backgroundColor: UIColor.white, foregroundColor: foregroundColor)
+                updatedBackgroundImage = generateBackground(backgroundColor: backgroundColor, foregroundColor: foregroundColor)
             }
             
             return { [weak self] in

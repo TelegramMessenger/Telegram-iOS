@@ -53,8 +53,8 @@ public struct ChatTextInputState: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.inputText = decoder.decodeStringForKey("t")
-        self.selectionRange = Int(decoder.decodeInt32ForKey("s0")) ..< Int(decoder.decodeInt32ForKey("s1"))
+        self.inputText = decoder.decodeStringForKey("t", orElse: "")
+        self.selectionRange = Int(decoder.decodeInt32ForKey("s0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("s1", orElse: 0))
     }
     
     public func encode(_ encoder: Encoder) {
@@ -74,7 +74,7 @@ struct ChatEditMessageState: Coding, Equatable {
     }
     
     init(decoder: Decoder) {
-        self.messageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("mp")), namespace: decoder.decodeInt32ForKey("mn"), id: decoder.decodeInt32ForKey("mi"))
+        self.messageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("mp", orElse: 0)), namespace: decoder.decodeInt32ForKey("mn", orElse: 0), id: decoder.decodeInt32ForKey("mi", orElse: 0))
         if let inputState = decoder.decodeObjectForKey("is", decoder: { return ChatTextInputState(decoder: $0) }) as? ChatTextInputState {
             self.inputState = inputState
         } else {
@@ -108,8 +108,8 @@ final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceState {
     }
     
     init(decoder: Decoder) {
-        self.timestamp = decoder.decodeInt32ForKey("d")
-        self.text = decoder.decodeStringForKey("t")
+        self.timestamp = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.text = decoder.decodeStringForKey("t", orElse: "")
     }
     
     func encode(_ encoder: Encoder) {
@@ -148,19 +148,19 @@ struct ChatInterfaceMessageActionsState: Coding, Equatable {
     }
     
     init(decoder: Decoder) {
-        if let closedMessageIdPeerId = (decoder.decodeInt64ForKey("cb.p") as Int64?), let closedMessageIdNamespace = (decoder.decodeInt32ForKey("cb.n") as Int32?), let closedMessageIdId = (decoder.decodeInt32ForKey("cb.i") as Int32?) {
+        if let closedMessageIdPeerId = decoder.decodeOptionalInt64ForKey("cb.p"), let closedMessageIdNamespace = decoder.decodeOptionalInt32ForKey("cb.n"), let closedMessageIdId = decoder.decodeOptionalInt32ForKey("cb.i") {
             self.closedButtonKeyboardMessageId = MessageId(peerId: PeerId(closedMessageIdPeerId), namespace: closedMessageIdNamespace, id: closedMessageIdId)
         } else {
             self.closedButtonKeyboardMessageId = nil
         }
         
-        if let processedMessageIdPeerId = (decoder.decodeInt64ForKey("pb.p") as Int64?), let processedMessageIdNamespace = (decoder.decodeInt32ForKey("pb.n") as Int32?), let processedMessageIdId = (decoder.decodeInt32ForKey("pb.i") as Int32?) {
+        if let processedMessageIdPeerId = decoder.decodeOptionalInt64ForKey("pb.p"), let processedMessageIdNamespace = decoder.decodeOptionalInt32ForKey("pb.n"), let processedMessageIdId = decoder.decodeOptionalInt32ForKey("pb.i") {
             self.processedSetupReplyMessageId = MessageId(peerId: PeerId(processedMessageIdPeerId), namespace: processedMessageIdNamespace, id: processedMessageIdId)
         } else {
             self.processedSetupReplyMessageId = nil
         }
         
-        if let closedPinnedMessageIdPeerId = (decoder.decodeInt64ForKey("cp.p") as Int64?), let closedPinnedMessageIdNamespace = (decoder.decodeInt32ForKey("cp.n") as Int32?), let closedPinnedMessageIdId = (decoder.decodeInt32ForKey("cp.i") as Int32?) {
+        if let closedPinnedMessageIdPeerId = decoder.decodeOptionalInt64ForKey("cp.p"), let closedPinnedMessageIdNamespace = decoder.decodeOptionalInt32ForKey("cp.n"), let closedPinnedMessageIdId = decoder.decodeOptionalInt32ForKey("cp.i") {
             self.closedPinnedMessageId = MessageId(peerId: PeerId(closedPinnedMessageIdPeerId), namespace: closedPinnedMessageIdNamespace, id: closedPinnedMessageIdId)
         } else {
             self.closedPinnedMessageId = nil
@@ -277,20 +277,20 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     }
     
     init(decoder: Decoder) {
-        self.timestamp = decoder.decodeInt32ForKey("ts")
+        self.timestamp = decoder.decodeInt32ForKey("ts", orElse: 0)
         if let inputState = decoder.decodeObjectForKey("is", decoder: { return ChatTextInputState(decoder: $0) }) as? ChatTextInputState {
             self.composeInputState = inputState
         } else {
             self.composeInputState = ChatTextInputState()
         }
-        if let composeDisableUrlPreview = decoder.decodeStringForKey("dup") as String? {
+        if let composeDisableUrlPreview = decoder.decodeOptionalStringForKey("dup") {
             self.composeDisableUrlPreview = composeDisableUrlPreview
         } else {
             self.composeDisableUrlPreview = nil
         }
-        let replyMessageIdPeerId: Int64? = decoder.decodeInt64ForKey("r.p")
-        let replyMessageIdNamespace: Int32? = decoder.decodeInt32ForKey("r.n")
-        let replyMessageIdId: Int32? = decoder.decodeInt32ForKey("r.i")
+        let replyMessageIdPeerId: Int64? = decoder.decodeOptionalInt64ForKey("r.p")
+        let replyMessageIdNamespace: Int32? = decoder.decodeOptionalInt32ForKey("r.n")
+        let replyMessageIdId: Int32? = decoder.decodeOptionalInt32ForKey("r.i")
         if let replyMessageIdPeerId = replyMessageIdPeerId, let replyMessageIdNamespace = replyMessageIdNamespace, let replyMessageIdId = replyMessageIdId {
             self.replyMessageId = MessageId(peerId: PeerId(replyMessageIdPeerId), namespace: replyMessageIdNamespace, id: replyMessageIdId)
         } else {

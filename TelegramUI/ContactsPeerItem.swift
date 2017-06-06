@@ -42,6 +42,8 @@ enum ContactsPeerItemSelection: Equatable {
 }
 
 class ContactsPeerItem: ListViewItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let account: Account
     let peer: Peer?
     let chatPeer: Peer?
@@ -54,7 +56,9 @@ class ContactsPeerItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(account: Account, peer: Peer?, chatPeer: Peer?, status: ContactsPeerItemStatus, selection: ContactsPeerItemSelection, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer?, chatPeer: Peer?, status: ContactsPeerItemStatus, selection: ContactsPeerItemSelection, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.account = account
         self.peer = peer
         self.chatPeer = chatPeer
@@ -89,7 +93,7 @@ class ContactsPeerItem: ListViewItem {
                     letter = channel.title.substring(to: channel.title.index(after: channel.title.startIndex)).uppercased()
                 }
             }
-            self.headerAccessoryItem = ContactsSectionHeaderAccessoryItem(sectionHeader: .letter(letter))
+            self.headerAccessoryItem = ContactsSectionHeaderAccessoryItem(sectionHeader: .letter(letter), theme: theme)
         } else {
             self.headerAccessoryItem = nil
         }
@@ -184,15 +188,12 @@ class ContactsPeerItemNode: ListViewItemNode {
     
     required init() {
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = .white
         self.backgroundNode.isLayerBacked = true
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.avatarNode = AvatarNode(font: Font.regular(15.0))
@@ -260,7 +261,14 @@ class ContactsPeerItemNode: ListViewItemNode {
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let currentSelectionNode = self.selectionNode
         
+        let currentItem = self.layoutParams?.0
+        
         return { [weak self] item, width, first, last, firstWithHeader in
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
             var leftInset: CGFloat = 65.0
             let rightInset: CGFloat = 10.0
             
@@ -292,21 +300,21 @@ class ContactsPeerItemNode: ListViewItemNode {
                 if let user = peer as? TelegramUser {
                     if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                         let string = NSMutableAttributedString()
-                        string.append(NSAttributedString(string: firstName, font: titleFont, textColor: .black))
-                        string.append(NSAttributedString(string: " ", font: titleFont, textColor: .black))
-                        string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: .black))
+                        string.append(NSAttributedString(string: firstName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
+                        string.append(NSAttributedString(string: " ", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
+                        string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor))
                         titleAttributedString = string
                     } else if let firstName = user.firstName, !firstName.isEmpty {
-                        titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: UIColor.black)
+                        titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
                     } else if let lastName = user.lastName, !lastName.isEmpty {
-                        titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: UIColor.black)
+                        titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
                     } else {
-                        titleAttributedString = NSAttributedString(string: "Deleted User", font: titleBoldFont, textColor: UIColor(0xa6a6a6))
+                        titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleBoldFont, textColor: item.theme.list.itemSecondaryTextColor)
                     }
                 } else if let group = peer as? TelegramGroup {
-                    titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: UIColor.black)
+                    titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
                 } else if let channel = peer as? TelegramChannel {
-                    titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: UIColor.black)
+                    titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
                 }
                 
                 switch item.status {
@@ -316,12 +324,12 @@ class ContactsPeerItemNode: ListViewItemNode {
                         if let presence = presence as? TelegramUserPresence {
                             userPresence = presence
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                            let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
-                            statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? UIColor(0x007ee5) : UIColor(0xa6a6a6))
+                            let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, presence: presence, relativeTo: Int32(timestamp))
+                            statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
                         }
                     case .addressName:
                         if let addressName = peer.addressName {
-                            statusAttributedString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: UIColor(0xa6a6a6))
+                            statusAttributedString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                         }
                 }
             }
@@ -348,6 +356,12 @@ class ContactsPeerItemNode: ListViewItemNode {
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] in
                         if let strongSelf = strongSelf {
                             strongSelf.layoutParams = (item, width, first, last, firstWithHeader)
+                            
+                            if let _ = updatedTheme {
+                                strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
+                                strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                                strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                            }
                             
                             strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: leftInset - 51.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
                             

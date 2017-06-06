@@ -40,25 +40,6 @@ enum ChatMessageBackgroundType: Equatable {
     }
 }
 
-private let chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, highlighted: false, neighbors: .none)
-private let chatMessageBackgroundIncomingHighlightedImage = messageBubbleImage(incoming: true, highlighted: true, neighbors: .none)
-private let chatMessageBackgroundIncomingMergedTopImage = messageBubbleImage(incoming: true, highlighted: false, neighbors: .top)
-private let chatMessageBackgroundIncomingMergedTopHighlightedImage = messageBubbleImage(incoming: true, highlighted: true, neighbors: .top)
-private let chatMessageBackgroundIncomingMergedBottomImage = messageBubbleImage(incoming: true, highlighted: false, neighbors: .bottom)
-private let chatMessageBackgroundIncomingMergedBottomHighlightedImage = messageBubbleImage(incoming: true, highlighted: true, neighbors: .bottom)
-private let chatMessageBackgroundIncomingMergedBothImage = messageBubbleImage(incoming: true, highlighted: false, neighbors: .both)
-private let chatMessageBackgroundIncomingMergedBothHighlightedImage = messageBubbleImage(incoming: true, highlighted: true, neighbors: .both)
-
-private let chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, highlighted: false, neighbors: .none)
-private let chatMessageBackgroundOutgoingHighlightedImage = messageBubbleImage(incoming: false, highlighted: true, neighbors: .none)
-private let chatMessageBackgroundOutgoingMergedTopImage = messageBubbleImage(incoming: false, highlighted: false, neighbors: .top)
-private let chatMessageBackgroundOutgoingMergedTopHighlightedImage = messageBubbleImage(incoming: false, highlighted: true, neighbors: .top)
-private let chatMessageBackgroundOutgoingMergedBottomImage = messageBubbleImage(incoming: false, highlighted: false, neighbors: .bottom)
-private let chatMessageBackgroundOutgoingMergedBottomHighlightedImage = messageBubbleImage(incoming: false, highlighted: true, neighbors: .bottom)
-private let chatMessageBackgroundOutgoingMergedBothImage = messageBubbleImage(incoming: false, highlighted: false, neighbors: .both)
-private let chatMessageBackgroundOutgoingMergedBothHighlightedImage = messageBubbleImage(incoming: false, highlighted: true, neighbors: .both)
-
-
 class ChatMessageBackground: ASImageNode {
     private var type: ChatMessageBackgroundType?
     private var currentHighlighted = false
@@ -71,7 +52,7 @@ class ChatMessageBackground: ASImageNode {
         self.displayWithoutProcessing = true
     }
     
-    func setType(type: ChatMessageBackgroundType, highlighted: Bool) {
+    func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics) {
         if let currentType = self.type, currentType == type, self.currentHighlighted == highlighted {
             return
         }
@@ -83,24 +64,24 @@ class ChatMessageBackground: ASImageNode {
         case let .Incoming(mergeType):
             switch mergeType {
                 case .None:
-                    image = highlighted ? chatMessageBackgroundIncomingHighlightedImage : chatMessageBackgroundIncomingImage
+                    image = highlighted ? graphics.chatMessageBackgroundIncomingHighlightedImage : graphics.chatMessageBackgroundIncomingImage
                 case .Top:
-                    image = highlighted ? chatMessageBackgroundIncomingMergedTopHighlightedImage : chatMessageBackgroundIncomingMergedTopImage
+                    image = highlighted ? graphics.chatMessageBackgroundIncomingMergedTopHighlightedImage : graphics.chatMessageBackgroundIncomingMergedTopImage
                 case .Bottom:
-                    image = highlighted ? chatMessageBackgroundIncomingMergedBottomHighlightedImage : chatMessageBackgroundIncomingMergedBottomImage
+                    image = highlighted ? graphics.chatMessageBackgroundIncomingMergedBottomHighlightedImage : graphics.chatMessageBackgroundIncomingMergedBottomImage
                 case .Both:
-                    image = highlighted ? chatMessageBackgroundIncomingMergedBothHighlightedImage : chatMessageBackgroundIncomingMergedBothImage
+                    image = highlighted ? graphics.chatMessageBackgroundIncomingMergedBothHighlightedImage : graphics.chatMessageBackgroundIncomingMergedBothImage
             }
         case let .Outgoing(mergeType):
             switch mergeType {
                 case .None:
-                    image = highlighted ? chatMessageBackgroundOutgoingHighlightedImage : chatMessageBackgroundOutgoingImage
+                    image = highlighted ? graphics.chatMessageBackgroundOutgoingHighlightedImage : graphics.chatMessageBackgroundOutgoingImage
                 case .Top:
-                    image = highlighted ? chatMessageBackgroundOutgoingMergedTopHighlightedImage : chatMessageBackgroundOutgoingMergedTopImage
+                    image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedTopHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedTopImage
                 case .Bottom:
-                    image = highlighted ? chatMessageBackgroundOutgoingMergedBottomHighlightedImage : chatMessageBackgroundOutgoingMergedBottomImage
+                    image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedBottomHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedBottomImage
                 case .Both:
-                    image = highlighted ? chatMessageBackgroundOutgoingMergedBothHighlightedImage : chatMessageBackgroundOutgoingMergedBothImage
+                    image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedBothHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedBothImage
             }
         }
         self.image = image

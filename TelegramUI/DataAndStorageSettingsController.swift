@@ -45,22 +45,22 @@ private enum DataAndStorageSection: Int32 {
 }
 
 private enum DataAndStorageEntry: ItemListNodeEntry {
-    case storageUsage(String)
-    case networkUsage(String)
-    case automaticPhotoDownloadHeader(String)
-    case automaticPhotoDownloadPrivateChats(String, Bool)
-    case automaticPhotoDownloadGroupsAndChannels(String, Bool)
-    case automaticVoiceDownloadHeader(String)
-    case automaticVoiceDownloadPrivateChats(String, Bool)
-    case automaticVoiceDownloadGroupsAndChannels(String, Bool)
-    case automaticInstantVideoDownloadHeader(String)
-    case automaticInstantVideoDownloadPrivateChats(String, Bool)
-    case automaticInstantVideoDownloadGroupsAndChannels(String, Bool)
-    case voiceCallsHeader(String)
-    case useLessVoiceData(String, String)
-    case otherHeader(String)
-    case saveIncomingPhotos(String, Bool)
-    case saveEditedPhotos(String, Bool)
+    case storageUsage(PresentationTheme, String)
+    case networkUsage(PresentationTheme, String)
+    case automaticPhotoDownloadHeader(PresentationTheme, String)
+    case automaticPhotoDownloadPrivateChats(PresentationTheme, String, Bool)
+    case automaticPhotoDownloadGroupsAndChannels(PresentationTheme, String, Bool)
+    case automaticVoiceDownloadHeader(PresentationTheme, String)
+    case automaticVoiceDownloadPrivateChats(PresentationTheme, String, Bool)
+    case automaticVoiceDownloadGroupsAndChannels(PresentationTheme, String, Bool)
+    case automaticInstantVideoDownloadHeader(PresentationTheme, String)
+    case automaticInstantVideoDownloadPrivateChats(PresentationTheme, String, Bool)
+    case automaticInstantVideoDownloadGroupsAndChannels(PresentationTheme, String, Bool)
+    case voiceCallsHeader(PresentationTheme, String)
+    case useLessVoiceData(PresentationTheme, String, String)
+    case otherHeader(PresentationTheme, String)
+    case saveIncomingPhotos(PresentationTheme, String, Bool)
+    case saveEditedPhotos(PresentationTheme, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -118,98 +118,98 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     
     static func ==(lhs: DataAndStorageEntry, rhs: DataAndStorageEntry) -> Bool {
         switch lhs {
-            case let .storageUsage(text):
-                if case .storageUsage(text) = rhs {
+            case let .storageUsage(lhsTheme, lhsText):
+                if case let .storageUsage(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .networkUsage(text):
-                if case .networkUsage(text) = rhs {
+            case let .networkUsage(lhsTheme, lhsText):
+                if case let .networkUsage(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticPhotoDownloadHeader(text):
-                if case .automaticPhotoDownloadHeader(text) = rhs {
+            case let .automaticPhotoDownloadHeader(lhsTheme, lhsText):
+                if case let .automaticPhotoDownloadHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticPhotoDownloadPrivateChats(text, value):
-                if case .automaticPhotoDownloadPrivateChats(text, value) = rhs {
+            case let .automaticPhotoDownloadPrivateChats(lhsTheme, lhsText, lhsValue):
+                if case let .automaticPhotoDownloadPrivateChats(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticPhotoDownloadGroupsAndChannels(text, value):
-                if case .automaticPhotoDownloadGroupsAndChannels(text, value) = rhs {
+            case let .automaticPhotoDownloadGroupsAndChannels(lhsTheme, lhsText, lhsValue):
+                if case let .automaticPhotoDownloadGroupsAndChannels(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticVoiceDownloadHeader(text):
-                if case .automaticVoiceDownloadHeader(text) = rhs {
+            case let .automaticVoiceDownloadHeader(lhsTheme, lhsText):
+                if case let .automaticVoiceDownloadHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticVoiceDownloadPrivateChats(text, value):
-                if case .automaticVoiceDownloadPrivateChats(text, value) = rhs {
+            case let .automaticVoiceDownloadPrivateChats(lhsTheme, lhsText, lhsValue):
+                if case let .automaticVoiceDownloadPrivateChats(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticVoiceDownloadGroupsAndChannels(text, value):
-                if case .automaticVoiceDownloadGroupsAndChannels(text, value) = rhs {
+            case let .automaticVoiceDownloadGroupsAndChannels(lhsTheme, lhsText, lhsValue):
+                if case let .automaticVoiceDownloadGroupsAndChannels(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticInstantVideoDownloadHeader(text):
-                if case .automaticInstantVideoDownloadHeader(text) = rhs {
+            case let .automaticInstantVideoDownloadHeader(lhsTheme, lhsText):
+                if case let .automaticInstantVideoDownloadHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticInstantVideoDownloadPrivateChats(text, value):
-                if case .automaticInstantVideoDownloadPrivateChats(text, value) = rhs {
+            case let .automaticInstantVideoDownloadPrivateChats(lhsTheme, lhsText, lhsValue):
+                if case let .automaticInstantVideoDownloadPrivateChats(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticInstantVideoDownloadGroupsAndChannels(text, value):
-                if case .automaticInstantVideoDownloadGroupsAndChannels(text, value) = rhs {
+            case let .automaticInstantVideoDownloadGroupsAndChannels(lhsTheme, lhsText, lhsValue):
+                if case let .automaticInstantVideoDownloadGroupsAndChannels(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .voiceCallsHeader(text):
-                if case .voiceCallsHeader(text) = rhs {
+            case let .voiceCallsHeader(lhsTheme, lhsText):
+                if case let .voiceCallsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .useLessVoiceData(text, value):
-                if case .useLessVoiceData(text, value) = rhs {
+            case let .useLessVoiceData(lhsTheme, lhsText, lhsValue):
+                if case let .useLessVoiceData(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .otherHeader(text):
-                if case .otherHeader(text) = rhs {
+            case let .otherHeader(lhsTheme, lhsText):
+                if case let .otherHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .saveIncomingPhotos(text, value):
-                if case .saveIncomingPhotos(text, value) = rhs {
+            case let .saveIncomingPhotos(lhsTheme, lhsText, lhsValue):
+                if case let .saveIncomingPhotos(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .saveEditedPhotos(text, value):
-                if case .saveEditedPhotos(text, value) = rhs {
+            case let .saveEditedPhotos(lhsTheme, lhsText, lhsValue):
+                if case let .saveEditedPhotos(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -223,58 +223,58 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     
     func item(_ arguments: DataAndStorageControllerArguments) -> ListViewItem {
         switch self {
-            case let .storageUsage(text):
-                return ItemListDisclosureItem(title: text, label: "", sectionId: self.section, style: .blocks, action: {
+            case let .storageUsage(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openStorageUsage()
                 })
-            case let .networkUsage(text):
-                return ItemListDisclosureItem(title: text, label: "", sectionId: self.section, style: .blocks, action: {
+            case let .networkUsage(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openNetworkUsage()
                 })
-            case let .automaticPhotoDownloadHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .automaticPhotoDownloadPrivateChats(text, value):
-                return ItemListSwitchItem(title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .automaticPhotoDownloadHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .automaticPhotoDownloadPrivateChats(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutomaticDownload(.photo, .privateChats, value)
                 })
-            case let .automaticPhotoDownloadGroupsAndChannels(text, value):
-                return ItemListSwitchItem(title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .automaticPhotoDownloadGroupsAndChannels(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutomaticDownload(.photo, .groupsAndChannels, value)
                 })
-            case let .automaticVoiceDownloadHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .automaticVoiceDownloadPrivateChats(text, value):
-                return ItemListSwitchItem(title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .automaticVoiceDownloadHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .automaticVoiceDownloadPrivateChats(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutomaticDownload(.voice, .privateChats, value)
                 })
-            case let .automaticVoiceDownloadGroupsAndChannels(text, value):
-                return ItemListSwitchItem(title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .automaticVoiceDownloadGroupsAndChannels(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutomaticDownload(.voice, .groupsAndChannels, value)
                 })
-            case let .automaticInstantVideoDownloadHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .automaticInstantVideoDownloadPrivateChats(text, value):
-                return ItemListSwitchItem(title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .automaticInstantVideoDownloadHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .automaticInstantVideoDownloadPrivateChats(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutomaticDownload(.instantVideo, .privateChats, value)
                 })
-            case let .automaticInstantVideoDownloadGroupsAndChannels(text, value):
-                return ItemListSwitchItem(title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .automaticInstantVideoDownloadGroupsAndChannels(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutomaticDownload(.instantVideo, .groupsAndChannels, value)
                 })
-            case let .voiceCallsHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .useLessVoiceData(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, action: {
+            case let .voiceCallsHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .useLessVoiceData(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceUseLessData()
                 })
-            case let .otherHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .saveIncomingPhotos(text, value):
-                return ItemListSwitchItem(title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .otherHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .saveIncomingPhotos(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveIncomingPhotos(value)
                 })
-            case let .saveEditedPhotos(text, value):
-                return ItemListSwitchItem(title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .saveEditedPhotos(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveEditedPhotos(value)
                 })
         }
@@ -314,34 +314,34 @@ private func stringForUseLessDataSetting(_ settings: VoiceCallSettings) -> Strin
     }
 }
 
-private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData) -> [DataAndStorageEntry] {
+private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
-    entries.append(.storageUsage("Storage Usage"))
-    entries.append(.networkUsage("Network Usage"))
+    entries.append(.storageUsage(presentationData.theme, "Storage Usage"))
+    entries.append(.networkUsage(presentationData.theme, "Network Usage"))
     
-    entries.append(.automaticPhotoDownloadHeader("AUTOMATIC PHOTO DOWNLOAD"))
-    entries.append(.automaticPhotoDownloadPrivateChats("Private Chats", data.automaticMediaDownloadSettings.categories.photo.privateChats))
-    entries.append(.automaticPhotoDownloadGroupsAndChannels("Groups and Channels", data.automaticMediaDownloadSettings.categories.photo.groupsAndChannels))
+    entries.append(.automaticPhotoDownloadHeader(presentationData.theme, "AUTOMATIC PHOTO DOWNLOAD"))
+    entries.append(.automaticPhotoDownloadPrivateChats(presentationData.theme, "Private Chats", data.automaticMediaDownloadSettings.categories.photo.privateChats))
+    entries.append(.automaticPhotoDownloadGroupsAndChannels(presentationData.theme, "Groups and Channels", data.automaticMediaDownloadSettings.categories.photo.groupsAndChannels))
     
-    entries.append(.automaticVoiceDownloadHeader("AUTOMATIC AUDIO DOWNLOAD"))
-    entries.append(.automaticVoiceDownloadPrivateChats("Private Chats", data.automaticMediaDownloadSettings.categories.voice.privateChats))
-    entries.append(.automaticVoiceDownloadGroupsAndChannels("Groups and Channels", data.automaticMediaDownloadSettings.categories.voice.groupsAndChannels))
+    entries.append(.automaticVoiceDownloadHeader(presentationData.theme, "AUTOMATIC AUDIO DOWNLOAD"))
+    entries.append(.automaticVoiceDownloadPrivateChats(presentationData.theme, "Private Chats", data.automaticMediaDownloadSettings.categories.voice.privateChats))
+    entries.append(.automaticVoiceDownloadGroupsAndChannels(presentationData.theme, "Groups and Channels", data.automaticMediaDownloadSettings.categories.voice.groupsAndChannels))
     
-    entries.append(.automaticInstantVideoDownloadHeader("AUTOMATIC VIDEO MESSAGE DOWNLOAD"))
-    entries.append(.automaticInstantVideoDownloadPrivateChats("Private Chats", data.automaticMediaDownloadSettings.categories.instantVideo.privateChats))
-    entries.append(.automaticInstantVideoDownloadGroupsAndChannels("Groups and Channels", data.automaticMediaDownloadSettings.categories.instantVideo.groupsAndChannels))
+    entries.append(.automaticInstantVideoDownloadHeader(presentationData.theme, "AUTOMATIC VIDEO MESSAGE DOWNLOAD"))
+    entries.append(.automaticInstantVideoDownloadPrivateChats(presentationData.theme, "Private Chats", data.automaticMediaDownloadSettings.categories.instantVideo.privateChats))
+    entries.append(.automaticInstantVideoDownloadGroupsAndChannels(presentationData.theme, "Groups and Channels", data.automaticMediaDownloadSettings.categories.instantVideo.groupsAndChannels))
     
     /*entries.append(.automaticGifDownloadHeader("AUTOMATIC GIF DOWNLOAD"))
     entries.append(.automaticGifDownloadPrivateChats("Private Chats", data.automaticMediaDownloadSettings.categories.gif.privateChats))
     entries.append(.automaticGifDownloadGroupsAndChannels("Groups and Channels", data.automaticMediaDownloadSettings.categories.gif.groupsAndChannels))*/
     
-    entries.append(.voiceCallsHeader("VOICE CALLS"))
-    entries.append(.useLessVoiceData("Use Less Data", stringForUseLessDataSetting(data.voiceCallSettings)))
+    entries.append(.voiceCallsHeader(presentationData.theme, "VOICE CALLS"))
+    entries.append(.useLessVoiceData(presentationData.theme, "Use Less Data", stringForUseLessDataSetting(data.voiceCallSettings)))
     
-    entries.append(.otherHeader("OTHER"))
-    entries.append(.saveIncomingPhotos("Save Incoming Photos", data.automaticMediaDownloadSettings.saveIncomingPhotos))
-    entries.append(.saveEditedPhotos("Save Edited Photos", data.generatedMediaStoreSettings.storeEditedPhotos))
+    entries.append(.otherHeader(presentationData.theme, "OTHER"))
+    entries.append(.saveIncomingPhotos(presentationData.theme, "Save Incoming Photos", data.automaticMediaDownloadSettings.saveIncomingPhotos))
+    entries.append(.saveEditedPhotos(presentationData.theme, "Save Edited Photos", data.generatedMediaStoreSettings.storeEditedPhotos))
     
     return entries
 }
@@ -350,10 +350,6 @@ func dataAndStorageController(account: Account) -> ViewController {
     let initialState = DataAndStorageControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
-    let stateValue = Atomic(value: initialState)
-    let updateState: ((DataAndStorageControllerState) -> DataAndStorageControllerState) -> Void = { f in
-        statePromise.set(stateValue.modify { f($0) })
-    }
     
     var pushControllerImpl: ((ViewController) -> Void)?
     
@@ -435,19 +431,18 @@ func dataAndStorageController(account: Account) -> ViewController {
         }).start()
     })
     
-    let signal = combineLatest(statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
-        |> map { state, dataAndStorageData -> (ItemListControllerState, (ItemListNodeState<DataAndStorageEntry>, DataAndStorageEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, state, dataAndStorageData -> (ItemListControllerState, (ItemListNodeState<DataAndStorageEntry>, DataAndStorageEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(title: .text("Data and Storage"), leftNavigationButton: nil, rightNavigationButton: nil, animateChanges: false)
-            let listState = ItemListNodeState(entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Data and Storage"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let listState = ItemListNodeState(entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {

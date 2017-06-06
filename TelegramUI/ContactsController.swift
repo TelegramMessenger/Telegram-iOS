@@ -19,27 +19,60 @@ public class ContactsController: ViewController {
         return self._ready
     }
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     public init(account: Account) {
         self.account = account
         
-        super.init()
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.title = "Contacts"
-        self.tabBarItem.title = "Contacts"
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        
+        self.title = self.presentationData.strings.Contacts_Title
+        self.tabBarItem.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
         self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconContactsSelected")
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
                 strongSelf.contactsNode.contactListNode.scrollToTop()
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.title = self.presentationData.strings.Contacts_Title
+        self.tabBarItem.title = self.presentationData.strings.Contacts_Title
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
     
     override public func loadDisplayNode() {

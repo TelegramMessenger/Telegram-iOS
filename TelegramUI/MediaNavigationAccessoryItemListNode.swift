@@ -4,10 +4,10 @@ import Display
 import TelegramCore
 import Postbox
 
-private let handleImage = generateStretchableFilledCircleImage(diameter: 7.0, color: UIColor(0xbab7ba))
-
 final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
     static let minimizedPanelHeight: CGFloat = 31.0
+    
+    private var theme: PresentationTheme
     
     var collapse: (() -> Void)?
     
@@ -57,7 +57,7 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                                 if let galleryMedia = galleryMedia {
                                     if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice {
                                         if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
-                                            let player = ManagedAudioPlaylistPlayer(audioSessionManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
+                                            let player = ManagedAudioPlaylistPlayer(audioSessionManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, overlayMediaManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.overlayMediaManager, mediaManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager, postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
                                             applicationContext.mediaManager.setPlaylistPlayer(player)
                                             player.control(.navigation(.next))
                                         }
@@ -65,7 +65,7 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                                 }
                             }
                             }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _ in }, navigateToMessage: { _ in }, clickThroughMessage: { }, toggleMessageSelection: { _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _ in }, updateInputState: { _ in }, openMessageShareMenu: { _ in
-                            }, presentController: { _ in })
+                        }, presentController: { _ in }, callPeer: { _ in }, longTap: { _ in })
                         
                         let listNode = ChatHistoryListNode(account: account, peerId: updatedPlaylistPeerId, tagMask: .Music, messageId: nil, controllerInteraction: controllerInteraction, mode: .list)
                         listNode.preloadPages = true
@@ -102,28 +102,31 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
     init(account: Account) {
         self.account = account
         
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.theme = presentationData.theme
+        
         self.topSeparatorNode = ASDisplayNode()
         self.topSeparatorNode.isLayerBacked = true
-        self.topSeparatorNode.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
+        self.topSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         
         self.bottomSeparatorNode = ASDisplayNode()
         self.bottomSeparatorNode.isLayerBacked = true
-        self.bottomSeparatorNode.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
+        self.bottomSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
+        self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         
         self.panelNode = HighlightTrackingButtonNode()
-        self.panelNode.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
+        self.panelNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
         
         self.panelHandleNode = ASImageNode()
         self.panelHandleNode.displaysAsynchronously = false
         self.panelHandleNode.displayWithoutProcessing = true
-        self.panelHandleNode.image = handleImage
+        self.panelHandleNode.image = PresentationResourcesRootController.navigationPlayerHandleIcon(self.theme)
         
         self.contentNode = ASDisplayNode()
-        self.contentNode.backgroundColor = .white
+        self.contentNode.backgroundColor = self.theme.chatList.backgroundColor
         self.contentNode.clipsToBounds = true
         
         super.init()

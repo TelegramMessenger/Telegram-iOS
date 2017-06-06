@@ -13,12 +13,7 @@ private func canSendMessagesToPeer(_ peer: Peer) -> Bool {
     } else if let peer = peer as? TelegramChannel {
         switch peer.info {
             case .broadcast:
-                switch peer.role {
-                    case .creator, .editor, .moderator:
-                        return true
-                    case .member:
-                        return false
-                }
+                return peer.hasAdminRights(.canPostMessages)
             case .group:
                 return true
         }
@@ -53,9 +48,7 @@ public final class ShareController: ViewController {
         self.shareAction = shareAction
         self.defaultAction = defaultAction
         
-        super.init(navigationBar: NavigationBar())
-        
-        self.navigationBar.isHidden = true
+        super.init(navigationBarTheme: nil)
         
         self.peers.set(account.postbox.tailChatListView(100) |> take(1) |> map { view -> [Peer] in
             var peers: [Peer] = []

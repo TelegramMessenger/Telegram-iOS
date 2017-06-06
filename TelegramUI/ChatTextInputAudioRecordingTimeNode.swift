@@ -5,9 +5,12 @@ import SwiftSignalKit
 
 private final class ChatTextInputAudioRecordingTimeNodeParameters: NSObject {
     let timestamp: Double
+    let theme: PresentationTheme
     
-    init(timestamp: Double) {
+    init(timestamp: Double, theme: PresentationTheme) {
         self.timestamp = timestamp
+        self.theme = theme
+        
         super.init()
     }
 }
@@ -45,7 +48,11 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    private var theme: PresentationTheme
+    
+    init(theme: PresentationTheme) {
+        self.theme = theme
+        
         self.textNode = TextNode()
         super.init()
         self.isOpaque = false
@@ -55,16 +62,22 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
         self.stateDisposable.dispose()
     }
     
+    func updateTheme(theme: PresentationTheme) {
+        self.theme = theme
+        
+        self.setNeedsDisplay()
+    }
+    
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self.textNode)
-        let (size, apply) = makeLayout(NSAttributedString(string: "00:00,00", font: Font.regular(15.0), textColor: .black), nil, 1, .end, CGSize(width: 200.0, height: 100.0), .natural, nil, UIEdgeInsets())
-        apply()
+        let (size, apply) = makeLayout(NSAttributedString(string: "00:00,00", font: Font.regular(15.0), textColor: theme.chat.inputPanel.primaryTextColor), nil, 1, .end, CGSize(width: 200.0, height: 100.0), .natural, nil, UIEdgeInsets())
+        let _ = apply()
         self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 1.0 + UIScreenPixel), size: size.size)
         return size.size
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return ChatTextInputAudioRecordingTimeNodeParameters(timestamp: self.timestamp)
+        return ChatTextInputAudioRecordingTimeNodeParameters(timestamp: self.timestamp, theme: self.theme)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -80,7 +93,7 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
             let currentAudioDurationSeconds = Int(parameters.timestamp)
             let currentAudioDurationMilliseconds = Int(parameters.timestamp * 100.0) % 100
             let text = String(format: "%d:%02d,%02d", currentAudioDurationSeconds / 60, currentAudioDurationSeconds % 60, currentAudioDurationMilliseconds)
-            let string = NSAttributedString(string: text, font: textFont, textColor: .black)
+            let string = NSAttributedString(string: text, font: textFont, textColor: parameters.theme.chat.inputPanel.primaryTextColor)
             string.draw(at: CGPoint())
         }
     }

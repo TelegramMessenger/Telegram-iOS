@@ -1,9 +1,9 @@
 import Foundation
 import TelegramCore
 
-func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseFont: UIFont, boldFont: UIFont, fixedFont: UIFont) -> NSAttributedString {
+func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, boldFont: UIFont, fixedFont: UIFont) -> NSAttributedString {
     var nsString: NSString?
-    let string = NSMutableAttributedString(string: text, attributes: [NSFontAttributeName: baseFont, NSForegroundColorAttributeName: UIColor.black])
+    let string = NSMutableAttributedString(string: text, attributes: [NSFontAttributeName: baseFont, NSForegroundColorAttributeName: baseColor])
     var skipEntity = false
     let stringLength = string.length
     for i in 0 ..< entities.count {
@@ -22,19 +22,19 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
         }
         switch entity.type {
             case .Url:
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
+                string.addAttribute(NSForegroundColorAttributeName, value: linkColor, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(TextNode.UrlAttribute, value: nsString!.substring(with: range), range: range)
             case .Email:
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
+                string.addAttribute(NSForegroundColorAttributeName, value: linkColor, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(TextNode.UrlAttribute, value: "mailto:\(nsString!.substring(with: range))", range: range)
             case let .TextUrl(url):
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
+                string.addAttribute(NSForegroundColorAttributeName, value: linkColor, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
@@ -42,14 +42,15 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
             case .Bold:
                 string.addAttribute(NSFontAttributeName, value: boldFont, range: range)
             case .Mention:
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
+                string.addAttribute(NSForegroundColorAttributeName, value: linkColor, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(TextNode.TelegramPeerTextMentionAttribute, value: nsString!.substring(with: range), range: range)
             case let .TextMention(peerId):
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
-                string.addAttribute(TextNode.TelegramPeerMentionAttribute, value: peerId.toInt64() as NSNumber, range: range)
+                string.addAttribute(NSForegroundColorAttributeName, value: linkColor, range: range)
+                let mention = nsString!.substring(with: range)
+                string.addAttribute(TextNode.TelegramPeerMentionAttribute, value: TelegramPeerMention(peerId: peerId, mention: mention), range: range)
             case .Hashtag:
                 if nsString == nil {
                     nsString = text as NSString
@@ -63,17 +64,17 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                             
                             skipEntity = true
                             let combinedRange = NSRange(location: range.location, length: nextRange.location + nextRange.length - range.location)
-                            string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: combinedRange)
+                            string.addAttribute(NSForegroundColorAttributeName, value: linkColor, range: combinedRange)
                             string.addAttribute(TextNode.TelegramHashtagAttribute, value: TelegramHashtag(peerName: peerName, hashtag: hashtag), range: combinedRange)
                         }
                     }
                 }
                 if !skipEntity {
-                    string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
+                    string.addAttribute(NSForegroundColorAttributeName, value: linkColor, range: range)
                     string.addAttribute(TextNode.TelegramHashtagAttribute, value: TelegramHashtag(peerName: nil, hashtag: hashtag), range: range)
                 }
             case .BotCommand:
-                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
+                string.addAttribute(NSForegroundColorAttributeName, value: linkColor, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }

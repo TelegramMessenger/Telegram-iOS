@@ -5,20 +5,6 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-private let lineImage = generateVerticallyStretchableFilledCircleImage(radius: 1.0, color: UIColor(0x007ee5))
-private let closeButtonImage = generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0x9099A2).cgColor)
-    context.setLineWidth(2.0)
-    context.setLineCap(.round)
-    context.move(to: CGPoint(x: 1.0, y: 1.0))
-    context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - 1.0))
-    context.strokePath()
-    context.move(to: CGPoint(x: size.width - 1.0, y: 1.0))
-    context.addLine(to: CGPoint(x: 1.0, y: size.height - 1.0))
-    context.strokePath()
-})
-
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let account: Account
     private let tapButton: HighlightTrackingButtonNode
@@ -42,18 +28,15 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.tapButton = HighlightTrackingButtonNode()
         
         self.closeButton = HighlightableButtonNode()
-        self.closeButton.setImage(closeButtonImage, for: [])
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
         self.separatorNode.isLayerBacked = true
         
         self.lineNode = ASImageNode()
         self.lineNode.displayWithoutProcessing = true
         self.lineNode.displaysAsynchronously = false
-        self.lineNode.image = lineImage
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = true
@@ -95,8 +78,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.tapButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
         self.addSubnode(self.tapButton)
         
-        self.backgroundColor = UIColor(0xF5F6F8)
-        
         self.addSubnode(self.separatorNode)
     }
     
@@ -104,8 +85,18 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.disposable.dispose()
     }
     
+    private var theme: PresentationTheme?
+    
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let panelHeight: CGFloat = 44.0
+        
+        if self.theme !== interfaceState.theme {
+            self.theme = interfaceState.theme
+            self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
+            self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(interfaceState.theme)
+            self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+        }
         
         if self.currentMessageId != interfaceState.pinnedMessageId {
             self.currentMessageId = interfaceState.pinnedMessageId
@@ -115,7 +106,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         if let strongSelf = self, let message = view.message {
                             strongSelf.currentMessage = message
                             if let currentLayout = strongSelf.currentLayout {
-                                strongSelf.enqueueTransition(width: currentLayout, transition: .immediate, message: message)
+                                strongSelf.enqueueTransition(width: currentLayout, transition: .immediate, message: message, theme: interfaceState.theme, strings: interfaceState.strings)
                             }
                         }
                     }))
@@ -137,14 +128,14 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentLayout = width
             
             if let currentMessage = self.currentMessage {
-                self.enqueueTransition(width: width, transition: .immediate, message: currentMessage)
+                self.enqueueTransition(width: width, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings)
             }
         }
         
         return panelHeight
     }
     
-    private func enqueueTransition(width: CGFloat, transition: ContainedViewLayoutTransition, message: Message) {
+    private func enqueueTransition(width: CGFloat, transition: ContainedViewLayoutTransition, message: Message, theme: PresentationTheme, strings: PresentationStrings) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
@@ -154,9 +145,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             let rightInset: CGFloat = 18.0
             let textRightInset: CGFloat = 25.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: "Pinned message", font: Font.medium(15.0), textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: strings.Conversation_PinnedMessage, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
-            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: message.text, font: Font.regular(15.0), textColor: .black), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: message.text, font: Font.regular(15.0), textColor: theme.chat.inputPanel.primaryTextColor), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             Queue.mainQueue().async {
                 if let strongSelf = self {

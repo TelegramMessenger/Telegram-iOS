@@ -4,8 +4,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private let addMemberPlusIcon = UIImage(bundleImageName: "Peer Info/PeerItemPlusIcon")?.precomposed()
-
 private final class SelectivePrivacyPeersControllerArguments {
     let account: Account
     
@@ -58,8 +56,8 @@ private enum SelectivePrivacyPeersEntryStableId: Hashable {
 }
 
 private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
-    case peerItem(Int32, Peer, ItemListPeerItemEditing, Bool)
-    case addItem(Bool)
+    case peerItem(Int32, PresentationTheme, PresentationStrings, Peer, ItemListPeerItemEditing, Bool)
+    case addItem(PresentationTheme, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -72,7 +70,7 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     var stableId: SelectivePrivacyPeersEntryStableId {
         switch self {
-            case let .peerItem(_, peer, _, _):
+            case let .peerItem(_, _, _, peer, _, _):
                 return .peer(peer.id)
             case .addItem:
                 return .add
@@ -81,12 +79,18 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     static func ==(lhs: SelectivePrivacyPeersEntry, rhs: SelectivePrivacyPeersEntry) -> Bool {
         switch lhs {
-            case let .peerItem(lhsIndex, lhsPeer, lhsEditing, lhsEnabled):
-                if case let .peerItem(rhsIndex, rhsPeer, rhsEditing, rhsEnabled) = rhs {
+        case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsEditing, lhsEnabled):
+                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsEditing, rhsEnabled) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
                     if !lhsPeer.isEqual(rhsPeer) {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
                         return false
                     }
                     if lhsEditing != rhsEditing {
@@ -99,8 +103,8 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .addItem(editing):
-                if case .addItem(editing) = rhs {
+            case let .addItem(lhsTheme, lhsText, lhsEditing):
+                if case let .addItem(rhsTheme, rhsText, rhsEditing) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEditing == rhsEditing {
                     return true
                 } else {
                     return false
@@ -110,9 +114,9 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     static func <(lhs: SelectivePrivacyPeersEntry, rhs: SelectivePrivacyPeersEntry) -> Bool {
         switch lhs {
-            case let .peerItem(index, _, _, _):
+            case let .peerItem(index, _, _, _, _, _):
                 switch rhs {
-                    case let .peerItem(rhsIndex, _, _, _):
+                    case let .peerItem(rhsIndex, _, _, _, _, _):
                         return index < rhsIndex
                     case .addItem:
                         return true
@@ -124,14 +128,14 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     func item(_ arguments: SelectivePrivacyPeersControllerArguments) -> ListViewItem {
         switch self {
-            case let .peerItem(_, peer, editing, enabled):
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+            case let .peerItem(_, theme, strings, peer, editing, enabled):
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
                 })
-            case let .addItem(editing):
-                return ItemListPeerActionItem(icon: addMemberPlusIcon, title: "Add New...", sectionId: self.section, editing: editing, action: {
+            case let .addItem(theme, text, editing):
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: editing, action: {
                     arguments.addPeer()
                 })
         }
@@ -171,16 +175,16 @@ private struct SelectivePrivacyPeersControllerState: Equatable {
     }
 }
 
-private func selectivePrivacyPeersControllerEntries(state: SelectivePrivacyPeersControllerState, peers: [Peer]) -> [SelectivePrivacyPeersEntry] {
+private func selectivePrivacyPeersControllerEntries(presentationData: PresentationData, state: SelectivePrivacyPeersControllerState, peers: [Peer]) -> [SelectivePrivacyPeersEntry] {
     var entries: [SelectivePrivacyPeersEntry] = []
     
     var index: Int32 = 0
     for peer in peers {
-        entries.append(.peerItem(index, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.id == state.peerIdWithRevealedOptions), true))
+        entries.append(.peerItem(index, presentationData.theme, presentationData.strings, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.id == state.peerIdWithRevealedOptions), true))
         index += 1
     }
     
-    entries.append(.addItem(state.editing))
+    entries.append(.addItem(presentationData.theme, presentationData.strings.BlockedUsers_AddNew, state.editing))
     
     return entries
 }
@@ -273,19 +277,19 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
     
     var previousPeers: [Peer]?
     
-    let signal = combineLatest(statePromise.get(), peersPromise.get())
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
-        |> map { state, peers -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacyPeersEntry>, SelectivePrivacyPeersEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacyPeersEntry>, SelectivePrivacyPeersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
             if !peers.isEmpty {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }
@@ -296,15 +300,15 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
-            let listState = ItemListNodeState(entries: selectivePrivacyPeersControllerEntries(state: state, peers: peers), style: .blocks, emptyStateItem: nil, animateChanges: previous != nil && previous!.count >= peers.count)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+            let listState = ItemListNodeState(entries: selectivePrivacyPeersControllerEntries(presentationData: presentationData, state: state, peers: peers), style: .blocks, emptyStateItem: nil, animateChanges: previous != nil && previous!.count >= peers.count)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

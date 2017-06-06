@@ -35,18 +35,18 @@ private enum PrivacyAndSecuritySection: Int32 {
 }
 
 private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
-    case privacyHeader
-    case blockedPeers
-    case lastSeenPrivacy(String)
-    case groupPrivacy(String)
-    case voiceCallPrivacy(String)
-    case securityHeader
-    case passcode
-    case twoStepVerification
-    case activeSessions
-    case accountHeader
-    case accountTimeout(String)
-    case accountInfo
+    case privacyHeader(PresentationTheme, String)
+    case blockedPeers(PresentationTheme, String)
+    case lastSeenPrivacy(PresentationTheme, String, String)
+    case groupPrivacy(PresentationTheme, String, String)
+    case voiceCallPrivacy(PresentationTheme, String, String)
+    case securityHeader(PresentationTheme, String)
+    case passcode(PresentationTheme, String)
+    case twoStepVerification(PresentationTheme, String)
+    case activeSessions(PresentationTheme, String)
+    case accountHeader(PresentationTheme, String)
+    case accountTimeout(PresentationTheme, String, String)
+    case accountInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -90,28 +90,74 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     
     static func ==(lhs: PrivacyAndSecurityEntry, rhs: PrivacyAndSecurityEntry) -> Bool {
         switch lhs {
-            case .privacyHeader, .blockedPeers, .securityHeader, .passcode, .twoStepVerification, .activeSessions, .accountHeader, .accountInfo:
-                return lhs.stableId == rhs.stableId
-            case let .lastSeenPrivacy(text):
-                if case .lastSeenPrivacy(text) = rhs {
+            case let .privacyHeader(lhsTheme, lhsText):
+                if case let .privacyHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .groupPrivacy(text):
-                if case .groupPrivacy(text) = rhs {
+            case let .blockedPeers(lhsTheme, lhsText):
+                if case let .blockedPeers(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .voiceCallPrivacy(text):
-                if case .voiceCallPrivacy(text) = rhs {
+            case let .lastSeenPrivacy(lhsTheme, lhsText, lhsValue):
+                if case let .lastSeenPrivacy(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .accountTimeout(text):
-                if case .accountTimeout(text) = rhs {
+            case let .groupPrivacy(lhsTheme, lhsText, lhsValue):
+                if case let .groupPrivacy(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .voiceCallPrivacy(lhsTheme, lhsText, lhsValue):
+                if case let .voiceCallPrivacy(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .securityHeader(lhsTheme, lhsText):
+                if case let .securityHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .passcode(lhsTheme, lhsText):
+                if case let .passcode(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .twoStepVerification(lhsTheme, lhsText):
+                if case let .twoStepVerification(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .activeSessions(lhsTheme, lhsText):
+                if case let .activeSessions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .accountHeader(lhsTheme, lhsText):
+                if case let .accountHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .accountTimeout(lhsTheme, lhsText, lhsValue):
+                if case let .accountTimeout(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .accountInfo(lhsTheme, lhsText):
+                if case let .accountInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -125,46 +171,46 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     
     func item(_ arguments: PrivacyAndSecurityControllerArguments) -> ListViewItem {
         switch self {
-            case .privacyHeader:
-                return ItemListSectionHeaderItem(text: "PRIVACY", sectionId: self.section)
-            case .blockedPeers:
-                return ItemListDisclosureItem(title: "Blocked Users", label: "", sectionId: self.section, style: .blocks, action: {
+            case let .privacyHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .blockedPeers(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openBlockedUsers()
                 })
-            case let .lastSeenPrivacy(text):
-                return ItemListDisclosureItem(title: "Last Seen", label: text, sectionId: self.section, style: .blocks, action: {
+            case let .lastSeenPrivacy(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openLastSeenPrivacy()
                 })
-            case let .groupPrivacy(text):
-                return ItemListDisclosureItem(title: "Groups", label: text, sectionId: self.section, style: .blocks, action: {
+            case let .groupPrivacy(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openGroupsPrivacy()
                 })
-            case let .voiceCallPrivacy(text):
-                return ItemListDisclosureItem(title: "Voice Calls", label: text, sectionId: self.section, style: .blocks, action: {
+            case let .voiceCallPrivacy(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceCallPrivacy()
                 })
-            case .securityHeader:
-                return ItemListSectionHeaderItem(text: "SECURITY", sectionId: self.section)
-            case .passcode:
-                return ItemListDisclosureItem(title: "Passcode Lock", label: "", sectionId: self.section, style: .blocks, action: {
+            case let .securityHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .passcode(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openPasscode()
                 })
-            case .twoStepVerification:
-                return ItemListDisclosureItem(title: "Two-Step Verification", label: "", sectionId: self.section, style: .blocks, action: {
+            case let .twoStepVerification(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openTwoStepVerification()
                 })
-            case .activeSessions:
-                return ItemListDisclosureItem(title: "Active Sessions", label: "", sectionId: self.section, style: .blocks, action: {
+            case let .activeSessions(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openActiveSessions()
                 })
-            case .accountHeader:
-                return ItemListSectionHeaderItem(text: "DELETE MY ACCOUNT", sectionId: self.section)
-            case let .accountTimeout(text):
-                return ItemListDisclosureItem(title: "If Away For", label: text, sectionId: self.section, style: .blocks, action: {
+            case let .accountHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .accountTimeout(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.setupAccountAutoremove()
                 })
-            case .accountInfo:
-                return ItemListTextItem(text: .plain("If you do not log in at least once within this period, your account will be deleted along with all groups, messages and contacts."), sectionId: self.section)
+            case let .accountInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -232,26 +278,26 @@ private func stringForAccountTimeout(_ timeout: Int32) -> String {
     }
 }
 
-private func privacyAndSecurityControllerEntries(state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?) -> [PrivacyAndSecurityEntry] {
+private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
-    entries.append(.privacyHeader)
-    entries.append(.blockedPeers)
+    entries.append(.privacyHeader(presentationData.theme, presentationData.strings.PrivacySettings_PrivacyTitle))
+    entries.append(.blockedPeers(presentationData.theme, presentationData.strings.Settings_BlockedUsers))
     if let privacySettings = privacySettings {
-        entries.append(.lastSeenPrivacy(stringForSelectiveSettings(privacySettings.presence)))
-        entries.append(.groupPrivacy(stringForSelectiveSettings(privacySettings.groupInvitations)))
-        entries.append(.voiceCallPrivacy(stringForSelectiveSettings(privacySettings.voiceCalls)))
+        entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, stringForSelectiveSettings(privacySettings.presence)))
+        entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, stringForSelectiveSettings(privacySettings.groupInvitations)))
+        entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, stringForSelectiveSettings(privacySettings.voiceCalls)))
     } else {
-        entries.append(.lastSeenPrivacy("Loading"))
-        entries.append(.groupPrivacy("Loading"))
-        entries.append(.voiceCallPrivacy("Loading"))
+        entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, presentationData.strings.Channel_NotificationLoading))
+        entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, presentationData.strings.Channel_NotificationLoading))
+        entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, presentationData.strings.Channel_NotificationLoading))
     }
     
-    entries.append(.securityHeader)
-    entries.append(.passcode)
-    entries.append(.twoStepVerification)
-    entries.append(.activeSessions)
-    entries.append(.accountHeader)
+    entries.append(.securityHeader(presentationData.theme, presentationData.strings.PrivacySettings_SecurityTitle))
+    entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_Passcode))
+    entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth))
+    entries.append(.activeSessions(presentationData.theme, presentationData.strings.PrivacySettings_AuthSessions))
+    entries.append(.accountHeader(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountTitle))
     if let privacySettings = privacySettings {
         let value: Int32
         if let updatingAccountTimeoutValue = state.updatingAccountTimeoutValue {
@@ -259,11 +305,11 @@ private func privacyAndSecurityControllerEntries(state: PrivacyAndSecurityContro
         } else {
             value = privacySettings.accountRemovalTimeout
         }
-        entries.append(.accountTimeout(stringForAccountTimeout(value)))
+        entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, stringForAccountTimeout(value)))
     } else {
-        entries.append(.accountTimeout("Loading"))
+        entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, presentationData.strings.Channel_NotificationLoading))
     }
-    entries.append(.accountInfo)
+    entries.append(.accountInfo(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountHelp))
     
     return entries
 }
@@ -437,24 +483,23 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
         }))
     })
     
-    let signal = combineLatest(statePromise.get() |> deliverOnMainQueue, privacySettingsPromise.get())
-        |> map { state, privacySettings -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, privacySettingsPromise.get())
+        |> map { presentationData, state, privacySettings -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
             
             var rightNavigationButton: ItemListNavigationButton?
             if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             }
             
-            let controllerState = ItemListControllerState(title: .text("Privacy and Security"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
-            let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(state: state, privacySettings: privacySettings), style: .blocks, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Privacy and Security"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings), style: .blocks, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
         }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

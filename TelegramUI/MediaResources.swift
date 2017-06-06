@@ -65,7 +65,7 @@ public final class VideoLibraryMediaResource: TelegramMediaResource {
     }
     
     public required init(decoder: Decoder) {
-        self.localIdentifier = decoder.decodeStringForKey("i")
+        self.localIdentifier = decoder.decodeStringForKey("i", orElse: "")
         self.adjustments = decoder.decodeObjectForKey("a", decoder: { VideoMediaResourceAdjustments(decoder: $0) }) as? VideoMediaResourceAdjustments
     }
     
@@ -127,8 +127,8 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
     }
     
     public required init(decoder: Decoder) {
-        self.randomId = decoder.decodeInt64ForKey("i")
-        self.path = decoder.decodeStringForKey("p")
+        self.randomId = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.path = decoder.decodeStringForKey("p", orElse: "")
         self.adjustments = decoder.decodeObjectForKey("a", decoder: { VideoMediaResourceAdjustments(decoder: $0) }) as? VideoMediaResourceAdjustments
     }
     
@@ -183,7 +183,7 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
     }
     
     public required init(decoder: Decoder) {
-        self.localIdentifier = decoder.decodeStringForKey("i")
+        self.localIdentifier = decoder.decodeStringForKey("i", orElse: "")
     }
     
     public func encode(_ encoder: Encoder) {

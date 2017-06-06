@@ -6,17 +6,22 @@ import Postbox
 import TelegramCore
 
 final class ChatListSearchRecentPeersNode: ASDisplayNode {
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
     private let sectionHeaderNode: ListSectionHeaderNode
     private let listView: ListView
     
     private let disposable = MetaDisposable()
     
-    init(account: Account, peerSelected: @escaping (Peer) -> Void) {
-        self.sectionHeaderNode = ListSectionHeaderNode()
-        self.sectionHeaderNode.title = "PEOPLE"
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void) {
+        self.theme = theme
+        self.strings = strings
+        
+        self.sectionHeaderNode = ListSectionHeaderNode(theme: theme)
+        self.sectionHeaderNode.title = strings.DialogList_RecentTitlePeople
         
         self.listView = ListView()
-        self.listView.transform = CATransform3DMakeRotation(-CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
+        self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         super.init()
         
@@ -27,7 +32,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
             if let strongSelf = self {
                 var items: [ListViewItem] = []
                 for peer in peers {
-                    items.append(HorizontalPeerItem(account: account, peer: peer, action: peerSelected))
+                    items.append(HorizontalPeerItem(theme: strongSelf.theme, strings: strongSelf.strings, account: account, peer: peer, action: peerSelected))
                 }
                 strongSelf.listView.transaction(deleteIndices: [], insertIndicesAndItems: (0 ..< items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [], updateOpaqueState: nil)
             }
@@ -36,6 +41,16 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
     
     deinit {
         disposable.dispose()
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        if self.theme !== theme || self.strings !== strings {
+            self.theme = theme
+            self.strings = strings
+            
+            self.sectionHeaderNode.title = strings.DialogList_RecentTitlePeople
+            self.sectionHeaderNode.updateTheme(theme: theme)
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {

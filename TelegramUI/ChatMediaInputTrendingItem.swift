@@ -7,12 +7,12 @@ import Postbox
 
 private let iconImage = generateImage(CGSize(width: 26.0, height: 26.0), rotatedContext: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0x9099A2).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0x9099A2).cgColor)
     context.setLineWidth(2.0)
     context.setLineCap(.round)
     let diameter: CGFloat = 22.0
     context.strokeEllipse(in: CGRect(origin: CGPoint(x: floor((size.width - diameter) / 2.0), y: floor((size.width - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter)))
-    context.setFillColor(UIColor(0x9099A2).cgColor)
+    context.setFillColor(UIColor(rgb: 0x9099A2).cgColor)
     UIGraphicsPushContext(context)
     
     context.setTextDrawingMode(.stroke)
@@ -61,7 +61,7 @@ private let boundingImageSize = CGSize(width: 30.0, height: 30.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
 private let verticalOffset: CGFloat = 3.0 + UIScreenPixel
 
-private let highlightBackground = generateStretchableFilledCircleImage(radius: 9.0, color: UIColor(0x9099A2, 0.2))
+private let highlightBackground = generateStretchableFilledCircleImage(radius: 9.0, color: UIColor(rgb: 0x9099A2, alpha: 0.2))
 
 final class ChatMediaInputTrendingItemNode: ListViewItemNode {
     private let imageNode: ASImageNode

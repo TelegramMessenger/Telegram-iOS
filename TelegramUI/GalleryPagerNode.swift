@@ -4,7 +4,7 @@ import Display
 import SwiftSignalKit
 
 final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let pageGap: CGFloat = 20.0
+    private let pageGap: CGFloat
     
     private let scrollView: UIScrollView
     
@@ -24,14 +24,16 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     var centralItemIndexUpdated: (Int?) -> Void = { _ in }
     var toggleControlsVisibility: () -> Void = { }
     
-    override init() {
+    init(pageGap: CGFloat) {
+        self.pageGap = pageGap
         self.scrollView = UIScrollView()
         
         super.init()
         
         self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.showsHorizontalScrollIndicator = false
-        self.scrollView.alwaysBounceHorizontal = true
+        self.scrollView.alwaysBounceHorizontal = !pageGap.isZero
+        self.scrollView.bounces = !pageGap.isZero
         self.scrollView.isPagingEnabled = true
         self.scrollView.delegate = self
         self.scrollView.clipsToBounds = false

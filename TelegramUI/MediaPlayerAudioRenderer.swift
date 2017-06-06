@@ -325,25 +325,25 @@ private final class AudioPlayerRendererContext {
             self.audioUnit = audioUnit
         }
         
-        self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play, activate: { [weak self] in
+        self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play, once: true, activate: { [weak self] in
             audioPlayerRendererQueue.async {
                 if let strongSelf = self, !strongSelf.paused {
                     strongSelf.audioSessionAcquired()
                 }
             }
-        }, deactivate: { [weak self] in
-            return Signal { subscriber in
-                audioPlayerRendererQueue.async {
-                    if let strongSelf = self {
-                        strongSelf.audioPaused()
-                        strongSelf.stop()
-                        subscriber.putCompletion()
+            }, deactivate: { [weak self] in
+                return Signal { subscriber in
+                    audioPlayerRendererQueue.async {
+                        if let strongSelf = self {
+                            strongSelf.audioPaused()
+                            strongSelf.stop()
+                            subscriber.putCompletion()
+                        }
                     }
+                    
+                    return EmptyDisposable
                 }
-                
-                return EmptyDisposable
-            }
-        }, once: true))
+        }))
     }
     
     private func audioSessionAcquired() {

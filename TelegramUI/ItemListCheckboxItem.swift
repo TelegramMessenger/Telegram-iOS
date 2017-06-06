@@ -3,24 +3,20 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-private let checkIcon = generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0x007ee5).cgColor)
-    context.setLineWidth(2.0)
-    context.move(to: CGPoint(x: 12.0, y: 1.0))
-    context.addLine(to: CGPoint(x: 4.16482734, y: 9.0))
-    context.addLine(to: CGPoint(x: 1.0, y: 5.81145833))
-    context.strokePath()
-})
-
 class ItemListCheckboxItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let title: String
     let checked: Bool
     let zeroSeparatorInsets: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(title: String, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    init(theme: PresentationTheme? = nil, title: String, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+        if let theme = theme {
+            self.theme = theme
+        } else {
+            self.theme = defaultPresentationTheme
+        }
         self.title = title
         self.checked = checked
         self.zeroSeparatorInsets = zeroSeparatorInsets
@@ -78,17 +74,16 @@ class ItemListCheckboxItemNode: ListViewItemNode {
     private let iconNode: ASImageNode
     private let titleNode: TextNode
     
+    private var item: ItemListCheckboxItem?
+    
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.iconNode = ASImageNode()
@@ -102,7 +97,6 @@ class ItemListCheckboxItemNode: ListViewItemNode {
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -114,10 +108,12 @@ class ItemListCheckboxItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ItemListCheckboxItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
+        let currentItem = self.item
+        
         return { item, width, neighbors in
             let leftInset: CGFloat = 44.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let separatorHeight = UIScreenPixel
             
@@ -127,14 +123,32 @@ class ItemListCheckboxItemNode: ListViewItemNode {
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
+            var updateCheckImage: UIImage?
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+                updateCheckImage = PresentationResourcesItemList.checkIconImage(item.theme)
+            }
+            
             return (layout, { [weak self] in
-                let image = checkIcon
-                
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
+                    if let updateCheckImage = updateCheckImage {
+                        strongSelf.iconNode.image = updateCheckImage
+                    }
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
+                    
                     let _ = titleApply()
                     
-                    strongSelf.iconNode.image = image
-                    if let image = image {
+                    if let image = strongSelf.iconNode.image {
                         strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: floor((leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                     }
                     strongSelf.iconNode.isHidden = !item.checked

@@ -11,7 +11,7 @@ private var nextWorker = 0
 final class SoftwareVideoLayerFrameManager {
     private let fetchDisposable: Disposable
     private var dataDisposable = MetaDisposable()
-    private var source: SoftwareVideoSource?
+    private let source = Atomic<SoftwareVideoSource?>(value: nil)
     
     private var baseTimestamp: Double?
     private var frames: [MediaTrackFrame] = []
@@ -40,7 +40,7 @@ final class SoftwareVideoLayerFrameManager {
     func start() {
         self.dataDisposable.set((self.account.postbox.mediaBox.resourceData(self.resource, option: .complete(waitUntilFetchStatus: false)) |> deliverOn(applyQueue)).start(next: { [weak self] data in
             if let strongSelf = self, data.complete {
-                strongSelf.source = SoftwareVideoSource(path: data.path)
+                let _ = strongSelf.source.swap(SoftwareVideoSource(path: data.path))
             }
         }))
     }
@@ -89,7 +89,7 @@ final class SoftwareVideoLayerFrameManager {
                     return
                 }
                 if let strongSelf = self {
-                    let frameAndLoop = strongSelf.source?.readFrame(maxPts: maxPts)
+                    let frameAndLoop = (strongSelf.source.with { $0 })?.readFrame(maxPts: maxPts)
                     
                     applyQueue.async {
                         if let strongSelf = self {

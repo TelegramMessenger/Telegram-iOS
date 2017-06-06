@@ -12,16 +12,16 @@ private enum SubscriberAction {
     case unmuteNotifications
 }
 
-private func titleAndColorForAction(_ action: SubscriberAction) -> (String, UIColor) {
+private func titleAndColorForAction(_ action: SubscriberAction, theme: PresentationTheme, strings: PresentationStrings) -> (String, UIColor) {
     switch action {
         case .join:
-            return ("Join", UIColor(0x007ee5))
+            return (strings.Channel_JoinChannel, theme.chat.inputPanel.panelControlAccentColor)
         case .kicked:
-            return ("Join", UIColor.gray)
+            return (strings.Channel_JoinChannel, theme.chat.inputPanel.panelControlDisabledColor)
         case .muteNotifications:
-            return ("Mute", UIColor(0x007ee5))
+            return (strings.Conversation_Mute, theme.chat.inputPanel.panelControlAccentColor)
         case .unmuteNotifications:
-            return ("Unmute", UIColor(0x007ee5))
+            return (strings.Conversation_Unmute, theme.chat.inputPanel.panelControlAccentColor)
     }
 }
 
@@ -53,7 +53,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     
     private let actionDisposable = MetaDisposable()
     
-    private var presentationInterfaceState = ChatPresentationInterfaceState()
+    private var presentationInterfaceState: ChatPresentationInterfaceState?
     
     private var notificationSettingsDisposable = MetaDisposable()
     
@@ -86,7 +86,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func buttonPressed() {
-        guard let account = self.account, let action = self.action, let peer = self.presentationInterfaceState.peer else {
+        guard let account = self.account, let action = self.action, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.peer else {
             return
         }
         
@@ -106,12 +106,12 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             case .kicked:
                 break
             case .muteNotifications:
-                if let account = self.account, let peer = self.presentationInterfaceState.peer {
+                if let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.peer {
                     let muteState: PeerMuteState = .muted(until: Int32.max)
                     self.actionDisposable.set(changePeerNotificationSettings(account: account, peerId: peer.id, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
                 }
             case .unmuteNotifications:
-                if let account = self.account, let peer = self.presentationInterfaceState.peer {
+                if let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.peer {
                     let muteState: PeerMuteState = .unmuted
                     self.actionDisposable.set(changePeerNotificationSettings(account: account, peerId: peer.id, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
                 }
@@ -125,10 +125,10 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
-            if let peer = interfaceState.peer, previousState.peer == nil || !peer.isEqual(previousState.peer!) {
+            if let peer = interfaceState.peer, previousState?.peer == nil || !peer.isEqual(previousState!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings {
                 if let action = actionForPeer(peer: peer, muteState: self.muteState) {
                     self.action = action
-                    let (title, color) = titleAndColorForAction(action)
+                    let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
                     self.button.setTitle(title, for: [])
                     self.button.setTitleColor(color, for: [.normal])
                     self.button.setTitleColor(color.withAlphaComponent(0.5), for: [.highlighted])
@@ -146,20 +146,20 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         }
                     }
                     |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] muteState in
-                        if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.peer {
+                        if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let peer = presentationInterfaceState.peer {
                             strongSelf.muteState = muteState
                             let action = actionForPeer(peer: peer, muteState: muteState)
                             if let layoutData = strongSelf.layoutData, action != strongSelf.action {
                                 strongSelf.action = action
                                 if let action = action {
-                                    let (title, color) = titleAndColorForAction(action)
+                                    let (title, color) = titleAndColorForAction(action, theme: presentationInterfaceState.theme, strings: presentationInterfaceState.strings)
                                     strongSelf.button.setTitle(title, for: [])
                                     strongSelf.button.setTitleColor(color, for: [.normal])
                                     strongSelf.button.setTitleColor(color.withAlphaComponent(0.5), for: [.highlighted])
                                     strongSelf.button.sizeToFit()
                                 }
                                 
-                                let _ = strongSelf.updateLayout(width: layoutData, transition: .immediate, interfaceState: strongSelf.presentationInterfaceState)
+                                let _ = strongSelf.updateLayout(width: layoutData, transition: .immediate, interfaceState: presentationInterfaceState)
                             }
                         }
                     }))

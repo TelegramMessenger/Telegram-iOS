@@ -10,7 +10,7 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
             } else if let inputMediaNode = inputMediaNode {
                 return inputMediaNode
             } else {
-                let inputNode = ChatMediaInputNode(account: account, controllerInteraction: controllerInteraction)
+                let inputNode = ChatMediaInputNode(account: account, controllerInteraction: controllerInteraction, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 inputNode.interfaceInteraction = interfaceInteraction
                 return inputNode
             }

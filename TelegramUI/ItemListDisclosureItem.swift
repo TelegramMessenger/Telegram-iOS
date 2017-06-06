@@ -9,6 +9,7 @@ enum ItemListDisclosureStyle {
 }
 
 class ItemListDisclosureItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let title: String
     let label: String
     let sectionId: ItemListSectionId
@@ -16,7 +17,12 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
     
-    init(title: String, label: String, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
+    init(theme: PresentationTheme? = nil, title: String, label: String, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
+        if let theme = theme {
+            self.theme = theme
+        } else {
+            self.theme = defaultPresentationTheme
+        }
         self.title = title
         self.label = label
         self.sectionId = sectionId
@@ -65,7 +71,6 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
 }
 
 private let titleFont = Font.regular(17.0)
-private let arrowImage = UIImage(bundleImageName: "Peer Info/DisclosureArrow")?.precomposed()
 
 class ItemListDisclosureItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
@@ -93,11 +98,9 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -110,10 +113,8 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         self.arrowNode.displayWithoutProcessing = true
         self.arrowNode.displaysAsynchronously = false
         self.arrowNode.isLayerBacked = true
-        self.arrowNode.image = arrowImage
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -127,6 +128,8 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
+        let currentItem = self.item
+        
         return { item, width, neighbors in
             var rightInset: CGFloat = 34.0
             
@@ -135,6 +138,14 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                     rightInset = 16.0
                 case .arrow:
                     rightInset = 34.0
+            }
+            
+            var updateArrowImage: UIImage?
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
             }
             
             let contentSize: CGSize
@@ -150,8 +161,8 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: titleFont, textColor: UIColor(0x8e8e93)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: titleFont, textColor: item.theme.list.itemSecondaryTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -159,6 +170,17 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    if let updateArrowImage = updateArrowImage {
+                        strongSelf.arrowNode.image = updateArrowImage
+                    }
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
                     
                     let _ = titleApply()
                     let _ = labelApply()
@@ -214,7 +236,7 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleLayout.size)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: width - rightInset - labelLayout.size.width, y: 12.0), size: labelLayout.size)
                     
-                    if let arrowImage = arrowImage {
+                    if let arrowImage = strongSelf.arrowNode.image {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: width - 15.0 - arrowImage.size.width, y: 18.0), size: arrowImage.size)
                     }
                     

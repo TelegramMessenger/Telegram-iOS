@@ -3,10 +3,7 @@ import AsyncDisplayKit
 import UIKit
 import Postbox
 import TelegramCore
-
-private let createGroupIcon = UIImage(bundleImageName: "Contact List/CreateGroupActionIcon")?.precomposed()
-private let createSecretChatIcon = UIImage(bundleImageName: "Contact List/CreateSecretChatActionIcon")?.precomposed()
-private let createChannelIcon = UIImage(bundleImageName: "Contact List/CreateChannelActionIcon")?.precomposed()
+import SwiftSignalKit
 
 final class ComposeControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
@@ -25,21 +22,26 @@ final class ComposeControllerNode: ASDisplayNode {
     var openCreateNewSecretChat: (() -> Void)?
     var openCreateNewChannel: (() -> Void)?
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     init(account: Account) {
         self.account = account
+        
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         var openCreateNewGroupImpl: (() -> Void)?
         var openCreateNewSecretChatImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
         self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: [
-            ContactListAdditionalOption(title: "New Group", icon: createGroupIcon, action: {
+            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
                 openCreateNewGroupImpl?()
             }),
-            ContactListAdditionalOption(title: "New Secret Chat", icon: createSecretChatIcon, action: {
+            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewEncryptedChat, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateSecretChatActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
                 openCreateNewSecretChatImpl?()
             }),
-            ContactListAdditionalOption(title: "New Channel", icon: createChannelIcon, action: {
+            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateChannelActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
                 openCreateNewChannelImpl?()
             })
         ]))
@@ -48,7 +50,7 @@ final class ComposeControllerNode: ASDisplayNode {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.contactListNode)
         
@@ -61,6 +63,28 @@ final class ComposeControllerNode: ASDisplayNode {
         openCreateNewChannelImpl = { [weak self] in
             self?.openCreateNewChannel?()
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    strongSelf.presentationData = presentationData
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        
+        self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -69,7 +93,7 @@ final class ComposeControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
+        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
@@ -95,7 +119,7 @@ final class ComposeControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(contentNode: ContactsSearchContainerNode(account: self.account, openPeer: { [weak self] peerId in
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, openPeer: { [weak self] peerId in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peerId)
                 }

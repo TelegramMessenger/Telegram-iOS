@@ -347,9 +347,9 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
     
     let peerView = account.viewTracker.peerView(peerId)
     
-    let signal = combineLatest(statePromise.get() |> deliverOnMainQueue, peerView |> deliverOnMainQueue)
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, peerView |> deliverOnMainQueue)
         |> deliverOnMainQueue
-        |> map { state, view -> (ItemListControllerState, (ItemListNodeState<GroupAdminsEntry>, GroupAdminsEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<GroupAdminsEntry>, GroupAdminsEntry.ItemGenerationArguments)) in
             
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if view.cachedData == nil {
@@ -361,7 +361,7 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             }
             
-            let controllerState = ItemListControllerState(title: .text("Admins"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Admins"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: true)
             let listState = ItemListNodeState(entries: groupAdminsControllerEntries(account: account, view: view, state: state), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: true)
             
             return (controllerState, (listState, arguments))
@@ -369,6 +369,6 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
             actionsDisposable.dispose()
         }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     return controller
 }

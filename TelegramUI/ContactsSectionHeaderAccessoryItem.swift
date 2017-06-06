@@ -26,13 +26,15 @@ func ==(lhs: ContactsSectionHeader, rhs: ContactsSectionHeader) -> Bool {
 
 final class ContactsSectionHeaderAccessoryItem: ListViewAccessoryItem {
     private let sectionHeader: ContactsSectionHeader
+    private let theme: PresentationTheme
     
-    init(sectionHeader: ContactsSectionHeader) {
+    init(sectionHeader: ContactsSectionHeader, theme: PresentationTheme) {
         self.sectionHeader = sectionHeader
+        self.theme = theme
     }
     
     func isEqualToItem(_ other: ListViewAccessoryItem) -> Bool {
-        if let other = other as? ContactsSectionHeaderAccessoryItem, self.sectionHeader == other.sectionHeader {
+        if let other = other as? ContactsSectionHeaderAccessoryItem, self.sectionHeader == other.sectionHeader, self.theme === other.theme {
             return true
         } else {
             return false
@@ -40,17 +42,19 @@ final class ContactsSectionHeaderAccessoryItem: ListViewAccessoryItem {
     }
     
     func node() -> ListViewAccessoryItemNode {
-        return ContactsSectionHeaderAccessoryItemNode(sectionHeader: self.sectionHeader)
+        return ContactsSectionHeaderAccessoryItemNode(sectionHeader: self.sectionHeader, theme: self.theme)
     }
 }
 
 private final class ContactsSectionHeaderAccessoryItemNode: ListViewAccessoryItemNode {
     private let sectionHeader: ContactsSectionHeader
     private let sectionHeaderNode: ListSectionHeaderNode
+    private var theme: PresentationTheme
     
-    init(sectionHeader: ContactsSectionHeader) {
+    init(sectionHeader: ContactsSectionHeader, theme: PresentationTheme) {
         self.sectionHeader = sectionHeader
-        self.sectionHeaderNode = ListSectionHeaderNode()
+        self.theme = theme
+        self.sectionHeaderNode = ListSectionHeaderNode(theme: theme)
         
         super.init()
         

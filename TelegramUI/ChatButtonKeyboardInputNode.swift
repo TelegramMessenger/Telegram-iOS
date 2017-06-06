@@ -7,27 +7,24 @@ import SwiftSignalKit
 
 private let defaultPortraitPanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 271.0 : 258.0
 
-private func generateButtonBackgroundImage(color: UIColor) -> UIImage? {
-    let radius: CGFloat = 5.0
-    let shadowSize: CGFloat = 1.0
-    return generateImage(CGSize(width: radius * 2.0, height: radius * 2.0 + shadowSize), contextGenerator: { size, context in
-        context.setFillColor(UIColor(0xc3c7c9).cgColor)
-        context.fillEllipse(in: CGRect(x: 0.0, y: 0.0, width: radius * 2.0, height: radius * 2.0))
-        context.setFillColor(color.cgColor)
-        context.fillEllipse(in: CGRect(x: 0.0, y: shadowSize, width: radius * 2.0, height: radius * 2.0))
-    })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius))
-}
-private let buttonBackgroundImage = generateButtonBackgroundImage(color: .white)
-private let buttonHighlightedBackgroundImage = generateButtonBackgroundImage(color: UIColor(0xa8b3c0))
-
 private final class ChatButtonKeyboardInputButtonNode: ASButtonNode {
     var button: ReplyMarkupButton?
     
-    override init() {
+    private var theme: PresentationTheme?
+    
+    init(theme: PresentationTheme) {
         super.init()
         
-        self.setBackgroundImage(buttonBackgroundImage, for: [])
-        self.setBackgroundImage(buttonHighlightedBackgroundImage, for: [.highlighted])
+        self.updateTheme(theme: theme)
+    }
+    
+    func updateTheme(theme: PresentationTheme) {
+        if theme !== self.theme {
+            self.theme = theme
+            
+            self.setBackgroundImage(PresentationResourcesChat.chatInputButtonPanelButtonImage(theme), for: [])
+            self.setBackgroundImage(PresentationResourcesChat.chatInputButtonPanelButtonHighlightedImage(theme), for: [.highlighted])
+        }
     }
 }
 
@@ -41,6 +38,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     private var buttonNodes: [ChatButtonKeyboardInputButtonNode] = []
     private var message: Message?
     
+    private var theme: PresentationTheme?
+    
     init(account: Account, controllerInteraction: ChatControllerInteraction) {
         self.account = account
         self.controllerInteraction = controllerInteraction
@@ -49,11 +48,9 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = UIColor(0xBEC2C6)
         
         super.init()
         
-        self.backgroundColor = UIColor(0xE8EBF0)
         self.addSubnode(self.scrollNode)
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.canCancelContentTouches = true
@@ -67,6 +64,13 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel)))
+        
+        if self.theme !== interfaceState.theme {
+            self.theme = interfaceState.theme
+            
+            self.separatorNode.backgroundColor = interfaceState.theme.chat.inputButtonPanel.panelSerapatorColor
+            self.backgroundColor = interfaceState.theme.chat.inputButtonPanel.panelBackgroundColor
+        }
         
         var validatedMarkup: ReplyMarkupMessageAttribute?
         if let message = interfaceState.keyboardButtonsMessage {
@@ -91,7 +95,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             
             var panelHeight = self.heightForWidth(width: width)
             
-            var rowsHeight = verticalInset + CGFloat(markup.rows.count) * buttonHeight + CGFloat(max(0, markup.rows.count - 1)) * rowSpacing + verticalInset
+            let rowsHeight = verticalInset + CGFloat(markup.rows.count) * buttonHeight + CGFloat(max(0, markup.rows.count - 1)) * rowSpacing + verticalInset
             if !markup.flags.contains(.fit) && rowsHeight < panelHeight {
                 buttonHeight = floor((panelHeight - verticalInset * 2.0 - CGFloat(max(0, markup.rows.count - 1)) * rowSpacing) / CGFloat(markup.rows.count))
             }
@@ -106,8 +110,9 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     let buttonNode: ChatButtonKeyboardInputButtonNode
                     if buttonIndex < self.buttonNodes.count {
                         buttonNode = self.buttonNodes[buttonIndex]
+                        buttonNode.updateTheme(theme: interfaceState.theme)
                     } else {
-                        buttonNode = ChatButtonKeyboardInputButtonNode()
+                        buttonNode = ChatButtonKeyboardInputButtonNode(theme: interfaceState.theme)
                         buttonNode.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: [.touchUpInside])
                         self.scrollNode.addSubnode(buttonNode)
                         self.buttonNodes.append(buttonNode)
@@ -115,7 +120,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     buttonIndex += 1
                     if buttonNode.button != button {
                         buttonNode.button = button
-                        buttonNode.setTitle(button.title, with: Font.regular(16.0), with: .black, for: [])
+                        buttonNode.setTitle(button.title, with: Font.regular(16.0), with: interfaceState.theme.chat.inputButtonPanel.buttonTextColor, for: [])
                     }
                     buttonNode.frame = CGRect(origin: CGPoint(x: sideInset + CGFloat(columnIndex) * (buttonWidth + columnSpacing), y: verticalOffset), size: CGSize(width: buttonWidth, height: buttonHeight))
                     columnIndex += 1

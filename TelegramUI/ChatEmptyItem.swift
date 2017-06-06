@@ -6,9 +6,16 @@ import Postbox
 import TelegramCore
 
 private let messageFont = Font.medium(14.0)
-private let iconImage = UIImage(bundleImageName: "Chat/EmptyChatIcon")?.precomposed()
 
 final class ChatEmptyItem: ListViewItem {
+    fileprivate let theme: PresentationTheme
+    fileprivate let strings: PresentationStrings
+    
+    init(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+    }
+    
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = {
             let node = ChatEmptyItemNode()
@@ -50,8 +57,6 @@ final class ChatEmptyItem: ListViewItem {
     }
 }
 
-private let backgroundImage = generateStretchableFilledCircleImage(radius: 14.0, color: UIColor(0x748391, 0.45))
-
 final class ChatEmptyItemNode: ListViewItemNode {
     var controllerInteraction: ChatControllerInteraction?
     
@@ -60,15 +65,15 @@ final class ChatEmptyItemNode: ListViewItemNode {
     let iconNode: ASImageNode
     let textNode: TextNode
     
+    private var theme: PresentationTheme?
+    
     init() {
         self.offsetContainer = ASDisplayNode()
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = backgroundImage
         self.iconNode = ASImageNode()
-        self.iconNode.image = iconImage
         self.textNode = TextNode()
         
         super.init(layerBacked: false, dynamicBounce: true, rotated: true)
@@ -84,9 +89,20 @@ final class ChatEmptyItemNode: ListViewItemNode {
     
     func asyncLayout() -> (_ item: ChatEmptyItem, _ width: CGFloat) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let currentTheme = self.theme
         return { [weak self] item, width in
-            let attributedText = NSAttributedString(string: "No messages\nhere yet...", font: messageFont, textColor: .white, paragraphAlignment: .center)
+            var updatedBackgroundImage: UIImage?
+            var updatedIconImage: UIImage?
             
+            let iconImage = PresentationResourcesChat.chatEmptyItemIconImage(item.theme)
+            
+            if currentTheme !== item.theme {
+                updatedBackgroundImage = PresentationResourcesChat.chatEmptyItemBackgroundImage(item.theme)
+                updatedIconImage = iconImage
+            }
+            
+            let attributedText = NSAttributedString(string: item.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: item.theme.chat.serviceMessage.serviceMessagePrimaryTextColor, paragraphAlignment: .center)
+                
             let horizontalEdgeInset: CGFloat = 10.0
             let horizontalContentInset: CGFloat = 12.0
             let verticalItemInset: CGFloat = 10.0
@@ -109,6 +125,16 @@ final class ChatEmptyItemNode: ListViewItemNode {
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: imageSize.height + imageSpacing + textLayout.size.height + verticalItemInset * 2.0 + verticalContentInset * 2.0 + 4.0), insets: UIEdgeInsets())
             return (itemLayout, { _ in
                 if let strongSelf = self {
+                    strongSelf.theme = item.theme
+                    
+                    if let updatedBackgroundImage = updatedBackgroundImage {
+                        strongSelf.backgroundNode.image = updatedBackgroundImage
+                    }
+                    
+                    if let updatedIconImage = updatedIconImage {
+                        strongSelf.iconNode.image = updatedIconImage
+                    }
+                    
                     let _ = textApply()
                     strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)
                     strongSelf.backgroundNode.frame = backgroundFrame

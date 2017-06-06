@@ -41,7 +41,7 @@ func authorizationNextOptionText(_ type: AuthorizationCodeNextType?, timeout: In
                 }
         }
     } else {
-        return NSAttributedString(string: "Haven't received the code?", font: Font.regular(16.0), textColor: UIColor(0x007ee5), paragraphAlignment: .center)
+        return NSAttributedString(string: "Haven't received the code?", font: Font.regular(16.0), textColor: UIColor(rgb: 0x007ee5), paragraphAlignment: .center)
     }
 }
 
@@ -84,11 +84,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     override init() {
         self.navigationBackgroundNode = ASDisplayNode()
         self.navigationBackgroundNode.isLayerBacked = true
-        self.navigationBackgroundNode.backgroundColor = UIColor(0xefefef)
+        self.navigationBackgroundNode.backgroundColor = UIColor(rgb: 0xefefef)
         
         self.stripeNode = ASDisplayNode()
         self.stripeNode.isLayerBacked = true
-        self.stripeNode.backgroundColor = UIColor(0xbcbbc1)
+        self.stripeNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
         
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
@@ -105,7 +105,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
-        self.codeSeparatorNode.backgroundColor = UIColor(0xbcbbc1)
+        self.codeSeparatorNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
         
         self.codeField = TextFieldNode()
         self.codeField.textField.font = Font.regular(24.0)
@@ -129,7 +129,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.codeField.textField.addTarget(self, action: #selector(self.codeFieldTextChanged(_:)), for: .editingChanged)
         
-        self.codeField.textField.attributedPlaceholder = NSAttributedString(string: "Code", font: Font.regular(24.0), textColor: UIColor(0xbcbcc3))
+        self.codeField.textField.attributedPlaceholder = NSAttributedString(string: "Code", font: Font.regular(24.0), textColor: UIColor(rgb: 0xbcbcc3))
     }
     
     deinit {

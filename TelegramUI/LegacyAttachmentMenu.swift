@@ -5,7 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 
-func legacyAttachmentMenu(parentController: LegacyController, recentlyUsedInlineBots: [Peer], presentOverlayController: @escaping (UIViewController) -> (() -> Void), openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], presentOverlayController: @escaping (UIViewController) -> (() -> Void), openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let controller = TGMenuSheetController()
     controller.applicationInterface = parentController.applicationInterface
     controller.dismissesByOutsideTap = true
@@ -34,25 +34,25 @@ func legacyAttachmentMenu(parentController: LegacyController, recentlyUsedInline
     carouselItem.allowCaptions = true
     itemViews.append(carouselItem)
     
-    let galleryItem = TGMenuSheetButtonItemView(title: "Photo or Video", type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+    let galleryItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
         controller?.dismiss(animated: true)
         openGallery()
     })!
     itemViews.append(galleryItem)
     
-    let fileItem = TGMenuSheetButtonItemView(title: "File", type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
+    let fileItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
         controller?.dismiss(animated: true)
         openFileGallery()
     })!
     itemViews.append(fileItem)
     
-    let locationItem = TGMenuSheetButtonItemView(title: "Location", type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+    let locationItem = TGMenuSheetButtonItemView(title: strings.Conversation_Location, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
         controller?.dismiss(animated: true)
         openMap()
     })!
     itemViews.append(locationItem)
     
-    let contactItem = TGMenuSheetButtonItemView(title: "Contact", type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+    let contactItem = TGMenuSheetButtonItemView(title: strings.Conversation_Contact, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
         controller?.dismiss(animated: true)
         openContacts()
     })!
@@ -76,7 +76,7 @@ func legacyAttachmentMenu(parentController: LegacyController, recentlyUsedInline
     
     carouselItem.remainingHeight = TGMenuSheetButtonItemViewHeight * CGFloat(itemViews.count - 1)
     
-    let cancelItem = TGMenuSheetButtonItemView(title: "Cancel", type: TGMenuSheetButtonTypeCancel, action: { [weak controller] in
+    let cancelItem = TGMenuSheetButtonItemView(title: strings.Common_Cancel, type: TGMenuSheetButtonTypeCancel, action: { [weak controller] in
         controller?.dismiss(animated: true)
     })!
     itemViews.append(cancelItem)

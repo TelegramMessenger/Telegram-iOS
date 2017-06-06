@@ -18,15 +18,25 @@ class ChatListControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     
-    init(account: Account) {
+    var themeAndStrings: (PresentationTheme, PresentationStrings)
+    
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
-        self.chatListNode = ChatListNode(account: account, mode: .chatList)
+        self.chatListNode = ChatListNode(account: account, mode: .chatList, theme: theme, strings: strings)
+        
+        self.themeAndStrings = (theme, strings)
         
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
         
         self.addSubnode(self.chatListNode)
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.themeAndStrings = (theme, strings)
+        self.chatListNode.updateThemeAndStrings(theme: theme, strings: strings)
+        self.searchDisplayController?.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -86,7 +96,7 @@ class ChatListControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(contentNode: ChatListSearchContainerNode(account: self.account, openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChatListSearchContainerNode(account: self.account, openPeer: { [weak self] peer in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peer)
                 }

@@ -71,7 +71,7 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
 private let titleFont = Font.medium(16.0)
 private let textFont = Font.regular(15.0)
 private let iconFont = Font.medium(25.0)
-private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 2.0, color: UIColor(0xdfdfdf))
+private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 2.0, color: UIColor(rgb: 0xdfdfdf))
 
 final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private let imageNodeBackground: ASDisplayNode
@@ -230,7 +230,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         if updatedVideoResource {
                             if let videoResource = videoResource {
                                 if let applicationContext = item.account.applicationContext as? TelegramApplicationContext {
-                                    strongSelf.videoNode.acquireContext(account: item.account, mediaManager: applicationContext.mediaManager, id: ChatContextResultManagedMediaId(result: item.result), resource: videoResource)
+                                    strongSelf.videoNode.acquireContext(account: item.account, mediaManager: applicationContext.mediaManager, id: ChatContextResultManagedMediaId(result: item.result), resource: videoResource, priority: 1)
                                 }
                             } else {
                                 strongSelf.videoNode.clearContext()

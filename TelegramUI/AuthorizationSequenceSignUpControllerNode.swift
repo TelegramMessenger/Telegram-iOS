@@ -33,11 +33,11 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     override init() {
         self.navigationBackgroundNode = ASDisplayNode()
         self.navigationBackgroundNode.isLayerBacked = true
-        self.navigationBackgroundNode.backgroundColor = UIColor(0xefefef)
+        self.navigationBackgroundNode.backgroundColor = UIColor(rgb: 0xefefef)
         
         self.stripeNode = ASDisplayNode()
         self.stripeNode.isLayerBacked = true
-        self.stripeNode.backgroundColor = UIColor(0xbcbbc1)
+        self.stripeNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
         
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
@@ -47,31 +47,31 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.currentOptionNode = ASTextNode()
         self.currentOptionNode.isLayerBacked = true
         self.currentOptionNode.displaysAsynchronously = false
-        self.currentOptionNode.attributedText = NSAttributedString(string: "Enter your name and add a profile picture", font: Font.regular(16.0), textColor: UIColor(0x878787), paragraphAlignment: .center)
+        self.currentOptionNode.attributedText = NSAttributedString(string: "Enter your name and add a profile picture", font: Font.regular(16.0), textColor: UIColor(rgb: 0x878787), paragraphAlignment: .center)
         
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.isLayerBacked = true
-        self.firstSeparatorNode.backgroundColor = UIColor(0xbcbbc1)
+        self.firstSeparatorNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
         
         self.lastSeparatorNode = ASDisplayNode()
         self.lastSeparatorNode.isLayerBacked = true
-        self.lastSeparatorNode.backgroundColor = UIColor(0xbcbbc1)
+        self.lastSeparatorNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
         
         self.firstNameField = TextFieldNode()
         self.firstNameField.textField.font = Font.regular(20.0)
         self.firstNameField.textField.textAlignment = .natural
         self.firstNameField.textField.returnKeyType = .next
-        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: "First name", font: self.firstNameField.textField.font, textColor: UIColor(0xbcbcc3))
+        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: "First name", font: self.firstNameField.textField.font, textColor: UIColor(rgb: 0xbcbcc3))
         
         self.lastNameField = TextFieldNode()
         self.lastNameField.textField.font = Font.regular(20.0)
         self.lastNameField.textField.textAlignment = .natural
         self.lastNameField.textField.returnKeyType = .done
-        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: "Last name", font: self.lastNameField.textField.font, textColor: UIColor(0xbcbcc3))
+        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: "Last name", font: self.lastNameField.textField.font, textColor: UIColor(rgb: 0xbcbcc3))
         
         self.addPhotoButton = HighlightableButtonNode()
-        self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "add\nphoto", font: Font.regular(16.0), textColor: UIColor(0xbcbcc3), paragraphAlignment: .center), for: .normal)
-        self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: UIColor(0xbcbcc3)), for: .normal)
+        self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "add\nphoto", font: Font.regular(16.0), textColor: UIColor(rgb: 0xbcbcc3), paragraphAlignment: .center), for: .normal)
+        self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: UIColor(rgb: 0xbcbcc3)), for: .normal)
         
         super.init(viewBlock: {
             return UITracingLayerView()
@@ -96,8 +96,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     }
     
     func updateData(firstName: String, lastName: String) {
-        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: UIColor(0xbcbcc3))
-        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: UIColor(0xbcbcc3))
+        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: UIColor(rgb: 0xbcbcc3))
+        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: UIColor(rgb: 0xbcbcc3))
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

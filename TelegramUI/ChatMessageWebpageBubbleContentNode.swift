@@ -5,21 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 
-private func generateLineImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 2.0, height: 3.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(color.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0)))
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 1.0), size: CGSize(width: 2.0, height: 2.0)))
-    })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: 1)
-}
-
-private let incomingLineImage = generateLineImage(color: UIColor(0x3ca7fe))
-private let outgoingLineImage = generateLineImage(color: UIColor(0x29cc10))
-
-private let incomingAccentColor = UIColor(0x3ca7fe)
-private let outgoingAccentColor = UIColor(0x00a700)
-
 private let titleFont: UIFont = UIFont.boldSystemFont(ofSize: 15.0)
 private let textFont: UIFont = UIFont.systemFont(ofSize: 15.0)
 
@@ -77,6 +62,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         return { item, layoutConstants, _, constrainedSize in
             let insets = UIEdgeInsets(top: 0.0, left: 9.0 + 8.0, bottom: 5.0, right: 8.0)
             
+            let incoming = item.message.effectivelyIncoming
+            
             var webPage: TelegramMediaWebpage?
             var webPageContent: TelegramMediaWebpageLoadedContent?
             for media in item.message.media {
@@ -105,10 +92,17 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     sentViaBot = true
                 }
             }
-            if let author = item.message.author as? TelegramUser, author.botInfo != nil {
-                sentViaBot = true
+            
+            var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+            
+            if let author = item.message.author as? TelegramUser {
+                if author.botInfo != nil {
+                    sentViaBot = true
+                }
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    dateText = "\(author.displayTitle), \(dateText)"
+                }
             }
-            let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
             
             var textString: NSAttributedString?
             var inlineImageDimensions: CGSize?
@@ -123,24 +117,26 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 let string = NSMutableAttributedString()
                 var notEmpty = false
                 
+                let bubbleTheme = item.theme.chat.bubble
+                
                 if let websiteName = webpage.websiteName, !websiteName.isEmpty {
-                    string.append(NSAttributedString(string: websiteName, font: titleFont, textColor: item.message.effectivelyIncoming ? incomingAccentColor : outgoingAccentColor))
+                    string.append(NSAttributedString(string: websiteName, font: titleFont, textColor: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor))
                     notEmpty = true
                 }
                 
                 if let title = webpage.title, !title.isEmpty {
                     if notEmpty {
-                        string.append(NSAttributedString(string: "\n", font: textFont, textColor: UIColor.black))
+                        string.append(NSAttributedString(string: "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                     }
-                    string.append(NSAttributedString(string: title, font: titleFont, textColor: UIColor.black))
+                    string.append(NSAttributedString(string: title, font: titleFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                     notEmpty = true
                 }
                 
                 if let text = webpage.text, !text.isEmpty {
                     if notEmpty {
-                        string.append(NSAttributedString(string: "\n", font: textFont, textColor: UIColor.black))
+                        string.append(NSAttributedString(string: "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                     }
-                    string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: UIColor.black))
+                    string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                     notEmpty = true
                 }
                 
@@ -148,7 +144,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if let file = webpage.file {
                     if file.isVideo {
-                        let (initialImageWidth, _, refineLayout) = contentImageLayout(item.account, item.message, file, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
+                        let (initialImageWidth, _, refineLayout) = contentImageLayout(item.account, item, file, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else {
@@ -156,12 +152,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if file.isVoice {
                             automaticDownload = true
                         }
-                        let (_, refineLayout) = contentFileLayout(item.account, item.message, file, automaticDownload, item.message.effectivelyIncoming, nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(item.account, item, file, automaticDownload, item.message.effectivelyIncoming, nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = webpage.image {
                     if let type = webpage.type, ["photo"].contains(type) {
-                        let (initialImageWidth, _, refineLayout) = contentImageLayout(item.account, item.message, image, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
+                        let (initialImageWidth, _, refineLayout) = contentImageLayout(item.account, item, image, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else if let dimensions = largestImageRepresentation(image.representations)?.dimensions {
@@ -201,7 +197,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusSizeAndApply: (CGSize, (Bool) -> Void)?
                 
                 if refineContentImageLayout == nil && refineContentFileLayout == nil {
-                    statusSizeAndApply = statusLayout(edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                    statusSizeAndApply = statusLayout(item.theme, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                 }
                 
                 let (textLayout, textApply) = textAsyncLayout(textString, nil, 12, .end, textConstrainedSize, .natural, textCutout, UIEdgeInsets())
@@ -234,7 +230,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 textFrame = textFrame.offsetBy(dx: insets.left, dy: insets.top)
                 
-                let lineImage = item.message.effectivelyIncoming ? incomingLineImage : outgoingLineImage
+                let lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(item.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(item.theme)
                 
                 var boundingSize = textFrame.size
                 if let statusFrame = statusFrame {

@@ -39,7 +39,7 @@ private final class ChatMediaActionSheetRollItemNode: ActionSheetItemNode, PHPho
         self.label = UILabel()
         self.label.backgroundColor = nil
         self.label.isOpaque = false
-        self.label.textColor = UIColor(0x007ee5)
+        self.label.textColor = UIColor(rgb: 0x007ee5)
         self.label.text = "Photo or Video"
         self.label.font = Font.regular(20.0)
         self.label.sizeToFit()

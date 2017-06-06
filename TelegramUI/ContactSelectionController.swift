@@ -13,6 +13,7 @@ public class ContactSelectionController: ViewController {
     }
     
     private let index: PeerNameIndex = .lastNameFirst
+    private let titleProducer: (PresentationStrings) -> String
     
     private var _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -29,6 +30,9 @@ public class ContactSelectionController: ViewController {
     private let createActionDisposable = MetaDisposable()
     private let confirmationDisposable = MetaDisposable()
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     public var displayNavigationActivity: Bool = false {
         didSet {
             if self.displayNavigationActivity != oldValue {
@@ -41,21 +45,40 @@ public class ContactSelectionController: ViewController {
         }
     }
     
-    public init(account: Account, title: String, confirmation: @escaping (PeerId) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+    public init(account: Account, title: @escaping (PresentationStrings) -> String, confirmation: @escaping (PeerId) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.account = account
+        self.titleProducer = title
         self.confirmation = confirmation
         
-        super.init()
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.title = title
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        
+        self.title = self.titleProducer(self.presentationData.strings)
+        
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
                 strongSelf.contactsNode.contactListNode.scrollToTop()
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -64,6 +87,15 @@ public class ContactSelectionController: ViewController {
     
     deinit {
         self.createActionDisposable.dispose()
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.title = self.titleProducer(self.presentationData.strings)
+        self.tabBarItem.title = self.presentationData.strings.Contacts_Title
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
     
     @objc func cancelPressed() {

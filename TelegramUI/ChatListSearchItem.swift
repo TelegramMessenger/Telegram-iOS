@@ -6,17 +6,16 @@ import Display
 import SwiftSignalKit
 
 private let searchBarFont = Font.regular(15.0)
-private let pinnedBackgroundColor = UIColor(0xf7f7f7)
-private let regularSearchBackgroundColor = UIColor(0xededed)
-private let pinnedSearchBackgroundColor = UIColor(0xe5e5e5)
 
 class ChatListSearchItem: ListViewItem {
     let selectable: Bool = false
     
+    let theme: PresentationTheme
     private let placeholder: String
     private let activate: () -> Void
     
-    init(placeholder: String, activate: @escaping () -> Void) {
+    init(theme: PresentationTheme, placeholder: String, activate: @escaping () -> Void) {
+        self.theme = theme
         self.placeholder = placeholder
         self.activate = activate
     }
@@ -31,7 +30,7 @@ class ChatListSearchItem: ListViewItem {
             if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
                 nextIsPinned = true
             }
-            let (layout, apply) = makeLayout(width, nextIsPinned)
+            let (layout, apply) = makeLayout(self, width, nextIsPinned)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -54,7 +53,7 @@ class ChatListSearchItem: ListViewItem {
                     if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
                         nextIsPinned = true
                     }
-                    let (nodeLayout, apply) = layout(width, nextIsPinned)
+                    let (nodeLayout, apply) = layout(self, width, nextIsPinned)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply(animation.isAnimated)
@@ -90,18 +89,18 @@ class ChatListSearchItemNode: ListViewItemNode {
         if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
             nextIsPinned = true
         }
-        let (layout, apply) = makeLayout(width, nextIsPinned)
+        let (layout, apply) = makeLayout(item as! ChatListSearchItem, width, nextIsPinned)
         apply(false)
         self.contentSize = layout.contentSize
         self.insets = layout.insets
     }
     
-    func asyncLayout() -> (_ width: CGFloat, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ChatListSearchItem, _ width: CGFloat, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let searchBarNodeLayout = self.searchBarNode.asyncLayout()
         let placeholder = self.placeholder
         
-        return { width, nextIsPinned in
-            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "Search", font: searchBarFont, textColor: UIColor(0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude), nextIsPinned ? pinnedSearchBackgroundColor : regularSearchBackgroundColor)
+        return { item, width, nextIsPinned in
+            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: UIColor(rgb: 0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude), nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, nextIsPinned ? item.theme.chatList.itemBackgroundColor : item.theme.chatList.pinnedItemBackgroundColor)
             
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 44.0 + 4.0), insets: UIEdgeInsets())
             
@@ -119,7 +118,7 @@ class ChatListSearchItemNode: ListViewItemNode {
                     
                     strongSelf.searchBarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: width - 16.0, height: 28.0))
                     
-                    transition.updateBackgroundColor(node: strongSelf, color: nextIsPinned ? pinnedBackgroundColor : UIColor.white)
+                    transition.updateBackgroundColor(node: strongSelf, color: nextIsPinned ? item.theme.chatList.pinnedItemBackgroundColor : item.theme.chatList.itemBackgroundColor)
                 }
             })
         }

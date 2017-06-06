@@ -7,6 +7,7 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case automaticMediaDownloadSettings = 2
     case generatedMediaStoreSettings = 3
     case voiceCallSettings = 4
+    case presentationThemeSettings = 5
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -15,4 +16,5 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let automaticMediaDownloadSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.automaticMediaDownloadSettings.rawValue)
     public static let generatedMediaStoreSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.generatedMediaStoreSettings.rawValue)
     public static let voiceCallSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voiceCallSettings.rawValue)
+    public static let presentationThemeSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.presentationThemeSettings.rawValue)
 }

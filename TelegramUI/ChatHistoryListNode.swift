@@ -88,7 +88,7 @@ struct ChatHistoryListViewTransition {
 private func maxMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> (incoming: MessageIndex?, overall: MessageIndex?) {
     var overall: MessageIndex?
     for i in (indexRange.0 ... indexRange.1).reversed() {
-        if case let .MessageEntry(message, _, _) = entries[i] {
+        if case let .MessageEntry(message, _, _, _, _) = entries[i] {
             if overall == nil {
                 overall = MessageIndex(message)
             }
@@ -103,30 +103,30 @@ private func maxMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange
 private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, entries: [ChatHistoryViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
-            case let .MessageEntry(message, read, _):
+            case let .MessageEntry(message, theme, strings, read, _):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItem(account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message, read: read)
+                        item = ChatMessageItem(theme: theme, strings: strings, account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message, read: read)
                     case .list:
-                        item = ListMessageItem(account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message)
+                        item = ListMessageItem(theme: theme, account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message)
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
-            case .HoleEntry:
+            case let .HoleEntry(_, theme, strings):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatHoleItem(index: entry.entry.index)
+                        item = ChatHoleItem(index: entry.entry.index, theme: theme, strings: strings)
                     case .list:
                         item = ListMessageHoleItem()
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
-            case .UnreadEntry:
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(text):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
-            case .EmptyChatInfoEntry:
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(), directionHint: entry.directionHint)
+            case let .UnreadEntry(_, theme, strings):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, theme: theme, strings: strings), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(text, theme, strings):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, theme: theme, strings: strings), directionHint: entry.directionHint)
+            case let .EmptyChatInfoEntry(theme, strings):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(theme: theme, strings: strings), directionHint: entry.directionHint)
         }
     }
 }
@@ -134,30 +134,30 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
 private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, entries: [ChatHistoryViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
-            case let .MessageEntry(message, read, _):
+            case let .MessageEntry(message, theme, strings, read, _):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItem(account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message, read: read)
+                        item = ChatMessageItem(theme: theme, strings: strings, account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message, read: read)
                     case .list:
-                        item = ListMessageItem(account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message)
+                        item = ListMessageItem(theme: theme, account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message)
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
-            case .HoleEntry:
+            case let .HoleEntry(_, theme, strings):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatHoleItem(index: entry.entry.index)
+                        item = ChatHoleItem(index: entry.entry.index, theme: theme, strings: strings)
                     case .list:
                         item = ListMessageHoleItem()
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
-            case .UnreadEntry:
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(text):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
-            case .EmptyChatInfoEntry:
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(), directionHint: entry.directionHint)
+            case let .UnreadEntry(_, theme, strings):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, theme: theme, strings: strings), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(text, theme, strings):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, theme: theme, strings: strings), directionHint: entry.directionHint)
+            case let .EmptyChatInfoEntry(theme, strings):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(theme: theme, strings: strings), directionHint: entry.directionHint)
         }
     }
 }
@@ -229,12 +229,20 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     var scrolledToIndex: ((MessageIndex) -> Void)?
     
+    private var currentPresentationData: PresentationData
+    private var themeAndStrings: Promise<(PresentationTheme, PresentationStrings)>
+    private var presentationDataDisposable: Disposable?
+    
     public init(account: Account, peerId: PeerId, tagMask: MessageTags?, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode = .bubbles) {
         self.account = account
         self.peerId = peerId
         self.messageId = messageId
         self.controllerInteraction = controllerInteraction
         self.mode = mode
+        
+        self.currentPresentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        self.themeAndStrings = Promise((self.currentPresentationData.theme, self.currentPresentationData.strings))
         
         super.init()
         
@@ -277,7 +285,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)
         
-        let historyViewTransition = historyViewUpdate |> mapToQueue { [weak self] update -> Signal<ChatHistoryListViewTransition, NoError> in
+        let historyViewTransition = combineLatest(historyViewUpdate, self.themeAndStrings.get()) |> mapToQueue { [weak self] update, themeAndStrings -> Signal<ChatHistoryListViewTransition, NoError> in
             let initialData: ChatHistoryCombinedInitialData?
             switch update {
                 case let .Loading(data):
@@ -321,7 +329,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                     }
                     
-                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: mode == .bubbles, includeChatInfoEntry: true))
+                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles, includeChatInfoEntry: true, theme: themeAndStrings.0, strings: themeAndStrings.1))
                     let previous = previousView.swap(processedView)
                     
                     return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
@@ -374,7 +382,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         
                         var messageIdsWithViewCount: [MessageId] = []
                         for i in (indexRange.0 ... indexRange.1) {
-                            if case let .MessageEntry(message, _, _) = historyView.filteredEntries[i] {
+                            if case let .MessageEntry(message, _, _, _, _) = historyView.filteredEntries[i] {
                                 inner: for attribute in message.attributes {
                                     if attribute is ViewCountMessageAttribute {
                                         messageIdsWithViewCount.append(message.id)
@@ -410,6 +418,25 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.currentPresentationData.theme
+                    let previousStrings = strongSelf.currentPresentationData.strings
+                    
+                    strongSelf.currentPresentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.forEachItemHeaderNode { itemHeaderNode in
+                            if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
+                                dateNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
+                            }
+                        }
+                        strongSelf.themeAndStrings.set(.single((presentationData.theme, presentationData.strings)))
+                    }
+                }
+            })
     }
     
     deinit {
@@ -435,7 +462,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 var index = 0
                 for entry in historyView.filteredEntries.reversed() {
                     if index >= visibleRange.firstIndex && index <= visibleRange.lastIndex {
-                        if case let .MessageEntry(message, _, _) = entry {
+                        if case let .MessageEntry(message, _, _, _, _) = entry {
                             return message
                         }
                     }
@@ -443,7 +470,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
             
-            for case let .MessageEntry(message, _, _) in historyView.filteredEntries {
+            for case let .MessageEntry(message, _, _, _, _) in historyView.filteredEntries {
                 return message
             }
         }
@@ -452,7 +479,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {
         if let historyView = self.historyView {
-            for case let .MessageEntry(message, _, _) in historyView.filteredEntries where message.id == id {
+            for case let .MessageEntry(message, _, _, _, _) in historyView.filteredEntries where message.id == id {
                 return message
             }
         }

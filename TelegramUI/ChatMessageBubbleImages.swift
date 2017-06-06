@@ -1,14 +1,6 @@
 import Foundation
 import Display
 
-private let incomingFillColor = UIColor(0xffffff)
-private let incomingFillHighlightedColor = UIColor(0xd9f4ff)
-private let incomingStrokeColor = UIColor(0x86A9C9, 0.5)
-
-private let outgoingFillColor = UIColor(0xE1FFC7)
-private let outgoingFillHighlightedColor = UIColor(0xc8ffa6)
-private let outgoingStrokeColor = UIColor(0x86A9C9, 0.5)
-
 enum MessageBubbleImageNeighbors {
     case none
     case top
@@ -16,21 +8,21 @@ enum MessageBubbleImageNeighbors {
     case both
 }
 
-func messageSingleBubbleLikeImage(incoming: Bool, highlighted: Bool) -> UIImage {
+func messageSingleBubbleLikeImage(fillColor: UIColor, strokeColor: UIColor) -> UIImage {
     let diameter: CGFloat = 36.0
     return generateImage(CGSize(width: 36.0, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         let lineWidth: CGFloat = 0.5
         
-        context.setFillColor((incoming ? (highlighted ? incomingStrokeColor : incomingStrokeColor) : (highlighted ? outgoingStrokeColor : outgoingStrokeColor)).cgColor)
+        context.setFillColor(strokeColor.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        context.setFillColor((incoming ? (highlighted ? incomingFillHighlightedColor : incomingFillColor) : (highlighted ? outgoingFillHighlightedColor : outgoingFillColor)).cgColor)
+        context.setFillColor(fillColor.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(x: lineWidth, y: lineWidth), size: CGSize(width: size.width - lineWidth * 2.0, height: size.height - lineWidth * 2.0)))
     })!.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-func messageBubbleImage(incoming: Bool, highlighted: Bool, neighbors: MessageBubbleImageNeighbors) -> UIImage {
+func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors) -> UIImage {
     let diameter: CGFloat = 36.0
     let corner: CGFloat = 7.0
     return generateImage(CGSize(width: 42.0, height: diameter), contextGenerator: { size, context in
@@ -50,9 +42,9 @@ func messageBubbleImage(incoming: Bool, highlighted: Bool, neighbors: MessageBub
         
         let lineWidth: CGFloat = 1.0
         
-        context.setFillColor((incoming ? (highlighted ? incomingFillHighlightedColor : incomingFillColor) : (highlighted ? outgoingFillHighlightedColor : outgoingFillColor)).cgColor)
+        context.setFillColor(fillColor.cgColor)
         context.setLineWidth(lineWidth)
-        context.setStrokeColor((incoming ? incomingStrokeColor : outgoingStrokeColor).cgColor)
+        context.setStrokeColor(strokeColor.cgColor)
         
         switch neighbors {
             case .none:
@@ -130,17 +122,4 @@ func messageBubbleActionButtonImage(color: UIColor, position: MessageBubbleActio
                 context.fill(CGRect(origin: CGPoint(x: 0.0, y: smallRadius), size: CGSize(width: size.width, height: size.height - largeRadius - smallRadius)))
         }
     })!.stretchableImage(withLeftCapWidth: Int(size.width / 2.0), topCapHeight: Int(size.height / 2.0))
-}
-
-func generateInstantVideoBackground(incoming: Bool, highlighted: Bool = false) -> UIImage? {
-    return generateImage(CGSize(width: 212.0, height: 212.0), rotatedContext: { size, context in
-        let lineWidth: CGFloat = 0.5
-        
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        
-        context.setFillColor((incoming ? (highlighted ? incomingStrokeColor : incomingStrokeColor) : (highlighted ? outgoingStrokeColor : outgoingStrokeColor)).cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        context.setFillColor((incoming ? (highlighted ? incomingFillHighlightedColor : incomingFillColor) : (highlighted ? outgoingFillHighlightedColor : outgoingFillColor)).cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: lineWidth, y: lineWidth), size: CGSize(width: size.width - lineWidth * 2.0, height: size.height - lineWidth * 2.0)))
-    })
 }

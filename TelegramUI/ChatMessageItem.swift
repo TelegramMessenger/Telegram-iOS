@@ -77,6 +77,8 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
 }
 
 public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let account: Account
     let peerId: PeerId
     let controllerInteraction: ChatControllerInteraction
@@ -86,7 +88,9 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     public let accessoryItem: ListViewAccessoryItem?
     let header: ChatMessageDateHeader
     
-    public init(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool) {
+        self.theme = theme
+        self.strings = strings
         self.account = account
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
@@ -97,7 +101,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         let incoming = message.effectivelyIncoming
         let displayAuthorInfo = incoming && message.author != nil && peerId.isGroupOrChannel
         
-        self.header = ChatMessageDateHeader(timestamp: message.timestamp)
+        self.header = ChatMessageDateHeader(timestamp: message.timestamp, theme: theme, strings: strings)
         
         if displayAuthorInfo {
             var hasActionMedia = false
@@ -107,7 +111,11 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     break
                 }
             }
-            if !hasActionMedia {
+            var isBroadcastChannel = false
+            if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                isBroadcastChannel = true
+            }
+            if !hasActionMedia && !isBroadcastChannel {
                 if let author = message.author {
                     accessoryItem = ChatMessageAvatarAccessoryItem(account: account, peerId: author.id, peer: author, messageTimestamp: message.timestamp)
                 }
@@ -135,8 +143,12 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                             break
                     }
                 }
-            } else if let _ = media as? TelegramMediaAction {
-                viewClassName = ChatMessageActionItemNode.self
+            } else if let action = media as? TelegramMediaAction {
+                if case .phoneCall = action.action {
+                    viewClassName = ChatMessageBubbleItemNode.self
+                } else {
+                    viewClassName = ChatMessageActionItemNode.self
+                }
             }
         }
         

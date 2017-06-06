@@ -7,17 +7,21 @@ import TelegramCore
 
 class ChatDocumentGalleryItem: GalleryItem {
     let account: Account
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(account: Account, message: Message, location: MessageHistoryEntryLocation?) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, message: Message, location: MessageHistoryEntryLocation?) {
         self.account = account
+        self.theme = theme
+        self.strings = strings
         self.message = message
         self.location = location
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatDocumentGalleryItemNode(account: self.account)
+        let node = ChatDocumentGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile {
@@ -61,7 +65,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
-    init(account: Account) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         if #available(iOS 9.0, *) {
             let webView = WKWebView()
             self.webView = webView
@@ -70,7 +74,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
             webView.scalesPageToFit = true
             self.webView = webView
         }
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
         
         super.init()
         

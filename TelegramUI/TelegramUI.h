@@ -2,8 +2,8 @@
 //  TelegramUI.h
 //  TelegramUI
 //
-//  Created by Peter on 8/10/16.
-//  Copyright © 2016 Telegram. All rights reserved.
+//  Created by Peter on 5/3/17.
+//  Copyright © 2017 Telegram. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
@@ -16,4 +16,6 @@ FOUNDATION_EXPORT const unsigned char TelegramUIVersionString[];
 
 // In this header, you should import all the public headers of your framework using statements like #import <TelegramUI/PublicHeader.h>
 
-
+#import <TelegramUI/OngoingCallThreadLocalContext.h>
+#import <TelegramUI/SecretChatKeyVisualization.h>
+#import <TelegramUI/NumberPluralizationForm.h>

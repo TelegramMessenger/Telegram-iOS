@@ -2,22 +2,30 @@ import Foundation
 import Postbox
 import TelegramCore
 
-func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool, includeChatInfoEntry: Bool) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, theme: PresentationTheme, strings: PresentationStrings) -> [ChatHistoryEntry] {
     var entries: [ChatHistoryEntry] = []
     
     for entry in view.entries {
         switch entry {
             case let .HoleEntry(hole, _):
-                entries.append(.HoleEntry(hole))
+                entries.append(.HoleEntry(hole, theme, strings))
             case let .MessageEntry(message, read, _, monthLocation):
-                entries.append(.MessageEntry(message, read, monthLocation))
+                var isClearHistory = false
+                if !message.media.isEmpty {
+                    if let action = message.media[0] as? TelegramMediaAction, case .historyCleared = action.action {
+                        isClearHistory = true
+                    }
+                }
+                if !isClearHistory {
+                    entries.append(.MessageEntry(message, theme, strings, read, monthLocation))
+                }
         }
     }
     
     if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {
         var inserted = false
         var i = 0
-        let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex)
+        let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, theme, strings)
         for entry in entries {
             if entry > unreadEntry {
                 entries.insert(unreadEntry, at: i)
@@ -42,9 +50,9 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
                 }
             }
             if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
-                entries.insert(.ChatInfoEntry(botInfo.description), at: 0)
-            } else if view.entries.isEmpty {
-                entries.insert(.EmptyChatInfoEntry, at: 0)
+                entries.insert(.ChatInfoEntry(botInfo.description, theme, strings), at: 0)
+            } else if view.entries.isEmpty && includeEmptyEntry {
+                entries.insert(.EmptyChatInfoEntry(theme, strings), at: 0)
             }
         }
     }

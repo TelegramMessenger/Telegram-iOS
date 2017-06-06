@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0820"
+   LastUpgradeVersion = "0900"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D0FC407E1D5B8E7400261D9D"
+               BlueprintIdentifier = "D0EC6CA41EB9F4CC00EBF1C3"
                BuildableName = "TelegramUI.framework"
                BlueprintName = "TelegramUI"
                ReferencedContainer = "container:TelegramUI.xcodeproj">
@@ -45,7 +45,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0FC407E1D5B8E7400261D9D"
+            BlueprintIdentifier = "D0EC6CA41EB9F4CC00EBF1C3"
             BuildableName = "TelegramUI.framework"
             BlueprintName = "TelegramUI"
             ReferencedContainer = "container:TelegramUI.xcodeproj">
@@ -63,7 +63,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0FC407E1D5B8E7400261D9D"
+            BlueprintIdentifier = "D0EC6CA41EB9F4CC00EBF1C3"
             BuildableName = "TelegramUI.framework"
             BlueprintName = "TelegramUI"
             ReferencedContainer = "container:TelegramUI.xcodeproj">

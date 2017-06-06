@@ -33,11 +33,13 @@ enum ChatMessageBubbleContentTapAction {
     case none
     case url(String)
     case textMention(String)
-    case peerMention(PeerId)
+    case peerMention(PeerId, String)
     case botCommand(String)
     case hashtag(String?, String)
     case instantPage
     case holdToPreviewSecretMedia
+    case call(PeerId)
+    case ignore
 }
 
 class ChatMessageBubbleContentNode: ASDisplayNode {
@@ -79,5 +81,8 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     
     func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
         return .none
+    }
+    
+    func updateTouchesAtPoint(_ point: CGPoint?) {
     }
 }

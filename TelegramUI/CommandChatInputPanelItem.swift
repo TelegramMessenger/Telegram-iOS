@@ -71,7 +71,7 @@ final class CommandChatInputPanelItem: ListViewItem {
 private let avatarFont = Font.regular(16.0)
 private let textFont = Font.medium(14.0)
 private let descriptionFont = Font.regular(14.0)
-private let descriptionColor = UIColor(0x9099A2)
+private let descriptionColor = UIColor(rgb: 0x9099A2)
 
 private let arrowImage = generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
@@ -79,7 +79,7 @@ private let arrowImage = generateImage(CGSize(width: 11.0, height: 11.0), contex
     context.scaleBy(x: 1.0, y: -1.0)
     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
     
-    context.setStrokeColor(UIColor(0xC7CCD0).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0xC7CCD0).cgColor)
     context.setLineCap(.round)
     context.setLineWidth(2.0)
     context.setLineJoin(.round)
@@ -112,15 +112,15 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
         self.textNode = TextNode()
         
         self.topSeparatorNode = ASDisplayNode()
-        self.topSeparatorNode.backgroundColor = UIColor(0xC9CDD1)
+        self.topSeparatorNode.backgroundColor = UIColor(rgb: 0xC9CDD1)
         self.topSeparatorNode.isLayerBacked = true
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xD6D6DA)
+        self.separatorNode.backgroundColor = UIColor(rgb: 0xD6D6DA)
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
+        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.arrowNode = HighlightableButtonNode()

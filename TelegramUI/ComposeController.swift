@@ -21,20 +21,41 @@ public class ComposeController: ViewController {
     
     private let createActionDisposable = MetaDisposable()
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     public init(account: Account) {
         self.account = account
         
-        super.init()
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.title = "Mew Message"
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        
+        self.title = self.presentationData.strings.Compose_NewMessage
+        
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
                 strongSelf.contactsNode.contactListNode.scrollToTop()
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -43,6 +64,14 @@ public class ComposeController: ViewController {
     
     deinit {
         self.createActionDisposable.dispose()
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.title = self.presentationData.strings.Compose_NewMessage
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
     
     override public func loadDisplayNode() {
@@ -83,7 +112,7 @@ public class ComposeController: ViewController {
         
         self.contactsNode.openCreateNewSecretChat = { [weak self] in
             if let strongSelf = self {
-                let controller = ContactSelectionController(account: strongSelf.account, title: "New Secret Chat")
+                let controller = ContactSelectionController(account: strongSelf.account, title: { $0.Compose_NewEncryptedChat })
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak controller] peerId in

@@ -111,15 +111,15 @@ public func debugAccountsController(account: Account, accountManager: AccountMan
         }).start()
     })
     
-    let signal = accountManager.accountRecords()
-        |> map { view -> (ItemListControllerState, (ItemListNodeState<DebugAccountsControllerEntry>, DebugAccountsControllerEntry.ItemGenerationArguments)) in
-            let controllerState = ItemListControllerState(title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil)
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, accountManager.accountRecords())
+        |> map { presentationData, view -> (ItemListControllerState, (ItemListNodeState<DebugAccountsControllerEntry>, DebugAccountsControllerEntry.ItemGenerationArguments)) in
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"))
             let listState = ItemListNodeState(entries: debugAccountsControllerEntries(view: view), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window, with: a)
     }

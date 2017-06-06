@@ -83,8 +83,8 @@ final class MediaPlayerNode: ASDisplayNode {
         if let (timebase, requestFrames, rotationAngle) = self.state {
             if let videoLayer = self.videoLayer {
                 videoQueue.async {
-                    if videoLayer.controlTimebase !== timebase {
-                        //self.videoNode.playerLayer.flush()
+                    if videoLayer.controlTimebase !== timebase || videoLayer.status == .failed {
+                        videoLayer.flush()
                         videoLayer.controlTimebase = timebase
                     }
                 }

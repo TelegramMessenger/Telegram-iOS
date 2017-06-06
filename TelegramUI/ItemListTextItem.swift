@@ -13,13 +13,19 @@ enum ItemListTextItemLinkAction {
 }
 
 class ItemListTextItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let text: ItemListTextItemText
     let sectionId: ItemListSectionId
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     
     let isAlwaysPlain: Bool = true
     
-    init(text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
+    init(theme: PresentationTheme? = nil, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
+        if let theme = theme {
+            self.theme = theme
+        } else {
+            self.theme = defaultPresentationTheme
+        }
         self.text = text
         self.sectionId = sectionId
         self.linkAction = linkAction
@@ -99,9 +105,9 @@ class ItemListTextItemNode: ListViewItemNode {
             let attributedText: NSAttributedString
             switch item.text {
                 case let .plain(text):
-                    attributedText = NSAttributedString(string: text, font: titleFont, textColor: UIColor(0x6d6d72))
+                    attributedText = NSAttributedString(string: text, font: titleFont, textColor: item.theme.list.freeTextColor)
                 case let .markdown(text):
-                    attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: UIColor(0x6d6d72)), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: UIColor(0x6d6d72)), link: MarkdownAttributeSet(font: titleFont, textColor: UIColor(0x007ee5)), linkAttribute: { contents in
+                    attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
                         return (TextNode.UrlAttribute, contents)
                     }))
             }
@@ -142,9 +148,10 @@ class ItemListTextItemNode: ListViewItemNode {
                         case .tap:
                             let titleFrame = self.titleNode.frame
                             if let item = self.item, titleFrame.contains(location) {
-                                let attributes = self.titleNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY))
-                                if let url = attributes[TextNode.UrlAttribute] as? String {
-                                    item.linkAction?(.tap(url))
+                                if let (_, attributes) = self.titleNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                                    if let url = attributes[TextNode.UrlAttribute] as? String {
+                                        item.linkAction?(.tap(url))
+                                    }
                                 }
                             }
                         default:

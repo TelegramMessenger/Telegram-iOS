@@ -71,12 +71,12 @@ func layoutInstantPageBlock(_ block: InstantPageBlock, boundingWidth: CGFloat, h
             let backgroundInset: CGFloat = 14.0
             let item = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0 - backgroundInset * 2.0)
             item.frame = item.frame.offsetBy(dx: horizontalInset, dy: backgroundInset)
-            let backgroundItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0)), shapeFrame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0)), shape: .rect, color: UIColor(0xF5F8FC))
+            let backgroundItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0)), shapeFrame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0)), shape: .rect, color: UIColor(rgb: 0xF5F8FC))
             return InstantPageLayout(origin: CGPoint(), contentSize: item.frame.size, items: [backgroundItem, item])
         case let .authorDate(author: author, date: date):
             let styleStack = InstantPageTextStyleStack()
             styleStack.push(.fontSize(15.0))
-            styleStack.push(.textColor(UIColor(0x79828b)))
+            styleStack.push(.textColor(UIColor(rgb: 0x79828b)))
             var text: RichText?
             if case .empty = author {
                 if date != 0 {

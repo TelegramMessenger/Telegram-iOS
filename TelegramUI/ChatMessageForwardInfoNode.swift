@@ -6,17 +6,17 @@ import Postbox
 private let prefixFont = Font.regular(13.0)
 private let peerFont = Font.medium(13.0)
 
-class ChatMessageForwardInfoNode: ASTransformLayerNode {
+class ChatMessageForwardInfoNode: ASDisplayNode {
     private var textNode: TextNode?
     
     override init() {
         super.init()
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ incoming: Bool, _ peer: Peer, _ authorPeer: Peer?, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ theme: PresentationTheme, _ incoming: Bool, _ peer: Peer, _ authorPeer: Peer?, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode) {
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         
-        return { incoming, peer, authorPeer, constrainedSize in
+        return { theme, incoming, peer, authorPeer, constrainedSize in
             let prefix: NSString = "Forwarded Message\nFrom: "
             let peerString: String
             if let authorPeer = authorPeer {
@@ -25,7 +25,7 @@ class ChatMessageForwardInfoNode: ASTransformLayerNode {
                 peerString = peer.displayTitle
             }
             let completeString: NSString = "\(prefix)\(peerString)" as NSString
-            let color = incoming ? UIColor(0x007bff) : UIColor(0x00a516)
+            let color = incoming ? theme.chat.bubble.incomingAccentColor : theme.chat.bubble.outgoingAccentColor
             let string = NSMutableAttributedString(string: completeString as String, attributes: [NSForegroundColorAttributeName: color, NSFontAttributeName: prefixFont])
             string.addAttributes([NSFontAttributeName: peerFont], range: NSMakeRange(prefix.length, completeString.length - prefix.length))
             let (textLayout, textApply) = textNodeLayout(string, nil, 2, .end, constrainedSize, .natural, nil, UIEdgeInsets())

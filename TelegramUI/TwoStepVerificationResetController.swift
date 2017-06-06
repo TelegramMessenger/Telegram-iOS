@@ -40,8 +40,8 @@ private enum TwoStepVerificationResetTag: ItemListItemTag {
 }
 
 private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
-    case codeEntry(String)
-    case codeInfo(String)
+    case codeEntry(PresentationTheme, String)
+    case codeInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         return TwoStepVerificationResetSection.password.rawValue
@@ -58,14 +58,14 @@ private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
     
     static func ==(lhs: TwoStepVerificationResetEntry, rhs: TwoStepVerificationResetEntry) -> Bool {
         switch lhs {
-            case let .codeEntry(text):
-                if case .codeEntry(text) = rhs {
+            case let .codeEntry(lhsTheme, lhsText):
+                if case let .codeEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .codeInfo(text):
-                if case .codeInfo(text) = rhs {
+            case let .codeInfo(lhsTheme, lhsText):
+                if case let .codeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -79,14 +79,14 @@ private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
     
     func item(_ arguments: TwoStepVerificationResetControllerArguments) -> ListViewItem {
         switch self {
-            case let .codeEntry(text):
-                return ItemListSingleLineInputItem(title: NSAttributedString(string: "Code", textColor: .black), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .codeEntry(theme, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "Code", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .codeInfo(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
+            case let .codeInfo(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         }
     }
 }
@@ -120,11 +120,11 @@ private struct TwoStepVerificationResetControllerState: Equatable {
     }
 }
 
-private func twoStepVerificationResetControllerEntries(state: TwoStepVerificationResetControllerState, emailPattern: String) -> [TwoStepVerificationResetEntry] {
+private func twoStepVerificationResetControllerEntries(presentationData: PresentationData, state: TwoStepVerificationResetControllerState, emailPattern: String) -> [TwoStepVerificationResetEntry] {
     var entries: [TwoStepVerificationResetEntry] = []
 
-    entries.append(.codeEntry(state.codeText))
-    entries.append(.codeInfo("Please check your e-mail and enter the 6-digit code we've sent there to deactivate your cloud password.\n\n[Having trouble accessing your e-mail \(escapedPlaintextForMarkdown(emailPattern))?]()"))
+    entries.append(.codeEntry(presentationData.theme, state.codeText))
+    entries.append(.codeInfo(presentationData.theme, "Please check your e-mail and enter the 6-digit code we've sent there to deactivate your cloud password.\n\n[Having trouble accessing your e-mail \(escapedPlaintextForMarkdown(emailPattern))?]()"))
     
     return entries
 }
@@ -192,10 +192,10 @@ func twoStepVerificationResetController(account: Account, emailPattern: String, 
         presentControllerImpl?(standardTextAlertController(title: nil, text: "Your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = statePromise.get() |> deliverOnMainQueue
-        |> map { state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationResetEntry>, TwoStepVerificationResetEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationResetEntry>, TwoStepVerificationResetEntry.ItemGenerationArguments)) in
             
-            let leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
+            let leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
             
@@ -207,22 +207,20 @@ func twoStepVerificationResetController(account: Account, emailPattern: String, 
                 if state.codeText.isEmpty {
                     nextEnabled = false
                 }
-                rightNavigationButton = ItemListNavigationButton(title: "Next", style: .bold, enabled: nextEnabled, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: nextEnabled, action: {
                     checkCode()
                 })
             }
             
-            let controllerState = ItemListControllerState(title: .text("E-Mail Code"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
-            let listState = ItemListNodeState(entries: twoStepVerificationResetControllerEntries(state: state, emailPattern: emailPattern), style: .blocks, focusItemTag: TwoStepVerificationResetTag.input, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.TwoStepAuth_RecoveryTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: twoStepVerificationResetControllerEntries(presentationData: presentationData, state: state, emailPattern: emailPattern), style: .blocks, focusItemTag: TwoStepVerificationResetTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
-    
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

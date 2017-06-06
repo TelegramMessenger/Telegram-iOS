@@ -4,15 +4,23 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 class ItemListSwitchItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let title: String
     let value: Bool
+    let enabled: Bool
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let updated: (Bool) -> Void
     
-    init(title: String, value: Bool, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
+    init(theme: PresentationTheme? = nil, title: String, value: Bool, enabled: Bool = true, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
+        if let theme = theme {
+            self.theme = theme
+        } else {
+            self.theme = defaultPresentationTheme
+        }
         self.title = title
         self.value = value
+        self.enabled = enabled
         self.sectionId = sectionId
         self.style = style
         self.updated = updated
@@ -63,6 +71,7 @@ class ItemListSwitchItemNode: ListViewItemNode {
     
     private let titleNode: TextNode
     private var switchNode: SwitchNode
+    private var disabledOverlayNode: ASDisplayNode?
     
     private var item: ItemListSwitchItem?
     
@@ -72,11 +81,9 @@ class ItemListSwitchItemNode: ListViewItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -98,13 +105,19 @@ class ItemListSwitchItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ItemListSwitchItem, _ width: CGFloat, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
+        let currentItem = self.item
+        var currentDisabledOverlayNode = self.disabledOverlayNode
+        
         return { item, width, neighbors in
-            let sectionInset: CGFloat = 22.0
-            let rightInset: CGFloat = 80.0
-            
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
+            
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
             
             switch item.style {
                 case .plain:
@@ -115,7 +128,16 @@ class ItemListSwitchItemNode: ListViewItemNode {
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            
+            if !item.enabled {
+                if currentDisabledOverlayNode == nil {
+                    currentDisabledOverlayNode = ASDisplayNode()
+                    currentDisabledOverlayNode?.backgroundColor = item.theme.list.itemBackgroundColor.withAlphaComponent(0.5)
+                }
+            } else {
+                currentDisabledOverlayNode = nil
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -123,6 +145,40 @@ class ItemListSwitchItemNode: ListViewItemNode {
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    let transition: ContainedViewLayoutTransition
+                    if animated {
+                        transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    } else {
+                        transition = .immediate
+                    }
+                    
+                    if let currentDisabledOverlayNode = currentDisabledOverlayNode {
+                        if currentDisabledOverlayNode != strongSelf.disabledOverlayNode {
+                            strongSelf.disabledOverlayNode = currentDisabledOverlayNode
+                            strongSelf.addSubnode(currentDisabledOverlayNode)
+                            currentDisabledOverlayNode.alpha = 0.0
+                            transition.updateAlpha(node: currentDisabledOverlayNode, alpha: 1.0)
+                            currentDisabledOverlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - separatorHeight))
+                        } else {
+                            transition.updateFrame(node: currentDisabledOverlayNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - separatorHeight)))
+                        }
+                    } else if let disabledOverlayNode = strongSelf.disabledOverlayNode {
+                        transition.updateAlpha(node: disabledOverlayNode, alpha: 0.0, completion: { [weak disabledOverlayNode] _ in
+                            disabledOverlayNode?.removeFromSupernode()
+                        })
+                        strongSelf.disabledOverlayNode = nil
+                    }
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        
+                        strongSelf.switchNode.frameColor = item.theme.list.itemSwitchColors.frameColor
+                        strongSelf.switchNode.contentColor = item.theme.list.itemSwitchColors.contentColor
+                        strongSelf.switchNode.handleColor = item.theme.list.itemSwitchColors.handleColor
+                    }
                     
                     let _ = titleApply()
                     

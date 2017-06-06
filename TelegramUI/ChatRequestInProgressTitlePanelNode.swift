@@ -17,7 +17,7 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         super.init()
         
-        self.backgroundColor = UIColor(0xF5F6F8)
+        self.backgroundColor = UIColor(rgb: 0xF5F6F8)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.separatorNode)

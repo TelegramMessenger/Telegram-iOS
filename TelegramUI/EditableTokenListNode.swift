@@ -7,7 +7,7 @@ struct EditableTokenListToken {
     let title: String
 }
 
-private let caretIndicatorImage = generateVerticallyStretchableFilledCircleImage(radius: 1.0, color: UIColor(0x3350ee))
+private let caretIndicatorImage = generateVerticallyStretchableFilledCircleImage(radius: 1.0, color: UIColor(rgb: 0x3350ee))
 
 private func caretAnimation() -> CAAnimation {
     let animation = CAKeyframeAnimation(keyPath: "opacity")
@@ -24,18 +24,38 @@ private func caretAnimation() -> CAAnimation {
     return animation
 }
 
+final class EditableTokenListNodeTheme {
+    let backgroundColor: UIColor
+    let separatorColor: UIColor
+    let placeholderTextColor: UIColor
+    let primaryTextColor: UIColor
+    let selectedTextColor: UIColor
+    let keyboardColor: PresentationThemeKeyboardColor
+    
+    init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, selectedTextColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
+        self.backgroundColor = backgroundColor
+        self.separatorColor = separatorColor
+        self.placeholderTextColor = placeholderTextColor
+        self.primaryTextColor = primaryTextColor
+        self.selectedTextColor = selectedTextColor
+        self.keyboardColor = keyboardColor
+    }
+}
+
 private final class TokenNode: ASDisplayNode {
+    let theme: EditableTokenListNodeTheme
     let token: EditableTokenListToken
     let titleNode: ASTextNode
     var isSelected: Bool {
         didSet {
             if self.isSelected != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: token.title + ",", font: Font.regular(15.0), textColor: self.isSelected ? UIColor(0x007ee5) : UIColor.black)
+                self.titleNode.attributedText = NSAttributedString(string: token.title + ",", font: Font.regular(15.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)
             }
         }
     }
     
-    init(token: EditableTokenListToken, isSelected: Bool) {
+    init(theme: EditableTokenListNodeTheme, token: EditableTokenListToken, isSelected: Bool) {
+        self.theme = theme
         self.token = token
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
@@ -44,7 +64,7 @@ private final class TokenNode: ASDisplayNode {
         
         super.init()
         
-        self.titleNode.attributedText = NSAttributedString(string: token.title + ",", font: Font.regular(15.0), textColor: self.isSelected ? UIColor(0x007ee5) : UIColor.black)
+        self.titleNode.attributedText = NSAttributedString(string: token.title + ",", font: Font.regular(15.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)
         self.addSubnode(self.titleNode)
     }
     
@@ -73,6 +93,7 @@ private final class CaretIndicatorNode: ASImageNode {
 }
 
 final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
+    private let theme: EditableTokenListNodeTheme
     private let placeholderNode: ASTextNode
     private var tokenNodes: [TokenNode] = []
     private let separatorNode: ASDisplayNode
@@ -83,14 +104,23 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     var textUpdated: ((String) -> Void)?
     var deleteToken: ((AnyHashable) -> Void)?
     
-    override init() {
+    init(theme: EditableTokenListNodeTheme, placeholder: String) {
+        self.theme = theme
+        
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isLayerBacked = true
         self.placeholderNode.maximumNumberOfLines = 1
-        self.placeholderNode.attributedText = NSAttributedString(string: "Whom would you like to message?", font: Font.regular(15.0), textColor: UIColor(0x8e8e92))
+        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.placeholderTextColor)
         
         self.textFieldNode = TextFieldNode()
         self.textFieldNode.textField.font = Font.regular(15.0)
+        self.textFieldNode.textField.textColor = theme.primaryTextColor
+        switch theme.keyboardColor {
+            case .light:
+                self.textFieldNode.textField.keyboardAppearance = .default
+            case .dark:
+                self.textFieldNode.textField.keyboardAppearance = .dark
+        }
         
         self.caretIndicatorNode = CaretIndicatorNode()
         self.caretIndicatorNode.isLayerBacked = true
@@ -100,11 +130,11 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = UIColor(0xc7c6cb)
+        self.separatorNode.backgroundColor = theme.separatorColor
         
         super.init()
         
-        self.backgroundColor = UIColor(0xf7f7f7)
+        self.backgroundColor = theme.backgroundColor
         self.addSubnode(self.placeholderNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.textFieldNode)
@@ -170,7 +200,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             if let currentNode = currentNode {
                 tokenNode = currentNode
             } else {
-                tokenNode = TokenNode(token: token, isSelected: self.selectedTokenId != nil && token.id == self.selectedTokenId!)
+                tokenNode = TokenNode(theme: self.theme, token: token, isSelected: self.selectedTokenId != nil && token.id == self.selectedTokenId!)
                 self.tokenNodes.append(tokenNode)
                 self.addSubnode(tokenNode)
                 animateIn = true

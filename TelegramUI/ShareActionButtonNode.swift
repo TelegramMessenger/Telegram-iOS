@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let badgeBackgroundImage = generateStretchableFilledCircleImage(diameter: 22.0, color: UIColor(0x007ee5))
+private let badgeBackgroundImage = generateStretchableFilledCircleImage(diameter: 22.0, color: UIColor(rgb: 0x007ee5))
 
 final class ShareActionButtonNode: ASButtonNode {
     private let badgeLabel: ASTextNode

@@ -17,10 +17,10 @@ private enum VoiceCallDataSavingSection: Int32 {
 }
 
 private enum VoiceCallDataSavingEntry: ItemListNodeEntry {
-    case never(String, Bool)
-    case cellular(String, Bool)
-    case always(String, Bool)
-    case info(String)
+    case never(PresentationTheme, String, Bool)
+    case cellular(PresentationTheme, String, Bool)
+    case always(PresentationTheme, String, Bool)
+    case info(PresentationTheme, String)
     
     var section: ItemListSectionId {
         return VoiceCallDataSavingSection.dataSaving.rawValue
@@ -41,26 +41,26 @@ private enum VoiceCallDataSavingEntry: ItemListNodeEntry {
     
     static func ==(lhs: VoiceCallDataSavingEntry, rhs: VoiceCallDataSavingEntry) -> Bool {
         switch lhs {
-            case let .never(text, value):
-                if case .never(text, value) = rhs {
+            case let .never(lhsTheme, lhsText, lhsValue):
+                if case let .never(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .cellular(text, value):
-                if case .cellular(text, value) = rhs {
+            case let .cellular(lhsTheme, lhsText, lhsValue):
+                if case let .cellular(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .always(text, value):
-                if case .always(text, value) = rhs {
+            case let .always(lhsTheme, lhsText, lhsValue):
+                if case let .always(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .info(text):
-                if case .info(text) = rhs {
+            case let .info(lhsTheme, lhsText):
+                if case let .info(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -74,20 +74,20 @@ private enum VoiceCallDataSavingEntry: ItemListNodeEntry {
     
     func item(_ arguments: VoiceCallDataSavingControllerArguments) -> ListViewItem {
         switch self {
-            case let .never(text, value):
-                return ItemListCheckboxItem(title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .never(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSelection(.never)
                 })
-            case let .cellular(text, value):
-                return ItemListCheckboxItem(title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .cellular(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSelection(.cellular)
                 })
-            case let .always(text, value):
-                return ItemListCheckboxItem(title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .always(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSelection(.always)
                 })
-            case let .info(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
+            case let .info(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -103,13 +103,13 @@ private func stringForDataSavingOption(_ option: VoiceCallDataSaving) -> String 
     }
 }
 
-private func voiceCallDataSavingControllerEntries(settings: VoiceCallSettings) -> [VoiceCallDataSavingEntry] {
+private func voiceCallDataSavingControllerEntries(presentationData: PresentationData, settings: VoiceCallSettings) -> [VoiceCallDataSavingEntry] {
     var entries: [VoiceCallDataSavingEntry] = []
     
-    entries.append(.never(stringForDataSavingOption(.never), settings.dataSaving == .never))
-    entries.append(.cellular(stringForDataSavingOption(.cellular), settings.dataSaving == .cellular))
-    entries.append(.always(stringForDataSavingOption(.always), settings.dataSaving == .always))
-    entries.append(.info("Using less data may improve your experience on bad networks, but will slightly decrease audio quality."))
+    entries.append(.never(presentationData.theme, stringForDataSavingOption(.never), settings.dataSaving == .never))
+    entries.append(.cellular(presentationData.theme, stringForDataSavingOption(.cellular), settings.dataSaving == .cellular))
+    entries.append(.always(presentationData.theme, stringForDataSavingOption(.always), settings.dataSaving == .always))
+    entries.append(.info(presentationData.theme, "Using less data may improve your experience on bad networks, but will slightly decrease audio quality."))
     
     return entries
 }
@@ -134,17 +134,15 @@ func voiceCallDataSavingController(account: Account) -> ViewController {
         }).start()
     })
     
-    let signal = voiceCallSettingsPromise.get() |> deliverOnMainQueue
-        |> map { data -> (ItemListControllerState, (ItemListNodeState<VoiceCallDataSavingEntry>, VoiceCallDataSavingEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, voiceCallSettingsPromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, data -> (ItemListControllerState, (ItemListNodeState<VoiceCallDataSavingEntry>, VoiceCallDataSavingEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(title: .text("Use Less Data"), leftNavigationButton: nil, rightNavigationButton: nil, animateChanges: false)
-            let listState = ItemListNodeState(entries: voiceCallDataSavingControllerEntries(settings: data), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Use Less Data"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: voiceCallDataSavingControllerEntries(presentationData: presentationData, settings: data), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
-    
+    let controller = ItemListController(account: account, state: signal)
     return controller
 }

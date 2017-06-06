@@ -11,12 +11,16 @@ final class HashtagSearchController: TelegramController {
     private var transitionDisposable: Disposable?
     private let openMessageFromSearchDisposable = MetaDisposable()
     
+    private var presentationData: PresentationData
+    
     private var controllerNode: HashtagSearchControllerNode {
         return self.displayNode as! HashtagSearchControllerNode
     }
     
     init(account: Account, peerName: String?, query: String) {
         self.account = account
+        
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init(account: account)
         
@@ -25,7 +29,7 @@ final class HashtagSearchController: TelegramController {
         } else {
             self.title = query
         }
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         let peerId: Signal<PeerId?, NoError>
         if let peerName = peerName {
@@ -38,7 +42,7 @@ final class HashtagSearchController: TelegramController {
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = peerId
             |> mapToSignal { peerId -> Signal<[ChatListSearchEntry], NoError> in
                 return searchMessages(account: account, peerId: peerId, query: query)
-                    |> map { return $0.map({ .message($0) }) }
+                    |> map { return $0.map({ .message($0, defaultPresentationTheme, defaultPresentationStrings) }) }
             }
         
         let interaction = ChatListNodeInteraction(activateSearch: {

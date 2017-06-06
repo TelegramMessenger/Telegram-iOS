@@ -5,20 +5,6 @@ import Postbox
 import SwiftSignalKit
 import Display
 
-private let lineImage = generateVerticallyStretchableFilledCircleImage(radius: 1.0, color: UIColor(0x007ee5))
-private let closeButtonImage = generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0x9099A2).cgColor)
-    context.setLineWidth(2.0)
-    context.setLineCap(.round)
-    context.move(to: CGPoint(x: 1.0, y: 1.0))
-    context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - 1.0))
-    context.strokePath()
-    context.move(to: CGPoint(x: size.width - 1.0, y: 1.0))
-    context.addLine(to: CGPoint(x: 1.0, y: size.height - 1.0))
-    context.strokePath()
-})
-
 final class EditAccessoryPanelNode: AccessoryPanelNode {
     let messageId: MessageId
     
@@ -49,18 +35,21 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    init(account: Account, messageId: MessageId) {
+    var theme: PresentationTheme
+    
+    init(account: Account, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings) {
         self.messageId = messageId
+        self.theme = theme
         
         self.closeButton = ASButtonNode()
-        self.closeButton.setImage(closeButtonImage, for: [])
+        self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASImageNode()
         self.lineNode.displayWithoutProcessing = true
         self.lineNode.displaysAsynchronously = false
-        self.lineNode.image = lineImage
+        self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
         
         self.titleNode = ASTextNode()
         self.titleNode.truncationMode = .byTruncatingTail
@@ -89,8 +78,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
                         text = messageText
                     }
                     
-                    strongSelf.titleNode.attributedText = NSAttributedString(string: "Edit Message", font: Font.medium(15.0), textColor: UIColor(0x007ee5))
-                    strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: UIColor.black)
+                    strongSelf.titleNode.attributedText = NSAttributedString(string: "Edit Message", font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                    strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.primaryTextColor)
                     
                     strongSelf.setNeedsLayout()
                 }
@@ -100,6 +89,26 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     deinit {
         self.messageDisposable.dispose()
         self.editingMessageDisposable.dispose()
+    }
+    
+    override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        if self.theme !== theme {
+            self.theme = theme
+            
+            self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
+            
+            self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+            
+            if let text = self.titleNode.attributedText?.string {
+                self.titleNode.attributedText = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+            }
+            
+            if let text = self.textNode.attributedText?.string {
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
+            }
+            
+            self.setNeedsLayout()
+        }
     }
     
     override func didLoad() {

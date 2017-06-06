@@ -10,7 +10,7 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
     
     private var statusDisposable: Disposable?
     
-    private var presentationInterfaceState = ChatPresentationInterfaceState()
+    private var presentationInterfaceState: ChatPresentationInterfaceState?
     
     override init() {
         self.button = HighlightableButtonNode()
@@ -46,7 +46,7 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
             if let peer = interfaceState.peer as? TelegramSecretChat {
                 switch peer.embeddedState {
                     case .handshake:
-                        self.button.setAttributedTitle(NSAttributedString(string: "Exchanging encryption keys...", font: Font.regular(15.0), textColor: .black), for: [])
+                        self.button.setAttributedTitle(NSAttributedString(string: interfaceState.strings.Conversation_EncryptionProcessing, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.primaryTextColor), for: [])
                     case .active, .terminated:
                         break
                 }

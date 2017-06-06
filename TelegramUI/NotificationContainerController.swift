@@ -8,7 +8,7 @@ public final class NotificationContainerController: ViewController {
     }
     
     public init() {
-        super.init(navigationBar: NavigationBar())
+        super.init(navigationBarTheme: nil)
         
         self.statusBar.statusBarStyle = .Ignore
     }
@@ -19,8 +19,6 @@ public final class NotificationContainerController: ViewController {
     
     override public func loadView() {
         super.loadView()
-        
-        self.navigationBar.removeFromSupernode()
     }
     
     override public func loadDisplayNode() {

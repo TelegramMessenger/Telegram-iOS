@@ -6,46 +6,6 @@ import SwiftSignalKit
 
 private let dateFont = UIFont.italicSystemFont(ofSize: 11.0)
 
-private func generateCheckImage(partial: Bool, color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 11.0, height: 9.0), contextGenerator: { size, context in
-        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-        context.scaleBy(x: 1.0, y: -1.0)
-        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-        
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.scaleBy(x: 0.5, y: 0.5)
-        context.setStrokeColor(color.cgColor)
-        context.setLineWidth(2.5)
-        if partial {
-            let _ = try? drawSvgPath(context, path: "M1,14.5 L2.5,16 L16.4985125,1 ")
-        } else {
-            let _ = try? drawSvgPath(context, path: "M1,10 L7,16 L20.9985125,1 ")
-        }
-        context.strokePath()
-    })
-}
-
-private func generateClockFrameImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setStrokeColor(color.cgColor)
-        context.setFillColor(color.cgColor)
-        let strokeWidth: CGFloat = 1.0
-        context.setLineWidth(strokeWidth)
-        context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: size.width - strokeWidth, height: size.height - strokeWidth))
-        context.fill(CGRect(x: (11.0 - strokeWidth) / 2.0, y: strokeWidth * 3.0, width: strokeWidth, height: 11.0 / 2.0 - strokeWidth * 3.0))
-    })
-}
-
-private func generateClockMinImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(color.cgColor)
-        let strokeWidth: CGFloat = 1.0
-        context.fill(CGRect(x: (11.0 - strokeWidth) / 2.0, y: (11.0 - strokeWidth) / 2.0, width: 11.0 / 2.0 - strokeWidth, height: strokeWidth))
-    })
-}
-
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     if let _ = layer.animation(forKey: "clockFrameAnimation") {
         return
@@ -58,28 +18,9 @@ private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     basicAnimation.toValue = NSNumber(value: Float(Double.pi * 2.0))
     basicAnimation.repeatCount = Float.infinity
     basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+    basicAnimation.beginTime = 1.0
     layer.add(basicAnimation, forKey: "clockFrameAnimation")
 }
-
-private let checkBubbleFullImage = generateCheckImage(partial: false, color: UIColor(0x19C700))
-private let checkBubblePartialImage = generateCheckImage(partial: true, color: UIColor(0x19C700))
-
-private let checkMediaFullImage = generateCheckImage(partial: false, color: .white)
-private let checkMediaPartialImage = generateCheckImage(partial: true, color: .white)
-
-private let incomingDateColor = UIColor(0x525252, 0.6)
-private let outgoingDateColor = UIColor(0x008c09, 0.8)
-
-private let imageBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: UIColor(white: 0.0, alpha: 0.5))
-
-private let clockBubbleFrameImage = generateClockFrameImage(color: UIColor(0x42b649))
-private let clockBubbleMinImage = generateClockMinImage(color: UIColor(0x42b649))
-private let clockMediaFrameImage = generateClockFrameImage(color: .white)
-private let clockMediaMinImage = generateClockMinImage(color: .white)
-
-private let incomingImpressionIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ImpressionCount"), color: incomingDateColor)
-private let outgoingImpressionIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ImpressionCount"), color: outgoingDateColor)
-private let mediaImpressionIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ImpressionCount"), color: .white)
 
 enum ChatMessageDateAndStatusOutgoingType {
     case Sent(read: Bool)
@@ -92,9 +33,11 @@ enum ChatMessageDateAndStatusType {
     case BubbleOutgoing(ChatMessageDateAndStatusOutgoingType)
     case ImageIncoming
     case ImageOutgoing(ChatMessageDateAndStatusOutgoingType)
+    case FreeIncoming
+    case FreeOutgoing(ChatMessageDateAndStatusOutgoingType)
 }
 
-class ChatMessageDateAndStatusNode: ASTransformLayerNode {
+class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var backgroundNode: ASImageNode?
     private var checkSentNode: ASImageNode?
     private var checkReadNode: ASImageNode?
@@ -113,7 +56,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ theme: PresentationTheme, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -124,7 +67,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
         var currentBackgroundNode = self.backgroundNode
         var currentImpressionIcon = self.impressionIcon
         
-        return { edited, impressionCount, dateText, type, constrainedSize in
+        return { theme, edited, impressionCount, dateText, type, constrainedSize in
             let dateColor: UIColor
             var backgroundImage: UIImage?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
@@ -136,50 +79,75 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
             
+            let graphics = PresentationResourcesChat.principalGraphics(theme)
+            
             switch type {
                 case .BubbleIncoming:
-                    dateColor = incomingDateColor
+                    dateColor = theme.chat.bubble.incomingSecondaryTextColor
                     leftInset = 10.0
-                    loadedCheckFullImage = checkBubbleFullImage
-                    loadedCheckPartialImage = checkBubblePartialImage
-                    clockFrameImage = clockBubbleFrameImage
-                    clockMinImage = clockBubbleMinImage
+                    loadedCheckFullImage = graphics.checkBubbleFullImage
+                    loadedCheckPartialImage = graphics.checkBubblePartialImage
+                    clockFrameImage = graphics.clockBubbleIncomingFrameImage
+                    clockMinImage = graphics.clockBubbleIncomingMinImage
                     if impressionCount != nil {
-                        impressionImage = incomingImpressionIcon
+                        impressionImage = graphics.incomingDateAndStatusImpressionIcon
                     }
                 case let .BubbleOutgoing(status):
-                    dateColor = outgoingDateColor
+                    dateColor = theme.chat.bubble.outgoingSecondaryTextColor
                     outgoingStatus = status
                     leftInset = 10.0
-                    loadedCheckFullImage = checkBubbleFullImage
-                    loadedCheckPartialImage = checkBubblePartialImage
-                    clockFrameImage = clockBubbleFrameImage
-                    clockMinImage = clockBubbleMinImage
+                    loadedCheckFullImage = graphics.checkBubbleFullImage
+                    loadedCheckPartialImage = graphics.checkBubblePartialImage
+                    clockFrameImage = graphics.clockBubbleOutgoingFrameImage
+                    clockMinImage = graphics.clockBubbleOutgoingMinImage
                     if impressionCount != nil {
-                        impressionImage = outgoingImpressionIcon
+                        impressionImage = graphics.outgoingDateAndStatusImpressionIcon
                     }
                 case .ImageIncoming:
-                    dateColor = .white
-                    backgroundImage = imageBackground
+                    dateColor = theme.chat.bubble.mediaDateAndStatusTextColor
+                    backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = checkMediaFullImage
-                    loadedCheckPartialImage = checkMediaPartialImage
-                    clockFrameImage = clockMediaFrameImage
-                    clockMinImage = clockMediaMinImage
+                    loadedCheckFullImage = graphics.checkMediaFullImage
+                    loadedCheckPartialImage = graphics.checkMediaPartialImage
+                    clockFrameImage = graphics.clockMediaFrameImage
+                    clockMinImage = graphics.clockMediaMinImage
                     if impressionCount != nil {
-                        impressionImage = mediaImpressionIcon
+                        impressionImage = graphics.mediaImpressionIcon
                     }
                 case let .ImageOutgoing(status):
-                    dateColor = .white
+                    dateColor = theme.chat.bubble.mediaDateAndStatusTextColor
                     outgoingStatus = status
-                    backgroundImage = imageBackground
+                    backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = checkMediaFullImage
-                    loadedCheckPartialImage = checkMediaPartialImage
-                    clockFrameImage = clockMediaFrameImage
-                    clockMinImage = clockMediaMinImage
+                    loadedCheckFullImage = graphics.checkMediaFullImage
+                    loadedCheckPartialImage = graphics.checkMediaPartialImage
+                    clockFrameImage = graphics.clockMediaFrameImage
+                    clockMinImage = graphics.clockMediaMinImage
                     if impressionCount != nil {
-                        impressionImage = mediaImpressionIcon
+                        impressionImage = graphics.mediaImpressionIcon
+                    }
+                case .FreeIncoming:
+                    dateColor = theme.chat.bubble.mediaDateAndStatusTextColor
+                    backgroundImage = graphics.dateAndStatusFreeBackground
+                    leftInset = 0.0
+                    loadedCheckFullImage = graphics.checkMediaFullImage
+                    loadedCheckPartialImage = graphics.checkMediaPartialImage
+                    clockFrameImage = graphics.clockMediaFrameImage
+                    clockMinImage = graphics.clockMediaMinImage
+                    if impressionCount != nil {
+                        impressionImage = graphics.mediaImpressionIcon
+                    }
+                case let .FreeOutgoing(status):
+                    dateColor = theme.chat.bubble.mediaDateAndStatusTextColor
+                    outgoingStatus = status
+                    backgroundImage = graphics.dateAndStatusFreeBackground
+                    leftInset = 0.0
+                    loadedCheckFullImage = graphics.checkMediaFullImage
+                    loadedCheckPartialImage = graphics.checkMediaPartialImage
+                    clockFrameImage = graphics.clockMediaFrameImage
+                    clockMinImage = graphics.clockMediaMinImage
+                    if impressionCount != nil {
+                        impressionImage = graphics.mediaImpressionIcon
                     }
             }
             

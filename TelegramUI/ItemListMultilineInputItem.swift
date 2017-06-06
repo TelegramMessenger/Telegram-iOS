@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 class ItemListMultilineInputItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let text: String
     let placeholder: String
     let sectionId: ItemListSectionId
@@ -11,7 +12,8 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let action: () -> Void
     let textUpdated: (String) -> Void
     
-    init(text: String, placeholder: String, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, text: String, placeholder: String, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+        self.theme = theme
         self.text = text
         self.placeholder = placeholder
         self.sectionId = sectionId
@@ -71,11 +73,11 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
+        self.topStripeNode.backgroundColor = UIColor(rgb: 0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
+        self.bottomStripeNode.backgroundColor = UIColor(rgb: 0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.textClippingNode = ASDisplayNode()
@@ -93,7 +95,11 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     override func didLoad() {
         super.didLoad()
         
-        self.textNode.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
+        var textColor: UIColor = .black
+        if let item = self.item {
+            textColor = item.theme.list.itemPrimaryTextColor
+        }
+        self.textNode.typingAttributes = [NSFontAttributeName: Font.regular(17.0), NSForegroundColorAttributeName: textColor]
         self.textNode.clipsToBounds = true
         self.textNode.delegate = self
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
@@ -102,7 +108,14 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     func asyncLayout() -> (_ item: ItemListMultilineInputItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.measureTextNode)
         
+        let currentItem = self.item
+        
         return { item, width, neighbors in
+            var updatedTheme: PresentationTheme?
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let leftInset: CGFloat
             switch item.style {
                 case .blocks:
@@ -116,7 +129,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                measureText += "|"
             }
             let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
-            let attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: .black)
+            let attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
             let (textLayout, textApply) = makeTextLayout(attributedMeasureText, nil, 0, .end, CGSize(width: width - 8 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let separatorHeight = UIScreenPixel
@@ -130,11 +143,21 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(17.0), textColor: UIColor(0x878787))
+            let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        
+                        if strongSelf.isNodeLoaded {
+                            strongSelf.textNode.typingAttributes = [NSFontAttributeName: Font.regular(17.0), NSForegroundColorAttributeName: item.theme.list.itemPrimaryTextColor]
+                        }
+                    }
                     
                     let _ = textApply()
                     if let currentText = strongSelf.textNode.attributedText {
@@ -197,7 +220,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         let separatorHeight = UIScreenPixel
         let insets = self.insets
         let width = self.bounds.size.width
-        let contentSize = CGSize(width: width, height: currentValue - insets.top - insets.bottom)
+        let contentSize = CGSize(width: width, height: max(1.0, currentValue - insets.top - insets.bottom))
         
         if let item = self.item {
             let leftInset: CGFloat

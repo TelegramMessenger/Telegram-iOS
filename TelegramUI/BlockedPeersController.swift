@@ -44,7 +44,7 @@ private enum BlockedPeersEntryStableId: Hashable {
 }
 
 private enum BlockedPeersEntry: ItemListNodeEntry {
-    case peerItem(Int32, Peer, ItemListPeerItemEditing, Bool)
+    case peerItem(Int32, PresentationTheme, PresentationStrings, Peer, ItemListPeerItemEditing, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -55,16 +55,22 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     
     var stableId: BlockedPeersEntryStableId {
         switch self {
-            case let .peerItem(_, peer, _, _):
+            case let .peerItem(_, _, _, peer, _, _):
                 return .peer(peer.id)
         }
     }
     
     static func ==(lhs: BlockedPeersEntry, rhs: BlockedPeersEntry) -> Bool {
         switch lhs {
-        case let .peerItem(lhsIndex, lhsPeer, lhsEditing, lhsEnabled):
-            if case let .peerItem(rhsIndex, rhsPeer, rhsEditing, rhsEnabled) = rhs {
+        case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsEditing, lhsEnabled):
+            if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsEditing, rhsEnabled) = rhs {
                 if lhsIndex != rhsIndex {
+                    return false
+                }
+                if lhsTheme !== rhsTheme {
+                    return false
+                }
+                if lhsStrings !== rhsStrings {
                     return false
                 }
                 if !lhsPeer.isEqual(rhsPeer) {
@@ -85,9 +91,9 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     
     static func <(lhs: BlockedPeersEntry, rhs: BlockedPeersEntry) -> Bool {
         switch lhs {
-            case let .peerItem(index, _, _, _):
+            case let .peerItem(index, _, _, _, _, _):
                 switch rhs {
-                    case let .peerItem(rhsIndex, _, _, _):
+                    case let .peerItem(rhsIndex, _, _, _, _, _):
                         return index < rhsIndex
                 }
         }
@@ -95,8 +101,8 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     
     func item(_ arguments: BlockedPeersControllerArguments) -> ListViewItem {
         switch self {
-            case let .peerItem(_, peer, editing, enabled):
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+            case let .peerItem(_, theme, strings, peer, editing, enabled):
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -149,13 +155,13 @@ private struct BlockedPeersControllerState: Equatable {
     }
 }
 
-private func blockedPeersControllerEntries(state: BlockedPeersControllerState, peers: [Peer]?) -> [BlockedPeersEntry] {
+private func blockedPeersControllerEntries(presentationData: PresentationData, state: BlockedPeersControllerState, peers: [Peer]?) -> [BlockedPeersEntry] {
     var entries: [BlockedPeersEntry] = []
     
     if let peers = peers {
         var index: Int32 = 0
         for peer in peers {
-            entries.append(.peerItem(index, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != peer.id))
+            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != peer.id))
             index += 1
         }
     }
@@ -229,9 +235,9 @@ public func blockedPeersController(account: Account) -> ViewController {
     
     var previousPeers: [Peer]?
     
-    let signal = combineLatest(statePromise.get(), peersPromise.get())
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
-        |> map { state, peers -> (ItemListControllerState, (ItemListNodeState<BlockedPeersEntry>, BlockedPeersEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<BlockedPeersEntry>, BlockedPeersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
             if let peers = peers, !peers.isEmpty {
                 if state.editing {
@@ -261,15 +267,15 @@ public func blockedPeersController(account: Account) -> ViewController {
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: .text("Blocked Users"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
-            let listState = ItemListNodeState(entries: blockedPeersControllerEntries(state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Blocked Users"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: true)
+            let listState = ItemListNodeState(entries: blockedPeersControllerEntries(presentationData: presentationData, state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

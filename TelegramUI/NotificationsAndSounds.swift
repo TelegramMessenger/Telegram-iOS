@@ -48,25 +48,25 @@ private enum NotificationsAndSoundsSection: Int32 {
 }
 
 private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
-    case messageHeader
-    case messageAlerts(Bool)
-    case messagePreviews(Bool)
-    case messageSound(PeerMessageSound)
-    case messageNotice
+    case messageHeader(PresentationTheme, String)
+    case messageAlerts(PresentationTheme, String, Bool)
+    case messagePreviews(PresentationTheme, String, Bool)
+    case messageSound(PresentationTheme, String, String, PeerMessageSound)
+    case messageNotice(PresentationTheme, String)
     
-    case groupHeader
-    case groupAlerts(Bool)
-    case groupPreviews(Bool)
-    case groupSound(PeerMessageSound)
-    case groupNotice
+    case groupHeader(PresentationTheme, String)
+    case groupAlerts(PresentationTheme, String, Bool)
+    case groupPreviews(PresentationTheme, String, Bool)
+    case groupSound(PresentationTheme, String, String, PeerMessageSound)
+    case groupNotice(PresentationTheme, String)
     
-    case inAppHeader
-    case inAppSounds(Bool)
-    case inAppVibrate(Bool)
-    case inAppPreviews(Bool)
+    case inAppHeader(PresentationTheme, String)
+    case inAppSounds(PresentationTheme, String, Bool)
+    case inAppVibrate(PresentationTheme, String, Bool)
+    case inAppPreviews(PresentationTheme, String, Bool)
     
-    case reset
-    case resetNotice
+    case reset(PresentationTheme, String)
+    case resetNotice(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -120,98 +120,98 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     
     static func ==(lhs: NotificationsAndSoundsEntry, rhs: NotificationsAndSoundsEntry) -> Bool {
         switch lhs {
-            case .messageHeader:
-                if case .messageHeader = rhs {
+            case let .messageHeader(lhsTheme, lhsText):
+                if case let .messageHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .messageAlerts(value):
-                if case .messageAlerts(value) = rhs {
+            case let .messageAlerts(lhsTheme, lhsText, lhsValue):
+                if case let .messageAlerts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .messagePreviews(value):
-                if case .messagePreviews(value) = rhs {
+            case let .messagePreviews(lhsTheme, lhsText, lhsValue):
+                if case let .messagePreviews(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .messageSound(value):
-                if case .messageSound(value) = rhs {
+            case let .messageSound(lhsTheme, lhsText, lhsValue, lhsSound):
+                if case let .messageSound(rhsTheme, rhsText, rhsValue, rhsSound) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsSound == rhsSound {
                     return true
                 } else {
                     return false
                 }
-            case .messageNotice:
-                if case .messageNotice = rhs {
+            case let .messageNotice(lhsTheme, lhsText):
+                if case let .messageNotice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case .groupHeader:
-                if case .groupHeader = rhs {
+            case let .groupHeader(lhsTheme, lhsText):
+                if case let .groupHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .groupAlerts(value):
-                if case .groupAlerts(value) = rhs {
+            case let .groupAlerts(lhsTheme, lhsText, lhsValue):
+                if case let .groupAlerts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .groupPreviews(value):
-                if case .groupPreviews(value) = rhs {
+            case let .groupPreviews(lhsTheme, lhsText, lhsValue):
+                if case let .groupPreviews(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .groupSound(value):
-                if case .groupSound(value) = rhs {
+            case let .groupSound(lhsTheme, lhsText, lhsValue, lhsSound):
+                if case let .groupSound(rhsTheme, rhsText, rhsValue, rhsSound) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsSound == rhsSound {
                     return true
                 } else {
                     return false
                 }
-            case .groupNotice:
-                if case .groupNotice = rhs {
+            case let .groupNotice(lhsTheme, lhsText):
+                if case let .groupNotice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case .inAppHeader:
-                if case .inAppHeader = rhs {
+            case let .inAppHeader(lhsTheme, lhsText):
+                if case let .inAppHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .inAppSounds(value):
-                if case .inAppSounds(value) = rhs {
+            case let .inAppSounds(lhsTheme, lhsText, lhsValue):
+                if case let .inAppSounds(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .inAppVibrate(value):
-                if case .inAppVibrate(value) = rhs {
+            case let .inAppVibrate(lhsTheme, lhsText, lhsValue):
+                if case let .inAppVibrate(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .inAppPreviews(value):
-                if case .inAppPreviews(value) = rhs {
+            case let .inAppPreviews(lhsTheme, lhsText, lhsValue):
+                if case let .inAppPreviews(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case .reset:
-                if case .reset = rhs {
+            case let .reset(lhsTheme, lhsText):
+                if case let .reset(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case .resetNotice:
-                if case .resetNotice = rhs {
+            case let .resetNotice(lhsTheme, lhsText):
+                if case let .resetNotice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -225,19 +225,19 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     
     func item(_ arguments: NotificationsAndSoundsArguments) -> ListViewItem {
         switch self {
-            case .messageHeader:
-                return ItemListSectionHeaderItem(text: "MESSAGE NOTIFICATIONS", sectionId: self.section)
-            case let .messageAlerts(value):
-                return ItemListSwitchItem(title: "Alert", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            case let .messageHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .messageAlerts(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateMessageAlerts(updatedValue)
                 })
-            case let .messagePreviews(value):
-                return ItemListSwitchItem(title: "Message Preview", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            case let .messagePreviews(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateMessagePreviews(updatedValue)
                 })
-            case let .messageSound(value):
-                return ItemListDisclosureItem(title: "Sound", label: localizedPeerNotificationSoundString(value), sectionId: self.section, style: .blocks, action: {
-                    let (controller, result) = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: value)
+            case let .messageSound(theme, text, value, sound):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                    let (controller, result) = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound)
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     arguments.soundSelectionDisposable.set(result.start(next: { [weak arguments] value in
                         if let value = value {
@@ -245,21 +245,21 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                         }
                     }))
                 })
-            case .messageNotice:
-                return ItemListTextItem(text: .plain("You can set custom notifications for specific users on their info page."), sectionId: self.section)
-            case .groupHeader:
-                return ItemListSectionHeaderItem(text: "GROUP NOTIFICATIONS", sectionId: self.section)
-            case let .groupAlerts(value):
-                return ItemListSwitchItem(title: "Alert", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            case let .messageNotice(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .groupHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .groupAlerts(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateGroupAlerts(updatedValue)
                 })
-            case let .groupPreviews(value):
-                return ItemListSwitchItem(title: "Message Preview", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            case let .groupPreviews(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateGroupPreviews(updatedValue)
                 })
-            case let .groupSound(value):
-                return ItemListDisclosureItem(title: "Sound", label: localizedPeerNotificationSoundString(value), sectionId: self.section, style: .blocks, action: {
-                    let (controller, result) = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: value)
+            case let .groupSound(theme, text, value, sound):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                    let (controller, result) = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound)
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     arguments.soundSelectionDisposable.set(result.start(next: { [weak arguments] value in
                         if let value = value {
@@ -267,54 +267,54 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                         }
                     }))
                 })
-            case .groupNotice:
-                return ItemListTextItem(text: .plain("You can set custom notifications for specific groups on their info page."), sectionId: self.section)
-            case .inAppHeader:
-                return ItemListSectionHeaderItem(text: "IN-APP NOTIFICATIONS", sectionId: self.section)
-            case let .inAppSounds(value):
-                return ItemListSwitchItem(title: "In-App Sounds", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            case let .groupNotice(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .inAppHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .inAppSounds(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateInAppSounds(updatedValue)
                 })
-            case let .inAppVibrate(value):
-                return ItemListSwitchItem(title: "In-App Vibrate", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            case let .inAppVibrate(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateInAppVibration(updatedValue)
                 })
-            case let .inAppPreviews(value):
-                return ItemListSwitchItem(title: "In-App Preview", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            case let .inAppPreviews(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateInAppPreviews(updatedValue)
                 })
-            case .reset:
-                return ItemListActionItem(title: "Reset All Notifications", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .reset(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetNotifications()
                 })
-            case .resetNotice:
-                return ItemListTextItem(text: .plain("Undo all custom notification settings for all your contacts and groups."), sectionId: self.section)
+            case let .resetNotice(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
 
-private func notificationsAndSoundsEntries(globalSettings: GlobalNotificationSettingsSet, inAppSettings: InAppNotificationSettings) -> [NotificationsAndSoundsEntry] {
+private func notificationsAndSoundsEntries(globalSettings: GlobalNotificationSettingsSet, inAppSettings: InAppNotificationSettings, presentationData: PresentationData) -> [NotificationsAndSoundsEntry] {
     var entries: [NotificationsAndSoundsEntry] = []
     
-    entries.append(.messageHeader)
-    entries.append(.messageAlerts(globalSettings.privateChats.enabled))
-    entries.append(.messagePreviews(globalSettings.privateChats.displayPreviews))
-    entries.append(.messageSound(globalSettings.privateChats.sound))
-    entries.append(.messageNotice)
+    entries.append(.messageHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications))
+    entries.append(.messageAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.privateChats.enabled))
+    entries.append(.messagePreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.privateChats.displayPreviews))
+    entries.append(.messageSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: globalSettings.privateChats.sound), globalSettings.privateChats.sound))
+    entries.append(.messageNotice(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsHelp))
     
-    entries.append(.groupHeader)
-    entries.append(.groupAlerts(globalSettings.groupChats.enabled))
-    entries.append(.groupPreviews(globalSettings.groupChats.displayPreviews))
-    entries.append(.groupSound(globalSettings.groupChats.sound))
-    entries.append(.groupNotice)
+    entries.append(.groupHeader(presentationData.theme, presentationData.strings.Notifications_GroupNotifications))
+    entries.append(.groupAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.groupChats.enabled))
+    entries.append(.groupPreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.groupChats.displayPreviews))
+    entries.append(.groupSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: globalSettings.groupChats.sound), globalSettings.groupChats.sound))
+    entries.append(.groupNotice(presentationData.theme, presentationData.strings.Notifications_GroupNotificationsHelp))
     
-    entries.append(.inAppHeader)
-    entries.append(.inAppSounds(inAppSettings.playSounds))
-    entries.append(.inAppVibrate(inAppSettings.vibrate))
-    entries.append(.inAppPreviews(inAppSettings.displayPreviews))
+    entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications))
+    entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))
+    entries.append(.inAppVibrate(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsVibrate, inAppSettings.vibrate))
+    entries.append(.inAppPreviews(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsPreview, inAppSettings.displayPreviews))
     
-    entries.append(.reset)
-    entries.append(.resetNotice)
+    entries.append(.reset(presentationData.theme, presentationData.strings.Notifications_ResetAllNotifications))
+    entries.append(.resetNotice(presentationData.theme, presentationData.strings.Notifications_ResetAllNotificationsHelp))
     
     return entries
 }
@@ -398,8 +398,8 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
     
     let preferences = account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications, ApplicationSpecificPreferencesKeys.inAppNotificationSettings])
     
-    let signal = preferences
-        |> map { view -> (ItemListControllerState, (ItemListNodeState<NotificationsAndSoundsEntry>, NotificationsAndSoundsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, preferences)
+        |> map { presentationData, view -> (ItemListControllerState, (ItemListNodeState<NotificationsAndSoundsEntry>, NotificationsAndSoundsEntry.ItemGenerationArguments)) in
             
             let viewSettings: GlobalNotificationSettingsSet
             if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
@@ -415,13 +415,13 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
                 inAppSettings = InAppNotificationSettings.defaultSettings
             }
             
-            let controllerState = ItemListControllerState(title: .text("Notifications"), leftNavigationButton: nil, rightNavigationButton: nil)
-            let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(globalSettings: viewSettings, inAppSettings: inAppSettings), style: .blocks)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Notifications"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"))
+            let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(globalSettings: viewSettings, inAppSettings: inAppSettings, presentationData: presentationData), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window, with: a)
     }

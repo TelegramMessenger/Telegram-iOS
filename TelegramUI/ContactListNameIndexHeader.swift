@@ -2,18 +2,20 @@ import Display
 
 final class ContactListNameIndexHeader: Equatable, ListViewItemHeader {
     let id: Int64
+    let theme: PresentationTheme
     let letter: unichar
     let stickDirection: ListViewItemHeaderStickDirection = .top
     
     let height: CGFloat = 29.0
     
-    init(letter: unichar) {
+    init(theme: PresentationTheme, letter: unichar) {
+        self.theme = theme
         self.letter = letter
         self.id = Int64(letter)
     }
     
     func node() -> ListViewItemHeaderNode {
-        return ContactListNameIndexHeaderNode(letter: self.letter)
+        return ContactListNameIndexHeaderNode(theme: self.theme, letter: self.letter)
     }
     
     static func ==(lhs: ContactListNameIndexHeader, rhs: ContactListNameIndexHeader) -> Bool {
@@ -22,14 +24,16 @@ final class ContactListNameIndexHeader: Equatable, ListViewItemHeader {
 }
 
 final class ContactListNameIndexHeaderNode: ListViewItemHeaderNode {
+    private var theme: PresentationTheme
     private let letter: unichar
     
     private let sectionHeaderNode: ListSectionHeaderNode
     
-    init(letter: unichar) {
+    init(theme: PresentationTheme, letter: unichar) {
+        self.theme = theme
         self.letter = letter
         
-        self.sectionHeaderNode = ListSectionHeaderNode()
+        self.sectionHeaderNode = ListSectionHeaderNode(theme: theme)
         
         super.init()
         

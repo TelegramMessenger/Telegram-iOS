@@ -17,7 +17,7 @@ private let countryButtonBackground = generateImage(CGSize(width: 45.0, height: 
     context.closePath()
     context.fillPath()
     
-    context.setStrokeColor(UIColor(0xbcbbc1).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0xbcbbc1).cgColor)
     context.setLineWidth(lineWidth)
     
     context.move(to: CGPoint(x: size.width, y: size.height - arrowSize - lineWidth / 2.0))
@@ -35,7 +35,7 @@ private let countryButtonBackground = generateImage(CGSize(width: 45.0, height: 
 private let countryButtonHighlightedBackground = generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
     let arrowSize: CGFloat = 6.0
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor(0xbcbbc1).cgColor)
+    context.setFillColor(UIColor(rgb: 0xbcbbc1).cgColor)
     context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
     context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
     context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
@@ -50,7 +50,7 @@ private let phoneInputBackground = generateImage(CGSize(width: 60.0, height: 44.
     context.clear(CGRect(origin: CGPoint(), size: size))
     context.setFillColor(UIColor.white.cgColor)
     context.fill(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0xbcbbc1).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0xbcbbc1).cgColor)
     context.setLineWidth(lineWidth)
     context.move(to: CGPoint(x: 0.0, y: size.height - lineWidth / 2.0))
     context.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth / 2.0))
@@ -89,16 +89,20 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    var presentationData: PresentationData
+    
+    init(presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: "NEW NUMBER", font: Font.regular(14.0), textColor: UIColor(0x6d6d72))
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.ChangePhoneNumberNumber_NewNumber, font: Font.regular(14.0), textColor: self.presentationData.theme.list.sectionHeaderTextColor)
         
         self.noticeNode = ASTextNode()
         self.noticeNode.isLayerBacked = true
         self.noticeNode.displaysAsynchronously = false
-        self.noticeNode.attributedText = NSAttributedString(string: "We will send an SMS with a confirmation code to your new number.", font: Font.regular(14.0), textColor: UIColor(0x6d6d72))
+        self.noticeNode.attributedText = NSAttributedString(string: self.presentationData.strings.ChangePhoneNumberNumber_Help, font: Font.regular(14.0), textColor: self.presentationData.theme.list.freeTextColor)
         
         self.countryButton = ASButtonNode()
         self.countryButton.setBackgroundImage(countryButtonBackground, for: [])
@@ -116,7 +120,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.backgroundColor = UIColor(0xefefef)
+        self.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.noticeNode)
@@ -127,7 +131,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         self.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 15.0, bottom: 4.0, right: 0.0)
         self.countryButton.contentHorizontalAlignment = .left
         
-        self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: "Your phone number", font: Font.regular(17.0), textColor: UIColor(0xbcbcc3))
+        self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: self.presentationData.strings.Login_PhonePlaceholder, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPlaceholderTextColor)
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
         
@@ -136,7 +140,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
                 if let code = Int(code), let countryName = countryCodeToName[code] {
                     strongSelf.countryButton.setTitle(countryName, with: Font.regular(17.0), with: .black, for: [])
                 } else {
-                    strongSelf.countryButton.setTitle("Select Country", with: Font.regular(17.0), with: .black, for: [])
+                    strongSelf.countryButton.setTitle(strongSelf.presentationData.strings.Login_CountryCode, with: Font.regular(17.0), with: .black, for: [])
                 }
             }
         }

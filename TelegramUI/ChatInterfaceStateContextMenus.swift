@@ -17,20 +17,10 @@ func contextMenuForChatPresentationIntefaceState(_ chatPresentationInterfaceStat
     if let channel = peer as? TelegramChannel {
         switch channel.info {
             case .broadcast:
-                switch channel.role {
-                    case .creator, .editor, .moderator:
-                        canReply = true
-                    case .member:
-                        canReply = false
-                }
+                canReply = channel.hasAdminRights([.canPostMessages])
             case .group:
                 canReply = true
-                switch channel.role {
-                    case .creator, .editor, .moderator:
-                        canPin = true
-                    case .member:
-                        canPin = false
-                }
+                canPin = channel.hasAdminRights([.canPinMessages])
         }
     } else {
         canReply = true
@@ -133,13 +123,8 @@ func chatDeleteMessagesOptions(account: Account, messageIds: Set<MessageId>) -> 
                     if !message.flags.contains(.Incoming) {
                         options.insert(.globally)
                     } else {
-                        switch channel.role {
-                            case .creator:
-                                options.insert(.globally)
-                            case .moderator, .editor:
-                                options.insert(.globally)
-                            case .member:
-                                break
+                        if channel.hasAdminRights([.canDeleteMessages]) {
+                            options.insert(.globally)
                         }
                     }
                     optionsMap[message.id] = options

@@ -65,7 +65,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     override init(account: Account) {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = UIColor(0xbdc2c7)
+        self.separatorNode.backgroundColor = UIColor(rgb: 0xbdc2c7)
         self.separatorNode.isHidden = true
         
         self.listView = ListView()

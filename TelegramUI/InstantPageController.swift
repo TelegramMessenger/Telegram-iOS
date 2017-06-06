@@ -14,7 +14,7 @@ final class InstantPageController: ViewController {
         self.account = account
         self.webPage = webPage
         
-        super.init()
+        super.init(navigationBarTheme: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -24,7 +24,6 @@ final class InstantPageController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = InstantPageControllerNode(account: self.account)
         
-        self.navigationBar.isHidden = true
         self.statusBar.alpha = 0.0
         
         self.displayNodeDidLoad()

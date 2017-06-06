@@ -56,7 +56,7 @@ private enum ArchivedStickerPacksEntryId: Hashable {
 
 private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
     case info(String)
-    case pack(Int32, StickerPackCollectionInfo, StickerPackItem?, Int32, Bool, ItemListStickerPackItemEditing)
+    case pack(Int32, PresentationTheme, StickerPackCollectionInfo, StickerPackItem?, String, Bool, ItemListStickerPackItemEditing)
     
     var section: ItemListSectionId {
         switch self {
@@ -69,7 +69,7 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
         switch self {
             case .info:
                 return .index(0)
-            case let .pack(_, info, _, _, _, _):
+            case let .pack(_, _, info, _, _, _, _):
                 return .pack(info.id)
         }
     }
@@ -82,9 +82,12 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .pack(lhsIndex, lhsInfo, lhsTopItem, lhsCount, lhsEnabled, lhsEditing):
-                if case let .pack(rhsIndex, rhsInfo, rhsTopItem, rhsCount, rhsEnabled, rhsEditing) = rhs {
+            case let .pack(lhsIndex, lhsTheme, lhsInfo, lhsTopItem, lhsCount, lhsEnabled, lhsEditing):
+                if case let .pack(rhsIndex, rhsTheme, rhsInfo, rhsTopItem, rhsCount, rhsEnabled, rhsEditing) = rhs {
                     if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsInfo != rhsInfo {
@@ -118,9 +121,9 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .pack(lhsIndex, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                     default:
                         return false
@@ -132,8 +135,8 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
         switch self {
             case let .info(text):
                 return ItemListTextItem(text: .plain(text), sectionId: self.section)
-            case let .pack(_, info, topItem, count, enabled, editing):
-                return ItemListStickerPackItem(account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, sectionId: self.section, action: { _ in
+            case let .pack(_, theme, info, topItem, count, enabled, editing):
+                return ItemListStickerPackItem(theme: theme, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, sectionId: self.section, action: { _ in
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
@@ -189,11 +192,19 @@ private struct ArchivedStickerPacksControllerState: Equatable {
     }
 }
 
-private func archivedStickerPacksControllerEntries(state: ArchivedStickerPacksControllerState, packs: [ArchivedStickerPackItem]?, installedView: CombinedView) -> [ArchivedStickerPacksEntry] {
+private func stringForStickerCount(_ count: Int32) -> String {
+    if count == 1 {
+        return "1 sticker"
+    } else {
+        return "\(count) stickers"
+    }
+}
+
+private func archivedStickerPacksControllerEntries(presentationData: PresentationData, state: ArchivedStickerPacksControllerState, packs: [ArchivedStickerPackItem]?, installedView: CombinedView) -> [ArchivedStickerPacksEntry] {
     var entries: [ArchivedStickerPacksEntry] = []
     
     if let packs = packs {
-        entries.append(.info("You can have up to 200 sticker sets installed.\nUnused stickers are archived when you add more.\n\n"))
+        entries.append(.info(presentationData.strings.StickerPacksSettings_ArchivedPacks_Info + "\n\n"))
         
         var installedIds = Set<ItemCollectionId>()
         if let view = installedView.views[.itemCollectionIds(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionIdsView, let ids = view.idsByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
@@ -203,7 +214,7 @@ private func archivedStickerPacksControllerEntries(state: ArchivedStickerPacksCo
         var index: Int32 = 0
         for item in packs {
             if !installedIds.contains(item.info.id) {
-                entries.append(.pack(index, item.info, item.topItems.first, item.info.count, !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id)))
+                entries.append(.pack(index, presentationData.theme, item.info, item.topItems.first, stringForStickerCount(item.info.count), !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id)))
                 index += 1
             }
         }
@@ -286,18 +297,19 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
     
     var previousPackCount: Int?
     
-    let signal = combineLatest(statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue)
-        |> map { state, packs, installedView -> (ItemListControllerState, (ItemListNodeState<ArchivedStickerPacksEntry>, ArchivedStickerPacksEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue)
+        |> deliverOnMainQueue
+        |> map { presentationData, state, packs, installedView -> (ItemListControllerState, (ItemListNodeState<ArchivedStickerPacksEntry>, ArchivedStickerPacksEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
             if let packs = packs, packs.count != 0 {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(true)
                         }
@@ -313,16 +325,15 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
             }
             
-            let controllerState = ItemListControllerState(title: .text("Archived Stickers"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.StickerPacksSettings_ArchivedPacks), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
-            let listState = ItemListNodeState(entries: archivedStickerPacksControllerEntries(state: state, packs: packs, installedView: installedView), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
+            let listState = ItemListNodeState(entries: archivedStickerPacksControllerEntries(presentationData: presentationData, state: state, packs: packs, installedView: installedView), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

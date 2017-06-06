@@ -18,7 +18,7 @@ final class MapInputController: ViewController {
     }
     
     init() {
-        super.init(navigationBar: NavigationBar())
+        super.init(navigationBarTheme: nil)
         
         self._ready.set(.single(true))
         

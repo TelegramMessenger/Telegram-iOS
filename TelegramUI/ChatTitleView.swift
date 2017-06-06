@@ -7,6 +7,9 @@ import SwiftSignalKit
 import TelegramLegacyComponents
 
 final class ChatTitleView: UIView {
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
+    
     private let titleNode: ASTextNode
     private let infoNode: ASTextNode
     private let typingNode: ASTextNode
@@ -49,13 +52,14 @@ final class ChatTitleView: UIView {
                         }
                     }
                 }
-                let string = NSAttributedString(string: stringValue, font: Font.regular(13.0), textColor: UIColor(0x007ee5))
+                let string = NSAttributedString(string: stringValue, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.accentTextColor)
                 if self.typingNode.attributedText == nil || !self.typingNode.attributedText!.isEqual(to: string) {
                     self.typingNode.attributedText = string
                     self.setNeedsLayout()
                 }
                 if self.typingIndicator == nil {
                     let typingIndicator = TGModernConversationTitleActivityIndicator()
+                    typingIndicator.setColor(self.theme.rootController.navigationBar.accentTextColor)
                     self.addSubview(typingIndicator)
                     self.typingIndicator = typingIndicator
                 }
@@ -90,7 +94,7 @@ final class ChatTitleView: UIView {
     var peerView: PeerView? {
         didSet {
             if let peerView = self.peerView, let peer = peerViewMainPeer(peerView) {
-                let string = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: UIColor.black)
+                let string = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 
                 if self.titleNode.attributedText == nil || !self.titleNode.attributedText!.isEqual(to: string) {
                     self.titleNode.attributedText = string
@@ -107,15 +111,15 @@ final class ChatTitleView: UIView {
         if let peerView = self.peerView, let peer = peerViewMainPeer(peerView) {
             if let user = peer as? TelegramUser {
                 if let _ = user.botInfo {
-                    let string = NSAttributedString(string: "bot", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                    let string = NSAttributedString(string: self.strings.Bot_GenericBotStatus, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                         self.infoNode.attributedText = string
                         shouldUpdateLayout = true
                     }
                 } else if let peer = peerViewMainPeer(peerView), let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
                     let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                    let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
-                    let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? UIColor(0x007ee5) : UIColor(0x787878))
+                    let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, presence: presence, relativeTo: Int32(timestamp))
+                    let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: attributedString) {
                         self.infoNode.attributedText = attributedString
                         shouldUpdateLayout = true
@@ -123,7 +127,7 @@ final class ChatTitleView: UIView {
                     
                     self.presenceManager?.reset(presence: presence)
                 } else {
-                    let string = NSAttributedString(string: "offline", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                    let string = NSAttributedString(string: strings.Presence_offline, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                         self.infoNode.attributedText = string
                         shouldUpdateLayout = true
@@ -147,14 +151,14 @@ final class ChatTitleView: UIView {
                 }
                 if onlineCount > 1 {
                     let string = NSMutableAttributedString()
-                    string.append(NSAttributedString(string: "\(compactNumericCountString(group.participantCount)) members, ", font: Font.regular(13.0), textColor: UIColor(0x787878)))
-                    string.append(NSAttributedString(string: "\(onlineCount) online", font: Font.regular(13.0), textColor: UIColor(0x007ee5)))
+                    string.append(NSAttributedString(string: "\(compactNumericCountString(group.participantCount)) members, ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                    string.append(NSAttributedString(string: "\(onlineCount) online", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.accentTextColor))
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                         self.infoNode.attributedText = string
                         shouldUpdateLayout = true
                     }
                 } else {
-                    let string = NSAttributedString(string: "\(compactNumericCountString(group.participantCount)) members", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                    let string = NSAttributedString(string: "\(compactNumericCountString(group.participantCount)) members", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                         self.infoNode.attributedText = string
                         shouldUpdateLayout = true
@@ -162,7 +166,7 @@ final class ChatTitleView: UIView {
                 }
             } else if let channel = peer as? TelegramChannel {
                 if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                    let string = NSAttributedString(string: "\(compactNumericCountString(Int(memberCount))) members", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                    let string = NSAttributedString(string: "\(compactNumericCountString(Int(memberCount))) members", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                         self.infoNode.attributedText = string
                         shouldUpdateLayout = true
@@ -170,13 +174,13 @@ final class ChatTitleView: UIView {
                 } else {
                     switch channel.info {
                         case .group:
-                            let string = NSAttributedString(string: "group", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                            let string = NSAttributedString(string: "group", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                             if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                                 self.infoNode.attributedText = string
                                 shouldUpdateLayout = true
                             }
                         case .broadcast:
-                            let string = NSAttributedString(string: "channel", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                            let string = NSAttributedString(string: "channel", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                             if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                                 self.infoNode.attributedText = string
                                 shouldUpdateLayout = true
@@ -191,7 +195,10 @@ final class ChatTitleView: UIView {
         }
     }
     
-    override init(frame: CGRect) {
+    init(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
         self.titleNode = ASTextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
@@ -212,7 +219,7 @@ final class ChatTitleView: UIView {
         
         self.button = HighlightTrackingButton()
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.infoNode)

@@ -58,14 +58,14 @@ private func stringForUserCount(_ count: Int) -> String {
 }
 
 private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
-    case settingHeader(String)
-    case everybody(Bool)
-    case contacts(Bool)
-    case nobody(Bool)
-    case settingInfo(String)
-    case disableFor(String, Int)
-    case enableFor(String, Int)
-    case peersInfo
+    case settingHeader(PresentationTheme, String)
+    case everybody(PresentationTheme, String, Bool)
+    case contacts(PresentationTheme, String, Bool)
+    case nobody(PresentationTheme, String, Bool)
+    case settingInfo(PresentationTheme, String)
+    case disableFor(PresentationTheme, String, String)
+    case enableFor(PresentationTheme, String, String)
+    case peersInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -99,50 +99,50 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     
     static func ==(lhs: SelectivePrivacySettingsEntry, rhs: SelectivePrivacySettingsEntry) -> Bool {
         switch lhs {
-            case let .settingHeader(text):
-                if case .settingHeader(text) = rhs {
+            case let .settingHeader(lhsTheme, lhsText):
+                if case let .settingHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .everybody(value):
-                if case .everybody(value) = rhs {
+            case let .everybody(lhsTheme, lhsText, lhsValue):
+                if case let .everybody(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .contacts(value):
-                if case .contacts(value) = rhs {
+            case let .contacts(lhsTheme, lhsText, lhsValue):
+                if case let .contacts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .nobody(value):
-                if case .nobody(value) = rhs {
+            case let .nobody(lhsTheme, lhsText, lhsValue):
+                if case let nobody(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .settingInfo(text):
-                if case .settingInfo(text) = rhs {
+            case let .settingInfo(lhsTheme, lhsText):
+                if case let .settingInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .disableFor(title, count):
-                if case .disableFor(title, count) = rhs {
+            case let .disableFor(lhsTheme, lhsText, lhsValue):
+                if case let .disableFor(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .enableFor(title, count):
-                if case .enableFor(title, count) = rhs {
+            case let .enableFor(lhsTheme, lhsText, lhsValue):
+                if case let .enableFor(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case .peersInfo:
-                if case .peersInfo = rhs {
+            case let .peersInfo(lhsTheme, lhsText):
+                if case let .peersInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -156,32 +156,32 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     
     func item(_ arguments: SelectivePrivacySettingsControllerArguments) -> ListViewItem {
         switch self {
-            case let .settingHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .everybody(value):
-                return ItemListCheckboxItem(title: "Everybody", checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .settingHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .everybody(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateType(.everybody)
                 })
-            case let .contacts(value):
-                return ItemListCheckboxItem(title: "My Contacts", checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .contacts(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateType(.contacts)
                 })
-            case let .nobody(value):
-                return ItemListCheckboxItem(title: "Nobody", checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .nobody(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateType(.nobody)
                 })
-            case let .settingInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
-            case let .disableFor(title, count):
-                return ItemListDisclosureItem(title: title, label: stringForUserCount(count), sectionId: self.section, style: .blocks, action: {
+            case let .settingInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .disableFor(theme, title, value):
+                return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openDisableFor()
                 })
-            case let .enableFor(title, count):
-                return ItemListDisclosureItem(title: title, label: stringForUserCount(count), sectionId: self.section, style: .blocks, action: {
+            case let .enableFor(theme, title, value):
+                return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openEnableFor()
                 })
-            case .peersInfo:
-                return ItemListTextItem(text: .plain("These settings will override the values above."), sectionId: self.section)
+            case let .peersInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -234,7 +234,7 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     }
 }
 
-private func selectivePrivacySettingsControllerEntries(kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState) -> [SelectivePrivacySettingsEntry] {
+private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState) -> [SelectivePrivacySettingsEntry] {
     var entries: [SelectivePrivacySettingsEntry] = []
     
     let settingTitle: String
@@ -243,44 +243,44 @@ private func selectivePrivacySettingsControllerEntries(kind: SelectivePrivacySet
     let enableForText: String
     switch kind {
         case .presence:
-            settingTitle = "WHO CAN SEE MY TIMESTAMP"
-            settingInfoText = "Important: you won't be able to see Last Seen times for people with whom you don't share your Last Seen time. Approximate last seen will be shown instead (recently, within a week, within a month)."
-            disableForText = "Never Share With"
-            enableForText = "Always Share With"
+            settingTitle = presentationData.strings.PrivacyLastSeenSettings_WhoCanSeeMyTimestamp
+            settingInfoText = presentationData.strings.PrivacyLastSeenSettings_CustomHelp
+            disableForText = presentationData.strings.PrivacyLastSeenSettings_NeverShareWith
+            enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
         case .groupInvitations:
-            settingTitle = "WHO CAN ADD ME TO GROUP CHATS"
-            settingInfoText = "You can restrict who can add you to groups and channels with granular precision."
-            disableForText = "Never Allow"
-            enableForText = "Always Allow"
+            settingTitle = presentationData.strings.Privacy_GroupsAndChannels_WhoCanAddMe
+            settingInfoText = presentationData.strings.Privacy_GroupsAndChannels_CustomHelp
+            disableForText = presentationData.strings.Privacy_GroupsAndChannels_NeverAllow
+            enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
         case .voiceCalls:
-            settingTitle = "WHO CAN CALL ME"
-            settingInfoText = "You can restrict who can call you with granular precision."
-            disableForText = "Never Allow"
-            enableForText = "Always Allow"
+            settingTitle = presentationData.strings.Privacy_Calls_WhoCanCallMe
+            settingInfoText = presentationData.strings.Privacy_Calls_CustomHelp
+            disableForText = presentationData.strings.Privacy_GroupsAndChannels_NeverAllow
+            enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
     }
     
-    entries.append(.settingHeader(settingTitle))
+    entries.append(.settingHeader(presentationData.theme, settingTitle))
     
-    entries.append(.everybody(state.setting == .everybody))
-    entries.append(.contacts(state.setting == .contacts))
+    entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
+    entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
     switch kind {
         case .presence, .voiceCalls:
-            entries.append(.nobody(state.setting == .nobody))
+            entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
         case .groupInvitations:
             break
     }
-    entries.append(.settingInfo(settingInfoText))
+    entries.append(.settingInfo(presentationData.theme, settingInfoText))
     
     switch state.setting {
         case .everybody:
-            entries.append(.disableFor(disableForText, state.disableFor.count))
+            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor.count)))
         case .contacts:
-            entries.append(.disableFor(disableForText, state.disableFor.count))
-            entries.append(.enableFor(enableForText, state.enableFor.count))
+            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor.count)))
+            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor.count)))
         case .nobody:
-            entries.append(.enableFor(enableForText, state.enableFor.count))
+            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor.count)))
     }
-    entries.append(.peersInfo)
+    entries.append(.peersInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp))
     
     return entries
 }
@@ -360,10 +360,10 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
         }))
     })
     
-    let signal = statePromise.get() |> deliverOnMainQueue
-        |> map { state -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
             
-            let leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
+            let leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
             
@@ -371,7 +371,7 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
             if state.saving {
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
                     var wasSaving = false
                     var settings: SelectivePrivacySettings?
                     updateState { state in
@@ -412,22 +412,21 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
             let title: String
             switch kind {
                 case .presence:
-                    title = "Last Seen"
+                    title = presentationData.strings.PrivacySettings_LastSeen
                 case .groupInvitations:
-                    title = "Groups"
+                    title = presentationData.strings.Privacy_GroupsAndChannels
                 case .voiceCalls:
-                    title = "Voice Calls"
+                    title = presentationData.strings.Settings_CallSettings
             }
-            let controllerState = ItemListControllerState(title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
-            let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(kind: kind, state: state), style: .blocks, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state), style: .blocks, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
@@ -435,7 +434,7 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
         controller?.present(c, in: .window)
     }
     dismissImpl = { [weak controller] in
-        (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
+        let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
     }
     
     return controller

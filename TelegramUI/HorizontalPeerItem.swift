@@ -6,11 +6,15 @@ import TelegramCore
 import SwiftSignalKit
 
 final class HorizontalPeerItem: ListViewItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let account: Account
     let peer: Peer
     let action: (Peer) -> Void
     
-    init(account: Account, peer: Peer, action: @escaping (Peer) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, action: @escaping (Peer) -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.account = account
         self.peer = peer
         self.action = action
@@ -21,7 +25,7 @@ final class HorizontalPeerItem: ListViewItem {
             let node = HorizontalPeerItemNode()
             node.contentSize = CGSize(width: 92.0, height: 80.0)
             node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
-            node.update(account: self.account, peer: self.peer)
+            node.update(account: self.account, peer: self.peer, theme: self.theme, strings: self.strings)
             node.action = self.action
             completion(node, {
                 return (nil, {})
@@ -58,15 +62,15 @@ final class HorizontalPeerItemNode: ListViewItemNode {
     override func didLoad() {
         super.didLoad()
         
-        self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
+        self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func update(account: Account, peer: Peer) {
+    func update(account: Account, peer: Peer, theme: PresentationTheme, strings: PresentationStrings) {
         self.peer = peer
         self.avatarNode.setPeer(account: account, peer: peer)
-        self.titleNode.attributedText = NSAttributedString(string: peer.compactDisplayTitle, font: Font.regular(11.0), textColor: UIColor.black)
+        self.titleNode.attributedText = NSAttributedString(string: peer.compactDisplayTitle, font: Font.regular(11.0), textColor: theme.list.itemPrimaryTextColor)
         let titleSize = self.titleNode.measure(CGSize(width: 84.0, height: CGFloat.infinity))
         self.titleNode.frame = CGRect(origin: CGPoint(x: floor((92.0 - titleSize.width) / 2.0), y: 4.0 + 60.0 + 6.0), size: titleSize)
     }

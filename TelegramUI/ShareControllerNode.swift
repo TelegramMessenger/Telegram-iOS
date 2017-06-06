@@ -7,10 +7,10 @@ import TelegramCore
 
 private let defaultBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 1.0)
 private let highlightedBackgroundColor: UIColor = UIColor(white: 0.9, alpha: 1.0)
-private let separatorColor: UIColor = UIColor(0xbcbbc1)
+private let separatorColor: UIColor = UIColor(rgb: 0xbcbbc1)
 
 private let subtitleFont = Font.regular(12.0)
-private let subtitleColor = UIColor(0x7b7b81)
+private let subtitleColor = UIColor(rgb: 0x7b7b81)
 
 private let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: .white)
 private let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: highlightedBackgroundColor)
@@ -29,7 +29,7 @@ private let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0,
     context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
 })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
 
-final class ShareControllerNode: ASDisplayNode, UIScrollViewDelegate {
+final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let account: Account
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -125,9 +125,7 @@ final class ShareControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.installActionSeparatorNode.displaysAsynchronously = false
         self.installActionSeparatorNode.backgroundColor = separatorColor
         
-        super.init(viewBlock: {
-            return UITracingLayerView()
-        }, didLoad: nil)
+        super.init()
         
         self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer in
             if let strongSelf = self {
@@ -142,11 +140,11 @@ final class ShareControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.updateVisibleItemsSelection(animated: true)
                 if strongSelf.selectedPeers.isEmpty {
                     if let defaultAction = strongSelf.defaultAction {
-                        strongSelf.installActionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(0x007ee5), for: .normal)
+                        strongSelf.installActionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
                     }
                     strongSelf.installActionButtonNode.badge = nil
                 } else {
-                    strongSelf.installActionButtonNode.setTitle("Send", with: Font.medium(20.0), with: UIColor(0x007ee5), for: .normal)
+                    strongSelf.installActionButtonNode.setTitle("Send", with: Font.medium(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
                     strongSelf.installActionButtonNode.badge = "\(strongSelf.selectedPeers.count)"
                 }
                 
@@ -177,7 +175,7 @@ final class ShareControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.wrappingScrollNode.view.delegate = self
         self.addSubnode(self.wrappingScrollNode)
         
-        self.cancelButtonNode.setTitle("Cancel", with: Font.medium(20.0), with: UIColor(0x007ee5), for: .normal)
+        self.cancelButtonNode.setTitle("Cancel", with: Font.medium(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
         /*self.cancelButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
@@ -304,7 +302,7 @@ final class ShareControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
         transition.updateFrame(node: self.installActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
         
-        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth + 25.0))), transition: transition), stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth + 25.0), lineSpacing: 0.0)), transition: transition), stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         transition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))))
         
         if animateIn {
@@ -457,7 +455,7 @@ final class ShareControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.installActionSeparatorNode.alpha = 1.0
         
         if let defaultAction = defaultAction {
-            self.installActionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(0x007ee5), for: .normal)
+            self.installActionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
         }
     }
     
@@ -483,6 +481,11 @@ final class ShareControllerNode: ASDisplayNode, UIScrollViewDelegate {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let result = self.installActionButtonNode.hitTest(self.installActionButtonNode.convert(point, from: self), with: event) {
             return result
+        }
+        if self.bounds.contains(point) {
+            if !self.contentBackgroundNode.bounds.contains(self.convert(point, to: self.contentBackgroundNode)) && !self.cancelButtonNode.bounds.contains(self.convert(point, to: self.cancelButtonNode)) {
+                return self.dimNode.view
+            }
         }
         return super.hitTest(point, with: event)
     }

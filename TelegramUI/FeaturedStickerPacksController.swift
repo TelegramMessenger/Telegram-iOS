@@ -44,7 +44,7 @@ private enum FeaturedStickerPacksEntryId: Hashable {
 }
 
 private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
-    case pack(Int32, StickerPackCollectionInfo, Bool, StickerPackItem?, Int32, Bool)
+    case pack(Int32, PresentationTheme, StickerPackCollectionInfo, Bool, StickerPackItem?, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -55,16 +55,19 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     var stableId: FeaturedStickerPacksEntryId {
         switch self {
-            case let .pack(_, info, _, _, _, _):
+            case let .pack(_, _, info, _, _, _, _):
                 return .pack(info.id)
         }
     }
     
     static func ==(lhs: FeaturedStickerPacksEntry, rhs: FeaturedStickerPacksEntry) -> Bool {
         switch lhs {
-            case let .pack(lhsIndex, lhsInfo, lhsUnread, lhsTopItem, lhsCount, lhsInstalled):
-                if case let .pack(rhsIndex, rhsInfo, rhsUnread, rhsTopItem, rhsCount, rhsInstalled) = rhs {
+            case let .pack(lhsIndex, lhsTheme, lhsInfo, lhsUnread, lhsTopItem, lhsCount, lhsInstalled):
+                if case let .pack(rhsIndex, rhsTheme, rhsInfo, rhsUnread, rhsTopItem, rhsCount, rhsInstalled) = rhs {
                     if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsInfo != rhsInfo {
@@ -91,9 +94,9 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     static func <(lhs: FeaturedStickerPacksEntry, rhs: FeaturedStickerPacksEntry) -> Bool {
         switch lhs {
-            case let .pack(lhsIndex, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                 }
         }
@@ -101,8 +104,8 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     func item(_ arguments: FeaturedStickerPacksControllerArguments) -> ListViewItem {
         switch self {
-            case let .pack(_, info, unread, topItem, count, installed):
-                return ItemListStickerPackItem(account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: { _ in
+            case let .pack(_, theme, info, unread, topItem, count, installed):
+                return ItemListStickerPackItem(theme: theme, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: { _ in
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { _ in
                 }, addPack: {
@@ -122,7 +125,15 @@ private struct FeaturedStickerPacksControllerState: Equatable {
     }
 }
 
-private func featuredStickerPacksControllerEntries(state: FeaturedStickerPacksControllerState, view: CombinedView, featured: [FeaturedStickerPackItem], unreadPacks: [ItemCollectionId: Bool]) -> [FeaturedStickerPacksEntry] {
+private func stringForStickerCount(_ count: Int32) -> String {
+    if count == 1 {
+        return "1 sticker"
+    } else {
+        return "\(count) stickers"
+    }
+}
+
+private func featuredStickerPacksControllerEntries(presentationData: PresentationData, state: FeaturedStickerPacksControllerState, view: CombinedView, featured: [FeaturedStickerPackItem], unreadPacks: [ItemCollectionId: Bool]) -> [FeaturedStickerPacksEntry] {
     var entries: [FeaturedStickerPacksEntry] = []
     
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView, !featured.isEmpty {
@@ -137,7 +148,7 @@ private func featuredStickerPacksControllerEntries(state: FeaturedStickerPacksCo
                 if let value = unreadPacks[item.info.id] {
                     unread = value
                 }
-                entries.append(.pack(index, item.info, unread, item.topItems.first, item.info.count, installedPacks.contains(item.info.id)))
+                entries.append(.pack(index, presentationData.theme, item.info, unread, item.topItems.first, stringForStickerCount(item.info.count), installedPacks.contains(item.info.id)))
                 index += 1
             }
         }
@@ -175,8 +186,9 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
     var previousPackCount: Int?
     var initialUnreadPacks: [ItemCollectionId: Bool] = [:]
     
-    let signal = combineLatest(statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
-        |> map { state, view, featured -> (ItemListControllerState, (ItemListNodeState<FeaturedStickerPacksEntry>, FeaturedStickerPacksEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
+        |> deliverOnMainQueue
+        |> map { presentationData, state, view, featured -> (ItemListControllerState, (ItemListNodeState<FeaturedStickerPacksEntry>, FeaturedStickerPacksEntry.ItemGenerationArguments)) in
             let packCount: Int? = featured.count
             
             for item in featured {
@@ -189,15 +201,15 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
             let previous = previousPackCount
             previousPackCount = packCount
             
-            let controllerState = ItemListControllerState(title: .text("Trending Stickers"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.FeaturedStickerPacks_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
-            let listState = ItemListNodeState(entries: featuredStickerPacksControllerEntries(state: state, view: view, featured: featured, unreadPacks: initialUnreadPacks), style: .blocks, animateChanges: false)
+            let listState = ItemListNodeState(entries: featuredStickerPacksControllerEntries(presentationData: presentationData, state: state, view: view, featured: featured, unreadPacks: initialUnreadPacks), style: .blocks, animateChanges: false)
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     
     var alreadyReadIds = Set<ItemCollectionId>()
     
@@ -205,7 +217,7 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
         var unreadIds: [ItemCollectionId] = []
         for entry in entries {
             switch entry {
-                case let .pack(_, info, unread, _, _, _):
+                case let .pack(_, _, info, unread, _, _, _):
                     if unread && !alreadyReadIds.contains(info.id) {
                         unreadIds.append(info.id)
                     }
@@ -218,7 +230,6 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
         }
     }
     
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

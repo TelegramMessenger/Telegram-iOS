@@ -59,7 +59,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             
             let initialImageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
             
-            let (initialWidth, _, refineLayout) = interactiveImageLayout(item.account, item.message, selectedMedia!, initialImageCorners, item.account.settings.automaticDownloadSettingsForPeerId(item.peerId).downloadPhotos, CGSize(width: constrainedSize.width, height: constrainedSize.height), layoutConstants)
+            let (initialWidth, _, refineLayout) = interactiveImageLayout(item.account, item, selectedMedia!, initialImageCorners, item.account.settings.automaticDownloadSettingsForPeerId(item.peerId).downloadPhotos, CGSize(width: constrainedSize.width, height: constrainedSize.height), layoutConstants)
             
             return (initialWidth + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, { constrainedSize in
                 let (refinedWidth, finishLayout) = refineLayout(constrainedSize)
@@ -83,10 +83,17 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             sentViaBot = true
                         }
                     }
-                    if let author = item.message.author as? TelegramUser, author.botInfo != nil {
-                        sentViaBot = true
+                    
+                    var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                    
+                    if let author = item.message.author as? TelegramUser {
+                        if author.botInfo != nil {
+                            sentViaBot = true
+                        }
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            dateText = "\(author.displayTitle), \(dateText)"
+                        }
                     }
-                    let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
                     
                     let statusType: ChatMessageDateAndStatusType?
                     if case .None = position.bottom {
@@ -111,7 +118,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     var statusApply: ((Bool) -> Void)?
                     
                     if let statusType = statusType {
-                        let (size, apply) = statusLayout(edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: imageLayoutSize.width, height: CGFloat.greatestFiniteMagnitude))
+                        let (size, apply) = statusLayout(item.theme, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: imageLayoutSize.width, height: CGFloat.greatestFiniteMagnitude))
                         statusSize = size
                         statusApply = apply
                     }

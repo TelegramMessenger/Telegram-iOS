@@ -5,7 +5,7 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
-private let backgroundImage = UIImage(bundleImageName: "Chat/Wallpapers/Builtin0")
+private var backgroundImageForWallpaper: (TelegramWallpaper, UIImage)?
 
 private func shouldRequestLayoutOnPresentationInterfaceStateTransition(_ lhs: ChatPresentationInterfaceState, _ rhs: ChatPresentationInterfaceState) -> Bool {
     
@@ -17,8 +17,12 @@ class ChatControllerNode: ASDisplayNode {
     let peerId: PeerId
     let controllerInteraction: ChatControllerInteraction
     
+    let navigationBar: NavigationBar
+    
     let backgroundNode: ASDisplayNode
     let historyNode: ChatHistoryListNode
+    
+    private var searchNavigationNode: ChatSearchNavigationContentNode?
     
     private let inputPanelBackgroundNode: ASDisplayNode
     private let inputPanelBackgroundSeparatorNode: ASDisplayNode
@@ -39,7 +43,7 @@ class ChatControllerNode: ASDisplayNode {
     
     private var ignoreUpdateHeight = false
     
-    var chatPresentationInterfaceState = ChatPresentationInterfaceState()
+    var chatPresentationInterfaceState: ChatPresentationInterfaceState
     
     var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
@@ -55,10 +59,12 @@ class ChatControllerNode: ASDisplayNode {
     private var scheduledLayoutTransitionRequestId: Int = 0
     private var scheduledLayoutTransitionRequest: (Int, ContainedViewLayoutTransition)?
     
-    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction) {
+    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, navigationBar: NavigationBar) {
         self.account = account
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
+        self.chatPresentationInterfaceState = chatPresentationInterfaceState
+        self.navigationBar = navigationBar
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -72,22 +78,52 @@ class ChatControllerNode: ASDisplayNode {
         self.historyNode = ChatHistoryListNode(account: account, peerId: peerId, tagMask: nil, messageId: messageId, controllerInteraction: controllerInteraction)
         
         self.inputPanelBackgroundNode = ASDisplayNode()
-        self.inputPanelBackgroundNode.backgroundColor = UIColor(0xF5F6F8)
+        self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
         self.inputPanelBackgroundNode.isLayerBacked = true
         
         self.inputPanelBackgroundSeparatorNode = ASDisplayNode()
-        self.inputPanelBackgroundSeparatorNode.backgroundColor = UIColor(0xC9CDD1)
+        self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelStrokeColor
         self.inputPanelBackgroundSeparatorNode.isLayerBacked = true
         
-        self.navigateToLatestButton = ChatHistoryNavigationButtonNode()
+        self.navigateToLatestButton = ChatHistoryNavigationButtonNode(theme: self.chatPresentationInterfaceState.theme)
         self.navigateToLatestButton.alpha = 0.0
         
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.backgroundColor = UIColor(0xdee3e9)
+        self.backgroundColor = UIColor(rgb: 0xdee3e9)
+        
+        assert(Queue.mainQueue().isCurrent())
+        
+        var backgroundImage: UIImage?
+        let wallpaper = chatPresentationInterfaceState.chatWallpaper
+        if wallpaper == backgroundImageForWallpaper?.0 {
+            backgroundImage = backgroundImageForWallpaper?.1
+        } else {
+            switch wallpaper {
+                case .builtin:
+                    backgroundImage = UIImage(bundleImageName: "Chat/Wallpapers/Builtin0")?.precomposed()
+                case let .color(color):
+                    backgroundImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+                        context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                    })
+                case let .image(representations):
+                    if let largest = largestImageRepresentation(representations) {
+                        if let path = account.postbox.mediaBox.completedResourcePath(largest.resource) {
+                            backgroundImage = UIImage(contentsOfFile: path)?.precomposed()
+                        }
+                    }
+            }
+            if let backgroundImage = backgroundImage {
+                backgroundImageForWallpaper = (wallpaper, backgroundImage)
+            }
+        }
+        
         self.backgroundNode.contents = backgroundImage?.cgImage
+        
+        
         self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.historyNode)
@@ -187,6 +223,28 @@ class ChatControllerNode: ASDisplayNode {
             previousInputPanelOrigin.y -= inputPanelNode.bounds.size.height
         }
         self.containerLayoutAndNavigationBarHeight = (layout, navigationBarHeight)
+        
+        let transitionIsAnimated: Bool
+        if case .immediate = transition {
+            transitionIsAnimated = false
+        } else {
+            transitionIsAnimated = true
+        }
+        
+        if let search = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
+            var activate = false
+            if self.searchNavigationNode == nil {
+                activate = true
+                self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, interaction: interfaceInteraction)
+            }
+            self.navigationBar.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
+            if activate {
+                self.searchNavigationNode?.activate()
+            }
+        } else if let searchNavigationNode = self.searchNavigationNode {
+            self.searchNavigationNode = nil
+            self.navigationBar.setContentNode(nil, animated: transitionIsAnimated)
+        }
         
         var dismissedTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
         var immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = false
@@ -549,6 +607,8 @@ class ChatControllerNode: ASDisplayNode {
             let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             
+            self.navigateToLatestButton.updateTheme(theme: chatPresentationInterfaceState.theme)
+            
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
             var extendedSearchLayout = false
             if let inputQueryResult = chatPresentationInterfaceState.inputQueryResult {
@@ -628,6 +688,7 @@ class ChatControllerNode: ASDisplayNode {
                     return (.none, state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
                 })
         }
+        self.searchNavigationNode?.deactivate()
     }
     
     private func scheduleLayoutTransitionRequest(_ transition: ContainedViewLayoutTransition) {
@@ -645,9 +706,9 @@ class ChatControllerNode: ASDisplayNode {
         self.setNeedsLayout()
     }
     
-    func loadInputPanels() {
+    func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings) {
         if self.inputMediaNode == nil {
-            let inputNode = ChatMediaInputNode(account: self.account, controllerInteraction: self.controllerInteraction)
+            let inputNode = ChatMediaInputNode(account: self.account, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings)
             inputNode.interfaceInteraction = interfaceInteraction
             self.inputMediaNode = inputNode
             let _ = inputNode.updateLayout(width: self.bounds.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)

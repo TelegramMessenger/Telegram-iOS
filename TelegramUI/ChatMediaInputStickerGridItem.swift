@@ -8,27 +8,29 @@ import Postbox
 final class ChatMediaInputStickerGridSection: GridSection {
     let collectionId: ItemCollectionId
     let collectionInfo: StickerPackCollectionInfo?
+    let theme: PresentationTheme
     let height: CGFloat = 26.0
     
     var hashValue: Int {
         return self.collectionId.hashValue
     }
     
-    init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?) {
+    init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?, theme: PresentationTheme) {
         self.collectionId = collectionId
         self.collectionInfo = collectionInfo
+        self.theme = theme
     }
     
     func isEqual(to: GridSection) -> Bool {
         if let to = to as? ChatMediaInputStickerGridSection {
-            return self.collectionId == to.collectionId
+            return self.collectionId == to.collectionId && self.theme === to.theme
         } else {
             return false
         }
     }
     
     func node() -> ASDisplayNode {
-        return ChatMediaInputStickerGridSectionNode(collectionInfo: self.collectionInfo)
+        return ChatMediaInputStickerGridSectionNode(collectionInfo: self.collectionInfo, theme: self.theme)
     }
 }
 
@@ -37,14 +39,14 @@ private let sectionTitleFont = Font.medium(12.0)
 final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
     let titleNode: ASTextNode
     
-    init(collectionInfo: StickerPackCollectionInfo?) {
+    init(collectionInfo: StickerPackCollectionInfo?, theme: PresentationTheme) {
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
         
         super.init()
         
         self.addSubnode(self.titleNode)
-        self.titleNode.attributedText = NSAttributedString(string: collectionInfo?.title.uppercased() ?? "", font: sectionTitleFont, textColor: UIColor(0x9099A2))
+        self.titleNode.attributedText = NSAttributedString(string: collectionInfo?.title.uppercased() ?? "", font: sectionTitleFont, textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
     }
@@ -69,14 +71,14 @@ final class ChatMediaInputStickerGridItem: GridItem {
     
     let section: GridSection?
     
-    init(account: Account, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, selected: @escaping () -> Void) {
+    init(account: Account, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
         self.account = account
         self.index = index
         self.stickerItem = stickerItem
         self.interfaceInteraction = interfaceInteraction
         self.inputNodeInteraction = inputNodeInteraction
         self.selected = selected
-        self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo)
+        self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, theme: theme)
     }
     
     func node(layout: GridNodeLayout) -> GridItemNode {

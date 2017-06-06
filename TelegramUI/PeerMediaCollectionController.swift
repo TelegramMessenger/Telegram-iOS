@@ -22,7 +22,7 @@ public class PeerMediaCollectionController: ViewController {
     private var didSetPeerReady = false
     private let peer = Promise<Peer?>(nil)
     
-    private var interfaceState = PeerMediaCollectionInterfaceState()
+    private var interfaceState: PeerMediaCollectionInterfaceState
     
     private var rightNavigationButton: PeerMediaCollectionNavigationButton?
     
@@ -34,20 +34,27 @@ public class PeerMediaCollectionController: ViewController {
     
     private let messageContextDisposable = MetaDisposable()
     
+    private var presentationData: PresentationData
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
         self.peerId = peerId
         self.messageId = messageId
         
-        super.init()
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.interfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
-        self.titleView = PeerMediaCollectionTitleView(toggle: { [weak self] in
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        
+        self.titleView = PeerMediaCollectionTitleView(mediaCollectionInterfaceState: self.interfaceState, toggle: { [weak self] in
             self?.updateInterfaceState { $0.withToggledSelectingMode() }
         })
         
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        
         self.navigationItem.titleView = self.titleView
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.ready.set(.never())
         
@@ -195,7 +202,10 @@ public class PeerMediaCollectionController: ViewController {
             }, openHashtag: {_ in
             }, updateInputState: { _ in
             }, openMessageShareMenu: { _ in
-            }, presentController: { _ in })
+            }, presentController: { _ in
+            }, callPeer: { _ in
+            }, longTap: { _ in
+            })
         
         self.controllerInteraction = controllerInteraction
         
@@ -293,7 +303,11 @@ public class PeerMediaCollectionController: ViewController {
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
         }, editMessage: { _, _ in
         }, beginMessageSearch: {
-        }, navigateToMessage: { _ in 
+        }, dismissMessageSearch: {
+        }, updateMessageSearch: { _ in 
+        }, navigateMessageSearch: { _ in
+        }, openCalendarSearch: {
+        }, navigateToMessage: { _ in
         }, openPeerInfo: {
         }, togglePeerNotifications: {
         }, sendContextResult: { _ in

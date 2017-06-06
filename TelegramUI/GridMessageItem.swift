@@ -33,6 +33,9 @@ private let timezoneOffset: Int32 = {
 final class GridMessageItemSection: GridSection {
     let height: CGFloat = 44.0
     
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    
     private let roundedTimestamp: Int32
     private let month: Int32
     private let year: Int32
@@ -41,7 +44,10 @@ final class GridMessageItemSection: GridSection {
         return self.roundedTimestamp.hashValue
     }
     
-    init(timestamp: Int32) {
+    init(timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
         var now = time_t(timestamp)
         var timeinfoNow: tm = tm()
         localtime_r(&now, &timeinfoNow)
@@ -60,26 +66,31 @@ final class GridMessageItemSection: GridSection {
     }
     
     func node() -> ASDisplayNode {
-        return GridMessageItemSectionNode(roundedTimestamp: self.roundedTimestamp, month: self.month, year: self.year)
+        return GridMessageItemSectionNode(theme: self.theme, strings: self.strings, roundedTimestamp: self.roundedTimestamp, month: self.month, year: self.year)
     }
 }
 
 private let sectionTitleFont = Font.regular(17.0)
 
 final class GridMessageItemSectionNode: ASDisplayNode {
+    var theme: PresentationTheme
+    var strings: PresentationStrings
     let titleNode: ASTextNode
     
-    init(roundedTimestamp: Int32, month: Int32, year: Int32) {
+    init(theme: PresentationTheme, strings: PresentationStrings, roundedTimestamp: Int32, month: Int32, year: Int32) {
+        self.theme = theme
+        self.strings = strings
+        
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
         
         super.init()
         
-        self.backgroundColor = UIColor(white: 1.0, alpha: 0.9)
+        self.backgroundColor = theme.list.plainBackgroundColor.withAlphaComponent(0.9)
         
-        let dateText = stringForMonth(month, ofYear: year)
+        let dateText = stringForMonth(strings: strings, month: month, ofYear: year)
         self.addSubnode(self.titleNode)
-        self.titleNode.attributedText = NSAttributedString(string: dateText, font: sectionTitleFont, textColor: .black)
+        self.titleNode.attributedText = NSAttributedString(string: dateText, font: sectionTitleFont, textColor: theme.list.itemPrimaryTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
     }
@@ -95,17 +106,21 @@ final class GridMessageItemSectionNode: ASDisplayNode {
 }
 
 final class GridMessageItem: GridItem {
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
     private let account: Account
     private let message: Message
     private let controllerInteraction: ChatControllerInteraction
     
     let section: GridSection?
     
-    init(account: Account, message: Message, controllerInteraction: ChatControllerInteraction) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, message: Message, controllerInteraction: ChatControllerInteraction) {
+        self.theme = theme
+        self.strings = strings
         self.account = account
         self.message = message
         self.controllerInteraction = controllerInteraction
-        self.section = GridMessageItemSection(timestamp: message.timestamp)
+        self.section = GridMessageItemSection(timestamp: message.timestamp, theme: theme, strings: strings)
     }
     
     func node(layout: GridNodeLayout) -> GridItemNode {

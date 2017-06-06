@@ -2,17 +2,17 @@ import Postbox
 import TelegramCore
 
 enum ChatHistoryEntry: Identifiable, Comparable {
-    case HoleEntry(MessageHistoryHole)
-    case MessageEntry(Message, Bool, MessageHistoryEntryMonthLocation?)
-    case UnreadEntry(MessageIndex)
-    case ChatInfoEntry(String)
-    case EmptyChatInfoEntry
+    case HoleEntry(MessageHistoryHole, PresentationTheme, PresentationStrings)
+    case MessageEntry(Message, PresentationTheme, PresentationStrings, Bool, MessageHistoryEntryMonthLocation?)
+    case UnreadEntry(MessageIndex, PresentationTheme, PresentationStrings)
+    case ChatInfoEntry(String, PresentationTheme, PresentationStrings)
+    case EmptyChatInfoEntry(PresentationTheme, PresentationStrings)
     
     var stableId: UInt64 {
         switch self {
-            case let .HoleEntry(hole):
+            case let .HoleEntry(hole, _, _):
                 return UInt64(hole.stableId) | ((UInt64(1) << 40))
-            case let .MessageEntry(message, _, _):
+            case let .MessageEntry(message, _, _, _, _):
                 return UInt64(message.stableId) | ((UInt64(2) << 40))
             case .UnreadEntry:
                 return UInt64(3) << 40
@@ -25,11 +25,11 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     
     var index: MessageIndex {
         switch self {
-            case let .HoleEntry(hole):
+            case let .HoleEntry(hole, _, _):
                 return hole.maxIndex
-            case let .MessageEntry(message, _, _):
+            case let .MessageEntry(message, _, _, _, _):
                 return MessageIndex(message)
-            case let .UnreadEntry(index):
+            case let .UnreadEntry(index, _, _):
                 return index
             case .ChatInfoEntry:
                 return MessageIndex.absoluteLowerBound()
@@ -41,16 +41,21 @@ enum ChatHistoryEntry: Identifiable, Comparable {
 
 func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
     switch lhs {
-        case let .HoleEntry(lhsHole):
-            switch rhs {
-                case let .HoleEntry(rhsHole) where lhsHole == rhsHole:
-                    return true
-                default:
-                    return false
+        case let .HoleEntry(lhsHole, lhsTheme, lhsStrings):
+            if case let .HoleEntry(rhsHole, rhsTheme, rhsStrings) = rhs, lhsHole == rhsHole, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                return true
+            } else {
+                return false
             }
-        case let .MessageEntry(lhsMessage, lhsRead, _):
+        case let .MessageEntry(lhsMessage, lhsTheme, lhsStrings, lhsRead, _):
             switch rhs {
-                case let .MessageEntry(rhsMessage, rhsRead, _) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
+                case let .MessageEntry(rhsMessage, rhsTheme, rhsStrings, rhsRead, _) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
+                        return false
+                    }
                     if lhsMessage.stableVersion != rhsMessage.stableVersion {
                         return false
                     }
@@ -78,21 +83,20 @@ func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
                 default:
                     return false
             }
-        case let .UnreadEntry(lhsIndex):
-            switch rhs {
-                case let .UnreadEntry(rhsIndex) where lhsIndex == rhsIndex:
-                    return true
-                default:
-                    return false
-            }
-        case let .ChatInfoEntry(text):
-            if case .ChatInfoEntry(text) = rhs {
+        case let .UnreadEntry(lhsIndex, lhsTheme, lhsStrings):
+            if case let .UnreadEntry(rhsIndex, rhsTheme, rhsStrings) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                 return true
             } else {
                 return false
             }
-        case .EmptyChatInfoEntry:
-            if case .EmptyChatInfoEntry = rhs {
+        case let .ChatInfoEntry(lhsText, lhsTheme, lhsStrings):
+            if case let .ChatInfoEntry(rhsText, rhsTheme, rhsStrings) = rhs, lhsText == rhsText, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                return true
+            } else {
+                return false
+            }
+        case let .EmptyChatInfoEntry(lhsTheme, lhsStrings):
+            if case let .EmptyChatInfoEntry(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                 return true
             } else {
                 return false

@@ -1,11 +1,6 @@
 import UIKit
 import Display
 
-private let topLockedImage = generateTintedImage(image: UIImage(bundleImageName: "Chat List/LockLockedTop"), color: UIColor(0x007ee5))
-private let topUnlockedImage = UIImage(bundleImageName: "Chat List/LockUnlockedTop")?.preloaded()
-private let bottomLockedImage = generateTintedImage(image: UIImage(bundleImageName: "Chat List/LockLockedBottom"), color: UIColor(0x007ee5))
-private let bottomUnlockedImage = UIImage(bundleImageName: "Chat List/LockUnlockedBottom")?.preloaded()
-
 final class ChatListTitleLockView: UIView {
     private let topView: UIImageView
     private let bottomView: UIImageView
@@ -26,7 +21,7 @@ final class ChatListTitleLockView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func setIsLocked(_ isLocked: Bool, animated: Bool) {
+    func setIsLocked( _ isLocked: Bool, theme: PresentationTheme, animated: Bool) {
         self.isLocked = isLocked
         if animated {
             let topViewCopy = UIImageView(image: self.topView.image)
@@ -37,8 +32,8 @@ final class ChatListTitleLockView: UIView {
             bottomViewCopy.frame = self.bottomView.frame
             self.addSubview(bottomViewCopy)
             
-            self.topView.image = self.isLocked ? topLockedImage : topUnlockedImage
-            self.bottomView.image = self.isLocked ? bottomLockedImage : bottomUnlockedImage
+            self.topView.image = self.isLocked ? PresentationResourcesChatList.lockTopLockedImage(theme) : PresentationResourcesChatList.lockTopUnlockedImage(theme)
+            self.bottomView.image = self.isLocked ? PresentationResourcesChatList.lockBottomLockedImage(theme) : PresentationResourcesChatList.lockBottomUnlockedImage(theme)
             
             self.topView.alpha = 0.5
             self.bottomView.alpha = 0.5
@@ -64,8 +59,8 @@ final class ChatListTitleLockView: UIView {
                 bottomViewCopy.removeFromSuperview()
             })
         } else {
-            self.topView.image = self.isLocked ? topLockedImage : topUnlockedImage
-            self.bottomView.image = self.isLocked ? bottomLockedImage : bottomUnlockedImage
+            self.topView.image = self.isLocked ? PresentationResourcesChatList.lockTopLockedImage(theme) : PresentationResourcesChatList.lockTopUnlockedImage(theme)
+            self.bottomView.image = self.isLocked ? PresentationResourcesChatList.lockBottomLockedImage(theme) : PresentationResourcesChatList.lockBottomUnlockedImage(theme)
             self.layoutItems()
         }
     }

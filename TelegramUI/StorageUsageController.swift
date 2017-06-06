@@ -22,12 +22,12 @@ private enum StorageUsageSection: Int32 {
 }
 
 private enum StorageUsageEntry: ItemListNodeEntry {
-    case keepMedia(String, String)
-    case keepMediaInfo(String)
+    case keepMedia(PresentationTheme, String, String)
+    case keepMediaInfo(PresentationTheme, String)
     
-    case collecting(String)
-    case peersHeader(String)
-    case peer(Int32, Peer, String)
+    case collecting(PresentationTheme, String)
+    case peersHeader(PresentationTheme, String)
+    case peer(Int32, PresentationTheme, PresentationStrings, Peer, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -48,40 +48,46 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return 2
             case .peersHeader:
                 return 3
-            case let .peer(index, _, _):
+            case let .peer(index, _, _, _, _):
                 return 4 + index
         }
     }
     
     static func ==(lhs: StorageUsageEntry, rhs: StorageUsageEntry) -> Bool {
         switch lhs {
-            case let .keepMedia(text, value):
-                if case .keepMedia(text, value) = rhs {
+            case let .keepMedia(lhsTheme, lhsText, lhsValue):
+                if case let .keepMedia(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .keepMediaInfo(text):
-                if case .keepMediaInfo(text) = rhs {
+            case let .keepMediaInfo(lhsTheme, lhsText):
+                if case let .keepMediaInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .collecting(text):
-                if case .collecting(text) = rhs {
+            case let .collecting(lhsTheme, lhsText):
+                if case let .collecting(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .peersHeader(text):
-                if case .peersHeader(text) = rhs {
+            case let .peersHeader(lhsTheme, lhsText):
+                if case let .peersHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsValue):
-                if case let .peer(rhsIndex, rhsPeer, rhsValue) = rhs {
+            case let .peer(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsValue):
+                if case let .peer(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsValue) = rhs {
                     if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
                         return false
                     }
                     if !arePeersEqual(lhsPeer, rhsPeer) {
@@ -103,18 +109,18 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     
     func item(_ arguments: StorageUsageControllerArguments) -> ListViewItem {
         switch self {
-            case let .keepMedia(text, value):
-                return ItemListDisclosureItem(title: text, label: value, sectionId: self.section, style: .blocks, action: {
+            case let .keepMedia(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.updateKeepMedia()
                 })
-            case let .keepMediaInfo(text):
-                return ItemListTextItem(text: .markdown(text), sectionId: self.section)
-            case let .collecting(text):
-                return ItemListActivityTextItem(displayActivity: true, text: NSAttributedString(string: text, textColor: UIColor(0x6d6d72)), sectionId: self.section)
-            case let .peersHeader(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .peer(_, peer, value):
-                return ItemListPeerItem(account: arguments.account, peer: peer, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
+            case let .keepMediaInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
+            case let .collecting(theme, text):
+                return ItemListActivityTextItem(displayActivity: true, text: NSAttributedString(string: text, textColor: theme.list.freeTextColor), sectionId: self.section)
+            case let .peersHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .peer(_, theme, strings, peer, value):
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
                     arguments.openPeerMedia(peer.id)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     
@@ -135,11 +141,11 @@ private func stringForKeepMediaTimeout(_ timeout: Int32) -> String {
     }
 }
 
-private func storageUsageControllerEntries(cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?) -> [StorageUsageEntry] {
+private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?) -> [StorageUsageEntry] {
     var entries: [StorageUsageEntry] = []
     
-    entries.append(.keepMedia("Keep Media", stringForKeepMediaTimeout(cacheSettings.defaultCacheStorageTimeout)))
-    entries.append(.keepMediaInfo("Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.\n\nAll media will stay in the Telegram cloud and can be re-downloaded if you need it again."))
+    entries.append(.keepMedia(presentationData.theme, "Keep Media", stringForKeepMediaTimeout(cacheSettings.defaultCacheStorageTimeout)))
+    entries.append(.keepMediaInfo(presentationData.theme, "Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.\n\nAll media will stay in the Telegram cloud and can be re-downloaded if you need it again."))
     
     var addedHeader = false
     
@@ -160,15 +166,15 @@ private func storageUsageControllerEntries(cacheSettings: CacheStorageSettings, 
                 if let peer = stats.peers[peerId] {
                     if !addedHeader {
                         addedHeader = true
-                        entries.append(.peersHeader("CHATS"))
+                        entries.append(.peersHeader(presentationData.theme, "CHATS"))
                     }
-                    entries.append(.peer(index, peer, dataSizeString(Int(size))))
+                    entries.append(.peer(index, presentationData.theme, presentationData.strings, peer, dataSizeString(Int(size))))
                     index += 1
                 }
             }
         }
     } else {
-        entries.append(.collecting("Calculating current cache size..."))
+        entries.append(.collecting(presentationData.theme, "Calculating current cache size..."))
     }
     
     return entries
@@ -355,20 +361,18 @@ func storageUsageController(account: Account) -> ViewController {
         })
     })
     
-    let signal = combineLatest(cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
-        |> map { cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState<StorageUsageEntry>, StorageUsageEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState<StorageUsageEntry>, StorageUsageEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(title: .text("Storage Usage"), leftNavigationButton: nil, rightNavigationButton: nil, animateChanges: false)
-            let listState = ItemListNodeState(entries: storageUsageControllerEntries(cacheSettings: cacheSettings, cacheStats: cacheStats), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Storage Usage"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let listState = ItemListNodeState(entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, cacheStats: cacheStats), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionDisposables.dispose()
         }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
-    
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }

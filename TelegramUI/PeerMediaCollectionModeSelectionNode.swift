@@ -2,9 +2,9 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let checkmarkImage = generateTintedImage(image: UIImage(bundleImageName: "List Menu/Checkmark")?.precomposed(), color: UIColor(0x007ee5))
-
 private final class PeerMediaCollectionModeSelectionCaseNode: ASDisplayNode {
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
     fileprivate let mode: PeerMediaCollectionMode
     private let selected: () -> Void
     
@@ -17,23 +17,25 @@ private final class PeerMediaCollectionModeSelectionCaseNode: ASDisplayNode {
     var isSelected = false {
         didSet {
             if self.isSelected != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(self.mode), font: Font.regular(17.0), textColor: isSelected ? UIColor(0x007ee5) : UIColor.black)
+                self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(self.mode, strings: self.strings), font: Font.regular(17.0), textColor: isSelected ? self.theme.list.itemAccentColor : self.theme.list.itemPrimaryTextColor)
                 self.checkmarkView.isHidden = !self.isSelected
             }
         }
     }
     
-    init(mode: PeerMediaCollectionMode, selected: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, mode: PeerMediaCollectionMode, selected: @escaping () -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.mode = mode
         self.selected = selected
         
         self.button = HighlightTrackingButton()
         
         self.selectionBackgroundNode = ASDisplayNode()
-        self.selectionBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
+        self.selectionBackgroundNode.backgroundColor = self.theme.list.itemHighlightedBackgroundColor
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
+        self.separatorNode.backgroundColor = self.theme.list.itemSeparatorColor
         
         self.titleNode = ASTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -41,7 +43,7 @@ private final class PeerMediaCollectionModeSelectionCaseNode: ASDisplayNode {
         self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         
-        self.checkmarkView = UIImageView(image: checkmarkImage)
+        self.checkmarkView = UIImageView(image: PresentationResourcesItemList.checkIconImage(self.theme))
         
         super.init()
         
@@ -50,7 +52,7 @@ private final class PeerMediaCollectionModeSelectionCaseNode: ASDisplayNode {
         self.selectionBackgroundNode.alpha = 0.0
         self.addSubnode(self.selectionBackgroundNode)
         
-        self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(mode), font: Font.regular(17.0), textColor: UIColor.black)
+        self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(mode, strings: self.strings), font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor)
         self.addSubnode(self.titleNode)
         
         self.checkmarkView.isHidden = true
@@ -100,7 +102,7 @@ final class PeerMediaCollectionModeSelectionNode: ASDisplayNode {
     var selectedMode: ((PeerMediaCollectionMode) -> Void)?
     var dismiss: (() -> Void)?
     
-    var mediaCollectionInterfaceState = PeerMediaCollectionInterfaceState() {
+    var mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState {
         didSet {
             for caseNode in self.caseNodes {
                 caseNode.isSelected = self.mediaCollectionInterfaceState.mode == caseNode.mode
@@ -108,12 +110,14 @@ final class PeerMediaCollectionModeSelectionNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    init(mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState) {
+        self.mediaCollectionInterfaceState = mediaCollectionInterfaceState
+        
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
         
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = UIColor.white
+        self.backgroundNode.backgroundColor = self.mediaCollectionInterfaceState.theme.list.itemBackgroundColor
     
         super.init()
         
@@ -124,7 +128,7 @@ final class PeerMediaCollectionModeSelectionNode: ASDisplayNode {
             }
         }
         self.caseNodes = modes.map { mode in
-            return PeerMediaCollectionModeSelectionCaseNode(mode: mode, selected: {
+            return PeerMediaCollectionModeSelectionCaseNode(theme: self.mediaCollectionInterfaceState.theme, strings: self.mediaCollectionInterfaceState.strings, mode: mode, selected: {
                 selected(mode)
             })
         }

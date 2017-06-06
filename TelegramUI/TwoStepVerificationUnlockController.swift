@@ -46,18 +46,18 @@ private enum TwoStepVerificationUnlockSettingsEntryTag: ItemListItemTag {
 }
 
 private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
-    case passwordEntry(String)
-    case passwordEntryInfo(String)
+    case passwordEntry(PresentationTheme, String, String)
+    case passwordEntryInfo(PresentationTheme, String)
     
-    case passwordSetup
-    case passwordSetupInfo(String)
+    case passwordSetup(PresentationTheme, String)
+    case passwordSetupInfo(PresentationTheme, String)
     
-    case changePassword
-    case turnPasswordOff
-    case setupRecoveryEmail(Bool)
-    case passwordInfo(String)
+    case changePassword(PresentationTheme, String)
+    case turnPasswordOff(PresentationTheme, String)
+    case setupRecoveryEmail(PresentationTheme, String)
+    case passwordInfo(PresentationTheme, String)
     
-    case pendingEmailInfo(String)
+    case pendingEmailInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         return TwoStepVerificationUnlockSettingsSection.password.rawValue
@@ -88,44 +88,60 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
     
     static func ==(lhs: TwoStepVerificationUnlockSettingsEntry, rhs: TwoStepVerificationUnlockSettingsEntry) -> Bool {
         switch lhs {
-            case let .passwordEntry(text):
-                if case .passwordEntry(text) = rhs {
+            case let .passwordEntry(lhsTheme, lhsText, lhsValue):
+                if case let .passwordEntry(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .passwordEntryInfo(text):
-                if case .passwordEntryInfo(text) = rhs {
+            case let .passwordEntryInfo(lhsTheme, lhsText):
+                if case let .passwordEntryInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .passwordSetupInfo(text):
-                if case .passwordSetupInfo(text) = rhs {
+            case let .passwordSetupInfo(lhsTheme, lhsText):
+                if case let .passwordSetupInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .setupRecoveryEmail(exists):
-                if case .setupRecoveryEmail(exists) = rhs {
+            case let .setupRecoveryEmail(lhsTheme, lhsText):
+                if case let .setupRecoveryEmail(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .passwordInfo(text):
-                if case .passwordInfo(text) = rhs {
+            case let .passwordInfo(lhsTheme, lhsText):
+                if case let .passwordInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .pendingEmailInfo(text):
-                if case .pendingEmailInfo(text) = rhs {
+            case let .pendingEmailInfo(lhsTheme, lhsText):
+                if case let .pendingEmailInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case .passwordSetup, .changePassword, .turnPasswordOff:
-                return lhs.stableId == rhs.stableId
+            case let .passwordSetup(lhsTheme, lhsText):
+                if case let .passwordSetup(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .changePassword(lhsTheme, lhsText):
+                if case let .changePassword(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .turnPasswordOff(lhsTheme, lhsText):
+                if case let .turnPasswordOff(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -135,49 +151,43 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
     
     func item(_ arguments: TwoStepVerificationUnlockSettingsControllerArguments) -> ListViewItem {
         switch self {
-            case let .passwordEntry(text):
-                return ItemListSingleLineInputItem(title: NSAttributedString(string: "Password", textColor: .black), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationUnlockSettingsEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
+            case let .passwordEntry(theme, text, value):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: text, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationUnlockSettingsEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePasswordText(updatedText)
                 }, action: {
                 })
-            case let .passwordEntryInfo(text):
-                return ItemListTextItem(text: .markdown(text), sectionId: self.section, linkAction: { action in
+            case let .passwordEntryInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
                     switch action {
                         case .tap:
                             arguments.openForgotPassword()
                     }
                 })
-            case .passwordSetup:
-                return ItemListActionItem(title: "Set Additional Password", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .passwordSetup(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.openSetupPassword()
                 })
-            case let .passwordSetupInfo(text):
-                return ItemListTextItem(text: .markdown(text), sectionId: self.section)
-            case .changePassword:
-                return ItemListActionItem(title: "Change Password", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .passwordSetupInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
+            case let .changePassword(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.openSetupPassword()
                 })
-            case .turnPasswordOff:
-                return ItemListActionItem(title: "Turn Password Off", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .turnPasswordOff(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.openDisablePassword()
                 })
-            case let .setupRecoveryEmail(exists):
-                let title: String
-                if exists {
-                    title = "Change Recovery E-Mail"
-                } else {
-                    title = "Set Recovery E-Mail"
-                }
-                return ItemListActionItem(title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .setupRecoveryEmail(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.openSetupEmail()
                 })
-            case let .passwordInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
-            case let .pendingEmailInfo(text):
-                return ItemListTextItem(text: .markdown(text), sectionId: self.section, linkAction: { action in
+            case let .passwordInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .pendingEmailInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
                     switch action {
-                    case .tap:
-                        arguments.openResetPendingEmail()
+                        case .tap:
+                            arguments.openResetPendingEmail()
                     }
                 })
         }
@@ -213,37 +223,37 @@ private struct TwoStepVerificationUnlockSettingsControllerState: Equatable {
     }
 }
 
-private func twoStepVerificationUnlockSettingsControllerEntries(state: TwoStepVerificationUnlockSettingsControllerState,data: TwoStepVerificationUnlockSettingsControllerData) -> [TwoStepVerificationUnlockSettingsEntry] {
+private func twoStepVerificationUnlockSettingsControllerEntries(presentationData: PresentationData, state: TwoStepVerificationUnlockSettingsControllerState,data: TwoStepVerificationUnlockSettingsControllerData) -> [TwoStepVerificationUnlockSettingsEntry] {
     var entries: [TwoStepVerificationUnlockSettingsEntry] = []
     
     switch data {
         case let .access(configuration):
             if let configuration = configuration {
                 switch configuration {
-                case let .notSet(pendingEmailPattern):
-                    if pendingEmailPattern.isEmpty {
-                        entries.append(.passwordSetup)
-                        entries.append(.passwordSetupInfo("You can set a password that will be required when you log in on a new device in addition to the code you cat in the SMS."))
-                    } else {
-                        entries.append(.pendingEmailInfo("Please check your e-mail and click on the validation link to complete Two-Step verification setup. Be sure to check the spam folder as well.\n\n\(pendingEmailPattern)\n\n[Abort Two-Step Verification Setup]()"))
-                    }
-                case let .set(hint, _, _):
-                    entries.append(.passwordEntry(state.passwordText))
-                    if hint.isEmpty {
-                        entries.append(.passwordEntryInfo("You have enabled Two-Step verification, so your account is protected with an additional password.\n\n[Forgot password?](forgot)"))
-                    } else {
-                        entries.append(.passwordEntryInfo("hint: \(escapedPlaintextForMarkdown(hint))\n\nYou have enabled Two-Step verification, so your account is protected with an additional password.\n\n[Forgot password?](forgot)"))
-                    }
+                    case let .notSet(pendingEmailPattern):
+                        if pendingEmailPattern.isEmpty {
+                            entries.append(.passwordSetup(presentationData.theme, presentationData.strings.TwoStepAuth_SetPassword))
+                            entries.append(.passwordSetupInfo(presentationData.theme, presentationData.strings.TwoStepAuth_SetPasswordHelp))
+                        } else {
+                            entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmailPattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
+                        }
+                    case let .set(hint, _, _):
+                        entries.append(.passwordEntry(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordPassword, state.passwordText))
+                        if hint.isEmpty {
+                            entries.append(.passwordEntryInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordHelp + "\n\n[" + presentationData.strings.TwoStepAuth_EnterPasswordForgot + "](forgot)"))
+                        } else {
+                            entries.append(.passwordEntryInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordHint(escapedPlaintextForMarkdown(hint)).0 + "\n\n" + presentationData.strings.TwoStepAuth_EnterPasswordHelp + "\n\n[" + presentationData.strings.TwoStepAuth_EnterPasswordForgot + "](forgot)"))
+                        }
                 }
             }
         case let .manage(_, emailSet, pendingEmailPattern):
-            entries.append(.changePassword)
-            entries.append(.turnPasswordOff)
-            entries.append(.setupRecoveryEmail(emailSet))
+            entries.append(.changePassword(presentationData.theme, presentationData.strings.TwoStepAuth_ChangePassword))
+            entries.append(.turnPasswordOff(presentationData.theme, presentationData.strings.TwoStepAuth_RemovePassword))
+            entries.append(.setupRecoveryEmail(presentationData.theme, emailSet ? presentationData.strings.TwoStepAuth_ChangeEmail : presentationData.strings.TwoStepAuth_SetupEmail))
             if pendingEmailPattern.isEmpty {
-                entries.append(.passwordInfo("You have enabled Two-Step verification.\nYou'll need the password you set up here to log in to your Telegram account."))
+                entries.append(.passwordInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordHelp))
             } else {
-                entries.append(.passwordInfo("Your recovery e-mail \(pendingEmailPattern) is not yet active and pending confirmation."))
+                entries.append(.passwordInfo(presentationData.theme, presentationData.strings.TwoStepAuth_PendingEmailHelp(pendingEmailPattern).0))
             }
     }
     
@@ -442,15 +452,15 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
         }))
     })
     
-    let signal = combineLatest(statePromise.get(), dataPromise.get() |> deliverOnMainQueue) |> deliverOnMainQueue
-        |> map { state, data -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationUnlockSettingsEntry>, TwoStepVerificationUnlockSettingsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), dataPromise.get() |> deliverOnMainQueue) |> deliverOnMainQueue
+        |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationUnlockSettingsEntry>, TwoStepVerificationUnlockSettingsEntry.ItemGenerationArguments)) in
             
             var rightNavigationButton: ItemListNavigationButton?
             var emptyStateItem: ItemListControllerEmptyStateItem?
             let title: String
             switch data {
                 case let .access(configuration):
-                    title = "Password"
+                    title = presentationData.strings.TwoStepAuth_Title
                     if let configuration = configuration {
                         if state.checking {
                             rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
@@ -459,7 +469,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                 case .notSet:
                                     break
                                 case .set:
-                                    rightNavigationButton = ItemListNavigationButton(title: "Next", style: .bold, enabled: true, action: {
+                                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: true, action: {
                                         var wasChecking = false
                                         var password: String?
                                         updateState { state in
@@ -500,22 +510,21 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                         emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
                     }
                 case .manage:
-                    title = "Two-Step Verification"
+                    title = presentationData.strings.PrivacySettings_TwoStepAuth
                     if state.checking {
                         rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
                     }
             }
             
-            let controllerState = ItemListControllerState(title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
-            let listState = ItemListNodeState(entries: twoStepVerificationUnlockSettingsControllerEntries(state: state, data: data), style: .blocks, focusItemTag: TwoStepVerificationUnlockSettingsEntryTag.password, emptyStateItem: emptyStateItem, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: twoStepVerificationUnlockSettingsControllerEntries(presentationData: presentationData, state: state, data: data), style: .blocks, focusItemTag: TwoStepVerificationUnlockSettingsEntryTag.password, emptyStateItem: emptyStateItem, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     replaceControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: true)
     }

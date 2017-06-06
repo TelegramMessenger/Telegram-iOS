@@ -18,14 +18,18 @@ final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecog
         }
     }
     
+    private var presentationData: PresentationData
+    
     init(account: Account) {
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
         self.backgroundNode = ASDisplayNode()
-        self.headerNode = MediaNavigationAccessoryHeaderNode()
+        self.headerNode = MediaNavigationAccessoryHeaderNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.itemListNode = MediaNavigationAccessoryItemListNode(account: account)
         
         super.init()
         
-        self.backgroundNode.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
+        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
         self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.itemListNode)

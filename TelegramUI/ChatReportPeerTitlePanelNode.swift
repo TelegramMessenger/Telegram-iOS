@@ -6,7 +6,7 @@ import TelegramCore
 
 private let closeButtonImage = generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0x9099A2).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0x9099A2).cgColor)
     context.setLineWidth(2.0)
     context.setLineCap(.round)
     context.move(to: CGPoint(x: 1.0, y: 1.0))
@@ -51,7 +51,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         super.init()
         
-        self.backgroundColor = UIColor(0xF5F6F8)
+        self.backgroundColor = UIColor(rgb: 0xF5F6F8)
         
         self.addSubnode(self.separatorNode)
         
@@ -95,8 +95,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 let view = UIButton()
                 view.setTitle(button.title, for: [])
                 view.titleLabel?.font = Font.regular(16.0)
-                view.setTitleColor(UIColor(0x007ee5), for: [])
-                view.setTitleColor(UIColor(0x007ee5).withAlphaComponent(0.7), for: [.highlighted])
+                view.setTitleColor(UIColor(rgb: 0x007ee5), for: [])
+                view.setTitleColor(UIColor(rgb: 0x007ee5).withAlphaComponent(0.7), for: [.highlighted])
                 view.addTarget(self, action: #selector(self.buttonPressed(_:)), for: [.touchUpInside])
                 self.view.addSubview(view)
                 self.buttons.append((button, view))

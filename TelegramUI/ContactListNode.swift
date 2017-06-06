@@ -72,10 +72,10 @@ private final class ContactListNodeInteraction {
 }
 
 private enum ContactListNodeEntry: Comparable, Identifiable {
-    case search
-    case vcard(Peer)
-    case option(Int, ContactListAdditionalOption)
-    case peer(Int, Peer, PeerPresence?, ContactListNameIndexHeader?, ContactsPeerItemSelection)
+    case search(PresentationTheme, PresentationStrings)
+    case vcard(Peer, PresentationTheme, PresentationStrings)
+    case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
+    case peer(Int, Peer, PeerPresence?, ContactListNameIndexHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
     
     var stableId: ContactListNodeEntryId {
         switch self {
@@ -83,33 +83,33 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return .search
             case .vcard:
                 return .vcard
-            case let .option(index, _):
+            case let .option(index, _, _, _):
                 return .option(index: index)
-            case let .peer(_, peer, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _):
                 return .peerId(peer.id.toInt64())
         }
     }
     
     func item(account: Account, interaction: ContactListNodeInteraction) -> ListViewItem {
         switch self {
-            case .search:
-                return ChatListSearchItem(placeholder: "Search contacts", activate: {
+            case let .search(theme, strings):
+                return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     interaction.activateSearch()
                 })
-            case let .vcard(peer):
-                return ContactsVCardItem(account: account, peer: peer, action: { peer in
+            case let .vcard(peer, theme, strings):
+                return ContactsVCardItem(theme: theme, strings: strings, account: account, peer: peer, action: { peer in
                     interaction.openPeer(peer)
                 })
-            case let .option(_, option):
-                return ContactListActionItem(title: option.title, icon: option.icon, action: option.action)
-            case let .peer(_, peer, presence, header, selection):
+            case let .option(_, option, theme, strings):
+                return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
+            case let .peer(_, peer, presence, header, selection, theme, strings):
                 let status: ContactsPeerItemStatus
                 if let presence = presence {
                     status = .presence(presence)
                 } else {
                     status = .none
                 }
-                return ContactsPeerItem(account: account, peer: peer, chatPeer: peer, status: status, selection: selection, index: nil, header: header, action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: status, selection: selection, index: nil, header: header, action: { _ in
                     interaction.openPeer(peer)
                 })
         }
@@ -117,29 +117,27 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
 
     static func ==(lhs: ContactListNodeEntry, rhs: ContactListNodeEntry) -> Bool {
         switch lhs {
-            case .search:
-                switch rhs {
-                    case .search:
-                        return true
-                    default:
-                        return false
-                }
-            case let .vcard(lhsPeer):
-                switch rhs {
-                    case let .vcard(rhsPeer):
-                        return lhsPeer.id == rhsPeer.id
-                    default:
-                        return false
-                }
-            case let .option(index, option):
-                if case .option(index, option) = rhs {
+            case let .search(lhsTheme, lhsStrings):
+                if case let .search(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection):
+            case let .vcard(lhsPeer, lhsTheme, lhsStrings):
+                if case let .vcard(rhsPeer, rhsTheme, rhsStrings) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                    return true
+                } else {
+                    return false
+                }
+            case let .option(lhsIndex, lhsOption, lhsTheme, lhsStrings):
+                if case let .option(rhsIndex, rhsOption, rhsTheme, rhsStrings) = rhs, lhsIndex == rhsIndex, lhsOption == rhsOption, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                    return true
+                } else {
+                    return false
+                }
+            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings):
                 switch rhs {
-                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection):
+                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -157,6 +155,12 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                             return false
                         }
                         if lhsSelection != rhsSelection {
+                            return false
+                        }
+                        if lhsTheme !== rhsTheme {
+                            return false
+                        }
+                        if lhsStrings !== rhsStrings {
                             return false
                         }
                         return true
@@ -177,20 +181,20 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     case .peer, .option:
                         return true
                 }
-            case let .option(lhsIndex, _):
+            case let .option(lhsIndex, _, _, _):
                 switch rhs {
                     case .search, .vcard:
                         return false
-                    case let .option(rhsIndex, _):
+                    case let .option(rhsIndex, _, _, _):
                         return lhsIndex < rhsIndex
                     case .peer:
                         return true
                 }
-            case let .peer(lhsIndex, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _, _, _):
                 switch rhs {
                     case .search, .vcard, .option:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                 }
         }
@@ -233,7 +237,7 @@ private extension PeerIndexNameRepresentation {
     }
 }
 
-private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var orderedPeers: [Peer]
@@ -241,10 +245,10 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
     
     switch presentation {
         case let .orderedByPresence(displayVCard):
-            entries.append(.search)
+            entries.append(.search(theme, strings))
             if displayVCard {
                 if let peer = accountPeer {
-                    entries.append(.vcard(peer))
+                    entries.append(.vcard(peer, theme, strings))
                 }
             }
             orderedPeers = peers.sorted(by: { lhs, rhs in
@@ -291,16 +295,16 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
                 if let cached = headerCache[indexHeader] {
                     header = cached
                 } else {
-                    header = ContactListNameIndexHeader(letter: indexHeader)
+                    header = ContactListNameIndexHeader(theme: theme, letter: indexHeader)
                     headerCache[indexHeader] = header
                 }
                 headers[peer.id] = header
             }
             if displaySearch {
-                entries.append(.search)
+                entries.append(.search(theme, strings))
             }
             for i in 0 ..< options.count {
-                entries.append(.option(i, options[i]))
+                entries.append(.option(i, options[i], theme, strings))
             }
         case .search:
             orderedPeers = peers
@@ -332,7 +336,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
         } else {
             selection = .none
         }
-        entries.append(.peer(i, orderedPeers[i], presences[orderedPeers[i].id], headers[orderedPeers[i].id], selection))
+        entries.append(.peer(i, orderedPeers[i], presences[orderedPeers[i].id], headers[orderedPeers[i].id], selection, theme, strings))
     }
     return entries
 }
@@ -415,8 +419,7 @@ final class ContactListNode: ASDisplayNode {
     }
     private var didSetReady = false
     
-    private var enableUpdatesValue = true
-    private let enableUpdatesPromise = ValuePromise<Bool>(true, ignoreRepeated: true)
+    private let contactPeersViewPromise = Promise<ContactPeersView>()
     
     private let selectionStatePromise = Promise<ContactListNodeGroupSelectionState?>(nil)
     private var selectionStateValue: ContactListNodeGroupSelectionState? {
@@ -425,12 +428,19 @@ final class ContactListNode: ASDisplayNode {
         }
     }
     
+    private var enableUpdatesValue = false
     var enableUpdates: Bool {
         get {
             return self.enableUpdatesValue
         } set(value) {
-            self.enableUpdatesValue = value
-            self.enableUpdatesPromise.set(value)
+            if value != self.enableUpdatesValue {
+                self.enableUpdatesValue = value
+                if value {
+                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId))
+                } else {
+                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId) |> take(1))
+                }
+            }
         }
     }
     
@@ -440,12 +450,22 @@ final class ContactListNode: ASDisplayNode {
     private let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
     private let disposable = MetaDisposable()
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
+    
     init(account: Account, presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
         
         self.listNode = ListView()
         
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
+        
         super.init()
+        
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.selectionStateValue = selectionState
         self.selectionStatePromise.set(.single(selectionState))
@@ -465,13 +485,14 @@ final class ContactListNode: ASDisplayNode {
         var firstTime: Int32 = 1
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<ContactsListNodeTransition, NoError>
+        let themeAndStringsPromise = self.themeAndStringsPromise
         if case let .search(query) = presentation {
             transition = query
                 |> mapToSignal { query in
-                    return combineLatest(account.postbox.searchContacts(query: query), selectionStateSignal)
-                        |> mapToQueue { peers, selectionState -> Signal<ContactsListNodeTransition, NoError> in
+                    return combineLatest(account.postbox.searchContacts(query: query), selectionStateSignal, themeAndStringsPromise.get())
+                        |> mapToQueue { peers, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
                             let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
-                                let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState)
+                                let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
                                 let previous = previousEntries.swap(entries)
                                 return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
                             }
@@ -484,41 +505,53 @@ final class ContactListNode: ASDisplayNode {
                         }
                 }
         } else {
-            transition = self.enableUpdatesPromise.get()
-                |> mapToSignal { enableUpdates -> Signal<ContactsListNodeTransition, NoError> in
-                    if enableUpdates {
-                        return combineLatest(account.postbox.contactPeersView(accountPeerId: account.peerId), selectionStateSignal)
-                        |> mapToQueue { view, selectionState -> Signal<ContactsListNodeTransition, NoError> in
-                            let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
-                                let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: view.peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState)
-                                let previous = previousEntries.swap(entries)
-                                let animated: Bool
-                                if let previous = previous {
-                                    animated = (entries.count - previous.count) < 20
-                                } else {
-                                    animated = false
-                                }
-                                return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: animated))
-                            }
-                    
-                            if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
-                                return signal |> runOn(Queue.mainQueue())
-                            } else {
-                                return signal |> runOn(processingQueue)
-                            }
+            transition = (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get())
+                |> mapToQueue { view, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
+                    let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
+                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: view.peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
+                        let previous = previousEntries.swap(entries)
+                        let animated: Bool
+                        if let previous = previous {
+                            animated = (entries.count - previous.count) < 20
+                        } else {
+                            animated = false
                         }
-                    } else {
-                        return .never()
+                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: animated))
                     }
-            } |> deliverOnMainQueue
+            
+                    if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
+                        return signal |> runOn(Queue.mainQueue())
+                    } else {
+                        return signal |> runOn(processingQueue)
+                    }
+                })
+                |> deliverOnMainQueue
         }
         self.disposable.set(transition.start(next: { [weak self] transition in
             self?.enqueueTransition(transition)
         }))
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.backgroundColor = presentationData.theme.chatList.backgroundColor
+                        strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings)))
+                    }
+                }
+            })
+        
+        self.enableUpdates = true
     }
     
     deinit {
         self.disposable.dispose()
+        self.presentationDataDisposable?.dispose()
     }
     
     func updateSelectionState(_ f: (ContactListNodeGroupSelectionState?) -> ContactListNodeGroupSelectionState?) {

@@ -62,12 +62,19 @@ final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
                         for attribute in file.attributes {
-                            if case let .Audio(isVoice, duration, title, performer, _) = attribute {
-                                if isVoice {
-                                    return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .voice)
-                                } else {
-                                    return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .music(title: title, performer: performer))
-                                }
+                            switch attribute {
+                                case let .Audio(isVoice, duration, title, performer, _):
+                                    if isVoice {
+                                        return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .voice)
+                                    } else {
+                                        return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .music(title: title, performer: performer))
+                                    }
+                                case let .Video(duration, _, flags):
+                                    if flags.contains(.instantRoundVideo) {
+                                        return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .video)
+                                    }
+                                default:
+                                    break
                             }
                         }
                         return nil
@@ -120,10 +127,23 @@ func peerMessageHistoryAudioPlaylist(account: Account, messageId: MessageId) -> 
                 case let .MessageEntry(message, _, _, _):
                     for media in message.media {
                         if let file = media as? TelegramMediaFile {
-                            if file.isVoice {
-                                tagMask = .VoiceOrInstantVideo
-                            } else {
-                                tagMask = .Music
+                            inner: for attribute in file.attributes {
+                                switch attribute {
+                                    case let .Video(_, _, flags):
+                                        if flags.contains(.instantRoundVideo) {
+                                            tagMask = .VoiceOrInstantVideo
+                                            break inner
+                                        }
+                                    case let .Audio(isVoice, _, _, _, _):
+                                        if isVoice {
+                                            tagMask = .VoiceOrInstantVideo
+                                        } else {
+                                            tagMask = .Music
+                                        }
+                                        break inner
+                                    default:
+                                        break
+                                }
                             }
                             break
                         }

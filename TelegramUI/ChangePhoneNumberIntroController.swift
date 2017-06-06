@@ -4,6 +4,8 @@ import AsyncDisplayKit
 import TelegramCore
 
 private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
+    var presentationData: PresentationData
+    
     let iconNode: ASImageNode
     let labelNode: ASTextNode
     let buttonNode: HighlightableButtonNode
@@ -11,7 +13,9 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
     var dismiss: (() -> Void)?
     var action: (() -> Void)?
     
-    override init() {
+    init(presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
         self.iconNode = ASImageNode()
         self.labelNode = ASTextNode()
         self.buttonNode = HighlightableButtonNode()
@@ -20,16 +24,17 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.iconNode.image = UIImage(bundleImageName: "Settings/ChangePhoneIntroIcon")?.precomposed()
-        self.labelNode.attributedText = NSAttributedString(string: "You can change your Telegram number here. Your account and all your cloud data — messages, media, contacts, etc. will be moved to the new number.\n\nImportant: all your Telegram contacts will get your new number added to their address book, provided they had your old number and you haven't blocked them in Telegram.", font: Font.regular(14.0), textColor: UIColor(0x6d6d72), paragraphAlignment: .center)
-        self.buttonNode.setTitle("Change Number", with: Font.regular(19.0), with: UIColor(0x007ee5), for: .normal)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Settings/ChangePhoneIntroIcon"), color: presentationData.theme.list.freeTextColor)
+        let textColor = self.presentationData.theme.list.freeTextColor
+        self.labelNode.attributedText = parseMarkdownIntoAttributedString(self.presentationData.strings.PhoneNumberHelp_Help, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(14.0), textColor: textColor), bold: MarkdownAttributeSet(font: Font.semibold(14.0), textColor: textColor), link: MarkdownAttributeSet(font: Font.regular(14.0), textColor: textColor), linkAttribute: { _ in return nil }), textAlignment: .center)
+        self.buttonNode.setTitle(self.presentationData.strings.PhoneNumberHelp_ChangeNumber, with: Font.regular(19.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.buttonNode)
         
-        self.backgroundColor = UIColor(0xefeff4)
+        self.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
     }
     
     func animateIn() {
@@ -72,13 +77,19 @@ final class ChangePhoneNumberIntroController: ViewController {
     private let account: Account
     private var didPlayPresentationAnimation = false
     
+    private var presentationData: PresentationData
+    
     init(account: Account, phoneNumber: String) {
         self.account = account
         
-        super.init(navigationBar: NavigationBar())
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.title = phoneNumber
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         //self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(self.cancelPressed))
     }
     
@@ -87,7 +98,7 @@ final class ChangePhoneNumberIntroController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChangePhoneNumberIntroControllerNode()
+        self.displayNode = ChangePhoneNumberIntroControllerNode(presentationData: self.presentationData)
         (self.displayNode as! ChangePhoneNumberIntroControllerNode).dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -117,7 +128,7 @@ final class ChangePhoneNumberIntroController: ViewController {
     }
     
     func proceed() {
-        self.present(standardTextAlertController(title: nil, text: "All your Telegram contacts will get your new number added to their address book, provided they had your old number and you haven't blocked them in Telegram.", actions: [TextAlertAction(type: .defaultAction, title: "Cancel", action: {}), TextAlertAction(type: .genericAction, title: "OK", action: { [weak self] in
+        self.present(standardTextAlertController(title: nil, text: self.presentationData.strings.PhoneNumberHelp_Alert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChangePhoneNumberController(account: strongSelf.account), animated: true)
             }

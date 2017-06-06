@@ -7,10 +7,12 @@ private let controlCharactersSet = CharacterSet(charactersIn: "[]()*_-\\")
 final class MarkdownAttributeSet {
     let font: UIFont
     let textColor: UIColor
+    let additionalAttributes: [String: Any]
     
-    init(font: UIFont, textColor: UIColor) {
+    init(font: UIFont, textColor: UIColor, additionalAttributes: [String: Any] = [:]) {
         self.font = font
         self.textColor = textColor
+        self.additionalAttributes = additionalAttributes
     }
 }
 
@@ -46,12 +48,23 @@ func escapedPlaintextForMarkdown(_ string: String) -> String {
     return result as String
 }
 
-func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAttributes) -> NSAttributedString {
+func paragraphStyleWithAlignment(_ alignment: NSTextAlignment) -> NSParagraphStyle {
+    let paragraphStyle = NSMutableParagraphStyle()
+    paragraphStyle.alignment = alignment
+    return paragraphStyle
+}
+
+func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAttributes, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
     let nsString = string as NSString
     let result = NSMutableAttributedString()
     var remainingRange = NSMakeRange(0, nsString.length)
     
-    let bodyAttributes: [String: Any] = [NSFontAttributeName: attributes.body.font, NSForegroundColorAttributeName: attributes.body.textColor]
+    var bodyAttributes: [String: Any] = [NSFontAttributeName: attributes.body.font, NSForegroundColorAttributeName: attributes.body.textColor, NSParagraphStyleAttributeName: paragraphStyleWithAlignment(textAlignment)]
+    if !attributes.body.additionalAttributes.isEmpty {
+        for (key, value) in attributes.body.additionalAttributes {
+            bodyAttributes[key] = value
+        }
+    }
     
     while true {
         let range = nsString.rangeOfCharacter(from: controlStartCharactersSet, options: [], range: remainingRange)
@@ -65,7 +78,12 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
             if character == UInt16(("[" as UnicodeScalar).value) {
                 remainingRange = NSMakeRange(range.location + range.length, remainingRange.location + remainingRange.length - (range.location + range.length))
                 if let (parsedLinkText, parsedLinkContents) = parseLink(string: nsString, remainingRange: &remainingRange) {
-                    var linkAttributes: [String: Any] = [NSFontAttributeName: attributes.link.font, NSForegroundColorAttributeName: attributes.link.textColor]
+                    var linkAttributes: [String: Any] = [NSFontAttributeName: attributes.link.font, NSForegroundColorAttributeName: attributes.link.textColor, NSParagraphStyleAttributeName: paragraphStyleWithAlignment(textAlignment)]
+                    if !attributes.body.additionalAttributes.isEmpty {
+                        for (key, value) in attributes.link.additionalAttributes {
+                            linkAttributes[key] = value
+                        }
+                    }
                     if let (attributeName, attributeValue) = attributes.linkAttribute(parsedLinkContents) {
                         linkAttributes[attributeName] = attributeValue
                     }
@@ -78,7 +96,12 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
                         remainingRange = NSMakeRange(range.location + range.length + 1, remainingRange.location + remainingRange.length - (range.location + range.length + 1))
                         
                         if let bold = parseBold(string: nsString, remainingRange: &remainingRange) {
-                            let boldAttributes: [String: Any] = [NSFontAttributeName: attributes.bold.font, NSForegroundColorAttributeName: attributes.bold.textColor]
+                            var boldAttributes: [String: Any] = [NSFontAttributeName: attributes.bold.font, NSForegroundColorAttributeName: attributes.bold.textColor, NSParagraphStyleAttributeName: paragraphStyleWithAlignment(textAlignment)]
+                            if !attributes.body.additionalAttributes.isEmpty {
+                                for (key, value) in attributes.bold.additionalAttributes {
+                                    boldAttributes[key] = value
+                                }
+                            }
                             result.append(NSAttributedString(string: bold, attributes: boldAttributes))
                         } else {
                             result.append(NSAttributedString(string: nsString.substring(with: NSMakeRange(remainingRange.location, 1)), attributes: bodyAttributes))

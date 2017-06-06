@@ -13,10 +13,9 @@ final class AuthorizationSequenceSplashController: ViewController {
     
     var nextPressed: (() -> Void)?
     
-    override init(navigationBar: NavigationBar = NavigationBar()) {
-        super.init(navigationBar: navigationBar)
+    init() {
+        super.init(navigationBarTheme: nil)
         
-        self.navigationBar.isHidden = true
         self.controller.startMessaging = { [weak self] in
             self?.nextPressed?()
         }

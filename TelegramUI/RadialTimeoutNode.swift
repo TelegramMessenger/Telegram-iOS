@@ -30,8 +30,8 @@ private final class RadialTimeoutNodeTimer: NSObject {
 }
 
 public final class RadialTimeoutNode: ASDisplayNode {
-    private let nodeBackgroundColor: UIColor
-    private let nodeForegroundColor: UIColor
+    private var nodeBackgroundColor: UIColor
+    private var nodeForegroundColor: UIColor
     
     private var timeout: (Double, Double)?
     
@@ -44,6 +44,13 @@ public final class RadialTimeoutNode: ASDisplayNode {
         super.init()
         
         self.isOpaque = false
+    }
+    
+    public func updateTheme(backgroundColor: UIColor, foregroundColor: UIColor) {
+        self.nodeBackgroundColor = backgroundColor
+        self.nodeForegroundColor = foregroundColor
+        
+        self.setNeedsDisplay()
     }
     
     deinit {

@@ -4,13 +4,15 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 class ItemListPeerActionItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let icon: UIImage?
     let title: String
     let editing: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(icon: UIImage?, title: String, sectionId: ItemListSectionId, editing: Bool, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, icon: UIImage?, title: String, sectionId: ItemListSectionId, editing: Bool, action: @escaping () -> Void) {
+        self.theme = theme
         self.icon = icon
         self.title = title
         self.editing = editing
@@ -73,17 +75,16 @@ class ItemListPeerActionItemNode: ListViewItemNode {
     private let iconNode: ASImageNode
     private let titleNode: TextNode
     
+    private var item: ItemListPeerActionItem?
+    
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.iconNode = ASImageNode()
@@ -97,7 +98,6 @@ class ItemListPeerActionItemNode: ListViewItemNode {
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -109,12 +109,19 @@ class ItemListPeerActionItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ItemListPeerActionItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
+        let currentItem = self.item
+        
         return { item, width, neighbors in
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
             let leftInset: CGFloat = 65.0
             
             let editingOffset: CGFloat = (item.editing ? 38.0 : 0.0)
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor), nil, 1, .end, CGSize(width: width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let separatorHeight = UIScreenPixel
             
@@ -126,7 +133,17 @@ class ItemListPeerActionItemNode: ListViewItemNode {
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
+                    
                     let _ = titleApply()
+                    
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {

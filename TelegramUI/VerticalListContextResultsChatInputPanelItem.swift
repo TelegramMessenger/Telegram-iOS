@@ -71,7 +71,7 @@ final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
 private let titleFont = Font.medium(16.0)
 private let textFont = Font.regular(15.0)
 private let iconFont = Font.medium(25.0)
-private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 2.0, color: UIColor(0xdfdfdf))
+private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 2.0, color: UIColor(rgb: 0xdfdfdf))
 
 final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     static let itemHeight: CGFloat = 75.0
@@ -92,15 +92,15 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         self.textNode = TextNode()
         
         self.topSeparatorNode = ASDisplayNode()
-        self.topSeparatorNode.backgroundColor = UIColor(0xC9CDD1)
+        self.topSeparatorNode.backgroundColor = UIColor(rgb: 0xC9CDD1)
         self.topSeparatorNode.isLayerBacked = true
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xD6D6DA)
+        self.separatorNode.backgroundColor = UIColor(rgb: 0xD6D6DA)
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
+        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.iconTextBackgroundNode = ASImageNode()
@@ -163,7 +163,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             }
             
             if let text = item.result.description {
-                textString = NSAttributedString(string: text, font: textFont, textColor: UIColor(0x8e8e93))
+                textString = NSAttributedString(string: text, font: textFont, textColor: UIColor(rgb: 0x8e8e93))
             }
             
             var imageResource: TelegramMediaResource?

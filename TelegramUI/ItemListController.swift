@@ -1,6 +1,7 @@
 import Foundation
 import Display
 import SwiftSignalKit
+import TelegramCore
 
 enum ItemListNavigationButtonStyle {
     case regular
@@ -24,6 +25,14 @@ struct ItemListNavigationButton {
     let action: () -> Void
 }
 
+struct ItemListBackButton: Equatable {
+    let title: String
+    
+    static func ==(lhs: ItemListBackButton, rhs: ItemListBackButton) -> Bool {
+        return lhs.title == rhs.title
+    }
+}
+
 enum ItemListControllerTitle: Equatable {
     case text(String)
     case sectionControl([String], Int)
@@ -37,7 +46,7 @@ enum ItemListControllerTitle: Equatable {
                     return false
                 }
             case let .sectionControl(lhsSection, lhsIndex):
-                if case let .sectionControl(rhsSection, rhsIndex) = rhs {
+                if case let .sectionControl(rhsSection, rhsIndex) = rhs, lhsSection == rhsSection, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -46,16 +55,38 @@ enum ItemListControllerTitle: Equatable {
     }
 }
 
+final class ItemListControllerTabBarItem: Equatable {
+    let title: String
+    let image: UIImage?
+    let selectedImage: UIImage?
+    
+    init(title: String, image: UIImage?, selectedImage: UIImage?) {
+        self.title = title
+        self.image = image
+        self.selectedImage = selectedImage
+    }
+    
+    static func ==(lhs: ItemListControllerTabBarItem, rhs: ItemListControllerTabBarItem) -> Bool {
+        return lhs.title == rhs.title && lhs.image === rhs.image && lhs.selectedImage === rhs.selectedImage
+    }
+}
+
 struct ItemListControllerState {
+    let theme: PresentationTheme
     let title: ItemListControllerTitle
     let leftNavigationButton: ItemListNavigationButton?
     let rightNavigationButton: ItemListNavigationButton?
+    let backNavigationButton: ItemListBackButton?
+    let tabBarItem: ItemListControllerTabBarItem?
     let animateChanges: Bool
     
-    init(title: ItemListControllerTitle, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, animateChanges: Bool = true) {
+    init(theme: PresentationTheme, title: ItemListControllerTitle, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, backNavigationButton: ItemListBackButton?, tabBarItem: ItemListControllerTabBarItem? = nil, animateChanges: Bool = true) {
+        self.theme = theme
         self.title = title
         self.leftNavigationButton = leftNavigationButton
         self.rightNavigationButton = rightNavigationButton
+        self.backNavigationButton = backNavigationButton
+        self.tabBarItem = tabBarItem
         self.animateChanges = animateChanges
     }
 }
@@ -65,12 +96,18 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     private var leftNavigationButtonTitleAndStyle: (String, ItemListNavigationButtonStyle)?
     private var rightNavigationButtonTitleAndStyle: (String, ItemListNavigationButtonStyle)?
+    private var backNavigationButton: ItemListBackButton?
+    private var tabBarItemInfo: ItemListControllerTabBarItem?
     private var navigationButtonActions: (left: (() -> Void)?, right: (() -> Void)?) = (nil, nil)
     private var segmentedTitleView: ItemListControllerSegmentedTitleView?
+    
+    private var theme: PresentationTheme
     
     private var didPlayPresentationAnimation = false
     
     var titleControlValueChanged: ((Int) -> Void)?
+    
+    private var tabBarItemDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -83,18 +120,40 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         }
     }
     
-    init(_ state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
+    init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
         self.state = state
         
-        super.init()
+        self.theme = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme
+        
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.theme))
+        
+        self.statusBar.statusBarStyle = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme.rootController.statusBar.style.style
         
         self.scrollToTop = { [weak self] in
             (self?.displayNode as! ItemListNode<Entry>).scrollToTop()
+        }
+        
+        if let tabBarItem = tabBarItem {
+            self.tabBarItemDisposable = (tabBarItem |> deliverOnMainQueue).start(next: { [weak self] tabBarItemInfo in
+                if let strongSelf = self {
+                    if strongSelf.tabBarItemInfo != tabBarItemInfo {
+                        strongSelf.tabBarItemInfo = tabBarItemInfo
+                        
+                        strongSelf.tabBarItem.title = tabBarItemInfo.title
+                        strongSelf.tabBarItem.image = tabBarItemInfo.image
+                        strongSelf.tabBarItem.selectedImage = tabBarItemInfo.selectedImage
+                    }
+                }
+            })
         }
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.tabBarItemDisposable?.dispose()
     }
     
     override func loadDisplayNode() {
@@ -114,7 +173,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                                 if let segmentedTitleView = strongSelf.segmentedTitleView, segmentedTitleView.segments == sections {
                                     segmentedTitleView.index = index
                                 } else {
-                                    let segmentedTitleView = ItemListControllerSegmentedTitleView(segments: sections, index: index)
+                                    let segmentedTitleView = ItemListControllerSegmentedTitleView(segments: sections, index: index, color: controllerState.theme.rootController.navigationBar.accentTextColor)
                                     strongSelf.segmentedTitleView = segmentedTitleView
                                     strongSelf.navigationItem.titleView = strongSelf.segmentedTitleView
                                     segmentedTitleView.indexUpdated = { index in
@@ -145,7 +204,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                         if let rightNavigationButton = controllerState.rightNavigationButton {
                             let item: UIBarButtonItem
                             if case .activity = rightNavigationButton.style {
-                                item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode())
+                                item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: controllerState.theme))
                             } else {
                                 item = UIBarButtonItem(title: rightNavigationButton.title, style: rightNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.rightNavigationButtonPressed))
                             }
@@ -159,9 +218,38 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                     }  else if let barButtonItem = strongSelf.navigationItem.rightBarButtonItem, let rightNavigationButton = controllerState.rightNavigationButton, rightNavigationButton.enabled != barButtonItem.isEnabled {
                         barButtonItem.isEnabled = rightNavigationButton.enabled
                     }
+                    
+                    if strongSelf.backNavigationButton != controllerState.backNavigationButton {
+                        strongSelf.backNavigationButton = controllerState.backNavigationButton
+                        
+                        if let backNavigationButton = strongSelf.backNavigationButton {
+                            strongSelf.navigationItem.backBarButtonItem = UIBarButtonItem(title: backNavigationButton.title, style: .plain, target: nil, action: nil)
+                        } else {
+                            strongSelf.navigationItem.backBarButtonItem = nil
+                        }
+                    }
+                    
+                    if strongSelf.theme !== controllerState.theme {
+                        strongSelf.theme = controllerState.theme
+                        
+                        strongSelf.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: strongSelf.theme))
+                        strongSelf.statusBar.statusBarStyle = strongSelf.theme.rootController.statusBar.style.style
+                        
+                        strongSelf.segmentedTitleView?.color = controllerState.theme.rootController.navigationBar.accentTextColor
+                        
+                        if let rightNavigationButton = controllerState.rightNavigationButton {
+                            if case .activity = rightNavigationButton.style {
+                                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: controllerState.theme))!
+                                
+                                strongSelf.rightNavigationButtonTitleAndStyle = (rightNavigationButton.title, rightNavigationButton.style)
+                                strongSelf.navigationItem.setRightBarButton(item, animated: false)
+                                item.isEnabled = rightNavigationButton.enabled
+                            }
+                        }
+                    }
                 }
             }
-        } |> map { $1 }
+        } |> map { ($0.theme, $1) }
         let displayNode = ItemListNode<Entry>(state: nodeState)
         displayNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: true, completion: nil)

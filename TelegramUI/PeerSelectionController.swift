@@ -18,7 +18,7 @@ public final class PeerSelectionController: ViewController {
     public init(account: Account) {
         self.account = account
         
-        super.init()
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme))
         
         self.title = "Forward"
         

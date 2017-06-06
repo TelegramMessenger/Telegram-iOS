@@ -20,7 +20,7 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.dataSaving = VoiceCallDataSaving(rawValue: (decoder.decodeInt32ForKey("ds") as Int32))!
+        self.dataSaving = VoiceCallDataSaving(rawValue: decoder.decodeInt32ForKey("ds", orElse: 0))!
     }
     
     public func encode(_ encoder: Encoder) {

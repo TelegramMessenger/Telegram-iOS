@@ -22,7 +22,7 @@ public class TelegramController: ViewController {
     init(account: Account) {
         self.account = account
         
-        super.init(navigationBar: NavigationBar())
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme))
         
         if let applicationContext = account.applicationContext as? TelegramApplicationContext {
             self.mediaStatusDisposable = (applicationContext.mediaManager.playlistPlayerStateAndStatus
@@ -48,8 +48,8 @@ public class TelegramController: ViewController {
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        if let playlistStateAndStatus = playlistStateAndStatus {
-            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: self.navigationBar.frame.maxY), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - self.navigationBar.frame.maxY - layout.insets(options: [.input]).bottom)))
+        if let playlistStateAndStatus = self.playlistStateAndStatus {
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: super.navigationHeight), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - super.navigationHeight - layout.insets(options: [.input]).bottom)))
             if let mediaAccessoryPanel = self.mediaAccessoryPanel {
                 transition.updateFrame(node: mediaAccessoryPanel, frame: panelFrame)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)
@@ -93,7 +93,11 @@ public class TelegramController: ViewController {
                     }
                 }
                 mediaAccessoryPanel.frame = panelFrame
-                self.displayNode.insertSubnode(mediaAccessoryPanel, belowSubnode: self.navigationBar)
+                if let navigationBar = self.navigationBar {
+                    self.displayNode.insertSubnode(mediaAccessoryPanel, belowSubnode: navigationBar)
+                } else {
+                    self.displayNode.addSubnode(mediaAccessoryPanel)
+                }
                 self.mediaAccessoryPanel = mediaAccessoryPanel
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: .immediate)
                 mediaAccessoryPanel.containerNode.headerNode.stateAndStatus = playlistStateAndStatus

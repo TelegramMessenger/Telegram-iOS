@@ -2,39 +2,17 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let closeButtonImage = generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0x9099A2).cgColor)
-    context.setLineWidth(2.0)
-    context.setLineCap(.round)
-    context.move(to: CGPoint(x: 1.0, y: 1.0))
-    context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - 1.0))
-    context.strokePath()
-    context.move(to: CGPoint(x: size.width - 1.0, y: 1.0))
-    context.addLine(to: CGPoint(x: 1.0, y: size.height - 1.0))
-    context.strokePath()
-})
-
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
 private let maximizedTitleFont = Font.bold(17.0)
 private let maximizedSubtitleFont = Font.regular(12.0)
 
-private let titleColor = UIColor.black
-private let subtitleColor = UIColor(0x8b8b8b)
-
-private let playIcon = UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPlay")?.precomposed()
-private let pauseIcon = UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPause")?.precomposed()
-private let maximizedPlayIcon = UIImage(bundleImageName: "GlobalMusicPlayer/Play")?.precomposed()
-private let maximizedPauseIcon = UIImage(bundleImageName: "GlobalMusicPlayer/Pause")?.precomposed()
-private let maximizedPreviousIcon = UIImage(bundleImageName: "GlobalMusicPlayer/Previous")?.precomposed()
-private let maximizedNextIcon = UIImage(bundleImageName: "GlobalMusicPlayer/Next")?.precomposed()
-private let maximizedShuffleIcon = UIImage(bundleImageName: "GlobalMusicPlayer/Shuffle")?.precomposed()
-private let maximizedRepeatIcon = UIImage(bundleImageName: "GlobalMusicPlayer/Repeat")?.precomposed()
-
 final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     static let minimizedHeight: CGFloat = 37.0
     static let maximizedHeight: CGFloat = 166.0
+    
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
     
     private let titleNode: TextNode
     private let subtitleNode: TextNode
@@ -81,7 +59,10 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    init(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
         self.subtitleNode = TextNode()
@@ -93,7 +74,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.maximizedSubtitleNode.isLayerBacked = true
         
         self.closeButton = HighlightableButtonNode()
-        self.closeButton.setImage(closeButtonImage, for: [])
+        self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.displaysAsynchronously = false
         
@@ -106,18 +87,18 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.actionPauseNode.isLayerBacked = true
         self.actionPauseNode.displaysAsynchronously = false
         self.actionPauseNode.displayWithoutProcessing = true
-        self.actionPauseNode.image = pauseIcon
+        self.actionPauseNode.image = PresentationResourcesRootController.navigationPlayerPauseIcon(self.theme)
         
         self.actionPlayNode = ASImageNode()
         self.actionPlayNode.contentMode = .center
         self.actionPlayNode.isLayerBacked = true
         self.actionPlayNode.displaysAsynchronously = false
         self.actionPlayNode.displayWithoutProcessing = true
-        self.actionPlayNode.image = playIcon
+        self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
         self.actionPlayNode.isHidden = true
         
-        self.maximizedLeftTimestampNode = MediaPlayerTimeTextNode(textColor: UIColor(0x686669))
-        self.maximizedRightTimestampNode = MediaPlayerTimeTextNode(textColor: UIColor(0x686669))
+        self.maximizedLeftTimestampNode = MediaPlayerTimeTextNode(textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+        self.maximizedRightTimestampNode = MediaPlayerTimeTextNode(textColor: self.theme.rootController.navigationBar.secondaryTextColor)
         self.maximizedLeftTimestampNode.alignment = .right
         self.maximizedRightTimestampNode.mode = .reversed
         
@@ -129,46 +110,46 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.maximizedActionPauseNode.isLayerBacked = true
         self.maximizedActionPauseNode.displaysAsynchronously = false
         self.maximizedActionPauseNode.displayWithoutProcessing = true
-        self.maximizedActionPauseNode.image = maximizedPauseIcon
+        self.maximizedActionPauseNode.image = PresentationResourcesRootController.navigationPlayerMaximizedPauseIcon(self.theme)
         
         self.maximizedActionPlayNode = ASImageNode()
         self.maximizedActionPlayNode.isLayerBacked = true
         self.maximizedActionPlayNode.displaysAsynchronously = false
         self.maximizedActionPlayNode.displayWithoutProcessing = true
-        self.maximizedActionPlayNode.image = maximizedPlayIcon
+        self.maximizedActionPlayNode.image = PresentationResourcesRootController.navigationPlayerMaximizedPlayIcon(self.theme)
         self.maximizedActionPlayNode.isHidden = true
         
         let maximizedActionButtonSize = CGSize(width: 66.0, height: 50.0)
         self.maximizedActionButton.frame = CGRect(origin: CGPoint(), size: maximizedActionButtonSize)
-        if let maximizedPauseIcon = maximizedPauseIcon {
+        if let maximizedPauseIcon = self.maximizedActionPauseNode.image {
             self.maximizedActionPauseNode.frame = CGRect(origin: CGPoint(x: floor((maximizedActionButtonSize.width - maximizedPauseIcon.size.width) / 2.0), y: floor((maximizedActionButtonSize.height - maximizedPauseIcon.size.height) / 2.0)), size: maximizedPauseIcon.size)
         }
-        if let maximizedPlayIcon = maximizedPlayIcon {
+        if let maximizedPlayIcon = self.maximizedActionPlayNode.image {
             self.maximizedActionPlayNode.frame = CGRect(origin: CGPoint(x: floor((maximizedActionButtonSize.width - maximizedPlayIcon.size.width) / 2.0) + 2.0, y: floor((maximizedActionButtonSize.height - maximizedPlayIcon.size.height) / 2.0)), size: maximizedPlayIcon.size)
         }
         
         self.maximizedPreviousButton = HighlightableButtonNode()
-        self.maximizedPreviousButton.setImage(maximizedPreviousIcon, for: [])
+        self.maximizedPreviousButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedPreviousIcon(self.theme), for: [])
         self.maximizedPreviousButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.maximizedPreviousButton.displaysAsynchronously = false
         
         self.maximizedNextButton = HighlightableButtonNode()
-        self.maximizedNextButton.setImage(maximizedNextIcon, for: [])
+        self.maximizedNextButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedNextIcon(self.theme), for: [])
         self.maximizedNextButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.maximizedNextButton.displaysAsynchronously = false
         
         self.maximizedShuffleButton = HighlightableButtonNode()
-        self.maximizedShuffleButton.setImage(maximizedShuffleIcon, for: [])
+        self.maximizedShuffleButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedShuffleIcon(self.theme), for: [])
         self.maximizedShuffleButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.maximizedShuffleButton.displaysAsynchronously = false
         
         self.maximizedRepeatButton = HighlightableButtonNode()
-        self.maximizedRepeatButton.setImage(maximizedRepeatIcon, for: [])
+        self.maximizedRepeatButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRepeatIcon(self.theme), for: [])
         self.maximizedRepeatButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.maximizedRepeatButton.displaysAsynchronously = false
         
-        self.scrubbingNode = MediaPlayerScrubbingNode(lineHeight: 2.0, lineCap: .square, scrubberHandle: false, backgroundColor: .clear, foregroundColor: UIColor(0x007ee5))
-        self.maximizedScrubbingNode = MediaPlayerScrubbingNode(lineHeight: 3.0, lineCap: .round, scrubberHandle: true, backgroundColor: UIColor(0xcfcccf), foregroundColor: UIColor(0x007ee5))
+        self.scrubbingNode = MediaPlayerScrubbingNode(lineHeight: 2.0, lineCap: .square, scrubberHandle: false, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor)
+        self.maximizedScrubbingNode = MediaPlayerScrubbingNode(lineHeight: 3.0, lineCap: .round, scrubberHandle: true, backgroundColor: self.theme.rootController.navigationBar.secondaryTextColor, foregroundColor: self.theme.rootController.navigationBar.accentTextColor)
 
         
         super.init()
@@ -275,16 +256,21 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                     let titleText: String = title ?? "Unknown Track"
                     let subtitleText: String = performer ?? "Unknown Artist"
                     
-                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: titleColor)
-                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: subtitleColor)
+                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 
-                    maximizedTitleString = NSAttributedString(string: titleText, font: maximizedTitleFont, textColor: titleColor)
-                    maximizedSubtitleString = NSAttributedString(string: subtitleText, font: maximizedSubtitleFont, textColor: subtitleColor)
+                    maximizedTitleString = NSAttributedString(string: titleText, font: maximizedTitleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                    maximizedSubtitleString = NSAttributedString(string: subtitleText, font: maximizedSubtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 case .voice:
-                    let titleText: String = "Voice Message"
-                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: titleColor)
+                    let titleText: String = self.strings.Message_Audio
+                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 
-                    maximizedTitleString = NSAttributedString(string: titleText, font: maximizedTitleFont, textColor: titleColor)
+                    maximizedTitleString = NSAttributedString(string: titleText, font: maximizedTitleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                case .video:
+                    let titleText: String = self.strings.Message_VideoMessage
+                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                    
+                    maximizedTitleString = NSAttributedString(string: titleText, font: maximizedTitleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
             }
         }
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)

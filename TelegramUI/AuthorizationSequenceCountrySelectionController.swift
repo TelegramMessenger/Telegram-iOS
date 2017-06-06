@@ -440,13 +440,11 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
     
     var completeWithCountryCode: ((Int) -> Void)?
     
-    override init(navigationBar: NavigationBar = NavigationBar()) {
+    init() {
         self.innerController = InnerCountrySelectionController()
         self.innerNavigationController = UINavigationController(rootViewController: self.innerController)
         
-        super.init(navigationBar: navigationBar)
-        
-        self.navigationBar.isHidden = true
+        super.init(navigationBarTheme: nil)
         
         self.innerController.dismiss = { [weak self] in
             self?.cancelPressed()

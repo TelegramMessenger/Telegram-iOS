@@ -16,7 +16,7 @@ final class ShareControllerInteraction {
 
 private let selectionBackgroundImage = generateImage(CGSize(width: 60.0 + 4.0, height: 60.0 + 4.0), rotatedContext: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor(0x007ee5).cgColor)
+    context.setFillColor(UIColor(rgb: 0x007ee5).cgColor)
     context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
     context.setFillColor(UIColor.white.cgColor)
     context.fillEllipse(in: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
@@ -103,7 +103,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     func setup(account: Account, peer: Peer) {
         if self.currentState == nil || self.currentState!.0 !== account || !arePeersEqual(self.currentState!.1, peer) {
             let text = peer.displayTitle
-            self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? UIColor(0x007ee5) : UIColor.black, paragraphAlignment: .center)
+            self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? UIColor(rgb: 0x007ee5) : UIColor.black, paragraphAlignment: .center)
             self.avatarNode.setPeer(account: account, peer: peer)
             self.currentState = (account, peer)
             self.setNeedsLayout()
@@ -129,7 +129,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             self.currentSelected = selected
             
             if let (_, peer) = self.currentState {
-                self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: selected ? UIColor(0x007ee5) : UIColor.black, paragraphAlignment: .center)
+                self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: selected ? UIColor(rgb: 0x007ee5) : UIColor.black, paragraphAlignment: .center)
             }
             
             if selected {

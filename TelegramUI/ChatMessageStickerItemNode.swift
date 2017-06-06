@@ -5,8 +5,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private let backgroundImage = generateStretchableFilledCircleImage(radius: 4.0, color: UIColor(0x748391, 0.45))
-
 class ChatMessageStickerItemNode: ChatMessageItemView {
     let imageNode: TransformImageNode
     var progressNode: RadialProgressNode?
@@ -86,7 +84,25 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let avatarInset: CGFloat = (item.peerId.isGroupOrChannel && item.message.author != nil) ? layoutConstants.avatarDiameter : 0.0
+            let avatarInset: CGFloat
+            var hasAvatar = false
+            
+            if item.peerId.isGroupOrChannel && item.message.author != nil {
+                var isBroadcastChannel = false
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    isBroadcastChannel = true
+                }
+                
+                if !isBroadcastChannel {
+                    hasAvatar = true
+                }
+            }
+            
+            if hasAvatar {
+                avatarInset = layoutConstants.avatarDiameter
+            } else {
+                avatarInset = 0.0
+            }
             
             var layoutInsets = UIEdgeInsets(top: mergedTop ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
             if dateHeaderAtBottom {
@@ -105,14 +121,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             for attribute in item.message.attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     let availableWidth = max(60.0, width - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-                    replyInfoApply = makeReplyInfoLayout(item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    replyInfoApply = makeReplyInfoLayout(item.theme, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     
                     if let currentReplyBackgroundNode = currentReplyBackgroundNode {
                         updatedReplyBackgroundNode = currentReplyBackgroundNode
                     } else {
                         updatedReplyBackgroundNode = ASImageNode()
                     }
-                    replyBackgroundImage = backgroundImage
+                    replyBackgroundImage = PresentationResourcesChat.chatFreeformContentAdditionalInfoBackgroundImage(item.theme)
                     break
                 }
             }
@@ -170,6 +186,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
+                            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
+                                if let item = self.item, let author = item.message.author {
+                                    self.controllerInteraction?.openPeer(author.id, .info, item.message.id)
+                                }
+                                return
+                            }
                             /*if let nameNode = self.nameNode, nameNode.frame.contains(location) {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {

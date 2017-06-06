@@ -201,14 +201,14 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
             styleStack.pop()
             return result
         case let .url(text, url, _):
-            styleStack.push(.textColor(UIColor(0x007BE8)))
+            styleStack.push(.textColor(UIColor(rgb: 0x007BE8)))
             let result = attributedStringForRichText(text, styleStack: styleStack)
             styleStack.pop()
             styleStack.pop()
             return result
         case let .email(text, _):
             styleStack.push(.bold)
-            styleStack.push(.textColor(UIColor(0x007BE8)))
+            styleStack.push(.textColor(UIColor(rgb: 0x007BE8)))
             let result = attributedStringForRichText(text, styleStack: styleStack)
             styleStack.pop()
             styleStack.pop()

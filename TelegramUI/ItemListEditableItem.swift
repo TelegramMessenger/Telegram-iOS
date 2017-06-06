@@ -72,8 +72,8 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
         return !self.isDisplayingRevealedOptions
     }
     
-    override init(layerBacked: Bool, dynamicBounce: Bool, rotated: Bool) {
-        super.init(layerBacked: layerBacked, dynamicBounce: dynamicBounce, rotated: rotated)
+    override init(layerBacked: Bool, dynamicBounce: Bool, rotated: Bool, seeThrough: Bool) {
+        super.init(layerBacked: layerBacked, dynamicBounce: dynamicBounce, rotated: rotated, seeThrough: seeThrough)
     }
     
     override func didLoad() {

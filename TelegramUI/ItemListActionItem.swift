@@ -16,6 +16,7 @@ enum ItemListActionAlignment {
 }
 
 class ItemListActionItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let title: String
     let kind: ItemListActionKind
     let alignment: ItemListActionAlignment
@@ -24,7 +25,12 @@ class ItemListActionItem: ListViewItem, ItemListItem {
     let action: () -> Void
     let tag: Any?
     
-    init(title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, tag: Any? = nil) {
+    init(theme: PresentationTheme? = nil, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, tag: Any? = nil) {
+        if let theme = theme {
+            self.theme = theme
+        } else {
+            self.theme = defaultPresentationTheme
+        }
         self.title = title
         self.kind = kind
         self.alignment = alignment
@@ -95,11 +101,9 @@ class ItemListActionItemNode: ListViewItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -108,7 +112,6 @@ class ItemListActionItemNode: ListViewItemNode {
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -119,17 +122,25 @@ class ItemListActionItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ItemListActionItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
+        let currentItem = self.item
+        
         return { item, width, neighbors in
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let textColor: UIColor
             switch item.kind {
                 case .destructive:
-                    textColor = UIColor(0xff3b30)
+                    textColor = item.theme.list.itemDestructiveColor
                 case .generic:
-                    textColor = UIColor(0x007ee5)
+                    textColor = item.theme.list.itemAccentColor
                 case .neutral:
-                    textColor = .black
+                    textColor = item.theme.list.itemPrimaryTextColor
                 case .disabled:
-                    textColor = UIColor(0x8e8e93)
+                    textColor = item.theme.list.itemDisabledTextColor
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: textColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
@@ -153,6 +164,13 @@ class ItemListActionItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
                     
                     let _ = titleApply()
                     

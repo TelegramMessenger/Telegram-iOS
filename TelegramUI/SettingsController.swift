@@ -15,10 +15,13 @@ private struct SettingsItemArguments {
     let changeProfilePhoto: () -> Void
     let openPrivacyAndSecurity: () -> Void
     let openDataAndStorage: () -> Void
+    let openThemes: () -> Void
+    let openTheme: (TelegramWallpaper) -> Void
     let pushController: (ViewController) -> Void
     let presentController: (ViewController) -> Void
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let saveEditingState: () -> Void
+    let openLanguage: () -> Void
     let openSupport: () -> Void
     let openFaq: () -> Void
     let logout: () -> Void
@@ -33,29 +36,31 @@ private enum SettingsSection: Int32 {
 }
 
 private enum SettingsEntry: ItemListNodeEntry {
-    case userInfo(Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, TelegramMediaImageRepresentation?)
-    case setProfilePhoto
+    case userInfo(PresentationTheme, PresentationStrings, Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, TelegramMediaImageRepresentation?)
+    case setProfilePhoto(PresentationTheme, String)
     
-    case notificationsAndSounds
-    case privacyAndSecurity
-    case dataAndStorage
-    case stickers
-    case phoneNumber(String)
-    case username(String)
-    case askAQuestion(Bool)
-    case faq
-    case debug
-    case logOut
+    case notificationsAndSounds(PresentationTheme, String)
+    case privacyAndSecurity(PresentationTheme, String)
+    case dataAndStorage(PresentationTheme, String)
+    case stickers(PresentationTheme, String)
+    case themes(PresentationTheme, String, [TelegramWallpaper])
+    case phoneNumber(PresentationTheme, String, String)
+    case username(PresentationTheme, String, String)
+    case language(PresentationTheme, String, String)
+    case askAQuestion(PresentationTheme, String, Bool)
+    case faq(PresentationTheme, String)
+    case debug(PresentationTheme, String)
+    case logOut(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
             case .userInfo, .setProfilePhoto:
                 return SettingsSection.info.rawValue
-            case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .stickers:
+            case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .stickers, .themes:
                 return SettingsSection.generalSettings.rawValue
             case .phoneNumber, .username:
                 return SettingsSection.accountSettings.rawValue
-            case .askAQuestion, .faq, .debug:
+            case .language, .askAQuestion, .faq, .debug:
                 return SettingsSection.help.rawValue
             case .logOut:
                 return SettingsSection.logOut.rawValue
@@ -76,25 +81,35 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return 4
             case .stickers:
                 return 5
-            case .phoneNumber:
+            case .themes:
                 return 6
-            case .username:
+            case .phoneNumber:
                 return 7
-            case .askAQuestion:
+            case .username:
                 return 8
-            case .faq:
+            case .askAQuestion:
                 return 9
-            case .debug:
+            case .language:
                 return 10
-            case .logOut:
+            case .faq:
                 return 11
+            case .debug:
+                return 12
+            case .logOut:
+                return 13
         }
     }
     
     static func ==(lhs: SettingsEntry, rhs: SettingsEntry) -> Bool {
         switch lhs {
-            case let .userInfo(lhsPeer, lhsCachedData, lhsEditingState, lhsUpdatingImage):
-                if case let .userInfo(rhsPeer, rhsCachedData, rhsEditingState, rhsUpdatingImage) = rhs {
+            case let .userInfo(lhsTheme, lhsStrings, lhsPeer, lhsCachedData, lhsEditingState, lhsUpdatingImage):
+                if case let .userInfo(rhsTheme, rhsStrings, rhsPeer, rhsCachedData, rhsEditingState, rhsUpdatingImage) = rhs {
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
+                        return false
+                    }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                         if !lhsPeer.isEqual(rhsPeer) {
                             return false
@@ -119,68 +134,80 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case .setProfilePhoto:
-                if case .setProfilePhoto = rhs {
+            case let .setProfilePhoto(lhsTheme, lhsText):
+                if case let .setProfilePhoto(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case .notificationsAndSounds:
-                if case .notificationsAndSounds = rhs {
+            case let .notificationsAndSounds(lhsTheme, lhsText):
+                if case let .notificationsAndSounds(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case .privacyAndSecurity:
-                if case .privacyAndSecurity = rhs {
+            case let .privacyAndSecurity(lhsTheme, lhsText):
+                if case let .privacyAndSecurity(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case .dataAndStorage:
-                if case .dataAndStorage = rhs {
+            case let .dataAndStorage(lhsTheme, lhsText):
+                if case let .dataAndStorage(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case .stickers:
-                if case .stickers = rhs {
+            case let .stickers(lhsTheme, lhsText):
+                if case let .stickers(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .phoneNumber(number):
-                if case .phoneNumber(number) = rhs {
+            case let .themes(lhsTheme, lhsText, lhsWallpapers):
+                if case let .themes(rhsTheme, rhsText, rhsWallpapers) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsWallpapers == rhsWallpapers {
                     return true
                 } else {
                     return false
                 }
-            case let .username(address):
-                if case .username(address) = rhs {
+            case let .phoneNumber(lhsTheme, lhsText, lhsNumber):
+                if case let .phoneNumber(rhsTheme, rhsText, rhsNumber) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsNumber == rhsNumber {
                     return true
                 } else {
                     return false
                 }
-            case let .askAQuestion(loading):
-                if case .askAQuestion(loading) = rhs {
+            case let .username(lhsTheme, lhsText, lhsAddress):
+                if case let .username(rhsTheme, rhsText, rhsAddress) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsAddress == rhsAddress {
                     return true
                 } else {
                     return false
                 }
-            case .faq:
-                if case .faq = rhs {
+            case let .language(lhsTheme, lhsText, lhsValue):
+                if case let .language(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case .debug:
-                if case .debug = rhs {
+            case let .askAQuestion(lhsTheme, lhsText, lhsLoading):
+                if case let .askAQuestion(rhsTheme, rhsText, rhsLoading) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
                 }
-            case .logOut:
-                if case .logOut = rhs {
+            case let .faq(lhsTheme, lhsText):
+                if case let .faq(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .debug(lhsTheme, lhsText):
+                if case let .debug(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .logOut(lhsTheme, lhsText):
+                if case let .logOut(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -194,54 +221,64 @@ private enum SettingsEntry: ItemListNodeEntry {
     
     func item(_ arguments: SettingsItemArguments) -> ListViewItem {
         switch self {
-            case let .userInfo(peer, cachedData, state, updatingImage):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max)), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks, editingNameUpdated: { editingName in
+            case let .userInfo(theme, strings, peer, cachedData, state, updatingImage):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max)), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.avatarTapAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingImage)
-            case .setProfilePhoto:
-                return ItemListActionItem(title: "Set Profile Photo", kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .setProfilePhoto(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
-            case .notificationsAndSounds:
-                return ItemListDisclosureItem(title: "Notifications and Sounds", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .notificationsAndSounds(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(notificationsAndSoundsController(account: arguments.account))
                 })
-            case .privacyAndSecurity:
-                return ItemListDisclosureItem(title: "Privacy and Security", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .privacyAndSecurity(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openPrivacyAndSecurity()
                 })
-            case .dataAndStorage:
-                return ItemListDisclosureItem(title: "Data and Storage", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .dataAndStorage(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openDataAndStorage()
                 })
-            case .stickers:
-                return ItemListDisclosureItem(title: "Stickers", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .stickers(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(installedStickerPacksController(account: arguments.account, mode: .general))
                 })
-            case let .phoneNumber(number):
-                return ItemListDisclosureItem(title: "Phone Number", label: number, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .themes(theme, text, wallpapers):
+                return SettingsThemesItem(account: arguments.account, theme: theme, title: text, sectionId: self.section, action: {
+                    arguments.openThemes()
+                }, openWallpaper: { wallpaper in
+                    arguments.openTheme(wallpaper)
+                }, wallpapers: wallpapers)
+            case let .phoneNumber(theme, text, number):
+                return ItemListDisclosureItem(theme: theme, title: text, label: number, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(ChangePhoneNumberIntroController(account: arguments.account, phoneNumber: number))
                 })
-            case let .username(address):
-                return ItemListDisclosureItem(title: "Username", label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .username(theme, text, address):
+                return ItemListDisclosureItem(theme: theme, title: text, label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.presentController(usernameSetupController(account: arguments.account))
                 })
-            case let .askAQuestion(askAQuestion):
-                return ItemListDisclosureItem(title: "Ask a Question", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .language(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openLanguage()
+                })
+            case let .askAQuestion(theme, text, loading):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSupport()
                 })
-            case .faq:
-                return ItemListDisclosureItem(title: "Telegram FAQ", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .faq(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openFaq()
                 })
-            case .debug:
-                return ItemListDisclosureItem(title: "Debug", label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .debug(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(debugController(account: arguments.account, accountManager: arguments.accountManager))
                 })
-            case .logOut:
-                return ItemListActionItem(title: "Log Out", kind: .destructive, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .logOut(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.logout()
                 })
         }
@@ -299,30 +336,32 @@ private struct SettingsState: Equatable {
     }
 }
 
-private func settingsEntries(state: SettingsState, view: PeerView) -> [SettingsEntry] {
+private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, wallpapers: [TelegramWallpaper]) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
         let userInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingState?.editingName, updatingName: state.updatingName)
-        entries.append(.userInfo(peer, view.cachedData, userInfoState, state.updatingAvatar))
-        entries.append(.setProfilePhoto)
+        entries.append(.userInfo(presentationData.theme, presentationData.strings, peer, view.cachedData, userInfoState, state.updatingAvatar))
+        entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Settings_SetProfilePhoto))
         
-        entries.append(.notificationsAndSounds)
-        entries.append(.privacyAndSecurity)
-        entries.append(.dataAndStorage)
-        entries.append(.stickers)
+        entries.append(.notificationsAndSounds(presentationData.theme, presentationData.strings.Settings_NotificationsAndSounds))
+        entries.append(.privacyAndSecurity(presentationData.theme, presentationData.strings.Settings_PrivacySettings))
+        entries.append(.dataAndStorage(presentationData.theme, presentationData.strings.Settings_ChatSettings))
+        entries.append(.stickers(presentationData.theme, presentationData.strings.ChatSettings_Stickers))
+        entries.append(.themes(presentationData.theme, presentationData.strings.Settings_ChatBackground, wallpapers))
         
         if let phone = peer.phone {
-            entries.append(.phoneNumber(formatPhoneNumber(phone)))
+            entries.append(.phoneNumber(presentationData.theme, presentationData.strings.Settings_PhoneNumber, formatPhoneNumber(phone)))
         }
-        entries.append(.username(peer.addressName == nil ? "" : ("@" + peer.addressName!)))
+        entries.append(.username(presentationData.theme, presentationData.strings.Settings_Username, peer.addressName == nil ? "" : ("@" + peer.addressName!)))
         
-        entries.append(.askAQuestion(state.loadingSupportPeer))
-        entries.append(.faq)
-        entries.append(.debug)
+        entries.append(.askAQuestion(presentationData.theme, presentationData.strings.Settings_Support, state.loadingSupportPeer))
+        entries.append(.language(presentationData.theme, presentationData.strings.Settings_AppLanguage, presentationData.strings.Localization_LanguageName))
+        entries.append(.faq(presentationData.theme, presentationData.strings.Settings_FAQ))
+        entries.append(.debug(presentationData.theme, "Debug"))
         
         if let _ = state.editingState {
-            entries.append(.logOut)
+            entries.append(.logOut(presentationData.theme, presentationData.strings.Settings_Logout))
         }
     }
     
@@ -358,6 +397,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
     var updateHiddenAvatarImpl: (() -> Void)?
+    
+    let wallpapersPromise = Promise<[TelegramWallpaper]>()
+    wallpapersPromise.set(telegramWallpapers(account: account))
     
     let arguments = SettingsItemArguments(account: account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
@@ -429,6 +471,15 @@ public func settingsController(account: Account, accountManager: AccountManager)
         pushControllerImpl?(privacyAndSecurityController(account: account, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: account) |> map { Optional($0) })))
     }, openDataAndStorage: {
         pushControllerImpl?(dataAndStorageController(account: account))
+    }, openThemes: {
+        pushControllerImpl?(ThemeGridController(account: account))
+    }, openTheme: { wallpaper in
+        let _ = (wallpapersPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { wallpapers in
+            let controller = ThemeGalleryController(account: account, wallpapers: wallpapers, at: wallpaper)
+            presentControllerImpl?(controller, ThemePreviewControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
+                return nil
+            }))
+        })
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, presentController: { controller in
@@ -460,6 +511,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 }
             }).start())
         }
+    }, openLanguage: {
+        let controller = LanguageSelectionController(account: account)
+        presentControllerImpl?(controller, nil)
     }, openSupport: {
         var load = false
         updateState { state in
@@ -485,7 +539,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
         }
         
         if let applicationContext = account.applicationContext as? TelegramApplicationContext {
-            applicationContext.openUrl(faqUrl)
+            applicationContext.applicationBindings.openUrl(faqUrl)
         }
     }, logout: {
         let alertController = standardTextAlertController(title: NSLocalizedString("Settings.LogoutConfirmationTitle", comment: ""), text: NSLocalizedString("Settings.LogoutConfirmationText", comment: ""), actions: [
@@ -500,16 +554,16 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let peerView = account.viewTracker.peerView(account.peerId)
     
-    let signal = combineLatest(statePromise.get(), peerView)
-        |> map { state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, wallpapersPromise.get())
+        |> map { presentationData, state, view, wallpapers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             let rightNavigationButton: ItemListNavigationButton
             if let _ = state.editingState {
-                rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
                     arguments.saveEditingState()
                 })
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                     if let peer = peer as? TelegramUser {
                         updateState { state in
                             return state.withUpdatedEditingState(SettingsEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer.indexName)))
@@ -518,19 +572,17 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 })
             }
             
-            let controllerState = ItemListControllerState(title: .text("Settings"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton)
-            let listState = ItemListNodeState(entries: settingsEntries(state: state, view: view), style: .blocks)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Settings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, wallpapers: wallpapers), style: .blocks)
             
             return (controllerState, (listState, arguments))
     } |> afterDisposed {
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
-    controller.tabBarItem.title = "Settings"
-    controller.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")?.precomposed()
-    controller.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconSettingsSelected")?.precomposed()
+    let controller = ItemListController(account: account, state: signal, tabBarItem: (account.applicationContext as! TelegramApplicationContext).presentationData |> map { presentationData in
+        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: PresentationResourcesRootController.tabSettingsIcon(presentationData.theme), selectedImage: PresentationResourcesRootController.tabSettingsSelectedIcon(presentationData.theme))
+    })
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }

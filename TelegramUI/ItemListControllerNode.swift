@@ -35,6 +35,7 @@ enum ItemListStyle {
 }
 
 private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
+    let theme: PresentationTheme
     let entries: ItemListNodeEntryTransition
     let updateStyle: ItemListStyle?
     let emptyStateItem: ItemListControllerEmptyStateItem?
@@ -99,11 +100,14 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
     private var enqueuedTransitions: [ItemListNodeTransition<Entry>] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
+    private var theme: PresentationTheme?
+    private var listStyle: ItemListStyle?
+    
     var dismiss: (() -> Void)?
     
     var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)?
     
-    init(state: Signal<(ItemListNodeState<Entry>, Entry.ItemGenerationArguments), NoError>) {
+    init(state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
         self.listNode = ListView()
         
         super.init(viewBlock: {
@@ -112,7 +116,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
         
         self.addSubnode(self.listNode)
         
-        self.backgroundColor = UIColor(0xefeff4)
+        self.backgroundColor = UIColor(rgb: 0xefeff4)
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self, let visibleEntriesUpdated = strongSelf.visibleEntriesUpdated, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState<Entry>)?.mergedEntries {
@@ -134,7 +138,8 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
         }
         
         let previousState = Atomic<ItemListNodeState<Entry>?>(value: nil)
-        self.transitionDisposable.set(((state |> map { state, arguments -> ItemListNodeTransition<Entry> in
+        self.transitionDisposable.set(((state |> map { theme, stateAndArguments -> ItemListNodeTransition<Entry> in
+            let (state, arguments) = stateAndArguments
             assert(state.entries == state.entries.sorted())
             let previous = previousState.swap(state)
             let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, arguments: arguments)
@@ -142,7 +147,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
             if previous?.style != state.style {
                 updatedStyle = state.style
             }
-            return ItemListNodeTransition(entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, focusItemTag: state.focusItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && !state.animateChanges, mergedEntries: state.entries)
+            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, focusItemTag: state.focusItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && !state.animateChanges, mergedEntries: state.entries)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -220,14 +225,32 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
         while !self.enqueuedTransitions.isEmpty {
             let transition = self.enqueuedTransitions.removeFirst()
             
-            if let updateStyle = transition.updateStyle {
-                switch updateStyle {
-                case .plain:
-                    self.backgroundColor = .white
-                case .blocks:
-                    self.backgroundColor = UIColor(0xefeff4)
+            if transition.theme !== self.theme {
+                self.theme = transition.theme
+                
+                if let listStyle = self.listStyle {
+                    switch listStyle {
+                        case .plain:
+                            self.backgroundColor = transition.theme.list.plainBackgroundColor
+                        case .blocks:
+                            self.backgroundColor = transition.theme.list.blocksBackgroundColor
+                    }
                 }
             }
+            
+            if let updateStyle = transition.updateStyle {
+                self.listStyle = updateStyle
+                
+                if let theme = self.theme {
+                    switch updateStyle {
+                        case .plain:
+                            self.backgroundColor = transition.theme.list.plainBackgroundColor
+                        case .blocks:
+                            self.backgroundColor = transition.theme.list.blocksBackgroundColor
+                    }
+                }
+            }
+            
             var options = ListViewDeleteAndInsertOptions()
             if transition.firstTime {
                 options.insert(.Synchronous)

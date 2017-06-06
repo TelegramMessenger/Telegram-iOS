@@ -11,7 +11,7 @@ final class ChatUnblockInputPanelNode: ChatInputPanelNode {
     
     private var statusDisposable: Disposable?
     
-    private var presentationInterfaceState = ChatPresentationInterfaceState()
+    private var presentationInterfaceState: ChatPresentationInterfaceState?
     
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
@@ -35,7 +35,13 @@ final class ChatUnblockInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override init() {
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
+    
+    init(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
         self.button = HighlightableButtonNode()
         self.activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
         self.activityIndicator.isHidden = true
@@ -45,12 +51,21 @@ final class ChatUnblockInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.button)
         self.view.addSubview(self.activityIndicator)
         
-        self.button.setAttributedTitle(NSAttributedString(string: "Unblock", font: Font.regular(17.0), textColor: UIColor(0x007ee5)), for: [])
+        self.button.setAttributedTitle(NSAttributedString(string: strings.Conversation_Unblock, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor), for: [])
         self.button.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: [.touchUpInside])
     }
     
     deinit {
         self.statusDisposable?.dispose()
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        if self.theme !== theme || self.strings !== strings {
+            self.theme = theme
+            self.strings = strings
+            
+            self.button.setAttributedTitle(NSAttributedString(string: strings.Conversation_Unblock, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor), for: [])
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

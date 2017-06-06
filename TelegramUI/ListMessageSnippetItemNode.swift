@@ -9,7 +9,7 @@ private let titleFont = Font.medium(16.0)
 private let descriptionFont = Font.regular(14.0)
 private let iconFont = Font.medium(22.0)
 
-private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 2.0, color: UIColor(0xdfdfdf))
+private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 2.0, color: UIColor(rgb: 0xdfdfdf))
 
 final class ListMessageSnippetItemNode: ListMessageNode {
     private let highlightedBackgroundNode: ASDisplayNode
@@ -24,14 +24,14 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     private var currentIconImageRepresentation: TelegramMediaImageRepresentation?
     private var currentMedia: Media?
     
+    private var appliedItem: ListMessageItem?
+    
     public required init() {
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
         self.separatorNode.displaysAsynchronously = false
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -93,13 +93,19 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         let iconTextMakeLayout = TextNode.asyncLayout(self.iconTextNode)
         let iconImageLayout = self.iconImageNode.asyncLayout()
         
-        let currentMedia = self.currentMedia
         let currentIconImageRepresentation = self.currentIconImageRepresentation
         
+        let currentItem = self.appliedItem
+        
         return { [weak self] item, width, _, _, _ in
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let leftInset: CGFloat = 65.0
             
-            var extensionIconImage: UIImage?
             var title: NSAttributedString?
             var descriptionText: NSAttributedString?
             var iconText: NSAttributedString?
@@ -121,7 +127,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                             iconText = NSAttributedString(string: host.substring(to: host.index(after: host.startIndex)).uppercased(), font: iconFont, textColor: UIColor.white)
                         }
                         
-                        title = NSAttributedString(string: content.title ?? content.websiteName ?? hostName, font: titleFont, textColor: UIColor.black)
+                        title = NSAttributedString(string: content.title ?? content.websiteName ?? hostName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                         
                         if let image = content.image {
                             iconImageRepresentation = smallestImageRepresentation(image.representations)
@@ -131,10 +137,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         
                         let mutableDescriptionText = NSMutableAttributedString()
                         if let text = content.text {
-                            mutableDescriptionText.append(NSAttributedString(string: text + "\n", font: descriptionFont, textColor: UIColor.black))
+                            mutableDescriptionText.append(NSAttributedString(string: text + "\n", font: descriptionFont, textColor: item.theme.list.itemPrimaryTextColor))
                         }
                         
-                        mutableDescriptionText.append(NSAttributedString(string: content.displayUrl, font: descriptionFont, textColor: UIColor(0x007ee5)))
+                        mutableDescriptionText.append(NSAttributedString(string: content.displayUrl, font: descriptionFont, textColor: item.theme.list.itemAccentColor))
                         
                         let style = NSMutableParagraphStyle()
                         style.lineSpacing = 4.0
@@ -174,6 +180,13 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             
             return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: contentHeight), insets: UIEdgeInsets()), { _ in
                 if let strongSelf = self {
+                    strongSelf.appliedItem = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
+                    
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: contentHeight + UIScreenPixel))
                     

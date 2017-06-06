@@ -55,7 +55,7 @@ private enum ChannelInfoEntryTag {
 }
 
 private enum ChannelInfoEntry: ItemListNodeEntry {
-    case info(peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: TelegramMediaImageRepresentation?)
+    case info(PresentationTheme, PresentationStrings, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: TelegramMediaImageRepresentation?)
     case about(text: String)
     case addressName(value: String)
     case channelPhotoSetup
@@ -118,8 +118,14 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChannelInfoEntry, rhs: ChannelInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsPeer, lhsCachedData, lhsState, lhsUpdatingAvatar):
-                if case let .info(rhsPeer, rhsCachedData, rhsState, rhsUpdatingAvatar) = rhs {
+            case let .info(lhsTheme, lhsStrings, lhsPeer, lhsCachedData, lhsState, lhsUpdatingAvatar):
+                if case let .info(rhsTheme, rhsStrings, rhsPeer, rhsCachedData, rhsState, rhsUpdatingAvatar) = rhs {
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
+                        return false
+                    }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                         if !lhsPeer.isEqual(rhsPeer) {
                             return false
@@ -209,16 +215,16 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChannelInfoControllerArguments) -> ListViewItem {
         switch self {
-            case let .info(peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+            case let .info(theme, strings, peer, cachedData, state, updatingAvatar):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
             case let .about(text):
-                return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section, action: nil)
+                return ItemListTextWithLabelItem(theme: defaultPresentationTheme, label: "about", text: text, multiline: true, sectionId: self.section, action: nil)
             case let .addressName(value):
-                return ItemListTextWithLabelItem(label: "share link", text: "https://t.me/\(value)", multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: defaultPresentationTheme, label: "share link", text: "https://t.me/\(value)", multiline: false, sectionId: self.section, action: {
                     arguments.displayAddressNameContextMenu("https://t.me/\(value)")
                 }, tag: ChannelInfoEntryTag.addressName)
             case .channelPhotoSetup:
@@ -230,7 +236,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     arguments.openChannelTypeSetup()
                 })
             case let .channelDescriptionSetup(text):
-                return ItemListMultilineInputItem(text: text, placeholder: "Channel Description", sectionId: self.section, style: .plain, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: defaultPresentationTheme, text: text, placeholder: "Channel Description", sectionId: self.section, style: .plain, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
@@ -339,32 +345,23 @@ private struct ChannelInfoEditingState: Equatable {
     }
 }
 
-private func channelInfoEntries(account: Account, view: PeerView, state: ChannelInfoState) -> [ChannelInfoEntry] {
+private func channelInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, state: ChannelInfoState) -> [ChannelInfoEntry] {
     var entries: [ChannelInfoEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramChannel {
-        var canManageChannel = false
-        var canManageMembers = false
+        let canEditChannel = peer.hasAdminRights(.canChangeInfo)
+        let canEditMembers = peer.hasAdminRights(.canBanUsers)
         let isPublic = peer.username != nil
-        switch peer.role {
-            case .creator:
-                canManageChannel = true
-                canManageMembers = true
-            case .moderator:
-                canManageMembers = true
-            case .editor, .member:
-                break
-        }
         
-        let infoState = ItemListAvatarAndNameInfoItemState(editingName: canManageChannel ? state.editingState?.editingName : nil, updatingName: nil)
-        entries.append(.info(peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
+        let infoState = ItemListAvatarAndNameInfoItemState(editingName: canEditChannel ? state.editingState?.editingName : nil, updatingName: nil)
+        entries.append(.info(presentationData.theme, presentationData.strings, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
         
-        if state.editingState != nil && canManageChannel {
+        if state.editingState != nil && canEditChannel {
             entries.append(.channelPhotoSetup)
         }
         
         if let cachedChannelData = view.cachedData as? CachedChannelData {
-            if let editingState = state.editingState, canManageChannel {
+            if let editingState = state.editingState, canEditChannel {
                 entries.append(.channelDescriptionSetup(text: editingState.editingDescriptionText))
             } else {
                 if let about = cachedChannelData.about, !about.isEmpty {
@@ -373,18 +370,18 @@ private func channelInfoEntries(account: Account, view: PeerView, state: Channel
             }
         }
         
-        if state.editingState != nil && canManageChannel {
+        if state.editingState != nil && peer.flags.contains(.isCreator) {
             entries.append(.channelTypeSetup(isPublic: isPublic))
         } else if let username = peer.username, !username.isEmpty {
             entries.append(.addressName(value: username))
         }
         
         if let cachedChannelData = view.cachedData as? CachedChannelData {
-            if state.editingState != nil && canManageMembers {
+            if state.editingState != nil && canEditMembers {
                 if let bannedCount = cachedChannelData.participantsSummary.bannedCount {
                     entries.append(.banned(count: bannedCount))
                 }
-            } else if canManageMembers {
+            } else {
                 if let adminCount = cachedChannelData.participantsSummary.adminCount {
                     entries.append(.admins(count: adminCount))
                 }
@@ -399,7 +396,7 @@ private func channelInfoEntries(account: Account, view: PeerView, state: Channel
         }
         entries.append(ChannelInfoEntry.sharedMedia)
         
-        if peer.role == .creator {
+        if peer.flags.contains(.isCreator) {
             if state.editingState != nil {
                 entries.append(ChannelInfoEntry.deleteChannel)
             }
@@ -630,19 +627,16 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         displayAddressNameContextMenuImpl?(text)
     })
     
-    let signal = combineLatest(statePromise.get(), account.viewTracker.peerView(peerId))
-        |> map { state, view -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId))
+        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             
             var canManageChannel = false
             if let peer = peer as? TelegramChannel {
-                switch peer.role {
-                case .creator:
+                if peer.flags.contains(.isCreator) {
                     canManageChannel = true
-                case .moderator:
-                    break
-                case .editor, .member:
-                    break
+                } else if let adminRights = peer.adminRights, !adminRights.isEmpty {
+                    canManageChannel = true
                 }
             }
             
@@ -722,15 +716,15 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 })
             }
             
-            let controllerState = ItemListControllerState(title: .text("Info"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
-            let listState = ItemListNodeState(entries: channelInfoEntries(account: account, view: view, state: state), style: .plain)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Info"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
+            let listState = ItemListNodeState(entries: channelInfoEntries(account: account, presentationData: presentationData, view: view, state: state), style: .plain)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)

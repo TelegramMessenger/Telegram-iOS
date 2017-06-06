@@ -47,9 +47,10 @@ enum ItemListStickerPackItemControl: Equatable {
 }
 
 final class ItemListStickerPackItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let account: Account
     let packInfo: StickerPackCollectionInfo
-    let itemCount: Int32
+    let itemCount: String
     let topItem: StickerPackItem?
     let unread: Bool
     let control: ItemListStickerPackItemControl
@@ -61,7 +62,8 @@ final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let addPack: () -> Void
     let removePack: () -> Void
     
-    init(account: Account, packInfo: StickerPackCollectionInfo, itemCount: Int32, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
+    init(theme: PresentationTheme, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
+        self.theme = theme
         self.account = account
         self.packInfo = packInfo
         self.itemCount = itemCount
@@ -124,34 +126,6 @@ final class ItemListStickerPackItem: ListViewItem, ItemListItem {
 private let titleFont = Font.bold(15.0)
 private let statusFont = Font.regular(14.0)
 
-private func stringForStickerCount(_ count: Int32) -> String {
-    if count == 1 {
-        return "1 sticker"
-    } else {
-        return "\(count) stickers"
-    }
-}
-
-private let plusIcon = generateImage(CGSize(width: 18.0, height: 18.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor(0x007ee5).cgColor)
-    let lineWidth = min(1.5, UIScreenPixel * 4.0)
-    context.fill(CGRect(x: floorToScreenPixels((18.0 - lineWidth) / 2.0), y: 0.0, width: lineWidth, height: 18.0))
-    context.fill(CGRect(x: 0.0, y: floorToScreenPixels((18.0 - lineWidth) / 2.0), width: 18.0, height: lineWidth))
-})
-
-private let checkIcon = generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0x8d8c9d).cgColor)
-    context.setLineWidth(2.0)
-    context.move(to: CGPoint(x: 12.0, y: 1.0))
-    context.addLine(to: CGPoint(x: 4.16482734, y: 9.0))
-    context.addLine(to: CGPoint(x: 1.0, y: 5.81145833))
-    context.strokePath()
-})
-
-private let unreadIcon = generateFilledCircleImage(diameter: 6.0, color: UIColor(0x007ee5))
-
 class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -186,14 +160,11 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.imageNode = TransformImageNode()
@@ -221,10 +192,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.installationActionNode = HighlightableButtonNode()
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false)
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.imageNode)
         self.addSubnode(self.titleNode)
@@ -249,13 +219,21 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
+        let currentItem = self.layoutParams?.0
+        
         return { item, width, neighbors in
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let packRevealOptions: [ItemListRevealOption]
             if item.editing.editable && item.enabled {
-                packRevealOptions = [ItemListRevealOption(key: 0, title: "Remove", icon: nil, color: UIColor(0xff3824))]
+                packRevealOptions = [ItemListRevealOption(key: 0, title: "Remove", icon: nil, color: UIColor(rgb: 0xff3824))]
             } else {
                 packRevealOptions = []
             }
@@ -269,19 +247,19 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 case let .installation(installed):
                     rightInset += 50.0
                     if installed {
-                        installationActionImage = checkIcon
+                        installationActionImage = PresentationResourcesItemList.checkIconImage(item.theme)
                     } else {
-                        installationActionImage = plusIcon
+                        installationActionImage = PresentationResourcesItemList.plusIconImage(item.theme)
                     }
             }
             
             var unreadImage: UIImage?
             if item.unread {
-                unreadImage = unreadIcon
+                unreadImage = PresentationResourcesItemList.stickerUnreadDotImage(item.theme)
             }
             
-            titleAttributedString = NSAttributedString(string: item.packInfo.title, font: titleFont, textColor: UIColor.black)
-            statusAttributedString = NSAttributedString(string: stringForStickerCount(item.itemCount), font: statusFont, textColor: UIColor(0x808080))
+            titleAttributedString = NSAttributedString(string: item.packInfo.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+            statusAttributedString = NSAttributedString(string: item.itemCount, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
             
             let leftInset: CGFloat = 65.0
             
@@ -309,7 +287,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = UIColor(white: 1.0, alpha: 0.5)
+                    currentDisabledOverlayNode?.backgroundColor = item.theme.list.itemBackgroundColor.withAlphaComponent(0.5)
                 }
             } else {
                 currentDisabledOverlayNode = nil
@@ -345,6 +323,13 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, width, neighbors)
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
                     
                     let revealOffset = strongSelf.revealOffset
                     
@@ -532,7 +517,6 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         super.updateRevealOffset(offset: offset, transition: transition)
         
         let leftInset: CGFloat = 65.0
-        let width = self.bounds.size.width
         
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {

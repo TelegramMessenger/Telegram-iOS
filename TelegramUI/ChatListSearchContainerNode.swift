@@ -37,22 +37,22 @@ enum ChatListRecentEntryStableId: Hashable {
 }
 
 enum ChatListRecentEntry: Comparable, Identifiable {
-    case topPeers([Peer])
-    case peer(index: Int, peer: Peer)
+    case topPeers([Peer], PresentationTheme, PresentationStrings)
+    case peer(index: Int, peer: Peer, PresentationTheme, PresentationStrings)
     
     var stableId: ChatListRecentEntryStableId {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, peer):
+            case let .peer(_, peer, _, _):
                 return .peerId(peer.id)
         }
     }
     
     static func ==(lhs: ChatListRecentEntry, rhs: ChatListRecentEntry) -> Bool {
         switch lhs {
-            case let .topPeers(lhsPeers):
-                if case let .topPeers(rhsPeers) = rhs {
+            case let .topPeers(lhsPeers, lhsTheme, lhsStrings):
+                if case let .topPeers(rhsPeers, rhsTheme, rhsStrings) = rhs {
                     if lhsPeers.count != rhsPeers.count {
                         return false
                     }
@@ -61,12 +61,18 @@ enum ChatListRecentEntry: Comparable, Identifiable {
                             return false
                         }
                     }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
+                        return false
+                    }
                     return true
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer):
-                if case let .peer(rhsIndex, rhsPeer) = rhs, lhsPeer.isEqual(rhsPeer) && lhsIndex == rhsIndex {
+            case let .peer(lhsIndex, lhsPeer, lhsTheme, lhsStrings):
+                if case let .peer(rhsIndex, rhsPeer, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false
@@ -78,11 +84,11 @@ enum ChatListRecentEntry: Comparable, Identifiable {
         switch lhs {
             case .topPeers:
                 return true
-            case let .peer(lhsIndex, _):
+            case let .peer(lhsIndex, _, _, _):
                 switch rhs {
                     case .topPeers:
                         return false
-                    case let .peer(rhsIndex, _):
+                    case let .peer(rhsIndex, _, _, _):
                         return lhsIndex <= rhsIndex
                 }
         }
@@ -90,12 +96,12 @@ enum ChatListRecentEntry: Comparable, Identifiable {
     
     func item(account: Account, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
         switch self {
-            case let .topPeers(peers):
-                return ChatListRecentPeersListItem(account: account, peers: peers, peerSelected: { peer in
+            case let .topPeers(peers, theme, strings):
+                return ChatListRecentPeersListItem(theme: theme, strings: strings, account: account, peers: peers, peerSelected: { peer in
                     peerSelected(peer)
                 })
-            case let .peer(_, peer):
-                return ContactsPeerItem(account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .recentPeers), action: { _ in
+            case let .peer(_, peer, theme, strings):
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings), action: { _ in
                     peerSelected(peer)
                 })
         }
@@ -145,41 +151,47 @@ enum ChatListSearchEntryStableId: Hashable {
 
 
 enum ChatListSearchEntry: Comparable, Identifiable {
-    case localPeer(Peer, Int)
-    case globalPeer(Peer, Int)
-    case message(Message)
+    case localPeer(Peer, Int, PresentationTheme, PresentationStrings)
+    case globalPeer(Peer, Int, PresentationTheme, PresentationStrings)
+    case message(Message, PresentationTheme, PresentationStrings)
     
     var stableId: ChatListSearchEntryStableId {
         switch self {
-            case let .localPeer(peer, _):
+            case let .localPeer(peer, _, _, _):
                 return .localPeerId(peer.id)
-            case let .globalPeer(peer, _):
+            case let .globalPeer(peer, _, _, _):
                 return .globalPeerId(peer.id)
-            case let .message(message):
+            case let .message(message, _, _):
                 return .messageId(message.id)
         }
     }
     
     static func ==(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(lhsPeer, lhsIndex):
-                if case let .localPeer(rhsPeer, rhsIndex) = rhs, lhsPeer.isEqual(rhsPeer) && lhsIndex == rhsIndex {
+            case let .localPeer(lhsPeer, lhsIndex, lhsTheme, lhsStrings):
+                if case let .localPeer(rhsPeer, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false
                 }
-            case let .globalPeer(lhsPeer, lhsIndex):
-                if case let .globalPeer(rhsPeer, rhsIndex) = rhs, lhsPeer.isEqual(rhsPeer) && lhsIndex == rhsIndex {
+            case let .globalPeer(lhsPeer, lhsIndex, lhsTheme, lhsStrings):
+                if case let .globalPeer(rhsPeer, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false
                 }
-            case let .message(lhsMessage):
-                if case let .message(rhsMessage) = rhs {
+            case let .message(lhsMessage, lhsTheme, lhsStrings):
+                if case let .message(rhsMessage, rhsTheme, rhsStrings) = rhs {
                     if lhsMessage.id != rhsMessage.id {
                         return false
                     }
                     if lhsMessage.stableVersion != rhsMessage.stableVersion {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
                         return false
                     }
                     return true
@@ -191,23 +203,23 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         
     static func <(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(_, lhsIndex):
-                if case let .localPeer(_, rhsIndex) = rhs {
+            case let .localPeer(_, lhsIndex, _, _):
+                if case let .localPeer(_, rhsIndex, _, _) = rhs {
                     return lhsIndex <= rhsIndex
                 } else {
                     return true
                 }
-            case let .globalPeer(_, lhsIndex):
+            case let .globalPeer(_, lhsIndex, _, _):
                 switch rhs {
                     case .localPeer:
                         return false
-                    case let .globalPeer(_, rhsIndex):
+                    case let .globalPeer(_, rhsIndex, _, _):
                         return lhsIndex <= rhsIndex
                     case .message:
                         return true
                 }
-            case let .message(lhsMessage):
-                if case let .message(rhsMessage) = rhs {
+            case let .message(lhsMessage, _, _):
+                if case let .message(rhsMessage, _, _) = rhs {
                     return MessageIndex(lhsMessage) < MessageIndex(rhsMessage)
                 } else {
                     return false
@@ -217,16 +229,16 @@ enum ChatListSearchEntry: Comparable, Identifiable {
     
     func item(account: Account, enableHeaders: Bool, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
-            case let .localPeer(peer, _):
-                return ContactsPeerItem(account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .localPeers), action: { _ in
+            case let .localPeer(peer, _, theme, strings):
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings), action: { _ in
                     interaction.peerSelected(peer)
                 })
-            case let .globalPeer(peer, _):
-                return ContactsPeerItem(account: account, peer: peer, chatPeer: peer, status: .addressName, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .globalPeers), action: { _ in
+            case let .globalPeer(peer, _, theme, strings):
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .addressName, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings), action: { _ in
                     interaction.peerSelected(peer)
                 })
-            case let .message(message):
-                return ChatListItem(account: account, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), message: message, peer: RenderedPeer(message: message), combinedReadState: nil, notificationSettings: nil, embeddedState: nil, editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages) : nil, interaction: interaction)
+            case let .message(message, theme, strings):
+                return ChatListItem(theme: theme, strings: strings, account: account, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), message: message, peer: RenderedPeer(message: message), combinedReadState: nil, notificationSettings: nil, embeddedState: nil, editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: theme, strings: strings) : nil, interaction: interaction)
         }
     }
 }
@@ -281,9 +293,17 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let searchQuery = Promise<String?>()
     private let searchDisposable = MetaDisposable()
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
+    
     init(account: Account, openPeer: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void) {
         self.account = account
         self.openMessage = openMessage
+        
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
         //self.recentPeersNode = ChatListSearchRecentPeersNode(account: account, peerSelected: openPeer)
         self.recentListNode = ListView()
@@ -292,7 +312,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         
         super.init()
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         //self.addSubnode(self.recentPeersNode)
         self.addSubnode(self.recentListNode)
@@ -300,41 +320,38 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         
         self.listNode.isHidden = true
     
+        let themeAndStringsPromise = self.themeAndStringsPromise
         let foundItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ChatListSearchEntry]?, NoError> in
                 if let query = query, !query.isEmpty {
                     let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased())
-                        |> map { peers -> [ChatListSearchEntry] in
+                    let foundRemotePeers: Signal<[Peer], NoError> = .single([]) |> then(searchPeers(account: account, query: query)
+                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                    let foundRemoteMessages: Signal<[Message], NoError> = .single([]) |> then(searchMessages(account: account, peerId: nil, query: query)
+                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                    
+                    return combineLatest(foundLocalPeers, foundRemotePeers, foundRemoteMessages, themeAndStringsPromise.get())
+                        |> map { foundLocalPeers, foundRemotePeers, foundRemoteMessages, themeAndStrings -> [ChatListSearchEntry]? in
                             var entries: [ChatListSearchEntry] = []
                             var index = 0
-                            for peer in peers {
-                                entries.append(.localPeer(peer, index))
+                            for peer in foundLocalPeers {
+                                entries.append(.localPeer(peer, index, themeAndStrings.0, themeAndStrings.1))
                                 index += 1
                             }
-                            return entries
-                        }
-                    
-                    let foundRemotePeers: Signal<[ChatListSearchEntry], NoError> = .single([]) |> then(searchPeers(account: account, query: query)
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
-                        |> map { peers -> [ChatListSearchEntry] in
-                            var entries: [ChatListSearchEntry] = []
-                            var index = 0
-                            for peer in peers {
-                                entries.append(.globalPeer(peer, index))
+
+                            index = 0
+                            for peer in foundRemotePeers {
+                                entries.append(.globalPeer(peer, index, themeAndStrings.0, themeAndStrings.1))
                                 index += 1
                             }
+                            
+                            index = 0
+                            for message in foundRemoteMessages {
+                                entries.append(.message(message, themeAndStrings.0, themeAndStrings.1))
+                                index += 1
+                            }
+                            
                             return entries
-                        })
-                    
-                    let foundRemoteMessages: Signal<[ChatListSearchEntry], NoError> = .single([]) |> then(searchMessages(account: account, peerId: nil, query: query)
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
-                        |> map { messages -> [ChatListSearchEntry] in
-                            return messages.map({ .message($0) })
-                        })
-                    
-                    return combineLatest(foundLocalPeers, foundRemotePeers, foundRemoteMessages)
-                        |> map { localPeers, remotePeers, remoteMessages -> [ChatListSearchEntry]? in
-                            return localPeers + remotePeers + remoteMessages
                         }
                 } else {
                     return .single(nil)
@@ -360,12 +377,12 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         })
         
         let previousRecentItems = Atomic<[ChatListRecentEntry]?>(value: nil)
-        let recentItemsTransition = recentlySearchedPeers(postbox: account.postbox)
-            |> mapToSignal { [weak self] peers -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
+        let recentItemsTransition = combineLatest(recentlySearchedPeers(postbox: account.postbox), themeAndStringsPromise.get())
+            |> mapToSignal { [weak self] peers, themeAndStrings -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
                 var entries: [ChatListRecentEntry] = []
-                entries.append(.topPeers([]))
+                entries.append(.topPeers([], themeAndStrings.0, themeAndStrings.1))
                 for i in 0 ..< peers.count {
-                    entries.append(.peer(index: i, peer: peers[i]))
+                    entries.append(.peer(index: i, peer: peers[i], themeAndStrings.0, themeAndStrings.1))
                 }
                 let previousEntries = previousRecentItems.swap(entries)
                 
@@ -392,11 +409,30 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 }
             }))
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
+                    }
+                }
+            })
     }
     
     deinit {
         self.recentDisposable.dispose()
         self.searchDisposable.dispose()
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.backgroundColor = theme.chatList.backgroundColor
     }
     
     override func searchTextUpdated(text: String) {

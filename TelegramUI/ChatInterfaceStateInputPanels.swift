@@ -3,13 +3,26 @@ import AsyncDisplayKit
 import TelegramCore
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputPanelNode? {
+    if let _ = chatPresentationInterfaceState.search {
+        if let currentPanel = currentPanel as? ChatSearchInputPanelNode {
+            currentPanel.interfaceInteraction = interfaceInteraction
+            return currentPanel
+        } else {
+            let panel = ChatSearchInputPanelNode(theme: chatPresentationInterfaceState.theme)
+            panel.account = account
+            panel.interfaceInteraction = interfaceInteraction
+            return panel
+        }
+    }
+    
     if let selectionState = chatPresentationInterfaceState.interfaceState.selectionState {
         if let currentPanel = currentPanel as? ChatMessageSelectionInputPanelNode {
             currentPanel.selectedMessageCount = selectionState.selectedIds.count
             currentPanel.interfaceInteraction = interfaceInteraction
+            currentPanel.updateTheme(theme: chatPresentationInterfaceState.theme)
             return currentPanel
         } else {
-            let panel = ChatMessageSelectionInputPanelNode()
+            let panel = ChatMessageSelectionInputPanelNode(theme: chatPresentationInterfaceState.theme)
             panel.account = account
             panel.selectedMessageCount = selectionState.selectedIds.count
             panel.interfaceInteraction = interfaceInteraction
@@ -19,9 +32,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         if chatPresentationInterfaceState.peerIsBlocked {
             if let currentPanel = currentPanel as? ChatUnblockInputPanelNode {
                 currentPanel.interfaceInteraction = interfaceInteraction
+                currentPanel.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 return currentPanel
             } else {
-                let panel = ChatUnblockInputPanelNode()
+                let panel = ChatUnblockInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 panel.account = account
                 panel.interfaceInteraction = interfaceInteraction
                 return panel
@@ -68,17 +82,14 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
                 switch channel.info {
                     case .broadcast:
-                        switch channel.role {
-                            case .creator, .editor, .moderator:
-                                break
-                            case .member:
-                                if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
-                                    return currentPanel
-                                } else {
-                                    let panel = ChatChannelSubscriberInputPanelNode()
-                                    panel.account = account
-                                    return panel
-                                }
+                        if !channel.hasAdminRights([.canPostMessages]) {
+                            if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
+                                return currentPanel
+                            } else {
+                                let panel = ChatChannelSubscriberInputPanelNode()
+                                panel.account = account
+                                return panel
+                            }
                         }
                     case .group:
                         switch channel.participationStatus {
@@ -121,9 +132,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             
             if displayBotStartPanel {
                 if let currentPanel = currentPanel as? ChatBotStartInputPanelNode {
+                    currentPanel.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                     return currentPanel
                 } else {
-                    let panel = ChatBotStartInputPanelNode()
+                    let panel = ChatBotStartInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                     panel.account = account
                     panel.interfaceInteraction = interfaceInteraction
                     return panel

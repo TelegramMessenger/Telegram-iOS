@@ -12,8 +12,8 @@ public struct AutomaticMediaDownloadCategoryPeers: Coding, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.privateChats = (decoder.decodeInt32ForKey("p") as Int32) != 0
-        self.groupsAndChannels = (decoder.decodeInt32ForKey("g") as Int32) != 0
+        self.privateChats = decoder.decodeInt32ForKey("p", orElse: 0) != 0
+        self.groupsAndChannels = decoder.decodeInt32ForKey("g", orElse: 0) != 0
     }
     
     public func encode(_ encoder: Encoder) {
@@ -115,7 +115,7 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     
     public init(decoder: Decoder) {
         self.categories = decoder.decodeObjectForKey("c", decoder: { AutomaticMediaDownloadCategories(decoder: $0) }) as! AutomaticMediaDownloadCategories
-        self.saveIncomingPhotos = (decoder.decodeInt32ForKey("siph") as Int32) != 0
+        self.saveIncomingPhotos = decoder.decodeInt32ForKey("siph", orElse: 0) != 0
     }
     
     public func encode(_ encoder: Encoder) {

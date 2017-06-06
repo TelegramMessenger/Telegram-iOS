@@ -27,9 +27,9 @@ final class StickerPackPreviewController: ViewController {
         self.account = account
         self.stickerPack = stickerPack
         
-        super.init(navigationBar: NavigationBar())
+        super.init(navigationBarTheme: nil)
         
-        self.navigationBar.isHidden = true
+        self.statusBar.statusBarStyle = .Ignore
         
         self.stickerPackContents.set(loadedStickerPack(account: account, reference: stickerPack))
     }

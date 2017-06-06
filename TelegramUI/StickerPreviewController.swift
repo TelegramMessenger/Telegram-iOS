@@ -27,9 +27,7 @@ final class StickerPreviewController: ViewController {
         self.account = account
         self.item = item
         
-        super.init(navigationBar: NavigationBar())
-        
-        self.navigationBar.isHidden = true
+        super.init(navigationBarTheme: nil)
     }
     
     required init(coder aDecoder: NSCoder) {

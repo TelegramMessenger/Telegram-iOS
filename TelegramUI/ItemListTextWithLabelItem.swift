@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
     let label: String
     let text: String
     let multiline: Bool
@@ -11,7 +12,8 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     let action: (() -> Void)?
     let tag: Any?
     
-    init(label: String, text: String, multiline: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, tag: Any? = nil) {
+    init(theme: PresentationTheme, label: String, text: String, multiline: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, tag: Any? = nil) {
+        self.theme = theme
         self.label = label
         self.text = text
         self.multiline = multiline
@@ -78,18 +80,14 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.labelNode = TextNode()
@@ -112,19 +110,33 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
+        let currentItem = self.item
+        
         return { item, width, neighbors in
+            var updatedTheme: PresentationTheme?
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             let insets = itemListNeighborsPlainInsets(neighbors)
             let leftInset: CGFloat = 35.0
             let separatorHeight = UIScreenPixel
             
-            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: labelFont, textColor: UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: item.text, font: textFont, textColor: UIColor.black), nil, item.multiline ? 0 : 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: labelFont, textColor: item.theme.list.itemAccentColor), nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: item.text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor), nil, item.multiline ? 0 : 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             let contentSize = CGSize(width: width, height: textLayout.size.height + 39.0)
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = nodeLayout.size
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
                     
                     let _ = labelApply()
                     let _ = textApply()

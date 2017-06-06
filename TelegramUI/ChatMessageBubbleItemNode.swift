@@ -15,6 +15,8 @@ private func contentNodeClassesForItem(_ item: ChatMessageItem) -> [AnyClass] {
             } else {
                 result.append(ChatMessageFileBubbleContentNode.self)
             }
+        } else if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
+            result.append(ChatMessageCallBubbleContentNode.self)
         }
     }
     
@@ -46,16 +48,13 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 private let chatMessagePeerIdColors: [UIColor] = [
-    UIColor(0xfc5c51),
-    UIColor(0xfa790f),
-    UIColor(0x0fb297),
-    UIColor(0x3ca5ec),
-    UIColor(0x3d72ed),
-    UIColor(0x895dd5)
+    UIColor(rgb: 0xfc5c51),
+    UIColor(rgb: 0xfa790f),
+    UIColor(rgb: 0x0fb297),
+    UIColor(rgb: 0x3ca5ec),
+    UIColor(rgb: 0x3d72ed),
+    UIColor(rgb: 0x895dd5)
 ]
-
-private let shareButtonBackgroundImage = generateFilledCircleImage(diameter: 29.0, color: UIColor(0x748391, 0.45))
-private let shareButtonImage = UIImage(bundleImageName: "Chat/Message/ShareIcon")?.precomposed()
 
 class ChatMessageBubbleItemNode: ChatMessageItemView {
     private let backgroundNode: ChatMessageBackground
@@ -78,6 +77,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var highlightedState: Bool = false
     
     private var backgroundFrameTransition: (CGRect, CGRect)?
+    
+    private var appliedItem: ChatMessageItem?
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -165,7 +166,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     switch tapAction {
                         case .none:
                             break
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage:
+                        case .ignore:
+                            return .fail
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .call:
                             return .waitForSingleTap
                         case .holdToPreviewSecretMedia:
                             return .waitForHold(timeout: 0.12, acceptTap: false)
@@ -174,6 +177,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             }
             
             return .waitForDoubleTap
+        }
+        recognizer.highlight = { [weak self] point in
+            if let strongSelf = self {
+                for contentNode in strongSelf.contentNodes {
+                    var translatedPoint: CGPoint?
+                    if let point = point {
+                        translatedPoint = CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY)
+                    }
+                    contentNode.updateTouchesAtPoint(translatedPoint)
+                }
+            }
         }
         self.view.addGestureRecognizer(recognizer)
     }
@@ -193,13 +207,33 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         
         let layoutConstants = self.layoutConstants
         
+        let currentItem = self.appliedItem
+        
         return { item, width, mergedTop, mergedBottom, dateHeaderAtBottom in
             let message = item.message
             let incoming = item.message.effectivelyIncoming
             
             let displayAuthorInfo = !mergedTop && incoming && item.peerId.isGroupOrChannel && item.message.author != nil
             
-            let avatarInset: CGFloat = (item.peerId.isGroupOrChannel && item.message.author != nil) ? layoutConstants.avatarDiameter : 0.0
+            let avatarInset: CGFloat
+            var hasAvatar = false
+            
+            if item.peerId.isGroupOrChannel && item.message.author != nil {
+                var isBroadcastChannel = false
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    isBroadcastChannel = true
+                }
+                
+                if !isBroadcastChannel {
+                    hasAvatar = true
+                }
+            }
+            
+            if hasAvatar {
+                avatarInset = layoutConstants.avatarDiameter
+            } else {
+                avatarInset = 0.0
+            }
             
             let tmpWidth = width * layoutConstants.bubble.maximumWidthFillFactor
             let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
@@ -302,9 +336,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode?) = (CGSize(), { nil })
             
             if displayHeader {
-                if let author = message.author, displayAuthorInfo {
-                    authorNameString = author.displayTitle
-                    authorNameColor = chatMessagePeerIdColors[Int(author.id.id % 6)]
+                if displayAuthorInfo {
+                    if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                        authorNameString = peer.displayTitle
+                        authorNameColor = chatMessagePeerIdColors[Int(peer.id.id % 6)]
+                    } else if let author = message.author {
+                        authorNameString = author.displayTitle
+                        authorNameColor = chatMessagePeerIdColors[Int(author.id.id % 6)]
+                    }
                 }
                 
                 if authorNameString != nil || inlineBotNameString != nil {
@@ -312,7 +351,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         headerSize.height += 4.0
                     }
                     
-                    let inlineBotNameColor = incoming ? UIColor(0x007ee5) : UIColor(0x00a700)
+                    let inlineBotNameColor = incoming ? item.theme.chat.bubble.incomingAccentColor : item.theme.chat.bubble.outgoingAccentColor
                     
                     let attributedString: NSAttributedString
                     if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
@@ -326,7 +365,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     } else if let inlineBotNameString = inlineBotNameString {
                         attributedString = NSAttributedString(string: "via @\(inlineBotNameString)", font: inlineBotNameFont, textColor: inlineBotNameColor)
                     } else {
-                        attributedString = NSAttributedString(string: "", font: nameFont, textColor: UIColor.black)
+                        attributedString = NSAttributedString(string: "", font: nameFont, textColor: inlineBotNameColor)
                     }
                     
                     let sizeAndApply = authorNameLayout(attributedString, nil, 1, .end, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
@@ -342,7 +381,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     if headerSize.height < CGFloat.ulpOfOne {
                         headerSize.height += 4.0
                     }
-                    let sizeAndApply = forwardInfoLayout(incoming, forwardInfo.source == nil ? forwardInfo.author : forwardInfo.source!, forwardInfo.source == nil ? nil : forwardInfo.author, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = forwardInfoLayout(item.theme, incoming, forwardInfo.source == nil ? forwardInfo.author : forwardInfo.source!, forwardInfo.source == nil ? nil : forwardInfo.author, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude))
                     forwardInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     forwardInfoOriginY = headerSize.height
@@ -356,7 +395,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     } else {
                         headerSize.height += 2.0
                     }
-                    let sizeAndApply = replyInfoLayout(item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = replyInfoLayout(item.theme, item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude))
                     replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     replyInfoOriginY = headerSize.height
@@ -396,7 +435,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
-                let (minWidth, buttonsLayout) = actionButtonsLayout(replyMarkup, maximumNodeWidth)
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.theme, replyMarkup, maximumNodeWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
@@ -447,22 +486,30 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
             
+            var updatedShareButtonBackground: UIImage?
+            
             var updatedShareButtonNode: HighlightableButtonNode?
             if needShareButton {
                 if currentShareButtonNode != nil {
                     updatedShareButtonNode = currentShareButtonNode
+                    if item.theme !== currentItem?.theme {
+                        updatedShareButtonBackground = PresentationResourcesChat.chatBubbleShareButtonImage(item.theme)
+                    }
                 } else {
                     let buttonNode = HighlightableButtonNode()
-                    buttonNode.setBackgroundImage(shareButtonBackgroundImage, for: [.normal])
-                    buttonNode.setImage(shareButtonImage, for: [.normal])
+                    buttonNode.setBackgroundImage(PresentationResourcesChat.chatBubbleShareButtonImage(item.theme), for: [.normal])
                     updatedShareButtonNode = buttonNode
                 }
             }
             
             let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
             
+            let graphics = PresentationResourcesChat.principalGraphics(item.theme)
+            
             return (layout, { [weak self] animation in
                 if let strongSelf = self {
+                    strongSelf.appliedItem = item
+                    
                     strongSelf.messageId = message.id
                     strongSelf.messageStableId = message.stableId
                     
@@ -473,7 +520,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     } else {
                         backgroundType = .Incoming(mergeType)
                     }
-                    strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState)
+                    strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics)
                     
                     strongSelf.backgroundType = backgroundType
                     
@@ -598,6 +645,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             strongSelf.shareButtonNode = updatedShareButtonNode
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                        if let updatedShareButtonBackground = updatedShareButtonBackground {
+                            strongSelf.shareButtonNode?.setBackgroundImage(updatedShareButtonBackground, for: [.normal])
                         }
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
@@ -797,7 +847,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             loop: for contentNode in self.contentNodes {
                                 let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY))
                                 switch tapAction {
-                                    case .none:
+                                    case .none, .ignore:
                                         break
                                     case let .url(url):
                                         foundTapAction = true
@@ -805,7 +855,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             controllerInteraction.openUrl(url)
                                         }
                                         break loop
-                                    case let .peerMention(peerId):
+                                    case let .peerMention(peerId, _):
                                         foundTapAction = true
                                         if let controllerInteraction = self.controllerInteraction {
                                             controllerInteraction.openPeer(peerId, .chat(textInputState: nil), nil)
@@ -837,7 +887,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         break loop
                                     case .holdToPreviewSecretMedia:
                                         foundTapAction = true
-                                        break
+                                    case let .call(peerId):
+                                        foundTapAction = true
+                                        if let controllerInteraction = self.controllerInteraction {
+                                            controllerInteraction.callPeer(peerId)
+                                        }
+                                        break loop
                                 }
                             }
                             if !foundTapAction {
@@ -845,7 +900,53 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             }
                         case .longTap, .doubleTap:
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
-                                self.controllerInteraction?.openMessageContextMenu(item.message.id, self, self.backgroundNode.frame)
+                                var foundTapAction = false
+                                loop: for contentNode in self.contentNodes {
+                                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY))
+                                    switch tapAction {
+                                        case .none, .ignore:
+                                            break
+                                        case let .url(url):
+                                            foundTapAction = true
+                                            if let controllerInteraction = self.controllerInteraction {
+                                                controllerInteraction.longTap(.url(url))
+                                            }
+                                            break loop
+                                        case let .peerMention(peerId, mention):
+                                            foundTapAction = true
+                                            if let controllerInteraction = self.controllerInteraction {
+                                                controllerInteraction.longTap(.mention(mention))
+                                            }
+                                            break loop
+                                        case let .textMention(name):
+                                            foundTapAction = true
+                                            if let controllerInteraction = self.controllerInteraction {
+                                                controllerInteraction.longTap(.mention(name))
+                                            }
+                                            break loop
+                                        case let .botCommand(command):
+                                            foundTapAction = true
+                                            if let item = self.item, let controllerInteraction = self.controllerInteraction {
+                                                controllerInteraction.longTap(.command(command))
+                                            }
+                                            break loop
+                                        case let .hashtag(_, hashtag):
+                                            foundTapAction = true
+                                            if let controllerInteraction = self.controllerInteraction {
+                                                controllerInteraction.longTap(.hashtag(hashtag))
+                                            }
+                                            break loop
+                                        case .instantPage:
+                                            break
+                                        case .holdToPreviewSecretMedia:
+                                            break
+                                        case let .call(peerId):
+                                            break
+                                    }
+                                }
+                                if !foundTapAction {
+                                    self.controllerInteraction?.openMessageContextMenu(item.message.id, self, self.backgroundNode.frame)
+                                }
                             }
                         case .hold:
                             if let item = self.item, item.message.containsSecretMedia {
@@ -970,7 +1071,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     override func updateHighlightedState(animated: Bool) {
-        if let controllerInteraction = self.controllerInteraction {
+        if let controllerInteraction = self.controllerInteraction, let item = self.item {
             var highlighted = false
             if let messageStableId = self.messageStableId, let highlightedState = controllerInteraction.highlightedState {
                 if highlightedState.messageStableId == messageStableId {
@@ -981,17 +1082,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             if self.highlightedState != highlighted {
                 self.highlightedState = highlighted
                 if let backgroundType = self.backgroundType {
+                    let graphics = PresentationResourcesChat.principalGraphics(item.theme)
+                    
                     if highlighted {
-                        self.backgroundNode.setType(type: backgroundType, highlighted: true)
+                        self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics)
                     } else {
                         if let previousContents = self.backgroundNode.layer.contents, animated {
-                            self.backgroundNode.setType(type: backgroundType, highlighted: false)
+                            self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics)
                             
                             if let updatedContents = self.backgroundNode.layer.contents {
                                 self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.42)
                             }
                         } else {
-                            self.backgroundNode.setType(type: backgroundType, highlighted: false)
+                            self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics)
                         }
                     }
                 }

@@ -241,7 +241,7 @@ private let countryButtonBackground = generateImage(CGSize(width: 61.0, height: 
     let arrowSize: CGFloat = 10.0
     let lineWidth = UIScreenPixel
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0xbcbbc1).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0xbcbbc1).cgColor)
     context.setLineWidth(lineWidth)
     context.move(to: CGPoint(x: size.width, y: size.height - arrowSize - lineWidth / 2.0))
     context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize - lineWidth / 2.0))
@@ -254,7 +254,7 @@ private let countryButtonBackground = generateImage(CGSize(width: 61.0, height: 
 private let countryButtonHighlightedBackground = generateImage(CGSize(width: 60.0, height: 67.0), rotatedContext: { size, context in
     let arrowSize: CGFloat = 10.0
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor(0xbcbbc1).cgColor)
+    context.setFillColor(UIColor(rgb: 0xbcbbc1).cgColor)
     context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
     context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
     context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
@@ -268,7 +268,7 @@ private let phoneInputBackground = generateImage(CGSize(width: 85.0, height: 57.
     let arrowSize: CGFloat = 10.0
     let lineWidth = UIScreenPixel
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0xbcbbc1).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0xbcbbc1).cgColor)
     context.setLineWidth(lineWidth)
     context.move(to: CGPoint(x: 15.0, y: size.height - lineWidth / 2.0))
     context.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth / 2.0))
@@ -313,11 +313,11 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     override init() {
         self.navigationBackgroundNode = ASDisplayNode()
         self.navigationBackgroundNode.isLayerBacked = true
-        self.navigationBackgroundNode.backgroundColor = UIColor(0xefefef)
+        self.navigationBackgroundNode.backgroundColor = UIColor(rgb: 0xefefef)
         
         self.stripeNode = ASDisplayNode()
         self.stripeNode.isLayerBacked = true
-        self.stripeNode.backgroundColor = UIColor(0xbcbbc1)
+        self.stripeNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
         
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
@@ -327,14 +327,14 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.noticeNode = ASTextNode()
         self.noticeNode.isLayerBacked = true
         self.noticeNode.displaysAsynchronously = false
-        self.noticeNode.attributedText = NSAttributedString(string: "Please confirm your country code and enter your phone number.", font: Font.regular(16.0), textColor: UIColor(0x878787), paragraphAlignment: .center)
+        self.noticeNode.attributedText = NSAttributedString(string: "Please confirm your country code and enter your phone number.", font: Font.regular(16.0), textColor: UIColor(rgb: 0x878787), paragraphAlignment: .center)
         
         self.termsOfServiceNode = ASTextNode()
         self.termsOfServiceNode.isLayerBacked = true
         self.termsOfServiceNode.displaysAsynchronously = false
         let termsString = NSMutableAttributedString()
         termsString.append(NSAttributedString(string: "By signing up,\nyou agree to the ", font: Font.regular(16.0), textColor: UIColor.black))
-        termsString.append(NSAttributedString(string: "Terms of Service", font: Font.regular(16.0), textColor: UIColor(0x007ee5)))
+        termsString.append(NSAttributedString(string: "Terms of Service", font: Font.regular(16.0), textColor: UIColor(rgb: 0x007ee5)))
         termsString.append(NSAttributedString(string: ".", font: Font.regular(16.0), textColor: UIColor.black))
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
@@ -371,7 +371,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 15.0, bottom: 10.0, right: 0.0)
         self.countryButton.contentHorizontalAlignment = .left
         
-        self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: "Your phone number", font: Font.regular(20.0), textColor: UIColor(0xbcbcc3))
+        self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: "Your phone number", font: Font.regular(20.0), textColor: UIColor(rgb: 0xbcbcc3))
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
         

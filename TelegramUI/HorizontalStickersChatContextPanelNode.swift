@@ -6,7 +6,7 @@ import Display
 
 private let backgroundCenterImage = generateImage(CGSize(width: 30.0, height: 82.0), rotatedContext: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0xbfbfc4).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0xbfbfc4).cgColor)
     context.setFillColor(UIColor.white.cgColor)
     let lineWidth = UIScreenPixel
     context.setLineWidth(lineWidth)
@@ -25,7 +25,7 @@ private let backgroundCenterImage = generateImage(CGSize(width: 30.0, height: 82
 
 private let backgroundLeftImage = generateImage(CGSize(width: 8.0, height: 16.0), rotatedContext: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0xbfbfc4).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0xbfbfc4).cgColor)
     context.setFillColor(UIColor.white.cgColor)
     let lineWidth = UIScreenPixel
     context.setLineWidth(lineWidth)
@@ -183,7 +183,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         self.gridNode.bounds = CGRect(x: gridBounds.minX, y: gridBounds.minY, width: gridFrame.size.height, height: gridFrame.size.width)
         self.gridNode.position = CGPoint(x: gridFrame.size.width / 2.0, y: gridFrame.size.height / 2.0)
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: CGSize(width: gridFrame.size.height, height: gridFrame.size.width), insets: UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0), preloadSize: 100.0, type: .fixed(itemSize: CGSize(width: 66.0, height: 66.0))), transition: .immediate), stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: CGSize(width: gridFrame.size.height, height: gridFrame.size.width), insets: UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0), preloadSize: 100.0, type: .fixed(itemSize: CGSize(width: 66.0, height: 66.0), lineSpacing: 0.0)), transition: .immediate), stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         let dequeue = self.validLayout == nil
         self.validLayout = (size, interfaceState)

@@ -9,14 +9,18 @@ final class SearchDisplayController {
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
-    init(contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
-        self.searchBar = SearchBarNode()
+    init(theme: PresentationTheme, strings: PresentationStrings, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
+        self.searchBar = SearchBarNode(theme: theme, strings: strings)
         self.contentNode = contentNode
         
         self.searchBar.textUpdated = { [weak contentNode] text in
             contentNode?.searchTextUpdated(text: text)
         }
         self.searchBar.cancel = cancel
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.searchBar.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -26,7 +30,7 @@ final class SearchDisplayController {
         self.containerLayout = (layout, searchBarFrame.maxY)
         
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, intrinsicInsets: layout.intrinsicInsets, statusBarHeight: nil, inputHeight: layout.inputHeight), navigationBarHeight: searchBarFrame.maxY, transition: transition)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: layout.intrinsicInsets, statusBarHeight: nil, inputHeight: layout.inputHeight), navigationBarHeight: searchBarFrame.maxY, transition: transition)
     }
     
     func activate(insertSubnode: (ASDisplayNode) -> Void, placeholder: SearchBarPlaceholderNode) {
@@ -37,7 +41,7 @@ final class SearchDisplayController {
         insertSubnode(self.contentNode)
         
         self.contentNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, intrinsicInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil), navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
         let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: self.contentNode.supernode)
         

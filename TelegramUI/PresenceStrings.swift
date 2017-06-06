@@ -10,60 +10,60 @@ func stringForTimestamp(day: Int32, month: Int32) -> String {
     return String(format: "%d.%02d", day, month)
 }
 
-func shortStringForDayOfWeek(_ day: Int32) -> String {
+func shortStringForDayOfWeek(strings: PresentationStrings, day: Int32) -> String {
     switch day {
         case 0:
-            return "Sun"
+            return strings.Weekday_ShortSunday
         case 1:
-            return "Mon"
+            return strings.Weekday_ShortMonday
         case 2:
-            return "Tue"
+            return strings.Weekday_ShortTuesday
         case 3:
-            return "Wed"
+            return strings.Weekday_ShortWednesday
         case 4:
-            return "Thu"
+            return strings.Weekday_ShortThursday
         case 5:
-            return "Fri"
+            return strings.Weekday_ShortFriday
         case 6:
-            return "Sat"
+            return strings.Weekday_ShortSaturday
         default:
             return ""
     }
 }
 
-func stringForMonth(_ month: Int32) -> String {
+func stringForMonth(strings: PresentationStrings, month: Int32) -> String {
     switch month {
         case 0:
-            return "January"
+            return strings.Month_GenJanuary
         case 1:
-            return "February"
+            return strings.Month_GenFebruary
         case 2:
-            return "March"
+            return strings.Month_GenMarch
         case 3:
-            return "April"
+            return strings.Month_GenApril
         case 4:
-            return "May"
+            return strings.Month_GenMay
         case 5:
-            return "June"
+            return strings.Month_GenJune
         case 6:
-            return "July"
+            return strings.Month_GenJuly
         case 7:
-            return "August"
+            return strings.Month_GenAugust
         case 8:
-            return "September"
+            return strings.Month_GenSeptember
         case 9:
-            return "October"
+            return strings.Month_GenOctober
         case 10:
-            return "November"
+            return strings.Month_GenNovember
         case 11:
-            return "December"
+            return strings.Month_GenDecember
         default:
             return ""
     }
 }
 
-func stringForMonth(_ month: Int32, ofYear year: Int32) -> String {
-    return stringForMonth(month) + " \(1900 + year)"
+func stringForMonth(strings: PresentationStrings, month: Int32, ofYear year: Int32) -> String {
+    return stringForMonth(strings: strings, month: month) + " \(1900 + year)"
 }
 
 func stringForTime(hours: Int32, minutes: Int32) -> String {
@@ -75,29 +75,29 @@ enum RelativeTimestampFormatDay {
     case yesterday
 }
 
-func stringForUserPresence(day: RelativeTimestampFormatDay, hours: Int32, minutes: Int32) -> String {
+func stringForUserPresence(strings: PresentationStrings, day: RelativeTimestampFormatDay, hours: Int32, minutes: Int32) -> String {
     let dayString: String
     switch day {
         case .today:
-            dayString = "today"
+            dayString = strings.LastSeen_AtDate(strings.Time_TodayAt(stringForTime(hours: hours, minutes: minutes)).0).0
         case .yesterday:
-            dayString = "yesterday"
+            dayString = strings.LastSeen_AtDate(strings.Time_YesterdayAt(stringForTime(hours: hours, minutes: minutes)).0).0
     }
-    return "last seen \(dayString) at \(stringForTime(hours: hours, minutes: minutes))"
+    return dayString
 }
 
-private func humanReadableStringForTimestamp(day: RelativeTimestampFormatDay, hours: Int32, minutes: Int32) -> String {
+private func humanReadableStringForTimestamp(strings: PresentationStrings, day: RelativeTimestampFormatDay, hours: Int32, minutes: Int32) -> String {
     let dayString: String
     switch day {
-        case .today:
-            dayString = "today"
-        case .yesterday:
-            dayString = "yesterday"
+    case .today:
+        dayString = strings.Time_TodayAt(stringForTime(hours: hours, minutes: minutes)).0
+    case .yesterday:
+        dayString = strings.Time_YesterdayAt(stringForTime(hours: hours, minutes: minutes)).0
     }
-    return "\(dayString) at \(stringForTime(hours: hours, minutes: minutes))"
+    return dayString
 }
 
-func humanReadableStringForTimestamp(timestamp: Int32) -> String {
+func humanReadableStringForTimestamp(strings: PresentationStrings, timestamp: Int32) -> String {
     var t: time_t = time_t(timestamp)
     var timeinfo: tm = tm()
     localtime_r(&t, &timeinfo)
@@ -119,7 +119,7 @@ func humanReadableStringForTimestamp(timestamp: Int32) -> String {
         } else {
             day = .yesterday
         }
-        return humanReadableStringForTimestamp(day: day, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
+        return humanReadableStringForTimestamp(strings: strings, day: day, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
     } else {
         return "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year))"
     }
@@ -163,7 +163,7 @@ func relativeUserPresenceStatus(_ presence: TelegramUserPresence, relativeTo tim
     }
 }
 
-func stringForRelativeTimestamp(_ relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+func stringForRelativeTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
     var t: time_t = time_t(relativeTimestamp)
     var timeinfo: tm = tm()
     localtime_r(&t, &timeinfo)
@@ -181,31 +181,27 @@ func stringForRelativeTimestamp(_ relativeTimestamp: Int32, relativeTo timestamp
         if dayDifference == 0 {
             return stringForTime(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
         } else {
-            return shortStringForDayOfWeek(timeinfo.tm_wday)
+            return shortStringForDayOfWeek(strings: strings, day: timeinfo.tm_wday)
         }
     } else {
         return stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1)
     }
 }
 
-func stringAndActivityForUserPresence(_ presence: TelegramUserPresence, relativeTo timestamp: Int32) -> (String, Bool) {
+func stringAndActivityForUserPresence(strings: PresentationStrings, presence: TelegramUserPresence, relativeTo timestamp: Int32) -> (String, Bool) {
     switch presence.status {
         case .none:
-            return ("offline", false)
+            return (strings.Presence_offline, false)
         case let .present(statusTimestamp):
             if statusTimestamp >= timestamp {
-                return ("online", true)
+                return (strings.Presence_online, true)
             } else {
                 let difference = timestamp - statusTimestamp
-                if difference < 30 {
-                    return ("last seen just now", false)
+                if difference < 60 {
+                    return (strings.LastSeen_JustNow, false)
                 } else if difference < 60 * 60 {
                     let minutes = difference / 60
-                    if minutes <= 1 {
-                        return ("last seen 1 minute ago", false)
-                    } else {
-                        return ("last seen \(minutes) minutes ago", false)
-                    }
+                    return (strings.LastSeen_MinutesAgo(minutes), false)
                 } else {
                     var t: time_t = time_t(statusTimestamp)
                     var timeinfo: tm = tm()
@@ -216,7 +212,7 @@ func stringAndActivityForUserPresence(_ presence: TelegramUserPresence, relative
                     localtime_r(&now, &timeinfoNow)
                     
                     if timeinfo.tm_year != timeinfoNow.tm_year {
-                        return ("last seen \(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year))", false)
+                        return (strings.LastSeen_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year)).0, false)
                     }
                     
                     let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
@@ -227,18 +223,18 @@ func stringAndActivityForUserPresence(_ presence: TelegramUserPresence, relative
                         } else {
                             day = .yesterday
                         }
-                        return (stringForUserPresence(day: day, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min), false)
+                        return (stringForUserPresence(strings: strings, day: day, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min), false)
                     } else {
-                        return ("last seen \(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year))", false)
+                        return (strings.LastSeen_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year)).0, false)
                     }
                 }
             }
         case .recently:
-            return ("last seen recently", false)
+            return (strings.LastSeen_Lately, false)
         case .lastWeek:
-            return ("last seen last week", false)
+            return (strings.LastSeen_WithinAWeek, false)
         case .lastMonth:
-            return ("last seen last month", false)
+            return (strings.LastSeen_WithinAMonth, false)
     }
 }
 

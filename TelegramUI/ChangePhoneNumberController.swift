@@ -29,14 +29,20 @@ final class ChangePhoneNumberController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
+    private var presentationData: PresentationData
+    
     init(account: Account) {
         self.account = account
         
-        super.init(navigationBar: NavigationBar())
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.title = "Change Number"
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        
+        self.title = self.presentationData.strings.ChangePhoneNumberNumber_Title
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -57,7 +63,7 @@ final class ChangePhoneNumberController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChangePhoneNumberControllerNode()
+        self.displayNode = ChangePhoneNumberControllerNode(presentationData: self.presentationData)
         self.displayNodeDidLoad()
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {

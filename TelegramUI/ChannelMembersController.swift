@@ -201,41 +201,32 @@ private func ChannelMembersControllerEntries(account: Account, view: PeerView, s
             switch lhs.participant {
                 case .creator:
                     lhsInvitedAt = Int32.min
-                case let .editor(_, _, invitedAt):
-                    lhsInvitedAt = invitedAt
-                case let .moderator(_, _, invitedAt):
-                    lhsInvitedAt = invitedAt
-                case let .member(_, invitedAt):
+                case let .member(_, invitedAt, _, _):
                     lhsInvitedAt = invitedAt
             }
             let rhsInvitedAt: Int32
             switch rhs.participant {
                 case .creator:
                     rhsInvitedAt = Int32.min
-                case let .editor(_, _, invitedAt):
-                    rhsInvitedAt = invitedAt
-                case let .moderator(_, _, invitedAt):
-                    rhsInvitedAt = invitedAt
-                case let .member(_, invitedAt):
+                case let .member(_, invitedAt, _, _):
                     rhsInvitedAt = invitedAt
             }
             return lhsInvitedAt < rhsInvitedAt
         }) {
             var editable = true
-            var isCreator = false
+            var canEditMembers = false
             if let peer = view.peers[view.peerId] as? TelegramChannel {
-                isCreator = peer.role == .creator
+                canEditMembers = peer.hasAdminRights(.canBanUsers)
             }
             
             if participant.peer.id == account.peerId {
                 editable = false
             } else {
-                if case .creator = participant.participant {
-                    editable = false
-                } else if case .moderator = participant.participant {
-                    editable = isCreator
-                } else if case .editor = participant.participant {
-                    editable = isCreator
+                switch participant.participant {
+                    case .creator:
+                        editable = false
+                    case .member:
+                        editable = canEditMembers
                 }
             }
             entries.append(.peerItem(index, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id))
@@ -267,7 +258,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     
     let arguments = ChannelMembersControllerArguments(account: account, addMember: {
         var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
-        let contactsController = ContactSelectionController(account: account, title: "Add Member", confirmation: { peerId in
+        let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, confirmation: { peerId in
             if let confirmationImpl = confirmationImpl {
                 return confirmationImpl(peerId)
             } else {
@@ -320,7 +311,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                                     }
                                     if !found {
                                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                        updatedPeers.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: peer.id, invitedAt: timestamp), peer: peer))
+                                        updatedPeers.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: peer.id, invitedAt: timestamp, adminInfo: nil, banInfo: nil), peer: peer))
                                         peersPromise.set(.single(updatedPeers))
                                     }
                                 }
@@ -389,9 +380,9 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest(statePromise.get(), peerView, peersPromise.get())
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, peersPromise.get())
         |> deliverOnMainQueue
-        |> map { state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelMembersEntry>, ChannelMembersEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelMembersEntry>, ChannelMembersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
             if let peers = peers, !peers.isEmpty {
                 if state.editing {
@@ -417,7 +408,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(title: .text("Members"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Members"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: true)
             let listState = ItemListNodeState(entries: ChannelMembersControllerEntries(account: account, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))
@@ -425,7 +416,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

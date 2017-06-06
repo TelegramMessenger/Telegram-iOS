@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import UIKit
 import Postbox
 import TelegramCore
+import SwiftSignalKit
 
 final class ContactSelectionControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
@@ -18,18 +19,43 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((PeerId) -> Void)?
     var dismiss: (() -> Void)?
     
+    var presentationData: PresentationData
+    var presentationDataDisposable: Disposable?
+    
     init(account: Account) {
         self.account = account
         
         self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: []))
         
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.contactListNode)
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    strongSelf.presentationData = presentationData
+                    if previousTheme !== presentationData.theme {
+                        strongSelf.updateTheme()
+                    }
+                }
+            })
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateTheme() {
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -38,7 +64,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
+        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
@@ -64,7 +90,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(contentNode: ContactsSearchContainerNode(account: self.account, openPeer: { [weak self] peerId in
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, openPeer: { [weak self] peerId in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peerId)
                 }

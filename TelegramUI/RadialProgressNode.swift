@@ -33,7 +33,7 @@ private class RadialProgressOverlayParameters: NSObject {
 }
 
 private class RadialProgressOverlayNode: ASDisplayNode {
-    let theme: RadialProgressTheme
+    var theme: RadialProgressTheme
     
     var previousProgress: Float?
     var effectiveProgress: Float = 0.0 {
@@ -82,9 +82,14 @@ private class RadialProgressOverlayNode: ASDisplayNode {
         self.displaysAsynchronously = true
     }
     
+    func updateTheme(_ theme: RadialProgressTheme) {
+        self.theme = theme
+        self.setNeedsDisplay()
+    }
+    
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         var updatedState = self.state
-        if case let .Fetching = updatedState {
+        if case .Fetching = updatedState {
             updatedState = .Fetching(progress: self.effectiveProgress)
         }
         return RadialProgressOverlayParameters(theme: self.theme, diameter: self.frame.size.width, state: updatedState)
@@ -108,8 +113,8 @@ private class RadialProgressOverlayNode: ASDisplayNode {
                 case .None, .Remote, .Play, .Pause, .Icon, .Image:
                     break
                 case let .Fetching(progress):
-                    let startAngle = -CGFloat(M_PI_2)
-                    let endAngle = 2.0 * CGFloat(M_PI) * CGFloat(progress) - CGFloat(M_PI_2)
+                    let startAngle = -CGFloat.pi / 2.0
+                    let endAngle = 2.0 * (CGFloat.pi / 2.0) * CGFloat(progress) - CGFloat(M_PI_2)
                     
                     let pathDiameter = parameters.diameter - 2.25 - 2.5 * 2.0
                     
@@ -128,7 +133,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
         basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
         basicAnimation.duration = 2.0
         basicAnimation.fromValue = NSNumber(value: Float(0.0))
-        basicAnimation.toValue = NSNumber(value: Float(M_PI * 2.0))
+        basicAnimation.toValue = NSNumber(value: Float.pi * 2.0)
         basicAnimation.repeatCount = Float.infinity
         basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
         
@@ -159,7 +164,7 @@ public struct RadialProgressTheme {
 }
 
 class RadialProgressNode: ASControlNode {
-    private let theme: RadialProgressTheme
+    private var theme: RadialProgressTheme
     private let overlay: RadialProgressOverlayNode
     
     var state: RadialProgressState = .None {
@@ -235,10 +240,6 @@ class RadialProgressNode: ASControlNode {
         }
     }
     
-    convenience override init() {
-        self.init(theme: RadialProgressTheme(backgroundColor: UIColor(white: 0.0, alpha: 0.6), foregroundColor: UIColor.white, icon: nil))
-    }
-    
     init(theme: RadialProgressTheme) {
         self.theme = theme
         self.overlay = RadialProgressOverlayNode(theme: theme)
@@ -246,6 +247,12 @@ class RadialProgressNode: ASControlNode {
         super.init()
         
         self.isOpaque = false
+    }
+    
+    func updateTheme(_ theme: RadialProgressTheme) {
+        self.theme = theme
+        self.setNeedsDisplay()
+        self.overlay.updateTheme(theme)
     }
     
     override var frame: CGRect {

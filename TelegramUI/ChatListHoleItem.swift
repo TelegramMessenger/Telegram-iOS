@@ -57,7 +57,7 @@ class ChatListHoleItemNode: ListViewItemNode {
     
     required init() {
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
+        self.separatorNode.backgroundColor = UIColor(rgb: 0xc8c7cc)
         self.separatorNode.isLayerBacked = true
         
         self.labelNode = TextNode()
@@ -78,10 +78,17 @@ class ChatListHoleItemNode: ListViewItemNode {
         let labelNodeLayout = TextNode.asyncLayout(self.labelNode)
         
         return { width, first, last in
-            let (labelLayout, labelApply) = labelNodeLayout(NSAttributedString(string: "Loading", font: titleFont, textColor: UIColor(0xc8c7cc)), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (labelLayout, labelApply) = labelNodeLayout(NSAttributedString(string: "", font: titleFont, textColor: UIColor(rgb: 0xc8c7cc)), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: false)
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 68.0), insets: insets)
+            
+            let separatorInset: CGFloat
+            if last {
+                separatorInset = 0.0
+            } else {
+                separatorInset = 80.0
+            }
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
@@ -91,7 +98,7 @@ class ChatListHoleItemNode: ListViewItemNode {
                     
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floor((width - labelLayout.size.width) / 2.0), y: floor((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                     
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 80.0, y: 68.0 - separatorHeight), size: CGSize(width: width - 78.0, height: separatorHeight))
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: separatorInset, y: 68.0 - separatorHeight), size: CGSize(width: width - separatorInset, height: separatorHeight))
                     
                     strongSelf.contentSize = layout.contentSize
                     strongSelf.insets = layout.insets

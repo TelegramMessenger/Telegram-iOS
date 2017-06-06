@@ -38,8 +38,8 @@ private enum ChangePhoneNumberCodeTag: ItemListItemTag {
 }
 
 private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
-    case codeEntry(String)
-    case codeInfo(String)
+    case codeEntry(PresentationTheme, String)
+    case codeInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         return ChangePhoneNumberCodeSection.code.rawValue
@@ -56,14 +56,14 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChangePhoneNumberCodeEntry, rhs: ChangePhoneNumberCodeEntry) -> Bool {
         switch lhs {
-            case let .codeEntry(text):
-                if case .codeEntry(text) = rhs {
+            case let .codeEntry(lhsTheme, lhsText):
+                if case let .codeEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .codeInfo(text):
-                if case .codeInfo(text) = rhs {
+            case let .codeInfo(lhsTheme, lhsText):
+                if case let .codeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -77,14 +77,14 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChangePhoneNumberCodeControllerArguments) -> ListViewItem {
         switch self {
-            case let .codeEntry(text):
-                return ItemListSingleLineInputItem(title: NSAttributedString(string: "Code", textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .codeEntry(theme, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "Code", textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .codeInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
+            case let .codeInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -126,15 +126,15 @@ private struct ChangePhoneNumberCodeControllerState: Equatable {
     }
 }
 
-private func changePhoneNumberCodeControllerEntries(state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?) -> [ChangePhoneNumberCodeEntry] {
+private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?) -> [ChangePhoneNumberCodeEntry] {
     var entries: [ChangePhoneNumberCodeEntry] = []
     
-    entries.append(.codeEntry(state.codeText))
+    entries.append(.codeEntry(presentationData.theme, state.codeText))
     var text = authorizationCurrentOptionText(codeData.type).string
     if let nextType = codeData.nextType {
         text += "\n\n" + authorizationNextOptionText(nextType, timeout: timeout).string
     }
-    entries.append(.codeInfo(text))
+    entries.append(.codeInfo(presentationData.theme, text))
     
     return entries
 }
@@ -260,8 +260,9 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
         checkCode()
     })
     
-    let signal = combineLatest(statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
-        |> map { state, data, timeout -> (ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
+        |> deliverOnMainQueue
+        |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
             if state.checking {
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
@@ -270,21 +271,20 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
                 if state.codeText.isEmpty {
                     nextEnabled = false
                 }
-                rightNavigationButton = ItemListNavigationButton(title: "Next", style: .bold, enabled: nextEnabled, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: nextEnabled, action: {
                     checkCode()
                 })
             }
             
-            let controllerState = ItemListControllerState(title: .text(formatPhoneNumber(phoneNumber)), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: false)
-            let listState = ItemListNodeState(entries: changePhoneNumberCodeControllerEntries(state: state, codeData: data, timeout: timeout), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(formatPhoneNumber(phoneNumber)), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: changePhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, codeData: data, timeout: timeout), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {

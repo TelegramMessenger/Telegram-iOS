@@ -6,6 +6,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var statusBar: StatusBar?
     var navigationBar: NavigationBar?
     let footerNode: GalleryFooterNode
+    var toolbarNode: ASDisplayNode?
     var transitionNodeForCentralItem: (() -> ASDisplayNode?)?
     var dismiss: (() -> Void)?
     
@@ -25,11 +26,11 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    init(controllerInteraction: GalleryControllerInteraction) {
+    init(controllerInteraction: GalleryControllerInteraction, pageGap: CGFloat = 20.0) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor.black
         self.scrollView = UIScrollView()
-        self.pager = GalleryPagerNode()
+        self.pager = GalleryPagerNode(pageGap: pageGap)
         self.footerNode = GalleryFooterNode(controllerInteraction: controllerInteraction)
         
         super.init(viewBlock: {
@@ -99,6 +100,10 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.footerNode.alpha = 1.0
         })
         
+        if let toolbarNode = self.toolbarNode {
+            toolbarNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.bounds.size.height), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        }
+        
         if animateContent {
             self.scrollView.layer.animateBounds(from: self.scrollView.layer.bounds.offsetBy(dx: 0.0, dy: -self.scrollView.layer.bounds.size.height), to: self.scrollView.layer.bounds, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         }
@@ -124,6 +129,10 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
             intermediateCompletion()
         })
         
+        if let toolbarNode = self.toolbarNode {
+            toolbarNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.bounds.size.height), duration: 0.25, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false, additive: true)
+        }
+        
         if animateContent {
             contentAnimationCompleted = false
             self.scrollView.layer.animateBounds(from: self.scrollView.layer.bounds, to: self.scrollView.layer.bounds.offsetBy(dx: 0.0, dy: -self.scrollView.layer.bounds.size.height), duration: 0.25, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false, completion: { _ in
@@ -145,13 +154,19 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.navigationBar?.alpha = transition
             self.footerNode.alpha = transition
         }
+        
+        if let toolbarNode = toolbarNode {
+            toolbarNode.layer.position = CGPoint(x: toolbarNode.layer.position.x, y: self.bounds.size.height - toolbarNode.bounds.size.height / 2.0 + (1.0 - transition) * toolbarNode.bounds.size.height)
+        }
     }
     
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         targetContentOffset.pointee = scrollView.contentOffset
         
         if abs(velocity.y) > 1.0 {
-            self.backgroundNode.layer.animate(from: self.backgroundNode.backgroundColor!, to: UIColor(white: 0.0, alpha: 0.0).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionLinear, duration: 0.2, removeOnCompletion: false)
+            if let backgroundColor = self.backgroundNode.backgroundColor {
+                self.backgroundNode.layer.animate(from: backgroundColor, to: UIColor(white: 0.0, alpha: 0.0).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionLinear, duration: 0.2, removeOnCompletion: false)
+            }
             
             var interfaceAnimationCompleted = false
             var contentAnimationCompleted = true

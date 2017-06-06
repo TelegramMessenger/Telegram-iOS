@@ -36,42 +36,74 @@ public class ContactMultiselectionController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     public init(account: Account, mode: ContactMultiselectionControllerMode) {
         self.account = account
         self.mode = mode
         
-        self.titleView = CounterContollerTitleView()
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init()
+        self.titleView = CounterContollerTitleView(theme: self.presentationData.theme)
+        
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         switch mode {
             case .groupCreation:
-                self.titleView.title = CounterContollerTitle(title: "New Group", counter: "0/5000")
-                let rightNavigationButton = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Compose_NewGroup, counter: "0/5000")
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
                 rightNavigationButton.isEnabled = false
             case .peerSelection:
-                self.titleView.title = CounterContollerTitle(title: "Add Users", counter: "")
-                let rightNavigationButton = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(cancelPressed))
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
                 rightNavigationButton.isEnabled = false
         }
         
         self.navigationItem.titleView = self.titleView
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
                 strongSelf.contactsNode.contactListNode.scrollToTop()
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        //self.title = self.presentationData.strings.Contacts_Title
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
     
     override public func loadDisplayNode() {
@@ -114,7 +146,7 @@ public class ContactMultiselectionController: ViewController {
                     strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
                     switch strongSelf.mode {
                         case .groupCreation:
-                            strongSelf.titleView.title = CounterContollerTitle(title: "New Group", counter: "\(updatedCount)/5000")
+                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroup, counter: "\(updatedCount)/5000")
                         case .peerSelection:
                             break
                     }
@@ -160,7 +192,7 @@ public class ContactMultiselectionController: ViewController {
                     strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
                     switch strongSelf.mode {
                         case .groupCreation:
-                            strongSelf.titleView.title = CounterContollerTitle(title: "New Group", counter: "\(updatedCount)/5000")
+                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroup, counter: "\(updatedCount)/5000")
                         case .peerSelection:
                             break
                     }

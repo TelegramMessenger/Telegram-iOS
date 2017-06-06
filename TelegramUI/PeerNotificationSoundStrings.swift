@@ -27,10 +27,10 @@ private let classicSounds: [String] = [
     "Telegraph"
 ]
 
-func localizedPeerNotificationSoundString(_ sound: PeerMessageSound) -> String {
+func localizedPeerNotificationSoundString(strings: PresentationStrings, sound: PeerMessageSound) -> String {
     switch sound {
         case .none:
-            return "None"
+            return strings.Settings_UsernameEmpty
         case let .bundledModern(id):
             if id >= 0 && Int(id) < modernSounds.count {
                 return modernSounds[Int(id)]

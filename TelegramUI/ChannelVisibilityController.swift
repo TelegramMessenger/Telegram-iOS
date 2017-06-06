@@ -33,20 +33,20 @@ private enum ChannelVisibilityEntryTag {
 }
 
 private enum ChannelVisibilityEntry: ItemListNodeEntry {
-    case typeHeader(String)
-    case typePublic(Bool)
-    case typePrivate(Bool)
-    case typeInfo(String)
+    case typeHeader(PresentationTheme, String)
+    case typePublic(PresentationTheme, String, Bool)
+    case typePrivate(PresentationTheme, String, Bool)
+    case typeInfo(PresentationTheme, String)
     
-    case publicLinkAvailability(Bool)
-    case privateLink(String?)
-    case editablePublicLink(String?, String)
-    case privateLinkInfo(String)
-    case publicLinkInfo(String)
-    case publicLinkStatus(String, AddressNameValidationStatus)
+    case publicLinkAvailability(PresentationTheme, String, Bool)
+    case privateLink(PresentationTheme, String, String?)
+    case editablePublicLink(PresentationTheme, String)
+    case privateLinkInfo(PresentationTheme, String)
+    case publicLinkInfo(PresentationTheme, String)
+    case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus)
     
-    case existingLinksInfo(String)
-    case existingLinkPeerItem(Int32, Peer, ItemListPeerItemEditing, Bool)
+    case existingLinksInfo(PresentationTheme, String)
+    case existingLinkPeerItem(Int32, PresentationTheme, PresentationStrings, Peer, ItemListPeerItemEditing, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -85,82 +85,88 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             
             case .existingLinksInfo:
                 return 10
-            case let .existingLinkPeerItem(index, _, _, _):
+            case let .existingLinkPeerItem(index, _, _, _, _, _):
                 return 11 + index
         }
     }
     
     static func ==(lhs: ChannelVisibilityEntry, rhs: ChannelVisibilityEntry) -> Bool {
         switch lhs {
-            case let .typeHeader(title):
-                if case .typeHeader(title) = rhs {
+            case let .typeHeader(lhsTheme, lhsTitle):
+                if case let .typeHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
                     return true
                 } else {
                     return false
                 }
-            case let .typePublic(selected):
-                if case .typePublic(selected) = rhs {
+            case let .typePublic(lhsTheme, lhsTitle, lhsSelected):
+                if case let .typePublic(rhsTheme, rhsTitle, rhsSelected) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSelected == rhsSelected {
                     return true
                 } else {
                     return false
                 }
-            case let .typePrivate(selected):
-                if case .typePrivate(selected) = rhs {
+            case let .typePrivate(lhsTheme, lhsTitle, lhsSelected):
+                if case let .typePrivate(rhsTheme, rhsTitle, rhsSelected) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSelected == rhsSelected {
                     return true
                 } else {
                     return false
                 }
-            case let .typeInfo(text):
-                if case .typeInfo(text) = rhs {
+            case let .typeInfo(lhsTheme, lhsText):
+                if case let .typeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .publicLinkAvailability(value):
-                if case .publicLinkAvailability(value) = rhs {
+            case let .publicLinkAvailability(lhsTheme, lhsText, lhsValue):
+                if case let .publicLinkAvailability(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .privateLink(lhsLink):
-                if case let .privateLink(rhsLink) = rhs, lhsLink == rhsLink {
+            case let .privateLink(lhsTheme, lhsText, lhsLink):
+                if case let .privateLink(rhsTheme, rhsText, rhsLink) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLink == rhsLink {
                     return true
                 } else {
                     return false
                 }
-            case let .editablePublicLink(lhsCurrentText, lhsText):
-                if case let .editablePublicLink(rhsCurrentText, rhsText) = rhs, lhsCurrentText == rhsCurrentText, lhsText == rhsText {
+            case let .editablePublicLink(lhsTheme, lhsCurrentText):
+                if case let .editablePublicLink(rhsTheme, rhsCurrentText) = rhs, lhsTheme === rhsTheme, lhsCurrentText == rhsCurrentText {
                     return true
                 } else {
                     return false
                 }
-            case let .privateLinkInfo(text):
-                if case .privateLinkInfo(text) = rhs {
+            case let .privateLinkInfo(lhsTheme, lhsText):
+                if case let .privateLinkInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .publicLinkInfo(text):
-                if case .publicLinkInfo(text) = rhs {
+            case let .publicLinkInfo(lhsTheme, lhsText):
+                if case let .publicLinkInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .publicLinkStatus(addressName, status):
-                if case .publicLinkStatus(addressName, status) = rhs {
+            case let .publicLinkStatus(lhsTheme, lhsText, lhsStatus):
+                if case let .publicLinkStatus(rhsTheme, rhsText, rhsStatus) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsStatus == rhsStatus {
                     return true
                 } else {
                     return false
                 }
-            case let .existingLinksInfo(text):
-                if case .existingLinksInfo(text) = rhs {
+            case let .existingLinksInfo(lhsTheme, lhsText):
+                if case let .existingLinksInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .existingLinkPeerItem(lhsIndex, lhsPeer, lhsEditing, lhsEnabled):
-                if case let .existingLinkPeerItem(rhsIndex, rhsPeer, rhsEditing, rhsEnabled) = rhs {
+            case let .existingLinkPeerItem(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsEditing, lhsEnabled):
+                if case let .existingLinkPeerItem(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsEditing, rhsEnabled) = rhs {
                     if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
                         return false
                     }
                     if !lhsPeer.isEqual(rhsPeer) {
@@ -185,74 +191,59 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChannelVisibilityControllerArguments) -> ListViewItem {
         switch self {
-            case let .typeHeader(title):
-                return ItemListSectionHeaderItem(text: title, sectionId: self.section)
-            case let .typePublic(selected):
-                return ItemListCheckboxItem(title: "Public", checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .typeHeader(theme, title):
+                return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
+            case let .typePublic(theme, text, selected):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateCurrentType(.publicChannel)
                 })
-            case let .typePrivate(selected):
-                return ItemListCheckboxItem(title: "Private", checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .typePrivate(theme, text, selected):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateCurrentType(.privateChannel)
                 })
-            case let .typeInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
-            case let .publicLinkAvailability(value):
-                if value {
-                    return ItemListActivityTextItem(displayActivity: true, text: NSAttributedString(string: "Checking", textColor: UIColor(0x6d6d72)), sectionId: self.section)
-                } else {
-                    return ItemListActivityTextItem(displayActivity: false, text: NSAttributedString(string: "Sorry, you have reserved too many public usernames. You can revoke the link from one of your older groups or channels, or create a private entity instead.", textColor: UIColor(0xcf3030)), sectionId: self.section)
-                }
-            case let .privateLink(link):
-                return ItemListActionItem(title: link ?? "Loading...", kind: link != nil ? .neutral : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    if let link = link {
-                        arguments.displayPrivateLinkMenu(link)
+            case let .typeInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .publicLinkAvailability(theme, text, value):
+                return ItemListActivityTextItem(displayActivity: value, text: NSAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor), sectionId: self.section)
+            case let .privateLink(theme, text, value):
+                return ItemListActionItem(theme: theme, title: text, kind: value != nil ? .neutral : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    if let value = value {
+                        arguments.displayPrivateLinkMenu(value)
                     }
                 }, tag: ChannelVisibilityEntryTag.privateLink)
-            case let .editablePublicLink(currentText, text):
-                return ItemListSingleLineInputItem(title: NSAttributedString(string: "t.me/", textColor: .black), text: text, placeholder: "", sectionId: self.section, textUpdated: { updatedText in
+            case let .editablePublicLink(theme, currentText):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: "", sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, action: {
                     
                 })
-            case let .privateLinkInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
-            case let .publicLinkInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
-            case let .publicLinkStatus(addressName, status):
+            case let .privateLinkInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .publicLinkInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .publicLinkStatus(theme, text, status):
                 var displayActivity = false
-                let text: NSAttributedString
+                let color: UIColor
                 switch status {
-                    case let .invalidFormat(error):
-                        switch error {
-                            case .startsWithDigit:
-                                text = NSAttributedString(string: "Names can't start with a digit.", textColor: UIColor(0xcf3030))
-                            case .startsWithUnderscore:
-                                text = NSAttributedString(string: "Names can't start with an underscore.", textColor: UIColor(0xcf3030))
-                            case .endsWithUnderscore:
-                                text = NSAttributedString(string: "Names can't end with an underscore.", textColor: UIColor(0xcf3030))
-                            case .tooShort:
-                                text = NSAttributedString(string: "Names must have at least 5 characters.", textColor: UIColor(0xcf3030))
-                            case .invalidCharacters:
-                                text = NSAttributedString(string: "Sorry, this name is invalid.", textColor: UIColor(0xcf3030))
-                        }
+                    case .invalidFormat:
+                        color = theme.list.freeTextErrorColor
                     case let .availability(availability):
                         switch availability {
                             case .available:
-                                text = NSAttributedString(string: "\(addressName) is available.", textColor: UIColor(0x26972c))
+                                color = theme.list.freeTextSuccessColor
                             case .invalid:
-                                text = NSAttributedString(string: "Sorry, this name is invalid.", textColor: UIColor(0xcf3030))
+                                color = theme.list.freeTextErrorColor
                             case .taken:
-                                text = NSAttributedString(string: "\(addressName) is already taken.", textColor: UIColor(0xcf3030))
+                                color = theme.list.freeTextErrorColor
                         }
                     case .checking:
-                        text = NSAttributedString(string: "Checking name...", textColor: UIColor(0x6d6d72))
+                        color = theme.list.freeTextColor
                         displayActivity = true
                 }
-                return ItemListActivityTextItem(displayActivity: displayActivity, text: text, sectionId: self.section)
-            case let .existingLinksInfo(text):
-                return ItemListTextItem(text: .plain(text), sectionId: self.section)
-            case let .existingLinkPeerItem(_, peer, editing, enabled):
+                return ItemListActivityTextItem(displayActivity: displayActivity, text: NSAttributedString(string: text, textColor: color), sectionId: self.section)
+            case let .existingLinksInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .existingLinkPeerItem(_, theme, strings, peer, editing, enabled):
                 var label = ""
                 if let addressName = peer.addressName {
                     label = "t.me/" + addressName
@@ -345,7 +336,7 @@ private struct ChannelVisibilityControllerState: Equatable {
     }
 }
 
-private func channelVisibilityControllerEntries(view: PeerView, publicChannelsToRevoke: [Peer]?, state: ChannelVisibilityControllerState) -> [ChannelVisibilityEntry] {
+private func channelVisibilityControllerEntries(presentationData: PresentationData, view: PeerView, publicChannelsToRevoke: [Peer]?, state: ChannelVisibilityControllerState) -> [ChannelVisibilityEntry] {
     var entries: [ChannelVisibilityEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramChannel {
@@ -376,22 +367,22 @@ private func channelVisibilityControllerEntries(view: PeerView, publicChannelsTo
             }
         }
         
-        entries.append(.typeHeader(isGroup ? "GROUP TYPE" : "CHANNEL TYPE"))
-        entries.append(.typePublic(selectedType == .publicChannel))
-        entries.append(.typePrivate(selectedType == .privateChannel))
+        entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_Edit_LinkItem))
+        entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
+        entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
         
         switch selectedType {
             case .publicChannel:
                 if isGroup {
-                    entries.append(.typeInfo("Public groups can be found in search, chat history is available to everyone and anyone can join."))
+                    entries.append(.typeInfo(presentationData.theme, "Public groups can be found in search, chat history is available to everyone and anyone can join."))
                 } else {
-                    entries.append(.typeInfo("Public channels can be found in search and anyone can join."))
+                    entries.append(.typeInfo(presentationData.theme, "Public channels can be found in search and anyone can join."))
                 }
             case .privateChannel:
                 if isGroup {
-                    entries.append(.typeInfo("Private groups can only be joined if you were invited of have an invite link."))
+                    entries.append(.typeInfo(presentationData.theme, "Private groups can only be joined if you were invited of have an invite link."))
                 } else {
-                    entries.append(.typeInfo("Private channels can only be joined if you were invited of have an invite link."))
+                    entries.append(.typeInfo(presentationData.theme, "Private channels can only be joined if you were invited of have an invite link."))
                 }
         }
 
@@ -404,7 +395,7 @@ private func channelVisibilityControllerEntries(view: PeerView, publicChannelsTo
                 
                 if displayAvailability {
                     if let publicChannelsToRevoke = publicChannelsToRevoke {
-                        entries.append(.publicLinkAvailability(false))
+                        entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
                         var index: Int32 = 0
                         for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
                             var lhsDate: Int32 = 0
@@ -417,25 +408,60 @@ private func channelVisibilityControllerEntries(view: PeerView, publicChannelsTo
                             }
                             return lhsDate > rhsDate
                         }) {
-                            entries.append(.existingLinkPeerItem(index, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
+                            entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
                             index += 1
                         }
                     } else {
-                        entries.append(.publicLinkAvailability(true))
+                        entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
                     }
                 } else {
-                    entries.append(.editablePublicLink(peer.addressName, currentAddressName))
+                    entries.append(.editablePublicLink(presentationData.theme, currentAddressName))
                     if let status = state.addressNameValidationStatus {
-                        entries.append(.publicLinkStatus(currentAddressName, status))
+                        let text: String
+                        switch status {
+                            case let .invalidFormat(error):
+                                switch error {
+                                    case .startsWithDigit:
+                                        text = "Names can't start with a digit."
+                                    case .startsWithUnderscore:
+                                        text = "Names can't start with an underscore."
+                                    case .endsWithUnderscore:
+                                        text = "Names can't end with an underscore."
+                                    case .tooShort:
+                                        text = "Names must have at least 5 characters."
+                                    case .invalidCharacters:
+                                        text = "Sorry, this name is invalid."
+                                }
+                            case let .availability(availability):
+                                switch availability {
+                                    case .available:
+                                        text = "\(currentAddressName) is available."
+                                    case .invalid:
+                                        text = "Sorry, this name is invalid."
+                                    case .taken:
+                                        text = "\(currentAddressName) is already taken."
+                                }
+                            case .checking:
+                                text = "Checking name..."
+                        }
+                        
+                        entries.append(.publicLinkStatus(presentationData.theme, text, status))
                     }
-                    entries.append(.publicLinkInfo("People can share this link with others and find your group using Telegram search."))
+                    entries.append(.publicLinkInfo(presentationData.theme, "People can share this link with others and find your group using Telegram search."))
                 }
             case .privateChannel:
-                entries.append(.privateLink((view.cachedData as? CachedChannelData)?.exportedInvitation?.link))
-                if isGroup {
-                    entries.append(.publicLinkInfo("People can join your group by following this link. You can revoke the link at any time."))
+                let link = (view.cachedData as? CachedChannelData)?.exportedInvitation?.link
+                let text: String
+                if let link = link {
+                    text = link
                 } else {
-                    entries.append(.publicLinkInfo("People can join your channel by following this link. You can revoke the link at any time."))
+                    text = "Loading..."
+                }
+                entries.append(.privateLink(presentationData.theme, text, link))
+                if isGroup {
+                    entries.append(.publicLinkInfo(presentationData.theme, "People can join your group by following this link. You can revoke the link at any time."))
+                } else {
+                    entries.append(.publicLinkInfo(presentationData.theme, "People can join your channel by following this link. You can revoke the link at any time."))
                 }
         }
     }
@@ -585,8 +611,9 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     let peerView = account.viewTracker.peerView(peerId)
         |> deliverOnMainQueue
     
-    let signal = combineLatest(statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
-        |> map { state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState<ChannelVisibilityEntry>, ChannelVisibilityEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
+        |> deliverOnMainQueue
+        |> map { presentationData, state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState<ChannelVisibilityEntry>, ChannelVisibilityEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             
             var rightNavigationButton: ItemListNavigationButton?
@@ -666,16 +693,15 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                     })
             }
             
-            let controllerState = ItemListControllerState(title: .text(isGroup ? "Group Type" : "Channel Link"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, animateChanges: false)
-            let listState = ItemListNodeState(entries: channelVisibilityControllerEntries(view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state), style: .blocks, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(isGroup ? "Group Type" : "Channel Link"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let listState = ItemListNodeState(entries: channelVisibilityControllerEntries(presentationData: presentationData, view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state), style: .blocks, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
         }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }

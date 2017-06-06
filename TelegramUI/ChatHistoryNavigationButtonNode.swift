@@ -2,27 +2,6 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private func generateBackgroundImage() -> UIImage? {
-    return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: size.width - 1.0, height: size.height - 1.0)))
-        context.setLineWidth(0.5)
-        context.setStrokeColor(UIColor(0x000000, 0.15).cgColor)
-        context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
-        context.setStrokeColor(UIColor(0x88888D).cgColor)
-        context.setLineWidth(1.5)
-        
-        let position = CGPoint(x: 9.0 - 0.5, y: 23.0)
-        context.move(to: CGPoint(x: position.x + 1.0, y: position.y - 1.0))
-        context.addLine(to: CGPoint(x: position.x + 10.0, y: position.y - 10.0))
-        context.addLine(to: CGPoint(x: position.x + 19.0, y: position.y - 1.0))
-        context.strokePath()
-    })
-}
-
-private let backgroundImage = generateBackgroundImage()
-private let badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: UIColor(0x007ee5), backgroundColor: nil)
 private let badgeFont = Font.regular(13.0)
 
 class ChatHistoryNavigationButtonNode: ASControlNode {
@@ -40,17 +19,21 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         }
     }
     
-    override init() {
+    private var theme: PresentationTheme
+    
+    init(theme: PresentationTheme) {
+        self.theme = theme
+        
         self.imageNode = ASImageNode()
         self.imageNode.displayWithoutProcessing = true
-        self.imageNode.image = backgroundImage
+        self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
         self.imageNode.isLayerBacked = true
         
         self.badgeBackgroundNode = ASImageNode()
         self.badgeBackgroundNode.isLayerBacked = true
         self.badgeBackgroundNode.displayWithoutProcessing = true
         self.badgeBackgroundNode.displaysAsynchronously = false
-        self.badgeBackgroundNode.image = badgeImage
+        self.badgeBackgroundNode.image = PresentationResourcesChat.chatHistoryNavigationButtonBadgeImage(theme)
         
         self.badgeTextNode = ASTextNode()
         self.badgeTextNode.maximumNumberOfLines = 1
@@ -70,6 +53,19 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         self.addTarget(self, action: #selector(onTap), forControlEvents: .touchUpInside)
     }
     
+    func updateTheme(theme: PresentationTheme) {
+        if self.theme !== theme {
+            self.theme = theme
+            
+            self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
+            self.badgeBackgroundNode.image = PresentationResourcesChat.chatHistoryNavigationButtonBadgeImage(theme)
+            
+            if let string = self.badgeTextNode.attributedText?.string {
+                self.badgeTextNode.attributedText = NSAttributedString(string: string, font: badgeFont, textColor: theme.chat.historyNavigation.badgeTextColor)
+            }
+        }
+    }
+    
     @objc func onTap() {
         if let tapped = self.tapped {
             tapped()
@@ -78,7 +74,7 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     
     private func layoutBadge() {
         if !self.badge.isEmpty {
-            self.badgeTextNode.attributedText = NSAttributedString(string: self.badge, font: badgeFont, textColor: .white)
+            self.badgeTextNode.attributedText = NSAttributedString(string: self.badge, font: badgeFont, textColor: self.theme.chat.historyNavigation.badgeTextColor)
             self.badgeBackgroundNode.isHidden = false
             self.badgeTextNode.isHidden = false
             

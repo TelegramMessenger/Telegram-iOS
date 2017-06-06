@@ -47,7 +47,7 @@ private final class ManagedAudioPlaylistPlayerStatusesContext {
     }
 }
 
-private struct WrappedManagedMediaId: Hashable {
+struct WrappedManagedMediaId: Hashable {
     let id: ManagedMediaId
     
     var hashValue: Int {
@@ -61,27 +61,131 @@ private struct WrappedManagedMediaId: Hashable {
 
 final class ManagedVideoContext {
     let mediaPlayer: MediaPlayer
-    let playerNode: MediaPlayerNode
+    let playerNode: MediaPlayerNode?
     
-    init(mediaPlayer: MediaPlayer, playerNode: MediaPlayerNode) {
+    init(mediaPlayer: MediaPlayer, playerNode: MediaPlayerNode?) {
         self.mediaPlayer = mediaPlayer
         self.playerNode = playerNode
     }
 }
 
-private final class ActiveManagedVideoContext {
-    let context: ManagedVideoContext
-    let contextSubscribers = Bag<(ManagedVideoContext?) -> Void>()
+final class ManagedVideoContextSubscriber {
+    let id: Int32
+    let priority: Int32
+    var active = false
+    let activate: (MediaPlayerNode) -> Void
+    let deactivate: () -> Signal<Void, NoError>
+    var deactivatingDisposable: Disposable? = nil
     
-    init(context: ManagedVideoContext) {
-        self.context = context
+    init(id: Int32, priority: Int32, activate: @escaping (MediaPlayerNode) -> Void, deactivate: @escaping () -> Signal<Void, NoError>) {
+        self.id = id
+        self.priority = priority
+        self.activate = activate
+        self.deactivate = deactivate
     }
 }
 
-final class MediaManager: NSObject {
+private final class ActiveManagedVideoContext {
+    let mediaPlayer: MediaPlayer
+    let playerNode: MediaPlayerNode
+    private var becameEmpty: () -> Void
+    private var nextSubscriberId: Int32 = 0
+    var contextSubscribers: [ManagedVideoContextSubscriber] = []
+    
+    init(mediaPlayer: MediaPlayer, playerNode: MediaPlayerNode, becameEmpty: @escaping () -> Void) {
+        self.mediaPlayer = mediaPlayer
+        self.playerNode = playerNode
+        self.becameEmpty = becameEmpty
+    }
+    
+    func addContextSubscriber(priority: Int32, activate: @escaping (MediaPlayerNode) -> Void, deactivate: @escaping () -> Signal<Void, NoError>) -> Disposable {
+        let id = self.nextSubscriberId
+        self.nextSubscriberId += 1
+        self.contextSubscribers.append(ManagedVideoContextSubscriber(id: id, priority: priority, activate: activate, deactivate: deactivate))
+        self.contextSubscribers.sort(by: { lhs, rhs in
+            if lhs.priority != rhs.priority {
+                return lhs.priority < rhs.priority
+            } else {
+                return lhs.id < rhs.id
+            }
+        })
+        self.updateSubscribers()
+        
+        return ActionDisposable { [weak self] in
+            Queue.mainQueue().async {
+                if let strongSelf = self {
+                    strongSelf.removeDeactivatedSubscriber(id: id)
+                }
+            }
+        }
+    }
+    
+    private func removeDeactivatedSubscriber(id: Int32) {
+        assert(Queue.mainQueue().isCurrent())
+        
+        for i in 0 ..< self.contextSubscribers.count {
+            if self.contextSubscribers[i].id == id {
+                self.contextSubscribers[i].deactivatingDisposable?.dispose()
+                self.contextSubscribers.remove(at: i)
+                self.updateSubscribers()
+                break
+            }
+        }
+    }
+    
+    private func updateSubscribers() {
+        assert(Queue.mainQueue().isCurrent())
+        
+        if !self.contextSubscribers.isEmpty {
+            var activeIndex: Int?
+            var deactivating = false
+            var index = 0
+            for subscriber in self.contextSubscribers {
+                if subscriber.active {
+                    activeIndex = index
+                    break
+                }
+                else if subscriber.deactivatingDisposable != nil {
+                    deactivating = false
+                }
+                index += 1
+            }
+            if !deactivating {
+                if let activeIndex = activeIndex, activeIndex != self.contextSubscribers.count - 1 {
+                    self.contextSubscribers[activeIndex].active = false
+                    let id = self.contextSubscribers[activeIndex].id
+                    self.contextSubscribers[activeIndex].deactivatingDisposable = (self.contextSubscribers[activeIndex].deactivate() |> deliverOn(Queue.mainQueue())).start(completed: { [weak self] in
+                        if let strongSelf = self {
+                            var index = 0
+                            for currentRecord in strongSelf.contextSubscribers {
+                                if currentRecord.id == id {
+                                    currentRecord.deactivatingDisposable = nil
+                                    break
+                                }
+                                index += 1
+                            }
+                            strongSelf.updateSubscribers()
+                        }
+                    })
+                } else if activeIndex == nil {
+                    let lastIndex = self.contextSubscribers.count - 1
+                    self.contextSubscribers[lastIndex].active = true
+                    //self.applyType(self.contextSubscribers[lastIndex].audioSessionType)
+                    
+                    self.contextSubscribers[lastIndex].activate(self.playerNode)
+                }
+            }
+        } else {
+            self.becameEmpty()
+        }
+    }
+}
+
+public final class MediaManager: NSObject {
     private let queue = Queue.mainQueue()
     
-    let audioSession = ManagedAudioSession()
+    public let audioSession: ManagedAudioSession
+    let overlayMediaManager = OverlayMediaManager()
     
     private let playlistPlayer = Atomic<ManagedAudioPlaylistPlayer?>(value: nil)
     private let playlistPlayerStateAndStatusValue = Promise<AudioPlaylistStateAndStatus?>(nil)
@@ -99,6 +203,8 @@ final class MediaManager: NSObject {
     private var managedVideoContexts: [WrappedManagedMediaId: ActiveManagedVideoContext] = [:]
     
     override init() {
+        self.audioSession = ManagedAudioSession()
+        
         super.init()
         
         let commandCenter = MPRemoteCommandCenter.shared()
@@ -141,6 +247,10 @@ final class MediaManager: NSObject {
                         nowPlayingInfo[MPMediaItemPropertyArtist] = subtitleText
                     case .voice:
                         let titleText: String = "Voice Message"
+                        
+                        nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
+                    case .video:
+                        let titleText: String = "Video Message"
                         
                         nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
                 }
@@ -204,54 +314,39 @@ final class MediaManager: NSObject {
         self.globalControlsStatusDisposable.dispose()
     }
     
-    func videoContext(account: Account, id: ManagedMediaId, resource: MediaResource, preferSoftwareDecoding: Bool, backgroundThread: Bool) -> Signal<ManagedVideoContext?, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
+    //func push(audioSessionType: ManagedAudioSessionType, activate: @escaping () -> Void, deactivate: @escaping () -> Signal<Void, NoError>, once: Bool = false) -> Disposable {
+    
+    func videoContext(postbox: Postbox, id: ManagedMediaId, resource: MediaResource, preferSoftwareDecoding: Bool, backgroundThread: Bool, priority: Int32, initiatePlayback: Bool, activate: @escaping (MediaPlayerNode) -> Void, deactivate: @escaping () -> Signal<Void, NoError>) -> (MediaPlayer, Disposable) {
+        assert(Queue.mainQueue().isCurrent())
+        
+        let wrappedId = WrappedManagedMediaId(id: id)
+        let activeContext: ActiveManagedVideoContext
+        var startPlayback = false
+        if let currentActiveContext = self.managedVideoContexts[wrappedId] {
+            activeContext = currentActiveContext
+        } else {
+            let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, overlayMediaManager: self.overlayMediaManager, postbox: postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: false)
+            mediaPlayer.actionAtEnd = .loop
+            let playerNode = MediaPlayerNode(backgroundThread: backgroundThread)
+            mediaPlayer.attachPlayerNode(playerNode)
             
-            self.queue.async {
-                let wrappedId = WrappedManagedMediaId(id: id)
-                let activeContext: ActiveManagedVideoContext
-                if let currentActiveContext = self.managedVideoContexts[wrappedId] {
-                    activeContext = currentActiveContext
-                } else {
-                    let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, postbox: account.postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: false)
-                    mediaPlayer.actionAtEnd = .loop
-                    let playerNode = MediaPlayerNode(backgroundThread: backgroundThread)
-                    mediaPlayer.attachPlayerNode(playerNode)
-                    activeContext = ActiveManagedVideoContext(context: ManagedVideoContext(mediaPlayer: mediaPlayer, playerNode: playerNode))
-                    self.managedVideoContexts[wrappedId] = activeContext
+            activeContext = ActiveManagedVideoContext(mediaPlayer: mediaPlayer, playerNode: playerNode, becameEmpty: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.managedVideoContexts[wrappedId]?.playerNode.removeFromSupernode()
+                    strongSelf.managedVideoContexts.removeValue(forKey: wrappedId)
                 }
-                
-                let index = activeContext.contextSubscribers.add({ context in
-                    subscriber.putNext(context)
-                })
-                
-                for (subscriberIndex, subscriberSink) in activeContext.contextSubscribers.copyItemsWithIndices() {
-                    if subscriberIndex == index {
-                        subscriberSink(activeContext.context)
-                    } else {
-                        subscriberSink(nil)
-                    }
-                }
-                
-                disposable.set(ActionDisposable {
-                    self.queue.async {
-                        if let activeContext = self.managedVideoContexts[wrappedId] {
-                            activeContext.contextSubscribers.remove(index)
-                            
-                            if activeContext.contextSubscribers.isEmpty {
-                                self.managedVideoContexts.removeValue(forKey: wrappedId)
-                            } else {
-                                let lastSubscriber = activeContext.contextSubscribers.copyItemsWithIndices().last!.1
-                                lastSubscriber(activeContext.context)
-                            }
-                        }
-                    }
-                })
+            })
+            self.managedVideoContexts[wrappedId] = activeContext
+            if initiatePlayback {
+                startPlayback = true
             }
-            
-            return disposable
         }
+        
+        if startPlayback {
+            activeContext.mediaPlayer.play()
+        }
+        
+        return (activeContext.mediaPlayer, activeContext.addContextSubscriber(priority: priority, activate: activate, deactivate: deactivate))
     }
     
     func audioRecorder() -> Signal<ManagedAudioRecorder?, NoError> {

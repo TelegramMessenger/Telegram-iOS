@@ -64,12 +64,12 @@ private enum InstalledStickerPacksEntryId: Hashable {
 }
 
 private enum InstalledStickerPacksEntry: ItemListNodeEntry {
-    case trending(Int32)
-    case archived
-    case masks
-    case packsTitle(String)
-    case pack(Int32, StickerPackCollectionInfo, StickerPackItem?, Int32, Bool, ItemListStickerPackItemEditing)
-    case packsInfo(String)
+    case trending(PresentationTheme, String, Int32)
+    case archived(PresentationTheme, String)
+    case masks(PresentationTheme, String)
+    case packsTitle(PresentationTheme, String)
+    case pack(Int32, PresentationTheme, StickerPackCollectionInfo, StickerPackItem?, String, Bool, ItemListStickerPackItemEditing)
+    case packsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -90,7 +90,7 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return .index(2)
             case .packsTitle:
                 return .index(3)
-            case let .pack(_, info, _, _, _, _):
+            case let .pack(_, _, info, _, _, _, _):
                 return .pack(info.id)
             case .packsInfo:
                 return .index(4)
@@ -99,23 +99,36 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     static func ==(lhs: InstalledStickerPacksEntry, rhs: InstalledStickerPacksEntry) -> Bool {
         switch lhs {
-            case let .trending(count):
-                if case .trending(count) = rhs {
+            case let .trending(lhsTheme, lhsText, lhsCount):
+                if case let .trending(rhsTheme, rhsText, rhsCount) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsCount == rhsCount {
                     return true
                 } else {
                     return false
                 }
-            case .masks, .archived:
-                return lhs.stableId == rhs.stableId
-            case let .packsTitle(text):
-                if case .packsTitle(text) = rhs {
+            case let .masks(lhsTheme, lhsCount):
+                if case let .masks(rhsTheme, rhsCount) = rhs, lhsTheme === rhsTheme, lhsCount == rhsCount {
                     return true
                 } else {
                     return false
                 }
-            case let .pack(lhsIndex, lhsInfo, lhsTopItem, lhsCount, lhsEnabled, lhsEditing):
-                if case let .pack(rhsIndex, rhsInfo, rhsTopItem, rhsCount, rhsEnabled, rhsEditing) = rhs {
+            case let .archived(lhsTheme, lhsCount):
+                if case let .archived(rhsTheme, rhsCount) = rhs, lhsTheme === rhsTheme, lhsCount == rhsCount {
+                    return true
+                } else {
+                    return false
+                }
+            case let .packsTitle(lhsTheme, lhsText):
+                if case let .packsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .pack(lhsIndex, lhsTheme, lhsInfo, lhsTopItem, lhsCount, lhsEnabled, lhsEditing):
+                if case let .pack(rhsIndex, rhsTheme, rhsInfo, rhsTopItem, rhsCount, rhsEnabled, rhsEditing) = rhs {
                     if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsInfo != rhsInfo {
@@ -137,8 +150,8 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .packsInfo(text):
-                if case .packsInfo(text) = rhs {
+            case let .packsInfo(lhsTheme, lhsText):
+                if case let .packsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -176,9 +189,9 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .pack(lhsIndex, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                     case .packsInfo:
                         return true
@@ -197,22 +210,22 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     func item(_ arguments: InstalledStickerPacksControllerArguments) -> ListViewItem {
         switch self {
-            case let .trending(count):
-                return ItemListDisclosureItem(title: "Trending", label: count == 0 ? "" : "\(count)", sectionId: self.section, style: .blocks, action: {
+            case let .trending(theme, text, count):
+                return ItemListDisclosureItem(theme: theme, title: text, label: count == 0 ? "" : "\(count)", sectionId: self.section, style: .blocks, action: {
                     arguments.openFeatured()
                 })
-            case .masks:
-                return ItemListDisclosureItem(title: "Masks", label: "", sectionId: self.section, style: .blocks, action: {
+            case let .masks(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openMasks()
                 })
-            case .archived:
-                return ItemListDisclosureItem(title: "Archived", label: "", sectionId: self.section, style: .blocks, action: {
+            case let .archived(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openArchived()
                 })
-            case let .packsTitle(text):
-                return ItemListSectionHeaderItem(text: text, sectionId: self.section)
-            case let .pack(_, info, topItem, count, enabled, editing):
-                return ItemListStickerPackItem(account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, sectionId: self.section, action: { _ in
+            case let .packsTitle(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .pack(_, theme, info, topItem, count, enabled, editing):
+                return ItemListStickerPackItem(theme: theme, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, sectionId: self.section, action: { _ in
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
@@ -220,8 +233,8 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 }, removePack: {
                     arguments.removePack(info.id)
                 })
-            case let .packsInfo(text):
-                return ItemListTextItem(text: .markdown(text), sectionId: self.section, linkAction: { _ in
+            case let .packsInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                     arguments.openStickersBot()
                 })
         }
@@ -271,7 +284,15 @@ private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> It
     }
 }
 
-private func installedStickerPacksControllerEntries(state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, featured: [FeaturedStickerPackItem]) -> [InstalledStickerPacksEntry] {
+private func stringForStickerCount(_ count: Int32) -> String {
+    if count == 1 {
+        return "1 sticker"
+    } else {
+        return "\(count) stickers"
+    }
+}
+
+private func installedStickerPacksControllerEntries(presentationData: PresentationData, state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, featured: [FeaturedStickerPackItem]) -> [InstalledStickerPacksEntry] {
     var entries: [InstalledStickerPacksEntry] = []
     
     switch mode {
@@ -283,11 +304,11 @@ private func installedStickerPacksControllerEntries(state: InstalledStickerPacks
                         unreadCount += 1
                     }
                 }
-                entries.append(.trending(unreadCount))
+                entries.append(.trending(presentationData.theme, presentationData.strings.StickerPacksSettings_FeaturedPacks, unreadCount))
             }
-            entries.append(.archived)
-            entries.append(.masks)
-            entries.append(.packsTitle("STICKER SETS"))
+            entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedPacks))
+            entries.append(.masks(presentationData.theme, presentationData.strings.MaskStickerSettings_Title))
+            entries.append(.packsTitle(presentationData.theme, presentationData.strings.StickerPacksSettings_StickerPacksSection))
         case .masks:
             break
     }
@@ -297,7 +318,7 @@ private func installedStickerPacksControllerEntries(state: InstalledStickerPacks
             var index: Int32 = 0
             for entry in packsEntries {
                 if let info = entry.info as? StickerPackCollectionInfo {
-                    entries.append(.pack(index, info, entry.firstItem as? StickerPackItem, info.count == 0 ? entry.count : info.count, true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id)))
+                    entries.append(.pack(index, presentationData.theme, info, entry.firstItem as? StickerPackItem, stringForStickerCount(info.count == 0 ? entry.count : info.count), true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id)))
                     index += 1
                 }
             }
@@ -306,9 +327,9 @@ private func installedStickerPacksControllerEntries(state: InstalledStickerPacks
     
     switch mode {
         case .general:
-            entries.append(.packsInfo("Artists are welcome to add their own sticker sets using our [@stickers]() bot.\n\nTap on a sticker to view and add the whole set."))
+            entries.append(.packsInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_ManagingHelp))
         case .masks:
-            entries.append(.packsInfo("You can add masks to photos and videos you send. To do this, open the photo editor before sending a photo or video."))
+            entries.append(.packsInfo(presentationData.theme, presentationData.strings.MaskStickerSettings_Info))
     }
     
     return entries
@@ -386,8 +407,9 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     
     var previousPackCount: Int?
     
-    let signal = combineLatest(statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
-        |> map { state, view, featured -> (ItemListControllerState, (ItemListNodeState<InstalledStickerPacksEntry>, InstalledStickerPacksEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
+        |> deliverOnMainQueue
+        |> map { presentationData, state, view, featured -> (ItemListControllerState, (ItemListNodeState<InstalledStickerPacksEntry>, InstalledStickerPacksEntry.ItemGenerationArguments)) in
             var packCount: Int? = nil
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView, let entries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] {
                 packCount = entries.count
@@ -396,13 +418,13 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             var rightNavigationButton: ItemListNavigationButton?
             if let packCount = packCount, packCount != 0 {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(true)
                         }
@@ -413,16 +435,15 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             let previous = previousPackCount
             previousPackCount = packCount
             
-            let controllerState = ItemListControllerState(title: .text(mode == .general ? "Stickers" : "Masks"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(mode == .general ? "Stickers" : "Masks"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
-            let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(state: state, mode: mode, view: view, featured: featured), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
+            let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featured), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
-    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
+    let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window, with: p)

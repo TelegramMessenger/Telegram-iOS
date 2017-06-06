@@ -16,8 +16,9 @@ private final class UserInfoControllerArguments {
     let updatePeerBlocked: (Bool) -> Void
     let deleteContact: () -> Void
     let displayUsernameContextMenu: (String) -> Void
+    let call: () -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, call: @escaping () -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
@@ -29,6 +30,7 @@ private final class UserInfoControllerArguments {
         self.updatePeerBlocked = updatePeerBlocked
         self.deleteContact = deleteContact
         self.displayUsernameContextMenu = displayUsernameContextMenu
+        self.call = call
     }
 }
 
@@ -44,19 +46,19 @@ private enum UserInfoEntryTag {
 }
 
 private enum UserInfoEntry: ItemListNodeEntry {
-    case info(peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState)
-    case about(text: String)
-    case phoneNumber(index: Int, value: PhoneNumberWithLabel)
-    case userName(value: String)
-    case sendMessage
-    case shareContact
-    case startSecretChat
-    case sharedMedia
-    case notifications(settings: PeerNotificationSettings?)
-    case notificationSound(settings: PeerNotificationSettings?)
-    case groupsInCommon(Int32)
-    case secretEncryptionKey(SecretChatKeyFingerprint)
-    case block(action: DestructiveUserInfoAction)
+    case info(PresentationTheme, PresentationStrings, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, displayCall: Bool)
+    case about(PresentationTheme, String, String)
+    case phoneNumber(PresentationTheme, Int, PhoneNumberWithLabel)
+    case userName(PresentationTheme, String, String)
+    case sendMessage(PresentationTheme, String)
+    case shareContact(PresentationTheme, String)
+    case startSecretChat(PresentationTheme, String)
+    case sharedMedia(PresentationTheme, String)
+    case notifications(PresentationTheme, String, String)
+    case notificationSound(PresentationTheme, String, String)
+    case groupsInCommon(PresentationTheme, String, Int32)
+    case secretEncryptionKey(PresentationTheme, String, SecretChatKeyFingerprint)
+    case block(PresentationTheme, String, DestructiveUserInfoAction)
     
     var section: ItemListSectionId {
         switch self {
@@ -77,9 +79,15 @@ private enum UserInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: UserInfoEntry, rhs: UserInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsPeer, lhsPresence, lhsCachedData, lhsState):
+            case let .info(lhsTheme, lhsStrings, lhsPeer, lhsPresence, lhsCachedData, lhsState, lhsDisplayCall):
                 switch rhs {
-                    case let .info(rhsPeer, rhsPresence, rhsCachedData, rhsState):
+                    case let .info(rhsTheme, rhsStrings, rhsPeer, rhsPresence, rhsCachedData, rhsState, rhsDisplayCall):
+                        if lhsTheme !== rhsTheme {
+                            return false
+                        }
+                        if lhsStrings !== rhsStrings {
+                            return false
+                        }
                         if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                             if !lhsPeer.isEqual(rhsPeer) {
                                 return false
@@ -104,101 +112,84 @@ private enum UserInfoEntry: ItemListNodeEntry {
                         if lhsState != rhsState {
                             return false
                         }
-                        return true
-                    default:
-                        return false
-                }
-            case let .about(lhsText):
-                switch rhs {
-                    case .about(lhsText):
-                        return true
-                    default:
-                        return false
-                }
-            case let .phoneNumber(lhsIndex, lhsValue):
-                switch rhs {
-                    case let .phoneNumber(rhsIndex, rhsValue) where lhsIndex == rhsIndex && lhsValue == rhsValue:
-                        return true
-                    default:
-                        return false
-                }
-            case let .userName(value):
-                switch rhs {
-                    case .userName(value):
-                        return true
-                    default:
-                        return false
-                }
-            case .sendMessage:
-                switch rhs {
-                    case .sendMessage:
-                        return true
-                    default:
-                        return false
-                }
-            case .shareContact:
-                switch rhs {
-                    case .shareContact:
-                        return true
-                    default:
-                        return false
-                }
-            case .startSecretChat:
-                switch rhs {
-                    case .startSecretChat:
-                        return true
-                    default:
-                        return false
-                }
-            case .sharedMedia:
-                switch rhs {
-                    case .sharedMedia:
-                        return true
-                    default:
-                        return false
-                }
-            case let .notifications(lhsSettings):
-                switch rhs {
-                    case let .notifications(rhsSettings):
-                        if let lhsSettings = lhsSettings, let rhsSettings = rhsSettings {
-                            return lhsSettings.isEqual(to: rhsSettings)
-                        } else if (lhsSettings != nil) != (rhsSettings != nil) {
+                        if lhsDisplayCall != rhsDisplayCall {
                             return false
                         }
                         return true
                     default:
                         return false
                 }
-            case let .notificationSound(lhsSettings):
-                switch rhs {
-                    case let .notificationSound(rhsSettings):
-                        if let lhsSettings = lhsSettings, let rhsSettings = rhsSettings {
-                            return lhsSettings.isEqual(to: rhsSettings)
-                        } else if (lhsSettings != nil) != (rhsSettings != nil) {
-                            return false
-                        }
-                        return true
-                    default:
-                        return false
-                }
-            case let .groupsInCommon(count):
-                if case .groupsInCommon(count) = rhs {
+            case let .about(lhsTheme, lhsText, lhsValue):
+                if case let .about(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .secretEncryptionKey(fingerprint):
-                if case .secretEncryptionKey(fingerprint) = rhs {
+            case let .phoneNumber(lhsTheme, lhsIndex, lhsValue):
+                if case let .phoneNumber(rhsTheme, rhsIndex, rhsValue) = rhs, lhsTheme === rhsTheme, lhsIndex == rhsIndex, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .block(action):
-                switch rhs {
-                    case .block(action):
-                        return true
-                    default:
-                        return false
+            case let .userName(lhsTheme, lhsText, lhsValue):
+                if case let .userName(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .sendMessage(lhsTheme, lhsText):
+                if case let .sendMessage(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .shareContact(lhsTheme, lhsText):
+                if case let .shareContact(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .startSecretChat(lhsTheme, lhsText):
+                if case let .startSecretChat(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .sharedMedia(lhsTheme, lhsText):
+                if case let .sharedMedia(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .notifications(lhsTheme, lhsText, lhsValue):
+                if case let .notifications(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .notificationSound(lhsTheme, lhsText, lhsValue):
+                if case let .notificationSound(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .groupsInCommon(lhsTheme, lhsText, lhsValue):
+                if case let .groupsInCommon(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .secretEncryptionKey(lhsTheme, lhsText, lhsValue):
+                if case let .secretEncryptionKey(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .block(lhsTheme, lhsText, lhsAction):
+                if case let .block(rhsTheme, rhsText, rhsAction) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsAction == rhsAction {
+                    return true
+                } else {
+                    return false
                 }
         }
     }
@@ -209,7 +200,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return 0
             case .about:
                 return 1
-            case let .phoneNumber(index, _):
+            case let .phoneNumber(_, index, _):
                 return 2 + index
             case .userName:
                 return 1000
@@ -240,71 +231,56 @@ private enum UserInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: UserInfoControllerArguments) -> ListViewItem {
         switch self {
-            case let .info(peer, presence, cachedData, state):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+            case let .info(theme, strings, peer, presence, cachedData, state, displayCall):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
-                }, context: arguments.avatarAndNameInfoContext)
-            case let .about(text):
-                return ItemListTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section, action: nil)
-            case let .phoneNumber(_, value):
-                return ItemListTextWithLabelItem(label: value.label, text: formatPhoneNumber(value.number), multiline: false, sectionId: self.section, action: {
+                }, context: arguments.avatarAndNameInfoContext, call: displayCall ? {
+                    arguments.call()
+                } : nil)
+            case let .about(theme, text, value):
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: value, multiline: true, sectionId: self.section, action: nil)
+            case let .phoneNumber(theme, _, value):
+                return ItemListTextWithLabelItem(theme: theme, label: value.label, text: formatPhoneNumber(value.number), multiline: false, sectionId: self.section, action: {
                     
                 })
-            case let .userName(value):
-                return ItemListTextWithLabelItem(label: "username", text: "@\(value)", multiline: false, sectionId: self.section, action: {
+            case let .userName(theme, text, value):
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: "@\(value)", multiline: false, sectionId: self.section, action: {
                     arguments.displayUsernameContextMenu("@" + value)
                 }, tag: UserInfoEntryTag.username)
-            case .sendMessage:
-                return ItemListActionItem(title: "Send Message", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+            case let .sendMessage(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.openChat()
                 })
-            case .shareContact:
-                return ItemListActionItem(title: "Share Contact", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+            case let .shareContact(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     
                 })
-            case .startSecretChat:
-                return ItemListActionItem(title: "Start Secret Chat", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+            case let .startSecretChat(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     
                 })
-            case .sharedMedia:
-                return ItemListDisclosureItem(title: "Shared Media", label: "", sectionId: self.section, style: .plain, action: {
+            case let .sharedMedia(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .plain, action: {
                     arguments.openSharedMedia()
                 })
-            case let .notifications(settings):
-                let label: String
-                if let settings = settings as? TelegramPeerNotificationSettings, case .muted = settings.muteState {
-                    label = "Disabled"
-                } else {
-                    label = "Enabled"
-                }
-                return ItemListDisclosureItem(title: "Notifications", label: label, sectionId: self.section, style: .plain, action: {
+            case let .notifications(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.changeNotificationMuteSettings()
                 })
-            case let .notificationSound(settings):
-                let label: String
-                label = "Default"
-                return ItemListDisclosureItem(title: "Sound", label: label, sectionId: self.section, style: .plain, action: {
+            case let .notificationSound(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                 })
-            case let .groupsInCommon(count):
-                return ItemListDisclosureItem(title: "Groups in Common", label: "\(count)", sectionId: self.section, style: .plain, action: {
+            case let .groupsInCommon(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "\(value)", sectionId: self.section, style: .plain, action: {
                     arguments.openGroupsInCommon()
                 })
-            case let .secretEncryptionKey(fingerprint):
-                return ItemListDisclosureItem(title: "Encryption Key", label: "", sectionId: self.section, style: .plain, action: {
+            case let .secretEncryptionKey(theme, text, fingerprint):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .plain, action: {
                 })
-            case let .block(action):
-                let title: String
-                switch action {
-                    case .block:
-                        title = "Block User"
-                    case .unblock:
-                        title = "Unblock User"
-                    case .removeContact:
-                        title = "Remove Contact"
-                }
-                return ItemListActionItem(title: title, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
+            case let .block(theme, text, action):
+                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     switch action {
                         case .block:
                             arguments.updatePeerBlocked(true)
@@ -368,7 +344,18 @@ private struct UserInfoState: Equatable {
     }
 }
 
-private func userInfoEntries(account: Account, view: PeerView, state: UserInfoState, peerChatState: Coding?) -> [UserInfoEntry] {
+private func stringForBlockAction(strings: PresentationStrings, action: DestructiveUserInfoAction) -> String {
+    switch action {
+        case .block:
+            return strings.Conversation_BlockUser
+        case .unblock:
+            return strings.Conversation_UnblockUser
+        case .removeContact:
+            return strings.UserInfo_DeleteContact
+    }
+}
+
+private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, state: UserInfoState, peerChatState: Coding?) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {
@@ -386,51 +373,57 @@ private func userInfoEntries(account: Account, view: PeerView, state: UserInfoSt
         }
     }
     
-    entries.append(UserInfoEntry.info(peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil)))
+    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: true))
     if let cachedUserData = view.cachedData as? CachedUserData {
         if let about = cachedUserData.about, !about.isEmpty {
-            entries.append(UserInfoEntry.about(text: about))
+            entries.append(UserInfoEntry.about(presentationData.theme, presentationData.strings.Profile_About, about))
         }
     }
     
     if let phoneNumber = user.phone, !phoneNumber.isEmpty {
-        entries.append(UserInfoEntry.phoneNumber(index: 0, value: PhoneNumberWithLabel(label: "home", number: phoneNumber)))
+        entries.append(UserInfoEntry.phoneNumber(presentationData.theme, 0, PhoneNumberWithLabel(label: "home", number: phoneNumber)))
     }
     
     if !isEditing {
         if let username = user.username, !username.isEmpty {
-            entries.append(UserInfoEntry.userName(value: username))
+            entries.append(UserInfoEntry.userName(presentationData.theme, presentationData.strings.Profile_Username, username))
         }
         
         if !(peer is TelegramSecretChat) {
-            entries.append(UserInfoEntry.sendMessage)
+            entries.append(UserInfoEntry.sendMessage(presentationData.theme, presentationData.strings.UserInfo_SendMessage))
             if view.peerIsContact {
-                entries.append(UserInfoEntry.shareContact)
+                entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
             }
-            entries.append(UserInfoEntry.startSecretChat)
+            entries.append(UserInfoEntry.startSecretChat(presentationData.theme, presentationData.strings.UserInfo_StartSecretChat))
         }
-        entries.append(UserInfoEntry.sharedMedia)
+        entries.append(UserInfoEntry.sharedMedia(presentationData.theme, presentationData.strings.GroupInfo_SharedMedia))
     }
-    entries.append(UserInfoEntry.notifications(settings: view.notificationSettings))
+    let notificationsLabel: String
+    if let settings = view.notificationSettings as? TelegramPeerNotificationSettings, case .muted = settings.muteState {
+        notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
+    } else {
+        notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
+    }
+    entries.append(UserInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsLabel))
     if let groupsInCommon = (view.cachedData as? CachedUserData)?.commonGroupCount, groupsInCommon != 0 && !isEditing {
-        entries.append(UserInfoEntry.groupsInCommon(groupsInCommon))
+        entries.append(UserInfoEntry.groupsInCommon(presentationData.theme, presentationData.strings.UserInfo_GroupsInCommon, groupsInCommon))
     }
     
     if peer is TelegramSecretChat, let peerChatState = peerChatState as? SecretChatKeyState, let keyFingerprint = peerChatState.keyFingerprint {
-        entries.append(UserInfoEntry.secretEncryptionKey(keyFingerprint))
+        entries.append(UserInfoEntry.secretEncryptionKey(presentationData.theme, presentationData.strings.Profile_EncryptionKey, keyFingerprint))
     }
     
     if isEditing {
-        entries.append(UserInfoEntry.notificationSound(settings: view.notificationSettings))
+        entries.append(UserInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, "Default"))
         if view.peerIsContact {
-            entries.append(UserInfoEntry.block(action: .removeContact))
+            entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .removeContact), .removeContact))
         }
     } else {
         if let cachedData = view.cachedData as? CachedUserData {
             if cachedData.isBlocked {
-                entries.append(UserInfoEntry.block(action: .unblock))
+                entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .unblock), .unblock))
             } else {
-                entries.append(UserInfoEntry.block(action: .block))
+                entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .block), .block))
             }
         }
     }
@@ -549,15 +542,33 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         
     }, displayUsernameContextMenu: { text in
         displayUsernameContextMenuImpl?(text)
+    }, call: {
+        let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
+        if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
+            if currentPeerId == peerId {
+                account.telegramApplicationContext.navigateToCurrentCall?()
+            } else {
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let _ = (account.postbox.modify { modifier -> (Peer?, Peer?) in
+                    return (modifier.getPeer(peerId), modifier.getPeer(currentPeerId))
+                } |> deliverOnMainQueue).start(next: { peer, current in
+                    if let peer = peer, let current = current {
+                        presentControllerImpl?(standardTextAlertController(title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
+                        })]), nil)
+                    }
+                })
+            }
+        }
     })
     
-    let signal = combineLatest(statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [.peerChatState(peerId: peerId)]))
-        |> map { state, view, chatState -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [.peerChatState(peerId: peerId)]))
+        |> map { presentationData, state, view, chatState -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             var leftNavigationButton: ItemListNavigationButton?
             let rightNavigationButton: ItemListNavigationButton
             if let editingState = state.editingState {
-                leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
+                leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
                     updateState {
                         $0.withUpdatedEditingState(nil)
                     }
@@ -571,7 +582,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 if state.savingData {
                     rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: doneEnabled, action: {})
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: doneEnabled, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: doneEnabled, action: {
                         var updateName: ItemListAvatarAndNameInfoItemName?
                         updateState { state in
                             if let editingState = state.editingState, let editingName = editingState.editingName {
@@ -602,7 +613,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                     })
                 }
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                     if let user = peer {
                         updateState { state in
                             return state.withUpdatedEditingState(UserInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(user.indexName)))
@@ -611,15 +622,15 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 })
             }
             
-            let controllerState = ItemListControllerState(title: .text("Info"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
-            let listState = ItemListNodeState(entries: userInfoEntries(account: account, view: view, state: state, peerChatState: (chatState.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState), style: .plain)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
+            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view, state: state, peerChatState: (chatState.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState), style: .plain)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(signal)
+    let controller = ItemListController(account: account, state: signal)
     
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)

@@ -12,14 +12,15 @@ struct CounterContollerTitle: Equatable {
 }
 
 final class CounterContollerTitleView: UIView {
+    private var theme: PresentationTheme
     private let titleNode: ASTextNode
     
     var title: CounterContollerTitle = CounterContollerTitle(title: "", counter: "") {
         didSet {
             if self.title != oldValue {
                 let string = NSMutableAttributedString()
-                string.append(NSAttributedString(string: title.title, font: Font.medium(17.0), textColor: .black))
-                string.append(NSAttributedString(string: "  " + title.counter, font: Font.regular(15.0), textColor: .gray))
+                string.append(NSAttributedString(string: title.title, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor))
+                string.append(NSAttributedString(string: "  " + title.counter, font: Font.regular(15.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
                 self.titleNode.attributedText = string
                 
                 self.setNeedsLayout()
@@ -27,14 +28,16 @@ final class CounterContollerTitleView: UIView {
         }
     }
     
-    override init(frame: CGRect) {
+    init(theme: PresentationTheme) {
+        self.theme = theme
+        
         self.titleNode = ASTextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         self.addSubnode(self.titleNode)
     }

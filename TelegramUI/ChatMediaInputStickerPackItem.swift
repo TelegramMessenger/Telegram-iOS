@@ -12,18 +12,20 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
     let stickerPackItem: StickerPackItem?
     let selectedItem: () -> Void
     let index: Int
+    let theme: PresentationTheme
     
     var selectable: Bool {
         return true
     }
     
-    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, stickerPackItem: StickerPackItem?, index: Int, selected: @escaping () -> Void) {
+    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, stickerPackItem: StickerPackItem?, index: Int, theme: PresentationTheme, selected: @escaping () -> Void) {
         self.account = account
         self.inputNodeInteraction = inputNodeInteraction
         self.collectionId = collectionId
         self.stickerPackItem = stickerPackItem
         self.selectedItem = selected
         self.index = index
+        self.theme = theme
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -32,7 +34,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
             node.contentSize = CGSize(width: 41.0, height: 41.0)
             node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             node.inputNodeInteraction = self.inputNodeInteraction
-            node.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId)
+            node.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
             completion(node, {
                 return (nil, {})
             })
@@ -41,6 +43,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
+            (node as? ChatMediaInputStickerPackItemNode)?.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
         })
     }
     
@@ -54,8 +57,6 @@ private let boundingImageSize = CGSize(width: 30.0, height: 30.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
 private let verticalOffset: CGFloat = 3.0
 
-private let highlightBackground = generateStretchableFilledCircleImage(radius: 9.0, color: UIColor(0x9099A2, 0.2))
-
 final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     private let imageNode: TransformImageNode
     private let highlightNode: ASImageNode
@@ -63,13 +64,13 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     var currentCollectionId: ItemCollectionId?
     private var currentItem: StickerPackItem?
+    private var theme: PresentationTheme?
     
     private let stickerFetchedDisposable = MetaDisposable()
     
     init() {
         self.highlightNode = ASImageNode()
         self.highlightNode.isLayerBacked = true
-        self.highlightNode.image = highlightBackground
         self.highlightNode.isHidden = true
         
         self.imageNode = TransformImageNode()
@@ -77,7 +78,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
         
-        self.imageNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
+        self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.imageNode.alphaTransitionOnFirstUpdate = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -90,8 +91,14 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         self.stickerFetchedDisposable.dispose()
     }
     
-    func updateStickerPackItem(account: Account, item: StickerPackItem?, collectionId: ItemCollectionId) {
+    func updateStickerPackItem(account: Account, item: StickerPackItem?, collectionId: ItemCollectionId, theme: PresentationTheme) {
         self.currentCollectionId = collectionId
+        
+        if self.theme !== theme {
+            self.theme = theme
+            
+            self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
+        }
         
         if self.currentItem != item {
             self.currentItem = item

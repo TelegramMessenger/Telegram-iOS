@@ -7,17 +7,21 @@ import TelegramCore
 
 class ChatVideoGalleryItem: GalleryItem {
     let account: Account
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(account: Account, message: Message, location: MessageHistoryEntryLocation?) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, message: Message, location: MessageHistoryEntryLocation?) {
         self.account = account
+        self.theme = theme
+        self.strings = strings
         self.message = message
         self.location = location
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatVideoGalleryItemNode(account: self.account)
+        let node = ChatVideoGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile, (file.isVideo || file.mimeType.hasPrefix("video/")) {
@@ -71,7 +75,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
-    init(account: Account) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.videoNode = MediaPlayerNode()
         self.snapshotNode = TransformImageNode()
         self.snapshotNode.backgroundColor = UIColor.black
@@ -81,7 +85,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.progressButtonNode = HighlightableButtonNode()
         self.progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(white: 0.0, alpha: 0.6), foregroundColor: UIColor.white, icon: nil))
         
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
         
         super.init()
         
@@ -126,7 +130,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.snapshotNode.alphaTransitionOnFirstUpdate = false
                 let displaySize = largestSize.dividedByScreenScale()
                 self.snapshotNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.snapshotNode.setSignal(account: account, signal: chatMessageImageFile(account: account, file: file, progressive: true), dispatchOnDisplayLink: false)
+                self.snapshotNode.setSignal(account: account, signal: chatMessageImageFile(account: account, file: file, progressive: false), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize, self.videoNode)
             } else {
                 self._ready.set(.single(Void()))
@@ -176,7 +180,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 /*let source = VideoPlayerSource(account: account, resource: CloudFileMediaResource(location: file.location, size: file.size))
                 self.videoNode.player = VideoPlayer(source: source)*/
                 
-                let player = MediaPlayer(audioSessionManager: (account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, postbox: account.postbox, resource: file.resource, streamable: false, video: true, preferSoftwareDecoding: false, enableSound: true)
+                let player = MediaPlayer(audioSessionManager: (account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, overlayMediaManager: (account.applicationContext as! TelegramApplicationContext).mediaManager.overlayMediaManager, postbox: account.postbox, resource: file.resource, streamable: false, video: true, preferSoftwareDecoding: false, enableSound: true)
                 if loopVideo {
                     player.actionAtEnd = .loop
                 }

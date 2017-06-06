@@ -81,23 +81,23 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, from fr
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
 
-private func chatMediaInputPanelEntries(view: ItemCollectionsView, recentStickers: OrderedItemListView?) -> [ChatMediaInputPanelEntry] {
+private func chatMediaInputPanelEntries(view: ItemCollectionsView, recentStickers: OrderedItemListView?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
-    entries.append(.recentGifs)
+    entries.append(.recentGifs(theme))
     if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
-        entries.append(.recentPacks)
+        entries.append(.recentPacks(theme))
     }
     var index = 0
     for (_, info, item) in view.collectionInfos {
         if let info = info as? StickerPackCollectionInfo {
-            entries.append(.stickerPack(index: index, info: info, topItem: item as? StickerPackItem))
+            entries.append(.stickerPack(index: index, info: info, topItem: item as? StickerPackItem, theme: theme))
             index += 1
         }
     }
     return entries
 }
 
-private func chatMediaInputGridEntries(view: ItemCollectionsView, recentStickers: OrderedItemListView?) -> [ChatMediaInputGridEntry] {
+private func chatMediaInputGridEntries(view: ItemCollectionsView, recentStickers: OrderedItemListView?, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     var stickerPackInfos: [ItemCollectionId: StickerPackCollectionInfo] = [:]
@@ -113,14 +113,14 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, recentStickers
             if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
                 let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
                 let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
-                entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo))
+                entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
             }
         }
     }
     
     for entry in view.entries {
         if let item = entry.item as? StickerPackItem {
-            entries.append(ChatMediaInputGridEntry(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId]))
+            entries.append(ChatMediaInputGridEntry(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], theme: theme))
         }
     }
     return entries
@@ -228,16 +228,24 @@ final class ChatMediaInputNode: ChatInputNode {
     private var validLayout: (CGFloat, ChatPresentationInterfaceState)?
     private var paneArrangement: ChatMediaInputPaneArrangement
     
-    init(account: Account, controllerInteraction: ChatControllerInteraction) {
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
+    
+    init(account: Account, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
         self.controllerInteraction = controllerInteraction
+        self.theme = theme
+        self.strings = strings
+        
+        self.themeAndStringsPromise = Promise((theme, strings))
         
         self.collectionListPanel = ASDisplayNode()
-        self.collectionListPanel.backgroundColor = UIColor(0xF5F6F8)
+        self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
         
         self.collectionListSeparator = ASDisplayNode()
         self.collectionListSeparator.isLayerBacked = true
-        self.collectionListSeparator.backgroundColor = UIColor(0xBEC2C6)
+        self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSerapatorColor
         
         self.listView = ListView()
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
@@ -274,7 +282,7 @@ final class ChatMediaInputNode: ChatInputNode {
         })
         
         self.clipsToBounds = true
-        self.backgroundColor = UIColor(0xE8EBF0)
+        self.backgroundColor = theme.chat.inputMediaPanel.gifsBackgroundColor
         
         self.addSubnode(self.collectionListPanel)
         self.addSubnode(self.collectionListSeparator)
@@ -322,8 +330,11 @@ final class ChatMediaInputNode: ChatInputNode {
         
         let inputNodeInteraction = self.inputNodeInteraction!
         
-        let transitions = itemCollectionsView
-            |> map { (view, update) -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(itemCollectionsView, self.themeAndStringsPromise.get())
+            |> map { viewAndUpdate, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+                let (view, update) = viewAndUpdate
+                let (theme, strings) = themeAndStrings
+                
                 var recentStickers: OrderedItemListView?
                 for orderedView in view.orderedItemListsViews {
                     if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
@@ -331,8 +342,8 @@ final class ChatMediaInputNode: ChatInputNode {
                         break
                     }
                 }
-                let panelEntries = chatMediaInputPanelEntries(view: view, recentStickers: recentStickers)
-                let gridEntries = chatMediaInputGridEntries(view: view, recentStickers: recentStickers)
+                let panelEntries = chatMediaInputPanelEntries(view: view, recentStickers: recentStickers, theme: theme)
+                let gridEntries = chatMediaInputGridEntries(view: view, recentStickers: recentStickers, strings: strings, theme: theme)
                 let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
                 return (view, preparedChatMediaInputPanelEntryTransition(account: account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: account, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)
             }
@@ -393,6 +404,19 @@ final class ChatMediaInputNode: ChatInputNode {
     
     deinit {
         self.disposable.dispose()
+    }
+    
+    private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        if self.theme !== theme || self.strings !== strings {
+            self.theme = theme
+            self.strings = strings
+            
+            self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+            self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSerapatorColor
+            self.backgroundColor = theme.chat.inputMediaPanel.gifsBackgroundColor
+            
+            self.themeAndStringsPromise.set(.single((theme, strings)))
+        }
     }
     
     override func didLoad() {
@@ -473,6 +497,11 @@ final class ChatMediaInputNode: ChatInputNode {
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         self.validLayout = (width, interfaceState)
+        
+        if self.theme !== interfaceState.theme || self.strings !== interfaceState.strings {
+            self.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
+        }
+        
         let separatorHeight = UIScreenPixel
         let panelHeight = self.heightForWidth(width: width)
         

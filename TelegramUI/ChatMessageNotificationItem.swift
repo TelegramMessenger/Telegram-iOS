@@ -69,10 +69,14 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         if let peer = messageMainPeer(item.message) {
             self.avatarNode.setPeer(account: item.account, peer: peer)
-        }
-        
-        if let peer = item.message.peers[item.message.id.peerId] {
-            self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: .black)
+            
+            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: .black)
+            } else if let author = item.message.author, author.id != peer.id {
+                self.titleNode.attributedText = NSAttributedString(string: author.displayTitle + "@" + peer.displayTitle, font: Font.semibold(16.0), textColor: .black)
+            } else {
+                self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: .black)
+            }
         }
         
         var updatedMedia: Media?

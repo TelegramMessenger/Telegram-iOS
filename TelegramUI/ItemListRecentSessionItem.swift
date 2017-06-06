@@ -31,6 +31,8 @@ enum ItemListRecentSessionItemText {
 }
 
 final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let session: RecentAccountSession
     let enabled: Bool
     let editable: Bool
@@ -40,7 +42,9 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
     let setSessionIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let removeSession: (Int64) -> Void
     
-    init(session: RecentAccountSession, enabled: Bool, editable: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, session: RecentAccountSession, enabled: Bool, editable: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.session = session
         self.enabled = enabled
         self.editable = editable
@@ -110,14 +114,11 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -141,10 +142,9 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         self.labelNode.contentsScale = UIScreen.main.scale
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false)
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.appNode)
@@ -161,7 +161,15 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
+        let currentItem = self.layoutParams?.0
+        
         return { item, width, neighbors in
+            var updatedTheme: PresentationTheme?
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
             var titleAttributedString: NSAttributedString?
             var appAttributedString: NSAttributedString?
             var locationAttributedString: NSAttributedString?
@@ -169,14 +177,14 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             
             let peerRevealOptions: [ItemListRevealOption]
             if item.editable && item.enabled {
-                peerRevealOptions = [ItemListRevealOption(key: 0, title: "Terminate", icon: nil, color: UIColor(0xff3824))]
+                peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.AuthSessions_TerminateSession, icon: nil, color: UIColor(rgb: 0xff3824))]
             } else {
                 peerRevealOptions = []
             }
             
             let rightInset: CGFloat = 0.0
             
-            titleAttributedString = NSAttributedString(string: "\(item.session.appName) \(item.session.appVersion)", font: titleFont, textColor: UIColor.black)
+            titleAttributedString = NSAttributedString(string: "\(item.session.appName) \(item.session.appVersion)", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
             
             var appString = ""
             if !item.session.deviceModel.isEmpty {
@@ -197,14 +205,14 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                 appString += item.session.systemVersion
             }
             
-            appAttributedString = NSAttributedString(string: appString, font: textFont, textColor: UIColor.black)
-            locationAttributedString = NSAttributedString(string: "\(item.session.ip) — \(item.session.country)", font: textFont, textColor: UIColor(0x6d6d6d))
+            appAttributedString = NSAttributedString(string: appString, font: textFont, textColor: item.theme.list.itemPrimaryTextColor)
+            locationAttributedString = NSAttributedString(string: "\(item.session.ip) — \(item.session.country)", font: textFont, textColor: item.theme.list.itemSecondaryTextColor)
             if item.session.isCurrent {
-                labelAttributedString = NSAttributedString(string: "online", font: textFont, textColor: UIColor(0x007ee5))
+                labelAttributedString = NSAttributedString(string: item.strings.Presence_online, font: textFont, textColor: item.theme.list.itemAccentColor)
             } else {
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                let dateText = stringForRelativeTimestamp(item.session.activityDate, relativeTo: timestamp)
-                labelAttributedString = NSAttributedString(string: dateText, font: textFont, textColor: UIColor(0x6d6d6d))
+                let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.session.activityDate, relativeTo: timestamp)
+                labelAttributedString = NSAttributedString(string: dateText, font: textFont, textColor: item.theme.list.itemSecondaryTextColor)
             }
             
             let leftInset: CGFloat = 15.0
@@ -244,6 +252,13 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, width, neighbors)
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    }
                     
                     let revealOffset = strongSelf.revealOffset
                     

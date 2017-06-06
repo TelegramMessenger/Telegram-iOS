@@ -2,8 +2,6 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let arrowImage = UIImage(bundleImageName: "Media Grid/TitleViewModeSelectionArrow")?.precomposed()
-
 final class PeerMediaCollectionTitleView: UIView {
     private let toggle: () -> Void
     
@@ -11,9 +9,10 @@ final class PeerMediaCollectionTitleView: UIView {
     private let arrowView: UIImageView
     private let button: HighlightTrackingButton
     
-    private var mediaCollectionInterfaceState = PeerMediaCollectionInterfaceState()
+    private var mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState
     
-    init(toggle: @escaping () -> Void) {
+    init(mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState, toggle: @escaping () -> Void) {
+        self.mediaCollectionInterfaceState = mediaCollectionInterfaceState
         self.toggle = toggle
         
         self.titleNode = ASTextNode()
@@ -22,13 +21,13 @@ final class PeerMediaCollectionTitleView: UIView {
         self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         
-        self.arrowView = UIImageView(image: arrowImage)
+        self.arrowView = UIImageView(image: PresentationResourcesRootController.navigationDropdownArrowImage(self.mediaCollectionInterfaceState.theme))
         
         self.button = HighlightTrackingButton(frame: CGRect())
         
         super.init(frame: CGRect())
         
-        self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(self.mediaCollectionInterfaceState.mode), font: Font.medium(17.0), textColor: UIColor.black)
+        self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(self.mediaCollectionInterfaceState.mode, strings: self.mediaCollectionInterfaceState.strings), font: Font.medium(17.0), textColor: self.mediaCollectionInterfaceState.theme.rootController.navigationBar.primaryTextColor)
         self.addSubnode(self.titleNode)
         self.addSubview(self.arrowView)
         
@@ -74,7 +73,7 @@ final class PeerMediaCollectionTitleView: UIView {
     func updateMediaCollectionInterfaceState(_ mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState, animated: Bool) {
         if self.mediaCollectionInterfaceState != mediaCollectionInterfaceState {
             if mediaCollectionInterfaceState.mode != self.mediaCollectionInterfaceState.mode {
-                self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(mediaCollectionInterfaceState.mode), font: Font.medium(17.0), textColor: UIColor.black)
+                self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(mediaCollectionInterfaceState.mode, strings: mediaCollectionInterfaceState.strings), font: Font.medium(17.0), textColor: mediaCollectionInterfaceState.theme.rootController.navigationBar.primaryTextColor)
                 self.setNeedsLayout()
             }
             

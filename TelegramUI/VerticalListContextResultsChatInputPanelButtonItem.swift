@@ -76,11 +76,11 @@ final class VerticalListContextResultsChatInputPanelButtonItemNode: ListViewItem
         self.buttonNode = HighlightTrackingButtonNode()
         
         self.topSeparatorNode = ASDisplayNode()
-        self.topSeparatorNode.backgroundColor = UIColor(0xC9CDD1)
+        self.topSeparatorNode.backgroundColor = UIColor(rgb: 0xC9CDD1)
         self.topSeparatorNode.isLayerBacked = true
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(0xD6D6DA)
+        self.separatorNode.backgroundColor = UIColor(rgb: 0xD6D6DA)
         self.separatorNode.isLayerBacked = true
         
         self.titleNode = TextNode()
@@ -124,7 +124,7 @@ final class VerticalListContextResultsChatInputPanelButtonItemNode: ListViewItem
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { [weak self] item, width, mergedTop, mergedBottom in
-            let titleString = NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x007ee5))
+            let titleString = NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(rgb: 0x007ee5))
             
             let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .end, CGSize(width: width - 16.0, height: 100.0), .natural, nil, UIEdgeInsets())
             
