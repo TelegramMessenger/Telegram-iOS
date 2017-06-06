@@ -64,7 +64,7 @@ public func removePeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -
                     }
                     |> mapToSignal { result -> Signal<Void, RemovePeerAdminError> in
                         account.stateManager.addUpdates(result)
-                        return account.postbox.modify { moifier -> Void in
+                        return account.postbox.modify { modifier -> Void in
                             modifier.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                 if let current = current as? CachedChannelData, let adminCount = current.participantsSummary.adminCount {
                                     return current.withUpdatedParticipantsSummary(current.participantsSummary.withUpdatedAdminCount(max(1, adminCount - 1)))
