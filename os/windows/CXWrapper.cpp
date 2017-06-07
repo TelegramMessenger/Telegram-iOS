@@ -17,6 +17,7 @@ using namespace Windows::Security::Cryptography;
 using namespace Windows::Security::Cryptography::Core;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Data::Json;
+using namespace Windows::Phone::Media::Devices;
 
 //CryptographicHash^ MicrosoftCryptoImpl::sha1Hash;
 //CryptographicHash^ MicrosoftCryptoImpl::sha256Hash;
@@ -90,6 +91,10 @@ void VoIPControllerWrapper::SetStateCallback(IStateCallback^ callback){
 
 void VoIPControllerWrapper::SetMicMute(bool mute){
 	controller->SetMicMute(mute);
+}
+
+int64 VoIPControllerWrapper::GetPreferredRelayID(){
+	return controller->GetPreferredRelayID();
 }
 
 void VoIPControllerWrapper::SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing){
@@ -172,6 +177,21 @@ void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
 	}
 
 	ServerConfig::GetSharedInstance()->Update(config);
+}
+
+void VoIPControllerWrapper::SwitchSpeaker(bool external){
+	auto routingManager = AudioRoutingManager::GetDefault();
+	if (external){
+		routingManager->SetAudioEndpoint(AudioRoutingEndpoint::Speakerphone);
+	}
+	else{
+		if ((routingManager->AvailableAudioEndpoints & AvailableAudioRoutingEndpoints::Bluetooth) == AvailableAudioRoutingEndpoints::Bluetooth){
+			routingManager->SetAudioEndpoint(AudioRoutingEndpoint::Bluetooth);
+		}
+		else if ((routingManager->AvailableAudioEndpoints & AvailableAudioRoutingEndpoints::Earpiece) == AvailableAudioRoutingEndpoints::Earpiece){
+			routingManager->SetAudioEndpoint(AudioRoutingEndpoint::Earpiece);
+		}
+	}
 }
 
 void MicrosoftCryptoImpl::AesIgeEncrypt(uint8_t* in, uint8_t* out, size_t len, uint8_t* key, uint8_t* iv){

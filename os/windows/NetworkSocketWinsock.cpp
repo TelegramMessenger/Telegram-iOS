@@ -244,7 +244,7 @@ void NetworkSocketWinsock::Receive(NetworkPacket *packet){
 				LOGE("error receiving: %d", error);
 				return;
 			}
-			//LOGV("Received %d bytes from %s:%d at %.5lf", len, inet_ntoa(srcAddr.sin_addr), ntohs(srcAddr.sin_port), GetCurrentTime());
+			//LOGV("Received %d bytes from %s:%d at %.5lf", res, inet_ntoa(srcAddr.sin6_addr), ntohs(srcAddr.sin6_port), GetCurrentTime());
 			if(addr->sa_family==AF_INET){
 				packet->port=ntohs(srcAddr4.sin_port);
 				lastRecvdV4=IPv4Address(srcAddr4.sin_addr.s_addr);
@@ -264,6 +264,7 @@ void NetworkSocketWinsock::Receive(NetworkPacket *packet){
 					packet->address=&lastRecvdV6;
 				}
 			}
+			packet->protocol=PROTO_UDP;
 			return;
 		}
 
@@ -397,7 +398,7 @@ void NetworkSocketWinsock::Open(){
 		localUdpPort=ntohs(((sockaddr_in6*)addr)->sin6_port);
 	else
 		localUdpPort=ntohs(((sockaddr_in*)addr)->sin_port);
-	LOGD("Bound to local UDP port %u", ntohs(localUdpPort));
+	LOGD("Bound to local UDP port %u", localUdpPort);
 
 	needUpdateNat64Prefix=true;
 	isV4Available=false;

@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		69015D8A1E9D846F00AC9763 /* NetworkSocketPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69015D881E9D846F00AC9763 /* NetworkSocketPosix.cpp */; };
-		69015D8B1E9D846F00AC9763 /* NetworkSocketPosix.h in Headers */ = {isa = PBXBuildFile; fileRef = 69015D891E9D846F00AC9763 /* NetworkSocketPosix.h */; };
 		69015D941E9D848700AC9763 /* NetworkSocket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69015D921E9D848700AC9763 /* NetworkSocket.cpp */; };
 		69015D951E9D848700AC9763 /* NetworkSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 69015D931E9D848700AC9763 /* NetworkSocket.h */; };
 		6915307B1E6B5BAB004F643F /* logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6915307A1E6B5BAB004F643F /* logging.cpp */; };
@@ -54,6 +52,10 @@
 		692AB91F1E675F7000706ACC /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 692AB91C1E675F7000706ACC /* AudioToolbox.framework */; };
 		692AB9201E675F7000706ACC /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 692AB91D1E675F7000706ACC /* AudioUnit.framework */; };
 		692AB9211E675F7000706ACC /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 692AB91E1E675F7000706ACC /* CoreAudio.framework */; };
+		69791A4D1EE8262400BB85FB /* NetworkSocketPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69791A4B1EE8262400BB85FB /* NetworkSocketPosix.cpp */; };
+		69791A4E1EE8262400BB85FB /* NetworkSocketPosix.h in Headers */ = {isa = PBXBuildFile; fileRef = 69791A4C1EE8262400BB85FB /* NetworkSocketPosix.h */; };
+		69791A571EE8272A00BB85FB /* Resampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69791A551EE8272A00BB85FB /* Resampler.cpp */; };
+		69791A581EE8272A00BB85FB /* Resampler.h in Headers */ = {isa = PBXBuildFile; fileRef = 69791A561EE8272A00BB85FB /* Resampler.h */; };
 		69A6DD941E95EC7700000E69 /* array_view.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD011E95EC7700000E69 /* array_view.h */; };
 		69A6DD951E95EC7700000E69 /* atomicops.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD021E95EC7700000E69 /* atomicops.h */; };
 		69A6DD961E95EC7700000E69 /* basictypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD031E95EC7700000E69 /* basictypes.h */; };
@@ -236,8 +238,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		69015D881E9D846F00AC9763 /* NetworkSocketPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkSocketPosix.cpp; sourceTree = "<group>"; };
-		69015D891E9D846F00AC9763 /* NetworkSocketPosix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSocketPosix.h; sourceTree = "<group>"; };
 		69015D921E9D848700AC9763 /* NetworkSocket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkSocket.cpp; sourceTree = "<group>"; };
 		69015D931E9D848700AC9763 /* NetworkSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSocket.h; sourceTree = "<group>"; };
 		6915307A1E6B5BAB004F643F /* logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cpp; sourceTree = "<group>"; };
@@ -284,6 +284,10 @@
 		692AB91C1E675F7000706ACC /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		692AB91D1E675F7000706ACC /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
 		692AB91E1E675F7000706ACC /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		69791A4B1EE8262400BB85FB /* NetworkSocketPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetworkSocketPosix.cpp; path = os/posix/NetworkSocketPosix.cpp; sourceTree = SOURCE_ROOT; };
+		69791A4C1EE8262400BB85FB /* NetworkSocketPosix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetworkSocketPosix.h; path = os/posix/NetworkSocketPosix.h; sourceTree = SOURCE_ROOT; };
+		69791A551EE8272A00BB85FB /* Resampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Resampler.cpp; sourceTree = "<group>"; };
+		69791A561EE8272A00BB85FB /* Resampler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Resampler.h; sourceTree = "<group>"; };
 		69A6DD011E95EC7700000E69 /* array_view.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = array_view.h; sourceTree = "<group>"; };
 		69A6DD021E95EC7700000E69 /* atomicops.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = atomicops.h; sourceTree = "<group>"; };
 		69A6DD031E95EC7700000E69 /* basictypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = basictypes.h; sourceTree = "<group>"; };
@@ -438,8 +442,8 @@
 		69015D871E9D846F00AC9763 /* posix */ = {
 			isa = PBXGroup;
 			children = (
-				69015D881E9D846F00AC9763 /* NetworkSocketPosix.cpp */,
-				69015D891E9D846F00AC9763 /* NetworkSocketPosix.h */,
+				69791A4B1EE8262400BB85FB /* NetworkSocketPosix.cpp */,
+				69791A4C1EE8262400BB85FB /* NetworkSocketPosix.h */,
 			);
 			name = posix;
 			path = ../../../../TDesktop/TBuild/tdesktop/third_party/libtgvoip/os/posix;
@@ -492,6 +496,8 @@
 				692AB8891E6759DD00706ACC /* AudioInput.h */,
 				692AB88A1E6759DD00706ACC /* AudioOutput.cpp */,
 				692AB88B1E6759DD00706ACC /* AudioOutput.h */,
+				69791A551EE8272A00BB85FB /* Resampler.cpp */,
+				69791A561EE8272A00BB85FB /* Resampler.h */,
 			);
 			path = audio;
 			sourceTree = "<group>";
@@ -877,6 +883,7 @@
 				69A6DDAE1E95EC7700000E69 /* complex_fft_tables.h in Headers */,
 				692AB8FF1E6759DD00706ACC /* TGLogWrapper.h in Headers */,
 				692AB8D41E6759DD00706ACC /* BufferOutputStream.h in Headers */,
+				69791A4E1EE8262400BB85FB /* NetworkSocketPosix.h in Headers */,
 				692AB9051E6759DD00706ACC /* VoIPServerConfig.h in Headers */,
 				69A6DDF31E95EC7700000E69 /* defines.h in Headers */,
 				69A6DD9D1E95EC7700000E69 /* sanitizer.h in Headers */,
@@ -896,7 +903,6 @@
 				69A6DDDB1E95EC7700000E69 /* aec_common.h in Headers */,
 				69A6DDDD1E95EC7700000E69 /* aec_core.h in Headers */,
 				69A6DE051E95EC7800000E69 /* block_mean_calculator.h in Headers */,
-				69015D8B1E9D846F00AC9763 /* NetworkSocketPosix.h in Headers */,
 				69A6DD951E95EC7700000E69 /* atomicops.h in Headers */,
 				69A6DD991E95EC7700000E69 /* constructormagic.h in Headers */,
 				69A6DDA01E95EC7700000E69 /* type_traits.h in Headers */,
@@ -925,6 +931,7 @@
 				69A6DDEF1E95EC7700000E69 /* digital_agc.h in Headers */,
 				69A6DDF21E95EC7700000E69 /* apm_data_dumper.h in Headers */,
 				69A6DDC21E95EC7700000E69 /* spl_inl_mips.h in Headers */,
+				69791A581EE8272A00BB85FB /* Resampler.h in Headers */,
 				692AB8DB1E6759DD00706ACC /* EchoCanceller.h in Headers */,
 				69A6DE1C1E95ECF000000E69 /* wav_file.h in Headers */,
 				692AB8D61E6759DD00706ACC /* BufferPool.h in Headers */,
@@ -1071,6 +1078,7 @@
 				69A6DDA11E95EC7700000E69 /* audio_util.cc in Sources */,
 				69A6DDE31E95EC7700000E69 /* echo_cancellation.cc in Sources */,
 				69A6DDD71E95EC7700000E69 /* sqrt_of_one_minus_x_squared.c in Sources */,
+				69791A4D1EE8262400BB85FB /* NetworkSocketPosix.cpp in Sources */,
 				692AB8D81E6759DD00706ACC /* CongestionControl.cpp in Sources */,
 				69A6DDCD1E95EC7700000E69 /* resample_by_2.c in Sources */,
 				69A6DDE51E95EC7700000E69 /* aecm_core.cc in Sources */,
@@ -1098,6 +1106,7 @@
 				69A6DDC61E95EC7700000E69 /* min_max_operations_neon.c in Sources */,
 				69A6DDB01E95EC7700000E69 /* cross_correlation.c in Sources */,
 				692AB8D11E6759DD00706ACC /* BufferInputStream.cpp in Sources */,
+				69791A571EE8272A00BB85FB /* Resampler.cpp in Sources */,
 				69A6DE0B1E95EC7800000E69 /* ooura_fft.cc in Sources */,
 				69A6DDB21E95EC7700000E69 /* division_operations.c in Sources */,
 				69A6DDCA1E95EC7700000E69 /* refl_coef_to_lpc.c in Sources */,
@@ -1134,7 +1143,6 @@
 				692AB8CB1E6759DD00706ACC /* AudioInput.cpp in Sources */,
 				69A6DDCC1E95EC7700000E69 /* resample_48khz.c in Sources */,
 				69A6DDAC1E95EC7700000E69 /* complex_bit_reverse_arm.S in Sources */,
-				69015D8A1E9D846F00AC9763 /* NetworkSocketPosix.cpp in Sources */,
 				69A6DDD81E95EC7700000E69 /* vector_scaling_operations.c in Sources */,
 				69A6DE0D1E95EC7800000E69 /* ooura_fft_neon.cc in Sources */,
 				692AB8FD1E6759DD00706ACC /* AudioUnitIO.cpp in Sources */,
@@ -1283,6 +1291,7 @@
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DWEBRTC_POSIX",
+					"-DTGVOIP_HAVE_TGLOG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1318,6 +1327,7 @@
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DWEBRTC_POSIX",
+					"-DTGVOIP_HAVE_TGLOG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1404,6 +1414,7 @@
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DWEBRTC_POSIX",
+					"-DTGVOIP_HAVE_TGLOG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1484,6 +1495,7 @@
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DWEBRTC_POSIX",
+					"-DTGVOIP_HAVE_TGLOG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = me.grishka.libtgvoip;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -305,6 +305,7 @@ void VoIPController::SetRemoteEndpoints(std::vector<Endpoint> endpoints, bool al
 			didAddTcpRelays=true;
 		if(itrtr->type==EP_TYPE_UDP_RELAY)
 			useTCP=false;
+		LOGV("Adding endpoint: %s:%d, %s", itrtr->address.ToString().c_str(), itrtr->port, itrtr->type==EP_TYPE_UDP_RELAY ? "UDP" : "TCP");
 	}
 	unlock_mutex(endpointsMutex);
 	currentEndpoint=this->endpoints[0];
@@ -585,7 +586,7 @@ void VoIPController::RunRecvThread(){
 			LOGE("Packet has zero length.");
 			continue;
 		}
-		//LOGV("Received %d bytes from %s:%d at %.5lf", len, inet_ntoa(srcAddr.sin_addr), ntohs(srcAddr.sin_port), GetCurrentTime());
+		//LOGV("Received %d bytes from %s:%d at %.5lf", len, packet.address->ToString().c_str(), packet.port, GetCurrentTime());
 		Endpoint* srcEndpoint=NULL;
 
 		IPv4Address* src4=dynamic_cast<IPv4Address*>(packet.address);
@@ -1894,6 +1895,7 @@ void VoIPController::SendPublicEndpointsRequest(Endpoint& relay){
 	pkt.length=32;
 	pkt.address=(NetworkAddress*)&relay.address;
 	pkt.port=relay.port;
+	pkt.protocol=PROTO_UDP;
 	socket->Send(&pkt);
 }
 
