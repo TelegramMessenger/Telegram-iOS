@@ -39,7 +39,7 @@
 /**
  * Custom block that handles the alert that prompts the user whether he wants to send crash reports
  */
-typedef void(^BITCustomAlertViewHandler)();
+typedef void(^BITCustomAlertViewHandler)(void);
 
 
 /**
