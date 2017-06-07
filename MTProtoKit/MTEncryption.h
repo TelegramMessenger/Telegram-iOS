@@ -47,6 +47,24 @@ bool MTCheckIsSafeGAOrB(NSData *gAOrB, NSData *p);
 bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain);
     
 uint64_t MTRsaFingerprint(NSString *key);
+    
+@interface MTBackupDatacenterAddress : NSObject
+
+@property (nonatomic, strong, readonly) NSString *ip;
+@property (nonatomic, readonly) int32_t port;
+
+@end
+
+@interface MTBackupDatacenterData : NSObject
+
+@property (nonatomic, readonly) int32_t datacenterId;
+@property (nonatomic, readonly) int32_t timestamp;
+@property (nonatomic, readonly) int32_t expirationDate;
+@property (nonatomic, strong, readonly) NSArray<MTBackupDatacenterAddress *> *addressList;
+
+@end
+
+MTBackupDatacenterData *MTIPDataDecode(NSData *data);
 
 #ifdef __cplusplus
 }

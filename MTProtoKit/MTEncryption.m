@@ -28,6 +28,10 @@
 #   include <openssl/pem.h>
 #endif
 
+#include <openssl/aes.h>
+
+#import "MTBufferReader.h"
+
 NSData *MTSha1(NSData *data)
 {
     uint8_t digest[20];
@@ -701,4 +705,156 @@ uint64_t MTRsaFingerprint(NSString *key) {
     BIO_free(keyBio);
     
     return fingerprint;
+}
+
+static NSData *decrypt_TL_data(unsigned char buffer[256]) {
+    NSString *keyString = @"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIIBCgKCAQEAyr+18Rex2ohtVy8sroGPBwXD3DOoKCSpjDqYoXgCqB7ioln4eDCF\n"
+"fOBUlfXUEvM/fnKCpF46VkAftlb4VuPDeQSS/ZxZYEGqHaywlroVnXHIjgqoxiAd\n"
+"192xRGreuXIaUKmkwlM9JID9WS2jUsTpzQ91L8MEPLJ/4zrBwZua8W5fECwCCh2c\n"
+"9G5IzzBm+otMS/YKwmR1olzRCyEkyAEjXWqBI9Ftv5eG8m0VkBzOG655WIYdyV0H\n"
+"fDK/NWcvGqa0w/nriMD6mDjKOryamw0OP9QuYgMN0C9xMW9y8SmP4h92OAWodTYg\n"
+"Y1hZCxdv6cs5UnW9+PWvS+WIbkh+GaWYxwIDAQAB\n"
+"-----END RSA PUBLIC KEY-----";
+    NSData *keyData = [keyString dataUsingEncoding:NSUTF8StringEncoding];
+    
+    BIO *keyBio = BIO_new(BIO_s_mem());
+    BIO_write(keyBio, keyData.bytes, (int)keyData.length);
+    
+    RSA *rsaKey = PEM_read_bio_RSAPublicKey(keyBio, NULL, NULL, NULL);
+    if (rsaKey == nil) {
+        return nil;
+    }
+    
+    BIGNUM x, y;
+    uint8_t *bytes = buffer;
+    static BN_CTX *bnContext;
+    if (bnContext == nil) {
+        bnContext = BN_CTX_new();
+    }
+    BN_init(&x);
+    BN_init(&y);
+    BN_bin2bn(bytes, 256, &x);
+    
+    NSData *result = nil;
+    if (BN_mod_exp(&y, &x, rsaKey->e, rsaKey->n, bnContext) == 1) {
+        unsigned l = 256 - BN_num_bytes(&y);
+        memset(bytes, 0, l);
+        if (BN_bn2bin(&y, bytes + l) == 256 - l) {
+            AES_KEY aeskey;
+            unsigned char iv[16];
+            memcpy(iv, bytes + 16, 16);
+            AES_set_decrypt_key(bytes, 256, &aeskey);
+            AES_cbc_encrypt(bytes + 32, bytes + 32, 256 - 32, &aeskey, iv, AES_DECRYPT);
+            
+            EVP_MD_CTX ctx;
+            unsigned char sha256_out[32];
+            unsigned olen = 0;
+            EVP_MD_CTX_init(&ctx);
+            EVP_DigestInit_ex(&ctx, EVP_sha256(), NULL);
+            EVP_DigestUpdate(&ctx, bytes + 32, 256 - 32 - 16);
+            EVP_DigestFinal_ex(&ctx, sha256_out, &olen);
+            EVP_MD_CTX_cleanup(&ctx);
+            if (olen == 32) {
+                if (memcmp(bytes + 256 - 16, sha256_out, 16) == 0) {
+                    unsigned data_len = *(unsigned *) (bytes + 32);
+                    if (data_len && data_len <= 256 - 32 - 16 && !(data_len & 3)) {
+                        result = [NSData dataWithBytes:bytes + 32 + 4 length:data_len];
+                    } else {
+                        NSLog(@"TL data length field invalid - %d", data_len);
+                    }
+                } else {
+                    NSLog(@"RSA signature check FAILED (SHA256 mismatch)");
+                }
+            }
+        }
+    }
+    BN_free(&x);
+    BN_free(&y);
+    RSA_free(rsaKey);
+    BIO_free(keyBio);
+    return result;
+}
+
+@implementation MTBackupDatacenterAddress
+
+- (instancetype)initWithIp:(NSString *)ip port:(int32_t)port {
+    self = [super init];
+    if (self != nil) {
+        _ip = ip;
+        _port = port;
+    }
+    return self;
+}
+
+@end
+
+@implementation MTBackupDatacenterData
+
+- (instancetype)initWithDatacenterId:(int32_t)datacenterId timestamp:(int32_t)timestamp expirationDate:(int32_t)expirationDate addressList:(NSArray<MTBackupDatacenterAddress *> *)addressList {
+    self = [super init];
+    if (self != nil) {
+        _datacenterId = datacenterId;
+        _timestamp = timestamp;
+        _expirationDate = expirationDate;
+        _addressList = addressList;
+    }
+    return self;
+}
+
+@end
+
+MTBackupDatacenterData *MTIPDataDecode(NSData *data) {
+    unsigned char buffer[256];
+    memcpy(buffer, data.bytes, 256);
+    NSData *result = decrypt_TL_data(buffer);
+    
+    if (result != nil) {
+        MTBufferReader *reader = [[MTBufferReader alloc] initWithData:result];
+        int32_t signature = 0;
+        if (![reader readInt32:&signature]) {
+            return nil;
+        }
+        if (signature != 0xd997c3c5) {
+            return nil;
+        }
+        int32_t timestamp = 0;
+        int32_t expirationDate = 0;
+        int32_t datacenterId = 0;
+        if (![reader readInt32:&timestamp]) {
+            return nil;
+        }
+        if (![reader readInt32:&expirationDate]) {
+            return nil;
+        }
+        if (![reader readInt32:&datacenterId]) {
+            return nil;
+        }
+        int32_t vectorSignature = 0;
+        if (![reader readInt32:&vectorSignature]) {
+            return nil;
+        }
+        if (vectorSignature != 0x1cb5c415) {
+            return nil;
+        }
+        
+        NSMutableArray<MTBackupDatacenterAddress *> *addressList = [[NSMutableArray alloc] init];
+        int32_t count = 0;
+        if (![reader readInt32:&count]) {
+            int32_t ip = 0;
+            int32_t port = 0;
+            if (![reader readInt32:&ip]) {
+                return nil;
+            }
+            if (![reader readInt32:&port]) {
+                return nil;
+            }
+            [addressList addObject:[[MTBackupDatacenterAddress alloc] initWithIp:[NSString stringWithFormat:@"%d.%d.%d.%d", (int)(ip & 0xFF), (int)((ip >> 8) & 0xFF), (int)((ip >> 16) & 0xFF), (int)((ip >> 24) & 0xFF)] port:port]];
+            return nil;
+        }
+        
+        return [[MTBackupDatacenterData alloc] initWithDatacenterId:datacenterId timestamp:timestamp expirationDate:expirationDate addressList:addressList];
+    } else {
+        return nil;
+    }
 }
