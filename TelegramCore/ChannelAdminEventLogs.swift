@@ -30,7 +30,7 @@ public enum AdminLogEventAction {
     case changePhoto(prev: [TelegramMediaImageRepresentation], new: [TelegramMediaImageRepresentation])
     case toggleInvites(Bool)
     case toggleSignatures(Bool)
-    case updatePinned(Message)
+    case updatePinned(Message?)
     case editMessage(prev: Message, new:Message)
     case deleteMessage(Message)
     case participantJoin
@@ -131,9 +131,15 @@ public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId:AdminL
                                 case let .channelAdminLogEventActionToggleSignatures(new):
                                     action = .toggleSignatures(boolFromApiValue(new))
                                 case let .channelAdminLogEventActionUpdatePinned(new):
-                                    if let message = StoreMessage(apiMessage: new), let rendered = locallyRenderedMessage(message: message, peers: peers) {
-                                        action = .updatePinned(rendered)
+                                    switch new {
+                                    case .messageEmpty:
+                                        action = .updatePinned(nil)
+                                    default:
+                                        if let message = StoreMessage(apiMessage: new), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                            action = .updatePinned(rendered)
+                                        }
                                     }
+                                    
                                 case let .channelAdminLogEventActionEditMessage(prev, new):
                                     if let prev = StoreMessage(apiMessage: prev), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
                                         action = .editMessage(prev: prevRendered, new: newRendered)
