@@ -700,6 +700,15 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
     
     let message = modifier.getMessage(id)
     if let message = message {
+        if let channel = message.peers[message.id.peerId] as? TelegramChannel {
+            switch channel.participationStatus {
+                case .kicked, .left:
+                    return (nil, false)
+                case .member:
+                    break
+            }
+        }
+        
         var foundReadState = false
         var isUnread = true
         if let readState = modifier.getCombinedPeerReadState(id.peerId) {

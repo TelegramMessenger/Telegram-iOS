@@ -28,9 +28,10 @@ func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signa
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             let admins = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 0))
             let members = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsRecent, offset: 0, limit: 0))
-            let banned = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsKicked(q: ""), offset: 0, limit: 0))
-            return combineLatest(admins, members, banned)
-                |> mapToSignal { admins, members, banned -> Signal<Void, MTRpcError> in
+            let banned = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsBanned(q: ""), offset: 0, limit: 0))
+            let kicked = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsKicked(q: ""), offset: 0, limit: 0))
+            return combineLatest(admins, members, banned, kicked)
+                |> mapToSignal { admins, members, banned, kicked -> Signal<Void, MTRpcError> in
                     return account.postbox.modify { modifier -> Void in
                         modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                             if let current = current as? CachedChannelData {
@@ -49,7 +50,12 @@ func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signa
                                     case let .channelParticipants(count, _, _):
                                         bannedCount = count
                                 }
-                                return current.withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: memberCount, adminCount: adminCount, bannedCount: bannedCount))
+                                let kickedCount: Int32
+                                switch kicked {
+                                    case let .channelParticipants(count, _, _):
+                                        kickedCount = count
+                                }
+                                return current.withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: memberCount, adminCount: adminCount, bannedCount: bannedCount, kickedCount: kickedCount))
                             }
                             return current
                         })

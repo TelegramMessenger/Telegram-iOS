@@ -246,7 +246,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                 
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
-                                                    .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: kickedCount))
+                                                    .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
                                                     .withUpdatedExportedInvitation(ExportedInvitation(apiExportedInvite: apiExportedInvite))
                                                     .withUpdatedBotInfos(botInfos)
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)

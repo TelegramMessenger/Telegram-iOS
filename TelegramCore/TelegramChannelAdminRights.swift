@@ -24,7 +24,7 @@ public struct TelegramChannelAdminRightsFlags: OptionSet {
     public static let canInviteUsers = TelegramChannelAdminRightsFlags(rawValue: 1 << 5)
     public static let canChangeInviteLink = TelegramChannelAdminRightsFlags(rawValue: 1 << 6)
     public static let canPinMessages = TelegramChannelAdminRightsFlags(rawValue: 1 << 7)
-    public static let canAddAdmins = TelegramChannelAdminRightsFlags(rawValue: 1 << 8)
+    public static let canAddAdmins = TelegramChannelAdminRightsFlags(rawValue: 1 << 9)
     
     public static var groupSpecific: TelegramChannelAdminRightsFlags = [
         .canChangeInfo,
