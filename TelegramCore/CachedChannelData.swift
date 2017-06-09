@@ -24,28 +24,35 @@ public struct CachedChannelParticipantsSummary: Coding, Equatable {
     public let memberCount: Int32?
     public let adminCount: Int32?
     public let bannedCount: Int32?
+    public let kickedCount: Int32?
     
-    init(memberCount: Int32?, adminCount: Int32?, bannedCount: Int32?) {
+    init(memberCount: Int32?, adminCount: Int32?, bannedCount: Int32?, kickedCount: Int32?) {
         self.memberCount = memberCount
         self.adminCount = adminCount
         self.bannedCount = bannedCount
+        self.kickedCount = kickedCount
     }
     
     public init(decoder: Decoder) {
         if let memberCount = decoder.decodeOptionalInt32ForKey("p.m") {
             self.memberCount = memberCount
         } else {
-            self.memberCount = 0
+            self.memberCount = nil
         }
         if let adminCount = decoder.decodeOptionalInt32ForKey("p.a") {
             self.adminCount = adminCount
         } else {
-            self.adminCount = 0
+            self.adminCount = nil
         }
         if let bannedCount = decoder.decodeOptionalInt32ForKey("p.b") {
             self.bannedCount = bannedCount
         } else {
-            self.bannedCount = 0
+            self.bannedCount = nil
+        }
+        if let kickedCount = decoder.decodeOptionalInt32ForKey("p.k") {
+            self.kickedCount = kickedCount
+        } else {
+            self.kickedCount = nil
         }
     }
     
@@ -65,22 +72,31 @@ public struct CachedChannelParticipantsSummary: Coding, Equatable {
         } else {
             encoder.encodeNil(forKey: "p.b")
         }
+        if let kickedCount = self.kickedCount {
+            encoder.encodeInt32(kickedCount, forKey: "p.k")
+        } else {
+            encoder.encodeNil(forKey: "p.k")
+        }
     }
     
     public static func ==(lhs: CachedChannelParticipantsSummary, rhs: CachedChannelParticipantsSummary) -> Bool {
-        return lhs.memberCount == rhs.memberCount && lhs.adminCount == rhs.adminCount && lhs.bannedCount == rhs.bannedCount
+        return lhs.memberCount == rhs.memberCount && lhs.adminCount == rhs.adminCount && lhs.bannedCount == rhs.bannedCount && lhs.kickedCount == rhs.kickedCount
     }
     
     public func withUpdatedMemberCount(_ memberCount: Int32?) -> CachedChannelParticipantsSummary {
-        return CachedChannelParticipantsSummary(memberCount: memberCount, adminCount: self.adminCount, bannedCount: self.bannedCount)
+        return CachedChannelParticipantsSummary(memberCount: memberCount, adminCount: self.adminCount, bannedCount: self.bannedCount, kickedCount: self.kickedCount)
     }
     
     public func withUpdatedAdminCount(_ adminCount: Int32?) -> CachedChannelParticipantsSummary {
-        return CachedChannelParticipantsSummary(memberCount: self.memberCount, adminCount: adminCount, bannedCount: self.bannedCount)
+        return CachedChannelParticipantsSummary(memberCount: self.memberCount, adminCount: adminCount, bannedCount: self.bannedCount, kickedCount: self.kickedCount)
     }
     
     public func withUpdatedBannedCount(_ bannedCount: Int32?) -> CachedChannelParticipantsSummary {
-        return CachedChannelParticipantsSummary(memberCount: self.memberCount, adminCount: self.adminCount, bannedCount: bannedCount)
+        return CachedChannelParticipantsSummary(memberCount: self.memberCount, adminCount: self.adminCount, bannedCount: bannedCount, kickedCount: self.kickedCount)
+    }
+    
+    public func withUpdatedKickedCount(_ kickedCount: Int32?) -> CachedChannelParticipantsSummary {
+        return CachedChannelParticipantsSummary(memberCount: self.memberCount, adminCount: self.adminCount, bannedCount: self.bannedCount, kickedCount: kickedCount)
     }
 }
 
@@ -99,7 +115,7 @@ public final class CachedChannelData: CachedPeerData {
     init() {
         self.flags = []
         self.about = nil
-        self.participantsSummary = CachedChannelParticipantsSummary(memberCount: nil, adminCount: nil, bannedCount: nil)
+        self.participantsSummary = CachedChannelParticipantsSummary(memberCount: nil, adminCount: nil, bannedCount: nil, kickedCount: nil)
         self.exportedInvitation = nil
         self.botInfos = []
         self.topParticipants = nil

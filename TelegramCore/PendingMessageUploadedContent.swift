@@ -64,6 +64,14 @@ func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoin
         } else if let contact = media as? TelegramMediaContact {
             let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName)
             return .ready(.media(input))
+        } else if let map = media as? TelegramMediaMap {
+            let input: Api.InputMedia
+            if let venue = map.venue {
+                input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "")
+            } else {
+                input = .inputMediaGeoPoint(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude))
+            }
+            return .ready(.media(input))
         } else {
             return .ready(.text(text))
         }
