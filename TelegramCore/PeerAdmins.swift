@@ -116,11 +116,11 @@ public enum AddPeerAdminError {
     case addMemberError(AddPeerMemberError)
 }
 
-public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Void, AddPeerAdminError> {
+public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId, adminRightsFlags:TelegramChannelAdminRightsFlags? = nil) -> Signal<Void, AddPeerAdminError> {
     return account.postbox.modify { modifier -> Signal<Void, AddPeerAdminError> in
         if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-                return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: TelegramChannelAdminRights(flags: [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canChangeInviteLink, .canPinMessages]).apiAdminRights))
+                return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: TelegramChannelAdminRights(flags: adminRightsFlags ?? [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canChangeInviteLink, .canPinMessages]).apiAdminRights))
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], AddPeerAdminError> in
                         if error.errorDescription == "USER_NOT_PARTICIPANT" {

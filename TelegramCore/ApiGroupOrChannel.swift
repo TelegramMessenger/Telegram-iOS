@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-private func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMediaImageRepresentation] {
+func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMediaImageRepresentation] {
     var telegramPhoto: [TelegramMediaImageRepresentation] = []
     switch photo {
     case let .chatPhoto(photoSmall, photoBig):

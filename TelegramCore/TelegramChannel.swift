@@ -271,4 +271,14 @@ public extension TelegramChannel {
             return false
         }
     }
+    
+    public func hasBannedRights(_ flags: TelegramChannelBannedRightsFlags) -> Bool {
+        if self.flags.contains(.isCreator) {
+            return false
+        } else if let bannedRights = self.bannedRights {
+            return flags.isSubset(of: bannedRights.flags)
+        } else {
+            return false
+        }
+    }
 }

@@ -13,13 +13,20 @@ public struct RenderedChannelParticipant: Equatable {
     public let participant: ChannelParticipant
     public let peer: Peer
     public let status: PeerPresence?
-    public init(participant: ChannelParticipant, peer: Peer, status: PeerPresence?) {
+    public init(participant: ChannelParticipant, peer: Peer, status: PeerPresence? = nil) {
         self.participant = participant
         self.peer = peer
         self.status = status
     }
     
     public static func ==(lhs: RenderedChannelParticipant, rhs: RenderedChannelParticipant) -> Bool {
+        if let lhsStatus = lhs.status, let rhsStatus = rhs.status {
+            if !lhsStatus.isEqual(to: rhsStatus) {
+                return false
+            }
+        } else if (lhs.status != nil) != (rhs.status != nil) {
+            return false
+        }
         return lhs.participant == rhs.participant && lhs.peer.isEqual(rhs.peer)
     }
 }

@@ -31,16 +31,20 @@ public func channelMembers(account: Account, peerId: PeerId, filter: ChannelMemb
                     switch result {
                     case let .channelParticipants(_, participants, users):
                         var peers: [PeerId: Peer] = [:]
+                        var status:[PeerId: PeerPresence] = [:]
                         for user in users {
-                            
                             let peer = TelegramUser(user: user)
                             peers[peer.id] = peer
+                            if let presence = TelegramUserPresence(apiUser: user) {
+                                status[peer.id] = presence
+                            }
                         }
                         
                         for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                             if let peer = peers[participant.peerId] {
-                                items.append(RenderedChannelParticipant(participant: participant, peer: peer))
+                                items.append(RenderedChannelParticipant(participant: participant, peer: peer, status: status[peer.id]))
                             }
+                            
                         }
                     }
                     return items
