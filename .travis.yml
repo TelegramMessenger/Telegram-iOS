@@ -15,8 +15,8 @@ env:
     - SCHEME="HockeySDK"             DESTINATION="OS=9.0,name=iPad Air"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.1,name=iPhone 6 Plus"            RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=10.2,name=iPad Pro (9.7-inch)"                 RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=10.3,name=iPhone 6s"                RUN_TESTS="YES"
-    - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,OS=10.3,name=iPhone 6" RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=10.3.1,name=iPhone 6s"                RUN_TESTS="YES"
+    - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,OS=10.3.1,name=iPhone 6" RUN_TESTS="YES"
     - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO" LINT="YES"
 
 before_install:
@@ -24,7 +24,6 @@ before_install:
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
   - gem install xcpretty-travis-formatter --no-rdoc --no-ri --no-document --quiet
   - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
-  - brew unlink carthage
   - brew install carthage
 
 script:
