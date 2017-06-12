@@ -99,7 +99,11 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		WebRtcAgcConfig agcConfig;
 		agcConfig.compressionGaindB = 9;
 		agcConfig.limiterEnable = 1;
+#ifndef TGVOIP_USE_DESKTOP_DSP
+		agcConfig.targetLevelDbfs = 3;
+#else
 		agcConfig.targetLevelDbfs = 9;
+#endif
 		WebRtcAgc_Init(agc, 0, 255, kAgcModeAdaptiveAnalog, 48000);
 		WebRtcAgc_set_config(agc, agcConfig);
 		agcMicLevel=128;
@@ -264,13 +268,13 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 
 		lock_mutex(aecMutex);
 		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0], _nsOut[0], samplesOut, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay());
-		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, _nsOut[0]+160, samplesOut+160, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay());
+		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, _nsOut[0]+160, samplesOut+160, AEC_FRAME_SIZE, (int16_t) (tgvoip::audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay()));
 		unlock_mutex(aecMutex);
 		memcpy(bufOut->ibuf()->bands(0)[0], samplesOut, 320*2);
 	}else if(enableAEC){
 		lock_mutex(aecMutex);
 		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0], NULL, samplesOut, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay());
-		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, NULL, samplesOut+160, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay());
+		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, NULL, samplesOut+160, AEC_FRAME_SIZE, (int16_t) (tgvoip::audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay()));
 		unlock_mutex(aecMutex);
 		memcpy(bufOut->ibuf()->bands(0)[0], samplesOut, 320*2);
 	}else if(enableNS){

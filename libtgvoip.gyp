@@ -91,6 +91,8 @@
           '<(tgvoip_src_loc)/os/linux/AudioOutputPulse.h',
           '<(tgvoip_src_loc)/os/linux/AudioInputPulse.cpp',
           '<(tgvoip_src_loc)/os/linux/AudioInputPulse.h',
+          '<(tgvoip_src_loc)/os/linux/PulseAudioLoader.cpp',
+          '<(tgvoip_src_loc)/os/linux/PulseAudioLoader.h',
 
           # POSIX
           '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.cpp',

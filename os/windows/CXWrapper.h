@@ -73,7 +73,9 @@ namespace libtgvoip{
 		Platform::String^ GetDebugLog();
 		Error GetLastError();
 		static Platform::String^ GetVersion();
+		int64 GetPreferredRelayID();
 		static void UpdateServerConfig(Platform::String^ json);
+		static void SwitchSpeaker(bool external);
 		//static Platform::String^ TestAesIge();
 	private:
 		static void OnStateChanged(tgvoip::VoIPController* c, int state);
@@ -81,7 +83,6 @@ namespace libtgvoip{
 		tgvoip::VoIPController* controller;
 		IStateCallback^ stateCallback;
     };
-
 
 	ref class MicrosoftCryptoImpl{
 	public:

@@ -19,7 +19,9 @@
 #include <vector>
 #pragma warning(push)
 #pragma warning(disable : 4201)
+#ifndef TGVOIP_WP_SILVERLIGHT
 #include <mmdeviceapi.h>
+#endif
 #ifdef TGVOIP_WINDOWS_DESKTOP
 #include <audiopolicy.h>
 #include <functiondiscoverykeys.h>

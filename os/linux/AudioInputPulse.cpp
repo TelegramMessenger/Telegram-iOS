@@ -11,39 +11,12 @@
 #include "AudioInputPulse.h"
 #include "../../logging.h"
 #include "../../VoIPController.h"
+#define TGVOIP_IN_AUDIO_IO
+#include "PulseAudioLoader.h"
+#undef TGVOIP_IN_AUDIO_IO
 
 #define BUFFER_SIZE 960
 #define CHECK_ERROR(res, msg) if(res!=0){LOGE(msg " failed: %s", pa_strerror(res)); failed=true; return;}
-#define CHECK_DL_ERROR(res, msg) if(!res){LOGE(msg ": %s", dlerror()); failed=true; return;}
-#define LOAD_DL_FUNCTION(name) {_import_##name=(typeof(_import_##name))dlsym(lib, #name); CHECK_DL_ERROR(_import_##name, "Error getting entry point for " #name);}
-
-#define pa_threaded_mainloop_new _import_pa_threaded_mainloop_new
-#define pa_threaded_mainloop_get_api _import_pa_threaded_mainloop_get_api
-#define pa_context_new _import_pa_context_new
-#define pa_context_set_state_callback _import_pa_context_set_state_callback
-#define pa_threaded_mainloop_lock _import_pa_threaded_mainloop_lock
-#define pa_threaded_mainloop_unlock _import_pa_threaded_mainloop_unlock
-#define pa_threaded_mainloop_start _import_pa_threaded_mainloop_start
-#define pa_context_connect _import_pa_context_connect
-#define pa_context_get_state _import_pa_context_get_state
-#define pa_threaded_mainloop_wait _import_pa_threaded_mainloop_wait
-#define pa_stream_new _import_pa_stream_new
-#define pa_stream_set_state_callback _import_pa_stream_set_state_callback
-#define pa_stream_set_read_callback _import_pa_stream_set_read_callback
-#define pa_stream_connect_record _import_pa_stream_connect_record
-#define pa_operation_unref _import_pa_operation_unref
-#define pa_stream_cork _import_pa_stream_cork
-#define pa_threaded_mainloop_stop _import_pa_threaded_mainloop_stop
-#define pa_stream_disconnect _import_pa_stream_disconnect
-#define pa_stream_unref _import_pa_stream_unref
-#define pa_context_disconnect _import_pa_context_disconnect
-#define pa_context_unref _import_pa_context_unref
-#define pa_threaded_mainloop_free _import_pa_threaded_mainloop_free
-#define pa_threaded_mainloop_signal _import_pa_threaded_mainloop_signal
-#define pa_stream_peek _import_pa_stream_peek
-#define pa_stream_drop _import_pa_stream_drop
-#define pa_strerror _import_pa_strerror
-#define pa_stream_get_state _import_pa_stream_get_state
 
 using namespace tgvoip::audio;
 
@@ -58,42 +31,10 @@ AudioInputPulse::AudioInputPulse(std::string devID){
 	stream=NULL;
 	remainingDataSize=0;
 
-	lib=dlopen("libpulse.so.0", RTLD_LAZY);
-	if(!lib)
-		lib=dlopen("libpulse.so", RTLD_LAZY);
-	if(!lib){
-		LOGE("Error loading libpulse: %s", dlerror());
+	if(!PulseAudioLoader::IncRef()){
 		failed=true;
 		return;
 	}
-
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_new);
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_get_api);
-	LOAD_DL_FUNCTION(pa_context_new);
-	LOAD_DL_FUNCTION(pa_context_set_state_callback);
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_lock);
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_unlock);
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_start);
-	LOAD_DL_FUNCTION(pa_context_connect);
-	LOAD_DL_FUNCTION(pa_context_get_state);
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_wait);
-	LOAD_DL_FUNCTION(pa_stream_new);
-	LOAD_DL_FUNCTION(pa_stream_set_state_callback);
-	LOAD_DL_FUNCTION(pa_stream_set_read_callback);
-	LOAD_DL_FUNCTION(pa_stream_connect_record);
-	LOAD_DL_FUNCTION(pa_operation_unref);
-	LOAD_DL_FUNCTION(pa_stream_cork);
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_stop);
-	LOAD_DL_FUNCTION(pa_stream_disconnect);
-	LOAD_DL_FUNCTION(pa_stream_unref);
-	LOAD_DL_FUNCTION(pa_context_disconnect);
-	LOAD_DL_FUNCTION(pa_context_unref);
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_free);
-	LOAD_DL_FUNCTION(pa_threaded_mainloop_signal);
-	LOAD_DL_FUNCTION(pa_stream_peek);
-	LOAD_DL_FUNCTION(pa_stream_drop);
-	LOAD_DL_FUNCTION(pa_stream_get_state);
-	LOAD_DL_FUNCTION(pa_strerror);
 
 	mainloop=pa_threaded_mainloop_new();
 	if(!mainloop){
@@ -181,8 +122,7 @@ AudioInputPulse::~AudioInputPulse(){
 	if(mainloop)
 		pa_threaded_mainloop_free(mainloop);
 	
-	if(lib)
-		dlclose(lib);
+	PulseAudioLoader::DecRef();
 }
 
 bool AudioInputPulse::IsAvailable(){
@@ -229,7 +169,7 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 
 	pa_buffer_attr bufferAttr={
 		.maxlength=960*6,
-		.tlength=960*4,
+		.tlength=960*6,
 		.prebuf=0,
 		.minreq=960*2
 	};
@@ -264,18 +204,60 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 	}
 }
 
-void AudioInputPulse::EnumerateDevices(std::vector<AudioInputDevice>& devs){
-	
+bool AudioInputPulse::EnumerateDevices(std::vector<AudioInputDevice>& devs){
+	if(!PulseAudioLoader::IncRef())
+		return false;
+
+	pa_mainloop* ml;
+	pa_mainloop_api* mlAPI;
+	pa_context* ctx;
+	pa_operation* op=NULL;
+	int state=0;
+	int paReady=0;
+
+	ml=pa_mainloop_new();
+	mlAPI=pa_mainloop_get_api(ml);
+	ctx=pa_context_new(mlAPI, "libtgvoip");
+
+	pa_context_connect(ctx, NULL, PA_CONTEXT_NOFLAGS, NULL);
+	pa_context_set_state_callback(ctx, AudioInputPulse::ContextStateCallbackEnum, &paReady);
+
+	while(true){
+		if(paReady==0){
+			pa_mainloop_iterate(ml, 1, NULL);
+			continue;
+		}
+		if(paReady==2){
+			pa_context_disconnect(ctx);
+			pa_context_unref(ctx);
+			pa_mainloop_free(ml);
+			PulseAudioLoader::DecRef();
+			return false;
+		}
+		if(!op){
+			op=pa_context_get_source_info_list(ctx, AudioInputPulse::DeviceEnumCallback, &devs);
+			continue;
+		}
+		if(pa_operation_get_state(op)==PA_OPERATION_DONE){
+			pa_operation_unref(op);
+			pa_context_disconnect(ctx);
+			pa_context_unref(ctx);
+			pa_mainloop_free(ml);
+			PulseAudioLoader::DecRef();
+			return true;
+		}
+		pa_mainloop_iterate(ml, 1, NULL);
+	}
 }
 
 void AudioInputPulse::ContextStateCallback(pa_context* context, void* arg) {
 	AudioInputPulse* self=(AudioInputPulse*) arg;
-	self->pa_threaded_mainloop_signal(self->mainloop, 0);
+	pa_threaded_mainloop_signal(self->mainloop, 0);
 }
 
 void AudioInputPulse::StreamStateCallback(pa_stream *s, void* arg) {
 	AudioInputPulse* self=(AudioInputPulse*) arg;
-	self->pa_threaded_mainloop_signal(self->mainloop, 0);
+	pa_threaded_mainloop_signal(self->mainloop, 0);
 }
 
 void AudioInputPulse::StreamReadCallback(pa_stream *stream, size_t requestedBytes, void *userdata){
@@ -316,4 +298,36 @@ void AudioInputPulse::StreamReadCallback(pa_stream *stream, size_t requestedByte
 
 void AudioInputPulse::StreamSuccessCallback(pa_stream *stream, int success, void *userdata) {
 	return;
+}
+
+void AudioInputPulse::ContextStateCallbackEnum(pa_context* context, void* arg){
+	pa_context_state_t state;
+	int* pa_ready=(int*)arg;
+
+	state=pa_context_get_state(context);
+	switch(state){
+		case PA_CONTEXT_UNCONNECTED:
+		case PA_CONTEXT_CONNECTING:
+		case PA_CONTEXT_AUTHORIZING:
+		case PA_CONTEXT_SETTING_NAME:
+		default:
+			break;
+		case PA_CONTEXT_FAILED:
+		case PA_CONTEXT_TERMINATED:
+			*pa_ready=2;
+			break;
+		case PA_CONTEXT_READY:
+			*pa_ready=1;
+			break;
+	}
+}
+
+void AudioInputPulse::DeviceEnumCallback(pa_context* ctx, const pa_source_info* info, int eol, void* userdata){
+	if(eol>0)
+		return;
+	std::vector<AudioInputDevice>* devs=(std::vector<AudioInputDevice>*)userdata;
+	AudioInputDevice dev;
+	dev.id=std::string(info->name);
+	dev.displayName=std::string(info->description);
+	devs->push_back(dev);
 }

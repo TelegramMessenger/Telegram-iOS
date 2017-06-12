@@ -71,12 +71,19 @@ void tgvoip_openssl_sha256(uint8_t* msg, size_t len, uint8_t* output){
 	SHA256(msg, len, output);
 }
 
+void tgvoip_openssl_aes_ctr_encrypt(uint8_t* inout, size_t length, uint8_t* key, uint8_t* iv, uint8_t* ecount, uint32_t* num){
+	AES_KEY akey;
+	AES_set_encrypt_key(key, 32*8, &akey);
+	AES_ctr128_encrypt(inout, inout, length, &akey, iv, ecount, num);
+}
+
 voip_crypto_functions_t VoIPController::crypto={
 		tgvoip_openssl_rand_bytes,
 		tgvoip_openssl_sha1,
 		tgvoip_openssl_sha256,
 		tgvoip_openssl_aes_ige_encrypt,
-		tgvoip_openssl_aes_ige_decrypt
+		tgvoip_openssl_aes_ige_decrypt,
+		tgvoip_openssl_aes_ctr_encrypt
 
 };
 #else
@@ -146,6 +153,9 @@ VoIPController::VoIPController() : activeNetItfName(""), currentAudioInput("defa
 	receivedInitAck=false;
 	peerPreferredRelay=NULL;
 	statsDump=NULL;
+	useTCP=false;
+	didAddTcpRelays=false;
+	enableTcpAt=0;
 
 	socket=NetworkSocket::Create();
 
@@ -178,6 +188,15 @@ VoIPController::VoIPController() : activeNetItfName(""), currentAudioInput("defa
 	stm->enabled=1;
 	stm->frameDuration=60;
 	outgoingStreams.push_back(stm);
+
+	std::vector<AudioOutputDevice> odevs=EnumerateAudioOutputs();
+	for(int i=0;i<odevs.size();i++){
+		LOGD("out device #%d: %s (%s)", i, odevs[i].id.c_str(), odevs[i].displayName.c_str());
+	}
+	std::vector<AudioInputDevice> idevs=EnumerateAudioInputs();
+	for(int i=0;i<idevs.size();i++){
+		LOGD("in device #%d: %s (%s)", i, idevs[i].id.c_str(), idevs[i].displayName.c_str());
+	}
 }
 
 VoIPController::~VoIPController(){
@@ -278,8 +297,15 @@ void VoIPController::SetRemoteEndpoints(std::vector<Endpoint> endpoints, bool al
 	size_t i;
 	lock_mutex(endpointsMutex);
 	this->endpoints.clear();
+	didAddTcpRelays=false;
+	useTCP=true;
 	for(std::vector<Endpoint>::iterator itrtr=endpoints.begin();itrtr!=endpoints.end();++itrtr){
 		this->endpoints.push_back(new Endpoint(*itrtr));
+		if(itrtr->type==EP_TYPE_TCP_RELAY)
+			didAddTcpRelays=true;
+		if(itrtr->type==EP_TYPE_UDP_RELAY)
+			useTCP=false;
+		LOGV("Adding endpoint: %s:%d, %s", itrtr->address.ToString().c_str(), itrtr->port, itrtr->type==EP_TYPE_UDP_RELAY ? "UDP" : "TCP");
 	}
 	unlock_mutex(endpointsMutex);
 	currentEndpoint=this->endpoints[0];
@@ -307,7 +333,7 @@ void* VoIPController::StartTickThread(void* controller){
 void VoIPController::Start(){
 	int res;
 	LOGW("Starting voip controller");
-	int32_t cfgFrameSize=ServerConfig::GetSharedInstance()->GetInt("audio_frame_size", 60);
+	int32_t cfgFrameSize=60; //ServerConfig::GetSharedInstance()->GetInt("audio_frame_size", 60);
 	if(cfgFrameSize==20 || cfgFrameSize==40 || cfgFrameSize==60)
 		outgoingStreams[0]->frameDuration=(uint16_t) cfgFrameSize;
 	socket->Open();
@@ -393,6 +419,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len){
 void VoIPController::Connect(){
 	assert(state!=STATE_WAIT_INIT_ACK);
 	connectionInitTime=GetCurrentTime();
+	enableTcpAt=connectionInitTime+5;
 	SendInit();
 }
 
@@ -528,6 +555,8 @@ void VoIPController::SendInit(){
 	out->WriteByte(0); // video codecs count
 	lock_mutex(endpointsMutex);
 	for(std::vector<Endpoint*>::iterator itr=endpoints.begin();itr!=endpoints.end();++itr){
+		if((*itr)->type==EP_TYPE_TCP_RELAY && !useTCP)
+			continue;
 		SendPacket(out->GetBuffer(), out->GetLength(), *itr);
 	}
 	unlock_mutex(endpointsMutex);
@@ -557,16 +586,18 @@ void VoIPController::RunRecvThread(){
 			LOGE("Packet has zero length.");
 			continue;
 		}
-		//LOGV("Received %d bytes from %s:%d at %.5lf", len, inet_ntoa(srcAddr.sin_addr), ntohs(srcAddr.sin_port), GetCurrentTime());
+		//LOGV("Received %d bytes from %s:%d at %.5lf", len, packet.address->ToString().c_str(), packet.port, GetCurrentTime());
 		Endpoint* srcEndpoint=NULL;
 
 		IPv4Address* src4=dynamic_cast<IPv4Address*>(packet.address);
 		if(src4){
 			lock_mutex(endpointsMutex);
 			for(std::vector<Endpoint*>::iterator itrtr=endpoints.begin();itrtr!=endpoints.end();++itrtr){
-				if((*itrtr)->address==*src4){
-					srcEndpoint=*itrtr;
-					break;
+				if((*itrtr)->address==*src4 && (*itrtr)->port==packet.port){
+					if(((*itrtr)->type!=EP_TYPE_TCP_RELAY && packet.protocol==PROTO_UDP) || ((*itrtr)->type==EP_TYPE_TCP_RELAY && packet.protocol==PROTO_TCP)){
+						srcEndpoint=*itrtr;
+						break;
+					}
 				}
 			}
 			unlock_mutex(endpointsMutex);
@@ -586,7 +617,7 @@ void VoIPController::RunRecvThread(){
 			stats.bytesRecvdWifi+=(uint64_t)len;
 		BufferInputStream in(buffer, (size_t)len);
 		try{
-		if(memcmp(buffer, srcEndpoint->type==EP_TYPE_UDP_RELAY ? srcEndpoint->peerTag : callID, 16)!=0){
+		if(memcmp(buffer, srcEndpoint->type==EP_TYPE_UDP_RELAY || srcEndpoint->type==EP_TYPE_TCP_RELAY ? srcEndpoint->peerTag : callID, 16)!=0){
 			LOGW("Received packet has wrong peerTag");
 
 			continue;
@@ -850,7 +881,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			if(!receivedInit){
 				receivedInit=true;
 				currentEndpoint=srcEndpoint;
-				if(srcEndpoint->type==EP_TYPE_UDP_RELAY)
+				if(srcEndpoint->type==EP_TYPE_UDP_RELAY || (useTCP && srcEndpoint->type==EP_TYPE_TCP_RELAY))
 					preferredRelay=srcEndpoint;
 				LogDebugInfo();
 			}
@@ -1122,7 +1153,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			endpoints.push_back(new Endpoint(0, peerPort, v4addr, v6addr, EP_TYPE_UDP_P2P_LAN, peerTag));
 			unlock_mutex(endpointsMutex);
 		}
-		if(type==PKT_NETWORK_CHANGED){
+		if(type==PKT_NETWORK_CHANGED && currentEndpoint->type!=EP_TYPE_UDP_RELAY && currentEndpoint->type!=EP_TYPE_TCP_RELAY){
 			currentEndpoint=preferredRelay;
 			if(allowP2p)
 				SendPublicEndpointsRequest();
@@ -1202,6 +1233,7 @@ void VoIPController::RunTickThread(){
 		Sleep(100);
 #endif
 		tickCount++;
+		double time=GetCurrentTime();
 		if(tickCount%5==0 && state==STATE_ESTABLISHED){
 			memmove(&rttHistory[1], rttHistory, 31*sizeof(double));
 			rttHistory[0]=GetAverageRTT();
@@ -1234,6 +1266,26 @@ void VoIPController::RunTickThread(){
 		int i;
 
 		conctl->Tick();
+
+		if(!useTCP && ((state==STATE_WAIT_INIT_ACK && tickCount>=50) || (state==STATE_ESTABLISHED && time-lastRecvPacketTime>=5.0))){
+			useTCP=true;
+			if(!didAddTcpRelays){
+				std::vector<Endpoint *> relays;
+				for(std::vector<Endpoint *>::iterator itr=endpoints.begin(); itr!=endpoints.end(); ++itr){
+					if((*itr)->type!=EP_TYPE_UDP_RELAY)
+						continue;
+					Endpoint *tcpRelay=new Endpoint(**itr);
+					tcpRelay->type=EP_TYPE_TCP_RELAY;
+					tcpRelay->averageRTT=0;
+					tcpRelay->lastPingSeq=0;
+					tcpRelay->lastPingTime=0;
+					memset(tcpRelay->rtts, 0, sizeof(tcpRelay->rtts));
+					relays.push_back(tcpRelay);
+				}
+				endpoints.insert(endpoints.end(), relays.begin(), relays.end());
+				didAddTcpRelays=true;
+			}
+		}
 
 		if(state==STATE_ESTABLISHED){
 			if((audioInput && !audioInput->IsInitialized()) || (audioOutput && !audioOutput->IsInitialized())){
@@ -1363,6 +1415,8 @@ void VoIPController::RunTickThread(){
 			double minPing=preferredRelay->averageRTT;
 			for(std::vector<Endpoint*>::iterator e=endpoints.begin();e!=endpoints.end();++e){
 				Endpoint* endpoint=*e;
+				if(endpoint->type==EP_TYPE_TCP_RELAY && !useTCP)
+					continue;
 				if(GetCurrentTime()-endpoint->lastPingTime>=10){
 					LOGV("Sending ping to %s", endpoint->address.ToString().c_str());
 					BufferOutputStream pkt(32);
@@ -1371,9 +1425,10 @@ void VoIPController::RunTickThread(){
 					endpoint->lastPingSeq=seq;
 					SendPacket(pkt.GetBuffer(), pkt.GetLength(), endpoint);
 				}
-				if(endpoint->type==EP_TYPE_UDP_RELAY){
-					if(endpoint->averageRTT>0 && endpoint->averageRTT<minPing*relaySwitchThreshold){
-						minPing=endpoint->averageRTT;
+				if(endpoint->type==EP_TYPE_UDP_RELAY || (useTCP && endpoint->type==EP_TYPE_TCP_RELAY)){
+					double k=endpoint->type==EP_TYPE_UDP_RELAY ? 1 : 2;
+					if(endpoint->averageRTT>0 && endpoint->averageRTT*k<minPing*relaySwitchThreshold){
+						minPing=endpoint->averageRTT*k;
 						minPingRelay=endpoint;
 					}
 				}
@@ -1381,7 +1436,7 @@ void VoIPController::RunTickThread(){
 			if(minPingRelay!=preferredRelay){
 				preferredRelay=minPingRelay;
 				LOGV("set preferred relay to %s", preferredRelay->address.ToString().c_str());
-				if(currentEndpoint->type==EP_TYPE_UDP_RELAY)
+				if(currentEndpoint->type==EP_TYPE_UDP_RELAY || currentEndpoint->type==EP_TYPE_TCP_RELAY)
 					currentEndpoint=preferredRelay;
 				LogDebugInfo();
 				/*BufferOutputStream pkt(32);
@@ -1418,7 +1473,7 @@ void VoIPController::RunTickThread(){
 
 		if(state==STATE_ESTABLISHED){
 			if(GetCurrentTime()-lastRecvPacketTime>=config.recv_timeout){
-				if(currentEndpoint && currentEndpoint->type!=EP_TYPE_UDP_RELAY){
+				if(currentEndpoint && currentEndpoint->type!=EP_TYPE_UDP_RELAY && currentEndpoint->type!=EP_TYPE_TCP_RELAY){
 					LOGW("Packet receive timeout, switching to relay");
 					currentEndpoint=preferredRelay;
 					for(std::vector<Endpoint*>::iterator itrtr=endpoints.begin();itrtr!=endpoints.end();++itrtr){
@@ -1489,11 +1544,13 @@ Endpoint& VoIPController::GetRemoteEndpoint(){
 void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint* ep){
 	if(stopping)
 		return;
+	if(ep->type==EP_TYPE_TCP_RELAY && !useTCP)
+		return;
 	//dst.sin_addr=ep->address;
 	//dst.sin_port=htons(ep->port);
 	//dst.sin_family=AF_INET;
 	BufferOutputStream out(len+128);
-	if(ep->type==EP_TYPE_UDP_RELAY)
+	if(ep->type==EP_TYPE_UDP_RELAY || ep->type==EP_TYPE_TCP_RELAY)
 		out.WriteBytes((unsigned char*)ep->peerTag, 16);
 	else
 		out.WriteBytes(callID, 16);
@@ -1528,6 +1585,7 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint* ep){
 	pkt.port=ep->port;
 	pkt.length=out.GetLength();
 	pkt.data=out.GetBuffer();
+	pkt.protocol=ep->type==EP_TYPE_TCP_RELAY ? PROTO_TCP : PROTO_UDP;
 	socket->Send(&pkt);
 }
 
@@ -1545,13 +1603,21 @@ void VoIPController::SetNetworkType(int type){
 		if(isFirstChange)
 			return;
 		if(currentEndpoint && currentEndpoint->type!=EP_TYPE_UDP_RELAY){
-			currentEndpoint=preferredRelay;
+			if(preferredRelay->type==EP_TYPE_UDP_RELAY)
+				currentEndpoint=preferredRelay;
 			for(std::vector<Endpoint*>::iterator itr=endpoints.begin();itr!=endpoints.end();){
 				Endpoint* endpoint=*itr;
-				if(endpoint->type==EP_TYPE_UDP_P2P_INET){
+				if(endpoint->type==EP_TYPE_UDP_RELAY && useTCP){
+					useTCP=false;
+					if(preferredRelay->type==EP_TYPE_TCP_RELAY){
+						preferredRelay=endpoint;
+						currentEndpoint=endpoint;
+					}
+				}
+				//if(endpoint->type==EP_TYPE_UDP_P2P_INET){
 					endpoint->averageRTT=0;
 					memset(endpoint->rtts, 0, sizeof(endpoint->rtts));
-				}
+				//}
 				if(endpoint->type==EP_TYPE_UDP_P2P_LAN){
 					delete endpoint;
 					itr=endpoints.erase(itr);
@@ -1829,6 +1895,7 @@ void VoIPController::SendPublicEndpointsRequest(Endpoint& relay){
 	pkt.length=32;
 	pkt.address=(NetworkAddress*)&relay.address;
 	pkt.port=relay.port;
+	pkt.protocol=PROTO_UDP;
 	socket->Send(&pkt);
 }
 
@@ -1977,6 +2044,9 @@ void VoIPController::LogDebugInfo(){
 				break;
 			case EP_TYPE_UDP_P2P_LAN:
 				typeStr="udp_p2p_lan";
+				break;
+			case EP_TYPE_TCP_RELAY:
+				typeStr="tcp_relay";
 				break;
 		}
 		snprintf(buffer, 1024, "{\"address\":\"%s\",\"port\":%u,\"type\":\"%s\",\"rtt\":%u%s%s}", e->address.ToString().c_str(), e->port, typeStr, (unsigned int)round(e->averageRTT*1000), currentEndpoint==&*e ? ",\"in_use\":true" : "", preferredRelay==&*e ? ",\"preferred\":true" : "");

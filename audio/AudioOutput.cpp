@@ -103,9 +103,7 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 #endif
 	AudioOutputWASAPI::EnumerateDevices(devs);
 #elif defined(__linux__) && !defined(__ANDROID__)
-	if(AudioOutputPulse::IsAvailable())
-		AudioOutputPulse::EnumerateDevices(devs);
-	else
+	if(!AudioOutputPulse::IsAvailable() || !AudioOutputPulse::EnumerateDevices(devs))
 		AudioOutputALSA::EnumerateDevices(devs);
 #endif
 }
