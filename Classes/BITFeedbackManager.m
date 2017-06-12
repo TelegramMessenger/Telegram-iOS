@@ -822,7 +822,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
     // we got a new incoming message, trigger user notification system
     if (newMessage) {
-      // check if the latest message is from the users own email address, then don't show an alert since he answered using his own email
+      // check if the latest message is from the users own email address, then don't show an alert since they answered using their own email
       BOOL latestMessageFromUser = NO;
 
       BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
