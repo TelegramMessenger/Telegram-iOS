@@ -86,6 +86,7 @@ namespace libtgvoip{
 
 	ref class MicrosoftCryptoImpl{
 	public:
+		static void AesCtrEncrypt(uint8_t* inout, size_t len, uint8_t* key, uint8_t* counter, uint8_t* ecount_buf, uint32_t* num);
 		static void AesIgeEncrypt(uint8_t* in, uint8_t* out, size_t len, uint8_t* key, uint8_t* iv);
 		static void AesIgeDecrypt(uint8_t* in, uint8_t* out, size_t len, uint8_t* key, uint8_t* iv);
 		static void SHA1(uint8_t* msg, size_t len, uint8_t* out);

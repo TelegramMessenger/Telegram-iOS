@@ -30,6 +30,7 @@ SymmetricKeyAlgorithmProvider^ MicrosoftCryptoImpl::aesKeyProvider;
 };*/
 
 VoIPControllerWrapper::VoIPControllerWrapper(){
+	VoIPController::crypto.aes_ctr_encrypt=MicrosoftCryptoImpl::AesCtrEncrypt;
 	VoIPController::crypto.aes_ige_decrypt=MicrosoftCryptoImpl::AesIgeDecrypt;
 	VoIPController::crypto.aes_ige_encrypt=MicrosoftCryptoImpl::AesIgeEncrypt;
 	VoIPController::crypto.sha1=MicrosoftCryptoImpl::SHA1;
@@ -180,6 +181,11 @@ void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
 }
 
 void VoIPControllerWrapper::SwitchSpeaker(bool external){
+#if WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
+	if (!Windows::Foundation::Metadata::ApiInformation::IsApiContractPresent("Windows.Phone.PhoneContract", 1)){
+		return;
+	}
+#endif
 	auto routingManager = AudioRoutingManager::GetDefault();
 	if (external){
 		routingManager->SetAudioEndpoint(AudioRoutingEndpoint::Speakerphone);
@@ -192,6 +198,41 @@ void VoIPControllerWrapper::SwitchSpeaker(bool external){
 			routingManager->SetAudioEndpoint(AudioRoutingEndpoint::Earpiece);
 		}
 	}
+}
+
+#define GETU32(pt) (((uint32_t)(pt)[0] << 24) ^ ((uint32_t)(pt)[1] << 16) ^ ((uint32_t)(pt)[2] <<  8) ^ ((uint32_t)(pt)[3])) 
+#define PUTU32(ct, st) { (ct)[0] = (u8)((st) >> 24); (ct)[1] = (u8)((st) >> 16); (ct)[2] = (u8)((st) >> 8); (ct)[3] = (u8)(st); }  typedef  uint8_t u8;  
+#define L_ENDIAN  /* increment counter (128-bit int) by 2^64 */ 
+static void AES_ctr128_inc(unsigned char *counter)
+{
+	unsigned long c;   /* Grab 3rd dword of counter and increment */ 
+#ifdef L_ENDIAN  c = GETU32(counter + 8);  c++;  PUTU32(counter + 8, c); 
+#else  c = GETU32(counter + 4);  c++;  PUTU32(counter + 4, c); 
+#endif   /* if no overflow, we're done */  if (c)   return;   /* Grab top dword of counter and increment */ 
+#ifdef L_ENDIAN  c = GETU32(counter + 12);  c++;  PUTU32(counter + 12, c); 
+#else  c = GETU32(counter + 0);  c++;  PUTU32(counter + 0, c); 
+#endif
+}  
+
+void MicrosoftCryptoImpl::AesCtrEncrypt(uint8_t* inout, size_t len, uint8_t* key, uint8_t* counter, uint8_t* ecount_buf, uint32_t* num)
+{  
+	unsigned int n;
+	unsigned long l=len;
+	IBuffer^ keybuf = IBufferFromPtr(key, 32);
+	CryptographicKey^ _key = aesKeyProvider->CreateSymmetricKey(keybuf);
+	n=*num;
+	while (l--){
+		if (n==0)
+		{
+			IBuffer^ inbuf=IBufferFromPtr(counter, 16);
+			IBuffer^ outbuf=CryptographicEngine::Encrypt(_key, inbuf, nullptr);
+			IBufferToPtr(outbuf, 16, ecount_buf);
+			AES_ctr128_inc(counter);
+		}
+		*inout=*(inout++)^ecount_buf[n];
+		n=(n+1)%16;
+	}
+	*num=n;
 }
 
 void MicrosoftCryptoImpl::AesIgeEncrypt(uint8_t* in, uint8_t* out, size_t len, uint8_t* key, uint8_t* iv){
