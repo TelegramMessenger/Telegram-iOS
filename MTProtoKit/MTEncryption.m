@@ -727,8 +727,8 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
     }
     
     BIGNUM x, y;
+    static BN_CTX *bnContext = nil;
     uint8_t *bytes = buffer;
-    static BN_CTX *bnContext;
     if (bnContext == nil) {
         bnContext = BN_CTX_new();
     }
@@ -759,12 +759,16 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
                 if (memcmp(bytes + 256 - 16, sha256_out, 16) == 0) {
                     unsigned data_len = *(unsigned *) (bytes + 32);
                     if (data_len && data_len <= 256 - 32 - 16 && !(data_len & 3)) {
-                        result = [NSData dataWithBytes:bytes + 32 + 4 length:data_len];
+                        result = [NSData dataWithBytes:buffer + 32 + 4 length:data_len];
                     } else {
-                        NSLog(@"TL data length field invalid - %d", data_len);
+                        if (MTLogEnabled()) {
+                            MTLog(@"TL data length field invalid - %d", data_len);
+                        }
                     }
                 } else {
-                    NSLog(@"RSA signature check FAILED (SHA256 mismatch)");
+                    if (MTLogEnabled()) {
+                        MTLog(@"RSA signature check FAILED (SHA256 mismatch)");
+                    }
                 }
             }
         }
@@ -841,6 +845,10 @@ MTBackupDatacenterData *MTIPDataDecode(NSData *data) {
         NSMutableArray<MTBackupDatacenterAddress *> *addressList = [[NSMutableArray alloc] init];
         int32_t count = 0;
         if (![reader readInt32:&count]) {
+            return nil;
+        }
+        
+        for (int i = 0; i < count; i++) {
             int32_t ip = 0;
             int32_t port = 0;
             if (![reader readInt32:&ip]) {
@@ -849,8 +857,7 @@ MTBackupDatacenterData *MTIPDataDecode(NSData *data) {
             if (![reader readInt32:&port]) {
                 return nil;
             }
-            [addressList addObject:[[MTBackupDatacenterAddress alloc] initWithIp:[NSString stringWithFormat:@"%d.%d.%d.%d", (int)(ip & 0xFF), (int)((ip >> 8) & 0xFF), (int)((ip >> 16) & 0xFF), (int)((ip >> 24) & 0xFF)] port:port]];
-            return nil;
+            [addressList addObject:[[MTBackupDatacenterAddress alloc] initWithIp:[NSString stringWithFormat:@"%d.%d.%d.%d", (int)((ip >> 24) & 0xFF), (int)((ip >> 16) & 0xFF), (int)((ip >> 8) & 0xFF), (int)((ip >> 0) & 0xFF)] port:port]];
         }
         
         return [[MTBackupDatacenterData alloc] initWithDatacenterId:datacenterId timestamp:timestamp expirationDate:expirationDate addressList:addressList];

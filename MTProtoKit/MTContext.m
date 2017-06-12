@@ -76,6 +76,8 @@
     
     NSMutableArray *_changeListeners;
     
+    MTSignal *_discoverBackupAddressListSignal;
+    
     NSMutableDictionary *_discoverDatacenterAddressActions;
     NSMutableDictionary *_datacenterAuthActions;
     NSMutableDictionary *_datacenterTransferAuthActions;
@@ -89,6 +91,7 @@
     NSMutableDictionary *_passwordRequiredByDatacenterId;
     
     NSMutableDictionary *_transportSchemeDisposableByDatacenterId;
+    id<MTDisposable> _backupAddressListDisposable;
     
     NSMutableDictionary<NSNumber *, id<MTDisposable> > *_fetchPublicKeysActions;
 }
@@ -286,6 +289,12 @@
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         [_changeListeners removeObject:changeListener];
+    } synchronous:true];
+}
+
+- (void)setDiscoverBackupAddressListSignal:(MTSignal *)signal {
+    [[MTContext contextQueue] dispatchOnQueue:^ {
+        _discoverBackupAddressListSignal = signal;
     } synchronous:true];
 }
 
@@ -879,6 +888,17 @@
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:transportScheme beginWithHttp:isProbablyHttp media:media];
+        
+        if (_backupAddressListDisposable == nil && _discoverBackupAddressListSignal != nil) {
+            __weak MTContext *weakSelf = self;
+            _backupAddressListDisposable = [[[_discoverBackupAddressListSignal delay:30.0 onQueue:[MTQueue mainQueue]] onDispose:^{
+                __strong MTContext *strongSelf = weakSelf;
+                if (strongSelf != nil) {
+                    [strongSelf->_backupAddressListDisposable dispose];
+                    strongSelf->_backupAddressListDisposable = nil;
+                }
+            }] startWithNext:nil];
+        }
     }];
 }
 
@@ -893,6 +913,10 @@
             id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
             [disposable dispose];
             [_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
+        }
+        if (_backupAddressListDisposable != nil) {
+            [_backupAddressListDisposable dispose];
+            _backupAddressListDisposable = nil;
         }
     }];
 }

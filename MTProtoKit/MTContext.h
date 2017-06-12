@@ -55,6 +55,8 @@
 - (void)addChangeListener:(id<MTContextChangeListener>)changeListener;
 - (void)removeChangeListener:(id<MTContextChangeListener>)changeListener;
 
+- (void)setDiscoverBackupAddressListSignal:(MTSignal *)signal;
+
 - (NSTimeInterval)globalTime;
 - (NSTimeInterval)globalTimeDifference;
 - (NSTimeInterval)globalTimeOffsetFromUTC;
