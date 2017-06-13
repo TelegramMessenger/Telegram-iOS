@@ -13,14 +13,19 @@ public struct RenderedChannelParticipant: Equatable {
     public let participant: ChannelParticipant
     public let peer: Peer
     public let peers: [PeerId: Peer]
+    public let peerPresences: [PeerId: PeerPresence]
     
-    public init(participant: ChannelParticipant, peer: Peer, peers: [PeerId: Peer]) {
+    public init(participant: ChannelParticipant, peer: Peer, peers: [PeerId: Peer], peerPresences: [PeerId: PeerPresence]) {
         self.participant = participant
         self.peer = peer
         self.peers = peers
+        self.peerPresences = peerPresences
     }
     
     public static func ==(lhs: RenderedChannelParticipant, rhs: RenderedChannelParticipant) -> Bool {
+        if lhs.participant != rhs.participant {
+            
+        }
         return lhs.participant == rhs.participant && lhs.peer.isEqual(rhs.peer)
     }
 }

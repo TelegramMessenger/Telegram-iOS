@@ -36,7 +36,7 @@ private func fetchChannelBlacklist(account: Account, peerId: PeerId, filter: Cha
                                 peers[peer.id] = peer
                             }
                             
-                            for participant in CachedChannelParticipants(apiParticipants: participants).participants {
+                        for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                                 if let peer = peers[participant.peerId] {
                                     items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers))
                                 }
