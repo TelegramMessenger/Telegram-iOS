@@ -66,7 +66,7 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
                                     }
                                     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                                     if !found {
-                                        updatedParticipants.insert(.member(id: memberId, invitedAt: timestamp), at: 0)
+                                        updatedParticipants.insert(.member(id: memberId, invitedAt: timestamp, adminInfo: nil, banInfo: nil), at: 0)
                                     }
                                     var updatedMemberCount: Int32?
                                     if let memberCount = cachedData.participantsSummary.memberCount {

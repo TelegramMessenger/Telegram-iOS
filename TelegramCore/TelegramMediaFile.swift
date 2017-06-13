@@ -136,6 +136,20 @@ public enum TelegramMediaFileAttribute: Coding {
     }
 }
 
+func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> CGSize? {
+    for attribute in attributes {
+        switch attribute {
+            case let .Video(_, size, _):
+                return size
+            case let .ImageSize(size):
+                return size
+            default:
+                break
+        }
+    }
+    return nil
+}
+
 public final class TelegramMediaFile: Media, Equatable {
     public let fileId: MediaId
     public let resource: TelegramMediaResource
@@ -255,17 +269,7 @@ public final class TelegramMediaFile: Media, Equatable {
     }
     
     public var dimensions: CGSize? {
-        for attribute in self.attributes {
-            switch attribute {
-                case let .Video(_, size, _):
-                    return size
-                case let .ImageSize(size):
-                    return size
-                default:
-                    break
-            }
-        }
-        return nil
+        return dimensionsForFileAttributes(self.attributes)
     }
     
     public func isEqual(_ other: Media) -> Bool {

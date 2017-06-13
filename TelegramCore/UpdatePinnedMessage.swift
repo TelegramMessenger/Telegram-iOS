@@ -25,13 +25,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         return .generic
     } |> mapToSignal { peer -> Signal<Void, UpdatePinnedMessageError> in
         if let group = peer as? TelegramChannel {
-            let canManage: Bool
-            switch group.role {
-                case .creator, .editor, .moderator:
-                    canManage = true
-                default:
-                    canManage = false
-            }
+            let canManage = group.hasAdminRights([.canPinMessages])
             
             if let inputChannel = apiInputChannel(group), canManage {
                 var flags: Int32 = 0

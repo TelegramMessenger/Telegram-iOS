@@ -17,8 +17,9 @@ final class AccountInitialState {
     let peerNotificationSettings: [PeerId: PeerNotificationSettings]
     let peerIdsWithNewMessages: Set<PeerId>
     let locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]
+    let cloudReadStates: [PeerId: PeerReadState]
     
-    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) {
+    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], cloudReadStates: [PeerId: PeerReadState]) {
         self.state = state
         self.peerIds = peerIds
         self.messageIds = messageIds
@@ -26,6 +27,7 @@ final class AccountInitialState {
         self.peerIdsWithNewMessages = peerIdsWithNewMessages
         self.peerNotificationSettings = peerNotificationSettings
         self.locallyGeneratedMessageTimestamps = locallyGeneratedMessageTimestamps
+        self.cloudReadStates = cloudReadStates
     }
 }
 

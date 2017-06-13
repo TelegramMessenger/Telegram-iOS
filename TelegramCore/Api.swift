@@ -21,7 +21,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-206066487] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[771925524] = { return Api.ChatFull.parse_chatFull($0) }
-    dict[-1009430225] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[-1781833897] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-636267638] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
     dict[-489233354] = { return Api.ChatParticipant.parse_chatParticipantAdmin($0) }
@@ -52,14 +52,15 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[145955919] = { return Api.PageBlock.parse_pageBlockCollage($0) }
     dict[319588707] = { return Api.PageBlock.parse_pageBlockSlideshow($0) }
     dict[-283684427] = { return Api.PageBlock.parse_pageBlockChannel($0) }
+    dict[834148991] = { return Api.PageBlock.parse_pageBlockAudio($0) }
     dict[-614138572] = { return Api.account.TmpPassword.parse_tmpPassword($0) }
     dict[590459437] = { return Api.Photo.parse_photoEmpty($0) }
     dict[-1836524247] = { return Api.Photo.parse_photo($0) }
     dict[-1683826688] = { return Api.Chat.parse_chatEmpty($0) }
     dict[-652419756] = { return Api.Chat.parse_chat($0) }
     dict[120753115] = { return Api.Chat.parse_chatForbidden($0) }
-    dict[-1588737454] = { return Api.Chat.parse_channel($0) }
     dict[-2059962289] = { return Api.Chat.parse_channelForbidden($0) }
+    dict[213142300] = { return Api.Chat.parse_channel($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
     dict[-613092008] = { return Api.ChatInvite.parse_chatInvite($0) }
     dict[1678812626] = { return Api.StickerSetCovered.parse_stickerSetCovered($0) }
@@ -87,9 +88,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
     dict[-209337866] = { return Api.LangPackDifference.parse_langPackDifference($0) }
     dict[-791039645] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
-    dict[-1299865402] = { return Api.ChannelParticipantRole.parse_channelRoleEmpty($0) }
-    dict[-1776756363] = { return Api.ChannelParticipantRole.parse_channelRoleModerator($0) }
-    dict[-2113143156] = { return Api.ChannelParticipantRole.parse_channelRoleEditor($0) }
     dict[-1432995067] = { return Api.storage.FileType.parse_fileUnknown($0) }
     dict[1086091090] = { return Api.storage.FileType.parse_filePartial($0) }
     dict[8322574] = { return Api.storage.FileType.parse_fileJpeg($0) }
@@ -201,11 +199,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[281165899] = { return Api.Update.parse_updateLangPackTooLong($0) }
     dict[1442983757] = { return Api.Update.parse_updateLangPack($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
-    dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
-    dict[-1861910545] = { return Api.ChannelParticipant.parse_channelParticipantModerator($0) }
-    dict[-1743180447] = { return Api.ChannelParticipant.parse_channelParticipantEditor($0) }
-    dict[-1933187430] = { return Api.ChannelParticipant.parse_channelParticipantKicked($0) }
     dict[-471670279] = { return Api.ChannelParticipant.parse_channelParticipantCreator($0) }
+    dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
+    dict[-1473271656] = { return Api.ChannelParticipant.parse_channelParticipantAdmin($0) }
+    dict[871546323] = { return Api.ChannelParticipant.parse_channelParticipantBanned($0) }
+    dict[-1933187430] = { return Api.ChannelParticipant.parse_channelParticipantKicked($0) }
     dict[471043349] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-1878523231] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
     dict[-994444869] = { return Api.Error.parse_error($0) }
@@ -235,8 +233,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[594758406] = { return Api.EncryptedMessage.parse_encryptedMessageService($0) }
     dict[-566281095] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsRecent($0) }
     dict[-1268741783] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsAdmins($0) }
-    dict[1010285434] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsKicked($0) }
     dict[-1328445861] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsBots($0) }
+    dict[338142689] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsBanned($0) }
+    dict[106343499] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsSearch($0) }
+    dict[-1548400251] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsKicked($0) }
     dict[-350980120] = { return Api.WebPage.parse_webPageEmpty($0) }
     dict[-981018084] = { return Api.WebPage.parse_webPagePending($0) }
     dict[1594340540] = { return Api.WebPage.parse_webPage($0) }
@@ -301,6 +301,20 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1877932953] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowUsers($0) }
     dict[-1058912715] = { return Api.messages.DhConfig.parse_dhConfigNotModified($0) }
     dict[740433629] = { return Api.messages.DhConfig.parse_dhConfig($0) }
+    dict[-421545947] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeTitle($0) }
+    dict[1427671598] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeAbout($0) }
+    dict[1783299128] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeUsername($0) }
+    dict[-1204857405] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangePhoto($0) }
+    dict[460916654] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleInvites($0) }
+    dict[648939889] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleSignatures($0) }
+    dict[-370660328] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionUpdatePinned($0) }
+    dict[1889215493] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionEditMessage($0) }
+    dict[1121994683] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionDeleteMessage($0) }
+    dict[405815507] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionParticipantJoin($0) }
+    dict[-124291086] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionParticipantLeave($0) }
+    dict[-484690728] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionParticipantInvite($0) }
+    dict[-422036098] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionParticipantToggleBan($0) }
+    dict[-714643696] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionParticipantToggleAdmin($0) }
     dict[-543777747] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
     dict[-1269012015] = { return Api.messages.AffectedHistory.parse_affectedHistory($0) }
     dict[-2037289493] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
@@ -315,9 +329,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-247351839] = { return Api.InputEncryptedChat.parse_inputEncryptedChat($0) }
     dict[-1169445179] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
     dict[-40996577] = { return Api.DraftMessage.parse_draftMessage($0) }
+    dict[1568467877] = { return Api.ChannelAdminRights.parse_channelAdminRights($0) }
     dict[-1369215196] = { return Api.DisabledFeature.parse_disabledFeature($0) }
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
     dict[1248893260] = { return Api.EncryptedFile.parse_encryptedFile($0) }
+    dict[1489977929] = { return Api.ChannelBannedRights.parse_channelBannedRights($0) }
     dict[-1613493288] = { return Api.NotifyPeer.parse_notifyPeer($0) }
     dict[-1261946036] = { return Api.NotifyPeer.parse_notifyUsers($0) }
     dict[-1073230141] = { return Api.NotifyPeer.parse_notifyChats($0) }
@@ -337,8 +353,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1182234929] = { return Api.InputUser.parse_inputUserEmpty($0) }
     dict[-138301121] = { return Api.InputUser.parse_inputUserSelf($0) }
     dict[-668391402] = { return Api.InputUser.parse_inputUser($0) }
-    dict[-1913754556] = { return Api.Page.parse_pagePart($0) }
-    dict[-677274263] = { return Api.Page.parse_pageFull($0) }
+    dict[-1908433218] = { return Api.Page.parse_pagePart($0) }
+    dict[1433323434] = { return Api.Page.parse_pageFull($0) }
     dict[157948117] = { return Api.upload.File.parse_file($0) }
     dict[352864346] = { return Api.upload.File.parse_fileCdnRedirect($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
@@ -444,6 +460,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1387117803] = { return Api.contacts.ImportedContacts.parse_importedContacts($0) }
     dict[-1678949555] = { return Api.InputWebDocument.parse_inputWebDocument($0) }
     dict[-326966976] = { return Api.phone.PhoneCall.parse_phoneCall($0) }
+    dict[995769920] = { return Api.ChannelAdminLogEvent.parse_channelAdminLogEvent($0) }
     dict[-1132882121] = { return Api.Bool.parse_boolFalse($0) }
     dict[-1720552011] = { return Api.Bool.parse_boolTrue($0) }
     dict[-892239370] = { return Api.LangPackString.parse_langPackString($0) }
@@ -529,6 +546,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-721239344] = { return Api.ContactLink.parse_contactLinkContact($0) }
     dict[-971322408] = { return Api.WebDocument.parse_webDocument($0) }
     dict[446822276] = { return Api.contacts.Found.parse_found($0) }
+    dict[-368018716] = { return Api.ChannelAdminLogEventsFilter.parse_channelAdminLogEventsFilter($0) }
     dict[1889961234] = { return Api.PeerNotifySettings.parse_peerNotifySettingsEmpty($0) }
     dict[-1697798976] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
     dict[-1995686519] = { return Api.InputBotInlineMessageID.parse_inputBotInlineMessageID($0) }
@@ -539,6 +557,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1041346555] = { return Api.updates.ChannelDifference.parse_channelDifferenceEmpty($0) }
     dict[1091431943] = { return Api.updates.ChannelDifference.parse_channelDifferenceTooLong($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
+    dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[1996904104] = { return Api.InputAppEvent.parse_inputAppEvent($0) }
     dict[-1148011883] = { return Api.MessageEntity.parse_messageEntityUnknown($0) }
     dict[-100378723] = { return Api.MessageEntity.parse_messageEntityMention($0) }
@@ -669,8 +688,6 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipant:
                 return _1.serialize(buffer, boxed)
-            case let _1 as Api.ChannelParticipantRole:
-                return _1.serialize(buffer, boxed)
             case let _1 as Api.storage.FileType:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ArchivedStickers:
@@ -771,6 +788,8 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.DhConfig:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.ChannelAdminLogEventAction:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.auth.ExportedAuthorization:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AffectedHistory:
@@ -791,9 +810,13 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.DraftMessage:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.ChannelAdminRights:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.DisabledFeature:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.EncryptedFile:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.ChannelBannedRights:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.NotifyPeer:
                 return _1.serialize(buffer, boxed)
@@ -923,6 +946,8 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.phone.PhoneCall:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.ChannelAdminLogEvent:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.Bool:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.LangPackString:
@@ -977,6 +1002,8 @@ public struct Api {
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Found:
                 return _1.serialize(buffer, boxed)
+            case let _1 as Api.ChannelAdminLogEventsFilter:
+                return _1.serialize(buffer, boxed)
             case let _1 as Api.PeerNotifySettings:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.InputBotInlineMessageID:
@@ -988,6 +1015,8 @@ public struct Api {
             case let _1 as Api.payments.SavedInfo:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.updates.ChannelDifference:
+                return _1.serialize(buffer, boxed)
+            case let _1 as Api.channels.AdminLogResults:
                 return _1.serialize(buffer, boxed)
             case let _1 as Api.InputAppEvent:
                 return _1.serialize(buffer, boxed)
@@ -2520,7 +2549,7 @@ public struct Api {
 
     public enum ChatFull: CustomStringConvertible {
         case chatFull(id: Int32, participants: Api.ChatParticipants, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo])
-        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?)
+        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -2539,9 +2568,9 @@ public struct Api {
                         item.serialize(buffer, true)
                     }
                     break
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId):
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId):
                     if boxed {
-                        buffer.appendInt32(-1009430225)
+                        buffer.appendInt32(-1781833897)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -2549,6 +2578,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(participantsCount!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(adminsCount!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(kickedCount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(bannedCount!, buffer: buffer, boxed: false)}
                     serializeInt32(readInboxMaxId, buffer: buffer, boxed: false)
                     serializeInt32(readOutboxMaxId, buffer: buffer, boxed: false)
                     serializeInt32(unreadCount, buffer: buffer, boxed: false)
@@ -2618,51 +2648,54 @@ public struct Api {
             var _6: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
             var _7: Int32?
-            _7 = reader.readInt32()
+            if Int(_1!) & Int(1 << 2) != 0 {_7 = reader.readInt32() }
             var _8: Int32?
             _8 = reader.readInt32()
             var _9: Int32?
             _9 = reader.readInt32()
-            var _10: Api.Photo?
+            var _10: Int32?
+            _10 = reader.readInt32()
+            var _11: Api.Photo?
             if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.Photo
+                _11 = Api.parse(reader, signature: signature) as? Api.Photo
             }
-            var _11: Api.PeerNotifySettings?
+            var _12: Api.PeerNotifySettings?
             if let signature = reader.readInt32() {
-                _11 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
+                _12 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
             }
-            var _12: Api.ExportedChatInvite?
+            var _13: Api.ExportedChatInvite?
             if let signature = reader.readInt32() {
-                _12 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+                _13 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
             }
-            var _13: [Api.BotInfo]?
+            var _14: [Api.BotInfo]?
             if let _ = reader.readInt32() {
-                _13 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotInfo.self)
+                _14 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotInfo.self)
             }
-            var _14: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_14 = reader.readInt32() }
             var _15: Int32?
             if Int(_1!) & Int(1 << 4) != 0 {_15 = reader.readInt32() }
             var _16: Int32?
-            if Int(_1!) & Int(1 << 5) != 0 {_16 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 4) != 0 {_16 = reader.readInt32() }
+            var _17: Int32?
+            if Int(_1!) & Int(1 << 5) != 0 {_17 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            let _c7 = _7 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
             let _c8 = _8 != nil
             let _c9 = _9 != nil
             let _c10 = _10 != nil
             let _c11 = _11 != nil
             let _c12 = _12 != nil
             let _c13 = _13 != nil
-            let _c14 = (Int(_1!) & Int(1 << 4) == 0) || _14 != nil
+            let _c14 = _14 != nil
             let _c15 = (Int(_1!) & Int(1 << 4) == 0) || _15 != nil
-            let _c16 = (Int(_1!) & Int(1 << 5) == 0) || _16 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 {
-                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, readInboxMaxId: _7!, readOutboxMaxId: _8!, unreadCount: _9!, chatPhoto: _10!, notifySettings: _11!, exportedInvite: _12!, botInfo: _13!, migratedFromChatId: _14, migratedFromMaxId: _15, pinnedMsgId: _16)
+            let _c16 = (Int(_1!) & Int(1 << 4) == 0) || _16 != nil
+            let _c17 = (Int(_1!) & Int(1 << 5) == 0) || _17 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
+                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, readInboxMaxId: _8!, readOutboxMaxId: _9!, unreadCount: _10!, chatPhoto: _11!, notifySettings: _12!, exportedInvite: _13!, botInfo: _14!, migratedFromChatId: _15, migratedFromMaxId: _16, pinnedMsgId: _17)
             }
             else {
                 return nil
@@ -2674,8 +2707,8 @@ public struct Api {
                 switch self {
                     case .chatFull(let id, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo):
                         return "(chatFull id: \(id), participants: \(participants), chatPhoto: \(chatPhoto), notifySettings: \(notifySettings), exportedInvite: \(exportedInvite), botInfo: \(botInfo))"
-                    case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId):
-                        return "(channelFull flags: \(flags), id: \(id), about: \(about), participantsCount: \(participantsCount), adminsCount: \(adminsCount), kickedCount: \(kickedCount), readInboxMaxId: \(readInboxMaxId), readOutboxMaxId: \(readOutboxMaxId), unreadCount: \(unreadCount), chatPhoto: \(chatPhoto), notifySettings: \(notifySettings), exportedInvite: \(exportedInvite), botInfo: \(botInfo), migratedFromChatId: \(migratedFromChatId), migratedFromMaxId: \(migratedFromMaxId), pinnedMsgId: \(pinnedMsgId))"
+                    case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId):
+                        return "(channelFull flags: \(flags), id: \(id), about: \(about), participantsCount: \(participantsCount), adminsCount: \(adminsCount), kickedCount: \(kickedCount), bannedCount: \(bannedCount), readInboxMaxId: \(readInboxMaxId), readOutboxMaxId: \(readOutboxMaxId), unreadCount: \(unreadCount), chatPhoto: \(chatPhoto), notifySettings: \(notifySettings), exportedInvite: \(exportedInvite), botInfo: \(botInfo), migratedFromChatId: \(migratedFromChatId), migratedFromMaxId: \(migratedFromMaxId), pinnedMsgId: \(pinnedMsgId))"
                 }
             }
         }
@@ -2840,6 +2873,7 @@ public struct Api {
         case pageBlockCollage(items: [Api.PageBlock], caption: Api.RichText)
         case pageBlockSlideshow(items: [Api.PageBlock], caption: Api.RichText)
         case pageBlockChannel(channel: Api.Chat)
+        case pageBlockAudio(audioId: Int64, caption: Api.RichText)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -3012,6 +3046,13 @@ public struct Api {
                         buffer.appendInt32(-283684427)
                     }
                     channel.serialize(buffer, true)
+                    break
+                case .pageBlockAudio(let audioId, let caption):
+                    if boxed {
+                        buffer.appendInt32(834148991)
+                    }
+                    serializeInt64(audioId, buffer: buffer, boxed: false)
+                    caption.serialize(buffer, true)
                     break
     }
     return true
@@ -3359,6 +3400,22 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_pageBlockAudio(_ reader: BufferReader) -> PageBlock? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.RichText?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PageBlock.pageBlockAudio(audioId: _1!, caption: _2!)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -3407,6 +3464,8 @@ public struct Api {
                         return "(pageBlockSlideshow items: \(items), caption: \(caption))"
                     case .pageBlockChannel(let channel):
                         return "(pageBlockChannel channel: \(channel))"
+                    case .pageBlockAudio(let audioId, let caption):
+                        return "(pageBlockAudio audioId: \(audioId), caption: \(caption))"
                 }
             }
         }
@@ -3495,8 +3554,8 @@ public struct Api {
         case chatEmpty(id: Int32)
         case chat(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?)
         case chatForbidden(id: Int32, title: String)
-        case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?)
         case channelForbidden(flags: Int32, id: Int32, accessHash: Int64, title: String)
+        case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?, adminRights: Api.ChannelAdminRights?, bannedRights: Api.ChannelBannedRights?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -3526,9 +3585,18 @@ public struct Api {
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     break
-                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason):
+                case .channelForbidden(let flags, let id, let accessHash, let title):
                     if boxed {
-                        buffer.appendInt32(-1588737454)
+                        buffer.appendInt32(-2059962289)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    break
+                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights):
+                    if boxed {
+                        buffer.appendInt32(213142300)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -3539,15 +3607,8 @@ public struct Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeInt32(version, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 9) != 0 {serializeString(restrictionReason!, buffer: buffer, boxed: false)}
-                    break
-                case .channelForbidden(let flags, let id, let accessHash, let title):
-                    if boxed {
-                        buffer.appendInt32(-2059962289)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 14) != 0 {adminRights!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 15) != 0 {bannedRights!.serialize(buffer, true)}
                     break
     }
     return true
@@ -3614,6 +3675,26 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_channelForbidden(_ reader: BufferReader) -> Chat? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Chat.channelForbidden(flags: _1!, id: _2!, accessHash: _3!, title: _4!)
+            }
+            else {
+                return nil
+            }
+        }
         fileprivate static func parse_channel(_ reader: BufferReader) -> Chat? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -3635,6 +3716,14 @@ public struct Api {
             _8 = reader.readInt32()
             var _9: String?
             if Int(_1!) & Int(1 << 9) != 0 {_9 = parseString(reader) }
+            var _10: Api.ChannelAdminRights?
+            if Int(_1!) & Int(1 << 14) != 0 {if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.ChannelAdminRights
+            } }
+            var _11: Api.ChannelBannedRights?
+            if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
+                _11 = Api.parse(reader, signature: signature) as? Api.ChannelBannedRights
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 13) == 0) || _3 != nil
@@ -3644,28 +3733,10 @@ public struct Api {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 9) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.Chat.channel(flags: _1!, id: _2!, accessHash: _3, title: _4!, username: _5, photo: _6!, date: _7!, version: _8!, restrictionReason: _9)
-            }
-            else {
-                return nil
-            }
-        }
-        fileprivate static func parse_channelForbidden(_ reader: BufferReader) -> Chat? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: String?
-            _4 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Chat.channelForbidden(flags: _1!, id: _2!, accessHash: _3!, title: _4!)
+            let _c10 = (Int(_1!) & Int(1 << 14) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 15) == 0) || _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.Chat.channel(flags: _1!, id: _2!, accessHash: _3, title: _4!, username: _5, photo: _6!, date: _7!, version: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11)
             }
             else {
                 return nil
@@ -3681,10 +3752,10 @@ public struct Api {
                         return "(chat flags: \(flags), id: \(id), title: \(title), photo: \(photo), participantsCount: \(participantsCount), date: \(date), version: \(version), migratedTo: \(migratedTo))"
                     case .chatForbidden(let id, let title):
                         return "(chatForbidden id: \(id), title: \(title))"
-                    case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason):
-                        return "(channel flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title), username: \(username), photo: \(photo), date: \(date), version: \(version), restrictionReason: \(restrictionReason))"
                     case .channelForbidden(let flags, let id, let accessHash, let title):
                         return "(channelForbidden flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title))"
+                    case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights):
+                        return "(channel flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title), username: \(username), photo: \(photo), date: \(date), version: \(version), restrictionReason: \(restrictionReason), adminRights: \(adminRights), bannedRights: \(bannedRights))"
                 }
             }
         }
@@ -4404,59 +4475,6 @@ public struct Api {
                 switch self {
                     case .langPackDifference(let langCode, let fromVersion, let version, let strings):
                         return "(langPackDifference langCode: \(langCode), fromVersion: \(fromVersion), version: \(version), strings: \(strings))"
-                }
-            }
-        }
-    }
-
-    public enum ChannelParticipantRole: CustomStringConvertible {
-        case channelRoleEmpty
-        case channelRoleModerator
-        case channelRoleEditor
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
-    switch self {
-                case .channelRoleEmpty:
-                    if boxed {
-                        buffer.appendInt32(-1299865402)
-                    }
-                    
-                    break
-                case .channelRoleModerator:
-                    if boxed {
-                        buffer.appendInt32(-1776756363)
-                    }
-                    
-                    break
-                case .channelRoleEditor:
-                    if boxed {
-                        buffer.appendInt32(-2113143156)
-                    }
-                    
-                    break
-    }
-    return true
-    }
-    
-        fileprivate static func parse_channelRoleEmpty(_ reader: BufferReader) -> ChannelParticipantRole? {
-            return Api.ChannelParticipantRole.channelRoleEmpty
-        }
-        fileprivate static func parse_channelRoleModerator(_ reader: BufferReader) -> ChannelParticipantRole? {
-            return Api.ChannelParticipantRole.channelRoleModerator
-        }
-        fileprivate static func parse_channelRoleEditor(_ reader: BufferReader) -> ChannelParticipantRole? {
-            return Api.ChannelParticipantRole.channelRoleEditor
-        }
-    
-        public var description: String {
-            get {
-                switch self {
-                    case .channelRoleEmpty:
-                        return "(channelRoleEmpty)"
-                    case .channelRoleModerator:
-                        return "(channelRoleModerator)"
-                    case .channelRoleEditor:
-                        return "(channelRoleEditor)"
                 }
             }
         }
@@ -7030,11 +7048,11 @@ public struct Api {
 
     public enum ChannelParticipant: CustomStringConvertible {
         case channelParticipant(userId: Int32, date: Int32)
-        case channelParticipantSelf(userId: Int32, inviterId: Int32, date: Int32)
-        case channelParticipantModerator(userId: Int32, inviterId: Int32, date: Int32)
-        case channelParticipantEditor(userId: Int32, inviterId: Int32, date: Int32)
-        case channelParticipantKicked(userId: Int32, kickedBy: Int32, date: Int32)
         case channelParticipantCreator(userId: Int32)
+        case channelParticipantSelf(userId: Int32, inviterId: Int32, date: Int32)
+        case channelParticipantAdmin(flags: Int32, userId: Int32, inviterId: Int32, promotedBy: Int32, date: Int32, adminRights: Api.ChannelAdminRights)
+        case channelParticipantBanned(userId: Int32, kickedBy: Int32, date: Int32, bannedRights: Api.ChannelBannedRights)
+        case channelParticipantKicked(userId: Int32, kickedBy: Int32, date: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -7045,6 +7063,12 @@ public struct Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
+                case .channelParticipantCreator(let userId):
+                    if boxed {
+                        buffer.appendInt32(-471670279)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    break
                 case .channelParticipantSelf(let userId, let inviterId, let date):
                     if boxed {
                         buffer.appendInt32(-1557620115)
@@ -7053,21 +7077,25 @@ public struct Api {
                     serializeInt32(inviterId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
-                case .channelParticipantModerator(let userId, let inviterId, let date):
+                case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
                     if boxed {
-                        buffer.appendInt32(-1861910545)
+                        buffer.appendInt32(-1473271656)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt32(inviterId, buffer: buffer, boxed: false)
+                    serializeInt32(promotedBy, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
+                    adminRights.serialize(buffer, true)
                     break
-                case .channelParticipantEditor(let userId, let inviterId, let date):
+                case .channelParticipantBanned(let userId, let kickedBy, let date, let bannedRights):
                     if boxed {
-                        buffer.appendInt32(-1743180447)
+                        buffer.appendInt32(871546323)
                     }
                     serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeInt32(inviterId, buffer: buffer, boxed: false)
+                    serializeInt32(kickedBy, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
+                    bannedRights.serialize(buffer, true)
                     break
                 case .channelParticipantKicked(let userId, let kickedBy, let date):
                     if boxed {
@@ -7076,12 +7104,6 @@ public struct Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt32(kickedBy, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
-                    break
-                case .channelParticipantCreator(let userId):
-                    if boxed {
-                        buffer.appendInt32(-471670279)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
                     break
     }
     return true
@@ -7096,6 +7118,17 @@ public struct Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelParticipant.channelParticipant(userId: _1!, date: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelParticipantCreator(_ reader: BufferReader) -> ChannelParticipant? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelParticipant.channelParticipantCreator(userId: _1!)
             }
             else {
                 return nil
@@ -7118,35 +7151,51 @@ public struct Api {
                 return nil
             }
         }
-        fileprivate static func parse_channelParticipantModerator(_ reader: BufferReader) -> ChannelParticipant? {
+        fileprivate static func parse_channelParticipantAdmin(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Api.ChannelAdminRights?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.ChannelAdminRights
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChannelParticipant.channelParticipantModerator(userId: _1!, inviterId: _2!, date: _3!)
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.ChannelParticipant.channelParticipantAdmin(flags: _1!, userId: _2!, inviterId: _3!, promotedBy: _4!, date: _5!, adminRights: _6!)
             }
             else {
                 return nil
             }
         }
-        fileprivate static func parse_channelParticipantEditor(_ reader: BufferReader) -> ChannelParticipant? {
+        fileprivate static func parse_channelParticipantBanned(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
+            var _4: Api.ChannelBannedRights?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.ChannelBannedRights
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChannelParticipant.channelParticipantEditor(userId: _1!, inviterId: _2!, date: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ChannelParticipant.channelParticipantBanned(userId: _1!, kickedBy: _2!, date: _3!, bannedRights: _4!)
             }
             else {
                 return nil
@@ -7169,33 +7218,22 @@ public struct Api {
                 return nil
             }
         }
-        fileprivate static func parse_channelParticipantCreator(_ reader: BufferReader) -> ChannelParticipant? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelParticipant.channelParticipantCreator(userId: _1!)
-            }
-            else {
-                return nil
-            }
-        }
     
         public var description: String {
             get {
                 switch self {
                     case .channelParticipant(let userId, let date):
                         return "(channelParticipant userId: \(userId), date: \(date))"
-                    case .channelParticipantSelf(let userId, let inviterId, let date):
-                        return "(channelParticipantSelf userId: \(userId), inviterId: \(inviterId), date: \(date))"
-                    case .channelParticipantModerator(let userId, let inviterId, let date):
-                        return "(channelParticipantModerator userId: \(userId), inviterId: \(inviterId), date: \(date))"
-                    case .channelParticipantEditor(let userId, let inviterId, let date):
-                        return "(channelParticipantEditor userId: \(userId), inviterId: \(inviterId), date: \(date))"
-                    case .channelParticipantKicked(let userId, let kickedBy, let date):
-                        return "(channelParticipantKicked userId: \(userId), kickedBy: \(kickedBy), date: \(date))"
                     case .channelParticipantCreator(let userId):
                         return "(channelParticipantCreator userId: \(userId))"
+                    case .channelParticipantSelf(let userId, let inviterId, let date):
+                        return "(channelParticipantSelf userId: \(userId), inviterId: \(inviterId), date: \(date))"
+                    case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
+                        return "(channelParticipantAdmin flags: \(flags), userId: \(userId), inviterId: \(inviterId), promotedBy: \(promotedBy), date: \(date), adminRights: \(adminRights))"
+                    case .channelParticipantBanned(let userId, let kickedBy, let date, let bannedRights):
+                        return "(channelParticipantBanned userId: \(userId), kickedBy: \(kickedBy), date: \(date), bannedRights: \(bannedRights))"
+                    case .channelParticipantKicked(let userId, let kickedBy, let date):
+                        return "(channelParticipantKicked userId: \(userId), kickedBy: \(kickedBy), date: \(date))"
                 }
             }
         }
@@ -7874,8 +7912,10 @@ public struct Api {
     public enum ChannelParticipantsFilter: CustomStringConvertible {
         case channelParticipantsRecent
         case channelParticipantsAdmins
-        case channelParticipantsKicked
         case channelParticipantsBots
+        case channelParticipantsBanned(q: String)
+        case channelParticipantsSearch(q: String)
+        case channelParticipantsKicked(q: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -7891,17 +7931,29 @@ public struct Api {
                     }
                     
                     break
-                case .channelParticipantsKicked:
-                    if boxed {
-                        buffer.appendInt32(1010285434)
-                    }
-                    
-                    break
                 case .channelParticipantsBots:
                     if boxed {
                         buffer.appendInt32(-1328445861)
                     }
                     
+                    break
+                case .channelParticipantsBanned(let q):
+                    if boxed {
+                        buffer.appendInt32(338142689)
+                    }
+                    serializeString(q, buffer: buffer, boxed: false)
+                    break
+                case .channelParticipantsSearch(let q):
+                    if boxed {
+                        buffer.appendInt32(106343499)
+                    }
+                    serializeString(q, buffer: buffer, boxed: false)
+                    break
+                case .channelParticipantsKicked(let q):
+                    if boxed {
+                        buffer.appendInt32(-1548400251)
+                    }
+                    serializeString(q, buffer: buffer, boxed: false)
                     break
     }
     return true
@@ -7913,11 +7965,41 @@ public struct Api {
         fileprivate static func parse_channelParticipantsAdmins(_ reader: BufferReader) -> ChannelParticipantsFilter? {
             return Api.ChannelParticipantsFilter.channelParticipantsAdmins
         }
-        fileprivate static func parse_channelParticipantsKicked(_ reader: BufferReader) -> ChannelParticipantsFilter? {
-            return Api.ChannelParticipantsFilter.channelParticipantsKicked
-        }
         fileprivate static func parse_channelParticipantsBots(_ reader: BufferReader) -> ChannelParticipantsFilter? {
             return Api.ChannelParticipantsFilter.channelParticipantsBots
+        }
+        fileprivate static func parse_channelParticipantsBanned(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelParticipantsFilter.channelParticipantsBanned(q: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelParticipantsSearch(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelParticipantsFilter.channelParticipantsSearch(q: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelParticipantsKicked(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelParticipantsFilter.channelParticipantsKicked(q: _1!)
+            }
+            else {
+                return nil
+            }
         }
     
         public var description: String {
@@ -7927,10 +8009,14 @@ public struct Api {
                         return "(channelParticipantsRecent)"
                     case .channelParticipantsAdmins:
                         return "(channelParticipantsAdmins)"
-                    case .channelParticipantsKicked:
-                        return "(channelParticipantsKicked)"
                     case .channelParticipantsBots:
                         return "(channelParticipantsBots)"
+                    case .channelParticipantsBanned(let q):
+                        return "(channelParticipantsBanned q: \(q))"
+                    case .channelParticipantsSearch(let q):
+                        return "(channelParticipantsSearch q: \(q))"
+                    case .channelParticipantsKicked(let q):
+                        return "(channelParticipantsKicked q: \(q))"
                 }
             }
         }
@@ -9555,6 +9641,341 @@ public struct Api {
         }
     }
 
+    public enum ChannelAdminLogEventAction: CustomStringConvertible {
+        case channelAdminLogEventActionChangeTitle(prevValue: String, newValue: String)
+        case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
+        case channelAdminLogEventActionChangeUsername(prevValue: String, newValue: String)
+        case channelAdminLogEventActionChangePhoto(prevPhoto: Api.ChatPhoto, newPhoto: Api.ChatPhoto)
+        case channelAdminLogEventActionToggleInvites(newValue: Api.Bool)
+        case channelAdminLogEventActionToggleSignatures(newValue: Api.Bool)
+        case channelAdminLogEventActionUpdatePinned(message: Api.Message)
+        case channelAdminLogEventActionEditMessage(prevMessage: Api.Message, newMessage: Api.Message)
+        case channelAdminLogEventActionDeleteMessage(message: Api.Message)
+        case channelAdminLogEventActionParticipantJoin
+        case channelAdminLogEventActionParticipantLeave
+        case channelAdminLogEventActionParticipantInvite(participant: Api.ChannelParticipant)
+        case channelAdminLogEventActionParticipantToggleBan(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant)
+        case channelAdminLogEventActionParticipantToggleAdmin(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .channelAdminLogEventActionChangeTitle(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(-421545947)
+                    }
+                    serializeString(prevValue, buffer: buffer, boxed: false)
+                    serializeString(newValue, buffer: buffer, boxed: false)
+                    break
+                case .channelAdminLogEventActionChangeAbout(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(1427671598)
+                    }
+                    serializeString(prevValue, buffer: buffer, boxed: false)
+                    serializeString(newValue, buffer: buffer, boxed: false)
+                    break
+                case .channelAdminLogEventActionChangeUsername(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(1783299128)
+                    }
+                    serializeString(prevValue, buffer: buffer, boxed: false)
+                    serializeString(newValue, buffer: buffer, boxed: false)
+                    break
+                case .channelAdminLogEventActionChangePhoto(let prevPhoto, let newPhoto):
+                    if boxed {
+                        buffer.appendInt32(-1204857405)
+                    }
+                    prevPhoto.serialize(buffer, true)
+                    newPhoto.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionToggleInvites(let newValue):
+                    if boxed {
+                        buffer.appendInt32(460916654)
+                    }
+                    newValue.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionToggleSignatures(let newValue):
+                    if boxed {
+                        buffer.appendInt32(648939889)
+                    }
+                    newValue.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionUpdatePinned(let message):
+                    if boxed {
+                        buffer.appendInt32(-370660328)
+                    }
+                    message.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionEditMessage(let prevMessage, let newMessage):
+                    if boxed {
+                        buffer.appendInt32(1889215493)
+                    }
+                    prevMessage.serialize(buffer, true)
+                    newMessage.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionDeleteMessage(let message):
+                    if boxed {
+                        buffer.appendInt32(1121994683)
+                    }
+                    message.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionParticipantJoin:
+                    if boxed {
+                        buffer.appendInt32(405815507)
+                    }
+                    
+                    break
+                case .channelAdminLogEventActionParticipantLeave:
+                    if boxed {
+                        buffer.appendInt32(-124291086)
+                    }
+                    
+                    break
+                case .channelAdminLogEventActionParticipantInvite(let participant):
+                    if boxed {
+                        buffer.appendInt32(-484690728)
+                    }
+                    participant.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionParticipantToggleBan(let prevParticipant, let newParticipant):
+                    if boxed {
+                        buffer.appendInt32(-422036098)
+                    }
+                    prevParticipant.serialize(buffer, true)
+                    newParticipant.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionParticipantToggleAdmin(let prevParticipant, let newParticipant):
+                    if boxed {
+                        buffer.appendInt32(-714643696)
+                    }
+                    prevParticipant.serialize(buffer, true)
+                    newParticipant.serialize(buffer, true)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_channelAdminLogEventActionChangeTitle(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeTitle(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionChangeAbout(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeAbout(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionChangeUsername(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsername(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionChangePhoto(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ChatPhoto?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ChatPhoto
+            }
+            var _2: Api.ChatPhoto?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChatPhoto
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangePhoto(prevPhoto: _1!, newPhoto: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionToggleInvites(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleInvites(newValue: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionToggleSignatures(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSignatures(newValue: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionUpdatePinned(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionUpdatePinned(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionEditMessage(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            var _2: Api.Message?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionEditMessage(prevMessage: _1!, newMessage: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionDeleteMessage(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDeleteMessage(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionParticipantJoin(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoin
+        }
+        fileprivate static func parse_channelAdminLogEventActionParticipantLeave(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantLeave
+        }
+        fileprivate static func parse_channelAdminLogEventActionParticipantInvite(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantInvite(participant: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionParticipantToggleBan(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            var _2: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantToggleBan(prevParticipant: _1!, newParticipant: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_channelAdminLogEventActionParticipantToggleAdmin(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            var _2: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantToggleAdmin(prevParticipant: _1!, newParticipant: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .channelAdminLogEventActionChangeTitle(let prevValue, let newValue):
+                        return "(channelAdminLogEventActionChangeTitle prevValue: \(prevValue), newValue: \(newValue))"
+                    case .channelAdminLogEventActionChangeAbout(let prevValue, let newValue):
+                        return "(channelAdminLogEventActionChangeAbout prevValue: \(prevValue), newValue: \(newValue))"
+                    case .channelAdminLogEventActionChangeUsername(let prevValue, let newValue):
+                        return "(channelAdminLogEventActionChangeUsername prevValue: \(prevValue), newValue: \(newValue))"
+                    case .channelAdminLogEventActionChangePhoto(let prevPhoto, let newPhoto):
+                        return "(channelAdminLogEventActionChangePhoto prevPhoto: \(prevPhoto), newPhoto: \(newPhoto))"
+                    case .channelAdminLogEventActionToggleInvites(let newValue):
+                        return "(channelAdminLogEventActionToggleInvites newValue: \(newValue))"
+                    case .channelAdminLogEventActionToggleSignatures(let newValue):
+                        return "(channelAdminLogEventActionToggleSignatures newValue: \(newValue))"
+                    case .channelAdminLogEventActionUpdatePinned(let message):
+                        return "(channelAdminLogEventActionUpdatePinned message: \(message))"
+                    case .channelAdminLogEventActionEditMessage(let prevMessage, let newMessage):
+                        return "(channelAdminLogEventActionEditMessage prevMessage: \(prevMessage), newMessage: \(newMessage))"
+                    case .channelAdminLogEventActionDeleteMessage(let message):
+                        return "(channelAdminLogEventActionDeleteMessage message: \(message))"
+                    case .channelAdminLogEventActionParticipantJoin:
+                        return "(channelAdminLogEventActionParticipantJoin)"
+                    case .channelAdminLogEventActionParticipantLeave:
+                        return "(channelAdminLogEventActionParticipantLeave)"
+                    case .channelAdminLogEventActionParticipantInvite(let participant):
+                        return "(channelAdminLogEventActionParticipantInvite participant: \(participant))"
+                    case .channelAdminLogEventActionParticipantToggleBan(let prevParticipant, let newParticipant):
+                        return "(channelAdminLogEventActionParticipantToggleBan prevParticipant: \(prevParticipant), newParticipant: \(newParticipant))"
+                    case .channelAdminLogEventActionParticipantToggleAdmin(let prevParticipant, let newParticipant):
+                        return "(channelAdminLogEventActionParticipantToggleAdmin prevParticipant: \(prevParticipant), newParticipant: \(newParticipant))"
+                }
+            }
+        }
+    }
+
     public enum LabeledPrice: CustomStringConvertible {
         case labeledPrice(label: String, amount: Int64)
     
@@ -9781,6 +10202,43 @@ public struct Api {
         }
     }
 
+    public enum ChannelAdminRights: CustomStringConvertible {
+        case channelAdminRights(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .channelAdminRights(let flags):
+                    if boxed {
+                        buffer.appendInt32(1568467877)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_channelAdminRights(_ reader: BufferReader) -> ChannelAdminRights? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminRights.channelAdminRights(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .channelAdminRights(let flags):
+                        return "(channelAdminRights flags: \(flags))"
+                }
+            }
+        }
+    }
+
     public enum DisabledFeature: CustomStringConvertible {
         case disabledFeature(feature: String, description: String)
     
@@ -9882,6 +10340,47 @@ public struct Api {
                         return "(encryptedFileEmpty)"
                     case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
                         return "(encryptedFile id: \(id), accessHash: \(accessHash), size: \(size), dcId: \(dcId), keyFingerprint: \(keyFingerprint))"
+                }
+            }
+        }
+    }
+
+    public enum ChannelBannedRights: CustomStringConvertible {
+        case channelBannedRights(flags: Int32, untilDate: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .channelBannedRights(let flags, let untilDate):
+                    if boxed {
+                        buffer.appendInt32(1489977929)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(untilDate, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_channelBannedRights(_ reader: BufferReader) -> ChannelBannedRights? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelBannedRights.channelBannedRights(flags: _1!, untilDate: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .channelBannedRights(let flags, let untilDate):
+                        return "(channelBannedRights flags: \(flags), untilDate: \(untilDate))"
                 }
             }
         }
@@ -10323,14 +10822,14 @@ public struct Api {
     }
 
     public enum Page: CustomStringConvertible {
-        case pagePart(blocks: [Api.PageBlock], photos: [Api.Photo], videos: [Api.Document])
-        case pageFull(blocks: [Api.PageBlock], photos: [Api.Photo], videos: [Api.Document])
+        case pagePart(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
+        case pageFull(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
-                case .pagePart(let blocks, let photos, let videos):
+                case .pagePart(let blocks, let photos, let documents):
                     if boxed {
-                        buffer.appendInt32(-1913754556)
+                        buffer.appendInt32(-1908433218)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(blocks.count))
@@ -10343,14 +10842,14 @@ public struct Api {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(videos.count))
-                    for item in videos {
+                    buffer.appendInt32(Int32(documents.count))
+                    for item in documents {
                         item.serialize(buffer, true)
                     }
                     break
-                case .pageFull(let blocks, let photos, let videos):
+                case .pageFull(let blocks, let photos, let documents):
                     if boxed {
-                        buffer.appendInt32(-677274263)
+                        buffer.appendInt32(1433323434)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(blocks.count))
@@ -10363,8 +10862,8 @@ public struct Api {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(videos.count))
-                    for item in videos {
+                    buffer.appendInt32(Int32(documents.count))
+                    for item in documents {
                         item.serialize(buffer, true)
                     }
                     break
@@ -10389,7 +10888,7 @@ public struct Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.Page.pagePart(blocks: _1!, photos: _2!, videos: _3!)
+                return Api.Page.pagePart(blocks: _1!, photos: _2!, documents: _3!)
             }
             else {
                 return nil
@@ -10412,7 +10911,7 @@ public struct Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.Page.pageFull(blocks: _1!, photos: _2!, videos: _3!)
+                return Api.Page.pageFull(blocks: _1!, photos: _2!, documents: _3!)
             }
             else {
                 return nil
@@ -10422,10 +10921,10 @@ public struct Api {
         public var description: String {
             get {
                 switch self {
-                    case .pagePart(let blocks, let photos, let videos):
-                        return "(pagePart blocks: \(blocks), photos: \(photos), videos: \(videos))"
-                    case .pageFull(let blocks, let photos, let videos):
-                        return "(pageFull blocks: \(blocks), photos: \(photos), videos: \(videos))"
+                    case .pagePart(let blocks, let photos, let documents):
+                        return "(pagePart blocks: \(blocks), photos: \(photos), documents: \(documents))"
+                    case .pageFull(let blocks, let photos, let documents):
+                        return "(pageFull blocks: \(blocks), photos: \(photos), documents: \(documents))"
                 }
             }
         }
@@ -13450,6 +13949,57 @@ public struct Api {
         }
     }
 
+    public enum ChannelAdminLogEvent: CustomStringConvertible {
+        case channelAdminLogEvent(id: Int64, date: Int32, userId: Int32, action: Api.ChannelAdminLogEventAction)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .channelAdminLogEvent(let id, let date, let userId, let action):
+                    if boxed {
+                        buffer.appendInt32(995769920)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    action.serialize(buffer, true)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_channelAdminLogEvent(_ reader: BufferReader) -> ChannelAdminLogEvent? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Api.ChannelAdminLogEventAction?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.ChannelAdminLogEventAction
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ChannelAdminLogEvent.channelAdminLogEvent(id: _1!, date: _2!, userId: _3!, action: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .channelAdminLogEvent(let id, let date, let userId, let action):
+                        return "(channelAdminLogEvent id: \(id), date: \(date), userId: \(userId), action: \(action))"
+                }
+            }
+        }
+    }
+
     public enum Bool: CustomStringConvertible {
         case boolFalse
         case boolTrue
@@ -15577,6 +16127,43 @@ public struct Api {
         }
     }
 
+    public enum ChannelAdminLogEventsFilter: CustomStringConvertible {
+        case channelAdminLogEventsFilter(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    switch self {
+                case .channelAdminLogEventsFilter(let flags):
+                    if boxed {
+                        buffer.appendInt32(-368018716)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    return true
+    }
+    
+        fileprivate static func parse_channelAdminLogEventsFilter(_ reader: BufferReader) -> ChannelAdminLogEventsFilter? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventsFilter.channelAdminLogEventsFilter(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+        public var description: String {
+            get {
+                switch self {
+                    case .channelAdminLogEventsFilter(let flags):
+                        return "(channelAdminLogEventsFilter flags: \(flags))"
+                }
+            }
+        }
+    }
+
     public enum PeerNotifySettings: CustomStringConvertible {
         case peerNotifySettingsEmpty
         case peerNotifySettings(flags: Int32, muteUntil: Int32, sound: String)
@@ -16653,6 +17240,69 @@ public struct Api {
                     switch self {
                         case .channelParticipant(let participant, let users):
                             return "(channels.channelParticipant participant: \(participant), users: \(users))"
+                    }
+                }
+            }
+        }
+    
+        public enum AdminLogResults: CustomStringConvertible {
+            case adminLogResults(events: [Api.ChannelAdminLogEvent], chats: [Api.Chat], users: [Api.User])
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        switch self {
+                    case .adminLogResults(let events, let chats, let users):
+                        if boxed {
+                            buffer.appendInt32(-309659827)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(events.count))
+                        for item in events {
+                            item.serialize(buffer, true)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(chats.count))
+                        for item in chats {
+                            item.serialize(buffer, true)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(users.count))
+                        for item in users {
+                            item.serialize(buffer, true)
+                        }
+                        break
+        }
+        return true
+        }
+        
+            fileprivate static func parse_adminLogResults(_ reader: BufferReader) -> AdminLogResults? {
+                var _1: [Api.ChannelAdminLogEvent]?
+                if let _ = reader.readInt32() {
+                    _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ChannelAdminLogEvent.self)
+                }
+                var _2: [Api.Chat]?
+                if let _ = reader.readInt32() {
+                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                }
+                var _3: [Api.User]?
+                if let _ = reader.readInt32() {
+                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                }
+                let _c1 = _1 != nil
+                let _c2 = _2 != nil
+                let _c3 = _3 != nil
+                if _c1 && _c2 && _c3 {
+                    return Api.channels.AdminLogResults.adminLogResults(events: _1!, chats: _2!, users: _3!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+            public var description: String {
+                get {
+                    switch self {
+                        case .adminLogResults(let events, let chats, let users):
+                            return "(channels.adminLogResults events: \(events), chats: \(chats), users: \(users))"
                     }
                 }
             }
@@ -19356,28 +20006,6 @@ public struct Api {
                     })
                 }
             
-                public static func search(flags flags: Int32, peer: Api.InputPeer, q: String, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offset: Int32, maxId: Int32, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-732523960)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeString(q, buffer: buffer, boxed: false)
-                    filter.serialize(buffer, true)
-                    serializeInt32(minDate, buffer: buffer, boxed: false)
-                    serializeInt32(maxDate, buffer: buffer, boxed: false)
-                    serializeInt32(offset, buffer: buffer, boxed: false)
-                    serializeInt32(maxId, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.search flags: \(flags), peer: \(peer), q: \(q), filter: \(filter), minDate: \(minDate), maxDate: \(maxDate), offset: \(offset), maxId: \(maxId), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Messages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
-                        }
-                        return result
-                    })
-                }
-            
                 public static func readHistory(peer peer: Api.InputPeer, maxId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.AffectedMessages?) {
                     let buffer = Buffer()
                     buffer.appendInt32(238054714)
@@ -20704,6 +21332,29 @@ public struct Api {
                         return result
                     })
                 }
+            
+                public static func search(flags flags: Int32, peer: Api.InputPeer, q: String, fromId: Api.InputUser?, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offset: Int32, maxId: Int32, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-225926539)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {fromId!.serialize(buffer, true)}
+                    filter.serialize(buffer, true)
+                    serializeInt32(minDate, buffer: buffer, boxed: false)
+                    serializeInt32(maxDate, buffer: buffer, boxed: false)
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(maxId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(messages.search flags: \(flags), peer: \(peer), q: \(q), fromId: \(fromId), filter: \(filter), minDate: \(minDate), maxDate: \(maxDate), offset: \(offset), maxId: \(maxId), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel channel: Api.InputChannel, maxId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
@@ -20884,22 +21535,6 @@ public struct Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func editAdmin(channel channel: Api.InputChannel, userId: Api.InputUser, role: Api.ChannelParticipantRole) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-344583728)
-                    channel.serialize(buffer, true)
-                    userId.serialize(buffer, true)
-                    role.serialize(buffer, true)
-                    return (FunctionDescription({return "(channels.editAdmin channel: \(channel), userId: \(userId), role: \(role))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
@@ -21126,6 +21761,63 @@ public struct Api {
                         var result: Api.messages.Chats?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.Chats
+                        }
+                        return result
+                    })
+                }
+            
+                public static func editAdmin(channel channel: Api.InputChannel, userId: Api.InputUser, adminRights: Api.ChannelAdminRights) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(548962836)
+                    channel.serialize(buffer, true)
+                    userId.serialize(buffer, true)
+                    adminRights.serialize(buffer, true)
+                    return (FunctionDescription({return "(channels.editAdmin channel: \(channel), userId: \(userId), adminRights: \(adminRights))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func editBanned(channel channel: Api.InputChannel, userId: Api.InputUser, bannedRights: Api.ChannelBannedRights) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1076292147)
+                    channel.serialize(buffer, true)
+                    userId.serialize(buffer, true)
+                    bannedRights.serialize(buffer, true)
+                    return (FunctionDescription({return "(channels.editBanned channel: \(channel), userId: \(userId), bannedRights: \(bannedRights))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getAdminLog(flags flags: Int32, channel: Api.InputChannel, q: String, eventsFilter: Api.ChannelAdminLogEventsFilter?, admins: [Api.InputUser]?, maxId: Int64, minId: Int64, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.channels.AdminLogResults?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(870184064)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {eventsFilter!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(admins!.count))
+                    for item in admins! {
+                        item.serialize(buffer, true)
+                    }}
+                    serializeInt64(maxId, buffer: buffer, boxed: false)
+                    serializeInt64(minId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(channels.getAdminLog flags: \(flags), channel: \(channel), q: \(q), eventsFilter: \(eventsFilter), admins: \(admins), maxId: \(maxId), minId: \(minId), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.channels.AdminLogResults? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.channels.AdminLogResults?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.channels.AdminLogResults
                         }
                         return result
                     })

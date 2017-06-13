@@ -182,7 +182,7 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
     if peer.id.namespace == Namespaces.Peer.CloudChannel {
         if let inputChannel = apiInputChannel(peer) {
             let signal: Signal<Api.Updates, MTRpcError>
-            if let channel = peer as? TelegramChannel, case .creator = channel.role {
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isCreator) {
                 signal = network.request(Api.functions.channels.deleteChannel(channel: inputChannel))
             } else {
                 signal = network.request(Api.functions.channels.leaveChannel(channel: inputChannel))

@@ -14,10 +14,11 @@ public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedC
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100))
                 |> retryRequest
-                |> map { result -> [RenderedChannelParticipant] in
-                    var items: [RenderedChannelParticipant] = []
+                |> mapToSignal { result -> Signal<[RenderedChannelParticipant], NoError> in
                     switch result {
-                        case let .channelParticipants(_, participants, users):
+                        case let .channelParticipants(count, participants, users):
+                            var items: [RenderedChannelParticipant] = []
+                            
                             var peers: [PeerId: Peer] = [:]
                             for user in users {
                                 let peer = TelegramUser(user: user)
@@ -26,11 +27,21 @@ public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedC
                         
                             for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                                 if let peer = peers[participant.peerId] {
-                                    items.append(RenderedChannelParticipant(participant: participant, peer: peer))
+                                    items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers))
                                 }
                             }
+                        
+                            return account.postbox.modify { modifier -> [RenderedChannelParticipant] in
+                                modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                                    if let cachedData = cachedData as? CachedChannelData {
+                                        return cachedData.withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedAdminCount(count))
+                                    } else {
+                                        return cachedData
+                                    }
+                                })
+                                return items
+                            }
                     }
-                    return items
                 }
         } else {
             return .single([])

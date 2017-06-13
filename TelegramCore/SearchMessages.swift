@@ -32,7 +32,7 @@ public func searchMessages(account: Account, peerId: PeerId?, query: String, tag
         searchResult = account.postbox.loadedPeerWithId(peerId)
             |> mapToSignal { peer -> Signal<Api.messages.Messages, NoError> in
                 if let inputPeer = apiInputPeer(peer) {
-                    return account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: query, filter: filter, minDate: 0, maxDate: Int32.max - 1, offset: 0, maxId: Int32.max - 1, limit: 64))
+                    return account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: query, fromId: nil, filter: filter, minDate: 0, maxDate: Int32.max - 1, offset: 0, maxId: Int32.max - 1, limit: 64))
                         |> retryRequest
                 } else {
                     return .never()

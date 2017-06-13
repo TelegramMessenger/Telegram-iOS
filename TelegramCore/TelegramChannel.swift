@@ -35,41 +35,6 @@ public enum TelegramChannelParticipationStatus {
     }
 }
 
-public enum TelegramChannelRole {
-    case member
-    case creator
-    case editor
-    case moderator
-    
-    fileprivate var rawValue: Int32 {
-        switch self {
-            case .member:
-                return 0
-            case .creator:
-                return 1
-            case .editor:
-                return 2
-            case .moderator:
-                return 3
-        }
-    }
-    
-    fileprivate init(rawValue: Int32) {
-        switch rawValue {
-            case 0:
-                self = .member
-            case 1:
-                self = .creator
-            case 2:
-                self = .editor
-            case 3:
-                self = .moderator
-            default:
-                self = .member
-        }
-    }
-}
-
 public struct TelegramChannelBroadcastFlags: OptionSet {
     public var rawValue: Int32
     
@@ -170,6 +135,7 @@ public struct TelegramChannelFlags: OptionSet {
     }
     
     public static let isVerified = TelegramChannelFlags(rawValue: 1 << 0)
+    public static let isCreator = TelegramChannelFlags(rawValue: 1 << 1)
 }
 
 public final class TelegramChannel: Peer {
@@ -181,10 +147,11 @@ public final class TelegramChannel: Peer {
     public let creationDate: Int32
     public let version: Int32
     public let participationStatus: TelegramChannelParticipationStatus
-    public let role: TelegramChannelRole
     public let info: TelegramChannelInfo
     public let flags: TelegramChannelFlags
     public let restrictionInfo: PeerAccessRestrictionInfo?
+    public let adminRights: TelegramChannelAdminRights?
+    public let bannedRights: TelegramChannelBannedRights?
     
     public var indexName: PeerIndexNameRepresentation {
         return .title(title: self.title, addressName: self.username)
@@ -193,7 +160,7 @@ public final class TelegramChannel: Peer {
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, accessHash: Int64?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, role: TelegramChannelRole, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?) {
+    public init(id: PeerId, accessHash: Int64?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChannelAdminRights?, bannedRights: TelegramChannelBannedRights?) {
         self.id = id
         self.accessHash = accessHash
         self.title = title
@@ -202,10 +169,11 @@ public final class TelegramChannel: Peer {
         self.creationDate = creationDate
         self.version = version
         self.participationStatus = participationStatus
-        self.role = role
         self.info = info
         self.flags = flags
         self.restrictionInfo = restrictionInfo
+        self.adminRights = adminRights
+        self.bannedRights = bannedRights
     }
     
     public init(decoder: Decoder) {
@@ -217,10 +185,11 @@ public final class TelegramChannel: Peer {
         self.creationDate = decoder.decodeInt32ForKey("d", orElse: 0)
         self.version = decoder.decodeInt32ForKey("v", orElse: 0)
         self.participationStatus = TelegramChannelParticipationStatus(rawValue: decoder.decodeInt32ForKey("ps", orElse: 0))
-        self.role = TelegramChannelRole(rawValue: decoder.decodeInt32ForKey("ro", orElse: 0))
         self.info = TelegramChannelInfo.decode(decoder: decoder)
         self.flags = TelegramChannelFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
         self.restrictionInfo = decoder.decodeObjectForKey("ri") as? PeerAccessRestrictionInfo
+        self.adminRights = decoder.decodeObjectForKey("ar", decoder: { TelegramChannelAdminRights(decoder: $0) }) as? TelegramChannelAdminRights
+        self.bannedRights = decoder.decodeObjectForKey("br", decoder: { TelegramChannelBannedRights(decoder: $0) }) as? TelegramChannelBannedRights
     }
     
     public func encode(_ encoder: Encoder) {
@@ -240,13 +209,22 @@ public final class TelegramChannel: Peer {
         encoder.encodeInt32(self.creationDate, forKey: "d")
         encoder.encodeInt32(self.version, forKey: "v")
         encoder.encodeInt32(self.participationStatus.rawValue, forKey: "ps")
-        encoder.encodeInt32(self.role.rawValue, forKey: "ro")
         self.info.encode(encoder: encoder)
         encoder.encodeInt32(self.flags.rawValue, forKey: "fl")
         if let restrictionInfo = self.restrictionInfo {
             encoder.encodeObject(restrictionInfo, forKey: "ri")
         } else {
             encoder.encodeNil(forKey: "ri")
+        }
+        if let adminRights = self.adminRights {
+            encoder.encodeObject(adminRights, forKey: "ar")
+        } else {
+            encoder.encodeNil(forKey: "ar")
+        }
+        if let bannedRights = self.bannedRights {
+            encoder.encodeObject(bannedRights, forKey: "br")
+        } else {
+            encoder.encodeNil(forKey: "br")
         }
     }
     
@@ -263,7 +241,15 @@ public final class TelegramChannel: Peer {
             return false
         }
         
-        if self.role != other.role || self.info != other.info || self.flags != other.flags || self.restrictionInfo != other.restrictionInfo {
+        if self.info != other.info || self.flags != other.flags || self.restrictionInfo != other.restrictionInfo {
+            return false
+        }
+        
+        if self.adminRights != other.adminRights {
+            return false
+        }
+        
+        if self.bannedRights != other.bannedRights {
             return false
         }
         
@@ -271,6 +257,18 @@ public final class TelegramChannel: Peer {
     }
     
     func withUpdatedAddressName(_ addressName: String?) -> TelegramChannel {
-        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, role: self.role, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo)
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights)
+    }
+}
+
+public extension TelegramChannel {
+    public func hasAdminRights(_ flags: TelegramChannelAdminRightsFlags) -> Bool {
+        if self.flags.contains(.isCreator) {
+            return true
+        } else if let adminRights = self.adminRights {
+            return flags.isSubset(of: adminRights.flags)
+        } else {
+            return false
+        }
     }
 }

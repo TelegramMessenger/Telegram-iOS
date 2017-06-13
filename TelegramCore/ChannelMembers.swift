@@ -9,10 +9,22 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func channelMembers(account: Account, peerId: PeerId) -> Signal<[RenderedChannelParticipant], NoError> {
+public enum ChannelMembersFilter {
+    case none
+    case search(String)
+}
+
+public func channelMembers(account: Account, peerId: PeerId, filter: ChannelMembersFilter = .none) -> Signal<[RenderedChannelParticipant], NoError> {
     return account.postbox.modify { modifier -> Signal<[RenderedChannelParticipant], NoError> in
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsRecent, offset: 0, limit: 100))
+            let apiFilter: Api.ChannelParticipantsFilter
+            switch filter {
+                case .none:
+                    apiFilter = .channelParticipantsRecent
+                case let .search(query):
+                    apiFilter = .channelParticipantsSearch(q: query)
+            }
+            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: apiFilter, offset: 0, limit: 100))
                 |> retryRequest
                 |> map { result -> [RenderedChannelParticipant] in
                     var items: [RenderedChannelParticipant] = []
@@ -26,7 +38,7 @@ public func channelMembers(account: Account, peerId: PeerId) -> Signal<[Rendered
                         
                         for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                             if let peer = peers[participant.peerId] {
-                                items.append(RenderedChannelParticipant(participant: participant, peer: peer))
+                                items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers))
                             }
                         }
                     }

@@ -128,7 +128,9 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
             }
             switch result {
                 case let .internalReference(id, type, title, description, image, file, message):
-                    if let image = image {
+                    if type == "game" {
+                        return .message(text: "", attributes: attributes, media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: title ?? "", description: description ?? "", image: image, file: file), replyToMessageId: nil)
+                    } else if let image = image {
                         return .message(text: caption, attributes: attributes, media: image, replyToMessageId: nil)
                     } else if let file = file {
                         return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil)
