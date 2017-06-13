@@ -133,6 +133,16 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
         }
 }
 
+private func wrappedHistoryViewAdditionalData(peerId: PeerId, additionalData: [AdditionalMessageHistoryViewData]) -> [AdditionalMessageHistoryViewData] {
+    var result = additionalData
+    if peerId.namespace == Namespaces.Peer.CloudChannel {
+        if result.index(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
+            result.append(.peerChatState(peerId))
+        }
+    }
+    return result
+}
+
 private final class PeerCachedDataContext {
     var viewIds = Set<Int32>()
     var timestamp: Double?
@@ -196,8 +206,12 @@ public final class AccountViewTracker {
     private var channelPollingContexts: [PeerId: ChannelPollingContext] = [:]
     private var featuredStickerPacksContext: FeaturedStickerPacksContext?
     
+    private let historyViewChannelStateValidationContexts: HistoryViewChannelStateValidationContexts
+    
     init(account: Account) {
         self.account = account
+        
+        self.historyViewChannelStateValidationContexts = HistoryViewChannelStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network)
     }
     
     deinit {
@@ -482,10 +496,16 @@ public final class AccountViewTracker {
             if let strongSelf = self {
                 let messageIds = pendingWebpages(entries: next.0.entries)
                 strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds)
+                if peerId.namespace == Namespaces.Peer.CloudChannel {
+                    strongSelf.historyViewChannelStateValidationContexts.updateView(id: viewId, view: next.0)
+                }
             }
         }, disposed: { [weak self] viewId in
             if let strongSelf = self {
                 strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [])
+                if peerId.namespace == Namespaces.Peer.CloudChannel {
+                    strongSelf.historyViewChannelStateValidationContexts.updateView(id: viewId, view: nil)
+                }
             }
         })
         
@@ -511,7 +531,7 @@ public final class AccountViewTracker {
     
     public func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
+            let signal = account.postbox.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
             return wrappedMessageHistorySignal(peerId: peerId, signal: signal)
         } else {
             return .never()
@@ -520,7 +540,7 @@ public final class AccountViewTracker {
     
     public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
+            let signal = account.postbox.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
             return wrappedMessageHistorySignal(peerId: peerId, signal: signal)
         } else {
             return .never()
@@ -529,7 +549,7 @@ public final class AccountViewTracker {
     
     public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
+            let signal = account.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
             return wrappedMessageHistorySignal(peerId: peerId, signal: signal)
         } else {
             return .never()

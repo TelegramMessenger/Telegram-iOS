@@ -268,8 +268,15 @@ func textAndMediaFromApiMedia(_ media: Api.MessageMedia?, _ peerId:PeerId) -> (S
                 break
             case let .messageMediaGame(game):
                 return (nil, TelegramMediaGame(apiGame: game))
-            case let .messageMediaInvoice(_, title, description, photo, receiptMsgId, currency, totalAmount, startParam):
-                return (nil, TelegramMediaInvoice(title: title, description: description, photo: photo != nil ? TelegramMediaWebFile(photo!) : nil, receiptMessageId: receiptMsgId != nil ? MessageId(peerId: peerId, namespace: 0, id: receiptMsgId!) : nil, currency: currency, totalAmount: totalAmount, startParam: startParam))
+            case let .messageMediaInvoice(flags, title, description, photo, receiptMsgId, currency, totalAmount, startParam):
+                var parsedFlags = TelegramMediaInvoiceFlags()
+                if (flags & (1 << 3)) != 0 {
+                    parsedFlags.insert(.isTest)
+                }
+                if (flags & (1 << 1)) != 0 {
+                    parsedFlags.insert(.shippingAddressRequested)
+                }
+                return (nil, TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, flags: parsedFlags))
         }
     }
     

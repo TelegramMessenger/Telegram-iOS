@@ -28,6 +28,7 @@ private enum InstantPageBlockType: Int32 {
     case collage = 19
     case slideshow = 20
     case channelBanner = 21
+    case audio = 22
 }
 
 public indirect enum InstantPageBlock: Coding, Equatable {
@@ -47,8 +48,9 @@ public indirect enum InstantPageBlock: Coding, Equatable {
     case pullQuote(text: RichText, caption: RichText)
     case image(id: MediaId, caption: RichText)
     case video(id: MediaId, caption: RichText, autoplay: Bool, loop: Bool)
+    case audio(id: MediaId, caption: RichText)
     case cover(InstantPageBlock)
-    case webEmbed(url: String?, html: String?, dimensions: CGSize, caption: RichText, stretchToWidth: Bool, allowScrolling: Bool)
+    case webEmbed(url: String?, html: String?, dimensions: CGSize, caption: RichText, stretchToWidth: Bool, allowScrolling: Bool, coverId: MediaId?)
     case postEmbed(url: String, webpageId: MediaId?, avatarId: MediaId?, author: String, date: Int32, blocks: [InstantPageBlock], caption: RichText)
     case collage(items: [InstantPageBlock], caption: RichText)
     case slideshow(items: [InstantPageBlock], caption: RichText)
@@ -91,7 +93,11 @@ public indirect enum InstantPageBlock: Coding, Equatable {
             case InstantPageBlockType.cover.rawValue:
                 self = .cover(decoder.decodeObjectForKey("c", decoder: { InstantPageBlock(decoder: $0) }) as! InstantPageBlock)
             case InstantPageBlockType.webEmbed.rawValue:
-                self = .webEmbed(url: decoder.decodeOptionalStringForKey("u"), html: decoder.decodeOptionalStringForKey("h"), dimensions: CGSize(width: CGFloat(decoder.decodeInt32ForKey("sw", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("sh", orElse: 0))), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText, stretchToWidth: decoder.decodeInt32ForKey("st", orElse: 0) != 0, allowScrolling: decoder.decodeInt32ForKey("as", orElse: 0) != 0)
+                var coverId: MediaId?
+                if let coverIdNamespace = decoder.decodeOptionalInt32ForKey("ci.n"), let coverIdId = decoder.decodeOptionalInt64ForKey("ci.i") {
+                    coverId = MediaId(namespace: coverIdNamespace, id: coverIdId)
+                }
+                self = .webEmbed(url: decoder.decodeOptionalStringForKey("u"), html: decoder.decodeOptionalStringForKey("h"), dimensions: CGSize(width: CGFloat(decoder.decodeInt32ForKey("sw", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("sh", orElse: 0))), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText, stretchToWidth: decoder.decodeInt32ForKey("st", orElse: 0) != 0, allowScrolling: decoder.decodeInt32ForKey("as", orElse: 0) != 0, coverId: coverId)
             case InstantPageBlockType.postEmbed.rawValue:
                 var avatarId: MediaId?
                 let avatarIdNamespace: Int32? = decoder.decodeOptionalInt32ForKey("av.n")
@@ -106,6 +112,8 @@ public indirect enum InstantPageBlock: Coding, Equatable {
                 self = .slideshow(items: decoder.decodeObjectArrayWithDecoderForKey("b"), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
             case InstantPageBlockType.channelBanner.rawValue:
                 self = .channelBanner(decoder.decodeObjectForKey("c") as? TelegramChannel)
+            case InstantPageBlockType.audio.rawValue:
+                self = .audio(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0)), caption: decoder.decodeObjectForKey("c", decoder: { RichText(decoder: $0) }) as! RichText)
             default:
                 self = .unsupported
         }
@@ -172,8 +180,15 @@ public indirect enum InstantPageBlock: Coding, Equatable {
             case let .cover(block):
                 encoder.encodeInt32(InstantPageBlockType.cover.rawValue, forKey: "r")
                 encoder.encodeObject(block, forKey: "c")
-            case let .webEmbed(url, html, dimensions, caption, stretchToWidth, allowScrolling):
+            case let .webEmbed(url, html, dimensions, caption, stretchToWidth, allowScrolling, coverId):
                 encoder.encodeInt32(InstantPageBlockType.webEmbed.rawValue, forKey: "r")
+                if let coverId = coverId {
+                    encoder.encodeInt32(coverId.namespace, forKey: "ci.n")
+                    encoder.encodeInt64(coverId.id, forKey: "ci.i")
+                } else {
+                    encoder.encodeNil(forKey: "ci.n")
+                    encoder.encodeNil(forKey: "ci.i")
+                }
                 if let url = url {
                     encoder.encodeString(url, forKey: "u")
                 } else {
@@ -225,6 +240,11 @@ public indirect enum InstantPageBlock: Coding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "c")
                 }
+            case let .audio(id, caption):
+                encoder.encodeInt32(InstantPageBlockType.audio.rawValue, forKey: "r")
+                encoder.encodeInt32(id.namespace, forKey: "i.n")
+                encoder.encodeInt64(id.id, forKey: "i.i")
+                encoder.encodeObject(caption, forKey: "c")
         }
     }
     
@@ -332,8 +352,8 @@ public indirect enum InstantPageBlock: Coding, Equatable {
                 } else {
                     return false
                 }
-            case let .webEmbed(lhsUrl, lhsHtml, lhsDimensions, lhsCaption, lhsStretchToWidth, lhsAllowScrolling):
-                if case let .webEmbed(rhsUrl, rhsHtml, rhsDimensions, rhsCaption, rhsStretchToWidth, rhsAllowScrolling) = rhs, lhsUrl == rhsUrl && lhsHtml == rhsHtml && lhsDimensions == rhsDimensions && lhsCaption == rhsCaption && lhsStretchToWidth == rhsStretchToWidth && lhsAllowScrolling == rhsAllowScrolling {
+            case let .webEmbed(lhsUrl, lhsHtml, lhsDimensions, lhsCaption, lhsStretchToWidth, lhsAllowScrolling, lhsCoverId):
+                if case let .webEmbed(rhsUrl, rhsHtml, rhsDimensions, rhsCaption, rhsStretchToWidth, rhsAllowScrolling, rhsCoverId) = rhs, lhsUrl == rhsUrl && lhsHtml == rhsHtml && lhsDimensions == rhsDimensions && lhsCaption == rhsCaption && lhsStretchToWidth == rhsStretchToWidth && lhsAllowScrolling == rhsAllowScrolling && lhsCoverId == rhsCoverId {
                     return true
                 } else {
                     return false
@@ -369,6 +389,12 @@ public indirect enum InstantPageBlock: Coding, Equatable {
                 } else {
                     return false
                 }
+            case let .audio(id, caption):
+                if case .audio(id, caption) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -387,7 +413,9 @@ private final class MediaDictionary: Coding {
         var dict: [MediaId: Media] = [:]
         assert(mediaIds.count == medias.count)
         for i in 0 ..< mediaIds.count {
-            dict[mediaIds[i]] = medias[i] as! Media
+            if let media = medias[i] as? Media {
+                dict[mediaIds[i]] = media
+            }
         }
         self.dict = dict
     }
@@ -489,11 +517,11 @@ extension InstantPageBlock {
             case let .pageBlockPhoto(photoId, caption):
                 self = .image(id: MediaId(namespace: Namespaces.Media.CloudImage, id: photoId), caption: RichText(apiText: caption))
             case let .pageBlockVideo(flags, videoId, caption):
-                self = .video(id: MediaId(namespace: Namespaces.Media.CloudVideo, id: videoId), caption: RichText(apiText: caption), autoplay: (flags & (1 << 0)) != 0, loop: (flags & (1 << 1)) != 0)
+                self = .video(id: MediaId(namespace: Namespaces.Media.CloudFile, id: videoId), caption: RichText(apiText: caption), autoplay: (flags & (1 << 0)) != 0, loop: (flags & (1 << 1)) != 0)
             case let .pageBlockCover(cover):
                 self = .cover(InstantPageBlock(apiBlock: cover))
             case let .pageBlockEmbed(flags, url, html, posterPhotoId, w, h, caption):
-                self = .webEmbed(url: url, html: html, dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), caption: RichText(apiText: caption), stretchToWidth: (flags & (1 << 0)) != 0, allowScrolling: (flags & (1 << 3)) != 0)
+                self = .webEmbed(url: url, html: html, dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), caption: RichText(apiText: caption), stretchToWidth: (flags & (1 << 0)) != 0, allowScrolling: (flags & (1 << 3)) != 0, coverId: posterPhotoId.flatMap { MediaId(namespace: Namespaces.Media.CloudImage, id: $0) })
             case let .pageBlockEmbedPost(url, webpageId, authorPhotoId, author, date, blocks, caption):
                 self = .postEmbed(url: url, webpageId: webpageId == 0 ? nil : MediaId(namespace: Namespaces.Media.CloudWebpage, id: webpageId), avatarId: authorPhotoId == 0 ? nil : MediaId(namespace: Namespaces.Media.CloudImage, id: authorPhotoId), author: author, date: date, blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), caption: RichText(apiText: caption))
             case let .pageBlockCollage(items, caption):
@@ -502,6 +530,8 @@ extension InstantPageBlock {
                 self = .slideshow(items: items.map({ InstantPageBlock(apiBlock: $0) }), caption: RichText(apiText: caption))
             case let .pageBlockChannel(channel: apiChat):
                 self = .channelBanner(parseTelegramGroupOrChannel(chat: apiChat) as? TelegramChannel)
+            case let .pageBlockAudio(audioId, caption):
+                self = .audio(id: MediaId(namespace: Namespaces.Media.CloudFile, id: audioId), caption: RichText(apiText: caption))
         }
     }
 }

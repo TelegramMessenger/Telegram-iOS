@@ -284,6 +284,7 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
     
     var peerNotificationSettings: [PeerId: PeerNotificationSettings] = [:]
     var readInboxMaxIds: [PeerId: MessageId] = [:]
+    var cloudReadStates: [PeerId: PeerReadState] = [:]
     
     for peerId in peerIdsWithNewMessages {
         if let notificationSettings = modifier.getPeerNotificationSettings(peerId) {
@@ -292,6 +293,7 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
         if let readStates = modifier.getPeerReadStates(peerId) {
             for (namespace, state) in readStates {
                 if namespace == Namespaces.Message.Cloud {
+                    cloudReadStates[peerId] = state
                     switch state {
                         case let .idBased(maxIncomingReadId, _, _, _):
                             readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: maxIncomingReadId)
@@ -304,7 +306,7 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
         }
     }
     
-    return AccountMutableState(initialState: AccountInitialState(state: (modifier.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, channelStates: channelStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps), initialPeers: peers, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
+    return AccountMutableState(initialState: AccountInitialState(state: (modifier.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, channelStates: channelStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates), initialPeers: peers, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
 }
 
 func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGroup]) -> Signal<AccountMutableState, NoError> {
@@ -620,7 +622,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
                     } else if previousState.pts + ptsCount == pts {
                         updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
-                        updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
+                        updatedState.updateChannelState(peerId, state: previousState.withUpdatedPts(pts))
                     } else {
                         if !channelsToPoll.contains(peerId) {
                             Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) delete pts hole")
@@ -646,8 +648,10 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                                     updatedState.addPreCachedResource(resource, data: data)
                                 }
                             }
-                            updatedState.editMessage(messageId, message: message)
-                            updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
+                            var attributes = message.attributes
+                            attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
+                            updatedState.editMessage(messageId, message: message.withUpdatedAttributes(attributes))
+                            updatedState.updateChannelState(peerId, state: previousState.withUpdatedPts(pts))
                         } else {
                             if !channelsToPoll.contains(peerId) {
                                 Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) edit message pts hole")
@@ -678,7 +682,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                                 }
                         }
                         
-                        updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
+                        updatedState.updateChannelState(peerId, state: previousState.withUpdatedPts(pts))
                     } else {
                         if !channelsToPoll.contains(peerId) {
                             Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateWebPage pts hole")
@@ -712,8 +716,10 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                                     updatedState.addPreCachedResource(resource, data: data)
                                 }
                             }
-                            updatedState.addMessages([message], location: .UpperHistoryBlock)
-                            updatedState.updateChannelState(message.id.peerId, state: previousState.setPts(pts))
+                            var attributes = message.attributes
+                            attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
+                            updatedState.addMessages([message.withUpdatedAttributes(attributes)], location: .UpperHistoryBlock)
+                            updatedState.updateChannelState(message.id.peerId, state: previousState.withUpdatedPts(pts))
                         } else {
                             if !channelsToPoll.contains(message.id.peerId) {
                                 Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) message pts hole")
@@ -919,7 +925,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
             case let .updateUserName(userId, firstName, lastName, username):
-                //TODO add contact checing for apply first and last name
+                //TODO add contact checking for apply first and last name
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), { peer in
                     if let user = peer as? TelegramUser {
                         return user.withUpdatedUsername(username)
@@ -1021,8 +1027,11 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
         return resolveAssociatedMessages(account: account, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerNotificationSettings(account: account, state: resultingState)
-                    |> map { resultingState -> AccountFinalState in
-                        return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError, incomplete: missingUpdates)
+                    |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
+                        return resolveMissingPeerCloudReadStates(account: account, state: resultingState)
+                            |> map { resultingState -> AccountFinalState in
+                                return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError, incomplete: missingUpdates)
+                            }
                     }
             }
     }
@@ -1136,6 +1145,47 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Acc
     }
 }
 
+private func resolveMissingPeerCloudReadStates(account: Account, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+    var missingPeers: [PeerId: Api.InputPeer] = [:]
+    
+    for peerId in state.initialState.peerIdsWithNewMessages {
+        if state.initialState.cloudReadStates[peerId] == nil && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup)  {
+            if let peer = state.peers[peerId], let inputPeer = apiInputPeer(peer) {
+                missingPeers[peerId] = inputPeer
+            } else {
+                Logger.shared.log("State", "can't fetch notification settings for peer \(peerId): can't create inputPeer")
+            }
+        }
+    }
+    
+    if missingPeers.isEmpty {
+        return .single(state)
+    } else {
+        Logger.shared.log("State", "will fetch cloud read states for \(missingPeers.count) peers")
+        
+        var signals: [Signal<(PeerId, PeerReadState)?, NoError>] = []
+        for (peerId, inputPeer) in missingPeers {
+            let fetchSettings = fetchPeerCloudReadState(network: account.network, postbox: account.postbox, peerId: peerId, inputPeer: inputPeer)
+                |> map { state -> (PeerId, PeerReadState)? in
+                    return state.flatMap { (peerId, $0) }
+                }
+            signals.append(fetchSettings)
+        }
+        return combineLatest(signals)
+            |> map { peersAndSettings -> AccountMutableState in
+                var updatedState = state
+                for pair in peersAndSettings {
+                    if let (peerId, state) = pair {
+                        if case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count) = state {
+                            updatedState.resetReadState(peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count)
+                        }
+                    }
+                }
+                return updatedState
+        }
+    }
+}
+
 func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let accountState = (modifier.getState() as? AuthorizedAccountState)?.state, let peer = modifier.getPeer(peerId) {
@@ -1148,7 +1198,7 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
             if let notificationSettings = modifier.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
                 peerNotificationSettings[peerId] = notificationSettings
             }
-            let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), messageIds: Set(), peerIdsWithNewMessages: Set(), channelStates: channelStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: [:]), initialPeers: initialPeers, initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+            let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), messageIds: Set(), peerIdsWithNewMessages: Set(), channelStates: channelStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:]), initialPeers: initialPeers, initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
             return pollChannel(account, peer: peer, state: initialState)
                 |> mapToSignal { (finalState, _, timeout) -> Signal<Void, NoError> in
                     return resolveAssociatedMessages(account: account, state: finalState)
@@ -1173,7 +1223,11 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
 
 private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
     if let inputChannel = apiInputChannel(peer) {
-        return (account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: state.channelStates[peer.id]?.pts ?? 1, limit: 20))
+        var limit: Int32 = 20
+        #if (arch(i386) || arch(x86_64)) && os(iOS)
+            limit = 3
+        #endif
+        return (account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: state.channelStates[peer.id]?.pts ?? 1, limit: limit))
             |> map { Optional($0) }
             |> `catch` { error -> Signal<Api.updates.ChannelDifference?, MTRpcError> in
                 if error.errorDescription == "CHANNEL_PRIVATE" {
@@ -1192,9 +1246,9 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                             apiTimeout = timeout
                             let channelState: ChannelState
                             if let previousState = updatedState.channelStates[peer.id] {
-                                channelState = previousState.setPts(pts)
+                                channelState = previousState.withUpdatedPts(pts)
                             } else {
-                                channelState = ChannelState(pts: pts)
+                                channelState = ChannelState(pts: pts, invalidatedPts: nil)
                             }
                             updatedState.updateChannelState(peer.id, state: channelState)
                             
@@ -1225,20 +1279,15 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                             
                             let channelState: ChannelState
                             if let previousState = updatedState.channelStates[peer.id] {
-                                channelState = previousState.setPts(pts)
+                                channelState = previousState.withUpdatedPts(pts)
                             } else {
-                                channelState = ChannelState(pts: pts)
+                                channelState = ChannelState(pts: pts, invalidatedPts: nil)
                             }
                             updatedState.updateChannelState(peer.id, state: channelState)
                         case let .channelDifferenceTooLong(_, pts, timeout, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, messages, chats, users):
                             apiTimeout = timeout
                             
-                            let channelState: ChannelState
-                            if let previousState = updatedState.channelStates[peer.id] {
-                                channelState = previousState.setPts(pts)
-                            } else {
-                                channelState = ChannelState(pts: pts)
-                            }
+                            let channelState = ChannelState(pts: pts, invalidatedPts: pts)
                             updatedState.updateChannelState(peer.id, state: channelState)
                             
                             updatedState.mergeChats(chats)

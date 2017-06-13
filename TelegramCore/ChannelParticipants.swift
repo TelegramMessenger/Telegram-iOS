@@ -12,10 +12,12 @@ import Foundation
 public struct RenderedChannelParticipant: Equatable {
     public let participant: ChannelParticipant
     public let peer: Peer
+    public let peers: [PeerId: Peer]
     
-    public init(participant: ChannelParticipant, peer: Peer) {
+    public init(participant: ChannelParticipant, peer: Peer, peers: [PeerId: Peer]) {
         self.participant = participant
         self.peer = peer
+        self.peers = peers
     }
     
     public static func ==(lhs: RenderedChannelParticipant, rhs: RenderedChannelParticipant) -> Bool {

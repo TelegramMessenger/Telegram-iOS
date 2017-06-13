@@ -52,6 +52,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[145955919] = { return Api.PageBlock.parse_pageBlockCollage($0) }
     dict[319588707] = { return Api.PageBlock.parse_pageBlockSlideshow($0) }
     dict[-283684427] = { return Api.PageBlock.parse_pageBlockChannel($0) }
+    dict[834148991] = { return Api.PageBlock.parse_pageBlockAudio($0) }
     dict[-614138572] = { return Api.account.TmpPassword.parse_tmpPassword($0) }
     dict[590459437] = { return Api.Photo.parse_photoEmpty($0) }
     dict[-1836524247] = { return Api.Photo.parse_photo($0) }
@@ -352,8 +353,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1182234929] = { return Api.InputUser.parse_inputUserEmpty($0) }
     dict[-138301121] = { return Api.InputUser.parse_inputUserSelf($0) }
     dict[-668391402] = { return Api.InputUser.parse_inputUser($0) }
-    dict[-1913754556] = { return Api.Page.parse_pagePart($0) }
-    dict[-677274263] = { return Api.Page.parse_pageFull($0) }
+    dict[-1908433218] = { return Api.Page.parse_pagePart($0) }
+    dict[1433323434] = { return Api.Page.parse_pageFull($0) }
     dict[157948117] = { return Api.upload.File.parse_file($0) }
     dict[352864346] = { return Api.upload.File.parse_fileCdnRedirect($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
@@ -2872,6 +2873,7 @@ public struct Api {
         case pageBlockCollage(items: [Api.PageBlock], caption: Api.RichText)
         case pageBlockSlideshow(items: [Api.PageBlock], caption: Api.RichText)
         case pageBlockChannel(channel: Api.Chat)
+        case pageBlockAudio(audioId: Int64, caption: Api.RichText)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -3044,6 +3046,13 @@ public struct Api {
                         buffer.appendInt32(-283684427)
                     }
                     channel.serialize(buffer, true)
+                    break
+                case .pageBlockAudio(let audioId, let caption):
+                    if boxed {
+                        buffer.appendInt32(834148991)
+                    }
+                    serializeInt64(audioId, buffer: buffer, boxed: false)
+                    caption.serialize(buffer, true)
                     break
     }
     return true
@@ -3391,6 +3400,22 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_pageBlockAudio(_ reader: BufferReader) -> PageBlock? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.RichText?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PageBlock.pageBlockAudio(audioId: _1!, caption: _2!)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -3439,6 +3464,8 @@ public struct Api {
                         return "(pageBlockSlideshow items: \(items), caption: \(caption))"
                     case .pageBlockChannel(let channel):
                         return "(pageBlockChannel channel: \(channel))"
+                    case .pageBlockAudio(let audioId, let caption):
+                        return "(pageBlockAudio audioId: \(audioId), caption: \(caption))"
                 }
             }
         }
@@ -10795,14 +10822,14 @@ public struct Api {
     }
 
     public enum Page: CustomStringConvertible {
-        case pagePart(blocks: [Api.PageBlock], photos: [Api.Photo], videos: [Api.Document])
-        case pageFull(blocks: [Api.PageBlock], photos: [Api.Photo], videos: [Api.Document])
+        case pagePart(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
+        case pageFull(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
-                case .pagePart(let blocks, let photos, let videos):
+                case .pagePart(let blocks, let photos, let documents):
                     if boxed {
-                        buffer.appendInt32(-1913754556)
+                        buffer.appendInt32(-1908433218)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(blocks.count))
@@ -10815,14 +10842,14 @@ public struct Api {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(videos.count))
-                    for item in videos {
+                    buffer.appendInt32(Int32(documents.count))
+                    for item in documents {
                         item.serialize(buffer, true)
                     }
                     break
-                case .pageFull(let blocks, let photos, let videos):
+                case .pageFull(let blocks, let photos, let documents):
                     if boxed {
-                        buffer.appendInt32(-677274263)
+                        buffer.appendInt32(1433323434)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(blocks.count))
@@ -10835,8 +10862,8 @@ public struct Api {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(videos.count))
-                    for item in videos {
+                    buffer.appendInt32(Int32(documents.count))
+                    for item in documents {
                         item.serialize(buffer, true)
                     }
                     break
@@ -10861,7 +10888,7 @@ public struct Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.Page.pagePart(blocks: _1!, photos: _2!, videos: _3!)
+                return Api.Page.pagePart(blocks: _1!, photos: _2!, documents: _3!)
             }
             else {
                 return nil
@@ -10884,7 +10911,7 @@ public struct Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.Page.pageFull(blocks: _1!, photos: _2!, videos: _3!)
+                return Api.Page.pageFull(blocks: _1!, photos: _2!, documents: _3!)
             }
             else {
                 return nil
@@ -10894,10 +10921,10 @@ public struct Api {
         public var description: String {
             get {
                 switch self {
-                    case .pagePart(let blocks, let photos, let videos):
-                        return "(pagePart blocks: \(blocks), photos: \(photos), videos: \(videos))"
-                    case .pageFull(let blocks, let photos, let videos):
-                        return "(pageFull blocks: \(blocks), photos: \(photos), videos: \(videos))"
+                    case .pagePart(let blocks, let photos, let documents):
+                        return "(pagePart blocks: \(blocks), photos: \(photos), documents: \(documents))"
+                    case .pageFull(let blocks, let photos, let documents):
+                        return "(pageFull blocks: \(blocks), photos: \(photos), documents: \(documents))"
                 }
             }
         }

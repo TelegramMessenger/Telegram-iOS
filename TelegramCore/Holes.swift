@@ -80,6 +80,7 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                         let messages: [Api.Message]
                         let chats: [Api.Chat]
                         let users: [Api.User]
+                        var channelPts: Int32?
                         switch result {
                             case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
                                 messages = apiMessages
@@ -89,17 +90,24 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
-                            case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                            case let .channelMessages(_, pts, _, apiMessages, apiChats, apiUsers):
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
+                                channelPts = pts
                         }
                         return postbox.modify { modifier in
                             var storeMessages: [StoreMessage] = []
                             
                             for message in messages {
                                 if let storeMessage = StoreMessage(apiMessage: message) {
-                                    storeMessages.append(storeMessage)
+                                    if let channelPts = channelPts {
+                                        var attributes = storeMessage.attributes
+                                        attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
+                                        storeMessages.append(storeMessage.withUpdatedAttributes(attributes))
+                                    } else {
+                                        storeMessages.append(storeMessage)
+                                    }
                                 }
                             }
                             
@@ -218,7 +226,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                             
                             if let apiChannelPts = apiChannelPts {
-                                chatStates[peerId] = ChannelState(pts: apiChannelPts)
+                                chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
                             }
                             
                             notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
@@ -340,7 +348,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                                 readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                                 
                                 if let apiChannelPts = apiChannelPts {
-                                    chatStates[peerId] = ChannelState(pts: apiChannelPts)
+                                    chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
                                 }
                                 
                                 notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
@@ -391,7 +399,15 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                     modifier.resetIncomingReadStates(readStates)
                     
                     for (peerId, chatState) in chatStates {
-                        modifier.setPeerChatState(peerId, state: chatState)
+                        if let chatState = chatState as? ChannelState {
+                            if let current = modifier.getPeerChatState(peerId) as? ChannelState {
+                                modifier.setPeerChatState(peerId, state: current.withUpdatedPts(chatState.pts))
+                            } else {
+                                modifier.setPeerChatState(peerId, state: chatState)
+                            }
+                        } else {
+                            modifier.setPeerChatState(peerId, state: chatState)
+                        }
                     }
                     
                     if let replacePinnedPeerIds = replacePinnedPeerIds {
