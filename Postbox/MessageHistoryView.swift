@@ -2,10 +2,12 @@ import Foundation
 
 public enum AdditionalMessageHistoryViewData {
     case cachedPeerData(PeerId)
+    case peerChatState(PeerId)
 }
 
 public enum AdditionalMessageHistoryViewDataEntry {
     case cachedPeerData(PeerId, CachedPeerData?)
+    case peerChatState(PeerId, PeerChatState?)
 }
 
 public struct MessageHistoryViewId: Equatable {
@@ -521,7 +523,7 @@ final class MutableMessageHistoryView {
         return true
     }
     
-    func replay(_ operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], updatedMedia: [MediaId: Media?], updatedCachedPeerData: [PeerId: CachedPeerData], context: MutableMessageHistoryViewReplayContext, renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
+    func replay(postbox: Postbox, transaction: PostboxTransaction, operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], updatedMedia: [MediaId: Media?], updatedCachedPeerData: [PeerId: CachedPeerData], context: MutableMessageHistoryViewReplayContext, renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
         let tagMask = self.tagMask
         let unwrappedTagMask: UInt32 = tagMask?.rawValue ?? 0
         
@@ -679,6 +681,11 @@ final class MutableMessageHistoryView {
                 case let .cachedPeerData(peerId, _):
                     if let updatedData = updatedCachedPeerData[peerId] {
                         self.additionalDatas[i] = .cachedPeerData(peerId, updatedData)
+                        hasChanges = true
+                    }
+                case let .peerChatState(peerId, _):
+                    if transaction.currentUpdatedPeerChatStates.contains(peerId) {
+                        self.additionalDatas[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
                         hasChanges = true
                     }
             }
@@ -1049,7 +1056,7 @@ public final class MessageHistoryView {
         if !entries.isEmpty {
             var referenceIndex = entries.count - 1
             for i in 0 ..< entries.count {
-                if entries[i].index >= self.anchorIndex {
+                if entries[i].index > self.anchorIndex {
                     referenceIndex = i
                     break
                 }

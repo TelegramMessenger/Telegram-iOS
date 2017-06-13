@@ -1623,6 +1623,8 @@ public final class Postbox {
             switch data {
                 case let .cachedPeerData(peerId):
                     additionalDataEntries.append(.cachedPeerData(peerId, self.cachedPeerDataTable.get(peerId)))
+                case let .peerChatState(peerId):
+                    additionalDataEntries.append(.peerChatState(peerId, self.peerChatStateTable.get(peerId) as? PeerChatState))
             }
         }
         
