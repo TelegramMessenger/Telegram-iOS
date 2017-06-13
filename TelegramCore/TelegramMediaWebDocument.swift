@@ -6,10 +6,6 @@ import Foundation
 #endif
 
 public class TelegramMediaWebFile: Media {
-    
-    
-    
-
     public let resource: TelegramMediaResource
     public let mimeType: String
     public let size: Int32
@@ -61,14 +57,16 @@ public class TelegramMediaWebFile: Media {
         return true
     }
 
-
+    public var dimensions: CGSize? {
+        return dimensionsForFileAttributes(self.attributes)
+    }
 }
 
 extension TelegramMediaWebFile {
     convenience init(_ document:Api.WebDocument) {
         switch document {
-        case let .webDocument(data):
-            self.init(resource: WebFileReferenceMediaResource(url: data.url, size: data.size, datacenterId: data.dcId, accessHash: data.accessHash), mimeType: data.mimeType, size: data.size, attributes: telegramMediaFileAttributesFromApiAttributes(data.attributes))
+            case let .webDocument(data):
+                self.init(resource: WebFileReferenceMediaResource(url: data.url, size: data.size, datacenterId: data.dcId, accessHash: data.accessHash), mimeType: data.mimeType, size: data.size, attributes: telegramMediaFileAttributesFromApiAttributes(data.attributes))
         }
     }
 }

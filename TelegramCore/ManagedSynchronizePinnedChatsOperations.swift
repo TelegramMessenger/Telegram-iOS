@@ -178,7 +178,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                         readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                         
                         if let apiChannelPts = apiChannelPts {
-                            chatStates[peerId] = ChannelState(pts: apiChannelPts)
+                            chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
                         }
                         
                         notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
@@ -234,7 +234,15 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 modifier.resetIncomingReadStates(readStates)
                 
                 for (peerId, chatState) in chatStates {
-                    modifier.setPeerChatState(peerId, state: chatState)
+                    if let chatState = chatState as? ChannelState {
+                        if let current = modifier.getPeerChatState(peerId) as? ChannelState {
+                            modifier.setPeerChatState(peerId, state: current.withUpdatedPts(chatState.pts))
+                        } else {
+                            modifier.setPeerChatState(peerId, state: chatState)
+                        }
+                    } else {
+                        modifier.setPeerChatState(peerId, state: chatState)
+                    }
                 }
                 
                 if remotePeerIds == resultingPeerIds {

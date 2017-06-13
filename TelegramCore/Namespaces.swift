@@ -14,7 +14,6 @@ public struct Namespaces {
     
     public struct Media {
         public static let CloudImage: Int32 = 0
-        public static let CloudVideo: Int32 = 1
         public static let CloudAudio: Int32 = 2
         public static let CloudContact: Int32 = 3
         public static let CloudMap: Int32 = 4

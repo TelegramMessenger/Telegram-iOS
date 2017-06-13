@@ -12,24 +12,25 @@ import Foundation
 public struct RenderedChannelParticipant: Equatable {
     public let participant: ChannelParticipant
     public let peer: Peer
-    public let presence: PeerPresence?
-    public init(participant: ChannelParticipant, peer: Peer, presence: PeerPresence? = nil) {
+    public let peers: [PeerId: Peer]
+    public let presence:PeerPresence?
+    public init(participant: ChannelParticipant, peer: Peer, peers: [PeerId: Peer] = [:], presence: PeerPresence? = nil) {
         self.participant = participant
         self.peer = peer
+        self.peers = peers
         self.presence = presence
     }
     
     public static func ==(lhs: RenderedChannelParticipant, rhs: RenderedChannelParticipant) -> Bool {
-        if let lhsStatus = lhs.presence, let rhsStatus = rhs.presence {
-            if !lhsStatus.isEqual(to: rhsStatus) {
+        if let lhsPresence = lhs.presence, let rhsPresence = rhs.presence {
+            if !lhsPresence.isEqual(to: rhsPresence) {
                 return false
             }
-        } else if (lhs.presence != nil) != (rhs.presence != nil) {
+        } else if(lhs.presence != nil) != (rhs.presence != nil) {
             return false
         }
         return lhs.participant == rhs.participant && lhs.peer.isEqual(rhs.peer)
     }
-    
 }
 
 func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
