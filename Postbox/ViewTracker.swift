@@ -360,7 +360,7 @@ final class ViewTracker {
                         updateType = .Generic
                     }
                     
-                    if mutableView.replay(operations ?? [], holeFillDirections: transaction.peerIdsWithFilledHoles[peerId] ?? [:], updatedMedia: transaction.updatedMedia, updatedCachedPeerData: transaction.currentUpdatedCachedPeerData, context: context, renderIntermediateMessage: self.renderMessage) {
+                    if mutableView.replay(postbox: postbox, transaction: transaction, operations: operations ?? [], holeFillDirections: transaction.peerIdsWithFilledHoles[peerId] ?? [:], updatedMedia: transaction.updatedMedia, updatedCachedPeerData: transaction.currentUpdatedCachedPeerData, context: context, renderIntermediateMessage: self.renderMessage) {
                         mutableView.complete(context: context, fetchEarlier: { index, count in
                             return self.fetchEarlierHistoryEntries(peerId, index, count, mutableView.tagMask)
                         }, fetchLater: { index, count in

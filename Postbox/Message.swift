@@ -540,12 +540,30 @@ public final class StoreMessage {
         self.media = media
     }
     
+    public init(id: StoreMessageId, globallyUniqueId: Int64?, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+        self.id = id
+        self.timestamp = timestamp
+        self.globallyUniqueId = globallyUniqueId
+        self.flags = flags
+        self.tags = tags
+        self.globalTags = globalTags
+        self.forwardInfo = forwardInfo
+        self.authorId = authorId
+        self.text = text
+        self.attributes = attributes
+        self.media = media
+    }
+    
     public var index: MessageIndex? {
         if case let .Id(id) = self.id {
             return MessageIndex(id: id, timestamp: self.timestamp)
         } else {
             return nil
         }
+    }
+    
+    public func withUpdatedAttributes(_ attributes: [MessageAttribute]) -> StoreMessage {
+        return StoreMessage(id: self.id, globallyUniqueId: self.globallyUniqueId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributes: attributes, media: self.media)
     }
 }
 
