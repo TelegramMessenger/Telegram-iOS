@@ -31,7 +31,7 @@ public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedC
                             
                             for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                                 if let peer = peers[participant.peerId] {
-                                    items.append(RenderedChannelParticipant(participant: participant, peer: peer, status: status[peer.id]))
+                                    items.append(RenderedChannelParticipant(participant: participant, peer: peer, presence: status[peer.id]))
                                 }
                                 
                             }

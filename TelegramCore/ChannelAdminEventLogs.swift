@@ -69,7 +69,10 @@ public struct AdminLogEventsFlags : OptionSet {
     public static let editMessages = AdminLogEventsFlags(rawValue: 1 << 12)
     public static let deleteMessages = AdminLogEventsFlags(rawValue: 1 << 13)
     
-    public static var all:AdminLogEventsFlags {
+    public static var all:[AdminLogEventsFlags] {
+        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages]
+    }
+    public static var flags:AdminLogEventsFlags {
         return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages]
     }
 }
@@ -83,7 +86,7 @@ private func boolFromApiValue(_ value: Api.Bool) -> Bool {
     }
 }
 
-public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId:AdminLogEventId, minId:AdminLogEventId, limit:Int32 = 100, query:String = "", filter:AdminLogEventsFlags? = nil, admins:[PeerId]? = nil) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> {
+public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId:AdminLogEventId, minId:AdminLogEventId, limit:Int32 = 100, query:String? = nil, filter:AdminLogEventsFlags? = nil, admins:[PeerId]? = nil) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> {
     
     return account.postbox.modify { modifier -> (Peer?, [Peer]?) in
         return (modifier.getPeer(peerId), admins?.flatMap {modifier.getPeer($0)})
@@ -101,7 +104,7 @@ public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId:AdminL
                 if let _ = inputAdmins {
                     flags += Int32(1 << 1)
                 }
-                return account.network.request(Api.functions.channels.getAdminLog(flags: flags, channel: inputChannel, q: query, eventsFilter: eventsFilter, admins: inputAdmins, maxId: maxId, minId: minId, limit: limit)) |> map { result in
+                return account.network.request(Api.functions.channels.getAdminLog(flags: flags, channel: inputChannel, q: query ?? "", eventsFilter: eventsFilter, admins: inputAdmins, maxId: maxId, minId: minId, limit: limit)) |> map { result in
                     
                     switch result {
                     case let .adminLogResults(apiEvents, apiChats, apiUsers):
