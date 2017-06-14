@@ -209,6 +209,13 @@
 
 #pragma mark - Persistence Helpers
 
+- (void)setFilename:(NSString *)filename {
+  if (filename) {
+    filename = [_cachePath stringByAppendingPathComponent:[filename lastPathComponent]];
+  }
+  _filename = filename;
+}
+
 - (NSString *)possibleFilename {
   if (_tempFilename) {
     return _tempFilename;
