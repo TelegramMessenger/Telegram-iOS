@@ -27,7 +27,9 @@ static NSInteger const BITDebugBatchInterval = 3;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@implementation BITChannel
+@implementation BITChannel {
+  id _appDidEnterBackgroundObserver;
+}
 
 @synthesize persistence = _persistence;
 @synthesize channelBlocked = _channelBlocked;
@@ -47,6 +49,8 @@ NS_ASSUME_NONNULL_BEGIN
     }
     dispatch_queue_t serialQueue = dispatch_queue_create(BITDataItemsOperationsQueue, DISPATCH_QUEUE_SERIAL);
     _dataItemsOperations = serialQueue;
+    
+    [self registerObservers];
   }
   return self;
 }
@@ -57,6 +61,48 @@ NS_ASSUME_NONNULL_BEGIN
     _persistence = persistence;
   }
   return self;
+}
+
+- (void)dealloc {
+  [self unregisterObservers];
+  [self invalidateTimer];
+}
+
+#pragma mark - Observers
+
+- (void) registerObservers {
+  __weak typeof(self) weakSelf = self;
+  if(nil == _appDidEnterBackgroundObserver) {
+    void (^notificationBlock)(NSNotification *note) = ^(NSNotification *note) {
+      typeof(self) strongSelf = weakSelf;
+      if ([strongSelf timerIsRunning]) {
+        [strongSelf persistDataItemQueue];
+        
+        /**
+         * From the documentation for applicationDidEnterBackground:
+         * It's likely any background tasks you start in applicationDidEnterBackground: will not run until after that method exits,
+         * you should request additional background execution time before starting those tasks. In other words,
+         * first call beginBackgroundTaskWithExpirationHandler: and then run the task on a dispatch queue or secondary thread.
+         */
+        UIApplication *sharedApplication = [UIApplication sharedApplication];
+        __block UIBackgroundTaskIdentifier _backgroundTask = [sharedApplication beginBackgroundTaskWithExpirationHandler:^{
+          [sharedApplication endBackgroundTask:_backgroundTask];
+          _backgroundTask = UIBackgroundTaskInvalid;
+        }];
+      }
+    };
+    _appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+                                                                                       object:nil
+                                                                                        queue:NSOperationQueue.mainQueue
+                                                                                   usingBlock:notificationBlock];
+  }
+}
+
+- (void) unregisterObservers {
+  if(_appDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appDidEnterBackgroundObserver];
+    _appDidEnterBackgroundObserver = nil;
+  }
 }
 
 #pragma mark - Queue management
