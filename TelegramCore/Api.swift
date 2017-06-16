@@ -59,8 +59,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1683826688] = { return Api.Chat.parse_chatEmpty($0) }
     dict[-652419756] = { return Api.Chat.parse_chat($0) }
     dict[120753115] = { return Api.Chat.parse_chatForbidden($0) }
-    dict[-2059962289] = { return Api.Chat.parse_channelForbidden($0) }
     dict[213142300] = { return Api.Chat.parse_channel($0) }
+    dict[681420594] = { return Api.Chat.parse_channelForbidden($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
     dict[-613092008] = { return Api.ChatInvite.parse_chatInvite($0) }
     dict[1678812626] = { return Api.StickerSetCovered.parse_stickerSetCovered($0) }
@@ -3554,8 +3554,8 @@ public struct Api {
         case chatEmpty(id: Int32)
         case chat(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?)
         case chatForbidden(id: Int32, title: String)
-        case channelForbidden(flags: Int32, id: Int32, accessHash: Int64, title: String)
         case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?, adminRights: Api.ChannelAdminRights?, bannedRights: Api.ChannelBannedRights?)
+        case channelForbidden(flags: Int32, id: Int32, accessHash: Int64, title: String, untilDate: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -3585,15 +3585,6 @@ public struct Api {
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     break
-                case .channelForbidden(let flags, let id, let accessHash, let title):
-                    if boxed {
-                        buffer.appendInt32(-2059962289)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    break
                 case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights):
                     if boxed {
                         buffer.appendInt32(213142300)
@@ -3609,6 +3600,16 @@ public struct Api {
                     if Int(flags) & Int(1 << 9) != 0 {serializeString(restrictionReason!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 14) != 0 {adminRights!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 15) != 0 {bannedRights!.serialize(buffer, true)}
+                    break
+                case .channelForbidden(let flags, let id, let accessHash, let title, let untilDate):
+                    if boxed {
+                        buffer.appendInt32(681420594)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 16) != 0 {serializeInt32(untilDate!, buffer: buffer, boxed: false)}
                     break
     }
     return true
@@ -3675,26 +3676,6 @@ public struct Api {
                 return nil
             }
         }
-        fileprivate static func parse_channelForbidden(_ reader: BufferReader) -> Chat? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: String?
-            _4 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Chat.channelForbidden(flags: _1!, id: _2!, accessHash: _3!, title: _4!)
-            }
-            else {
-                return nil
-            }
-        }
         fileprivate static func parse_channel(_ reader: BufferReader) -> Chat? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -3742,6 +3723,29 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_channelForbidden(_ reader: BufferReader) -> Chat? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 16) != 0 {_5 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 16) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Chat.channelForbidden(flags: _1!, id: _2!, accessHash: _3!, title: _4!, untilDate: _5)
+            }
+            else {
+                return nil
+            }
+        }
     
         public var description: String {
             get {
@@ -3752,10 +3756,10 @@ public struct Api {
                         return "(chat flags: \(flags), id: \(id), title: \(title), photo: \(photo), participantsCount: \(participantsCount), date: \(date), version: \(version), migratedTo: \(migratedTo))"
                     case .chatForbidden(let id, let title):
                         return "(chatForbidden id: \(id), title: \(title))"
-                    case .channelForbidden(let flags, let id, let accessHash, let title):
-                        return "(channelForbidden flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title))"
                     case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights):
                         return "(channel flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title), username: \(username), photo: \(photo), date: \(date), version: \(version), restrictionReason: \(restrictionReason), adminRights: \(adminRights), bannedRights: \(bannedRights))"
+                    case .channelForbidden(let flags, let id, let accessHash, let title, let untilDate):
+                        return "(channelForbidden flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title), untilDate: \(untilDate))"
                 }
             }
         }

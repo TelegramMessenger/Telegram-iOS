@@ -24,6 +24,7 @@ public func removePeerChat(postbox: Postbox, peerId: PeerId, reportChatSpam: Boo
             }
             modifier.clearHistory(peerId)
             modifier.updatePeerChatListInclusion(peerId, inclusion: .never)
+            modifier.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
         } else {
             cloudChatAddRemoveChatOperation(modifier: modifier, peerId: peerId, reportChatSpam: reportChatSpam)
             if peerId.namespace == Namespaces.Peer.CloudUser  {

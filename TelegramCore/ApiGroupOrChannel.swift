@@ -91,7 +91,7 @@ public func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             }
             
             return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: date, version: version, participationStatus: participationStatus, info: info, flags: channelFlags, restrictionInfo: restrictionInfo, adminRights: adminRights.flatMap(TelegramChannelAdminRights.init), bannedRights: bannedRights.flatMap(TelegramChannelBannedRights.init))
-        case let .channelForbidden(flags, id, accessHash, title):
+        case let .channelForbidden(flags, id, accessHash, title, untilDate):
             let info: TelegramChannelInfo
             if (flags & Int32(1 << 8)) != 0 {
                 info = .group(TelegramChannelGroupInfo(flags: []))
@@ -99,7 +99,7 @@ public func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 info = .broadcast(TelegramChannelBroadcastInfo(flags: []))
             }
             
-            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .kicked, info: info, flags: TelegramChannelFlags(), restrictionInfo: nil, adminRights: nil, bannedRights: TelegramChannelBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .kicked, info: info, flags: TelegramChannelFlags(), restrictionInfo: nil, adminRights: nil, bannedRights: TelegramChannelBannedRights(flags: [.banReadMessages], untilDate: untilDate ?? Int32.max))
     }
 }
 
