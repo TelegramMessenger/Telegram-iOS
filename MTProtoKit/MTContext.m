@@ -341,7 +341,7 @@
     }];
 }
 
-- (void)updateAddressSetForDatacenterWithId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet
+- (void)updateAddressSetForDatacenterWithId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet forceUpdateSchemes:(bool)forceUpdateSchemes
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
@@ -364,10 +364,20 @@
                     [listener contextDatacenterAddressSetUpdated:self datacenterId:datacenterId addressSet:addressSet];
             }
             
-            if (previousAddressSetWasEmpty)
+            if (previousAddressSetWasEmpty || forceUpdateSchemes)
             {
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:false] media:false];
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:true] media:true];
+            }
+            
+            if (forceUpdateSchemes) {
+                id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
+                if (disposable != nil) {
+                    [disposable dispose];
+                    [_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
+                    
+                    [self transportSchemeForDatacenterWithIdRequired:datacenterId media:false];
+                }
             }
         }
     }];
@@ -891,7 +901,11 @@
         
         if (_backupAddressListDisposable == nil && _discoverBackupAddressListSignal != nil) {
             __weak MTContext *weakSelf = self;
-            _backupAddressListDisposable = [[[_discoverBackupAddressListSignal delay:30.0 onQueue:[MTQueue mainQueue]] onDispose:^{
+            double delay = 20.0f;
+#ifdef DEBUG
+            delay = 5.0;
+#endif
+            _backupAddressListDisposable = [[[_discoverBackupAddressListSignal delay:delay onQueue:[MTQueue mainQueue]] onDispose:^{
                 __strong MTContext *strongSelf = weakSelf;
                 if (strongSelf != nil) {
                     [strongSelf->_backupAddressListDisposable dispose];

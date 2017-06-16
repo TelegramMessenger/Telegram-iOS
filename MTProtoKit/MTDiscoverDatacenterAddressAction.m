@@ -145,7 +145,7 @@
     if (addressList.count != 0)
     {
         MTContext *context = _context;
-        [context updateAddressSetForDatacenterWithId:_datacenterId addressSet:[[MTDatacenterAddressSet alloc] initWithAddressList:addressList]];
+        [context updateAddressSetForDatacenterWithId:_datacenterId addressSet:[[MTDatacenterAddressSet alloc] initWithAddressList:addressList] forceUpdateSchemes:false];
         [self complete];
     }
     else
