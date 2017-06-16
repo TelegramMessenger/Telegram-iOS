@@ -1356,8 +1356,23 @@ public final class Postbox {
             if let updatedPeer = update(currentPeer, peer) {
                 self.peerTable.set(updatedPeer)
                 self.currentUpdatedPeers[updatedPeer.id] = updatedPeer
-                if currentPeer?.indexName != updatedPeer.indexName {
-                    self.peerNameIndexTable.markPeerNameUpdated(peerId: peer.id, name: updatedPeer.indexName)
+                var previousIndexNameWasEmpty = true
+                
+                if let currentPeer = currentPeer {
+                    if !currentPeer.indexName.isEmpty {
+                        previousIndexNameWasEmpty = false
+                    }
+                }
+                
+                let indexNameIsEmpty = updatedPeer.indexName.isEmpty
+                
+                if !previousIndexNameWasEmpty || !indexNameIsEmpty {
+                    if currentPeer?.indexName != updatedPeer.indexName {
+                        self.peerNameIndexTable.markPeerNameUpdated(peerId: peer.id, name: updatedPeer.indexName)
+                        for reverseAssociatedPeerId in self.reverseAssociatedPeerTable.get(peerId: peer.id) {
+                            self.peerNameIndexTable.markPeerNameUpdated(peerId: reverseAssociatedPeerId, name: updatedPeer.indexName)
+                        }
+                    }
                 }
             }
         }
@@ -1800,30 +1815,41 @@ public final class Postbox {
         } |> switchToLatest
     }
     
-    public func searchPeers(query: String) -> Signal<[Peer], NoError> {
-        return self.modify { modifier -> Signal<[Peer], NoError> in
+    public func searchPeers(query: String) -> Signal<[RenderedPeer], NoError> {
+        return self.modify { modifier -> Signal<[RenderedPeer], NoError> in
             var peerIds = Set<PeerId>()
-            var chatPeers: [Peer] = []
+            var chatPeers: [RenderedPeer] = []
             
             let (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable, reverseAssociatedPeerTable: self.reverseAssociatedPeerTable)
             
             for peerId in chatPeerIds {
                 if let peer = self.peerTable.get(peerId) {
-                    chatPeers.append(peer)
+                    var peers = SimpleDictionary<PeerId, Peer>()
+                    peers[peer.id] = peer
+                    if let associatedPeerId = peer.associatedPeerId {
+                        if let associatedPeer = self.peerTable.get(associatedPeerId) {
+                            peers[associatedPeer.id] = associatedPeer
+                        }
+                    }
+                    chatPeers.append(RenderedPeer(peerId: peer.id, peers: peers))
                     peerIds.insert(peerId)
                 }
             }
             
-            var contactPeers: [Peer] = []
+            var contactPeers: [RenderedPeer] = []
             for peerId in contactPeerIds {
                 if !peerIds.contains(peerId) {
                     if let peer = self.peerTable.get(peerId) {
-                        contactPeers.append(peer)
+                        var peers = SimpleDictionary<PeerId, Peer>()
+                        peers[peer.id] = peer
+                        contactPeers.append(RenderedPeer(peerId: peer.id, peers: peers))
                     }
                 }
             }
             
-            contactPeers.sort(by: { $0.indexName.indexName(.lastNameFirst) < $1.indexName.indexName(.lastNameFirst) })
+            contactPeers.sort(by: { lhs, rhs in
+                lhs.peers[lhs.peerId]!.indexName.indexName(.lastNameFirst) < rhs.peers[rhs.peerId]!.indexName.indexName(.lastNameFirst)
+            })
             return .single(chatPeers + contactPeers)
         } |> switchToLatest
     }

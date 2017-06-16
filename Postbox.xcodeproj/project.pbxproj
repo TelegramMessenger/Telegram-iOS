@@ -1267,10 +1267,11 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
-					"-DSQLITE_TEMP_STORE=2",
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_ENABLE_FTS3",
+					"-DSQLITE_OMIT_DEPRECATED",
+					"-DSQLITE_ENABLE_FTS5",
+					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1394,10 +1395,11 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
-					"-DSQLITE_TEMP_STORE=2",
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_ENABLE_FTS3",
+					"-DSQLITE_OMIT_DEPRECATED",
+					"-DSQLITE_ENABLE_FTS5",
+					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1642,10 +1644,11 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
-					"-DSQLITE_TEMP_STORE=2",
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_ENABLE_FTS3",
+					"-DSQLITE_OMIT_DEPRECATED",
+					"-DSQLITE_ENABLE_FTS5",
+					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
@@ -1675,10 +1678,11 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
-					"-DSQLITE_TEMP_STORE=2",
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_ENABLE_FTS3",
+					"-DSQLITE_OMIT_DEPRECATED",
+					"-DSQLITE_ENABLE_FTS5",
+					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";

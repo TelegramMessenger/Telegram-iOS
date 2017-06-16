@@ -3,6 +3,7 @@ import Foundation
 struct ChatListInclusionIndex {
     let topMessageIndex: MessageIndex?
     let inclusion: PeerChatListInclusion
+    var tags: [UInt16]?
     
     func includedIndex(peerId: PeerId) -> ChatListIndex? {
         switch inclusion {
@@ -30,6 +31,17 @@ struct ChatListInclusionIndex {
                 }
         }
     }
+}
+
+private struct ChatListIndexFlags: OptionSet {
+    var rawValue: Int8
+    
+    init(rawValue: Int8) {
+        self.rawValue = rawValue
+    }
+    
+    static let hasIndex = ChatListIndexFlags(rawValue: 1 << 0)
+    static let hasTags = ChatListIndexFlags(rawValue: 1 << 1)
 }
 
 final class ChatListIndexTable: Table {
@@ -66,7 +78,7 @@ final class ChatListIndexTable: Table {
         if self.updatedPreviousCachedIndices[peerId] == nil {
             self.updatedPreviousCachedIndices[peerId] = current
         }
-        let updated = ChatListInclusionIndex(topMessageIndex: index, inclusion: current.inclusion)
+        let updated = ChatListInclusionIndex(topMessageIndex: index, inclusion: current.inclusion, tags: current.tags)
         self.cachedIndices[peerId] = updated
         return updated
     }
@@ -76,7 +88,7 @@ final class ChatListIndexTable: Table {
         if self.updatedPreviousCachedIndices[peerId] == nil {
             self.updatedPreviousCachedIndices[peerId] = current
         }
-        let updated = ChatListInclusionIndex(topMessageIndex: current.topMessageIndex, inclusion: inclusion)
+        let updated = ChatListInclusionIndex(topMessageIndex: current.topMessageIndex, inclusion: inclusion, tags: current.tags)
         self.cachedIndices[peerId] = updated
         return updated
     }
@@ -88,9 +100,11 @@ final class ChatListIndexTable: Table {
             if let value = self.valueBox.get(self.table, key: self.key(peerId)) {
                 let topMessageIndex: MessageIndex?
                 
-                var hasIndex: Int8 = 0
-                value.read(&hasIndex, offset: 0, length: 1)
-                if hasIndex != 0 {
+                var flagsValue: Int8 = 0
+                value.read(&flagsValue, offset: 0, length: 1)
+                let flags = ChatListIndexFlags(rawValue: flagsValue)
+                
+                if flags.contains(.hasIndex) {
                     var idNamespace: Int32 = 0
                     var idId: Int32 = 0
                     var idTimestamp: Int32 = 0
@@ -131,11 +145,24 @@ final class ChatListIndexTable: Table {
                     preconditionFailure()
                 }
                 
-                let inclusionIndex = ChatListInclusionIndex(topMessageIndex: topMessageIndex, inclusion: inclusion)
+                var tags: [UInt16]?
+                if flags.contains(.hasTags) {
+                    var count: UInt16 = 0
+                    value.read(&count, offset: 0, length: 2)
+                    var resultTags: [UInt16] = []
+                    for _ in 0 ..< Int(count) {
+                        var tag: UInt16 = 0
+                        value.read(&tag, offset: 0, length: 2)
+                        resultTags.append(tag)
+                    }
+                    tags = resultTags
+                }
+                
+                let inclusionIndex = ChatListInclusionIndex(topMessageIndex: topMessageIndex, inclusion: inclusion, tags: tags)
                 self.cachedIndices[peerId] = inclusionIndex
                 return inclusionIndex
             } else {
-                return ChatListInclusionIndex(topMessageIndex: nil, inclusion: .notSpecified)
+                return ChatListInclusionIndex(topMessageIndex: nil, inclusion: .notSpecified, tags: nil)
             }
         }
     }
@@ -162,18 +189,26 @@ final class ChatListIndexTable: Table {
                 
                 let writeBuffer = WriteBuffer()
                 
+                var flags: ChatListIndexFlags = []
+                
+                if index.topMessageIndex != nil {
+                    flags.insert(.hasIndex)
+                }
+                
+                if index.tags != nil {
+                    flags.insert(.hasTags)
+                }
+                
+                var flagsValue = flags.rawValue
+                writeBuffer.write(&flagsValue, offset: 0, length: 1)
+                
                 if let topMessageIndex = index.topMessageIndex {
-                    var hasIndex: Int8 = 1
-                    writeBuffer.write(&hasIndex, offset: 0, length: 1)
                     var idNamespace: Int32 = topMessageIndex.id.namespace
                     var idId: Int32 = topMessageIndex.id.id
                     var idTimestamp: Int32 = topMessageIndex.timestamp
                     writeBuffer.write(&idNamespace, offset: 0, length: 4)
                     writeBuffer.write(&idId, offset: 0, length: 4)
                     writeBuffer.write(&idTimestamp, offset: 0, length: 4)
-                } else {
-                    var hasIndex: Int8 = 0
-                    writeBuffer.write(&hasIndex, offset: 0, length: 1)
                 }
                 
                 switch index.inclusion {
@@ -203,6 +238,16 @@ final class ChatListIndexTable: Table {
                             var hasMinTimestamp: Int8 = 0
                             writeBuffer.write(&hasMinTimestamp, offset: 0, length: 1)
                         }
+                }
+                
+                if let tags = index.tags {
+                    var count = UInt16(tags.count)
+                    writeBuffer.write(&count, offset: 0, length: 2)
+                    
+                    for tag in tags {
+                        var tagValue: UInt16 = tag
+                        writeBuffer.write(&tagValue, offset: 0, length: 2)
+                    }
                 }
                 
                 withExtendedLifetime(writeBuffer, {
