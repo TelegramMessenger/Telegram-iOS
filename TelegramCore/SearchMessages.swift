@@ -93,60 +93,80 @@ public func searchMessages(account: Account, peerId: PeerId?, query: String, tag
     return processedSearchResult
 }
 
-public func downloadMessage(account: Account, message: MessageId) -> Signal<Message?, NoError> {
-    let signal: Signal<Api.messages.Messages, MTRpcError>
-    if message.peerId.namespace == Namespaces.Peer.CloudChannel {
-        signal = .complete()
-    } else {
-        signal = account.network.request(Api.functions.messages.getMessages(id: [message.id]))
+
+public func downloadMessage(account: Account, messageId: MessageId) -> Signal<Message?, NoError> {
+    return account.postbox.modify { modifier -> Message? in
+        return modifier.getMessage(messageId)
+        } |> mapToSignal { message in
+            if let _ = message {
+                return .single(message)
+            } else {
+                return account.postbox.loadedPeerWithId(messageId.peerId) |> mapToSignal { peer -> Signal<Message?, NoError> in
+                    let signal: Signal<Api.messages.Messages, MTRpcError>
+                    if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
+                        if let channel = apiInputChannel(peer) {
+                            signal = account.network.request(Api.functions.channels.getMessages(channel: channel, id: [messageId.id]))
+                        } else {
+                            signal = .complete()
+                        }
+                    } else {
+                        signal = account.network.request(Api.functions.messages.getMessages(id: [messageId.id]))
+                    }
+                    
+                    return signal |> mapError {_ in} |> mapToSignal { result -> Signal<Message?, Void> in
+                        let messages: [Api.Message]
+                        let chats: [Api.Chat]
+                        let users: [Api.User]
+                        switch result {
+                        case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                        case let .messages(apiMessages, apiChats, apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                        case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                        }
+                        
+                        let postboxSignal = account.postbox.modify { modifier -> Message? in
+                            var peers: [PeerId: Peer] = [:]
+                            
+                            for user in users {
+                                if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                    peers[user.id] = user
+                                }
+                            }
+                            
+                            for chat in chats {
+                                if let groupOrChannel = mergeGroupOrChannel(lhs: modifier.getPeer(chat.peerId), rhs: chat) {
+                                    peers[groupOrChannel.id] = groupOrChannel
+                                }
+                            }
+                            
+                            var renderedMessages: [Message] = []
+                            for message in messages {
+                                if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                                    renderedMessages.append(renderedMessage)
+                                }
+                            }
+                            
+                            return renderedMessages.first
+                        }
+                        
+                        return postboxSignal
+                    }
+                    
+                    }
+                    |> `catch` { _ -> Signal<Message?, NoError> in
+                        return .single(nil)
+                }
+            }
     }
     
-    return signal
-        |> retryRequest
-        |> mapToSignal { result -> Signal<Message?, NoError> in
-            let messages: [Api.Message]
-            let chats: [Api.Chat]
-            let users: [Api.User]
-            switch result {
-                case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
-                    messages = apiMessages
-                    chats = apiChats
-                    users = apiUsers
-                case let .messages(apiMessages, apiChats, apiUsers):
-                    messages = apiMessages
-                    chats = apiChats
-                    users = apiUsers
-                case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
-                    messages = apiMessages
-                    chats = apiChats
-                    users = apiUsers
-            }
-            
-            return account.postbox.modify { modifier -> Message? in
-                var peers: [PeerId: Peer] = [:]
-                
-                for user in users {
-                    if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
-                        peers[user.id] = user
-                    }
-                }
-                
-                for chat in chats {
-                    if let groupOrChannel = mergeGroupOrChannel(lhs: modifier.getPeer(chat.peerId), rhs: chat) {
-                        peers[groupOrChannel.id] = groupOrChannel
-                    }
-                }
-                
-                var renderedMessages: [Message] = []
-                for message in messages {
-                    if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
-                        renderedMessages.append(renderedMessage)
-                    }
-                }
-                
-                return renderedMessages.first
-            }
-        }
 }
 
 public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timestamp: Int32) -> Signal<MessageId?, NoError> {
