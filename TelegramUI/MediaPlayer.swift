@@ -147,6 +147,8 @@ private final class MediaPlayerContext {
     }
     
     fileprivate func seek(timestamp: Double) {
+        assert(self.queue.isCurrent())
+        
         let action: MediaPlayerPlaybackAction
         switch self.state {
             case .empty, .paused:

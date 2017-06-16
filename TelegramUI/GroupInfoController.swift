@@ -5,8 +5,6 @@ import Postbox
 import TelegramCore
 import TelegramLegacyComponents
 
-private let addMemberPlusIcon = UIImage(bundleImageName: "Peer Info/PeerItemPlusIcon")?.precomposed()
-
 private final class GroupInfoArguments {
     let account: Account
     let peerId: PeerId
@@ -1148,6 +1146,8 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             |> mapToSignal { peer -> Signal<Bool, NoError> in
                 let result = ValuePromise<Bool>()
                 
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                
                 let actionSheet = ActionSheetController()
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: "Remove \(peer.displayTitle)?", color: .destructive, action: { [weak actionSheet] in
@@ -1156,7 +1156,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                         result.set(true)
                     })
                     ]), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])])
@@ -1220,7 +1220,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 if state.savingData {
                     rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: doneEnabled, action: {})
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: doneEnabled, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: doneEnabled, action: {
                         var updateValues: (title: String?, description: String?) = (nil, nil)
                         updateState { state in
                             updateValues = valuesRequiringUpdate(state: state, view: view)
@@ -1261,7 +1261,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     })
                 }
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                     if let peer = peer as? TelegramGroup {
                         updateState { state in
                             return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer.indexName), editingDescriptionText: ""))
@@ -1278,7 +1278,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Info"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"))
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: groupInfoEntries(account: account, presentationData: presentationData, view: view, state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))

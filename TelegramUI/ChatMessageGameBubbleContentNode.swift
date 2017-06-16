@@ -5,9 +5,9 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 
-final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
+final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
     private var item: ChatMessageItem?
-    private var webPage: TelegramMediaWebpage?
+    private var game: TelegramMediaGame?
     
     private let contentNode: ChatMessageAttachedContentNode
     
@@ -37,52 +37,41 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         let contentNodeLayout = self.contentNode.asyncLayout()
         
         return { item, layoutConstants, position, constrainedSize in
-            var webPage: TelegramMediaWebpage?
-            var webPageContent: TelegramMediaWebpageLoadedContent?
+            var game: TelegramMediaGame?
+            var messageEntities: [MessageTextEntity]?
+            
             for media in item.message.media {
-                if let media = media as? TelegramMediaWebpage {
-                    webPage = media
-                    if case let .Loaded(content) = media.content {
-                        webPageContent = content
-                    }
+                if let media = media as? TelegramMediaGame {
+                    game = media
+                    break
+                }
+            }
+            
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                    messageEntities = attribute.entities
                     break
                 }
             }
             
             var title: String?
-            var subtitle: String?
+            let subtitle: String? = nil
             var text: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
             
-            if let webpage = webPageContent {
-                if let websiteName = webpage.websiteName, !websiteName.isEmpty {
-                    title = websiteName
-                }
+            
+            if let game = game {
+                title = game.title
+                text = game.description
                 
-                if let title = webpage.title, !title.isEmpty {
-                    subtitle = title
-                }
-                
-                if let textValue = webpage.text, !textValue.isEmpty {
-                    text = textValue
-                }
-                
-                if let file = webpage.file {
-                    mediaAndFlags = (file, [])
-                } else if let image = webpage.image {
-                    if let type = webpage.type, ["photo"].contains(type) {
-                        var flags = ChatMessageAttachedContentNodeMediaFlags()
-                        if webpage.instantPage != nil {
-                            flags.insert(.preferMediaBeforeText)
-                        }
-                        mediaAndFlags = (image, flags)
-                    } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
-                        mediaAndFlags = (image, [.preferMediaInline])
-                    }
+                if let file = game.file {
+                    mediaAndFlags = (file, [.preferMediaBeforeText])
+                } else if let image = game.image {
+                    mediaAndFlags = (image, [.preferMediaBeforeText])
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, true, layoutConstants, position, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.account, item.message, item.read, title, subtitle, item.message.text.isEmpty ? text : item.message.text, item.message.text.isEmpty ? nil : messageEntities, mediaAndFlags, true, layoutConstants, position, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (refinedWidth, finalizeLayout) = continueLayout(constrainedSize)
@@ -92,7 +81,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     return (size, { [weak self] animation in
                         if let strongSelf = self {
-                            strongSelf.webPage = webPage
+                            strongSelf.game = game
                             
                             apply(animation)
                             
@@ -122,11 +111,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
         if self.bounds.contains(point) {
-            if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
+            /*if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
                 if content.instantPage != nil {
                     return .instantPage
                 }
-            }
+            }*/
         }
         return .none
     }

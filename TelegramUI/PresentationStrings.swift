@@ -1,7 +1,25 @@
 import Foundation
 
+private let fallbackDict: [String: String] = {
+    if let mainPath = Bundle.main.path(forResource: "en", ofType: "lproj"), let bundle = Bundle(path: mainPath) {
+        if let path = bundle.path(forResource: "Localizable", ofType: "strings") {
+            if let dict = NSDictionary(contentsOf: URL(fileURLWithPath: path)) as? [String: String] {
+                return dict
+            } else {
+                return [:]
+            }
+        } else {
+            return [:]
+        }
+    } else {
+        return [:]
+    }
+}()
+
 private func getValue(_ dict: [String: String], _ key: String) -> String {
     if let value = dict[key] {
+        return value
+    } else if let value = fallbackDict[key] {
         return value
     } else {
         return key
@@ -14,9 +32,9 @@ private extension PluralizationForm {
             case .zero:
                 return "_many"
             case .one:
-                return "_one"
+                return "_1"
             case .two:
-                return "_two"
+                return "_2"
             case .few:
                 return "_1_3"
             case .many:
@@ -28,6 +46,8 @@ private extension PluralizationForm {
 }
 private func getValueWithForm(_ dict: [String: String], _ key: String, _ form: PluralizationForm) -> String {
     if let value = dict[key + form.canonicalSuffix] {
+        return value
+    } else if let value = fallbackDict[key + form.canonicalSuffix] {
         return value
     }
     return key

@@ -56,19 +56,19 @@ private enum ChannelInfoEntryTag {
 
 private enum ChannelInfoEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: TelegramMediaImageRepresentation?)
-    case about(text: String)
-    case addressName(value: String)
-    case channelPhotoSetup
-    case channelTypeSetup(isPublic: Bool)
-    case channelDescriptionSetup(text: String)
-    case admins(count: Int32)
-    case members(count: Int32)
-    case banned(count: Int32)
-    case notifications(settings: PeerNotificationSettings)
-    case sharedMedia
-    case report
-    case leave
-    case deleteChannel
+    case about(theme: PresentationTheme, text: String, value: String)
+    case addressName(theme: PresentationTheme, text: String, value: String)
+    case channelPhotoSetup(theme: PresentationTheme, text: String)
+    case channelTypeSetup(theme: PresentationTheme, text: String, value: String)
+    case channelDescriptionSetup(theme: PresentationTheme, placeholder: String, value: String)
+    case admins(theme: PresentationTheme, text: String, value: String)
+    case members(theme: PresentationTheme, text: String, value: String)
+    case banned(theme: PresentationTheme, text: String, value: String)
+    case notifications(theme: PresentationTheme, text: String, value: String)
+    case sharedMedia(theme: PresentationTheme, text: String)
+    case report(theme: PresentationTheme, text: String)
+    case leave(theme: PresentationTheme, text: String)
+    case deleteChannel(theme: PresentationTheme, text: String)
     
     var section: ItemListSectionId {
         switch self {
@@ -150,59 +150,81 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .about(text):
-                if case .about(text) = rhs {
+            case let .about(lhsTheme, lhsText, lhsValue):
+                if case let .about(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .addressName(value):
-                if case .addressName(value) = rhs {
+            case let .addressName(lhsTheme, lhsText, lhsValue):
+                if case let .addressName(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case .channelPhotoSetup:
-                if case .channelPhotoSetup = rhs {
+            case let .channelPhotoSetup(lhsTheme, lhsText):
+                if case let .channelPhotoSetup(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .channelTypeSetup(isPublic):
-                if case .channelTypeSetup(isPublic) = rhs {
+            case let .channelTypeSetup(lhsTheme, lhsText, lhsValue):
+                if case let .channelTypeSetup(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .channelDescriptionSetup(text):
-                if case .channelDescriptionSetup(text) = rhs {
+            case let .channelDescriptionSetup(lhsTheme, lhsPlaceholder, lhsValue):
+                if case let .channelDescriptionSetup(rhsTheme, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .admins(count):
-                if case .admins(count) = rhs {
+            case let .admins(lhsTheme, lhsText, lhsValue):
+                if case let .admins(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .members(count):
-                if case .members(count) = rhs {
+            case let .members(lhsTheme, lhsText, lhsValue):
+                if case let .members(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .banned(count):
-                if case .banned(count) = rhs {
+            case let .banned(lhsTheme, lhsText, lhsValue):
+                if case let .banned(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case .sharedMedia, .report, .leave, .deleteChannel:
-                return lhs.stableId == rhs.stableId
-            case let .notifications(lhsSettings):
-                if case let .notifications(rhsSettings) = rhs {
-                    return lhsSettings.isEqual(to: rhsSettings)
+            case let .sharedMedia(lhsTheme, lhsText):
+                if case let .sharedMedia(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .report(lhsTheme, lhsText):
+                if case let .report(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .leave(lhsTheme, lhsText):
+                if case let .leave(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .deleteChannel(lhsTheme, lhsText):
+                if case let .deleteChannel(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .notifications(lhsTheme, lhsText, lhsValue):
+                if case let .notifications(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
                 } else {
                     return false
                 }
@@ -221,62 +243,56 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
-            case let .about(text):
-                return ItemListTextWithLabelItem(theme: defaultPresentationTheme, label: "about", text: text, multiline: true, sectionId: self.section, action: nil)
-            case let .addressName(value):
-                return ItemListTextWithLabelItem(theme: defaultPresentationTheme, label: "share link", text: "https://t.me/\(value)", multiline: false, sectionId: self.section, action: {
+            case let .about(theme, text, value):
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: value, multiline: true, sectionId: self.section, action: nil)
+            case let .addressName(theme, text, value):
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: "https://t.me/\(value)", multiline: false, sectionId: self.section, action: {
                     arguments.displayAddressNameContextMenu("https://t.me/\(value)")
                 }, tag: ChannelInfoEntryTag.addressName)
-            case .channelPhotoSetup:
-                return ItemListActionItem(title: "Set Channel Photo", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+            case let .channelPhotoSetup(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.changeProfilePhoto()
                 })
-            case let .channelTypeSetup(isPublic):
-                return ItemListDisclosureItem(title: "Channel Type", label: isPublic ? "Public" : "Private", sectionId: self.section, style: .plain, action: {
+            case let .channelTypeSetup(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openChannelTypeSetup()
                 })
-            case let .channelDescriptionSetup(text):
-                return ItemListMultilineInputItem(theme: defaultPresentationTheme, text: text, placeholder: "Channel Description", sectionId: self.section, style: .plain, textUpdated: { updatedText in
+            case let .channelDescriptionSetup(theme, placeholder, value):
+                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, sectionId: self.section, style: .plain, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
                 })
-            case let .admins(count):
-                return ItemListDisclosureItem(title: "Admins", label: "\(count)", sectionId: self.section, style: .plain, action: {
+            case let .admins(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openAdmins()
                 })
-            case let .members(count):
-                return ItemListDisclosureItem(title: "Members", label: "\(count)", sectionId: self.section, style: .plain, action: {
+            case let .members(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openMembers()
                 })
-            case let .banned(count):
-                return ItemListDisclosureItem(title: "Blacklist", label: "\(count)", sectionId: self.section, style: .plain, action: {
+            case let .banned(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openBanned()
                 })
-            case .sharedMedia:
-                return ItemListDisclosureItem(title: "Shared Media", label: "", sectionId: self.section, style: .plain, action: {
+            case let .sharedMedia(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .plain, action: {
                     arguments.openSharedMedia()
                 })
-            case let .notifications(settings):
-                let label: String
-                if let settings = settings as? TelegramPeerNotificationSettings, case .muted = settings.muteState {
-                    label = "Disabled"
-                } else {
-                    label = "Enabled"
-                }
-                return ItemListDisclosureItem(title: "Notifications", label: label, sectionId: self.section, style: .plain, action: {
+            case let .notifications(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.changeNotificationMuteSettings()
                 })
-            case .report:
-                return ItemListActionItem(title: "Report", kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+            case let .report(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.reportChannel()
                 })
-            case .leave:
-                return ItemListActionItem(title: "Leave Channel", kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
+            case let .leave(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.leaveChannel()
                 })
-            case .deleteChannel:
-                return ItemListActionItem(title: "Delete Channel", kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
+            case let .deleteChannel(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.deleteChannel()
                 })
         }
@@ -357,53 +373,65 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
         entries.append(.info(presentationData.theme, presentationData.strings, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
         
         if state.editingState != nil && canEditChannel {
-            entries.append(.channelPhotoSetup)
+            entries.append(.channelPhotoSetup(theme: presentationData.theme, text: presentationData.strings.Channel_UpdatePhotoItem))
         }
         
         if let cachedChannelData = view.cachedData as? CachedChannelData {
             if let editingState = state.editingState, canEditChannel {
-                entries.append(.channelDescriptionSetup(text: editingState.editingDescriptionText))
+                entries.append(.channelDescriptionSetup(theme: presentationData.theme, placeholder: presentationData.strings.Channel_Edit_AboutItem, value: editingState.editingDescriptionText))
             } else {
                 if let about = cachedChannelData.about, !about.isEmpty {
-                    entries.append(.about(text: about))
+                    entries.append(.about(theme: presentationData.theme, text: presentationData.strings.Channel_AboutItem, value: about))
                 }
             }
         }
         
         if state.editingState != nil && peer.flags.contains(.isCreator) {
-            entries.append(.channelTypeSetup(isPublic: isPublic))
+            let linkText: String
+            if let username = peer.username {
+                linkText = "@\(username)"
+            } else {
+                linkText = presentationData.strings.Channel_Setup_TypePrivate
+            }
+            entries.append(.channelTypeSetup(theme: presentationData.theme, text: presentationData.strings.Channel_Edit_LinkItem, value: linkText))
         } else if let username = peer.username, !username.isEmpty {
-            entries.append(.addressName(value: username))
+            entries.append(.addressName(theme: presentationData.theme, text: presentationData.strings.Channel_LinkItem, value: username))
         }
         
         if let cachedChannelData = view.cachedData as? CachedChannelData {
             if state.editingState != nil && canEditMembers {
-                if let bannedCount = cachedChannelData.participantsSummary.bannedCount {
-                    entries.append(.banned(count: bannedCount))
+                if let kickedCount = cachedChannelData.participantsSummary.kickedCount {
+                    entries.append(.banned(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Banned, value: "\(kickedCount)"))
                 }
             } else {
                 if let adminCount = cachedChannelData.participantsSummary.adminCount {
-                    entries.append(.admins(count: adminCount))
+                    entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Management, value: "\(adminCount)"))
                 }
                 if let memberCount = cachedChannelData.participantsSummary.memberCount {
-                    entries.append(.members(count: memberCount))
+                    entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Members, value: "\(memberCount)"))
                 }
             }
         }
         
-        if let notificationSettings = view.notificationSettings {
-            entries.append(ChannelInfoEntry.notifications(settings: notificationSettings))
+        if let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings {
+            let notificationsText: String
+            if case .muted = notificationSettings.muteState {
+                notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
+            } else {
+                notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
+            }
+            entries.append(ChannelInfoEntry.notifications(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Notifications, value: notificationsText))
         }
-        entries.append(ChannelInfoEntry.sharedMedia)
+        entries.append(ChannelInfoEntry.sharedMedia(theme: presentationData.theme, text: presentationData.strings.GroupInfo_SharedMedia))
         
         if peer.flags.contains(.isCreator) {
             if state.editingState != nil {
-                entries.append(ChannelInfoEntry.deleteChannel)
+                entries.append(ChannelInfoEntry.deleteChannel(theme: presentationData.theme, text: presentationData.strings.ChannelInfo_DeleteChannel))
             }
         } else {
-            entries.append(ChannelInfoEntry.report)
+            entries.append(ChannelInfoEntry.report(theme: presentationData.theme, text: presentationData.strings.ReportPeer_Report))
             if peer.participationStatus == .member {
-                entries.append(ChannelInfoEntry.leave)
+                entries.append(ChannelInfoEntry.leave(theme: presentationData.theme, text: presentationData.strings.Channel_LeaveChannel))
             }
         }
     }
@@ -552,6 +580,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }, openChannelTypeSetup: {
         presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .generic), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
     }, changeNotificationMuteSettings: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController()
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -567,30 +596,30 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             }
             changeMuteSettingsDisposable.set(changePeerNotificationSettings(account: account, peerId: peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
         }
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, action: {
+            dismissAction()
+            notificationAction(0)
+        }))
+        let intervals: [Int32] = [
+            1 * 60 * 60,
+            8 * 60 * 60,
+            2 * 24 * 60 * 60
+        ]
+        for value in intervals {
+            items.append(ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: value), action: {
+                dismissAction()
+                notificationAction(value)
+            }))
+        }
+        items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDisable, action: {
+            dismissAction()
+            notificationAction(Int32.max)
+        }))
+        
         controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Enable", action: {
-                    dismissAction()
-                    notificationAction(0)
-                }),
-                ActionSheetButtonItem(title: "Mute for 1 hour", action: {
-                    dismissAction()
-                    notificationAction(1 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: "Mute for 8 hours", action: {
-                    dismissAction()
-                    notificationAction(8 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: "Mute for 2 days", action: {
-                    dismissAction()
-                    notificationAction(2 * 24 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: "Disable", action: {
-                    dismissAction()
-                    notificationAction(Int32.max)
-                })
-                ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ActionSheetItemGroup(items: items),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openSharedMedia: {
@@ -606,20 +635,21 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }, reportChannel: {
         
     }, leaveChannel: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController()
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Leave Channel", action: {
+                ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, action: {
                     let _ = removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false).start()
                     dismissAction()
                     popToRootControllerImpl?()
                 }),
             ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
-            ])
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, deleteChannel: {
         
@@ -643,7 +673,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             var leftNavigationButton: ItemListNavigationButton?
             var rightNavigationButton: ItemListNavigationButton?
             if let editingState = state.editingState {
-                leftNavigationButton = ItemListNavigationButton(title: "Cancel", style: .regular, enabled: true, action: {
+                leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
                     updateState {
                         $0.withUpdatedEditingState(nil)
                     }
@@ -662,7 +692,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 if state.savingData {
                     rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: doneEnabled, action: {})
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: doneEnabled, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: doneEnabled, action: {
                         var updateValues: (title: String?, description: String?) = (nil, nil)
                         updateState { state in
                             updateValues = valuesRequiringUpdate(state: state, view: view)
@@ -703,7 +733,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                     })
                 }
             } else if canManageChannel {
-                rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         var text = ""
                         if let cachedData = view.cachedData as? CachedChannelData, let about = cachedData.about {
@@ -716,7 +746,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Info"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
             let listState = ItemListNodeState(entries: channelInfoEntries(account: account, presentationData: presentationData, view: view, state: state), style: .plain)
             
             return (controllerState, (listState, arguments))
@@ -737,6 +767,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }
     displayAddressNameContextMenuImpl = { [weak controller] text in
         if let strongController = controller {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             var resultItemNode: ListViewItemNode?
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
@@ -750,7 +781,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 return false
             })
             if let resultItemNode = resultItemNode {
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text("Copy"), action: {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(presentationData.strings.Conversation_ContextMenuCopy), action: {
                     UIPasteboard.general.string = text
                 })])
                 strongController.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in

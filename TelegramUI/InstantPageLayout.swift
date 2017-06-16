@@ -128,7 +128,7 @@ func layoutInstantPageBlock(_ block: InstantPageBlock, boundingWidth: CGFloat, h
             } else {
                 return InstantPageLayout(origin: CGPoint(), contentSize: CGSize(), items: [])
             }
-        case let .webEmbed(url, html, dimensions, caption, stretchToWidth, allowScrolling):
+        case let .webEmbed(url, html, dimensions, caption, stretchToWidth, allowScrolling, coverId):
             var embedBoundingWidth = boundingWidth - horizontalInset * 2.0
             if stretchToWidth {
                 embedBoundingWidth = boundingWidth

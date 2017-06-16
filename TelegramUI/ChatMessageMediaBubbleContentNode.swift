@@ -59,7 +59,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             
             let initialImageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
             
-            let (initialWidth, _, refineLayout) = interactiveImageLayout(item.account, item, selectedMedia!, initialImageCorners, item.account.settings.automaticDownloadSettingsForPeerId(item.peerId).downloadPhotos, CGSize(width: constrainedSize.width, height: constrainedSize.height), layoutConstants)
+            let (initialWidth, _, refineLayout) = interactiveImageLayout(item.account, item.theme, item.strings, item.message, selectedMedia!, initialImageCorners, item.account.settings.automaticDownloadSettingsForPeerId(item.peerId).downloadPhotos, CGSize(width: constrainedSize.width, height: constrainedSize.height), layoutConstants)
             
             return (initialWidth + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, { constrainedSize in
                 let (refinedWidth, finishLayout) = refineLayout(constrainedSize)

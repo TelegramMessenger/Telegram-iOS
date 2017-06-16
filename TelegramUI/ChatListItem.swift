@@ -363,171 +363,175 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            if true {
-                let peer: Peer?
-                
-                var messageText: String
-                if let message = message {
-                    if let messageMain = messageMainPeer(message) {
-                        peer = messageMain
-                    } else {
-                        peer = item.peer.chatMainPeer
-                    }
-                    
-                    messageText = message.text
-                    if message.text.isEmpty {
-                        for media in message.media {
-                            switch media {
-                                case _ as TelegramMediaImage:
-                                    if message.text.isEmpty {
-                                        messageText = item.strings.Message_Photo
-                                    }
-                                case let fileMedia as TelegramMediaFile:
-                                    if message.text.isEmpty {
-                                        if let fileName = fileMedia.fileName {
-                                            messageText = fileName
-                                        } else {
-                                            messageText = item.strings.Message_File
-                                        }
-                                        inner: for attribute in fileMedia.attributes {
-                                            switch attribute {
-                                                case .Animated:
-                                                    messageText = item.strings.Message_Animation
-                                                    break inner
-                                                case let .Audio(isVoice, _, title, performer, _):
-                                                    if isVoice {
-                                                        messageText = item.strings.Message_Audio
-                                                        break inner
-                                                    } else {
-                                                        let descriptionString: String
-                                                        if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                                            descriptionString = title + " — " + performer
-                                                        } else if let title = title, !title.isEmpty {
-                                                            descriptionString = title
-                                                        } else if let performer = performer, !performer.isEmpty {
-                                                            descriptionString = performer
-                                                        } else if let fileName = fileMedia.fileName {
-                                                            descriptionString = fileName
-                                                        } else {
-                                                            descriptionString = item.strings.Message_Audio
-                                                        }
-                                                        messageText = descriptionString
-                                                        break inner
-                                                    }
-                                                case let .Sticker(displayText, _):
-                                                    if displayText.isEmpty {
-                                                        messageText = item.strings.Message_Sticker
-                                                        break inner
-                                                    } else {
-                                                        messageText = displayText + " " + item.strings.Message_Sticker
-                                                        break inner
-                                                    }
-                                                case let .Video(_, _, flags):
-                                                    if flags.contains(.instantRoundVideo) {
-                                                        messageText = item.strings.Message_VideoMessage
-                                                    } else {
-                                                        messageText = item.strings.Message_Video
-                                                    }
-                                                    break inner
-                                                default:
-                                                    break
-                                            }
-                                        }
-                                    }
-                                case _ as TelegramMediaMap:
-                                    messageText = item.strings.Message_Location
-                                case _ as TelegramMediaContact:
-                                    messageText = item.strings.Message_Contact
-                                case let action as TelegramMediaAction:
-                                    switch action.action {
-                                        case .phoneCall:
-                                            if message.effectivelyIncoming {
-                                                messageText = item.strings.Notification_CallIncoming
-                                            } else {
-                                                messageText = item.strings.Notification_CallOutgoing
-                                            }
-                                        default:
-                                            if let text = serviceMessageString(theme: item.theme, strings: item.strings, message: message, accountPeerId: item.account.peerId) {
-                                                messageText = text.string
-                                            }
-                                    }
-                                default:
-                                    break
-                            }
-                        }
-                    }
+            let peer: Peer?
+            
+            var hideAuthor = false
+            var messageText: String
+            if let message = message {
+                if let messageMain = messageMainPeer(message) {
+                    peer = messageMain
                 } else {
                     peer = item.peer.chatMainPeer
-                    messageText = ""
                 }
                 
-                let attributedText: NSAttributedString
-                if let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
-                    authorAttributedString = NSAttributedString(string: item.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
-                    
-                    attributedText = NSAttributedString(string: embeddedState.text, font: textFont, textColor: theme.messageTextColor)
-                } else if let message = message, let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
-                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                        attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: theme.messageTextColor)
-                    } else {
-                        let peerText: String = author.id == account.peerId ? item.strings.DialogList_You : author.displayTitle
-                        
-                        authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
-                        attributedText = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
-                    }
-                } else {
-                    attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: theme.messageTextColor)
-                }
-                
-                if let displayTitle = peer?.displayTitle {
-                    titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
-                }
-                
-                textAttributedString = attributedText
-                
-                var t = Int(item.index.messageIndex.timestamp)
-                var timeinfo = tm()
-                localtime_r(&t, &timeinfo)
-                
-                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.index.messageIndex.timestamp, relativeTo: timestamp)
-                
-                dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: theme.dateTextColor)
-                
-                if let message = message, message.author?.id == account.peerId {
-                    if !message.flags.isSending {
-                        if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(MessageIndex(message)) {
-                            statusImage = PresentationResourcesChatList.doubleCheckImage(item.theme)
-                        } else {
-                            statusImage = PresentationResourcesChatList.singleCheckImage(item.theme)
+                messageText = message.text
+                if message.text.isEmpty {
+                    for media in message.media {
+                        switch media {
+                            case _ as TelegramMediaImage:
+                                if message.text.isEmpty {
+                                    messageText = item.strings.Message_Photo
+                                }
+                            case let fileMedia as TelegramMediaFile:
+                                if message.text.isEmpty {
+                                    if let fileName = fileMedia.fileName {
+                                        messageText = fileName
+                                    } else {
+                                        messageText = item.strings.Message_File
+                                    }
+                                    inner: for attribute in fileMedia.attributes {
+                                        switch attribute {
+                                            case .Animated:
+                                                messageText = item.strings.Message_Animation
+                                                break inner
+                                            case let .Audio(isVoice, _, title, performer, _):
+                                                if isVoice {
+                                                    messageText = item.strings.Message_Audio
+                                                    break inner
+                                                } else {
+                                                    let descriptionString: String
+                                                    if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+                                                        descriptionString = title + " — " + performer
+                                                    } else if let title = title, !title.isEmpty {
+                                                        descriptionString = title
+                                                    } else if let performer = performer, !performer.isEmpty {
+                                                        descriptionString = performer
+                                                    } else if let fileName = fileMedia.fileName {
+                                                        descriptionString = fileName
+                                                    } else {
+                                                        descriptionString = item.strings.Message_Audio
+                                                    }
+                                                    messageText = descriptionString
+                                                    break inner
+                                                }
+                                            case let .Sticker(displayText, _):
+                                                if displayText.isEmpty {
+                                                    messageText = item.strings.Message_Sticker
+                                                    break inner
+                                                } else {
+                                                    messageText = displayText + " " + item.strings.Message_Sticker
+                                                    break inner
+                                                }
+                                            case let .Video(_, _, flags):
+                                                if flags.contains(.instantRoundVideo) {
+                                                    messageText = item.strings.Message_VideoMessage
+                                                } else {
+                                                    messageText = item.strings.Message_Video
+                                                }
+                                                break inner
+                                            default:
+                                                break
+                                        }
+                                    }
+                                }
+                            case _ as TelegramMediaMap:
+                                messageText = item.strings.Message_Location
+                            case _ as TelegramMediaContact:
+                                messageText = item.strings.Message_Contact
+                            case let game as TelegramMediaGame:
+                                messageText = "🎮 \(game.title)"
+                            case let invoice as TelegramMediaInvoice:
+                                messageText = invoice.title
+                            case let action as TelegramMediaAction:
+                                hideAuthor = true
+                                switch action.action {
+                                    case .phoneCall:
+                                        if message.effectivelyIncoming {
+                                            messageText = item.strings.Notification_CallIncoming
+                                        } else {
+                                            messageText = item.strings.Notification_CallOutgoing
+                                        }
+                                    default:
+                                        if let text = serviceMessageString(theme: item.theme, strings: item.strings, message: message, accountPeerId: item.account.peerId) {
+                                            messageText = text.string
+                                        }
+                                }
+                            default:
+                                break
                         }
                     }
                 }
+            } else {
+                peer = item.peer.chatMainPeer
+                messageText = ""
+            }
+            
+            let attributedText: NSAttributedString
+            if let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
+                authorAttributedString = NSAttributedString(string: item.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                 
-                if let combinedReadState = combinedReadState {
-                    let unreadCount = combinedReadState.count
-                    if unreadCount != 0 {
-                        let badgeTextColor: UIColor
-                        if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
-                            if case .unmuted = notificationSettings.muteState {
-                                currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.theme)
-                                badgeTextColor = theme.unreadBadgeActiveTextColor
-                            } else {
-                                currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.theme)
-                                badgeTextColor = theme.unreadBadgeInactiveTextColor
-                            }
-                        } else {
+                attributedText = NSAttributedString(string: embeddedState.text, font: textFont, textColor: theme.messageTextColor)
+            } else if let message = message, let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
+                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                    attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: theme.messageTextColor)
+                } else {
+                    let peerText: String = author.id == account.peerId ? item.strings.DialogList_You : author.displayTitle
+                    
+                    authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
+                    attributedText = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
+                }
+            } else {
+                attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: theme.messageTextColor)
+            }
+            
+            if let displayTitle = peer?.displayTitle {
+                titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
+            }
+            
+            textAttributedString = attributedText
+            
+            var t = Int(item.index.messageIndex.timestamp)
+            var timeinfo = tm()
+            localtime_r(&t, &timeinfo)
+            
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.index.messageIndex.timestamp, relativeTo: timestamp)
+            
+            dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: theme.dateTextColor)
+            
+            if let message = message, message.author?.id == account.peerId {
+                if !message.flags.isSending {
+                    if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(MessageIndex(message)) {
+                        statusImage = PresentationResourcesChatList.doubleCheckImage(item.theme)
+                    } else {
+                        statusImage = PresentationResourcesChatList.singleCheckImage(item.theme)
+                    }
+                }
+            }
+            
+            if let combinedReadState = combinedReadState {
+                let unreadCount = combinedReadState.count
+                if unreadCount != 0 {
+                    let badgeTextColor: UIColor
+                    if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
+                        if case .unmuted = notificationSettings.muteState {
                             currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.theme)
                             badgeTextColor = theme.unreadBadgeActiveTextColor
+                        } else {
+                            currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.theme)
+                            badgeTextColor = theme.unreadBadgeInactiveTextColor
                         }
-                        badgeAttributedString = NSAttributedString(string: "\(unreadCount)", font: badgeFont, textColor: badgeTextColor)
+                    } else {
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.theme)
+                        badgeTextColor = theme.unreadBadgeActiveTextColor
                     }
+                    badgeAttributedString = NSAttributedString(string: "\(unreadCount)", font: badgeFont, textColor: badgeTextColor)
                 }
-                
-                if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
-                    if case .muted = notificationSettings.muteState {
-                        currentMutedIconImage = peerMutedIcon
-                    }
+            }
+            
+            if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
+                if case .muted = notificationSettings.muteState {
+                    currentMutedIconImage = peerMutedIcon
                 }
             }
             
@@ -551,7 +555,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 badgeSize = 0.0
             }
             
-            let (authorLayout, authorApply) = authorLayout(authorAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
+            let (authorLayout, authorApply) = authorLayout(hideAuthor ? nil : authorAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
             
             let (textLayout, textApply) = textLayout(textAttributedString, nil, authorAttributedString == nil ? 2 : 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
             

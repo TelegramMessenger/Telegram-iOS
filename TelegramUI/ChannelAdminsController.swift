@@ -235,7 +235,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                     arguments.removeAdmin(peerId)
                 })
             case let .addAdmin(theme, text, editing):
-                return ItemListPeerActionItem(theme: defaultPresentationTheme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: editing, action: {
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: editing, action: {
                     arguments.addAdmin()
                 })
             case let .adminsInfo(theme, text):
@@ -328,33 +328,35 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
     
     if let peer = view.peers[view.peerId] as? TelegramChannel {
         var isGroup = false
-        if case let .group(info) = peer.info, peer.flags.contains(.isCreator) {
+        if case let .group(info) = peer.info {
             isGroup = true
             
-            let selectedType: CurrentAdministrationType
-            if let current = state.selectedType {
-                selectedType = current
-            } else {
-                if info.flags.contains(.everyMemberCanInviteMembers) {
-                    selectedType = .everyoneCanAddMembers
+            if peer.flags.contains(.isCreator) {
+                let selectedType: CurrentAdministrationType
+                if let current = state.selectedType {
+                    selectedType = current
                 } else {
-                    selectedType = .adminsCanAddMembers
+                    if info.flags.contains(.everyMemberCanInviteMembers) {
+                        selectedType = .everyoneCanAddMembers
+                    } else {
+                        selectedType = .adminsCanAddMembers
+                    }
                 }
+                let selectedTypeValue: String
+                let infoText: String
+                switch selectedType {
+                    case .everyoneCanAddMembers:
+                        selectedTypeValue = presentationData.strings.ChannelMembers_WhoCanAddMembers_AllMembers
+                        infoText = presentationData.strings.ChannelMembers_AllMembersMayInviteOnHelp
+                    case .adminsCanAddMembers:
+                        selectedTypeValue = presentationData.strings.ChannelMembers_WhoCanAddMembers_Admins
+                        infoText = presentationData.strings.ChannelMembers_AllMembersMayInviteOffHelp
+                }
+                
+                entries.append(.administrationType(presentationData.theme, presentationData.strings.ChannelMembers_WhoCanAddMembers, selectedTypeValue))
+                
+                entries.append(.administrationInfo(presentationData.theme, infoText))
             }
-            let selectedTypeValue: String
-            let infoText: String
-            switch selectedType {
-                case .everyoneCanAddMembers:
-                    selectedTypeValue = presentationData.strings.ChannelMembers_WhoCanAddMembers_AllMembers
-                    infoText = presentationData.strings.ChannelMembers_AllMembersMayInviteOnHelp
-                case .adminsCanAddMembers:
-                    selectedTypeValue = presentationData.strings.ChannelMembers_WhoCanAddMembers_Admins
-                    infoText = presentationData.strings.ChannelMembers_AllMembersMayInviteOffHelp
-            }
-            
-            entries.append(.administrationType(presentationData.theme, presentationData.strings.ChannelMembers_WhoCanAddMembers, selectedTypeValue))
-            
-            entries.append(.administrationInfo(presentationData.theme, infoText))
         }
         
         if let participants = participants {
@@ -413,8 +415,10 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 }
             }
             
-            entries.append(.addAdmin(presentationData.theme, presentationData.strings.Channel_Management_AddModerator, state.editing))
-            entries.append(.adminsInfo(presentationData.theme, presentationData.strings.Channel_Management_AddModeratorHelp))
+            if peer.hasAdminRights(.canAddAdmins) {
+                entries.append(.addAdmin(presentationData.theme, presentationData.strings.Channel_Management_AddModerator, state.editing))
+                entries.append(.adminsInfo(presentationData.theme, presentationData.strings.Channel_Management_AddModeratorHelp))
+            }
         }
     }
     
@@ -541,117 +545,49 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
             }
         }))
     }, addAdmin: {
-        var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
-        let contactsController = ContactSelectionController(account: account, title: { $0.Channel_Management_AddModerator }, confirmation: { peerId in
-            if let confirmationImpl = confirmationImpl {
-                return confirmationImpl(peerId)
-            } else {
-                return .single(false)
-            }
-        })
-        confirmationImpl = { [weak contactsController] peerId in
-            return account.postbox.loadedPeerWithId(peerId)
-                |> deliverOnMainQueue
-                |> mapToSignal { peer in
-                    let result = ValuePromise<Bool>()
-                    if let contactsController = contactsController {
-                        let alertController = standardTextAlertController(title: nil, text: "Add \(peer.displayTitle) as admin?", actions: [
-                            TextAlertAction(type: .genericAction, title: "Cancel", action: {
-                                result.set(false)
-                            }),
-                            TextAlertAction(type: .defaultAction, title: "OK", action: {
-                                result.set(true)
-                            })
-                        ])
-                        contactsController.present(alertController, in: .window)
-                    }
-                    
-                    return result.get()
-            }
-        }
-        /*let addAdmin = contactsController.result
-            |> deliverOnMainQueue
-            |> mapToSignal { memberId -> Signal<Void, NoError> in
-                if let memberId = memberId {
-                    return account.postbox.peerView(id: memberId)
-                        |> take(1)
-                        |> deliverOnMainQueue
-                        |> mapToSignal { view -> Signal<Void, NoError> in
-                            if let peer = view.peers[memberId] {
-                                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                
-                                updateState { state in
-                                    var found = false
-                                    for participant in state.temporaryAdmins {
-                                        if participant.peer.id == memberId {
-                                            found = true
-                                            break
-                                        }
-                                    }
-                                    var removedPeerIds = state.removedPeerIds
-                                    removedPeerIds.remove(memberId)
-                                    if !found {
-                                        var temporaryAdmins = state.temporaryAdmins
-                                        temporaryAdmins.append(RenderedChannelParticipant(participant: ChannelParticipant.moderator(id: peer.id, invitedBy: account.peerId, invitedAt: timestamp), peer: peer))
-                                        return state.withUpdatedTemporaryAdmins(temporaryAdmins).withUpdatedRemovedPeerIds(removedPeerIds)
-                                    } else {
-                                        return state.withUpdatedRemovedPeerIds(removedPeerIds)
+        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, openPeer: { peer in
+            presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: peer.id, initialParticipant: nil, updated: { updatedRights in
+                let applyAdmin: Signal<Void, NoError> = adminsPromise.get()
+                    |> filter { $0 != nil }
+                    |> take(1)
+                    |> deliverOnMainQueue
+                    |> mapToSignal { admins -> Signal<Void, NoError> in
+                        if let admins = admins {
+                            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                            
+                            var updatedAdmins = admins
+                            if updatedRights.isEmpty {
+                                for i in 0 ..< updatedAdmins.count {
+                                    if updatedAdmins[i].peer.id == peer.id {
+                                        updatedAdmins.remove(at: i)
+                                        break
                                     }
                                 }
-                                
-                                let applyAdmin: Signal<Void, AddPeerAdminError> = adminsPromise.get()
-                                    |> filter { $0 != nil }
-                                    |> take(1)
-                                    |> deliverOnMainQueue
-                                    |> mapError { _ -> AddPeerAdminError in return .generic }
-                                    |> mapToSignal { admins -> Signal<Void, AddPeerAdminError> in
-                                        if let admins = admins {
-                                            var updatedAdmins = admins
-                                            var found = false
-                                            for i in 0 ..< updatedAdmins.count {
-                                                if updatedAdmins[i].peer.id == memberId {
-                                                    found = true
-                                                    break
-                                                }
-                                            }
-                                            if !found {
-                                                updatedAdmins.append(RenderedChannelParticipant(participant: ChannelParticipant.moderator(id: peer.id, invitedBy: account.peerId, invitedAt: timestamp), peer: peer))
-                                                adminsPromise.set(.single(updatedAdmins))
-                                            }
-                                        }
-                                        
-                                        return .complete()
-                                    }
-                            
-                                return addPeerAdmin(account: account, peerId: peerId, adminId: memberId)
-                                    |> deliverOnMainQueue
-                                    |> then(applyAdmin)
-                                    |> `catch` { _ -> Signal<Void, NoError> in
-                                        updateState { state in
-                                            var temporaryAdmins = state.temporaryAdmins
-                                            for i in 0 ..< temporaryAdmins.count {
-                                                if temporaryAdmins[i].peer.id == memberId {
-                                                    temporaryAdmins.remove(at: i)
-                                                    break
-                                                }
-                                            }
-                                            
-                                            return state.withUpdatedTemporaryAdmins(temporaryAdmins)
-                                        }
-                                        return .complete()
-                                    }
                             } else {
-                                return .complete()
+                                var found = false
+                                for i in 0 ..< updatedAdmins.count {
+                                    if updatedAdmins[i].peer.id == peer.id {
+                                        if case let .member(id, date, _, banInfo) = updatedAdmins[i].participant {
+                                            updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer, peers: [:])
+                                        }
+                                        found = true
+                                        break
+                                    }
+                                }
+                                if !found {
+                                    updatedAdmins.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: timestamp, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: nil), peer: peer, peers: [:]))
+                                }
                             }
-                    }
-                } else {
-                    return .complete()
+                            adminsPromise.set(.single(updatedAdmins))
+                        }
+                        
+                        return .complete()
                 }
-        }
-        presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        addAdminDisposable.set(addAdmin.start())*/
+                addAdminDisposable.set(applyAdmin.start())
+            }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openAdmin: { participant in
-        if case let .member(adminId, timestamp, _, _) = participant {
+        if case let .member(adminId, _, _, _) = participant {
             presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { updatedRights in
                 let applyAdmin: Signal<Void, NoError> = adminsPromise.get()
                     |> filter { $0 != nil }
@@ -672,7 +608,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                                 for i in 0 ..< updatedAdmins.count {
                                     if updatedAdmins[i].peer.id == adminId {
                                         if case let .member(id, date, _, banInfo) = updatedAdmins[i].participant {
-                                            updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer)
+                                            updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer, peers: [:])
                                         }
                                         found = true
                                         break

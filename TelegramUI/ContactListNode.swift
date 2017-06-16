@@ -208,7 +208,7 @@ private extension PeerIndexNameRepresentation {
                 switch other {
                     case let .title(title, _):
                         return lhsTitle.compare(title)
-                    case let .personName(_, last, _):
+                    case let .personName(_, last, _, _):
                         let lastResult = lhsTitle.compare(last)
                         if lastResult == .orderedSame {
                             return .orderedAscending
@@ -216,7 +216,7 @@ private extension PeerIndexNameRepresentation {
                             return lastResult
                         }
                 }
-            case let .personName(lhsFirst, lhsLast, _):
+            case let .personName(lhsFirst, lhsLast, _, _):
                 switch other {
                     case let .title(title, _):
                         let lastResult = lhsFirst.compare(title)
@@ -225,7 +225,7 @@ private extension PeerIndexNameRepresentation {
                         } else {
                             return lastResult
                         }
-                    case let .personName(first, last, _):
+                    case let .personName(first, last, _, _):
                         let lastResult = lhsLast.compare(last)
                         if lastResult == .orderedSame {
                             return lhsFirst.compare(first)
@@ -284,7 +284,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
                         if let c = title.utf16.first {
                             indexHeader = c
                         }
-                    case let .personName(first, last, _):
+                    case let .personName(first, last, _, _):
                         if let c = last.utf16.first {
                             indexHeader = c
                         } else if let c = first.utf16.first {
@@ -317,7 +317,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
                 if title.isEmpty {
                     removeIndices.append(i)
                 }
-            case let .personName(first, last, _):
+            case let .personName(first, last, _, _):
                 if first.isEmpty || last.isEmpty {
                     removeIndices.append(i)
                 }

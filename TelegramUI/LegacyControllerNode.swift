@@ -17,6 +17,8 @@ final class LegacyControllerNode: ASDisplayNode {
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
+        
+        self.clipsToBounds = true
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -33,7 +35,7 @@ final class LegacyControllerNode: ASDisplayNode {
     }
     
     func animateModalOut(completion: @escaping () -> Void) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, completion: { _ in
+        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, completion: { _ in
             completion()
         })
     }

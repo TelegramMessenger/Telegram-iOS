@@ -44,8 +44,23 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                         if maxIndex >= targetIndex {
                             for i in targetIndex ..< maxIndex {
                                 if case .HoleEntry = view.entries[i] {
-                                    fadeIn = true
-                                    return .Loading(initialData: initialData)
+                                    var incomingCount: Int32 = 0
+                                    inner: for entry in view.entries.reversed() {
+                                        switch entry {
+                                            case .HoleEntry:
+                                                break inner
+                                            case let .MessageEntry(message, _, _, _):
+                                                if message.flags.contains(.Incoming) {
+                                                    incomingCount += 1
+                                                }
+                                        }
+                                    }
+                                    if let combinedReadState = view.combinedReadState, combinedReadState.count == incomingCount {
+                                        
+                                    } else {
+                                        fadeIn = true
+                                        return .Loading(initialData: initialData)
+                                    }
                                 }
                             }
                         }

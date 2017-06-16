@@ -3,6 +3,8 @@ import Display
 
 enum ChatListSearchItemHeaderType: Int32 {
     case localPeers
+    case members
+    case contacts
     case globalPeers
     case recentPeers
     case messages
@@ -48,6 +50,10 @@ final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         switch type {
             case .localPeers:
                 self.sectionHeaderNode.title = strings.DialogList_SearchSectionDialogs.uppercased()
+            case .members:
+                self.sectionHeaderNode.title = strings.Compose_NewChannel_Members.uppercased()
+            case .contacts:
+                self.sectionHeaderNode.title = strings.Contacts_TopSection.uppercased()
             case .globalPeers:
                 self.sectionHeaderNode.title = strings.DialogList_SearchSectionGlobal.uppercased()
             case .messages:

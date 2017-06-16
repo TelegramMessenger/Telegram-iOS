@@ -22,6 +22,9 @@ public final class CallListController: ViewController {
     
     private let segmentedTitleView: ItemListControllerSegmentedTitleView
     
+    private var isEmpty: Bool?
+    private var editingMode: Bool = false
+    
     private let createActionDisposable = MetaDisposable()
     
     public init(account: Account) {
@@ -34,9 +37,7 @@ public final class CallListController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        self.navigationItem.titleView = self.segmentedTitleView
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         
         self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle
         self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconCalls")
@@ -80,9 +81,18 @@ public final class CallListController: ViewController {
         self.segmentedTitleView.segments = [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed]
         self.segmentedTitleView.color = self.presentationData.theme.rootController.navigationBar.accentTextColor
         
+        if let isEmpty = self.isEmpty, isEmpty {
+            self.title = self.presentationData.strings.Calls_TabTitle
+        } else {
+            if self.editingMode {
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+            } else {
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            }
+        }
+        
         self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
@@ -109,6 +119,25 @@ public final class CallListController: ViewController {
                             }
                         }
                     })
+            }
+        }, emptyStateUpdated: { [weak self] empty in
+            if let strongSelf = self {
+                if empty != strongSelf.isEmpty {
+                    strongSelf.isEmpty = empty
+                    
+                    if empty {
+                        strongSelf.navigationItem.setLeftBarButton(nil, animated: true)
+                        strongSelf.title = strongSelf.presentationData.strings.Calls_TabTitle
+                    } else {
+                        strongSelf.title = ""
+                        strongSelf.navigationItem.titleView = strongSelf.segmentedTitleView
+                        if strongSelf.editingMode {
+                            strongSelf.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+                        } else {
+                            strongSelf.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
+                        }
+                    }
+                }
             }
         })
         self._ready.set(self.controllerNode.ready)
@@ -151,6 +180,7 @@ public final class CallListController: ViewController {
     }
     
     @objc func editPressed() {
+        self.editingMode = true
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
         
         self.controllerNode.updateState { state in
@@ -159,6 +189,7 @@ public final class CallListController: ViewController {
     }
     
     @objc func donePressed() {
+        self.editingMode = false
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         
         self.controllerNode.updateState { state in

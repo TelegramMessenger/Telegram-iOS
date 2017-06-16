@@ -124,9 +124,7 @@ final class ComposeControllerNode: ASDisplayNode {
                     requestOpenPeerFromSearch(peerId)
                 }
             }), cancel: { [weak self] in
-                if let requestDeactivateSearch = self?.requestDeactivateSearch {
-                    requestDeactivateSearch()
-                }
+                self?.requestDeactivateSearch?()
             })
             
             self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)

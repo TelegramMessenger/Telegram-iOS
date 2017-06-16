@@ -5,9 +5,9 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 
-final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
+final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
     private var item: ChatMessageItem?
-    private var webPage: TelegramMediaWebpage?
+    private var invoice: TelegramMediaInvoice?
     
     private let contentNode: ChatMessageAttachedContentNode
     
@@ -37,52 +37,29 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         let contentNodeLayout = self.contentNode.asyncLayout()
         
         return { item, layoutConstants, position, constrainedSize in
-            var webPage: TelegramMediaWebpage?
-            var webPageContent: TelegramMediaWebpageLoadedContent?
+            var invoice: TelegramMediaInvoice?
             for media in item.message.media {
-                if let media = media as? TelegramMediaWebpage {
-                    webPage = media
-                    if case let .Loaded(content) = media.content {
-                        webPageContent = content
-                    }
+                if let media = media as? TelegramMediaInvoice {
+                    invoice = media
                     break
                 }
             }
             
             var title: String?
-            var subtitle: String?
+            let subtitle: String? = nil
             var text: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
             
-            if let webpage = webPageContent {
-                if let websiteName = webpage.websiteName, !websiteName.isEmpty {
-                    title = websiteName
-                }
+            if let invoice = invoice {
+                title = invoice.title
+                text = invoice.description
                 
-                if let title = webpage.title, !title.isEmpty {
-                    subtitle = title
-                }
-                
-                if let textValue = webpage.text, !textValue.isEmpty {
-                    text = textValue
-                }
-                
-                if let file = webpage.file {
-                    mediaAndFlags = (file, [])
-                } else if let image = webpage.image {
-                    if let type = webpage.type, ["photo"].contains(type) {
-                        var flags = ChatMessageAttachedContentNodeMediaFlags()
-                        if webpage.instantPage != nil {
-                            flags.insert(.preferMediaBeforeText)
-                        }
-                        mediaAndFlags = (image, flags)
-                    } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
-                        mediaAndFlags = (image, [.preferMediaInline])
-                    }
+                if let image = invoice.photo {
+                    mediaAndFlags = (image, [.preferMediaBeforeText])
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, true, layoutConstants, position, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, false, layoutConstants, position, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (refinedWidth, finalizeLayout) = continueLayout(constrainedSize)
@@ -92,7 +69,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     return (size, { [weak self] animation in
                         if let strongSelf = self {
-                            strongSelf.webPage = webPage
+                            strongSelf.invoice = invoice
                             
                             apply(animation)
                             
@@ -122,11 +99,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
         if self.bounds.contains(point) {
-            if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
-                if content.instantPage != nil {
-                    return .instantPage
-                }
-            }
+            /*if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
+             if content.instantPage != nil {
+             return .instantPage
+             }
+             }*/
         }
         return .none
     }

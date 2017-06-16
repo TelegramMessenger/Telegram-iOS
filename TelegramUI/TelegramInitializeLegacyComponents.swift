@@ -45,7 +45,7 @@ private final class AccessCheckerImpl: NSObject, TGAccessCheckerProtocol {
     }
 }
 
-public func initializeLegacyComponents(application: UIApplication, currentSizeClassGetter: @escaping () -> UIUserInterfaceSizeClass, currentHorizontalClassGetter: @escaping () -> UIUserInterfaceSizeClass, documentsPath: String, currentApplicationBounds: @escaping () -> CGRect) {
+public func initializeLegacyComponents(application: UIApplication, currentSizeClassGetter: @escaping () -> UIUserInterfaceSizeClass, currentHorizontalClassGetter: @escaping () -> UIUserInterfaceSizeClass, documentsPath: String, currentApplicationBounds: @escaping () -> CGRect, canOpenUrl: @escaping (URL) -> Bool, openUrl: @escaping (URL) -> Void) {
     freedomInit()
     //freedomUIKitInit();
     TGHacks.setApplication(application)
@@ -57,4 +57,16 @@ public func initializeLegacyComponents(application: UIApplication, currentSizeCl
         return SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber)
     }
     TGLegacyComponentsSetDocumentsPath(documentsPath)
+    
+    TGLegacyComponentsSetCanOpenURL({ url in
+        if let url = url {
+            return canOpenUrl(url)
+        }
+        return false
+    })
+    TGLegacyComponentsSetOpenURL({ url in
+        if let url = url {
+            return openUrl(url)
+        }
+    })
 }

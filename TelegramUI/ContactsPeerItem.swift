@@ -297,19 +297,25 @@ class ContactsPeerItemNode: ListViewItemNode {
             var userPresence: TelegramUserPresence?
             
             if let peer = item.peer {
+                let textColor: UIColor
+                if let _ = item.chatPeer as? TelegramSecretChat {
+                    textColor = item.theme.chatList.secretTitleColor
+                } else {
+                    textColor = item.theme.list.itemPrimaryTextColor
+                }
                 if let user = peer as? TelegramUser {
                     if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                         let string = NSMutableAttributedString()
-                        string.append(NSAttributedString(string: firstName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
-                        string.append(NSAttributedString(string: " ", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
-                        string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor))
+                        string.append(NSAttributedString(string: firstName, font: titleFont, textColor: textColor))
+                        string.append(NSAttributedString(string: " ", font: titleFont, textColor: textColor))
+                        string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: textColor))
                         titleAttributedString = string
                     } else if let firstName = user.firstName, !firstName.isEmpty {
-                        titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                        titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: textColor)
                     } else if let lastName = user.lastName, !lastName.isEmpty {
-                        titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                        titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: textColor)
                     } else {
-                        titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleBoldFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleBoldFont, textColor: textColor)
                     }
                 } else if let group = peer as? TelegramGroup {
                     titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)

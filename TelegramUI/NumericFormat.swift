@@ -22,15 +22,36 @@ public func compactNumericCountString(_ count: Int) -> String {
 
 func timeIntervalString(strings: PresentationStrings, value: Int32) -> String {
     if value < 60 {
-        return strings.MessageTimer_Seconds(value)
+        return strings.MessageTimer_Seconds(max(1, value))
     } else if value < 60 * 60 {
-        return strings.MessageTimer_Minutes(value / 60)
+        return strings.MessageTimer_Minutes(max(1, value / 60))
     } else if value < 60 * 60 * 24 {
-        return strings.MessageTimer_Hours(value / (60 * 60))
+        return strings.MessageTimer_Hours(max(1, value / (60 * 60)))
     } else if value < 60 * 60 * 24 * 7 {
-        return strings.MessageTimer_Days(value / (60 * 60 * 24))
+        return strings.MessageTimer_Days(max(1, value / (60 * 60 * 24)))
     } else {
-        return strings.MessageTimer_Weeks(value / (60 * 60 * 24 * 7))
+        return strings.MessageTimer_Weeks(max(1, value / (60 * 60 * 24 * 7)))
     }
 }
 
+func muteForIntervalString(strings: PresentationStrings, value: Int32) -> String {
+    if value < 60 * 60 {
+        return strings.MuteFor_Minutes(max(1, value / 60))
+    } else if value < 60 * 60 * 24 {
+        return strings.MuteFor_Hours(max(1, value / (60 * 60)))
+    } else if value < 60 * 60 * 24 * 7 {
+        return strings.MuteFor_Days(max(1, value / (60 * 60 * 24)))
+    } else {
+        return strings.MuteFor_Weeks(max(1, value / (60 * 60 * 24 * 7)))
+    }
+}
+
+func unmuteIntervalString(strings: PresentationStrings, value: Int32) -> String {
+    if value < 60 * 60 {
+        return strings.MuteExpires_Minutes(max(1, value / 60))
+    } else if value < 60 * 60 * 24 {
+        return strings.MuteExpires_Hours(max(1, value / (60 * 60)))
+    } else {
+        return strings.MuteExpires_Days(max(1, value / (60 * 60 * 24)))
+    }
+}

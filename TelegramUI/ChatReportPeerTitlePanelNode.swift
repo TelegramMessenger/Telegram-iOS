@@ -4,27 +4,13 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 
-private let closeButtonImage = generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(rgb: 0x9099A2).cgColor)
-    context.setLineWidth(2.0)
-    context.setLineCap(.round)
-    context.move(to: CGPoint(x: 1.0, y: 1.0))
-    context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - 1.0))
-    context.strokePath()
-    context.move(to: CGPoint(x: size.width - 1.0, y: 1.0))
-    context.addLine(to: CGPoint(x: 1.0, y: size.height - 1.0))
-    context.strokePath()
-})
-
-
 private enum ChatReportPeerTitleButton {
     case reportSpam
     
-    var title: String {
+    func title(strings: PresentationStrings) -> String {
         switch self {
             case .reportSpam:
-                return "Report spam"
+                return strings.ReportPeer_ReasonSpam
         }
     }
 }
@@ -39,19 +25,17 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let closeButton: HighlightableButtonNode
     private var buttons: [(ChatReportPeerTitleButton, UIButton)] = []
     
+    private var theme: PresentationTheme?
+    
     override init() {
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
         self.separatorNode.isLayerBacked = true
         
         self.closeButton = HighlightableButtonNode()
-        self.closeButton.setImage(closeButtonImage, for: [])
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.displaysAsynchronously = false
         
         super.init()
-        
-        self.backgroundColor = UIColor(rgb: 0xF5F6F8)
         
         self.addSubnode(self.separatorNode)
         
@@ -60,6 +44,14 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     }
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        if interfaceState.theme !== self.theme {
+            self.theme = interfaceState.theme
+            
+            self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
+            self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+        }
+        
         let panelHeight: CGFloat = 40.0
         
         let rightInset: CGFloat = 18.0
@@ -93,10 +85,10 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.buttons.removeAll()
             for button in updatedButtons {
                 let view = UIButton()
-                view.setTitle(button.title, for: [])
+                view.setTitle(button.title(strings: interfaceState.strings), for: [])
                 view.titleLabel?.font = Font.regular(16.0)
-                view.setTitleColor(UIColor(rgb: 0x007ee5), for: [])
-                view.setTitleColor(UIColor(rgb: 0x007ee5).withAlphaComponent(0.7), for: [.highlighted])
+                view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor, for: [])
+                view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7), for: [.highlighted])
                 view.addTarget(self, action: #selector(self.buttonPressed(_:)), for: [.touchUpInside])
                 self.view.addSubview(view)
                 self.buttons.append((button, view))

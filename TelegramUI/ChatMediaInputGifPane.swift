@@ -31,7 +31,7 @@ final class ChatMediaInputGifPane: ASDisplayNode, UIScrollViewDelegate {
         }
         self.disposable.set((gifs |> deliverOnMainQueue).start(next: { [weak self] gifs in
             if let strongSelf = self {
-                strongSelf.multiplexedNode.files = [gifs.first!]
+                strongSelf.multiplexedNode.files = gifs
             }
         }))
         

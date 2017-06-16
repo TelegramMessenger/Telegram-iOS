@@ -165,12 +165,14 @@ final class CallListControllerNode: ASDisplayNode {
     
     private let call: (PeerId) -> Void
     private let openInfo: (PeerId) -> Void
+    private let emptyStateUpdated: (Bool) -> Void
     
-    init(account: Account, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void) {
+    init(account: Account, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.call = call
         self.openInfo = openInfo
+        self.emptyStateUpdated = emptyStateUpdated
         
         self.currentState = CallListNodeState(theme: presentationData.theme, strings: presentationData.strings, editing: false, messageIdWithRevealedOptions: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
@@ -340,7 +342,7 @@ final class CallListControllerNode: ASDisplayNode {
             }
             
             return EmptyDisposable
-            } |> runOn(Queue.mainQueue())
+        } |> runOn(Queue.mainQueue())
     }
     
     private func dequeueTransition() {
@@ -350,6 +352,8 @@ final class CallListControllerNode: ASDisplayNode {
             let completion: (ListViewDisplayedItemRange) -> Void = { [weak self] visibleRange in
                 if let strongSelf = self {
                     strongSelf.callListView = transition.callListView
+                    
+                    strongSelf.emptyStateUpdated(transition.callListView.filteredEntries.isEmpty)
                     
                     if !strongSelf.didSetReady {
                         strongSelf.didSetReady = true

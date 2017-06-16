@@ -441,22 +441,58 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             } else if canEdit {
                 rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
-                    var updateFlags: TelegramChannelAdminRightsFlags?
-                    updateState { current in
-                        updateFlags = current.updatedFlags
-                        if let _ = updateFlags {
-                            return current.withUpdatedUpdating(true)
-                        } else {
-                            return current
+                    if let _ = initialParticipant {
+                        var updateFlags: TelegramChannelAdminRightsFlags?
+                        updateState { current in
+                            updateFlags = current.updatedFlags
+                            if let _ = updateFlags {
+                                return current.withUpdatedUpdating(true)
+                            } else {
+                                return current
+                            }
                         }
-                    }
-                    if let updateFlags = updateFlags {
-                        updateRightsDisposable.set((updatePeerAdminRights(account: account, peerId: peerId, adminId: adminId, rights: TelegramChannelAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { _ in
+                        
+                        if let updateFlags = updateFlags {
+                            updateRightsDisposable.set((updatePeerAdminRights(account: account, peerId: peerId, adminId: adminId, rights: TelegramChannelAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { _ in
+                                
+                            }, completed: {
+                                updated(TelegramChannelAdminRights(flags: updateFlags))
+                                dismissImpl?()
+                            }))
+                        }
+                    } else if canEdit, let channel = channelView.peers[channelView.peerId] as? TelegramChannel {
+                        var updateFlags: TelegramChannelAdminRightsFlags?
+                        updateState { current in
+                            updateFlags = current.updatedFlags
+                            return current.withUpdatedUpdating(true)
+                        }
+                        
+                        if updateFlags == nil {
+                            let maskRightsFlags: TelegramChannelAdminRightsFlags
+                            switch channel.info {
+                                case .broadcast:
+                                    maskRightsFlags = .broadcastSpecific
+                                case .group:
+                                    maskRightsFlags = .groupSpecific
+                            }
                             
-                        }, completed: {
-                            updated(TelegramChannelAdminRights(flags: updateFlags))
-                            dismissImpl?()
-                        }))
+                            if channel.flags.contains(.isCreator) {
+                                updateFlags = maskRightsFlags.subtracting(.canAddAdmins)
+                            } else if let adminRights = channel.adminRights {
+                                updateFlags = maskRightsFlags.intersection(adminRights.flags).subtracting(.canAddAdmins)
+                            } else {
+                                updateFlags = []
+                            }
+                        }
+                        
+                        if let updateFlags = updateFlags {
+                            updateRightsDisposable.set((updatePeerAdminRights(account: account, peerId: peerId, adminId: adminId, rights: TelegramChannelAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { _ in
+                                
+                            }, completed: {
+                                updated(TelegramChannelAdminRights(flags: updateFlags))
+                                dismissImpl?()
+                            }))
+                        }
                     }
                 })
             }

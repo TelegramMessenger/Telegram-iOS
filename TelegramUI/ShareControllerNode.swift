@@ -141,6 +141,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 if strongSelf.selectedPeers.isEmpty {
                     if let defaultAction = strongSelf.defaultAction {
                         strongSelf.installActionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
+                    } else {
+                        strongSelf.installActionButtonNode.setTitle("Send", with: Font.medium(20.0), with: .gray, for: .normal)
                     }
                     strongSelf.installActionButtonNode.badge = nil
                 } else {
@@ -302,8 +304,10 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
         transition.updateFrame(node: self.installActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
         
-        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth + 25.0), lineSpacing: 0.0)), transition: transition), stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
-        transition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))))
+        let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))
+        
+        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: gridSize, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth + 25.0), lineSpacing: 0.0)), transition: transition), stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        transition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
         
         if animateIn {
             var durationOffset = 0.0
@@ -456,6 +460,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         if let defaultAction = defaultAction {
             self.installActionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
+        } else {
+            self.installActionButtonNode.setTitle("Send", with: Font.medium(20.0), with: .gray, for: .normal)
         }
     }
     

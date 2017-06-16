@@ -6,6 +6,7 @@ import TelegramCore
 
 private func contentNodeClassesForItem(_ item: ChatMessageItem) -> [AnyClass] {
     var result: [AnyClass] = []
+    var skipText = false
     for media in item.message.media {
         if let _ = media as? TelegramMediaImage {
             result.append(ChatMessageMediaBubbleContentNode.self)
@@ -17,10 +18,20 @@ private func contentNodeClassesForItem(_ item: ChatMessageItem) -> [AnyClass] {
             }
         } else if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
             result.append(ChatMessageCallBubbleContentNode.self)
+        } else if let _ = media as? TelegramMediaMap {
+            result.append(ChatMessageMapBubbleContentNode.self)
+        } else if let _ = media as? TelegramMediaGame {
+            skipText = true
+            result.append(ChatMessageGameBubbleContentNode.self)
+            break
+        } else if let _ = media as? TelegramMediaInvoice {
+            skipText = true
+            result.append(ChatMessageInvoiceBubbleContentNode.self)
+            break
         }
     }
     
-    if !item.message.text.isEmpty {
+    if !skipText && !item.message.text.isEmpty {
         result.append(ChatMessageTextBubbleContentNode.self)
     }
     
@@ -182,7 +193,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             if let strongSelf = self {
                 for contentNode in strongSelf.contentNodes {
                     var translatedPoint: CGPoint?
-                    if let point = point {
+                    if let point = point, contentNode.frame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
                         translatedPoint = CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY)
                     }
                     contentNode.updateTouchesAtPoint(translatedPoint)
@@ -266,6 +277,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var inlineBotNameString: String?
             var replyMessage: Message?
             var replyMarkup: ReplyMarkupMessageAttribute?
+            var authorNameColor: UIColor?
             
             for attribute in message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute, let bot = message.peers[attribute.peerId] as? TelegramUser {
@@ -277,10 +289,36 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
             
-            var displayHeader = true
+            var initialDisplayHeader = true
             if inlineBotNameString == nil && message.forwardInfo == nil && replyMessage == nil {
                 if let first = contentPropertiesAndPrepareLayouts.first, first.0.hidesSimpleAuthorHeader {
-                    displayHeader = false
+                    initialDisplayHeader = false
+                }
+            }
+            
+            if initialDisplayHeader && displayAuthorInfo {
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    authorNameString = peer.displayTitle
+                    authorNameColor = chatMessagePeerIdColors[Int(peer.id.id % 6)]
+                } else if let author = message.author {
+                    authorNameString = author.displayTitle
+                    authorNameColor = chatMessagePeerIdColors[Int(author.id.id % 6)]
+                }
+            }
+            
+            var displayHeader = false
+            if initialDisplayHeader {
+                if authorNameString != nil {
+                    displayHeader = true
+                }
+                if inlineBotNameString != nil {
+                    displayHeader = true
+                }
+                if message.forwardInfo != nil {
+                    displayHeader = true
+                }
+                if replyMessage != nil {
+                    displayHeader = true
                 }
             }
             
@@ -327,7 +365,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var nameNodeOriginY: CGFloat = 0.0
             var nameNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
-            var authorNameColor: UIColor?
             
             var replyInfoOriginY: CGFloat = 0.0
             var replyInfoSizeApply: (CGSize, () -> ChatMessageReplyInfoNode?) = (CGSize(), { nil })
@@ -336,16 +373,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode?) = (CGSize(), { nil })
             
             if displayHeader {
-                if displayAuthorInfo {
-                    if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                        authorNameString = peer.displayTitle
-                        authorNameColor = chatMessagePeerIdColors[Int(peer.id.id % 6)]
-                    } else if let author = message.author {
-                        authorNameString = author.displayTitle
-                        authorNameColor = chatMessagePeerIdColors[Int(author.id.id % 6)]
-                    }
-                }
-                
                 if authorNameString != nil || inlineBotNameString != nil {
                     if headerSize.height < CGFloat.ulpOfOne {
                         headerSize.height += 4.0
@@ -915,7 +942,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         case let .peerMention(peerId, mention):
                                             foundTapAction = true
                                             if let controllerInteraction = self.controllerInteraction {
-                                                controllerInteraction.longTap(.mention(mention))
+                                                controllerInteraction.longTap(.peerMention(peerId, mention))
                                             }
                                             break loop
                                         case let .textMention(name):

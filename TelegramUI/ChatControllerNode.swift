@@ -231,7 +231,7 @@ class ChatControllerNode: ASDisplayNode {
             transitionIsAnimated = true
         }
         
-        if let search = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
+        if let _ = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
             var activate = false
             if self.searchNavigationNode == nil {
                 activate = true
@@ -241,7 +241,7 @@ class ChatControllerNode: ASDisplayNode {
             if activate {
                 self.searchNavigationNode?.activate()
             }
-        } else if let searchNavigationNode = self.searchNavigationNode {
+        } else if let _ = self.searchNavigationNode {
             self.searchNavigationNode = nil
             self.navigationBar.setContentNode(nil, animated: transitionIsAnimated)
         }

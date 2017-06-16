@@ -115,6 +115,14 @@ final class TextNodeLayout: NSObject {
         return nil
     }
     
+    func linesRects() -> [CGRect] {
+        var rects: [CGRect] = []
+        for line in self.lines {
+            rects.append(line.frame)
+        }
+        return rects
+    }
+    
     func attributeRects(name: String, at index: Int) -> [CGRect]? {
         if let attributedString = self.attributedString {
             var range = NSRange()

@@ -13,7 +13,7 @@ enum ItemListAvatarAndNameInfoItemName: Equatable {
     
     init(_ name: PeerIndexNameRepresentation) {
         switch name {
-            case let .personName(first, last, _):
+            case let .personName(first, last, _, _):
                 self = .personName(firstName: first, lastName: last)
             case let .title(title, _):
                 self = .title(title: title)

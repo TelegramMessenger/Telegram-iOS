@@ -38,13 +38,13 @@ enum ChatListRecentEntryStableId: Hashable {
 
 enum ChatListRecentEntry: Comparable, Identifiable {
     case topPeers([Peer], PresentationTheme, PresentationStrings)
-    case peer(index: Int, peer: Peer, PresentationTheme, PresentationStrings)
+    case peer(index: Int, peer: Peer, associatedPeer: Peer?, PresentationTheme, PresentationStrings)
     
     var stableId: ChatListRecentEntryStableId {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, peer, _, _):
+            case let .peer(_, peer, _, _, _):
                 return .peerId(peer.id)
         }
     }
@@ -71,8 +71,8 @@ enum ChatListRecentEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsTheme, lhsStrings):
-                if case let .peer(rhsIndex, rhsPeer, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+            case let .peer(lhsIndex, lhsPeer, lhsAssociatedPeer, lhsTheme, lhsStrings):
+                if case let .peer(rhsIndex, rhsPeer, rhsAssociatedPeer, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false
@@ -84,11 +84,11 @@ enum ChatListRecentEntry: Comparable, Identifiable {
         switch lhs {
             case .topPeers:
                 return true
-            case let .peer(lhsIndex, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _):
                 switch rhs {
                     case .topPeers:
                         return false
-                    case let .peer(rhsIndex, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _):
                         return lhsIndex <= rhsIndex
                 }
         }
@@ -100,8 +100,17 @@ enum ChatListRecentEntry: Comparable, Identifiable {
                 return ChatListRecentPeersListItem(theme: theme, strings: strings, account: account, peers: peers, peerSelected: { peer in
                     peerSelected(peer)
                 })
-            case let .peer(_, peer, theme, strings):
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings), action: { _ in
+            case let .peer(_, peer, associatedPeer, theme, strings):
+                let primaryPeer: Peer
+                var chatPeer: Peer?
+                if let associatedPeer = associatedPeer {
+                    primaryPeer = associatedPeer
+                    chatPeer = peer
+                } else {
+                    primaryPeer = peer
+                    chatPeer = associatedPeer
+                }
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: primaryPeer, chatPeer: chatPeer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings), action: { _ in
                     peerSelected(peer)
                 })
         }
@@ -151,13 +160,13 @@ enum ChatListSearchEntryStableId: Hashable {
 
 
 enum ChatListSearchEntry: Comparable, Identifiable {
-    case localPeer(Peer, Int, PresentationTheme, PresentationStrings)
+    case localPeer(Peer, Peer?, Int, PresentationTheme, PresentationStrings)
     case globalPeer(Peer, Int, PresentationTheme, PresentationStrings)
     case message(Message, PresentationTheme, PresentationStrings)
     
     var stableId: ChatListSearchEntryStableId {
         switch self {
-            case let .localPeer(peer, _, _, _):
+            case let .localPeer(peer, _, _, _, _):
                 return .localPeerId(peer.id)
             case let .globalPeer(peer, _, _, _):
                 return .globalPeerId(peer.id)
@@ -168,8 +177,8 @@ enum ChatListSearchEntry: Comparable, Identifiable {
     
     static func ==(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(lhsPeer, lhsIndex, lhsTheme, lhsStrings):
-                if case let .localPeer(rhsPeer, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings {
+            case let .localPeer(lhsPeer, lhsAssociatedPeer, lhsIndex, lhsTheme, lhsStrings):
+                if case let .localPeer(rhsPeer, rhsAssociatedPeer, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false
@@ -203,8 +212,8 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         
     static func <(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(_, lhsIndex, _, _):
-                if case let .localPeer(_, rhsIndex, _, _) = rhs {
+            case let .localPeer(_, _, lhsIndex, _, _):
+                if case let .localPeer(_, _, rhsIndex, _, _) = rhs {
                     return lhsIndex <= rhsIndex
                 } else {
                     return true
@@ -229,8 +238,18 @@ enum ChatListSearchEntry: Comparable, Identifiable {
     
     func item(account: Account, enableHeaders: Bool, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
-            case let .localPeer(peer, _, theme, strings):
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings), action: { _ in
+            case let .localPeer(peer, associatedPeer, _, theme, strings):
+                let primaryPeer: Peer
+                var chatPeer: Peer?
+                if let associatedPeer = associatedPeer {
+                    primaryPeer = associatedPeer
+                    chatPeer = peer
+                } else {
+                    primaryPeer = peer
+                    chatPeer = associatedPeer
+                }
+                
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: primaryPeer, chatPeer: chatPeer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings), action: { _ in
                     interaction.peerSelected(peer)
                 })
             case let .globalPeer(peer, _, theme, strings):
@@ -280,7 +299,6 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let account: Account
     private let openMessage: (Peer, MessageId) -> Void
     
-    //private let recentPeersNode: ChatListSearchRecentPeersNode
     private let recentListNode: ListView
     private let listNode: ListView
     
@@ -334,9 +352,15 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         |> map { foundLocalPeers, foundRemotePeers, foundRemoteMessages, themeAndStrings -> [ChatListSearchEntry]? in
                             var entries: [ChatListSearchEntry] = []
                             var index = 0
-                            for peer in foundLocalPeers {
-                                entries.append(.localPeer(peer, index, themeAndStrings.0, themeAndStrings.1))
-                                index += 1
+                            for renderedPeer in foundLocalPeers {
+                                if let peer = renderedPeer.peers[renderedPeer.peerId] {
+                                    var associatedPeer: Peer?
+                                    if let associatedPeerId = peer.associatedPeerId {
+                                        associatedPeer = renderedPeer.peers[associatedPeerId]
+                                    }
+                                    entries.append(.localPeer(peer, associatedPeer, index, themeAndStrings.0, themeAndStrings.1))
+                                    index += 1
+                                }
                             }
 
                             index = 0
@@ -381,8 +405,16 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             |> mapToSignal { [weak self] peers, themeAndStrings -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
                 var entries: [ChatListRecentEntry] = []
                 entries.append(.topPeers([], themeAndStrings.0, themeAndStrings.1))
-                for i in 0 ..< peers.count {
-                    entries.append(.peer(index: i, peer: peers[i], themeAndStrings.0, themeAndStrings.1))
+                var index = 0
+                for renderedPeer in peers {
+                    if let peer = renderedPeer.peers[renderedPeer.peerId] {
+                        var associatedPeer: Peer?
+                        if let associatedPeerId = peer.associatedPeerId {
+                            associatedPeer = renderedPeer.peers[associatedPeerId]
+                        }
+                        entries.append(.peer(index: index, peer: peer, associatedPeer: associatedPeer, themeAndStrings.0, themeAndStrings.1))
+                        index += 1
+                    }
                 }
                 let previousEntries = previousRecentItems.swap(entries)
                 

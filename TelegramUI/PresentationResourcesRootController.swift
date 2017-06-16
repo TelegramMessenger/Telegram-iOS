@@ -9,6 +9,10 @@ private func generateComposeButtonImage(theme: PresentationTheme) -> UIImage? {
     })
 }
 
+private func generateShareButtonImage(theme: PresentationTheme) -> UIImage? {
+    return generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationShare"), color: theme.rootController.navigationBar.accentTextColor)
+}
+
 struct PresentationResourcesRootController {
     static func navigationIndefiniteActivityImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.rootNavigationIndefiniteActivity.rawValue, { theme in
@@ -58,6 +62,10 @@ struct PresentationResourcesRootController {
     
     static func navigationComposeIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationComposeIcon.rawValue, generateComposeButtonImage)
+    }
+    
+    static func navigationShareIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationShareIcon.rawValue, generateShareButtonImage)
     }
     
     static func navigationDropdownArrowImage(_ theme: PresentationTheme) -> UIImage? {

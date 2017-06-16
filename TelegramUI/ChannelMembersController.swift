@@ -311,7 +311,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                                     }
                                     if !found {
                                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                        updatedPeers.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: peer.id, invitedAt: timestamp, adminInfo: nil, banInfo: nil), peer: peer))
+                                        updatedPeers.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: peer.id, invitedAt: timestamp, adminInfo: nil, banInfo: nil), peer: peer, peers: [:]))
                                         peersPromise.set(.single(updatedPeers))
                                     }
                                 }

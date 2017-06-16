@@ -1013,6 +1013,14 @@ func chatMessagePhotoCancelInteractiveFetch(account: Account, photo: TelegramMed
     }
 }
 
+func chatMessageWebFileInteractiveFetched(account: Account, image: TelegramMediaWebFile) -> Signal<FetchResourceSourceType, NoError> {
+    return account.postbox.mediaBox.fetchedResource(image.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
+}
+
+func chatMessageWebFileCancelInteractiveFetch(account: Account, image: TelegramMediaWebFile) {
+    return account.postbox.mediaBox.cancelInteractiveResourceFetch(image.resource)
+}
+
 func chatWebpageSnippetPhotoData(account: Account, photo: TelegramMediaImage) -> Signal<Data?, NoError> {
     if let closestRepresentation = photo.representationForDisplayAtSize(CGSize(width: 120.0, height: 120.0)) {
         let resourceData = account.postbox.mediaBox.resourceData(closestRepresentation.resource) |> map { next in
@@ -1372,12 +1380,6 @@ func chatAvatarGalleryPhoto(account: Account, representations: [TelegramMediaIma
             var fullSizeImage: CGImage?
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
-                    /*let options = NSMutableDictionary()
-                     options.setValue(max(fittedSize.width * context.scale, fittedSize.height * context.scale) as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
-                     options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
-                     if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
-                     fullSizeImage = image
-                     }*/
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
@@ -1483,3 +1485,149 @@ func settingsBuiltinWallpaperImage(account: Account) -> Signal<(TransformImageAr
     }
 }
 
+func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -> Signal<Data?, NoError> {
+    return Signal<Data?, NoError> { subscriber in
+        let fetchedDisposable = account.postbox.mediaBox.fetchedResource(resource, tag: nil).start()
+        let dataDisposable = account.postbox.mediaBox.resourceData(resource).start(next: { next in
+            subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+        }, error: subscriber.putError, completed: subscriber.putCompletion)
+        
+        return ActionDisposable {
+            fetchedDisposable.dispose()
+            dataDisposable.dispose()
+        }
+    }
+}
+
+private let locationPinImage = UIImage(named: "ModernMessageLocationPin")?.precomposed()
+
+func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMapSnapshotData(account: account, resource: resource)
+    
+    return signal |> map { fullSizeData in
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            
+            var fullSizeImage: CGImage?
+            if let fullSizeData = fullSizeData {
+                let options = NSMutableDictionary()
+                options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                    fullSizeImage = image
+                }
+                
+                if let fullSizeImage = fullSizeImage {
+                    let drawingRect = arguments.drawingRect
+                    var fittedSize = CGSize(width: CGFloat(fullSizeImage.width), height: CGFloat(fullSizeImage.height)).aspectFilled(drawingRect.size)
+                    if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                        fittedSize.width = arguments.boundingSize.width
+                    }
+                    if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                        fittedSize.height = arguments.boundingSize.height
+                    }
+                    
+                    let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                    
+                    context.withFlippedContext { c in
+                        c.setBlendMode(.copy)
+                        if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
+                            c.fill(arguments.drawingRect)
+                        }
+                        
+                        c.setBlendMode(.copy)
+                        
+                        c.interpolationQuality = .medium
+                        c.draw(fullSizeImage, in: fittedRect)
+                        
+                        c.setBlendMode(.normal)
+                        
+                        if let locationPinImage = locationPinImage {
+                            c.draw(locationPinImage.cgImage!, in: CGRect(origin: CGPoint(x: floor((arguments.drawingSize.width - locationPinImage.size.width) / 2.0), y: floor((arguments.drawingSize.height - locationPinImage.size.height) / 2.0) - 5.0), size: locationPinImage.size))
+                        }
+                    }
+                } else {
+                    context.withFlippedContext { c in
+                        c.setBlendMode(.copy)
+                        c.setFillColor(UIColor.white.cgColor)
+                        c.fill(arguments.drawingRect)
+                        
+                        c.setBlendMode(.normal)
+                        
+                        if let locationPinImage = locationPinImage {
+                            c.draw(locationPinImage.cgImage!, in: CGRect(origin: CGPoint(x: floor((arguments.drawingSize.width - locationPinImage.size.width) / 2.0), y: floor((arguments.drawingSize.height - locationPinImage.size.height) / 2.0) - 5.0), size: locationPinImage.size))
+                        }
+                    }
+                }
+            }
+            
+            addCorners(context, arguments: arguments)
+            
+            return context
+        }
+    }
+}
+
+func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return account.postbox.mediaBox.resourceData(file.resource)
+        |> map { fullSizeData in
+            return { arguments in
+                let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                
+                var fullSizeImage: CGImage?
+                if fullSizeData.complete {
+                    let options = NSMutableDictionary()
+                    options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                    if let imageSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: fullSizeData.path) as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        fullSizeImage = image
+                    }
+                    
+                    if let fullSizeImage = fullSizeImage {
+                        let drawingRect = arguments.drawingRect
+                        var fittedSize = CGSize(width: CGFloat(fullSizeImage.width), height: CGFloat(fullSizeImage.height)).aspectFilled(drawingRect.size)
+                        if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                            fittedSize.width = arguments.boundingSize.width
+                        }
+                        if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                            fittedSize.height = arguments.boundingSize.height
+                        }
+                        
+                        let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                        
+                        context.withFlippedContext { c in
+                            c.setBlendMode(.copy)
+                            if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
+                                c.fill(arguments.drawingRect)
+                            }
+                            
+                            c.setBlendMode(.copy)
+                            
+                            c.interpolationQuality = .medium
+                            c.draw(fullSizeImage, in: fittedRect)
+                            
+                            c.setBlendMode(.normal)
+                            
+                            if let locationPinImage = locationPinImage {
+                                c.draw(locationPinImage.cgImage!, in: CGRect(origin: CGPoint(x: floor((arguments.drawingSize.width - locationPinImage.size.width) / 2.0), y: floor((arguments.drawingSize.height - locationPinImage.size.height) / 2.0) - 5.0), size: locationPinImage.size))
+                            }
+                        }
+                    } else {
+                        context.withFlippedContext { c in
+                            c.setBlendMode(.copy)
+                            c.setFillColor(UIColor.white.cgColor)
+                            c.fill(arguments.drawingRect)
+                            
+                            c.setBlendMode(.normal)
+                            
+                            if let locationPinImage = locationPinImage {
+                                c.draw(locationPinImage.cgImage!, in: CGRect(origin: CGPoint(x: floor((arguments.drawingSize.width - locationPinImage.size.width) / 2.0), y: floor((arguments.drawingSize.height - locationPinImage.size.height) / 2.0) - 5.0), size: locationPinImage.size))
+                            }
+                        }
+                    }
+                }
+                
+                addCorners(context, arguments: arguments)
+                
+                return context
+            }
+    }
+}

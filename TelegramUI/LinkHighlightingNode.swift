@@ -31,9 +31,9 @@ private func drawConnectingCorner(context: CGContext, color: UIColor, at point: 
     context.setFillColor(color.cgColor)
     switch type {
         case .topLeft:
-            context.fill(CGRect(origin: CGPoint(x: point.x - radius, y: point.y - radius), size: CGSize(width: radius, height: radius)))
+            context.fill(CGRect(origin: CGPoint(x: point.x - radius, y: point.y), size: CGSize(width: radius, height: radius)))
             context.setFillColor(UIColor.clear.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: point.x - radius * 2.0, y: point.y - radius * 2.0), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: point.x - radius * 2.0, y: point.y), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
         case .topRight:
             context.fill(CGRect(origin: CGPoint(x: point.x, y: point.y), size: CGSize(width: radius, height: radius)))
             context.setFillColor(UIColor.clear.cgColor)
@@ -49,12 +49,10 @@ private func drawConnectingCorner(context: CGContext, color: UIColor, at point: 
     }
 }
 
-private func generateRectsImage(color: UIColor, rects: [CGRect]) -> (CGPoint, UIImage?) {
+private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat) -> (CGPoint, UIImage?) {
     if rects.isEmpty {
         return (CGPoint(), nil)
     }
-    
-    let inset: CGFloat = 2.0
     
     var topLeft = rects[0].origin
     var bottomRight = CGPoint(x: rects[0].maxX, y: rects[0].maxY)
@@ -76,8 +74,6 @@ private func generateRectsImage(color: UIColor, rects: [CGRect]) -> (CGPoint, UI
         
         context.setBlendMode(.copy)
         
-        let radius: CGFloat = 4.0
-        
         for i in 0 ..< rects.count {
             let rect = rects[i].insetBy(dx: -inset, dy: -inset)
             context.fill(rect.offsetBy(dx: -topLeft.x, dy: -topLeft.y))
@@ -98,42 +94,58 @@ private func generateRectsImage(color: UIColor, rects: [CGRect]) -> (CGPoint, UI
             
             if let previous = previous {
                 if previous.contains(rect.topLeft) {
-                    if abs(rect.topLeft.x - previous.minX) >= radius {
+                    if abs(rect.topLeft.x - previous.minX) >= innerRadius {
+                        var radius = innerRadius
+                        if let next = next {
+                            radius = min(radius, floor((next.minY - previous.maxY) / 2.0))
+                        }
                         drawConnectingCorner(context: context, color: color, at: CGPoint(x: rect.topLeft.x, y: previous.maxY), type: .topLeft, radius: radius)
                     }
                 } else {
-                    drawFullCorner(context: context, color: color, at: rect.topLeft, type: .topLeft, radius: radius)
+                    drawFullCorner(context: context, color: color, at: rect.topLeft, type: .topLeft, radius: outerRadius)
                 }
                 if previous.contains(rect.topRight.offsetBy(dx: -1.0, dy: 0.0)) {
-                    if abs(rect.topRight.x - previous.maxX) >= radius {
+                    if abs(rect.topRight.x - previous.maxX) >= innerRadius {
+                        var radius = innerRadius
+                        if let next = next {
+                            radius = min(radius, floor((next.minY - previous.maxY) / 2.0))
+                        }
                         drawConnectingCorner(context: context, color: color, at: CGPoint(x: rect.topRight.x, y: previous.maxY), type: .topRight, radius: radius)
                     }
                 } else {
-                    drawFullCorner(context: context, color: color, at: rect.topRight, type: .topRight, radius: radius)
+                    drawFullCorner(context: context, color: color, at: rect.topRight, type: .topRight, radius: outerRadius)
                 }
             } else {
-                drawFullCorner(context: context, color: color, at: rect.topLeft, type: .topLeft, radius: radius)
-                drawFullCorner(context: context, color: color, at: rect.topRight, type: .topRight, radius: radius)
+                drawFullCorner(context: context, color: color, at: rect.topLeft, type: .topLeft, radius: outerRadius)
+                drawFullCorner(context: context, color: color, at: rect.topRight, type: .topRight, radius: outerRadius)
             }
             
             if let next = next {
                 if next.contains(rect.bottomLeft) {
-                    if abs(rect.bottomRight.x - next.maxX) >= radius {
+                    if abs(rect.bottomRight.x - next.maxX) >= innerRadius {
+                        var radius = innerRadius
+                        if let previous = previous {
+                            radius = min(radius, floor((next.minY - previous.maxY) / 2.0))
+                        }
                         drawConnectingCorner(context: context, color: color, at: CGPoint(x: rect.bottomLeft.x, y: next.minY), type: .bottomLeft, radius: radius)
                     }
                 } else {
-                    drawFullCorner(context: context, color: color, at: rect.bottomLeft, type: .bottomLeft, radius: radius)
+                    drawFullCorner(context: context, color: color, at: rect.bottomLeft, type: .bottomLeft, radius: outerRadius)
                 }
                 if next.contains(rect.bottomRight.offsetBy(dx: -1.0, dy: 0.0)) {
-                    if abs(rect.bottomRight.x - next.maxX) >= radius {
+                    if abs(rect.bottomRight.x - next.maxX) >= innerRadius {
+                        var radius = innerRadius
+                        if let previous = previous {
+                            radius = min(radius, floor((next.minY - previous.maxY) / 2.0))
+                        }
                         drawConnectingCorner(context: context, color: color, at: CGPoint(x: rect.bottomRight.x, y: next.minY), type: .bottomRight, radius: radius)
                     }
                 } else {
-                    drawFullCorner(context: context, color: color, at: rect.bottomRight, type: .bottomRight, radius: radius)
+                    drawFullCorner(context: context, color: color, at: rect.bottomRight, type: .bottomRight, radius: outerRadius)
                 }
             } else {
-                drawFullCorner(context: context, color: color, at: rect.bottomLeft, type: .bottomLeft, radius: radius)
-                drawFullCorner(context: context, color: color, at: rect.bottomRight, type: .bottomRight, radius: radius)
+                drawFullCorner(context: context, color: color, at: rect.bottomLeft, type: .bottomLeft, radius: outerRadius)
+                drawFullCorner(context: context, color: color, at: rect.bottomRight, type: .bottomRight, radius: outerRadius)
             }
         }
     }))
@@ -144,8 +156,16 @@ final class LinkHighlightingNode: ASDisplayNode {
     private var rects: [CGRect] = []
     private let imageNode: ASImageNode
     
+    var innerRadius: CGFloat = 4.0
+    var outerRadius: CGFloat = 4.0
+    var inset: CGFloat = 2.0
+    
+    private var _color: UIColor
     var color: UIColor {
-        didSet {
+        get {
+            return _color
+        } set(value) {
+            self._color = value
             if !self.rects.isEmpty {
                 self.updateImage()
             }
@@ -153,12 +173,12 @@ final class LinkHighlightingNode: ASDisplayNode {
     }
     
     init(color: UIColor) {
+        self._color = color
+        
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
         self.imageNode.displaysAsynchronously = false
         self.imageNode.displayWithoutProcessing = true
-        
-        self.color = color
         
         super.init()
         
@@ -177,11 +197,41 @@ final class LinkHighlightingNode: ASDisplayNode {
         if rects.isEmpty {
             self.imageNode.image = nil
         }
-        let (offset, image) = generateRectsImage(color: self.color, rects: self.rects)
+        let (offset, image) = generateRectsImage(color: self.color, rects: self.rects, inset: self.inset, outerRadius: self.outerRadius, innerRadius: self.innerRadius)
         
         if let image = image {
             self.imageNode.image = image
             self.imageNode.frame = CGRect(origin: offset, size: image.size)
+        }
+    }
+    
+    func asyncLayout() -> (UIColor, [CGRect], CGFloat, CGFloat, CGFloat) -> () -> Void {
+        let currentRects = self.rects
+        let currentColor = self._color
+        let currentInnerRadius = self.innerRadius
+        let currentOuterRadius = self.outerRadius
+        let currentInset = self.inset
+        
+        return { [weak self] color, rects, innerRadius, outerRadius, inset in
+            var updatedImage: (CGPoint, UIImage?)?
+            if currentRects != rects || !currentColor.isEqual(color) || currentInnerRadius != innerRadius || currentOuterRadius != outerRadius || currentInset != inset {
+                updatedImage = generateRectsImage(color: color, rects: rects, inset: inset, outerRadius: outerRadius, innerRadius: innerRadius)
+            }
+            
+            return {
+                if let strongSelf = self {
+                    strongSelf._color = color
+                    strongSelf.rects = rects
+                    strongSelf.innerRadius = innerRadius
+                    strongSelf.outerRadius = outerRadius
+                    strongSelf.inset = inset
+                    
+                    if let (offset, maybeImage) = updatedImage, let image = maybeImage {
+                        strongSelf.imageNode.image = image
+                        strongSelf.imageNode.frame = CGRect(origin: offset, size: image.size)
+                    }
+                }
+            }
         }
     }
 }

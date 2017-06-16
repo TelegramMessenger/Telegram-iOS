@@ -6,13 +6,14 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let separatorNode: ASDisplayNode
     private let titleNode: ASTextNode
     
+    private var theme: PresentationTheme?
+    private var strings: PresentationStrings?
+    
     override init() {
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
         self.separatorNode.isLayerBacked = true
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: "Loading...", font: Font.regular(14.0), textColor: UIColor.black)
         self.titleNode.maximumNumberOfLines = 1
         
         super.init()
@@ -24,6 +25,19 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
     }
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        if interfaceState.strings !== self.strings {
+            self.strings = interfaceState.strings
+            
+            self.titleNode.attributedText = NSAttributedString(string: interfaceState.strings.Channel_NotificationLoading, font: Font.regular(14.0), textColor: UIColor.black)
+        }
+        
+        if interfaceState.theme !== self.theme {
+            self.theme = interfaceState.theme
+            
+            self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+        }
+        
         let panelHeight: CGFloat = 40.0
         
         let titleSize = self.titleNode.measure(CGSize(width: width, height: 100.0))
