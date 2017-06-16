@@ -11,6 +11,8 @@
 		C205FEA91EB3B75900455808 /* ExportMessageLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C205FEA71EB3B75900455808 /* ExportMessageLink.swift */; };
 		C22EE61B1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */; };
 		C22EE61C1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */; };
+		C230BEB61EE9A3760029586C /* ChannelAdminEventLogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = C230BEB51EE9A3760029586C /* ChannelAdminEventLogs.swift */; };
+		C230BEB71EE9A3760029586C /* ChannelAdminEventLogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = C230BEB51EE9A3760029586C /* ChannelAdminEventLogs.swift */; };
 		C2366C831E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */; };
 		C2366C841E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */; };
 		C2366C861E4F403C0097CCFF /* AddressNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2366C851E4F403C0097CCFF /* AddressNames.swift */; };
@@ -551,6 +553,7 @@
 /* Begin PBXFileReference section */
 		C205FEA71EB3B75900455808 /* ExportMessageLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExportMessageLink.swift; sourceTree = "<group>"; };
 		C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ToggleChannelSignatures.swift; sourceTree = "<group>"; };
+		C230BEB51EE9A3760029586C /* ChannelAdminEventLogs.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdminEventLogs.swift; sourceTree = "<group>"; };
 		C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupReturnAndLeft.swift; sourceTree = "<group>"; };
 		C2366C851E4F403C0097CCFF /* AddressNames.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddressNames.swift; sourceTree = "<group>"; };
 		C2366C881E4F40480097CCFF /* SupportPeerId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SupportPeerId.swift; sourceTree = "<group>"; };
@@ -1407,6 +1410,7 @@
 				D0F3A8A71E82CD7D00B4C64C /* UpdatePeerChatInterfaceState.swift */,
 				C23BC3861E9BE3CA00D79F92 /* ImportContact.swift */,
 				C205FEA71EB3B75900455808 /* ExportMessageLink.swift */,
+				C230BEB51EE9A3760029586C /* ChannelAdminEventLogs.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -1653,6 +1657,7 @@
 				D03B0D6B1D631A9D00955575 /* Phonebook.swift in Sources */,
 				D0AAD1A81E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift in Sources */,
 				C2366C831E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */,
+				C230BEB61EE9A3760029586C /* ChannelAdminEventLogs.swift in Sources */,
 				D03B0D3D1D6319E200955575 /* Fetch.swift in Sources */,
 				D0DF0C931D81AD09008AEB01 /* MessageUtils.swift in Sources */,
 				D03B0D681D631A8B00955575 /* RecentPeers.swift in Sources */,
@@ -1940,6 +1945,7 @@
 				D0F3CC7A1DDE2859008148FA /* RequestMessageActionCallback.swift in Sources */,
 				D073CEA11DCBF3D3007511FD /* StickerPack.swift in Sources */,
 				D0E23DD61E8042F500B9B6D2 /* FeaturedStickerPack.swift in Sources */,
+				C230BEB71EE9A3760029586C /* ChannelAdminEventLogs.swift in Sources */,
 				D00DBBDB1E64E67E00DB5485 /* UpdateSecretChat.swift in Sources */,
 				D0448C921E251F96005A61A7 /* SecretChatEncryption.swift in Sources */,
 				D00BDA1D1EE5952A00C64C5E /* TelegramChannelBannedRights.swift in Sources */,

@@ -19,21 +19,27 @@ public func removeRecentlySearchedPeer(postbox: Postbox, peerId: PeerId) -> Sign
     }
 }
 
-public func recentlySearchedPeers(postbox: Postbox) -> Signal<[Peer], NoError> {
+public func recentlySearchedPeers(postbox: Postbox) -> Signal<[RenderedPeer], NoError> {
     return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)])
-        //|> take(1)
-        |> mapToSignal { view -> Signal<[Peer], NoError> in
-            return postbox.modify { modifier -> [Peer] in
-                var peers: [Peer] = []
+        |> mapToSignal { view -> Signal<[RenderedPeer], NoError> in
+            return postbox.modify { modifier -> [RenderedPeer] in
+                var result: [RenderedPeer] = []
                 if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)] as? OrderedItemListView {
                     for item in view.items {
                         let peerId = RecentPeerItemId(item.id).peerId
                         if let peer = modifier.getPeer(peerId) {
-                            peers.append(peer)
+                            var peers = SimpleDictionary<PeerId, Peer>()
+                            peers[peer.id] = peer
+                            if let associatedPeerId = peer.associatedPeerId {
+                                if let associatedPeer = modifier.getPeer(associatedPeerId) {
+                                    peers[associatedPeer.id] = associatedPeer
+                                }
+                            }
+                            result.append(RenderedPeer(peerId: peer.id, peers: peers))
                         }
                     }
                 }
-                return peers
+                return result
             }
         }
 }

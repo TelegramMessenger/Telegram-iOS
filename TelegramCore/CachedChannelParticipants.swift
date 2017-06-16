@@ -136,6 +136,7 @@ public final class CachedChannelParticipants: Coding, Equatable {
     }
 }
 
+
 extension ChannelParticipant {
     init(apiParticipant: Api.ChannelParticipant) {
         switch apiParticipant {
@@ -149,7 +150,7 @@ extension ChannelParticipant {
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: TelegramChannelBannedRights(apiBannedRights: bannedRights))
             case let .channelParticipantAdmin(flags, userId, _, promotedBy, date, adminRights):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChannelAdminRights(apiAdminRights: adminRights), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: promotedBy), canBeEditedByAccountPeer: (flags & (1 << 0)) != 0), banInfo: nil)
-            case let .channelParticipantSelf(_, userId, date):
+            case let .channelParticipantSelf(userId, _, date):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: nil)
         }
     }

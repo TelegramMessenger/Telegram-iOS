@@ -34,6 +34,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
                                     modifier.updatePeerPresences(peerPresences)
                                 
                                     let parsedParticipants = CachedChannelParticipants(apiParticipants: participants)
+
                                     modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, currentData in
                                         if let currentData = currentData as? CachedChannelData {
                                             return currentData.withUpdatedTopParticipants(parsedParticipants)

@@ -31,15 +31,20 @@ private func fetchChannelBlacklist(account: Account, peerId: PeerId, filter: Cha
                     switch result {
                         case let .channelParticipants(_, participants, users):
                             var peers: [PeerId: Peer] = [:]
+                            var status:[PeerId: PeerPresence] = [:]
                             for user in users {
                                 let peer = TelegramUser(user: user)
                                 peers[peer.id] = peer
+                                if let presence = TelegramUserPresence(apiUser: user) {
+                                    status[peer.id] = presence
+                                }
                             }
                             
                         for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                                 if let peer = peers[participant.peerId] {
-                                    items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers))
+                                    items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presence: status[peer.id]))
                                 }
+                                
                             }
                     }
                     return items
@@ -50,24 +55,77 @@ private func fetchChannelBlacklist(account: Account, peerId: PeerId, filter: Cha
     } |> switchToLatest
 }
 
-public func channelBlacklistParticipants(account: Account, peerId: PeerId) -> Signal<[RenderedChannelParticipant], NoError> {
+public struct ChannelBlacklist {
+    public let banned: [RenderedChannelParticipant]
+    public let restricted: [RenderedChannelParticipant]
+    
+    public init(banned: [RenderedChannelParticipant], restricted: [RenderedChannelParticipant]) {
+        self.banned = banned
+        self.restricted = restricted
+    }
+    
+    public var isEmpty: Bool {
+        return banned.isEmpty && restricted.isEmpty
+    }
+    
+    public func withRemovedPeerId(_ memberId:PeerId) -> ChannelBlacklist {
+        var updatedRestricted = restricted
+        var updatedBanned = banned
+
+        for i in 0 ..< updatedBanned.count {
+            if updatedBanned[i].peer.id == memberId {
+                updatedBanned.remove(at: i)
+                break
+            }
+        }
+        for i in 0 ..< updatedRestricted.count {
+            if updatedRestricted[i].peer.id == memberId {
+                updatedRestricted.remove(at: i)
+                break
+            }
+        }
+        return ChannelBlacklist(banned: updatedBanned, restricted: updatedRestricted)
+    }
+    
+    public func withRemovedParticipant(_ participant:RenderedChannelParticipant) -> ChannelBlacklist {
+        let updated = self.withRemovedPeerId(participant.participant.peerId)
+        var updatedRestricted = updated.restricted
+        var updatedBanned = updated.banned
+        
+        if case .member(_, _, _, let maybeBanInfo) = participant.participant, let banInfo = maybeBanInfo {
+            if banInfo.flags.contains(.banReadMessages) {
+                updatedBanned.insert(participant, at: 0)
+            } else {
+                if !banInfo.flags.isEmpty {
+                    updatedRestricted.insert(participant, at: 0)
+                }
+            }
+        }
+    
+        
+        return ChannelBlacklist(banned: updatedBanned, restricted: updatedRestricted)
+    }
+}
+
+public func channelBlacklistParticipants(account: Account, peerId: PeerId) -> Signal<ChannelBlacklist, NoError> {
     return combineLatest(fetchChannelBlacklist(account: account, peerId: peerId, filter: .restricted), fetchChannelBlacklist(account: account, peerId: peerId, filter: .banned))
-        |> map { restricted, banned -> [RenderedChannelParticipant] in
-            var result: [RenderedChannelParticipant] = []
+        |> map { restricted, banned in
+            var r: [RenderedChannelParticipant] = []
+            var b: [RenderedChannelParticipant] = []
             var peerIds = Set<PeerId>()
             for participant in restricted {
                 if !peerIds.contains(participant.peer.id) {
                     peerIds.insert(participant.peer.id)
-                    result.append(participant)
+                    r.append(participant)
                 }
             }
             for participant in banned {
                 if !peerIds.contains(participant.peer.id) {
                     peerIds.insert(participant.peer.id)
-                    result.append(participant)
+                    b.append(participant)
                 }
             }
-            return result
+            return ChannelBlacklist(banned: b, restricted: r)
         }
 }
 

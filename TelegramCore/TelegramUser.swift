@@ -89,7 +89,7 @@ public final class TelegramUser: Peer {
     }
     
     public var indexName: PeerIndexNameRepresentation {
-        return .personName(first: self.firstName ?? "", last: self.lastName ?? "", addressName: self.username)
+        return .personName(first: self.firstName ?? "", last: self.lastName ?? "", addressName: self.username, phoneNumber: self.phone)
     }
     
     public let associatedPeerId: PeerId? = nil
