@@ -66,7 +66,7 @@ public class NavigationButtonNode: ASTextNode {
         }
     }
     
-    public var color: UIColor = UIColor(0x007ee5) {
+    public var color: UIColor = UIColor(rgb: 0x007ee5) {
         didSet {
             if let text = self._text {
                 self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())

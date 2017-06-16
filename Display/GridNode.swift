@@ -48,13 +48,13 @@ public struct GridNodeScrollToItem {
 }
 
 public enum GridNodeLayoutType: Equatable {
-    case fixed(itemSize: CGSize)
+    case fixed(itemSize: CGSize, lineSpacing: CGFloat)
     case balanced(idealHeight: CGFloat)
     
     public static func ==(lhs: GridNodeLayoutType, rhs: GridNodeLayoutType) -> Bool {
         switch lhs {
-            case let .fixed(itemSize):
-                if case .fixed(itemSize) = rhs {
+            case let .fixed(itemSize, lineSpacing):
+                if case .fixed(itemSize, lineSpacing) = rhs {
                     return true
                 } else {
                     return false
@@ -72,12 +72,14 @@ public enum GridNodeLayoutType: Equatable {
 public struct GridNodeLayout: Equatable {
     public let size: CGSize
     public let insets: UIEdgeInsets
+    public let scrollIndicatorInsets: UIEdgeInsets?
     public let preloadSize: CGFloat
     public let type: GridNodeLayoutType
     
-    public init(size: CGSize, insets: UIEdgeInsets, preloadSize: CGFloat, type: GridNodeLayoutType) {
+    public init(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets? = nil, preloadSize: CGFloat, type: GridNodeLayoutType) {
         self.size = size
         self.insets = insets
+        self.scrollIndicatorInsets = scrollIndicatorInsets
         self.preloadSize = preloadSize
         self.type = type
     }
@@ -245,7 +247,7 @@ private struct WrappedGridItemNode: Hashable {
 }
 
 open class GridNode: GridNodeScroller, UIScrollViewDelegate {
-    private var gridLayout = GridNodeLayout(size: CGSize(), insets: UIEdgeInsets(), preloadSize: 0.0, type: .fixed(itemSize: CGSize()))
+    private var gridLayout = GridNodeLayout(size: CGSize(), insets: UIEdgeInsets(), preloadSize: 0.0, type: .fixed(itemSize: CGSize(), lineSpacing: 0.0))
     private var firstIndexInSectionOffset: Int = 0
     private var items: [GridItem] = []
     private var itemNodes: [Int: GridItemNode] = [:]
@@ -258,6 +260,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     public var presentationLayoutUpdated: ((GridNodeCurrentPresentationLayout, ContainedViewLayoutTransition) -> Void)?
     
     public final var floatingSections = false
+    
+    public var showVerticalScrollIndicator: Bool = false {
+        didSet {
+            self.scrollView.showsVerticalScrollIndicator = self.showVerticalScrollIndicator
+        }
+    }
     
     public override init() {
         super.init()
@@ -418,10 +426,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             var sections: [GridNodePresentationSection] = []
             
             switch gridLayout.type {
-                case let .fixed(itemSize):
+                case let .fixed(itemSize, lineSpacing):
                     let itemsInRow = Int(gridLayout.size.width / itemSize.width)
                     let itemsInRowWidth = CGFloat(itemsInRow) * itemSize.width
-                    let remainingWidth = gridLayout.size.width - itemsInRowWidth
+                    let remainingWidth = max(0.0, gridLayout.size.width - itemsInRowWidth)
                     
                     let itemSpacing = floorToScreenPixels(remainingWidth / CGFloat(itemsInRow + 1))
                     
@@ -441,7 +449,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         if !keepSection {
                             if incrementedCurrentRow {
                                 nextItemOrigin.x = itemSpacing
-                                nextItemOrigin.y += itemSize.height
+                                nextItemOrigin.y += itemSize.height + lineSpacing
                                 incrementedCurrentRow = false
                             }
                             
@@ -455,7 +463,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         
                         if !incrementedCurrentRow {
                             incrementedCurrentRow = true
-                            contentSize.height += itemSize.height
+                            contentSize.height += itemSize.height + lineSpacing
                         }
                         
                         if index == 0 {
@@ -470,7 +478,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         nextItemOrigin.x += itemSize.width + itemSpacing
                         if nextItemOrigin.x + itemSize.width > gridLayout.size.width {
                             nextItemOrigin.x = itemSpacing
-                            nextItemOrigin.y += itemSize.height
+                            nextItemOrigin.y += itemSize.height + lineSpacing
                             incrementedCurrentRow = false
                         }
                     }
@@ -749,10 +757,17 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
         
         applyingContentOffset = true
+        
         self.scrollView.contentSize = presentationLayoutTransition.layout.contentSize
         self.scrollView.contentInset = presentationLayoutTransition.layout.layout.insets
-        if !self.scrollView.contentOffset.equalTo(presentationLayoutTransition.layout.contentOffset) {
-            self.scrollView.contentOffset = presentationLayoutTransition.layout.contentOffset
+        if let scrollIndicatorInsets = presentationLayoutTransition.layout.layout.scrollIndicatorInsets {
+            self.scrollView.scrollIndicatorInsets = scrollIndicatorInsets
+        } else {
+            self.scrollView.scrollIndicatorInsets = presentationLayoutTransition.layout.layout.insets
+        }
+        if !self.scrollView.contentOffset.equalTo(presentationLayoutTransition.layout.contentOffset) || self.bounds.size != presentationLayoutTransition.layout.layout.size {
+            //self.scrollView.contentOffset = presentationLayoutTransition.layout.contentOffset
+            self.bounds = CGRect(origin: presentationLayoutTransition.layout.contentOffset, size: presentationLayoutTransition.layout.layout.size)
         }
         applyingContentOffset = false
         

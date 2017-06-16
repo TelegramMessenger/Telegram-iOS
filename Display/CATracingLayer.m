@@ -37,7 +37,7 @@ static void *CATracingLayerPositionAnimationMirrorTarget = &CATracingLayerPositi
     return [self animationForKey:@"position"] != nil || [self animationForKey:@"bounds"] != nil;
 }
 
-static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull layer, NSMutableDictionary<NSNumber *, NSMutableArray<CALayer *> *> *layersByDepth) {
+static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull layer, NSMutableDictionary<NSNumber *, NSMutableArray<CALayer *> *> *layersByDepth, bool skipIfNoTraceableSublayers) {
     bool hadTraceableSublayers = false;
     for (CALayer *sublayer in layer.sublayers.reverseObjectEnumerator) {
         CATracingLayerInfo *sublayerTraceableInfo = [sublayer traceableInfo];
@@ -52,10 +52,10 @@ static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull
         }
     }
     
-    if (!hadTraceableSublayers) {
+    if (!skipIfNoTraceableSublayers || !hadTraceableSublayers) {
         for (CALayer *sublayer in layer.sublayers.reverseObjectEnumerator) {
             if ([sublayer isKindOfClass:[CATracingLayer class]]) {
-                traceLayerSurfaces(tracingTag, depth + 1, sublayer, layersByDepth);
+                traceLayerSurfaces(tracingTag, depth + 1, sublayer, layersByDepth, hadTraceableSublayers);
             }
         }
     }
@@ -64,7 +64,7 @@ static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull
 - (NSArray<NSArray<CALayer *> *> * _Nonnull)traceableLayerSurfacesWithTag:(int32_t)tracingTag {
     NSMutableDictionary<NSNumber *, NSMutableArray<CALayer *> *> *layersByDepth = [[NSMutableDictionary alloc] init];
     
-    traceLayerSurfaces(tracingTag, 0, self, layersByDepth);
+    traceLayerSurfaces(tracingTag, 0, self, layersByDepth, false);
     
     NSMutableArray<NSMutableArray<CALayer *> *> *result = [[NSMutableArray alloc] init];
     

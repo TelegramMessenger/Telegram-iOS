@@ -7,8 +7,10 @@ typedef void (^UIBarButtonItemSetEnabledListener)(BOOL);
 @interface UIBarButtonItem (Proxy)
 
 @property (nonatomic, strong, readonly) ASDisplayNode *customDisplayNode;
+@property (nonatomic, readonly) bool backButtonAppearance;
 
 - (instancetype)initWithCustomDisplayNode:(ASDisplayNode *)customDisplayNode;
+- (instancetype)initWithBackButtonAppearanceWithTitle:(NSString *)title target:(id)target action:(SEL)action;
 
 - (void)performActionOnTarget;
 

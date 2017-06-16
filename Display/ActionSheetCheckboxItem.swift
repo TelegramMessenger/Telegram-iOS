@@ -3,7 +3,7 @@ import AsyncDisplayKit
 
 private let checkIcon = generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(0x007ee5).cgColor)
+    context.setStrokeColor(UIColor(rgb: 0x007ee5).cgColor)
     context.setLineWidth(2.0)
     context.move(to: CGPoint(x: 12.0, y: 1.0))
     context.addLine(to: CGPoint(x: 4.16482734, y: 9.0))
@@ -95,7 +95,7 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         self.item = item
         
         self.titleNode.attributedText = NSAttributedString(string: item.title, font: ActionSheetCheckboxItemNode.defaultFont, textColor: .black)
-        self.labelNode.attributedText = NSAttributedString(string: item.label, font: ActionSheetCheckboxItemNode.defaultFont, textColor: UIColor(0x8e8e93))
+        self.labelNode.attributedText = NSAttributedString(string: item.label, font: ActionSheetCheckboxItemNode.defaultFont, textColor: UIColor(rgb: 0x8e8e93))
         self.checkNode.isHidden = !item.value
         
         self.setNeedsLayout()

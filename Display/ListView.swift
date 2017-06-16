@@ -1982,7 +1982,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
             
             self.updateAccessoryNodes(animated: animated, currentTimestamp: timestamp)
-            self.updateFloatingAccessoryNodes(animated: animated, currentTimestamp: timestamp)
             
             if let scrollToItem = scrollToItem , scrollToItem.animated {
                 if self.itemNodes.count != 0 {
@@ -2434,22 +2433,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
-    private func updateFloatingAccessoryNodes(animated: Bool, currentTimestamp: Double) {
-        var previousFloatingAccessoryItem: ListViewAccessoryItem?
-        for itemNode in self.itemNodes {
-            if let index = itemNode.index, let floatingAccessoryItem = self.items[index].floatingAccessoryItem {
-                if itemNode.floatingAccessoryItemNode == nil {
-                    let floatingAccessoryItemNode = floatingAccessoryItem.node()
-                    itemNode.floatingAccessoryItemNode = floatingAccessoryItemNode
-                    itemNode.addSubnode(floatingAccessoryItemNode)
-                }
-            } else {
-                itemNode.floatingAccessoryItemNode?.removeFromSupernode()
-                itemNode.floatingAccessoryItemNode = nil
-            }
-        }
-    }
-    
     private func enqueueUpdateVisibleItems() {
         if !self.enqueuedUpdateVisibleItems {
             self.enqueuedUpdateVisibleItems = true
@@ -2735,6 +2718,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             if itemNode.index != nil {
                 f(itemNode)
             }
+        }
+    }
+    
+    public func forEachItemHeaderNode(_ f: (ListViewItemHeaderNode) -> Void) {
+        for (_, itemNode) in self.itemHeaderNodes {
+            f(itemNode)
         }
     }
     

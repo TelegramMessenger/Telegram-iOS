@@ -98,7 +98,7 @@ class KeyboardManager {
         }
         
         var firstResponderView: UIView?
-        for surface in surfaces {
+        for surface in self.surfaces {
             if hasFirstResponder(surface.host) {
                 firstResponderView = surface.host
                 break

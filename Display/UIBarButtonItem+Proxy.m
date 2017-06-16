@@ -6,6 +6,7 @@
 static const void *setEnabledListenerBagKey = &setEnabledListenerBagKey;
 static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
 static const void *customDisplayNodeKey = &customDisplayNodeKey;
+static const void *backButtonAppearanceKey = &backButtonAppearanceKey;
 
 @implementation UIBarButtonItem (Proxy)
 
@@ -27,8 +28,20 @@ static const void *customDisplayNodeKey = &customDisplayNodeKey;
     return self;
 }
 
+- (instancetype)initWithBackButtonAppearanceWithTitle:(NSString *)title target:(id)target action:(SEL)action {
+    self = [self initWithTitle:title style:UIBarButtonItemStylePlain target:target action:action];
+    if (self != nil) {
+        [self setAssociatedObject:@true forKey:backButtonAppearanceKey];
+    }
+    return self;
+}
+
 - (ASDisplayNode *)customDisplayNode {
     return [self associatedObjectForKey:customDisplayNodeKey];
+}
+
+- (bool)backButtonAppearance {
+    return [[self associatedObjectForKey:backButtonAppearanceKey] boolValue];
 }
 
 - (void)_c1e56039_setEnabled:(BOOL)enabled

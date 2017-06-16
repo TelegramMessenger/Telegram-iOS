@@ -2,6 +2,7 @@
 
 typedef void (^UINavigationItemSetTitleListener)(NSString *);
 typedef void (^UINavigationItemSetTitleViewListener)(UIView *);
+typedef void (^UINavigationItemSetImageListener)(UIImage *);
 typedef void (^UINavigationItemSetBarButtonItemListener)(UIBarButtonItem *, UIBarButtonItem *, BOOL);
 typedef void (^UITabBarItemSetBadgeListener)(NSString *);
 
@@ -17,6 +18,8 @@ typedef void (^UITabBarItemSetBadgeListener)(NSString *);
 - (void)removeSetLeftBarButtonItemListener:(NSInteger)key;
 - (NSInteger)addSetRightBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener;
 - (void)removeSetRightBarButtonItemListener:(NSInteger)key;
+- (NSInteger)addSetBackBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener;
+- (void)removeSetBackBarButtonItemListener:(NSInteger)key;
 
 @end
 
@@ -25,5 +28,14 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBa
 @interface UITabBarItem (Proxy)
 
 - (void)removeSetBadgeListener:(NSInteger)key;
+
+- (NSInteger)addSetTitleListener:(UINavigationItemSetTitleListener)listener;
+- (void)removeSetTitleListener:(NSInteger)key;
+
+- (NSInteger)addSetImageListener:(UINavigationItemSetImageListener)listener;
+- (void)removeSetImageListener:(NSInteger)key;
+
+- (NSInteger)addSetSelectedImageListener:(UINavigationItemSetImageListener)listener;
+- (void)removeSetSelectedImageListener:(NSInteger)key;
 
 @end

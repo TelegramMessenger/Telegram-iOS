@@ -26,14 +26,14 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
     init(action: TextAlertAction) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = UIColor(0xe0e5e6)
+        self.backgroundNode.backgroundColor = UIColor(rgb: 0xe0e5e6)
         self.backgroundNode.alpha = 0.0
         
         self.action = action
         
         super.init()
         
-        self.setTitle(action.title, with: action.type == .defaultAction ? Font.medium(17.0) : Font.regular(17.0), with: UIColor(0x007ee5), for: [])
+        self.setTitle(action.title, with: action.type == .defaultAction ? Font.medium(17.0) : Font.regular(17.0), with: UIColor(rgb: 0x007ee5), for: [])
         
         self.highligthedChanged = { [weak self] value in
             if let strongSelf = self {
@@ -96,7 +96,7 @@ final class TextAlertContentNode: AlertContentNode {
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
-        self.actionNodesSeparator.backgroundColor = UIColor(0xc9cdd7)
+        self.actionNodesSeparator.backgroundColor = UIColor(rgb: 0xc9cdd7)
         
         self.actionNodes = actions.map { action -> TextAlertContentActionNode in
             return TextAlertContentActionNode(action: action)
@@ -107,7 +107,7 @@ final class TextAlertContentNode: AlertContentNode {
             for _ in 0 ..< actions.count - 1 {
                 let separatorNode = ASDisplayNode()
                 separatorNode.isLayerBacked = true
-                separatorNode.backgroundColor = UIColor(0xc9cdd7)
+                separatorNode.backgroundColor = UIColor(rgb: 0xc9cdd7)
                 actionVerticalSeparators.append(separatorNode)
             }
         }

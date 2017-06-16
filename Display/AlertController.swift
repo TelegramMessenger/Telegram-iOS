@@ -11,9 +11,7 @@ open class AlertController: ViewController {
     public init(contentNode: AlertContentNode) {
         self.contentNode = contentNode
         
-        super.init(navigationBar: NavigationBar())
-        
-        self.navigationBar.isHidden = true
+        super.init(navigationBarTheme: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {

@@ -8,7 +8,7 @@ open class ActionSheetController: ViewController {
     private var groups: [ActionSheetItemGroup] = []
     
     public init() {
-        super.init(navigationBar: NavigationBar())
+        super.init(navigationBarTheme: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -22,7 +22,6 @@ open class ActionSheetController: ViewController {
     open override func loadDisplayNode() {
         self.displayNode = ActionSheetControllerNode()
         self.displayNodeDidLoad()
-        self.navigationBar.isHidden = true
         
         self.actionSheetNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false)

@@ -64,7 +64,7 @@ open class ViewControllerPresentationArguments {
     }
     
     public let statusBar: StatusBar
-    public let navigationBar: NavigationBar
+    public let navigationBar: NavigationBar?
     
     public var displayNavigationBar = true
     
@@ -72,7 +72,11 @@ open class ViewControllerPresentationArguments {
     private weak var activeInputView: UIResponder?
     
     open var navigationHeight: CGFloat {
-        return self.navigationBar.frame.maxY
+        if let navigationBar = self.navigationBar {
+            return navigationBar.frame.maxY
+        } else {
+            return 0.0
+        }
     }
     
     private let _ready = Promise<Bool>(true)
@@ -107,17 +111,21 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    public init(navigationBar: NavigationBar = NavigationBar()) {
+    public init(navigationBarTheme: NavigationBarTheme?) {
         self.statusBar = StatusBar()
-        self.navigationBar = navigationBar
+        if let navigationBarTheme = navigationBarTheme {
+            self.navigationBar = NavigationBar(theme: navigationBarTheme)
+        } else {
+            self.navigationBar = nil
+        }
         self.presentationContext = PresentationContext()
         
         super.init(nibName: nil, bundle: nil)
         
-        self.navigationBar.backPressed = { [weak self] in
+        self.navigationBar?.backPressed = { [weak self] in
             self?.navigationController?.popViewController(animated: true)
         }
-        self.navigationBar.item = self.navigationItem
+        self.navigationBar?.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false
     }
     
@@ -151,7 +159,9 @@ open class ViewControllerPresentationArguments {
             navigationBarFrame.origin.y = -navigationBarFrame.size.height
         }
         
-        transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
+        if let navigationBar = self.navigationBar {
+            transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
+        }
         
         self.presentationContext.containerLayoutUpdated(layout, transition: transition)
         
@@ -162,7 +172,9 @@ open class ViewControllerPresentationArguments {
     
     open override func loadView() {
         self.view = self.displayNode.view
-        self.displayNode.addSubnode(self.navigationBar)
+        if let navigationBar = self.navigationBar {
+            self.displayNode.addSubnode(navigationBar)
+        }
         self.view.addSubview(self.statusBar.view)
         self.presentationContext.view = self.view
     }

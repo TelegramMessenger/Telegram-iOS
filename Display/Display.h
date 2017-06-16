@@ -30,3 +30,4 @@ FOUNDATION_EXPORT const unsigned char DisplayVersionString[];
 #import <Display/NSWeakReference.h>
 #import <Display/FBAnimationPerformanceTracker.h>
 #import <Display/CATracingLayer.h>
+#import <Display/CASeeThroughTracingLayer.h>

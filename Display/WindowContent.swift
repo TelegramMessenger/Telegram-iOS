@@ -15,45 +15,51 @@ private class WindowRootViewController: UIViewController {
 
 private struct WindowLayout: Equatable {
     public let size: CGSize
+    public let metrics: LayoutMetrics
     public let statusBarHeight: CGFloat?
+    public let forceInCallStatusBarText: String?
     public let inputHeight: CGFloat?
     public let inputMinimized: Bool
-}
 
-private func ==(lhs: WindowLayout, rhs: WindowLayout) -> Bool {
-    if !lhs.size.equalTo(rhs.size) {
-        return false
-    }
-    
-    if let lhsStatusBarHeight = lhs.statusBarHeight {
-        if let rhsStatusBarHeight = rhs.statusBarHeight {
-            if !lhsStatusBarHeight.isEqual(to: rhsStatusBarHeight) {
-                return false
-            }
-        } else {
+    static func ==(lhs: WindowLayout, rhs: WindowLayout) -> Bool {
+        if !lhs.size.equalTo(rhs.size) {
             return false
         }
-    } else if let _ = rhs.statusBarHeight {
-        return false
-    }
-    
-    if let lhsInputHeight = lhs.inputHeight {
-        if let rhsInputHeight = rhs.inputHeight {
-            if !lhsInputHeight.isEqual(to: rhsInputHeight) {
+        
+        if let lhsStatusBarHeight = lhs.statusBarHeight {
+            if let rhsStatusBarHeight = rhs.statusBarHeight {
+                if !lhsStatusBarHeight.isEqual(to: rhsStatusBarHeight) {
+                    return false
+                }
+            } else {
                 return false
             }
-        } else {
+        } else if let _ = rhs.statusBarHeight {
             return false
         }
-    } else if let _ = rhs.inputHeight {
-        return false
+        
+        if lhs.forceInCallStatusBarText != rhs.forceInCallStatusBarText {
+            return false
+        }
+        
+        if let lhsInputHeight = lhs.inputHeight {
+            if let rhsInputHeight = rhs.inputHeight {
+                if !lhsInputHeight.isEqual(to: rhsInputHeight) {
+                    return false
+                }
+            } else {
+                return false
+            }
+        } else if let _ = rhs.inputHeight {
+            return false
+        }
+        
+        if lhs.inputMinimized != rhs.inputMinimized {
+            return false
+        }
+        
+        return true
     }
-    
-    if lhs.inputMinimized != rhs.inputMinimized {
-        return false
-    }
-    
-    return true
 }
 
 private struct UpdatingLayout {
@@ -72,28 +78,35 @@ private struct UpdatingLayout {
         }
     }
     
-    mutating func update(size: CGSize, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
+    mutating func update(size: CGSize, metrics: LayoutMetrics, forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
         self.update(transition: transition, override: overrideTransition)
         
-        self.layout = WindowLayout(size: size, statusBarHeight: self.layout.statusBarHeight, inputHeight: self.layout.inputHeight, inputMinimized: self.layout.inputMinimized)
+        self.layout = WindowLayout(size: size, metrics: metrics, statusBarHeight: self.layout.statusBarHeight, forceInCallStatusBarText: forceInCallStatusBarText, inputHeight: self.layout.inputHeight, inputMinimized: self.layout.inputMinimized)
+    }
+    
+    
+    mutating func update(forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
+        self.update(transition: transition, override: overrideTransition)
+        
+        self.layout = WindowLayout(size: self.layout.size, metrics: self.layout.metrics, statusBarHeight: self.layout.statusBarHeight, forceInCallStatusBarText: forceInCallStatusBarText, inputHeight: self.layout.inputHeight, inputMinimized: self.layout.inputMinimized)
     }
     
     mutating func update(statusBarHeight: CGFloat?, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
         self.update(transition: transition, override: overrideTransition)
         
-        self.layout = WindowLayout(size: self.layout.size, statusBarHeight: statusBarHeight, inputHeight: self.layout.inputHeight, inputMinimized: self.layout.inputMinimized)
+        self.layout = WindowLayout(size: self.layout.size, metrics: self.layout.metrics, statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.layout.forceInCallStatusBarText, inputHeight: self.layout.inputHeight, inputMinimized: self.layout.inputMinimized)
     }
     
     mutating func update(inputHeight: CGFloat?, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
         self.update(transition: transition, override: overrideTransition)
         
-        self.layout = WindowLayout(size: self.layout.size, statusBarHeight: self.layout.statusBarHeight, inputHeight: inputHeight, inputMinimized: self.layout.inputMinimized)
+        self.layout = WindowLayout(size: self.layout.size, metrics: self.layout.metrics, statusBarHeight: self.layout.statusBarHeight, forceInCallStatusBarText: self.layout.forceInCallStatusBarText, inputHeight: inputHeight, inputMinimized: self.layout.inputMinimized)
     }
     
     mutating func update(inputMinimized: Bool, transition: ContainedViewLayoutTransition, overrideTransition: Bool) {
         self.update(transition: transition, override: overrideTransition)
         
-        self.layout = WindowLayout(size: self.layout.size, statusBarHeight: self.layout.statusBarHeight, inputHeight: self.layout.inputHeight, inputMinimized: inputMinimized)
+        self.layout = WindowLayout(size: self.layout.size, metrics: self.layout.metrics, statusBarHeight: self.layout.statusBarHeight, forceInCallStatusBarText: self.layout.forceInCallStatusBarText, inputHeight: self.layout.inputHeight, inputMinimized: inputMinimized)
     }
 }
 
@@ -106,7 +119,18 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> Container
         inputHeight = floor(0.85 * inputHeightValue)
     }
     
-    return ContainerViewLayout(size: layout.size, intrinsicInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: inputHeight)
+    let resolvedStatusBarHeight: CGFloat?
+    if let statusBarHeight = layout.statusBarHeight {
+        if layout.forceInCallStatusBarText != nil {
+            resolvedStatusBarHeight = 40.0
+        } else {
+            resolvedStatusBarHeight = statusBarHeight
+        }
+    } else {
+        resolvedStatusBarHeight = nil
+    }
+    
+    return ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: UIEdgeInsets(), statusBarHeight: resolvedStatusBarHeight, inputHeight: inputHeight)
 }
 
 public final class WindowHostView {
@@ -138,6 +162,10 @@ public protocol WindowHost {
     func present(_ controller: ViewController)
 }
 
+private func layoutMetricsForScreenSize(_ size: CGSize) -> LayoutMetrics {
+    return LayoutMetrics(widthClass: .compact, heightClass: .compact)
+}
+
 public class Window1 {
     public let hostView: WindowHostView
     
@@ -155,6 +183,13 @@ public class Window1 {
     private var tracingStatusBarsInvalidated = false
     
     private var statusBarHidden = false
+    
+    public private(set) var forceInCallStatusBarText: String? = nil
+    public var inCallNavigate: (() -> Void)? {
+        didSet {
+            self.statusBarManager?.inCallNavigate = self.inCallNavigate
+        }
+    }
     
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
@@ -178,7 +213,7 @@ public class Window1 {
             minimized = false
         }
         
-        self.windowLayout = WindowLayout(size: self.hostView.view.bounds.size, statusBarHeight: statusBarHeight, inputHeight: 0.0, inputMinimized: minimized)
+        self.windowLayout = WindowLayout(size: self.hostView.view.bounds.size, metrics: layoutMetricsForScreenSize(self.hostView.view.bounds.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, inputMinimized: minimized)
         self.presentationContext = PresentationContext()
         
         self.hostView.present = { [weak self] controller in
@@ -260,6 +295,16 @@ public class Window1 {
         }
     }
     
+    public func setForceInCallStatusBar(_ forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
+        if self.forceInCallStatusBarText != forceInCallStatusBarText {
+            self.forceInCallStatusBarText = forceInCallStatusBarText
+            
+            self.updateLayout { $0.update(forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
+            
+            self.invalidateTracingStatusBars()
+        }
+    }
+    
     private func invalidateTracingStatusBars() {
         self.tracingStatusBarsInvalidated = true
         self.hostView.view.setNeedsLayout()
@@ -274,8 +319,10 @@ public class Window1 {
             }
         }
         
-        if let result = self._topLevelOverlayController?.view.hitTest(point, with: event) {
-            return result
+        for controller in self._topLevelOverlayControllers.reversed() {
+            if let result = controller.view.hitTest(point, with: event) {
+                return result
+            }
         }
         
         if let result = self.presentationContext.hitTest(point, with: event) {
@@ -291,7 +338,7 @@ public class Window1 {
         } else {
             transition = .immediate
         }
-        self.updateLayout { $0.update(size: value, transition: transition, overrideTransition: true) }
+        self.updateLayout { $0.update(size: value, metrics: layoutMetricsForScreenSize(value), forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
     }
     
     private var _rootController: ContainableController?
@@ -313,24 +360,24 @@ public class Window1 {
         }
     }
     
-    private var _topLevelOverlayController: ContainableController?
-    public var topLevelOverlayController: ContainableController? {
+    private var _topLevelOverlayControllers: [ContainableController] = []
+    public var topLevelOverlayControllers: [ContainableController] {
         get {
-            return _topLevelOverlayController
+            return _topLevelOverlayControllers
         }
         set(value) {
-            if let topLevelOverlayController = self._topLevelOverlayController {
-                topLevelOverlayController.view.removeFromSuperview()
+            for controller in self._topLevelOverlayControllers {
+                controller.view.removeFromSuperview()
             }
-            self._topLevelOverlayController = value
+            self._topLevelOverlayControllers = value
             
-            if let topLevelOverlayController = self._topLevelOverlayController {
-                topLevelOverlayController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
+            for controller in self._topLevelOverlayControllers {
+                controller.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
                 
-                self.hostView.view.addSubview(topLevelOverlayController.view)
+                self.hostView.view.addSubview(controller.view)
             }
             
-            self.presentationContext.topLevelSubview = self._topLevelOverlayController?.view
+            self.presentationContext.topLevelSubview = self._topLevelOverlayControllers.first?.view
         }
     }
     
@@ -339,7 +386,7 @@ public class Window1 {
             self.tracingStatusBarsInvalidated = false
             
             if self.statusBarHidden {
-                statusBarManager.surfaces = []
+                statusBarManager.updateState(surfaces: [], forceInCallStatusBarText: nil, animated: false)
             } else {
                 var statusBarSurfaces: [StatusBarSurface] = []
                 for layers in self.hostView.view.layer.traceableLayerSurfaces(withTag: WindowTracingTags.statusBar) {
@@ -353,7 +400,13 @@ public class Window1 {
                     statusBarSurfaces.append(surface)
                 }
                 self.hostView.view.layer.adjustTraceableLayerTransforms(CGSize())
-                statusBarManager.surfaces = statusBarSurfaces
+                var animatedUpdate = false
+                if let updatingLayout = self.updatingLayout {
+                    if case .animated = updatingLayout.transition {
+                        animatedUpdate = true
+                    }
+                }
+                statusBarManager.updateState(surfaces: statusBarSurfaces, forceInCallStatusBarText: self.forceInCallStatusBarText, animated: animatedUpdate)
             }
             
             var keyboardSurfaces: [KeyboardSurface] = []
@@ -430,7 +483,7 @@ public class Window1 {
                     self.tracingStatusBarsInvalidated = true
                     self.hostView.view.setNeedsLayout()
                 }
-                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, statusBarHeight: statusBarHeight, inputHeight: updatingLayout.layout.inputHeight, inputMinimized: updatingLayout.layout.inputMinimized)
+                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, metrics: layoutMetricsForScreenSize(updatingLayout.layout.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: updatingLayout.layout.forceInCallStatusBarText, inputHeight: updatingLayout.layout.inputHeight, inputMinimized: updatingLayout.layout.inputMinimized)
                 
                 self._rootController?.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)
                 self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)

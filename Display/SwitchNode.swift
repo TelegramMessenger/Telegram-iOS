@@ -4,6 +4,28 @@ import AsyncDisplayKit
 open class SwitchNode: ASDisplayNode {
     public var valueUpdated: ((Bool) -> Void)?
     
+    public var frameColor = UIColor(rgb: 0xe0e0e0) {
+        didSet {
+            if self.isNodeLoaded {
+                (self.view as! UISwitch).tintColor = self.frameColor
+            }
+        }
+    }
+    public var handleColor = UIColor(rgb: 0xffffff) {
+        didSet {
+            if self.isNodeLoaded {
+                (self.view as! UISwitch).thumbTintColor = self.handleColor
+            }
+        }
+    }
+    public var contentColor = UIColor(rgb: 0x42d451) {
+        didSet {
+            if self.isNodeLoaded {
+                (self.view as! UISwitch).onTintColor = self.contentColor
+            }
+        }
+    }
+    
     private var _isOn: Bool = false
     public var isOn: Bool {
         get {
@@ -27,7 +49,10 @@ open class SwitchNode: ASDisplayNode {
     override open func didLoad() {
         super.didLoad()
         
-        (self.view as! UISwitch).backgroundColor = .white
+        (self.view as! UISwitch).backgroundColor = self.backgroundColor
+        (self.view as! UISwitch).tintColor = self.frameColor
+        (self.view as! UISwitch).onTintColor = self.contentColor
+        (self.view as! UISwitch).onTintColor = self.contentColor
         
         (self.view as! UISwitch).setOn(self._isOn, animated: false)
         

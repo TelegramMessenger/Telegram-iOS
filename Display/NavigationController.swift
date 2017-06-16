@@ -18,7 +18,7 @@ private class NavigationControllerView: UIView {
     }
 }
 
-open class NavigationController: NavigationControllerProxy, ContainableController, UIGestureRecognizerDelegate {
+open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public private(set) weak var overlayPresentingController: ViewController?
     
     private var containerLayout = ContainerViewLayout()
@@ -51,8 +51,8 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
         return self._viewControllers.last
     }
     
-    public override init() {
-        super.init()
+    public init() {
+        super.init(nibName: nil, bundle: nil)
     }
     
     public override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
@@ -75,7 +75,7 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
         self.containerLayout = layout
         self.view.frame = CGRect(origin: self.view.frame.origin, size: layout.size)
         
-        let containedLayout = ContainerViewLayout(size: layout.size, intrinsicInsets: layout.intrinsicInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight)
+        let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight)
         
         if let topViewController = self.topViewController {
             if let topViewController = topViewController as? ContainableController {
@@ -316,7 +316,11 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
             let topViewController = viewControllers[viewControllers.count - 1] as UIViewController
             
             if let controller = topViewController as? ContainableController {
-                controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
+                var layoutToApply = self.containerLayout
+                if !self.viewControllers.contains(where: { $0 === controller }) {
+                    layoutToApply = layoutToApply.withUpdatedInputHeight(nil)
+                }
+                controller.containerLayoutUpdated(layoutToApply, transition: .immediate)
             } else {
                 topViewController.view.frame = CGRect(origin: CGPoint(), size: self.view.bounds.size)
             }
@@ -329,9 +333,9 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                 
                 if let bottomController = bottomController as? ViewController {
                     if viewControllers.count >= 2 {
-                        bottomController.navigationBar.previousItem = viewControllers[viewControllers.count - 2].navigationItem
+                        bottomController.navigationBar?.previousItem = viewControllers[viewControllers.count - 2].navigationItem
                     } else {
-                        bottomController.navigationBar.previousItem = nil
+                        bottomController.navigationBar?.previousItem = nil
                     }
                 }
                 
@@ -366,7 +370,7 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                 let bottomController = self.viewControllers.last! as UIViewController
                 
                 if let topController = topController as? ViewController {
-                    topController.navigationBar.previousItem = bottomController.navigationItem
+                    topController.navigationBar?.previousItem = bottomController.navigationItem
                 }
                 
                 bottomController.viewWillDisappear(true)
@@ -413,9 +417,9 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
             if let topController = viewControllers.last {
                 if let topController = topController as? ViewController {
                     if viewControllers.count >= 2 {
-                        topController.navigationBar.previousItem = viewControllers[viewControllers.count - 2].navigationItem
+                        topController.navigationBar?.previousItem = viewControllers[viewControllers.count - 2].navigationItem
                     } else {
-                        topController.navigationBar.previousItem = nil
+                        topController.navigationBar?.previousItem = nil
                     }
                 }
                 

@@ -67,9 +67,20 @@ private let springAnimationIn: CABasicAnimation = {
     return animation
 }()
 
+private let springAnimationSolver: (CGFloat) -> CGFloat = { () -> (CGFloat) -> CGFloat in
+    if #available(iOS 9.0, *) {
+        return { t in
+            return springAnimationValueAt(springAnimationIn, t)
+        }
+    } else {
+        return { t in
+            return bezierPoint(0.23, 1.0, 0.32, 1.0, t)
+        }
+    }
+}()
+
 public let listViewAnimationCurveSystem: (CGFloat) -> CGFloat = { t in
-    //return bezierPoint(0.23, 1.0, 0.32, 1.0, t)
-    return springAnimationValueAt(springAnimationIn, t)
+    return springAnimationSolver(t)
 }
 
 public let listViewAnimationCurveLinear: (CGFloat) -> CGFloat = { t in

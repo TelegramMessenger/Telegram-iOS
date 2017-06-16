@@ -14,14 +14,22 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    init(itemSelected: @escaping (Int) -> Void) {
-        self.tabBarNode = TabBarNode(itemSelected: itemSelected)
+    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int) -> Void) {
+        self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected)
         
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
         
+        self.backgroundColor = theme.backgroundColor
+        
         self.addSubnode(self.tabBarNode)
+    }
+    
+    func updateTheme(_ theme: TabBarControllerTheme) {
+        self.backgroundColor = theme.backgroundColor
+        
+        self.tabBarNode.updateTheme(theme)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

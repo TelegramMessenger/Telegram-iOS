@@ -33,9 +33,8 @@ open class LegacyPresentedController: ViewController {
         self.legacyController = legacyController
         self.presentation = presentation
         
-        super.init()
+        super.init(navigationBarTheme: nil)
         
-        self.navigationBar.isHidden = true
         /*legacyController.navigation_setDismiss { [weak self] in
             self?.dismiss()
         }*/

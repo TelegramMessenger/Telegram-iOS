@@ -23,7 +23,7 @@ public final class ContextMenuController: ViewController {
     public init(actions: [ContextMenuAction]) {
         self.actions = actions
         
-        super.init()
+        super.init(navigationBarTheme: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -38,7 +38,6 @@ public final class ContextMenuController: ViewController {
             }
         })
         self.displayNodeDidLoad()
-        self.navigationBar.isHidden = true
     }
     
     override public func viewDidAppear(_ animated: Bool) {

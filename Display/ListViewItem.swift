@@ -34,7 +34,6 @@ public protocol ListViewItem {
     
     var accessoryItem: ListViewAccessoryItem? { get }
     var headerAccessoryItem: ListViewAccessoryItem? { get }
-    var floatingAccessoryItem: ListViewAccessoryItem? { get }
     var selectable: Bool { get }
     
     func selected(listView: ListView)
@@ -46,10 +45,6 @@ public extension ListViewItem {
     }
     
     var headerAccessoryItem: ListViewAccessoryItem? {
-        return nil
-    }
-    
-    var floatingAccessoryItem: ListViewAccessoryItem? {
         return nil
     }
     

@@ -3,6 +3,26 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
+public final class TabBarControllerTheme {
+    public let backgroundColor: UIColor
+    public let tabBarBackgroundColor: UIColor
+    public let tabBarSeparatorColor: UIColor
+    public let tabBarTextColor: UIColor
+    public let tabBarSelectedTextColor: UIColor
+    public let tabBarBadgeBackgroundColor: UIColor
+    public let tabBarBadgeTextColor: UIColor
+    
+    public init(backgroundColor: UIColor, tabBarBackgroundColor: UIColor, tabBarSeparatorColor: UIColor, tabBarTextColor: UIColor, tabBarSelectedTextColor: UIColor, tabBarBadgeBackgroundColor: UIColor, tabBarBadgeTextColor: UIColor) {
+        self.backgroundColor = backgroundColor
+        self.tabBarBackgroundColor = tabBarBackgroundColor
+        self.tabBarSeparatorColor = tabBarSeparatorColor
+        self.tabBarTextColor = tabBarTextColor
+        self.tabBarSelectedTextColor = tabBarSelectedTextColor
+        self.tabBarBadgeBackgroundColor = tabBarBadgeBackgroundColor
+        self.tabBarBadgeTextColor = tabBarBadgeTextColor
+    }
+}
+
 open class TabBarController: ViewController {
     private var containerLayout = ContainerViewLayout()
     
@@ -22,7 +42,7 @@ open class TabBarController: ViewController {
         }
     }
     
-    private var _selectedIndex: Int = 1
+    private var _selectedIndex: Int = 2
     public var selectedIndex: Int {
         get {
             return _selectedIndex
@@ -44,8 +64,12 @@ open class TabBarController: ViewController {
     
     private let pendingControllerDisposable = MetaDisposable()
     
-    override public init(navigationBar: NavigationBar = NavigationBar()) {
-        super.init(navigationBar: navigationBar)
+    private var theme: TabBarControllerTheme
+    
+    public init(navigationBarTheme: NavigationBarTheme, theme: TabBarControllerTheme) {
+        self.theme = theme
+        
+        super.init(navigationBarTheme: navigationBarTheme)
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -56,8 +80,18 @@ open class TabBarController: ViewController {
         self.pendingControllerDisposable.dispose()
     }
     
+    public func updateTheme(navigationBarTheme: NavigationBarTheme, theme: TabBarControllerTheme) {
+        self.navigationBar?.updateTheme(navigationBarTheme)
+        if self.theme !== theme {
+            self.theme = theme
+            if self.isNodeLoaded {
+                self.tabBarControllerNode.updateTheme(theme)
+            }
+        }
+    }
+    
     override open func loadDisplayNode() {
-        self.displayNode = TabBarControllerNode(itemSelected: { [weak self] index in
+        self.displayNode = TabBarControllerNode(theme: self.theme, itemSelected: { [weak self] index in
             if let strongSelf = self {
                 strongSelf.controllers[index].containerLayoutUpdated(strongSelf.containerLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
                 strongSelf.pendingControllerDisposable.set((strongSelf.controllers[index].ready.get() |> deliverOnMainQueue).start(next: { _ in
@@ -97,13 +131,14 @@ open class TabBarController: ViewController {
             currentController.willMove(toParentViewController: self)
             currentController.containerLayoutUpdated(self.containerLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
             self.tabBarControllerNode.currentControllerView = currentController.view
-            currentController.navigationBar.isHidden = true
+            currentController.navigationBar?.isHidden = true
             self.addChildViewController(currentController)
             currentController.didMove(toParentViewController: self)
             
             currentController.navigationItem.setTarget(self.navigationItem)
             displayNavigationBar = currentController.displayNavigationBar
             currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
+            self.statusBar.statusBarStyle = currentController.statusBar.statusBarStyle
         } else {
             self.navigationItem.title = nil
             self.navigationItem.leftBarButtonItem = nil

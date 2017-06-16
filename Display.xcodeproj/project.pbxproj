@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0078A671C92B21400DF6D92 /* StatusBar.swift */; };
-		D007B9A81D1D3B5400DA746D /* PresentableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007B9A71D1D3B5400DA746D /* PresentableViewController.swift */; };
 		D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */; };
 		D015F7521D1AE08D00E269B5 /* ContainableController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7511D1AE08D00E269B5 /* ContainableController.swift */; };
 		D015F7541D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7531D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift */; };
@@ -35,9 +34,10 @@
 		D03E7DF91C96C5F200C07816 /* NSWeakReference.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DF71C96C5F200C07816 /* NSWeakReference.m */; };
 		D03E7DFF1C96F7B400C07816 /* StatusBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */; };
 		D03E7E011C974AB300C07816 /* DisplayLinkDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7E001C974AB300C07816 /* DisplayLinkDispatcher.swift */; };
+		D05174B31EAA833200A1BF36 /* CASeeThroughTracingLayer.h in Headers */ = {isa = PBXBuildFile; fileRef = D05174B11EAA833200A1BF36 /* CASeeThroughTracingLayer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05174B41EAA833200A1BF36 /* CASeeThroughTracingLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */; };
 		D053CB601D22B4F200DD41DF /* CATracingLayer.h in Headers */ = {isa = PBXBuildFile; fileRef = D053CB5E1D22B4F200DD41DF /* CATracingLayer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D053CB611D22B4F200DD41DF /* CATracingLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = D053CB5F1D22B4F200DD41DF /* CATracingLayer.m */; };
-		D05BE4A91D1F1DDD002BD72C /* UniversalMasterController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05BE4A81D1F1DDD002BD72C /* UniversalMasterController.swift */; };
 		D05BE4AB1D1F25E3002BD72C /* PresentationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05BE4AA1D1F25E3002BD72C /* PresentationContext.swift */; };
 		D05BE4AE1D217F6B002BD72C /* MergedLayoutEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05BE4AD1D217F6B002BD72C /* MergedLayoutEvents.swift */; };
 		D05CC2671B69316F00E235A3 /* Display.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2661B69316F00E235A3 /* Display.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -78,6 +78,7 @@
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
 		D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */; };
+		D08CAA7B1ED73C990000FDA8 /* ViewControllerTracingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */; };
 		D08E903A1D24159200533158 /* ActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E90391D24159200533158 /* ActionSheetItem.swift */; };
 		D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */; };
 		D08E903E1D24187900533158 /* ActionSheetItemGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903D1D24187900533158 /* ActionSheetItemGroup.swift */; };
@@ -88,6 +89,8 @@
 		D0AE3D4D1D25C816001CCE13 /* NavigationBarTransitionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */; };
 		D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */; };
 		D0BE93191E8ED71100DCC1E6 /* NativeWindowHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE93181E8ED71100DCC1E6 /* NativeWindowHostView.swift */; };
+		D0C0B5991EDF3BC9000F4D2C /* ActionSheetTextItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */; };
+		D0C0B59D1EE022CC000F4D2C /* NavigationBarContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B59C1EE022CC000F4D2C /* NavigationBarContentNode.swift */; };
 		D0C0D28F1C997110001D2851 /* FBAnimationPerformanceTracker.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C0D28D1C997110001D2851 /* FBAnimationPerformanceTracker.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0C0D2901C997110001D2851 /* FBAnimationPerformanceTracker.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0C0D28E1C997110001D2851 /* FBAnimationPerformanceTracker.mm */; };
 		D0C2DFC61CC4431D0044FF83 /* ASTransformLayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBB1CC4431D0044FF83 /* ASTransformLayerNode.swift */; };
@@ -133,7 +136,6 @@
 
 /* Begin PBXFileReference section */
 		D0078A671C92B21400DF6D92 /* StatusBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBar.swift; sourceTree = "<group>"; };
-		D007B9A71D1D3B5400DA746D /* PresentableViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentableViewController.swift; sourceTree = "<group>"; };
 		D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextFieldNode.swift; sourceTree = "<group>"; };
 		D015F7511D1AE08D00E269B5 /* ContainableController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainableController.swift; sourceTree = "<group>"; };
 		D015F7531D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemContainedControllerTransitionCoordinator.swift; sourceTree = "<group>"; };
@@ -160,9 +162,10 @@
 		D03E7DF71C96C5F200C07816 /* NSWeakReference.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSWeakReference.m; sourceTree = "<group>"; };
 		D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarManager.swift; sourceTree = "<group>"; };
 		D03E7E001C974AB300C07816 /* DisplayLinkDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DisplayLinkDispatcher.swift; sourceTree = "<group>"; };
+		D05174B11EAA833200A1BF36 /* CASeeThroughTracingLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CASeeThroughTracingLayer.h; sourceTree = "<group>"; };
+		D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CASeeThroughTracingLayer.m; sourceTree = "<group>"; };
 		D053CB5E1D22B4F200DD41DF /* CATracingLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CATracingLayer.h; sourceTree = "<group>"; };
 		D053CB5F1D22B4F200DD41DF /* CATracingLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CATracingLayer.m; sourceTree = "<group>"; };
-		D05BE4A81D1F1DDD002BD72C /* UniversalMasterController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UniversalMasterController.swift; sourceTree = "<group>"; };
 		D05BE4AA1D1F25E3002BD72C /* PresentationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationContext.swift; sourceTree = "<group>"; };
 		D05BE4AD1D217F6B002BD72C /* MergedLayoutEvents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MergedLayoutEvents.swift; sourceTree = "<group>"; };
 		D05CC2631B69316F00E235A3 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -206,6 +209,7 @@
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
 		D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainerViewLayout.swift; sourceTree = "<group>"; };
+		D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewControllerTracingNode.swift; sourceTree = "<group>"; };
 		D08E90391D24159200533158 /* ActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItem.swift; sourceTree = "<group>"; };
 		D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonItem.swift; sourceTree = "<group>"; };
 		D08E903D1D24187900533158 /* ActionSheetItemGroup.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroup.swift; sourceTree = "<group>"; };
@@ -216,6 +220,8 @@
 		D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarTransitionState.swift; sourceTree = "<group>"; };
 		D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarProxyNode.swift; sourceTree = "<group>"; };
 		D0BE93181E8ED71100DCC1E6 /* NativeWindowHostView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NativeWindowHostView.swift; sourceTree = "<group>"; };
+		D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetTextItem.swift; sourceTree = "<group>"; };
+		D0C0B59C1EE022CC000F4D2C /* NavigationBarContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarContentNode.swift; sourceTree = "<group>"; };
 		D0C0D28D1C997110001D2851 /* FBAnimationPerformanceTracker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FBAnimationPerformanceTracker.h; sourceTree = "<group>"; };
 		D0C0D28E1C997110001D2851 /* FBAnimationPerformanceTracker.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FBAnimationPerformanceTracker.mm; sourceTree = "<group>"; };
 		D0C2DFBB1CC4431D0044FF83 /* ASTransformLayerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ASTransformLayerNode.swift; sourceTree = "<group>"; };
@@ -302,6 +308,7 @@
 				D08E903D1D24187900533158 /* ActionSheetItemGroup.swift */,
 				D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */,
 				D096A44F1EA64F580000A7AE /* ActionSheetCheckboxItem.swift */,
+				D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */,
 			);
 			name = "Action Sheet";
 			sourceTree = "<group>";
@@ -357,14 +364,6 @@
 			name = Theme;
 			sourceTree = "<group>";
 		};
-		D05BE4A71D1F1DCC002BD72C /* Master */ = {
-			isa = PBXGroup;
-			children = (
-				D05BE4A81D1F1DDD002BD72C /* UniversalMasterController.swift */,
-			);
-			name = Master;
-			sourceTree = "<group>";
-		};
 		D05BE4AC1D217F33002BD72C /* Utils */ = {
 			isa = PBXGroup;
 			children = (
@@ -373,6 +372,8 @@
 				D053CB5E1D22B4F200DD41DF /* CATracingLayer.h */,
 				D053CB5F1D22B4F200DD41DF /* CATracingLayer.m */,
 				D08E90461D243C2F00533158 /* HighlightTrackingButton.swift */,
+				D05174B11EAA833200A1BF36 /* CASeeThroughTracingLayer.h */,
+				D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -488,6 +489,7 @@
 				D05CC3091B695A9500E235A3 /* NavigationTransitionCoordinator.swift */,
 				D03E7DE51C96B96E00C07816 /* NavigationBarTransitionContainer.swift */,
 				D05CC30A1B695A9500E235A3 /* NavigationBar.swift */,
+				D0C0B59C1EE022CC000F4D2C /* NavigationBarContentNode.swift */,
 				D05CC30D1B695A9500E235A3 /* NavigationBackButtonNode.swift */,
 				D05CC30E1B695A9500E235A3 /* NavigationButtonNode.swift */,
 				D05CC30F1B695A9500E235A3 /* NavigationTitleNode.swift */,
@@ -532,12 +534,11 @@
 			children = (
 				D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */,
 				D015F7511D1AE08D00E269B5 /* ContainableController.swift */,
-				D007B9A71D1D3B5400DA746D /* PresentableViewController.swift */,
 				D05BE4AA1D1F25E3002BD72C /* PresentationContext.swift */,
 				D05CC2E21B69552C00E235A3 /* ViewController.swift */,
+				D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */,
 				D023837F1DDF7916004018B6 /* LegacyPresentedController.swift */,
 				D02383811DDF798E004018B6 /* LegacyPresentedControllerNode.swift */,
-				D05BE4A71D1F1DCC002BD72C /* Master */,
 				D081229A1D19A9EB005F7395 /* Navigation */,
 				D015F7551D1B142300E269B5 /* Tab Bar */,
 				D015F7561D1B465600E269B5 /* Action Sheet */,
@@ -618,6 +619,7 @@
 				D05CC2FF1B6955D000E235A3 /* UIWindow+OrientationChange.h in Headers */,
 				D053CB601D22B4F200DD41DF /* CATracingLayer.h in Headers */,
 				D05CC2FD1B6955D000E235A3 /* UIKitUtils.h in Headers */,
+				D05174B31EAA833200A1BF36 /* CASeeThroughTracingLayer.h in Headers */,
 				D05CC3081B69575900E235A3 /* NSBag.h in Headers */,
 				D0C0D28F1C997110001D2851 /* FBAnimationPerformanceTracker.h in Headers */,
 				D05CC2671B69316F00E235A3 /* Display.h in Headers */,
@@ -742,6 +744,7 @@
 				D0C2DFCB1CC4431D0044FF83 /* ListViewAnimation.swift in Sources */,
 				D0BE93191E8ED71100DCC1E6 /* NativeWindowHostView.swift in Sources */,
 				D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */,
+				D05174B41EAA833200A1BF36 /* CASeeThroughTracingLayer.m in Sources */,
 				D03E7DE61C96B96E00C07816 /* NavigationBarTransitionContainer.swift in Sources */,
 				D0C85DD01D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift in Sources */,
 				D05CC2F71B6955D000E235A3 /* UIKitUtils.swift in Sources */,
@@ -763,7 +766,6 @@
 				D03BCCEB1C72AE590097A291 /* Theme.swift in Sources */,
 				D0C2DFC81CC4431D0044FF83 /* Spring.swift in Sources */,
 				D05CC3071B69575900E235A3 /* NSBag.m in Sources */,
-				D05BE4A91D1F1DDD002BD72C /* UniversalMasterController.swift in Sources */,
 				D0AE3D4D1D25C816001CCE13 /* NavigationBarTransitionState.swift in Sources */,
 				D0C85DD21D1C08AE00124894 /* ActionSheetItemNode.swift in Sources */,
 				D0DC48561BF945DD00F672FD /* TabBarNode.swift in Sources */,
@@ -780,7 +782,6 @@
 				D0A749951E3A9E7B00AD786E /* SwitchNode.swift in Sources */,
 				D03725C51D6DF8B9007FC290 /* ContextMenuController.swift in Sources */,
 				D03725C31D6DF7A6007FC290 /* ContextMenuAction.swift in Sources */,
-				D007B9A81D1D3B5400DA746D /* PresentableViewController.swift in Sources */,
 				D015F75A1D1B46B600E269B5 /* ActionSheetControllerNode.swift in Sources */,
 				D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */,
 				D053CB611D22B4F200DD41DF /* CATracingLayer.m in Sources */,
@@ -806,6 +807,8 @@
 				D036574B1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift in Sources */,
 				D05CC2FE1B6955D000E235A3 /* UIWindow+OrientationChange.m in Sources */,
 				D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */,
+				D0C0B5991EDF3BC9000F4D2C /* ActionSheetTextItem.swift in Sources */,
+				D0C0B59D1EE022CC000F4D2C /* NavigationBarContentNode.swift in Sources */,
 				D08E903E1D24187900533158 /* ActionSheetItemGroup.swift in Sources */,
 				D02383861DE0E3B4004018B6 /* ListViewIntermediateState.swift in Sources */,
 				D0DA444E1E4DCA6E005FDCA7 /* AlertControllerNode.swift in Sources */,
@@ -817,6 +820,7 @@
 				D02383801DDF7916004018B6 /* LegacyPresentedController.swift in Sources */,
 				D08E90471D243C2F00533158 /* HighlightTrackingButton.swift in Sources */,
 				D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */,
+				D08CAA7B1ED73C990000FDA8 /* ViewControllerTracingNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

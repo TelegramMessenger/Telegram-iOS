@@ -19,27 +19,27 @@ public class NavigationBackButtonNode: ASControlNode {
     private let arrowSpacing: CGFloat = 4.0
     
     private var _text: String = ""
-    var text: String {
+    public var text: String {
         get {
             return self._text
         }
         set(value) {
             self._text = value
-            self.label.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+            self.label.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             self.invalidateCalculatedLayout()
         }
     }
     
-    var color: UIColor = UIColor(0x007ee5) {
+    public var color: UIColor = UIColor(rgb: 0x007ee5) {
         didSet {
-            self.label.attributedString = NSAttributedString(string: self._text, attributes: self.attributesForCurrentState())
+            self.label.attributedText = NSAttributedString(string: self._text, attributes: self.attributesForCurrentState())
         }
     }
     
     private var touchCount = 0
     var pressed: () -> () = {}
     
-    override init() {
+    override public init() {
         self.arrow = ASDisplayNode()
         self.label = ASTextNode()
         

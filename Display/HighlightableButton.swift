@@ -27,24 +27,44 @@ open class HighlightableButton: HighlightTrackingButton {
 }
 
 open class HighlightTrackingButtonNode: ASButtonNode {
+    private var internalHighlighted = false
+    
     public var highligthedChanged: (Bool) -> Void = { _ in }
     
     open override func beginTracking(with touch: UITouch, with event: UIEvent?) -> Bool {
-        self.highligthedChanged(true)
+        if !self.internalHighlighted {
+            self.internalHighlighted = true
+            self.highligthedChanged(true)
+        }
         
         return super.beginTracking(with: touch, with: event)
     }
     
     open override func endTracking(with touch: UITouch?, with event: UIEvent?) {
-        self.highligthedChanged(false)
+        if self.internalHighlighted {
+            self.internalHighlighted = false
+            self.highligthedChanged(false)
+        }
         
         super.endTracking(with: touch, with: event)
     }
     
     open override func cancelTracking(with event: UIEvent?) {
-        self.highligthedChanged(false)
+        if self.internalHighlighted {
+            self.internalHighlighted = false
+            self.highligthedChanged(false)
+        }
         
         super.cancelTracking(with: event)
+    }
+    
+    open override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
+        
+        if self.internalHighlighted {
+            self.internalHighlighted = false
+            self.highligthedChanged(false)
+        }
     }
 }
 

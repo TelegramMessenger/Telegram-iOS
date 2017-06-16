@@ -7,9 +7,12 @@
 static const void *sourceItemKey = &sourceItemKey;
 static const void *targetItemKey = &targetItemKey;
 static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
+static const void *setImageListenerBagKey = &setImageListenerBagKey;
+static const void *setSelectedImageListenerBagKey = &setSelectedImageListenerBagKey;
 static const void *setTitleViewListenerBagKey = &setTitleViewListenerBagKey;
 static const void *setLeftBarButtonItemListenerBagKey = &setLeftBarButtonItemListenerBagKey;
 static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemListenerBagKey;
+static const void *setBackBarButtonItemListenerBagKey = &setBackBarButtonItemListenerBagKey;
 static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 
 @implementation UINavigationItem (Proxy)
@@ -25,6 +28,7 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setLeftBarButtonItem:animated:) newSelector:@selector(_ac91f40f_setLeftBarButtonItem:animated:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItem:) newSelector:@selector(_ac91f40f_setRightBarButtonItem:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItem:animated:) newSelector:@selector(_ac91f40f_setRightBarButtonItem:animated:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setBackBarButtonItem:) newSelector:@selector(_ac91f40f_setBackBarButtonItem:)];
     });
 }
 
@@ -92,6 +96,22 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
     } else {
         [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
             listener(previousItem, rightBarButtonItem, animated);
+        }];
+    }
+}
+
+- (void)_ac91f40f_setBackBarButtonItem:(UIBarButtonItem *)backBarButtonItem
+{
+    UIBarButtonItem *previousItem = self.rightBarButtonItem;
+    
+    [self _ac91f40f_setBackBarButtonItem:backBarButtonItem];
+    
+    UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
+    if (targetItem != nil) {
+        [targetItem setBackBarButtonItem:backBarButtonItem];
+    } else {
+        [(NSBag *)[self associatedObjectForKey:setBackBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
+            listener(previousItem, backBarButtonItem, false);
         }];
     }
 }
@@ -184,6 +204,20 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
     [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] removeItem:key];
 }
 
+- (NSInteger)addSetBackBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener {
+    NSBag *bag = [self associatedObjectForKey:setBackBarButtonItemListenerBagKey];
+    if (bag == nil)
+    {
+        bag = [[NSBag alloc] init];
+        [self setAssociatedObject:bag forKey:setBackBarButtonItemListenerBagKey];
+    }
+    return [bag addItem:[listener copy]];
+}
+
+- (void)removeSetBackBarButtonItemListener:(NSInteger)key {
+    [(NSBag *)[self associatedObjectForKey:setBackBarButtonItemListenerBagKey] removeItem:key];
+}
+
 @end
 
 @implementation UITabBarItem (Proxy)
@@ -194,6 +228,9 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
     dispatch_once(&onceToken, ^
     {
         [RuntimeUtils swizzleInstanceMethodOfClass:[UITabBarItem class] currentSelector:@selector(setBadgeValue:) newSelector:@selector(_ac91f40f_setBadgeValue:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UITabBarItem class] currentSelector:@selector(setTitle:) newSelector:@selector(_ac91f40f_setTitle:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UITabBarItem class] currentSelector:@selector(setImage:) newSelector:@selector(_ac91f40f_setImage:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UITabBarItem class] currentSelector:@selector(setSelectedImage:) newSelector:@selector(_ac91f40f_setSelectedImage:)];
     });
 }
 
@@ -217,6 +254,72 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBa
     [(NSBag *)[self associatedObjectForKey:setBadgeListenerBagKey] enumerateItems:^(UITabBarItemSetBadgeListener listener) {
         listener(value);
     }];
+}
+
+- (void)_ac91f40f_setTitle:(NSString *)value {
+    [self _ac91f40f_setTitle:value];
+    
+    [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] enumerateItems:^(UINavigationItemSetTitleListener listener) {
+        listener(value);
+    }];
+}
+
+- (void)_ac91f40f_setImage:(UIImage *)value {
+    [self _ac91f40f_setImage:value];
+    
+    [(NSBag *)[self associatedObjectForKey:setImageListenerBagKey] enumerateItems:^(UINavigationItemSetImageListener listener) {
+        listener(value);
+    }];
+}
+
+- (void)_ac91f40f_setSelectedImage:(UIImage *)value {
+    [self _ac91f40f_setSelectedImage:value];
+    
+    [(NSBag *)[self associatedObjectForKey:setSelectedImageListenerBagKey] enumerateItems:^(UINavigationItemSetImageListener listener) {
+        listener(value);
+    }];
+}
+
+- (NSInteger)addSetTitleListener:(UINavigationItemSetTitleListener)listener {
+    NSBag *bag = [self associatedObjectForKey:setTitleListenerBagKey];
+    if (bag == nil)
+    {
+        bag = [[NSBag alloc] init];
+        [self setAssociatedObject:bag forKey:setTitleListenerBagKey];
+    }
+    return [bag addItem:[listener copy]];
+}
+
+- (void)removeSetTitleListener:(NSInteger)key {
+    [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] removeItem:key];
+}
+
+- (NSInteger)addSetImageListener:(UINavigationItemSetImageListener)listener {
+    NSBag *bag = [self associatedObjectForKey:setImageListenerBagKey];
+    if (bag == nil)
+    {
+        bag = [[NSBag alloc] init];
+        [self setAssociatedObject:bag forKey:setImageListenerBagKey];
+    }
+    return [bag addItem:[listener copy]];
+}
+
+- (void)removeSetImageListener:(NSInteger)key {
+    [(NSBag *)[self associatedObjectForKey:setImageListenerBagKey] removeItem:key];
+}
+
+- (NSInteger)addSetSelectedImageListener:(UINavigationItemSetImageListener)listener {
+    NSBag *bag = [self associatedObjectForKey:setSelectedImageListenerBagKey];
+    if (bag == nil)
+    {
+        bag = [[NSBag alloc] init];
+        [self setAssociatedObject:bag forKey:setSelectedImageListenerBagKey];
+    }
+    return [bag addItem:[listener copy]];
+}
+
+- (void)removeSetSelectedImageListener:(NSInteger)key {
+    [(NSBag *)[self associatedObjectForKey:setSelectedImageListenerBagKey] removeItem:key];
 }
 
 @end

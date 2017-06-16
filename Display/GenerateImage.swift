@@ -227,7 +227,7 @@ public class DrawingContext {
     
     private var _context: CGContext?
     
-    public func withContext(_ f: @noescape(CGContext) -> ()) {
+    public func withContext(_ f: (CGContext) -> ()) {
         if self._context == nil {
             if let c = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: self.bitmapInfo.rawValue) {
                 c.scaleBy(x: scale, y: scale)
@@ -248,7 +248,7 @@ public class DrawingContext {
         }
     }
     
-    public func withFlippedContext(_ f: @noescape(CGContext) -> ()) {
+    public func withFlippedContext(_ f: (CGContext) -> ()) {
         if self._context == nil {
             if let c = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: self.bitmapInfo.rawValue) {
                 c.scaleBy(x: scale, y: scale)
@@ -295,7 +295,7 @@ public class DrawingContext {
             let srcLine = self.bytes.advanced(by: y * self.bytesPerRow).assumingMemoryBound(to: UInt32.self)
             let pixel = srcLine + x
             let colorValue = pixel.pointee
-            return UIColor(UInt32(colorValue))
+            return UIColor(rgb: UInt32(colorValue))
         } else {
             return UIColor.clear
         }

@@ -7,8 +7,7 @@
 - (instancetype)init
 {
     self = [super initWithNavigationBarClass:[NavigationBarProxy class] toolbarClass:[UIToolbar class]];
-    if (self != nil)
-    {
+    if (self != nil) {
     }
     return self;
 }

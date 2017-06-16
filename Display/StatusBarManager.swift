@@ -12,25 +12,36 @@ private struct MappedStatusBarSurface {
     let surface: StatusBarSurface
 }
 
-private func mapStatusBar(_ statusBar: StatusBar) -> MappedStatusBar {
+private func mapStatusBar(_ statusBar: StatusBar, forceInCall: Bool) -> MappedStatusBar {
     let frame = CGRect(origin: statusBar.view.convert(CGPoint(), to: nil), size: statusBar.frame.size)
-    return MappedStatusBar(style: statusBar.statusBarStyle, frame: frame, statusBar: statusBar)
+    let resolvedStyle: StatusBarStyle
+    switch statusBar.statusBarStyle {
+        case .Black, .White:
+            if forceInCall {
+                resolvedStyle = .White
+            } else {
+                resolvedStyle = statusBar.statusBarStyle
+            }
+        default:
+            resolvedStyle = statusBar.statusBarStyle
+    }
+    return MappedStatusBar(style: resolvedStyle, frame: frame, statusBar: statusBar)
 }
 
-private func mappedSurface(_ surface: StatusBarSurface) -> MappedStatusBarSurface {
+private func mappedSurface(_ surface: StatusBarSurface, forceInCall: Bool) -> MappedStatusBarSurface {
     var statusBars: [MappedStatusBar] = []
     for statusBar in surface.statusBars {
         if statusBar.statusBarStyle != .Ignore {
-            statusBars.append(mapStatusBar(statusBar))
+            statusBars.append(mapStatusBar(statusBar, forceInCall: forceInCall))
         }
     }
     return MappedStatusBarSurface(statusBars: statusBars, surface: surface)
 }
 
-private func optimizeMappedSurface(statusBarSize: CGSize, surface: MappedStatusBarSurface) -> MappedStatusBarSurface {
+private func optimizeMappedSurface(statusBarSize: CGSize, surface: MappedStatusBarSurface, forceInCall: Bool) -> MappedStatusBarSurface {
     if surface.statusBars.count > 1 {
         for i in 1 ..< surface.statusBars.count {
-            if surface.statusBars[i].style != surface.statusBars[i - 1].style || abs(surface.statusBars[i].frame.origin.y - surface.statusBars[i - 1].frame.origin.y) > CGFloat.ulpOfOne {
+            if (!forceInCall && surface.statusBars[i].style != surface.statusBars[i - 1].style) || abs(surface.statusBars[i].frame.origin.y - surface.statusBars[i - 1].frame.origin.y) > CGFloat.ulpOfOne {
                 return surface
             }
             if let lhsStatusBar = surface.statusBars[i - 1].statusBar, let rhsStatusBar = surface.statusBars[i].statusBar , !lhsStatusBar.alpha.isEqual(to: rhsStatusBar.alpha) {
@@ -38,7 +49,7 @@ private func optimizeMappedSurface(statusBarSize: CGSize, surface: MappedStatusB
             }
         }
         let size = statusBarSize
-        return MappedStatusBarSurface(statusBars: [MappedStatusBar(style: surface.statusBars[0].style, frame: CGRect(origin: CGPoint(x: 0.0, y: surface.statusBars[0].frame.origin.y), size: size), statusBar: nil)], surface: surface.surface)
+        return MappedStatusBarSurface(statusBars: [MappedStatusBar(style: forceInCall ? .White : surface.statusBars[0].style, frame: CGRect(origin: CGPoint(x: 0.0, y: surface.statusBars[0].frame.origin.y), size: size), statusBar: nil)], surface: surface.surface)
     } else {
         return surface
     }
@@ -60,20 +71,28 @@ private func displayHiddenAnimation() -> CAAnimation {
 class StatusBarManager {
     private var host: StatusBarHost
     
-    var surfaces: [StatusBarSurface] = [] {
-        didSet {
-            self.updateSurfaces(oldValue)
-        }
-    }
+    private var surfaces: [StatusBarSurface] = []
+    
+    var inCallNavigate: (() -> Void)?
     
     init(host: StatusBarHost) {
         self.host = host
     }
     
-    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface]) {
+    func updateState(surfaces: [StatusBarSurface], forceInCallStatusBarText: String?, animated: Bool) {
+        let previousSurfaces = self.surfaces
+        self.surfaces = surfaces
+        self.updateSurfaces(previousSurfaces, forceInCallStatusBarText: forceInCallStatusBarText, animated: animated)
+    }
+    
+    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface], forceInCallStatusBarText: String?, animated: Bool) {
         let statusBarFrame = self.host.statusBarFrame
         guard let statusBarView = self.host.statusBarView else {
             return
+        }
+        
+        if self.host.statusBarWindow?.isUserInteractionEnabled != (forceInCallStatusBarText == nil) {
+            self.host.statusBarWindow?.isUserInteractionEnabled = (forceInCallStatusBarText == nil)
         }
         
         var mappedSurfaces: [MappedStatusBarSurface] = []
@@ -87,12 +106,12 @@ class StatusBarManager {
                 }
             }
             
-            let mapped = mappedSurface(surface)
+            let mapped = mappedSurface(surface, forceInCall: forceInCallStatusBarText != nil)
             
             if doNotOptimize {
                 mappedSurfaces.append(mapped)
             } else {
-                mappedSurfaces.append(optimizeMappedSurface(statusBarSize: statusBarFrame.size, surface: mapped))
+                mappedSurfaces.append(optimizeMappedSurface(statusBarSize: statusBarFrame.size, surface: mapped, forceInCall: forceInCallStatusBarText != nil))
             }
             mapIndex += 1
         }
@@ -176,25 +195,31 @@ class StatusBarManager {
         for surface in previousSurfaces {
             for statusBar in surface.statusBars {
                 if !visibleStatusBars.contains(where: {$0 === statusBar}) {
-                    statusBar.removeProxyNode()
+                    statusBar.updateState(statusBar: nil, inCallText: forceInCallStatusBarText, animated: animated)
                 }
             }
         }
         
         for surface in self.surfaces {
             for statusBar in surface.statusBars {
+                statusBar.inCallNavigate = self.inCallNavigate
                 if !visibleStatusBars.contains(where: {$0 === statusBar}) {
-                    statusBar.removeProxyNode()
+                    statusBar.updateState(statusBar: nil, inCallText: forceInCallStatusBarText, animated: animated)
                 }
             }
         }
         
         for statusBar in visibleStatusBars {
-            statusBar.updateProxyNode(statusBar: statusBarView)
+            statusBar.updateState(statusBar: statusBarView, inCallText: forceInCallStatusBarText, animated: animated)
         }
         
         if let globalStatusBar = globalStatusBar {
-            let statusBarStyle: UIStatusBarStyle = globalStatusBar.0 == .Black ? .default : .lightContent
+            let statusBarStyle: UIStatusBarStyle
+            if forceInCallStatusBarText != nil {
+                statusBarStyle = .lightContent
+            } else {
+                statusBarStyle = globalStatusBar.0 == .Black ? .default : .lightContent
+            }
             if self.host.statusBarStyle != statusBarStyle {
                 self.host.statusBarStyle = statusBarStyle
             }

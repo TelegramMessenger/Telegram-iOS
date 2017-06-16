@@ -31,7 +31,7 @@ private class StatusBarItemNode: ASDisplayNode {
     func update() {
         let context = DrawingContext(size: self.targetView.frame.size, clear: true)
         
-        if let contents = self.targetView.layer.contents, (self.targetView.layer.sublayers?.count ?? 0) == 0 && CFGetTypeID(contents as! CFTypeRef) == CGImage.typeID && false {
+        if let contents = self.targetView.layer.contents, (self.targetView.layer.sublayers?.count ?? 0) == 0 && CFGetTypeID(contents as CFTypeRef) == CGImage.typeID && false {
             let image = contents as! CGImage
             context.withFlippedContext { c in
                 c.setAlpha(CGFloat(self.targetView.layer.opacity))
@@ -42,7 +42,7 @@ private class StatusBarItemNode: ASDisplayNode {
             if let sublayers = self.targetView.layer.sublayers {
                 for sublayer in sublayers {
                     let origin = sublayer.frame.origin
-                    if let contents = sublayer.contents , CFGetTypeID(contents as! CFTypeRef) == CGImage.typeID {
+                    if let contents = sublayer.contents , CFGetTypeID(contents as CFTypeRef) == CGImage.typeID {
                         let image = contents as! CGImage
                         context.withFlippedContext { c in
                             c.translateBy(x: origin.x, y: origin.y)
@@ -73,6 +73,8 @@ private class StatusBarItemNode: ASDisplayNode {
         self.contents = context.generateImage()?.cgImage
         
         self.frame = self.targetView.frame
+        
+        
     }
 }
 

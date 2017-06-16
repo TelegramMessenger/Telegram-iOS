@@ -28,9 +28,9 @@ struct ListViewItemSpring {
 }
 
 private class ListViewItemView: UIView {
-    override class var layerClass: AnyClass {
+    /*override class var layerClass: AnyClass {
         return ASTransformLayer.self
-    }
+    }*/
 }
 
 public struct ListViewItemNodeLayout {
@@ -77,8 +77,6 @@ open class ListViewItemNode: ASDisplayNode {
             }
         }
     }
-    
-    final var floatingAccessoryItemNode: ListViewAccessoryItemNode?
     
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
@@ -157,7 +155,7 @@ open class ListViewItemNode: ASDisplayNode {
         return .complete()
     }
     
-    public init(layerBacked: Bool, dynamicBounce: Bool = true, rotated: Bool = false) {
+    public init(layerBacked: Bool, dynamicBounce: Bool = true, rotated: Bool = false, seeThrough: Bool = false) {
         if true {
             if dynamicBounce {
                 self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
@@ -183,8 +181,21 @@ open class ListViewItemNode: ASDisplayNode {
             }, didLoad: nil)
         }*/
         
-        super.init()
-        self.isLayerBacked = layerBacked
+        if seeThrough {
+            if (layerBacked) {
+                super.init(layerBlock: {
+                    return CASeeThroughTracingLayer()
+                }, didLoad: nil)
+            } else {
+                super.init(viewBlock: {
+                    return CASeeThroughTracingView()
+                }, didLoad: nil)
+            }
+        } else {
+            super.init()
+            
+            self.isLayerBacked = layerBacked
+        }
     }
     
     /*deinit {

@@ -6,8 +6,10 @@ public enum ListViewItemHeaderStickDirection {
     case bottom
 }
 
+public typealias ListViewItemHeaderId = Int64
+
 public protocol ListViewItemHeader: class {
-    var id: Int64 { get }
+    var id: ListViewItemHeaderId { get }
     var stickDirection: ListViewItemHeaderStickDirection { get }
     var height: CGFloat { get }
     
@@ -51,14 +53,28 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     open func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
     }
     
-    public init(dynamicBounce: Bool = false, isRotated: Bool = false) {
+    public init(layerBacked: Bool = false, dynamicBounce: Bool = false, isRotated: Bool = false, seeThrough: Bool = false) {
         self.wantsScrollDynamics = dynamicBounce
         self.isRotated = isRotated
         if dynamicBounce {
             self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
         }
         
-        super.init()
+        if seeThrough {
+            if (layerBacked) {
+                super.init(layerBlock: {
+                    return CASeeThroughTracingLayer()
+                }, didLoad: nil)
+            } else {
+                super.init(viewBlock: {
+                    return CASeeThroughTracingView()
+                }, didLoad: nil)
+            }
+        } else {
+            super.init()
+            
+            self.isLayerBacked = layerBacked
+        }
     }
     
     open func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {

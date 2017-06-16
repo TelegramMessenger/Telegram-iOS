@@ -80,7 +80,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         let textColor: UIColor
         switch item.color {
             case .accent:
-                textColor = UIColor(0x007ee5)
+                textColor = UIColor(rgb: 0x007ee5)
             case .destructive:
                 textColor = .red
             case .disabled:
