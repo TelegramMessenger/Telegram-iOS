@@ -213,7 +213,15 @@ final class PeerNameIndexTable: Table {
                                 updatedTokens = updatedName.indexTokens
                             } else {
                                 if let peer = self.peerTable.get(peerId) {
-                                    updatedTokens = peer.indexName.indexTokens
+                                    if let associatedPeerId = peer.associatedPeerId {
+                                        if let associatedPeer = self.peerTable.get(associatedPeerId) {
+                                            updatedTokens = associatedPeer.indexName.indexTokens
+                                        } else {
+                                            updatedTokens = []
+                                        }
+                                    } else {
+                                        updatedTokens = peer.indexName.indexTokens
+                                    }
                                 } else {
                                     //assertionFailure()
                                     updatedTokens = []

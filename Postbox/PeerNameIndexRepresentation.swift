@@ -2,7 +2,7 @@ import Foundation
 
 public enum PeerIndexNameRepresentation: Equatable {
     case title(title: String, addressName: String?)
-    case personName(first: String, last: String, addressName: String?)
+    case personName(first: String, last: String, addressName: String?, phoneNumber: String?)
     
     public static func ==(lhs: PeerIndexNameRepresentation, rhs: PeerIndexNameRepresentation) -> Bool {
         switch lhs {
@@ -12,12 +12,39 @@ public enum PeerIndexNameRepresentation: Equatable {
                 } else {
                     return false
                 }
-            case let .personName(lhsFirst, lhsLast, lhsAddressName):
-                if case let .personName(rhsFirst, rhsLast, rhsAddressName) = rhs, lhsFirst == rhsFirst, lhsLast == rhsLast, lhsAddressName == rhsAddressName {
+            case let .personName(lhsFirst, lhsLast, lhsAddressName, lhsPhoneNumber):
+                if case let .personName(rhsFirst, rhsLast, rhsAddressName, rhsPhoneNumber) = rhs, lhsFirst == rhsFirst, lhsLast == rhsLast, lhsAddressName == rhsAddressName, lhsPhoneNumber == rhsPhoneNumber {
                     return true
                 } else {
                     return false
                 }
+        }
+    }
+    
+    public var isEmpty: Bool {
+        switch self {
+            case let .title(title, addressName):
+                if !title.isEmpty {
+                    return false
+                }
+                if let addressName = addressName, !addressName.isEmpty {
+                    return false
+                }
+                return true
+            case let .personName(first, last, addressName, phoneNumber):
+                if !first.isEmpty {
+                    return false
+                }
+                if !last.isEmpty {
+                    return false
+                }
+                if let addressName = addressName, !addressName.isEmpty {
+                    return false
+                }
+                if let phoneNumber = phoneNumber, !phoneNumber.isEmpty {
+                    return false
+                }
+                return true
         }
     }
 }
@@ -32,7 +59,7 @@ extension PeerIndexNameRepresentation {
         switch self {
             case let .title(title, _):
                 return title
-            case let .personName(first, last, _):
+            case let .personName(first, last, _, _):
                 switch index {
                     case .firstNameFirst:
                         return first + last
@@ -68,11 +95,14 @@ extension PeerIndexNameRepresentation {
                     tokens.append(contentsOf: stringIndexTokens(addressName, transliteration: .none))
                 }
                 return tokens
-            case let .personName(first, last, addressName):
+            case let .personName(first, last, addressName, phoneNumber):
                 var tokens: [ValueBoxKey] = stringIndexTokens(first, transliteration: .combined)
                 tokens.append(contentsOf: stringIndexTokens(last, transliteration: .combined))
                 if let addressName = addressName {
                     tokens.append(contentsOf: stringIndexTokens(addressName, transliteration: .none))
+                }
+                if let phoneNumber = phoneNumber {
+                    tokens.append(contentsOf: stringIndexTokens(phoneNumber, transliteration: .none))
                 }
                 return tokens
         }

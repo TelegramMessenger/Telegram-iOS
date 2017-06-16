@@ -106,7 +106,13 @@ public final class Database {
     ///
     /// - parameter SQL: A batch of zero or more semicolon-separated SQL statements.
     public func execute(_ SQL: String) -> Bool {
-        return sqlite3_exec(self.handle, SQL, nil, nil, nil) == SQLITE_OK
+        let res = sqlite3_exec(self.handle, SQL, nil, nil, nil)
+        if res == SQLITE_OK {
+            return true
+        } else {
+            print("SQL error \(res) on SQL")
+            return false
+        }
     }
 }
 

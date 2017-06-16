@@ -149,7 +149,7 @@ final class SqliteValueBox: ValueBox {
             //database = Database(path)!
         }
         
-        sqlite3_busy_timeout(database.handle, 10000000)
+        sqlite3_busy_timeout(database.handle, 1000 * 10000)
         
         var resultCode: Bool
         
@@ -158,9 +158,9 @@ final class SqliteValueBox: ValueBox {
         assert(resultCode)
         resultCode = database.execute("PRAGMA synchronous=NORMAL")
         assert(resultCode)
-        //database.execute("PRAGMA temp_store=MEMORY")
-        resultCode = database.execute("PRAGMA wal_autocheckpoint=500")
+        resultCode = database.execute("PRAGMA temp_store=MEMORY")
         assert(resultCode)
+        //resultCode = database.execute("PRAGMA wal_autocheckpoint=500")
         //database.execute("PRAGMA journal_size_limit=1536")
         
         /*var statement: OpaquePointer? = nil
