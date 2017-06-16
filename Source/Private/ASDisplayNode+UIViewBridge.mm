@@ -586,11 +586,11 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 {
   _bridge_prologue_write;
   
-  CGColorRef newBackgroundCGColor = [newBackgroundColor CGColor];
+  CGColorRef newBackgroundCGColor = CGColorRetain([newBackgroundColor CGColor]);
   BOOL shouldApply = ASDisplayNodeShouldApplyBridgedWriteToView(self);
   
   if (shouldApply) {
-    CGColorRef oldBackgroundCGColor = _layer.backgroundColor;
+    CGColorRef oldBackgroundCGColor = CGColorRetain(_layer.backgroundColor);
     
     BOOL specialPropertiesHandling = ASDisplayNodeNeedsSpecialPropertiesHandlingForFlags(_flags);
     if (specialPropertiesHandling) {
@@ -602,12 +602,15 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
     if (!CGColorEqualToColor(oldBackgroundCGColor, newBackgroundCGColor)) {
       [self setNeedsDisplay];
     }
+    
+    CGColorRelease(oldBackgroundCGColor);
   } else {
     // NOTE: If we're in the background, we cannot read the current value of bgcolor (if loaded).
     // When the pending state is applied to the view on main, we will call `setNeedsDisplay` if
     // the new background color doesn't match the one on the layer.
     ASDisplayNodeGetPendingState(self).backgroundColor = newBackgroundCGColor;
   }
+  CGColorRelease(newBackgroundCGColor);
 }
 
 - (UIColor *)tintColor
