@@ -2293,6 +2293,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [service mtProtoApiEnvironmentUpdated:self apiEnvironment:apiEnvironment];
             }
         }
+        
+        //[self resetTransport];
     }];
 }
 
