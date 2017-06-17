@@ -14,7 +14,7 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
         return (network.request(Api.functions.help.getConfig()) |> retryRequest |> mapToSignal { result -> Signal<Void, NoError> in
             return postbox.modify { modifier -> Void in
                 switch result {
-                    case let .config(_, _, _, _, _, dcOptions, chatSizeMax, megagroupSizeMax, forwardedCountMax, onlineUpdatePeriodMs, offlineBlurTimeoutMs, offlineIdleTimeoutMs, onlineCloudTimeoutMs, notifyCloudDelayMs, notifyDefaultDelayMs, chatBigSize, pushChatPeriodMs, pushChatLimit, savedGifsLimit, editTimeLimit, ratingEDecay, stickersRecentLimit, tmpSessions, pinnedDialogsCountMax, callReceiveTimeoutMs, callRingTimeoutMs, callConnectTimeoutMs, callPacketTimeoutMs, meUrlPrefix, suggestedLangCode, langPackVersion, disabledFeatures):
+                    case let .config(_, _, _, _, _, dcOptions, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, onlineCloudTimeoutMs, notifyCloudDelayMs, notifyDefaultDelayMs, chatBigSize, pushChatPeriodMs, pushChatLimit, savedGifsLimit, editTimeLimit, ratingEDecay, stickersRecentLimit, tmpSessions, pinnedDialogsCountMax, callReceiveTimeoutMs, callRingTimeoutMs, callConnectTimeoutMs, callPacketTimeoutMs, meUrlPrefix, suggestedLangCode, langPackVersion, disabledFeatures):
                         var addressList: [Int: [MTDatacenterAddress]] = [:]
                         for option in dcOptions {
                             switch option {
@@ -30,7 +30,7 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                         }
                         network.context.performBatchUpdates {
                             for (id, list) in addressList {
-                                network.context.updateAddressSetForDatacenter(withId: id, addressSet: MTDatacenterAddressSet(addressList: list))
+                                network.context.updateAddressSetForDatacenter(withId: id, addressSet: MTDatacenterAddressSet(addressList: list), forceUpdateSchemes: false)
                             }
                         }
                         
@@ -48,6 +48,8 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                             }
                             return entry
                         })
+                        
+                        updateLimitsConfiguration(modifier: modifier, configuration: LimitsConfiguration(maxGroupMemberCount: chatSizeMax, maxSupergroupMemberCount: megagroupSizeMax, maxMessageForwardBatchSize: forwardedCountMax, maxSavedGifCount: savedGifsLimit, maxRecentStickerCount: stickersRecentLimit, maxMessageEditingInterval: editTimeLimit))
                     
                         let (_, version, _) = getLocalization(modifier)
                         if version != langPackVersion {
