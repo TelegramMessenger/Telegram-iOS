@@ -76,6 +76,8 @@
     
     NSMutableArray *_changeListeners;
     
+    MTSignal *_discoverBackupAddressListSignal;
+    
     NSMutableDictionary *_discoverDatacenterAddressActions;
     NSMutableDictionary *_datacenterAuthActions;
     NSMutableDictionary *_datacenterTransferAuthActions;
@@ -89,6 +91,7 @@
     NSMutableDictionary *_passwordRequiredByDatacenterId;
     
     NSMutableDictionary *_transportSchemeDisposableByDatacenterId;
+    id<MTDisposable> _backupAddressListDisposable;
     
     NSMutableDictionary<NSNumber *, id<MTDisposable> > *_fetchPublicKeysActions;
 }
@@ -289,6 +292,12 @@
     } synchronous:true];
 }
 
+- (void)setDiscoverBackupAddressListSignal:(MTSignal *)signal {
+    [[MTContext contextQueue] dispatchOnQueue:^ {
+        _discoverBackupAddressListSignal = signal;
+    } synchronous:true];
+}
+
 - (NSTimeInterval)globalTime
 {
     return [[NSDate date] timeIntervalSince1970] + [self globalTimeDifference];
@@ -332,7 +341,7 @@
     }];
 }
 
-- (void)updateAddressSetForDatacenterWithId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet
+- (void)updateAddressSetForDatacenterWithId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet forceUpdateSchemes:(bool)forceUpdateSchemes
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
@@ -355,10 +364,20 @@
                     [listener contextDatacenterAddressSetUpdated:self datacenterId:datacenterId addressSet:addressSet];
             }
             
-            if (previousAddressSetWasEmpty)
+            if (previousAddressSetWasEmpty || forceUpdateSchemes)
             {
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:false] media:false];
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:true] media:true];
+            }
+            
+            if (forceUpdateSchemes) {
+                id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
+                if (disposable != nil) {
+                    [disposable dispose];
+                    [_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
+                    
+                    [self transportSchemeForDatacenterWithIdRequired:datacenterId media:false];
+                }
             }
         }
     }];
@@ -879,6 +898,21 @@
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:transportScheme beginWithHttp:isProbablyHttp media:media];
+        
+        if (_backupAddressListDisposable == nil && _discoverBackupAddressListSignal != nil) {
+            __weak MTContext *weakSelf = self;
+            double delay = 20.0f;
+#ifdef DEBUG
+            delay = 5.0;
+#endif
+            _backupAddressListDisposable = [[[_discoverBackupAddressListSignal delay:delay onQueue:[MTQueue mainQueue]] onDispose:^{
+                __strong MTContext *strongSelf = weakSelf;
+                if (strongSelf != nil) {
+                    [strongSelf->_backupAddressListDisposable dispose];
+                    strongSelf->_backupAddressListDisposable = nil;
+                }
+            }] startWithNext:nil];
+        }
     }];
 }
 
@@ -893,6 +927,10 @@
             id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
             [disposable dispose];
             [_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
+        }
+        if (_backupAddressListDisposable != nil) {
+            [_backupAddressListDisposable dispose];
+            _backupAddressListDisposable = nil;
         }
     }];
 }

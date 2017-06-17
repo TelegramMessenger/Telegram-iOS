@@ -14,6 +14,8 @@
 
 #import "GCDAsyncSocket.h"
 #import <sys/socket.h>
+#import <netinet/in.h>
+#import <arpa/inet.h>
 
 #import "MTInternalId.h"
 
@@ -25,12 +27,67 @@
 
 MTInternalIdClass(MTTcpConnection)
 
+struct socks5_ident_req
+{
+    unsigned char Version;
+    unsigned char NumberOfMethods;
+    unsigned char Methods[256];
+};
+
+struct socks5_ident_resp
+{
+    unsigned char Version;
+    unsigned char Method;
+};
+
+struct socks5_req
+{
+    unsigned char Version;
+    unsigned char Cmd;
+    unsigned char Reserved;
+    unsigned char AddrType;
+    union {
+        struct in_addr IPv4;
+        struct in6_addr IPv6;
+        struct {
+            unsigned char DomainLen;
+            char Domain[256];
+        };
+    } DestAddr;
+    unsigned short DestPort;
+};
+
+struct socks5_resp
+{
+    unsigned char Version;
+    unsigned char Reply;
+    unsigned char Reserved;
+    unsigned char AddrType;
+    union {
+        struct in_addr IPv4;
+        struct in6_addr IPv6;
+        struct {
+            unsigned char DomainLen;
+            char Domain[256];
+        };
+    } BindAddr;
+    unsigned short BindPort;
+};
+
 typedef enum {
     MTTcpReadTagPacketShortLength = 0,
     MTTcpReadTagPacketLongLength = 1,
     MTTcpReadTagPacketBody = 2,
     MTTcpReadTagPacketHead = 3,
-    MTTcpReadTagQuickAck = 4
+    MTTcpReadTagQuickAck = 4,
+    MTTcpSocksLogin = 5,
+    MTTcpSocksRequest = 6,
+    MTTcpSocksReceiveBindAddr4 = 7,
+    MTTcpSocksReceiveBindAddr6 = 8,
+    MTTcpSocksReceiveBindAddrDomainNameLength = 9,
+    MTTcpSocksReceiveBindAddrDomainName = 10,
+    MTTcpSocksReceiveBindAddrPort = 11,
+    MTTcpSocksReceiveAuthResponse = 12
 } MTTcpReadTags;
 
 static const NSTimeInterval MTMinTcpResponseTimeout = 12.0;
@@ -43,12 +100,7 @@ struct ctr_state {
     unsigned char ecount[16];
 };
 
-static void init_ctr(struct ctr_state *state, const unsigned char *iv)
-{
-    state->num = 0;
-    memset(state->ecount, 0, 16);
-    memcpy(state->ivec, iv, 16);
-}
+
 
 @interface MTTcpConnection () <GCDAsyncSocketDelegate>
 {   
@@ -73,6 +125,11 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     MTAesCtr *_incomingAesCtr;
     
     MTNetworkUsageCalculationInfo *_usageCalculationInfo;
+    
+    NSString *_socksIp;
+    int32_t _socksPort;
+    NSString *_socksUsername;
+    NSString *_socksPassword;
 }
 
 @property (nonatomic) int64_t packetHeadDecodeToken;
@@ -104,12 +161,6 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     {
         _internalId = [[MTInternalId(MTTcpConnection) alloc] init];
         
-/*#ifdef DEBUG
-        if (![address isIpv6]) {
-            address = [[MTDatacenterAddress alloc] initWithIp:@"127.0.0.1" port:443 preferForMedia:address.preferForMedia restrictToTcp:address.restrictToTcp];
-        }
-#endif*/
-        
         _address = address;
         
         _interface = interface;
@@ -117,6 +168,13 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
         
         if (context.apiEnvironment.datacenterAddressOverrides[@(datacenterId)] != nil) {
             _firstPacketControlByte = [context.apiEnvironment tcpPayloadPrefix];
+        }
+        
+        if (context.apiEnvironment.socksProxySettings != nil) {
+            _socksIp = context.apiEnvironment.socksProxySettings.ip;
+            _socksPort = context.apiEnvironment.socksProxySettings.port;
+            _socksUsername = context.apiEnvironment.socksProxySettings.username;
+            _socksPassword = context.apiEnvironment.socksProxySettings.password;
         }
     }
     return self;
@@ -168,12 +226,31 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
             }
             
             NSString *ip = _address.ip;
+            uint16_t port = _address.port;
+            
+            if (_socksIp != nil) {
+                ip = _socksIp;
+                port = _socksPort;
+            }
             
             __autoreleasing NSError *error = nil;
-            if (![_socket connectToHost:ip onPort:_address.port viaInterface:_interface withTimeout:12 error:&error] || error != nil)
+            if (![_socket connectToHost:ip onPort:port viaInterface:_interface withTimeout:12 error:&error] || error != nil) {
                 [self closeAndNotify];
-            else
+            } else if (_socksIp == nil) {
                 [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+            } else {
+                struct socks5_ident_req req;
+                req.Version = 5;
+                req.NumberOfMethods = 1;
+                req.Methods[0] = 0x00;
+                
+                if (_socksUsername != nil) {
+                    req.NumberOfMethods += 1;
+                    req.Methods[1] = 0x02;
+                }
+                [_socket writeData:[NSData dataWithBytes:&req length:2 + req.NumberOfMethods] withTimeout:-1 tag:0];
+                [_socket readDataToLength:sizeof(struct socks5_ident_resp) withTimeout:-1 tag:MTTcpSocksLogin];
+            }
         }
     }];
 }
@@ -376,10 +453,197 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     }
 }
 
+- (void)requestSocksConnection {
+    struct socks5_req req;
+    
+    req.Version = 5;
+    req.Cmd = 1;
+    req.Reserved = 0;
+    req.AddrType = 1;
+    
+    struct in_addr ip4;
+    inet_aton(_address.ip.UTF8String, &ip4);
+    req.DestAddr.IPv4 = ip4;
+    req.DestPort = _address.port;
+    
+    NSMutableData *reqData = [[NSMutableData alloc] init];
+    [reqData appendBytes:&req length:4];
+    
+    switch (req.AddrType) {
+        case 1: {
+            [reqData appendBytes:&req.DestAddr.IPv4 length:sizeof(struct in_addr)];
+            break;
+        }
+        case 3: {
+            [reqData appendBytes:&req.DestAddr.DomainLen length:1];
+            [reqData appendBytes:&req.DestAddr.Domain length:req.DestAddr.DomainLen];
+            break;
+        }
+        case 4: {
+            [reqData appendBytes:&req.DestAddr.IPv6 length:sizeof(struct in6_addr)];
+            break;
+        }
+        default: {
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid socks request address type", __PRETTY_FUNCTION__);
+            }
+            [self closeAndNotify];
+            return;
+        }
+    }
+    
+    unsigned short port = htons(req.DestPort);
+    [reqData appendBytes:&port length:2];
+    
+    [_socket writeData:reqData withTimeout:-1 tag:0];
+    [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpSocksRequest];
+}
+
 - (void)socket:(GCDAsyncSocket *)__unused socket didReadData:(NSData *)rawData withTag:(long)tag
 {
     if (_closed)
         return;
+    
+    if (tag == MTTcpSocksLogin) {
+        if (rawData.length != sizeof(struct socks5_ident_resp)) {
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid socks5 login response length", __PRETTY_FUNCTION__);
+            }
+            [self closeAndNotify];
+            return;
+        }
+        
+        struct socks5_ident_resp resp;
+        [rawData getBytes:&resp length:sizeof(struct socks5_ident_resp)];
+        if (resp.Version != 5) {
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid socks response version", __PRETTY_FUNCTION__);
+            }
+            [self closeAndNotify];
+            return;
+        }
+        
+        if (resp.Method == 0xFF)
+        {
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid socks response method", __PRETTY_FUNCTION__);
+            }
+            [self closeAndNotify];
+            return;
+        }
+        
+        if (resp.Method == 0x02) {
+            NSMutableData *reqData = [[NSMutableData alloc] init];
+            uint8_t version = 1;
+            [reqData appendBytes:&version length:1];
+            
+            NSData *usernameData = [_socksUsername dataUsingEncoding:NSUTF8StringEncoding];
+            NSData *passwordData = [_socksPassword dataUsingEncoding:NSUTF8StringEncoding];
+            
+            uint8_t usernameLength = (uint8_t)(MIN(usernameData.length, 255));
+            [reqData appendBytes:&usernameLength length:1];
+            [reqData appendData:usernameData];
+            
+            uint8_t passwordLength = (uint8_t)(MIN(passwordData.length, 255));
+            [reqData appendBytes:&passwordLength length:1];
+            [reqData appendData:passwordData];
+            
+            [_socket writeData:reqData withTimeout:-1 tag:0];
+            [_socket readDataToLength:2 withTimeout:-1 tag:MTTcpSocksReceiveAuthResponse];
+        } else {
+            [self requestSocksConnection];
+        }
+        
+        return;
+    } else if (tag == MTTcpSocksRequest) {
+        struct socks5_resp resp;
+        if (rawData.length != 4) {
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid socks5 response length", __PRETTY_FUNCTION__);
+            }
+            [self closeAndNotify];
+            return;
+        }
+        [rawData getBytes:&resp length:4];
+        
+        if (resp.Reply != 0x00) {
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: socks5 connect failed, error 0x%02x", __PRETTY_FUNCTION__, resp.Reply);
+            }
+            [self closeAndNotify];
+            return;
+        }
+        
+        switch (resp.AddrType) {
+            case 1: {
+                [_socket readDataToLength:sizeof(struct in_addr) withTimeout:-1 tag:MTTcpSocksReceiveBindAddr4];
+                break;
+            }
+            case 3: {
+                [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpSocksReceiveBindAddrDomainNameLength];
+                break;
+            }
+            case 4: {
+                [_socket readDataToLength:sizeof(struct in6_addr) withTimeout:-1 tag:MTTcpSocksReceiveBindAddr6];
+                break;
+            }
+            default: {
+                if (MTLogEnabled()) {
+                    MTLog(@"***** %s: socks bound to unknown address type", __PRETTY_FUNCTION__);
+                }
+                [self closeAndNotify];
+                return;
+            }
+        }
+        
+        return;
+    } else if (tag == MTTcpSocksReceiveBindAddrDomainNameLength) {
+        if (rawData.length != 1) {
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid socks5 response domain name data length", __PRETTY_FUNCTION__);
+            }
+            [self closeAndNotify];
+            return;
+        }
+        
+        uint8_t length = 0;
+        [rawData getBytes:&length length:1];
+        
+        [_socket readDataToLength:(int)length withTimeout:-1 tag:MTTcpSocksReceiveBindAddrDomainName];
+        
+        return;
+    } else if (tag == MTTcpSocksReceiveBindAddrDomainName || tag == MTTcpSocksReceiveBindAddr4 || tag == MTTcpSocksReceiveBindAddr6) {
+        [_socket readDataToLength:2 withTimeout:-1 tag:MTTcpSocksReceiveBindAddrPort];
+        
+        return;
+    } else if (tag == MTTcpSocksReceiveBindAddrPort) {
+        if (_connectionOpened)
+            _connectionOpened();
+        id<MTTcpConnectionDelegate> delegate = _delegate;
+        if ([delegate respondsToSelector:@selector(tcpConnectionOpened:)])
+            [delegate tcpConnectionOpened:self];
+        
+        [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+        
+        return;
+    } else if (tag == MTTcpSocksReceiveAuthResponse) {
+        int8_t version = 0;
+        int8_t status = 0;
+        [rawData getBytes:&version range:NSMakeRange(0, 1)];
+        [rawData getBytes:&status range:NSMakeRange(1, 1)];
+        
+        if (version != 1 || status != 0) {
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid socks5 auth response", __PRETTY_FUNCTION__);
+            }
+            [self closeAndNotify];
+            return;
+        }
+        
+        [self requestSocksConnection];
+        
+        return;
+    }
     
     NSData *data = nil;
     if (useEncryption) {
@@ -528,14 +792,18 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
         [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
     }
 }
-
+             
 - (void)socket:(GCDAsyncSocket *)__unused socket didConnectToHost:(NSString *)__unused host port:(uint16_t)__unused port
 {
-    if (_connectionOpened)
-        _connectionOpened();
-    id<MTTcpConnectionDelegate> delegate = _delegate;
-    if ([delegate respondsToSelector:@selector(tcpConnectionOpened:)])
-        [delegate tcpConnectionOpened:self];
+    if (_socksIp != nil) {
+        
+    } else {
+        if (_connectionOpened)
+            _connectionOpened();
+        id<MTTcpConnectionDelegate> delegate = _delegate;
+        if ([delegate respondsToSelector:@selector(tcpConnectionOpened:)])
+            [delegate tcpConnectionOpened:self];
+    }
 }
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)__unused socket withError:(NSError *)error

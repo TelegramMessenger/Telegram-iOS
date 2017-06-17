@@ -124,6 +124,41 @@ typedef enum {
     
 } UIDeviceFamily;
 
+@implementation MTSocksProxySettings
+
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password {
+    self = [super init];
+    if (self != nil) {
+        _ip = ip;
+        _port = port;
+        _username = username;
+        _password = password;
+    }
+    return self;
+}
+
+- (BOOL)isEqual:(id)object {
+    if (![object isKindOfClass:[MTSocksProxySettings class]]) {
+        return false;
+    }
+    MTSocksProxySettings *other = object;
+    if ((other->_ip != nil) != (_ip != nil) || (_ip != nil && ![_ip isEqual:other->_ip])) {
+        return false;
+    }
+    if (other->_port != _port) {
+        return false;
+    }
+    if ((other->_username != nil) != (_username != nil) || (_username != nil && ![_username isEqual:other->_username])) {
+        return false;
+    }
+    if ((other->_password != nil) != (_password != nil) || (_password != nil && ![_password isEqual:other->_password])) {
+        return false;
+    }
+    return true;
+}
+
+@end
+
 @implementation MTApiEnvironment
 
 - (instancetype)init
@@ -327,6 +362,27 @@ typedef enum {
     result.langPack = self.langPack;
     
     result->_langPackCode = langPackCode;
+    
+    result.disableUpdates = self.disableUpdates;
+    result.tcpPayloadPrefix = self.tcpPayloadPrefix;
+    result.datacenterAddressOverrides = self.datacenterAddressOverrides;
+    
+    [result _updateApiInitializationHash];
+    
+    return result;
+}
+
+- (MTApiEnvironment *)withUpdatedSocksProxySettings:(MTSocksProxySettings *)socksProxySettings {
+    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    
+    result.apiId = self.apiId;
+    result.appVersion = self.appVersion;
+    result.layer = self.layer;
+    
+    result.langPack = self.langPack;
+    
+    result->_langPackCode = self.langPackCode;
+    result->_socksProxySettings = socksProxySettings;
     
     result.disableUpdates = self.disableUpdates;
     result.tcpPayloadPrefix = self.tcpPayloadPrefix;

@@ -53,6 +53,8 @@
 #import "MTNewSessionCreatedMessage.h"
 #import "MTPongMessage.h"
 
+#import "MTApiEnvironment.h"
+
 #import "MTTime.h"
 
 #define MTProtoV2 1
@@ -2286,7 +2288,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     
 - (void)contextApiEnvironmentUpdated:(MTContext *)context apiEnvironment:(MTApiEnvironment *)apiEnvironment {
     [[MTProto managerQueue] dispatchOnQueue:^{
+        MTSocksProxySettings *previousSocksProxySettings = _apiEnvironment.socksProxySettings;
+        
         _apiEnvironment = apiEnvironment;
+        
+        if ((_apiEnvironment.socksProxySettings != nil) != (previousSocksProxySettings != nil) || (previousSocksProxySettings != nil && ![_apiEnvironment.socksProxySettings isEqual:previousSocksProxySettings])) {
+            [self resetTransport];
+            [self requestTransportTransaction];
+        }
         
         for (id<MTMessageService> service in _messageServices) {
             if ([service respondsToSelector:@selector(mtProtoApiEnvironmentUpdated:apiEnvironment:)]) {
