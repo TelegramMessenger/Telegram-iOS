@@ -420,6 +420,11 @@ public final class Modifier {
         return nil
     }
     
+    public func findClosestMessageIdByTimestamp(peerId: PeerId, timestamp: Int32) -> MessageId? {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryTable.findMessageId(peerId: peerId, timestamp: timestamp)
+    }
+    
     public func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -1521,7 +1526,11 @@ public final class Postbox {
     }
     
     fileprivate func storedMessageId(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32) -> MessageId? {
-        return self.messageHistoryTable.findMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp)
+        if let id = self.messageHistoryTable.findMessageId(peerId: peerId, timestamp: timestamp), id.namespace == namespace {
+            return id
+        } else {
+            return nil
+        }
     }
     
     fileprivate func putItemCacheEntry(id: ItemCacheEntryId, entry: Coding, collectionSpec: ItemCacheCollectionSpec) {

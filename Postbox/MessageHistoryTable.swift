@@ -1962,7 +1962,7 @@ final class MessageHistoryTable: Table {
         return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: 1), exact: false)
     }
     
-    func findMessageId(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32) -> MessageId? {
+    func findMessageId(peerId: PeerId, timestamp: Int32) -> MessageId? {
         var result: MessageId?
         self.valueBox.range(self.table, start: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp)), end: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: Int32.max, id: Int32.max), timestamp: timestamp)), values: { key, value in
             let entry = self.readIntermediateEntry(key, value: value)
