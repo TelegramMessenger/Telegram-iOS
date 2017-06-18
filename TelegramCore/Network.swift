@@ -303,7 +303,7 @@ public struct NetworkInitializationArguments {
     }
 }
 
-func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?) -> Signal<Network, NoError> {
+func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -317,6 +317,10 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
             apiEnvironment.disableUpdates = supplementary
             apiEnvironment = apiEnvironment.withUpdatedLangPackCode(languageCode ?? "en")
+            
+            if let proxySettings = proxySettings {
+                apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: proxySettings.host, port: UInt16(proxySettings.port), username: proxySettings.username, password: proxySettings.password))
+            }
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
             

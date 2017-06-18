@@ -97,6 +97,8 @@ private enum PreferencesKeyValues: Int32 {
     case cacheStorageSettings = 1
     case localizationSettings = 2
     case suggestedLocalization = 3
+    case limitsConfiguration = 4
+    case proxySettings = 5
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -127,6 +129,18 @@ public struct PreferencesKeys {
     public static let suggestedLocalization: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.suggestedLocalization.rawValue)
+        return key
+    }()
+    
+    public static let limitsConfiguration: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.limitsConfiguration.rawValue)
+        return key
+    }()
+    
+    public static let proxySettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.proxySettings.rawValue)
         return key
     }()
 }

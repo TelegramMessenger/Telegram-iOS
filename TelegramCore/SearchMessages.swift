@@ -171,7 +171,9 @@ public func downloadMessage(account: Account, messageId: MessageId) -> Signal<Me
 
 public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timestamp: Int32) -> Signal<MessageId?, NoError> {
     return account.postbox.modify { modifier -> Signal<MessageId?, NoError> in
-        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            return .single(modifier.findClosestMessageIdByTimestamp(peerId: peerId, timestamp: timestamp))
+        } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0))
                 |> map { result -> MessageId? in
                     let messages: [Api.Message]
