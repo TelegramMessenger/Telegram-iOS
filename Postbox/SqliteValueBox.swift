@@ -22,6 +22,10 @@ private struct SqlitePreparedStatement {
         sqlite3_bind_blob(statement, Int32(index), data, Int32(length), nil)
     }
     
+    func bindText(_ index: Int, data: UnsafeRawPointer, length: Int) {
+        sqlite3_bind_text(statement, Int32(index), data.assumingMemoryBound(to: Int8.self), Int32(length), SQLITE_VAR_TRANSIENT)
+    }
+    
     func bind(_ index: Int, number: Int64) {
         sqlite3_bind_int64(statement, Int32(index), number)
     }
@@ -39,20 +43,24 @@ private struct SqlitePreparedStatement {
         sqlite3_clear_bindings(statement)
     }
     
-    func step(_ initial: Bool = false, path: String? = nil) -> Bool {
-        let result = sqlite3_step(statement)
-        if result != SQLITE_ROW && result != SQLITE_DONE {
+    func step(handle: OpaquePointer?, _ initial: Bool = false, path: String? = nil) -> Bool {
+        let res = sqlite3_step(statement)
+        if res != SQLITE_ROW && res != SQLITE_DONE {
             if initial {
                 if let path = path {
                     try? FileManager.default.removeItem(atPath: path)
                     preconditionFailure()
                 }
             } else  {
-                assertionFailure("Sqlite error \(result)")
+                if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
+                    print("SQL error \(res): \(str) on step")
+                } else {
+                    print("SQL error \(res) on step")
+                }
                 return false
             }
         }
-        return result == SQLITE_ROW
+        return res == SQLITE_ROW
     }
     
     func int64At(_ index: Int) -> Int64 {
@@ -66,6 +74,15 @@ private struct SqlitePreparedStatement {
         let valueMemory = malloc(Int(valueLength))!
         memcpy(valueMemory, valueData, Int(valueLength))
         return ReadBuffer(memory: valueMemory, length: Int(valueLength), freeWhenDone: true)
+    }
+    
+    func stringAt(_ index: Int) -> String? {
+        let valueLength = sqlite3_column_bytes(statement, Int32(index))
+        if let valueData = sqlite3_column_blob(statement, Int32(index)) {
+            return String(data: Data(bytes: valueData, count: Int(valueLength)), encoding: .utf8)
+        } else {
+            return nil
+        }
     }
     
     func keyAt(_ index: Int) -> ValueBoxKey {
@@ -96,6 +113,7 @@ final class SqliteValueBox: ValueBox {
     private let basePath: String
     private var database: Database!
     private var tables: [Int32: ValueBoxTable] = [:]
+    private var fullTextTables: [Int32: ValueBoxFullTextTable] = [:]
     private var getStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeKeyAscStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeKeyAscStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
@@ -111,6 +129,11 @@ final class SqliteValueBox: ValueBox {
     private var insertStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var insertOrReplaceStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var deleteStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var fullTextInsertStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var fullTextDeleteStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var fullTextMatchGlobalStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var fullTextMatchCollectionStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var fullTextMatchCollectionTagsStatements: [Int32 : SqlitePreparedStatement] = [:]
     
     private var readQueryTime: CFAbsoluteTime = 0.0
     private var writeQueryTime: CFAbsoluteTime = 0.0
@@ -177,17 +200,27 @@ final class SqliteValueBox: ValueBox {
         preparedStatement.destroy()*/
         
         let result = self.getUserVersion(database)
-        if result != 2 {
-            resultCode = database.execute("PRAGMA user_version=2")
+        if result < 2 {
+            resultCode = database.execute("PRAGMA user_version=3")
             assert(resultCode)
             resultCode = database.execute("DROP TABLE IF EXISTS __meta_tables")
             assert(resultCode)
             resultCode = database.execute("CREATE TABLE __meta_tables (name INTEGER, keyType INTEGER)")
             assert(resultCode)
+            resultCode = database.execute("CREATE TABLE __meta_fulltext_tables (name INTEGER)")
+            assert(resultCode)
+        } else if result < 3 {
+            resultCode = database.execute("PRAGMA user_version=3")
+            assert(resultCode)
+            resultCode = database.execute("CREATE TABLE __meta_fulltext_tables (name INTEGER)")
+            assert(resultCode)
         }
         
         for table in self.listTables(database) {
             self.tables[table.id] = table
+        }
+        for table in self.listFullTextTables(database) {
+            self.fullTextTables[table.id] = table
         }
         lock.unlock()
         
@@ -236,7 +269,7 @@ final class SqliteValueBox: ValueBox {
         let status = sqlite3_prepare_v2(database.handle, "PRAGMA user_version", -1, &statement, nil)
         assert(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        let _ = preparedStatement.step()
+        let _ = preparedStatement.step(handle: database.handle)
         let value = preparedStatement.int64At(0)
         preparedStatement.destroy()
         return value
@@ -250,10 +283,26 @@ final class SqliteValueBox: ValueBox {
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxTable] = []
         
-        while preparedStatement.step(true, path: basePath + "/db_sqlite") {
+        while preparedStatement.step(handle: database.handle, true, path: basePath + "/db_sqlite") {
             let value = preparedStatement.int64At(0)
             let keyType = preparedStatement.int64At(1)
             tables.append(ValueBoxTable(id: Int32(value), keyType: ValueBoxKeyType(rawValue: Int32(keyType))!))
+        }
+        preparedStatement.destroy()
+        return tables
+    }
+    
+    private func listFullTextTables(_ database: Database) -> [ValueBoxFullTextTable] {
+        assert(self.queue.isCurrent())
+        var statement: OpaquePointer? = nil
+        let status = sqlite3_prepare_v2(database.handle, "SELECT name FROM __meta_fulltext_tables", -1, &statement, nil)
+        assert(status == SQLITE_OK)
+        let preparedStatement = SqlitePreparedStatement(statement: statement)
+        var tables: [ValueBoxFullTextTable] = []
+        
+        while preparedStatement.step(handle: database.handle, true, path: basePath + "/db_sqlite") {
+            let value = preparedStatement.int64At(0)
+            tables.append(ValueBoxFullTextTable(id: Int32(value)))
         }
         preparedStatement.destroy()
         return tables
@@ -276,6 +325,17 @@ final class SqliteValueBox: ValueBox {
             }
             self.tables[table.id] = table
             let resultCode = self.database.execute("INSERT INTO __meta_tables(name, keyType) VALUES (\(table.id), \(table.keyType.rawValue))")
+            assert(resultCode)
+        }
+    }
+    
+    private func checkFullTextTable(_ table: ValueBoxFullTextTable) {
+        if let _ = self.fullTextTables[table.id] {
+        } else {
+            var resultCode = self.database.execute("CREATE VIRTUAL TABLE ft\(table.id) USING fts5(collectionId, itemId, contents, tags)")
+            assert(resultCode)
+            self.fullTextTables[table.id] = table
+            resultCode = self.database.execute("INSERT INTO __meta_fulltext_tables(name) VALUES (\(table.id))")
             assert(resultCode)
         }
     }
@@ -743,6 +803,150 @@ final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
+    private func fullTextInsertStatement(_ table: ValueBoxFullTextTable, collectionId: Data, itemId: Data, contents: Data, tags: Data) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
+        
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.fullTextInsertStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO ft\(table.id) (collectionId, itemId, contents, tags) VALUES(?, ?, ?, ?)", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.fullTextInsertStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        collectionId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(1, data: bytes, length: collectionId.count)
+        }
+        
+        itemId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(2, data: bytes, length: itemId.count)
+        }
+        
+        contents.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(3, data: bytes, length: contents.count)
+        }
+        
+        tags.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(4, data: bytes, length: tags.count)
+        }
+        
+        return resultStatement
+    }
+    
+    private func fullTextDeleteStatement(_ table: ValueBoxFullTextTable, itemId: Data) -> SqlitePreparedStatement {
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.fullTextDeleteStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "DELETE FROM ft\(table.id) WHERE itemId=?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.fullTextDeleteStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        itemId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(1, data: bytes, length: itemId.count)
+        }
+        
+        return resultStatement
+    }
+    
+    private func fullTextMatchGlobalStatement(_ table: ValueBoxFullTextTable, contents: Data) -> SqlitePreparedStatement {
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.fullTextMatchGlobalStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\"'", -1, &statement, nil)
+            if status != SQLITE_OK {
+                self.printError()
+                assertionFailure()
+            }
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.fullTextMatchGlobalStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        contents.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(1, data: bytes, length: contents.count)
+        }
+        
+        return resultStatement
+    }
+    
+    private func fullTextMatchCollectionStatement(_ table: ValueBoxFullTextTable, collectionId: Data, contents: Data) -> SqlitePreparedStatement {
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.fullTextMatchCollectionStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\" AND collectionId:\"' || ? || '\"'", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.fullTextMatchCollectionStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        contents.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(1, data: bytes, length: contents.count)
+        }
+        
+        collectionId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(2, data: bytes, length: collectionId.count)
+        }
+        
+        return resultStatement
+    }
+    
+    private func fullTextMatchCollectionTagsStatement(_ table: ValueBoxFullTextTable, collectionId: Data, contents: Data, tags: Data) -> SqlitePreparedStatement {
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.fullTextMatchCollectionTagsStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\" AND collectionId:\"' || ? || '\" AND tags:\"' || ? || '\"'", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.fullTextMatchCollectionTagsStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        contents.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(1, data: bytes, length: contents.count)
+        }
+        
+        collectionId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(2, data: bytes, length: collectionId.count)
+        }
+        
+        tags.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            resultStatement.bindText(3, data: bytes, length: tags.count)
+        }
+        
+        return resultStatement
+    }
+    
     public func get(_ table: ValueBoxTable, key: ValueBoxKey) -> ReadBuffer? {
         assert(self.queue.isCurrent())
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -751,7 +955,7 @@ final class SqliteValueBox: ValueBox {
             
             var buffer: ReadBuffer?
             
-            while statement.step() {
+            while statement.step(handle: self.database.handle) {
                 buffer = statement.valueAt(0)
                 break
             }
@@ -762,6 +966,8 @@ final class SqliteValueBox: ValueBox {
             
             return buffer
         }
+        
+        withExtendedLifetime(key, {})
         
         return nil
     }
@@ -806,7 +1012,7 @@ final class SqliteValueBox: ValueBox {
                     
                     startTime = currentTime
                     
-                    while statement.step() {
+                    while statement.step(handle: self.database.handle) {
                         startTime = CFAbsoluteTimeGetCurrent()
                         
                         let key = statement.keyAt(0)
@@ -841,7 +1047,7 @@ final class SqliteValueBox: ValueBox {
                     
                     startTime = currentTime
                     
-                    while statement.step() {
+                    while statement.step(handle: self.database.handle) {
                         startTime = CFAbsoluteTimeGetCurrent()
                         
                         let key = statement.int64KeyAt(0)
@@ -858,6 +1064,9 @@ final class SqliteValueBox: ValueBox {
                     statement.reset()
             }
         }
+        
+        withExtendedLifetime(start, {})
+        withExtendedLifetime(end, {})
     }
     
     public func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, keys: (ValueBoxKey) -> Bool, limit: Int) {
@@ -888,7 +1097,7 @@ final class SqliteValueBox: ValueBox {
                     
                     startTime = currentTime
                     
-                    while statement.step() {
+                    while statement.step(handle: self.database.handle) {
                         startTime = CFAbsoluteTimeGetCurrent()
                         
                         let key = statement.keyAt(0)
@@ -922,7 +1131,7 @@ final class SqliteValueBox: ValueBox {
                     
                     startTime = currentTime
                     
-                    while statement.step() {
+                    while statement.step(handle: self.database.handle) {
                         startTime = CFAbsoluteTimeGetCurrent()
                         
                         let key = statement.int64KeyAt(0)
@@ -938,6 +1147,9 @@ final class SqliteValueBox: ValueBox {
                     statement.reset()
             }
         }
+        
+        withExtendedLifetime(start, {})
+        withExtendedLifetime(end, {})
     }
     
     public func scan(_ table: ValueBoxTable, values: (ValueBoxKey, ReadBuffer) -> Bool) {
@@ -953,7 +1165,7 @@ final class SqliteValueBox: ValueBox {
             
             startTime = currentTime
             
-            while statement.step() {
+            while statement.step(handle: self.database.handle) {
                 startTime = CFAbsoluteTimeGetCurrent()
                 
                 let key = statement.keyAt(0)
@@ -979,25 +1191,25 @@ final class SqliteValueBox: ValueBox {
         
         if case .int64 = table.keyType {
             let statement = self.insertOrReplaceStatement(table, key: key, value: value)
-            while statement.step() {
+            while statement.step(handle: self.database.handle) {
             }
             statement.reset()
         } else {
             var exists = false
             let existsStatement = self.existsStatement(table, key: key)
-            if existsStatement.step() {
+            if existsStatement.step(handle: self.database.handle) {
                 exists = true
             }
             existsStatement.reset()
             
             if exists {
                 let statement = self.updateStatement(table, key: key, value: value)
-                while statement.step() {
+                while statement.step(handle: self.database.handle) {
                 }
                 statement.reset()
             } else {
                 let statement = self.insertStatement(table, key: key, value: value)
-                while statement.step() {
+                while statement.step(handle: self.database.handle) {
                 }
                 statement.reset()
             }
@@ -1012,7 +1224,86 @@ final class SqliteValueBox: ValueBox {
             let startTime = CFAbsoluteTimeGetCurrent()
             
             let statement = self.deleteStatement(table, key: key)
-            while statement.step() {
+            while statement.step(handle: self.database.handle) {
+            }
+            statement.reset()
+            
+            self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
+        }
+    }
+    
+    public func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool) {
+        if let _ = self.fullTextTables[table.id] {
+            guard let queryData = query.data(using: .utf8) else {
+                return
+            }
+            
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
+            var statement: SqlitePreparedStatement?
+            if let collectionId = collectionId {
+                if let collectionIdData = collectionId.data(using: .utf8) {
+                    if let tags = tags {
+                        if let tagsData = tags.data(using: .utf8) {
+                            statement = self.fullTextMatchCollectionTagsStatement(table, collectionId: collectionIdData, contents: queryData, tags: tagsData)
+                        }
+                    } else {
+                        statement = self.fullTextMatchCollectionStatement(table, collectionId: collectionIdData, contents: queryData)
+                    }
+                }
+            } else {
+                statement = self.fullTextMatchGlobalStatement(table, contents: queryData)
+            }
+            
+            if let statement = statement {
+                while statement.step(handle: self.database.handle) {
+                    let resultCollectionId = statement.stringAt(0)
+                    let resultItemId = statement.stringAt(1)
+                    
+                    if let resultCollectionId = resultCollectionId, let resultItemId = resultItemId {
+                        if !values(resultCollectionId, resultItemId) {
+                            break
+                        }
+                    } else {
+                        assertionFailure()
+                    }
+                }
+                
+                statement.reset()
+            }
+            
+            let currentTime = CFAbsoluteTimeGetCurrent()
+            self.readQueryTime += currentTime - startTime
+        }
+    }
+    
+    public func fullTextSet(_ table: ValueBoxFullTextTable, collectionId: String, itemId: String, contents: String, tags: String) {
+        self.checkFullTextTable(table)
+        
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
+        guard let collectionIdData = collectionId.data(using: .utf8), let itemIdData = itemId.data(using: .utf8), let contentsData = contents.data(using: .utf8), let tagsData = tags.data(using: .utf8) else {
+            return
+        }
+        
+        let statement = self.fullTextInsertStatement(table, collectionId: collectionIdData, itemId: itemIdData, contents: contentsData, tags: tagsData)
+        while statement.step(handle: self.database.handle) {
+        }
+        statement.reset()
+        
+        self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
+    }
+    
+    public func fullTextRemove(_ table: ValueBoxFullTextTable, itemId: String) {
+        if let _ = self.fullTextTables[table.id] {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
+            guard let itemIdData = itemId.data(using: .utf8) else {
+                return
+            }
+            
+            let statement = self.fullTextDeleteStatement(table, itemId: itemIdData)
+            while statement.step(handle: self.database.handle) {
             }
             statement.reset()
             
@@ -1096,6 +1387,31 @@ final class SqliteValueBox: ValueBox {
             statement.destroy()
         }
         self.deleteStatements.removeAll()
+        
+        for (_, statement) in self.fullTextInsertStatements {
+            statement.destroy()
+        }
+        self.fullTextInsertStatements.removeAll()
+        
+        for (_, statement) in self.fullTextDeleteStatements {
+            statement.destroy()
+        }
+        self.fullTextDeleteStatements.removeAll()
+        
+        for (_, statement) in self.fullTextMatchGlobalStatements {
+            statement.destroy()
+        }
+        self.fullTextMatchGlobalStatements.removeAll()
+        
+        for (_, statement) in self.fullTextMatchCollectionStatements {
+            statement.destroy()
+        }
+        self.fullTextMatchCollectionStatements.removeAll()
+        
+        for (_, statement) in self.fullTextMatchCollectionTagsStatements {
+            statement.destroy()
+        }
+        self.fullTextMatchCollectionTagsStatements.removeAll()
     }
     
     public func dropTable(_ table: ValueBoxTable) {
@@ -1114,5 +1430,11 @@ final class SqliteValueBox: ValueBox {
         self.database = self.openDatabase()
         
         tables.removeAll()
+    }
+    
+    private func printError() {
+        if let error = sqlite3_errmsg(self.database.handle), let str = NSString(utf8String: error) {
+            print("SQL error \(str)")
+        }
     }
 }

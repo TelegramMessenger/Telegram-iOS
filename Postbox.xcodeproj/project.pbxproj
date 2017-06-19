@@ -26,6 +26,8 @@
 		D019B1CF1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */; };
 		D01BAA551ED1D70C00295217 /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA541ED1D70C00295217 /* ManagedFile.swift */; };
 		D01BAA561ED1D70C00295217 /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA541ED1D70C00295217 /* ManagedFile.swift */; };
+		D01C7EDE1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */; };
+		D01C7EDF1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */; };
 		D01F7D9B1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */; };
 		D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */; };
 		D021E0D41DB4FAE100C6B04F /* ItemCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0D31DB4FAE100C6B04F /* ItemCollection.swift */; };
@@ -301,6 +303,7 @@
 		D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMergedOperationLogIndexTable.swift; sourceTree = "<group>"; };
 		D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageGloballyUniqueIdTable.swift; sourceTree = "<group>"; };
 		D01BAA541ED1D70C00295217 /* ManagedFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedFile.swift; sourceTree = "<group>"; };
+		D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTextIndexTable.swift; sourceTree = "<group>"; };
 		D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryInvalidatedReadStateTable.swift; sourceTree = "<group>"; };
 		D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizePeerReadStatesView.swift; sourceTree = "<group>"; };
 		D021E0D31DB4FAE100C6B04F /* ItemCollection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCollection.swift; sourceTree = "<group>"; };
@@ -558,6 +561,7 @@
 				D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */,
 				D0D510F51D63BBE100A97B8A /* MessageHistoryOperation.swift */,
 				D00EED1D1C81F28D00341DFF /* MessageHistoryTagsTable.swift */,
+				D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */,
 				D0E1D30B1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift */,
 				D033A6F61C73D512006A2EAB /* MessageHistoryUnsentTable.swift */,
 				D0F9E8641C58CB7F00037222 /* ChatListTable.swift */,
@@ -1048,6 +1052,7 @@
 				D0B418301D7DFE16004562A4 /* ValueBoxKey.swift in Sources */,
 				D0B418221D7DFE0C004562A4 /* Coding.swift in Sources */,
 				D0B4184B1D7DFE20004562A4 /* SynchronizePeerReadStatesView.swift in Sources */,
+				D01C7EDF1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1177,6 +1182,7 @@
 				D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */,
 				D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */,
 				D0D511001D64A58900A97B8A /* IpcPipe.swift in Sources */,
+				D01C7EDE1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1269,7 +1275,6 @@
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_OMIT_DEPRECATED",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 				);
@@ -1397,7 +1402,6 @@
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_OMIT_DEPRECATED",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 				);
@@ -1646,7 +1650,6 @@
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_OMIT_DEPRECATED",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 				);
@@ -1680,7 +1683,6 @@
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
-					"-DSQLITE_OMIT_DEPRECATED",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 				);

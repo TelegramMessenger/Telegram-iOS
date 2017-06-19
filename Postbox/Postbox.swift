@@ -420,9 +420,14 @@ public final class Modifier {
         return nil
     }
     
-    public func findClosestMessageIdByTimestamp(peerId: PeerId, timestamp: Int32) -> MessageId? {
+    public func findMessageIdByTimestamp(peerId: PeerId, timestamp: Int32) -> MessageId? {
         assert(!self.disposed)
         return self.postbox?.messageHistoryTable.findMessageId(peerId: peerId, timestamp: timestamp)
+    }
+    
+    public func findClosestMessageIdByTimestamp(peerId: PeerId, timestamp: Int32) -> MessageId? {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryTable.findClosestMessageId(peerId: peerId, timestamp: timestamp)
     }
     
     public func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
@@ -565,6 +570,15 @@ public final class Modifier {
     public func replaceGlobalMessageTagsHole(globalTags: GlobalMessageTags, index: MessageIndex, with updatedIndex: MessageIndex?, messages: [StoreMessage]) {
         assert(!self.disposed)
         self.postbox?.replaceGlobalMessageTagsHole(globalTags: globalTags, index: index, with: updatedIndex, messages: messages)
+    }
+    
+    public func searchMessages(peerId: PeerId?, query: String, tags: MessageTags?) -> [Message] {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.searchMessages(peerId: peerId, query: query, tags: tags)
+        } else {
+            return []
+        }
     }
 }
 
@@ -731,6 +745,7 @@ public final class Postbox {
     let preferencesTable: PreferencesTable
     let orderedItemListTable: OrderedItemListTable
     let orderedItemListIndexTable: OrderedItemListIndexTable
+    let textIndexTable: MessageHistoryTextIndexTable
     
     //temporary
     let peerRatingTable: RatingTable<PeerId>
@@ -779,7 +794,8 @@ public final class Postbox {
         self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox, table: MessageHistorySynchronizeReadStateTable.tableSpec(15))
         self.timestampBasedMessageAttributesIndexTable = TimestampBasedMessageAttributesIndexTable(valueBox: self.valueBox, table: TimestampBasedMessageAttributesTable.tableSpec(33))
         self.timestampBasedMessageAttributesTable = TimestampBasedMessageAttributesTable(valueBox: self.valueBox, table: TimestampBasedMessageAttributesTable.tableSpec(34), indexTable: self.timestampBasedMessageAttributesIndexTable)
-        self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, table: MessageHistoryTable.tableSpec(7), messageHistoryIndexTable: self.messageHistoryIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable, unsentTable: self.messageHistoryUnsentTable, tagsTable: self.messageHistoryTagsTable, globalTagsTable: self.globalMessageHistoryTagsTable, readStateTable: self.readStateTable, synchronizeReadStateTable: self.synchronizeReadStateTable)
+        self.textIndexTable = MessageHistoryTextIndexTable(valueBox: self.valueBox, table: MessageHistoryTextIndexTable.tableSpec(41))
+        self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, table: MessageHistoryTable.tableSpec(7), messageHistoryIndexTable: self.messageHistoryIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable, unsentTable: self.messageHistoryUnsentTable, tagsTable: self.messageHistoryTagsTable, globalTagsTable: self.globalMessageHistoryTagsTable, readStateTable: self.readStateTable, synchronizeReadStateTable: self.synchronizeReadStateTable, textIndexTable: self.textIndexTable)
         self.peerChatStateTable = PeerChatStateTable(valueBox: self.valueBox, table: PeerChatStateTable.tableSpec(13))
         self.peerNameTokenIndexTable = ReverseIndexReferenceTable<PeerIdReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<PeerIdReverseIndexReference>.tableSpec(26))
         self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox, table: PeerNameIndexTable.tableSpec(27), peerTable: self.peerTable, peerNameTokenIndexTable: self.peerNameTokenIndexTable)
@@ -1560,6 +1576,18 @@ public final class Postbox {
             
             let _ = self.addMessages(messages, location: .Random)
         }
+    }
+    
+    fileprivate func searchMessages(peerId: PeerId?, query: String, tags: MessageTags?) -> [Message] {
+        var result: [Message] = []
+        for messageId in self.textIndexTable.search(peerId: peerId, text: query, tags: tags) {
+            if let indexEntry = self.messageHistoryIndexTable.get(messageId), case let .Message(index) = indexEntry, let message = self.messageHistoryTable.getMessage(index) {
+                result.append(self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable))
+            } else {
+                assertionFailure()
+            }
+        }
+        return result
     }
     
     public func modify<T>(userInteractive: Bool = false, _ f: @escaping(Modifier) -> T) -> Signal<T, NoError> {

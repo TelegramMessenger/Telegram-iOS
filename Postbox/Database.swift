@@ -110,7 +110,11 @@ public final class Database {
         if res == SQLITE_OK {
             return true
         } else {
-            print("SQL error \(res) on SQL")
+            if let error = sqlite3_errmsg(self.handle), let str = NSString(utf8String: error) {
+                print("SQL error \(res): \(str) on SQL")
+            } else {
+                print("SQL error \(res) on SQL")
+            }
             return false
         }
     }

@@ -62,8 +62,9 @@ final class MessageHistoryTable: Table {
     let globalTagsTable: GlobalMessageHistoryTagsTable
     let readStateTable: MessageHistoryReadStateTable
     let synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable
+    let textIndexTable: MessageHistoryTextIndexTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, globalTagsTable: GlobalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, globalTagsTable: GlobalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable) {
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageMediaTable = messageMediaTable
         self.historyMetadataTable = historyMetadataTable
@@ -73,6 +74,7 @@ final class MessageHistoryTable: Table {
         self.globalTagsTable = globalTagsTable
         self.readStateTable = readStateTable
         self.synchronizeReadStateTable = synchronizeReadStateTable
+        self.textIndexTable = textIndexTable
         
         super.init(valueBox: valueBox, table: table)
     }
@@ -643,6 +645,10 @@ final class MessageHistoryTable: Table {
             sharedBuffer.write(&globalTagsValue, offset: 0, length: 4)
         }
         
+        if self.messageHistoryIndexTable.seedConfiguration.peerNamespacesRequiringMessageTextIndex.contains(message.id.peerId.namespace) {
+            self.textIndexTable.add(messageId: message.id, text: message.text, tags: message.tags)
+        }
+        
         var flags = MessageFlags(message.flags)
         sharedBuffer.write(&flags.rawValue, offset: 0, length: 4)
         
@@ -851,6 +857,10 @@ final class MessageHistoryTable: Table {
                     
                     for mediaId in message.referencedMedia {
                         let _ = self.messageMediaTable.removeReference(mediaId)
+                    }
+                    
+                    if self.messageHistoryIndexTable.seedConfiguration.peerNamespacesRequiringMessageTextIndex.contains(message.id.peerId.namespace) {
+                        self.textIndexTable.remove(messageId: message.id)
                     }
                     
                     resultTags = message.tags
@@ -1075,6 +1085,13 @@ final class MessageHistoryTable: Table {
                     }
                 case (false, false):
                     break
+            }
+            
+            if self.messageHistoryIndexTable.seedConfiguration.peerNamespacesRequiringMessageTextIndex.contains(message.id.peerId.namespace) {
+                if previousMessage.id != message.id || previousMessage.text != message.text || previousMessage.tags != message.tags {
+                    self.textIndexTable.remove(messageId: previousMessage.id)
+                    self.textIndexTable.add(messageId: message.id, text: message.text, tags: message.tags)
+                }
             }
             
             sharedBuffer.reset()
@@ -1972,6 +1989,29 @@ final class MessageHistoryTable: Table {
             }
             return true
         }, limit: 0)
+        return result
+    }
+    
+    func findClosestMessageId(peerId: PeerId, timestamp: Int32) -> MessageId? {
+        var result: MessageId?
+        self.valueBox.range(self.table, start: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp)), end: self.lowerBound(peerId), values: { key, value in
+            let entry = self.readIntermediateEntry(key, value: value)
+            if case .Message = entry {
+                result = entry.index.id
+                return false
+            }
+            return true
+        }, limit: 0)
+        if result == nil {
+            self.valueBox.range(self.table, start: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp)), end: self.upperBound(peerId), values: { key, value in
+                let entry = self.readIntermediateEntry(key, value: value)
+                if case .Message = entry {
+                    result = entry.index.id
+                    return false
+                }
+                return true
+            }, limit: 0)
+        }
         return result
     }
     
