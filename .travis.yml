@@ -37,7 +37,7 @@ script:
   # Run tests
   - if [ $RUN_TESTS == "YES" ]; then
       COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS=\"CI=1\" "
-      COMMAND="$COMMAND clean build-for-testing $COMMAND_SUFFIX && $COMMAND test-without-building $COMMAND_SUFFIX";
+      COMMAND="$COMMAND clean build-for-testing $COMMAND_SUFFIX && travis_retry $COMMAND test-without-building $COMMAND_SUFFIX";
     else
       COMMAND+="$COMMAND_SUFFIX";
     fi

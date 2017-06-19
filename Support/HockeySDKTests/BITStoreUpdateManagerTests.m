@@ -203,7 +203,6 @@
 
 - (void)testFirstStartHasNewVersionReturnsFalseWithFirstCheck {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
-  [given([mockUserDefaults objectForKey:anything()]) willReturn:nil];
   _storeUpdateManager.userDefaults = mockUserDefaults;
   
   [self startManager];
@@ -217,7 +216,6 @@
 
 - (void)testFirstStartHasNewVersionReturnsFalseWithSameVersion {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
-  [given([mockUserDefaults objectForKey:anything()]) willReturn:nil];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.2"];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@""];
   _storeUpdateManager.userDefaults = mockUserDefaults;
@@ -234,7 +232,6 @@
 
 - (void)testFirstStartHasNewVersionReturnsFalseWithSameVersionButDifferentUUID {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
-  [given([mockUserDefaults objectForKey:anything()]) willReturn:nil];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.2"];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@"1"];
   _storeUpdateManager.userDefaults = mockUserDefaults;
@@ -250,7 +247,6 @@
 
 - (void)testFirstStartHasNewVersionReturnsTrue {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
-  [given([mockUserDefaults objectForKey:anything()]) willReturn:nil];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.1"];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@""];
   _storeUpdateManager.userDefaults = mockUserDefaults;
@@ -267,7 +263,6 @@
 
 - (void)testFirstStartHasNewVersionReturnsFalseBecauseWeHaveANewerVersionInstalled {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
-  [given([mockUserDefaults objectForKey:anything()]) willReturn:nil];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.3"];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@""];
   _storeUpdateManager.userDefaults = mockUserDefaults;
@@ -283,7 +278,6 @@
 
 - (void)testReportedVersionIsBeingIgnored {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
-  [given([mockUserDefaults objectForKey:anything()]) willReturn:nil];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.1"];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@""];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateIgnoredVersion"]) willReturn:@"4.1.2"];
@@ -300,7 +294,6 @@
 
 - (void)testReportedVersionIsNewerThanTheIgnoredVersion {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
-  [given([mockUserDefaults objectForKey:anything()]) willReturn:nil];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.1"];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@""];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateIgnoredVersion"]) willReturn:@"4.1.1"];
