@@ -246,6 +246,18 @@ final class MediaPlayerNode: ASDisplayNode {
     
     deinit {
         assert(Queue.mainQueue().isCurrent())
+        
+        if let (takeFrameQueue, _) = self.takeFrameAndQueue {
+            if let videoLayer = self.videoLayer {
+                takeFrameQueue.async {
+                    videoLayer.flushAndRemoveImage()
+                    
+                    takeFrameQueue.after(1.0, {
+                        videoLayer.flushAndRemoveImage()
+                    })
+                }
+            }
+        }
     }
     
     override var frame: CGRect {

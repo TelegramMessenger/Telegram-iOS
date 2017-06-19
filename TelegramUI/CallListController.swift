@@ -82,7 +82,7 @@ public final class CallListController: ViewController {
         self.segmentedTitleView.color = self.presentationData.theme.rootController.navigationBar.accentTextColor
         
         if let isEmpty = self.isEmpty, isEmpty {
-            self.title = self.presentationData.strings.Calls_TabTitle
+            self.navigationItem.title = self.presentationData.strings.Calls_TabTitle
         } else {
             if self.editingMode {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
@@ -127,9 +127,9 @@ public final class CallListController: ViewController {
                     
                     if empty {
                         strongSelf.navigationItem.setLeftBarButton(nil, animated: true)
-                        strongSelf.title = strongSelf.presentationData.strings.Calls_TabTitle
+                        strongSelf.navigationItem.title = strongSelf.presentationData.strings.Calls_TabTitle
                     } else {
-                        strongSelf.title = ""
+                        strongSelf.navigationItem.title = ""
                         strongSelf.navigationItem.titleView = strongSelf.segmentedTitleView
                         if strongSelf.editingMode {
                             strongSelf.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))

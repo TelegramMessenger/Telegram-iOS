@@ -105,7 +105,7 @@ struct ChatTextInputPanelState: Equatable {
 private final class AccessoryItemIconButton: HighlightableButton {
     private let item: ChatTextInputAccessoryItem
     
-    init(item: ChatTextInputAccessoryItem, theme: PresentationTheme) {
+    init(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) {
         self.item = item
         
         super.init(frame: CGRect())
@@ -122,14 +122,15 @@ private final class AccessoryItemIconButton: HighlightableButton {
                     self.setImage(nil, for: [])
                     self.titleLabel?.font = Font.regular(12.0)
                     self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
-                    self.setTitle("\(timeout)s", for: [])
+                    self.setTitle(shortTimeIntervalString(strings: strings, value: timeout), for: [])
                 } else {
                     self.setImage(PresentationResourcesChat.chatInputTextFieldTimerImage(theme), for: [])
-            }
+                    self.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0)
+                }
         }
     }
     
-    func updateTheme(theme: PresentationTheme) {
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         switch self.item {
             case .keyboard:
                 self.setImage(PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), for: [])
@@ -142,9 +143,10 @@ private final class AccessoryItemIconButton: HighlightableButton {
                     self.setImage(nil, for: [])
                     self.titleLabel?.font = Font.regular(12.0)
                     self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
-                    self.setTitle("\(timeout)s", for: [])
+                    self.setTitle(shortTimeIntervalString(strings: strings, value: timeout), for: [])
                 } else {
                     self.setImage(PresentationResourcesChat.chatInputTextFieldTimerImage(theme), for: [])
+                    self.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0)
                 }
         }
     }
@@ -197,6 +199,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private var extendedSearchLayout = false
     
     private var theme: PresentationTheme?
+    private var strings: PresentationStrings?
     
     var inputTextState: ChatTextInputState {
         if let textInputNode = self.textInputNode {
@@ -437,7 +440,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.audioRecordingCancelIndicator?.updateTheme(theme: interfaceState.theme)
                 
                 for (_, button) in self.accessoryItemButtons {
-                    button.updateTheme(theme: interfaceState.theme)
+                    button.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
+                }
+            } else if self.strings !== interfaceState.strings {
+                self.strings = interfaceState.strings
+                
+                for (_, button) in self.accessoryItemButtons {
+                    button.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
                 }
             }
             
@@ -491,7 +500,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 }
                 if itemAndButton == nil {
-                    let button = AccessoryItemIconButton(item: item, theme: interfaceState.theme)
+                    let button = AccessoryItemIconButton(item: item, theme: interfaceState.theme, strings: interfaceState.strings)
                     button.addTarget(self, action: #selector(self.accessoryItemButtonPressed(_:)), for: [.touchUpInside])
                     itemAndButton = (item, button)
                 }

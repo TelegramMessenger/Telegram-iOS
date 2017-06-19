@@ -266,7 +266,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         if let updatedFlags = state.updatedFlags {
             currentRightsFlags = updatedFlags
         } else if let initialParticipant = initialParticipant, case let .member(_, _, _, maybeBanInfo) = initialParticipant, let banInfo = maybeBanInfo {
-            currentRightsFlags = banInfo.flags
+            currentRightsFlags = banInfo.rights.flags
         } else {
             currentRightsFlags = [.banSendMessages, .banSendGifs, .banSendGames, .banSendInline, .banSendStickers, .banSendMedia, .banEmbedLinks]
         }
@@ -275,7 +275,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         if let updatedTimeout = state.updatedTimeout {
             currentTimeout = updatedTimeout
         } else if let initialParticipant = initialParticipant, case let .member(_, _, _, maybeBanInfo) = initialParticipant, let banInfo = maybeBanInfo {
-            currentTimeout = banInfo.untilDate
+            currentTimeout = banInfo.rights.untilDate
         } else {
             currentTimeout = Int32.max
         }

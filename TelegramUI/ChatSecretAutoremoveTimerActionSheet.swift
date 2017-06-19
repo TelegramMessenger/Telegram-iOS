@@ -136,7 +136,11 @@ private final class AutoremoveTimeoutSelectorItemNode: ActionSheetItemNode, UIPi
     }
     
     func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
-        return NSAttributedString(string: timeIntervalString(strings: self.strings, value: timeoutValues[row]), font: Font.medium(15.0), textColor: UIColor.black)
+        if timeoutValues[row] == 0 {
+            return NSAttributedString(string: self.strings.Profile_MessageLifetimeForever, font: Font.medium(15.0), textColor: UIColor.black)
+        } else {
+            return NSAttributedString(string: timeIntervalString(strings: self.strings, value: timeoutValues[row]), font: Font.medium(15.0), textColor: UIColor.black)
+        }
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {

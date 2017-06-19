@@ -1899,7 +1899,7 @@ public class ChatController: TelegramController {
                 let controller = generator({ controller in
                     return presentOverlayController!(controller)
                 })
-                let legacyController = LegacyController(legacyController: controller, presentation: .modal(animateIn: false))
+                let legacyController = LegacyController(legacyController: controller, presentation: .modal(animateIn: true))
                 
                 presentOverlayController = { [weak legacyController] controller in
                     if let legacyController = legacyController {
