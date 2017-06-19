@@ -108,7 +108,7 @@ public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId:AdminL
                     
                     switch result {
                     case let .adminLogResults(apiEvents, apiChats, apiUsers):
-                        let peers = (apiChats.flatMap {parseTelegramGroupOrChannel(chat: $0)} + apiUsers.flatMap {TelegramUser(user: $0)}).reduce([:], { current, peer -> [PeerId : Peer] in
+                        let peers = (apiChats.flatMap {parseTelegramGroupOrChannel(chat: $0)} + apiUsers.flatMap {TelegramUser(user: $0)} + Array(arrayLiteral: peer)).reduce([:], { current, peer -> [PeerId : Peer] in
                             var current = current
                             current[peer.id] = peer
                             return current
