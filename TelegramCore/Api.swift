@@ -202,8 +202,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-471670279] = { return Api.ChannelParticipant.parse_channelParticipantCreator($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
     dict[-1473271656] = { return Api.ChannelParticipant.parse_channelParticipantAdmin($0) }
-    dict[871546323] = { return Api.ChannelParticipant.parse_channelParticipantBanned($0) }
-    dict[-1933187430] = { return Api.ChannelParticipant.parse_channelParticipantKicked($0) }
+    dict[573315206] = { return Api.ChannelParticipant.parse_channelParticipantBanned($0) }
     dict[471043349] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-1878523231] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
     dict[-994444869] = { return Api.Error.parse_error($0) }
@@ -7055,8 +7054,7 @@ public struct Api {
         case channelParticipantCreator(userId: Int32)
         case channelParticipantSelf(userId: Int32, inviterId: Int32, date: Int32)
         case channelParticipantAdmin(flags: Int32, userId: Int32, inviterId: Int32, promotedBy: Int32, date: Int32, adminRights: Api.ChannelAdminRights)
-        case channelParticipantBanned(userId: Int32, kickedBy: Int32, date: Int32, bannedRights: Api.ChannelBannedRights)
-        case channelParticipantKicked(userId: Int32, kickedBy: Int32, date: Int32)
+        case channelParticipantBanned(flags: Int32, userId: Int32, kickedBy: Int32, date: Int32, bannedRights: Api.ChannelBannedRights)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -7092,22 +7090,15 @@ public struct Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     adminRights.serialize(buffer, true)
                     break
-                case .channelParticipantBanned(let userId, let kickedBy, let date, let bannedRights):
+                case .channelParticipantBanned(let flags, let userId, let kickedBy, let date, let bannedRights):
                     if boxed {
-                        buffer.appendInt32(871546323)
+                        buffer.appendInt32(573315206)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt32(kickedBy, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     bannedRights.serialize(buffer, true)
-                    break
-                case .channelParticipantKicked(let userId, let kickedBy, let date):
-                    if boxed {
-                        buffer.appendInt32(-1933187430)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeInt32(kickedBy, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
     return true
@@ -7190,33 +7181,19 @@ public struct Api {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: Api.ChannelBannedRights?
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Api.ChannelBannedRights?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.ChannelBannedRights
+                _5 = Api.parse(reader, signature: signature) as? Api.ChannelBannedRights
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ChannelParticipant.channelParticipantBanned(userId: _1!, kickedBy: _2!, date: _3!, bannedRights: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        fileprivate static func parse_channelParticipantKicked(_ reader: BufferReader) -> ChannelParticipant? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChannelParticipant.channelParticipantKicked(userId: _1!, kickedBy: _2!, date: _3!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.ChannelParticipant.channelParticipantBanned(flags: _1!, userId: _2!, kickedBy: _3!, date: _4!, bannedRights: _5!)
             }
             else {
                 return nil
@@ -7234,10 +7211,8 @@ public struct Api {
                         return "(channelParticipantSelf userId: \(userId), inviterId: \(inviterId), date: \(date))"
                     case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
                         return "(channelParticipantAdmin flags: \(flags), userId: \(userId), inviterId: \(inviterId), promotedBy: \(promotedBy), date: \(date), adminRights: \(adminRights))"
-                    case .channelParticipantBanned(let userId, let kickedBy, let date, let bannedRights):
-                        return "(channelParticipantBanned userId: \(userId), kickedBy: \(kickedBy), date: \(date), bannedRights: \(bannedRights))"
-                    case .channelParticipantKicked(let userId, let kickedBy, let date):
-                        return "(channelParticipantKicked userId: \(userId), kickedBy: \(kickedBy), date: \(date))"
+                    case .channelParticipantBanned(let flags, let userId, let kickedBy, let date, let bannedRights):
+                        return "(channelParticipantBanned flags: \(flags), userId: \(userId), kickedBy: \(kickedBy), date: \(date), bannedRights: \(bannedRights))"
                 }
             }
         }
