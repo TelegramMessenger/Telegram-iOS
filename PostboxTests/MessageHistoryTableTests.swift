@@ -9,9 +9,12 @@ import Postbox
 import SwiftSignalKit
 
 private let peerId = PeerId(namespace: 1, id: 1)
+private let otherPeerId = PeerId(namespace: 1, id: 2)
 private let namespace: Int32 = 1
 private let authorPeerId = PeerId(namespace: 1, id: 6)
 private let peer = TestPeer(id: 6, data: "abc")
+private let tag1 = MessageTags(rawValue: 1 << 0)
+private let tag2 = MessageTags(rawValue: 1 << 1)
 
 private func ==(lhs: [Media], rhs: [Media]) -> Bool {
     if lhs.count != rhs.count {
@@ -69,7 +72,7 @@ private class TestEmbeddedMedia: Media, CustomStringConvertible {
     }
     
     required init(decoder: Decoder) {
-        self.data = decoder.decodeStringForKey("s")
+        self.data = decoder.decodeStringForKey("s", orElse: "")
     }
     
     func encode(_ encoder: Encoder) {
@@ -99,8 +102,8 @@ private class TestExternalMedia: Media {
     }
     
     required init(decoder: Decoder) {
-        self.id = MediaId(namespace: decoder.decodeInt32ForKey("i.n"), id: decoder.decodeInt64ForKey("i.i"))
-        self.data = decoder.decodeStringForKey("s")
+        self.id = MediaId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0))
+        self.data = decoder.decodeStringForKey("s", orElse: "")
     }
     
     func encode(_ encoder: Encoder) {
@@ -122,6 +125,8 @@ private class TestExternalMedia: Media {
 }
 
 private class TestPeer: Peer {
+    let associatedPeerId: PeerId? = nil
+
     public let notificationSettingsPeerId: PeerId? = nil
 
     let associatedPeerIds: [PeerId]? = nil
@@ -139,8 +144,8 @@ private class TestPeer: Peer {
     }
     
     required init(decoder: Decoder) {
-        self.id = PeerId(namespace: decoder.decodeInt32ForKey("i.n"), id: decoder.decodeInt32ForKey("i.i"))
-        self.data = decoder.decodeStringForKey("s")
+        self.id = PeerId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0))
+        self.data = decoder.decodeStringForKey("s", orElse: "")
     }
     
     func encode(_ encoder: Encoder) {
@@ -214,6 +219,9 @@ class MessageHistoryTableTests: XCTestCase {
     var readStateTable: MessageHistoryReadStateTable?
     var synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable?
     var globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable?
+    var globalTagsTable: GlobalMessageHistoryTagsTable?
+    var reverseAssociatedTable: ReverseAssociatedPeerTable?
+    var textIndexTable: MessageHistoryTextIndexTable?
     
     override class func setUp() {
         super.setUp()
@@ -231,7 +239,7 @@ class MessageHistoryTableTests: XCTestCase {
         path = NSTemporaryDirectory() + "\(randomId)"
         self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue())
         
-        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second])
+        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [])
         
         self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, table: GlobalMessageIdsTable.tableSpec(5), namespace: namespace)
         self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, table: MessageHistoryMetadataTable.tableSpec(7))
@@ -242,8 +250,11 @@ class MessageHistoryTableTests: XCTestCase {
         self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, table: MessageHistoryReadStateTable.tableSpec(10))
         self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox!, table: MessageHistorySynchronizeReadStateTable.tableSpec(11))
         self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox!, table: MessageGloballyUniqueIdTable.tableSpec(12))
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
-        self.peerTable = PeerTable(valueBox: self.valueBox!, table: PeerTable.tableSpec(6))
+        self.globalTagsTable = GlobalMessageHistoryTagsTable(valueBox: self.valueBox!, table: GlobalMessageHistoryTagsTable.tableSpec(13))
+        self.textIndexTable = MessageHistoryTextIndexTable(valueBox: self.valueBox!, table: MessageHistoryTextIndexTable.tableSpec(15))
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, globalTagsTable: self.globalTagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!, textIndexTable: self.textIndexTable!)
+        self.reverseAssociatedTable = ReverseAssociatedPeerTable(valueBox: self.valueBox!, table: ReverseAssociatedPeerTable.tableSpec(14))
+        self.peerTable = PeerTable(valueBox: self.valueBox!, table: PeerTable.tableSpec(6), reverseAssociatedTable: self.reverseAssociatedTable!)
         self.peerTable!.set(peer)
     }
     
@@ -265,42 +276,48 @@ class MessageHistoryTableTests: XCTestCase {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        let _ = self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
 
     private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
     private func addHole(_ id: Int32) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
     private func removeMessages(_ ids: [Int32]) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
     private func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
     private func fillMultipleHoles(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil, _ tags: MessageTags = []) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: tags, forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
     }
     
     private func expectEntries(_ entries: [Entry], tagMask: MessageTags? = nil) {
@@ -1026,5 +1043,138 @@ class MessageHistoryTableTests: XCTestCase {
             .Hole(401, 499, 500),
             .Hole(501, Int32.max, Int32.max)
         ], tagMask: [.First])
+    }
+    
+    func testFullTextGetEmpty() {
+        XCTAssert(self.textIndexTable!.search(peerId: nil, text: "abc", tags: nil).isEmpty)
+    }
+    
+    func testFullTextMatch1() {
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 1), text: "a b c", tags: [])
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 2), text: "a b c d", tags: [])
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 3), text: "c d e", tags: [])
+        
+        var result = self.textIndexTable!.search(peerId: nil, text: "a", tags: nil).sorted()
+        let testIds1: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 1),
+            MessageId(peerId: peerId, namespace: 0, id: 2),
+        ]
+        XCTAssert(result == testIds1)
+        
+        result = self.textIndexTable!.search(peerId: nil, text: "c", tags: nil).sorted()
+        let testIds2: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 1),
+            MessageId(peerId: peerId, namespace: 0, id: 2),
+            MessageId(peerId: peerId, namespace: 0, id: 3)
+        ]
+        XCTAssert(result == testIds2)
+        
+        result = self.textIndexTable!.search(peerId: nil, text: "d", tags: nil).sorted()
+        let testIds3: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 2),
+            MessageId(peerId: peerId, namespace: 0, id: 3)
+        ]
+        XCTAssert(result == testIds3)
+        
+        result = self.textIndexTable!.search(peerId: nil, text: "a b c", tags: nil).sorted()
+        XCTAssert(result == testIds1)
+        
+        result = self.textIndexTable!.search(peerId: nil, text: "a b c d e", tags: nil).sorted()
+        let testIds4: [MessageId] = [
+        ]
+        XCTAssert(result == testIds4)
+        
+        self.textIndexTable!.remove(messageId: MessageId(peerId: peerId, namespace: 0, id: 2))
+        let testIds5: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 1),
+            MessageId(peerId: peerId, namespace: 0, id: 3)
+        ]
+        result = self.textIndexTable!.search(peerId: nil, text: "c", tags: nil).sorted()
+        XCTAssert(result == testIds5)
+    }
+    
+    func testFullTextMatchLocal() {
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 1), text: "a b c", tags: [])
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 2), text: "a b c d", tags: [])
+        self.textIndexTable!.add(messageId: MessageId(peerId: otherPeerId, namespace: 0, id: 1), text: "c d e", tags: [])
+        self.textIndexTable!.add(messageId: MessageId(peerId: otherPeerId, namespace: 0, id: 2), text: "d e f", tags: [])
+        
+        var result = self.textIndexTable!.search(peerId: peerId, text: "a", tags: nil).sorted()
+        let testIds1: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 1),
+            MessageId(peerId: peerId, namespace: 0, id: 2),
+            ]
+        XCTAssert(result == testIds1)
+        
+        result = self.textIndexTable!.search(peerId: otherPeerId, text: "c", tags: nil).sorted()
+        let testIds2: [MessageId] = [
+            MessageId(peerId: otherPeerId, namespace: 0, id: 1),
+        ]
+        XCTAssert(result == testIds2)
+        
+        result = self.textIndexTable!.search(peerId: otherPeerId, text: "d", tags: nil).sorted()
+        let testIds3: [MessageId] = [
+            MessageId(peerId: otherPeerId, namespace: 0, id: 1),
+            MessageId(peerId: otherPeerId, namespace: 0, id: 2)
+        ]
+        XCTAssert(result == testIds3)
+    }
+    
+    func testFullTextMatchLocalTags() {
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 1), text: "a b c", tags: [])
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 2), text: "a b c d", tags: [])
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 3), text: "a b c", tags: [tag1])
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 4), text: "a b c", tags: [tag1, tag2])
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 5), text: "a b c", tags: [tag1, tag2])
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 6), text: "a b c", tags: [tag2])
+        
+        var result = self.textIndexTable!.search(peerId: peerId, text: "a b c", tags: nil).sorted()
+        let testIds1: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 1),
+            MessageId(peerId: peerId, namespace: 0, id: 2),
+            MessageId(peerId: peerId, namespace: 0, id: 3),
+            MessageId(peerId: peerId, namespace: 0, id: 4),
+            MessageId(peerId: peerId, namespace: 0, id: 5),
+            MessageId(peerId: peerId, namespace: 0, id: 6),
+        ]
+        XCTAssert(result == testIds1)
+        
+        result = self.textIndexTable!.search(peerId: peerId, text: "a b c", tags: [tag1]).sorted()
+        let testIds2: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 3),
+            MessageId(peerId: peerId, namespace: 0, id: 4),
+            MessageId(peerId: peerId, namespace: 0, id: 5),
+        ]
+        XCTAssert(result == testIds2)
+        
+        result = self.textIndexTable!.search(peerId: peerId, text: "a b c", tags: [tag2]).sorted()
+        let testIds3: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 4),
+            MessageId(peerId: peerId, namespace: 0, id: 5),
+            MessageId(peerId: peerId, namespace: 0, id: 6),
+        ]
+        XCTAssert(result == testIds3)
+        
+        result = self.textIndexTable!.search(peerId: peerId, text: "a b c", tags: [tag1, tag2]).sorted()
+        let testIds4: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 4),
+            MessageId(peerId: peerId, namespace: 0, id: 5),
+        ]
+        XCTAssert(result == testIds4)
+    }
+    
+    func testFullTextEscape1() {
+        self.textIndexTable!.add(messageId: MessageId(peerId: peerId, namespace: 0, id: 1), text: "abc' def'", tags: [])
+        var result = self.textIndexTable!.search(peerId: nil, text: "abc'", tags: nil).sorted()
+        let testIds1: [MessageId] = [
+            MessageId(peerId: peerId, namespace: 0, id: 1)
+            ]
+        XCTAssert(result == testIds1)
+        
+        result = self.textIndexTable!.search(peerId: nil, text: "abc' def'", tags: nil).sorted()
+        XCTAssert(result == testIds1)
+        
+        result = self.textIndexTable!.search(peerId: nil, text: "abc' AND def", tags: nil).sorted()
+        XCTAssert(result.isEmpty)
     }
 }

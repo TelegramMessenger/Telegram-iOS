@@ -7,7 +7,7 @@ class TestParent: Coding, Equatable {
     var parentInt32: Int32
     
     required init(decoder: Decoder) {
-        self.parentInt32 = decoder.decodeInt32ForKey("parentInt32")
+        self.parentInt32 = decoder.decodeInt32ForKey("parentInt32", orElse: 0)
     }
     
     init(parentInt32: Int32) {
@@ -28,10 +28,10 @@ class TestObject: TestParent {
     var int64Array: [Int64]
     
     required init(decoder: Decoder) {
-        self.int32 = decoder.decodeInt32ForKey("int32")
-        self.int64 = decoder.decodeInt64ForKey("int64")
-        self.double = decoder.decodeDoubleForKey("double")
-        self.string = decoder.decodeStringForKey("string")
+        self.int32 = decoder.decodeInt32ForKey("int32", orElse: 0)
+        self.int64 = decoder.decodeInt64ForKey("int64", orElse: 0)
+        self.double = decoder.decodeDoubleForKey("double", orElse: 0.0)
+        self.string = decoder.decodeStringForKey("string", orElse: "")
         self.int32Array = decoder.decodeInt32ArrayForKey("int32Array")
         self.int64Array = decoder.decodeInt64ArrayForKey("int64Array")
         super.init(decoder: decoder)
@@ -61,7 +61,7 @@ class TestObject: TestParent {
 class TestKey: Coding, Hashable {
     let value: Int
     required init(decoder: Decoder) {
-        self.value = Int(decoder.decodeInt32ForKey("value"))
+        self.value = Int(decoder.decodeInt32ForKey("value", orElse: 0))
     }
     
     init(value: Int) {
@@ -159,10 +159,10 @@ class SerializationTests: XCTestCase {
             XCTFail("object failed")
         }
         
-        XCTAssert(decoder.decodeStringForKey("d") == "test", "string failed")
-        XCTAssert(decoder.decodeBoolForKey("c"), "bool failed")
-        XCTAssert(decoder.decodeInt64ForKey("b") == Int64(12345), "int64 failed")
-        XCTAssert(decoder.decodeInt32ForKey("a") == 12345, "int32 failed")
+        XCTAssert(decoder.decodeStringForKey("d", orElse: "") == "test", "string failed")
+        XCTAssert(decoder.decodeBoolForKey("c", orElse: false), "bool failed")
+        XCTAssert(decoder.decodeInt64ForKey("b", orElse: 0) == Int64(12345), "int64 failed")
+        XCTAssert(decoder.decodeInt32ForKey("a", orElse: 0) == 12345, "int32 failed")
     }
     
     func testKeys() {

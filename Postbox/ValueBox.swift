@@ -10,6 +10,10 @@ struct ValueBoxTable {
     let keyType: ValueBoxKeyType
 }
 
+struct ValueBoxFullTextTable {
+    let id: Int32
+}
+
 protocol ValueBox {
     func begin()
     func commit()
@@ -24,6 +28,9 @@ protocol ValueBox {
     func exists(_ table: ValueBoxTable, key: ValueBoxKey) -> Bool
     func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer)
     func remove(_ table: ValueBoxTable, key: ValueBoxKey)
+    func fullTextSet(_ table: ValueBoxFullTextTable, collectionId: String, itemId: String, contents: String, tags: String)
+    func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool)
+    func fullTextRemove(_ table: ValueBoxFullTextTable, itemId: String)
     func dropTable(_ table: ValueBoxTable)
     func drop()
 }
