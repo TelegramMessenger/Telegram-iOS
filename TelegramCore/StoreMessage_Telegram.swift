@@ -436,8 +436,16 @@ extension StoreMessage {
                 if (flags & (1 << 1)) == 0 {
                     storeFlags.insert(.Incoming)
                 }
-                if (flags & (1 << 4)) != 0 {
-                    storeFlags.insert(.Personal)
+                
+                if (flags & (1 << 4)) != 0 || (flags & (1 << 13)) != 0 {
+                    var notificationFlags: NotificationInfoMessageAttributeFlags = []
+                    if (flags & (1 << 4)) != 0 {
+                        notificationFlags.insert(.personal)
+                    }
+                    if (flags & (1 << 13)) != 0 {
+                        notificationFlags.insert(.muted)
+                    }
+                    attributes.append(NotificationInfoMessageAttribute(flags: notificationFlags))
                 }
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), media: medias, textEntities: entitiesAttribute?.entities)
@@ -482,8 +490,15 @@ extension StoreMessage {
                     let _ = storeFlags.insert(.Incoming)
                 }
                 
-                if (flags & (1 << 4)) != 0 {
-                    let _ = storeFlags.insert(.Personal)
+                if (flags & (1 << 4)) != 0 || (flags & (1 << 13)) != 0 {
+                    var notificationFlags: NotificationInfoMessageAttributeFlags = []
+                    if (flags & (1 << 4)) != 0 {
+                        notificationFlags.insert(.personal)
+                    }
+                    if (flags & (1 << 13)) != 0 {
+                        notificationFlags.insert(.muted)
+                    }
+                    attributes.append(NotificationInfoMessageAttribute(flags: notificationFlags))
                 }
                 
                 var media: [Media] = []
