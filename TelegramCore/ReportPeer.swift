@@ -12,8 +12,29 @@ import Foundation
 public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId) {
-            if let _ = peer as? TelegramSecretChat {
-                return .complete()
+            if let peer = peer as? TelegramSecretChat {
+                return account.network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)))
+                    |> map { Optional($0) }
+                    |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { result -> Signal<Void, NoError> in
+                        return account.postbox.modify { modifier -> Void in
+                            if result != nil {
+                                modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                    if let current = current as? CachedUserData {
+                                        return current.withUpdatedReportStatus(.didReport)
+                                    } else if let current = current as? CachedGroupData {
+                                        return current.withUpdatedReportStatus(.didReport)
+                                    } else if let current = current as? CachedChannelData {
+                                        return current.withUpdatedReportStatus(.didReport)
+                                    } else {
+                                        return current
+                                    }
+                                })
+                            }
+                        }
+                    }
             } else if let inputPeer = apiInputPeer(peer) {
                 return account.network.request(Api.functions.messages.reportSpam(peer: inputPeer))
                     |> map { Optional($0) }
@@ -125,6 +146,8 @@ public func dismissReportPeer(account: Account, peerId: PeerId) -> Signal<Void, 
             } else if let current = current as? CachedGroupData {
                 return current.withUpdatedReportStatus(.none)
             } else if let current = current as? CachedChannelData {
+                return current.withUpdatedReportStatus(.none)
+            } else if let current = current as? CachedSecretChatData {
                 return current.withUpdatedReportStatus(.none)
             } else {
                 return current

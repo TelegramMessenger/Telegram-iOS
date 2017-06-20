@@ -12,7 +12,7 @@ public func removePeerChat(postbox: Postbox, peerId: PeerId, reportChatSpam: Boo
         if peerId.namespace == Namespaces.Peer.SecretChat {
             if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
                 
-                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate, state: state).withUpdatedEmbeddedState(.terminated)
+                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: reportChatSpam), state: state).withUpdatedEmbeddedState(.terminated)
                 if updatedState != state {
                     modifier.setPeerChatState(peerId, state: updatedState)
                     if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {

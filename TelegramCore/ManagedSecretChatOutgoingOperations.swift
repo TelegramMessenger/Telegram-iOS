@@ -156,8 +156,8 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .resendOperations(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .screenshotMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case .terminate:
-                                        return requestTerminateSecretChat(postbox: postbox, network: network, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex)
+                                    case let .terminate(reportSpam):
+                                        return requestTerminateSecretChat(postbox: postbox, network: network, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, reportSpam: reportSpam)
                                 }
                             } else {
                                 assertionFailure()
@@ -831,11 +831,48 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
         }
 }
 
-private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32) -> Signal<Void, NoError> {
+private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32, reportSpam: Bool) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.discardEncryption(chatId: peerId.id))
         |> map { Optional($0) }
         |> `catch` { _ in
             return .single(nil)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            if reportSpam {
+                return postbox.modify { modifier -> TelegramSecretChat? in
+                    if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
+                        return peer
+                    } else {
+                        return nil
+                    }
+                }
+                |> mapToSignal { peer -> Signal<Void, NoError> in
+                    if let peer = peer {
+                        return network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)))
+                        |> map { Optional($0) }
+                        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+                            return .single(nil)
+                        }
+                        |> mapToSignal { result -> Signal<Void, NoError> in
+                            return postbox.modify { modifier -> Void in
+                                if result != nil {
+                                    modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                        if let current = current as? CachedSecretChatData {
+                                            return current.withUpdatedReportStatus(.didReport)
+                                        } else {
+                                            return current
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                    } else {
+                        return .single(Void())
+                    }
+                }
+            } else {
+                return .single(Void())
+            }
         }
         |> mapToSignal { _ -> Signal<Void, NoError> in
             return postbox.modify { modifier -> Void in

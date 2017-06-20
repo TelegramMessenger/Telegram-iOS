@@ -9,7 +9,7 @@ import Foundation
 
 func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+        if let peer = modifier.getPeer(peerId) {
             let cachedData = modifier.getPeerCachedData(peerId: peerId)
             
             if let cachedData = cachedData as? CachedUserData {
@@ -24,51 +24,76 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
                 if cachedData.reportStatus != .unknown {
                     return .complete()
                 }
+            } else if let cachedData = cachedData as? CachedSecretChatData {
+                if cachedData.reportStatus != .unknown {
+                    return .complete()
+                }
             }
             
-            return network.request(Api.functions.messages.getPeerSettings(peer: inputPeer))
-                |> retryRequest
-                |> mapToSignal { peerSettings -> Signal<Void, NoError> in
+            if peerId.namespace == Namespaces.Peer.SecretChat {
+                return postbox.modify { modifier -> Void in
                     let reportStatus: PeerReportStatus
-                    switch peerSettings {
-                        case let .peerSettings(flags):
-                            reportStatus = (flags & (1 << 0) != 0) ? .canReport : .none
+                    if let peer = modifier.getPeer(peerId), let associatedPeerId = peer.associatedPeerId, modifier.isPeerContact(peerId: associatedPeerId) {
+                        reportStatus = .canReport
+                    } else {
+                        reportStatus = .canReport
                     }
                     
-                    return postbox.modify { modifier -> Void in
-                        modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                            switch peerId.namespace {
-                                case Namespaces.Peer.CloudUser:
-                                    let previous: CachedUserData
-                                    if let current = current as? CachedUserData {
-                                        previous = current
-                                    } else {
-                                        previous = CachedUserData()
-                                    }
-                                    return previous.withUpdatedReportStatus(reportStatus)
-                                case Namespaces.Peer.CloudGroup:
-                                    let previous: CachedGroupData
-                                    if let current = current as? CachedGroupData {
-                                        previous = current
-                                    } else {
-                                        previous = CachedGroupData()
-                                    }
-                                    return previous.withUpdatedReportStatus(reportStatus)
-                                case Namespaces.Peer.CloudChannel:
-                                    let previous: CachedChannelData
-                                    if let current = current as? CachedChannelData {
-                                        previous = current
-                                    } else {
-                                        previous = CachedChannelData()
-                                    }
-                                    return previous.withUpdatedReportStatus(reportStatus)
-                                default:
-                                    break
-                            }
-                            return current
-                        })
-                    }
+                    modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
+                        if let current = current as? CachedSecretChatData {
+                            return current.withUpdatedReportStatus(reportStatus)
+                        } else {
+                            return CachedSecretChatData(reportStatus: reportStatus)
+                        }
+                    })
                 }
+            } else if let inputPeer = apiInputPeer(peer) {
+                return network.request(Api.functions.messages.getPeerSettings(peer: inputPeer))
+                    |> retryRequest
+                    |> mapToSignal { peerSettings -> Signal<Void, NoError> in
+                        let reportStatus: PeerReportStatus
+                        switch peerSettings {
+                            case let .peerSettings(flags):
+                                reportStatus = (flags & (1 << 0) != 0) ? .canReport : .none
+                        }
+                        
+                        return postbox.modify { modifier -> Void in
+                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                switch peerId.namespace {
+                                    case Namespaces.Peer.CloudUser:
+                                        let previous: CachedUserData
+                                        if let current = current as? CachedUserData {
+                                            previous = current
+                                        } else {
+                                            previous = CachedUserData()
+                                        }
+                                        return previous.withUpdatedReportStatus(reportStatus)
+                                    case Namespaces.Peer.CloudGroup:
+                                        let previous: CachedGroupData
+                                        if let current = current as? CachedGroupData {
+                                            previous = current
+                                        } else {
+                                            previous = CachedGroupData()
+                                        }
+                                        return previous.withUpdatedReportStatus(reportStatus)
+                                    case Namespaces.Peer.CloudChannel:
+                                        let previous: CachedChannelData
+                                        if let current = current as? CachedChannelData {
+                                            previous = current
+                                        } else {
+                                            previous = CachedChannelData()
+                                        }
+                                        return previous.withUpdatedReportStatus(reportStatus)
+                                    default:
+                                        break
+                                }
+                                return current
+                            })
+                        }
+                    }
+            } else {
+                return .complete()
+            }
         } else {
             return .complete()
         }

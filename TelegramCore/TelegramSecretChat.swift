@@ -75,3 +75,33 @@ public final class TelegramSecretChat: Peer {
         return TelegramSecretChat(id: self.id, creationDate: self.creationDate, regularPeerId: self.regularPeerId, accessHash: self.accessHash, role: self.role, embeddedState: self.embeddedState, messageAutoremoveTimeout: messageAutoremoveTimeout)
     }
 }
+
+public final class CachedSecretChatData: CachedPeerData {
+    public let peerIds: Set<PeerId> = Set()
+
+    public let reportStatus: PeerReportStatus
+    
+    public init(reportStatus: PeerReportStatus) {
+        self.reportStatus = reportStatus
+    }
+    
+    public init(decoder: Decoder) {
+        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("rs", orElse: 0))!
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeInt32(self.reportStatus.rawValue, forKey: "rs")
+    }
+    
+    public func isEqual(to: CachedPeerData) -> Bool {
+        if let to = to as? CachedSecretChatData {
+            return self.reportStatus == to.reportStatus
+        } else {
+            return false
+        }
+    }
+    
+    func withUpdatedReportStatus(_ reportStatus: PeerReportStatus) -> CachedSecretChatData {
+        return CachedSecretChatData(reportStatus: reportStatus)
+    }
+}

@@ -113,7 +113,7 @@ enum SecretChatOutgoingOperationContents: Coding {
     case pfsCommitKey(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, keyFingerprint: Int64)
     case noop(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64)
     case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32, messageId: MessageId)
-    case terminate
+    case terminate(reportSpam: Bool)
     
     init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -146,7 +146,7 @@ enum SecretChatOutgoingOperationContents: Coding {
             case SecretChatOutgoingOperationValue.setMessageAutoremoveTimeout.rawValue:
                 self = .setMessageAutoremoveTimeout(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), timeout: decoder.decodeInt32ForKey("t", orElse: 0), messageId: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0)))
             case SecretChatOutgoingOperationValue.terminate.rawValue:
-                self = .terminate
+                self = .terminate(reportSpam: decoder.decodeInt32ForKey("rs", orElse: 0) != 0)
             default:
                 self = .noop(layer: SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: 0)
                 assertionFailure()
@@ -237,8 +237,9 @@ enum SecretChatOutgoingOperationContents: Coding {
                 encoder.encodeInt64(messageId.peerId.toInt64(), forKey: "m.p")
                 encoder.encodeInt32(messageId.namespace, forKey: "m.n")
                 encoder.encodeInt32(messageId.id, forKey: "m.i")
-            case .terminate:
+            case let .terminate(reportSpam):
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.terminate.rawValue, forKey: "r")
+                encoder.encodeInt32(reportSpam ? 1 : 0, forKey: "rs")
         }
     }
 }

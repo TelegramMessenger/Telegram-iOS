@@ -25,5 +25,5 @@ public struct SecretChatStateBridge {
 
 
 public func terminateLegacySecretChat(modifier: Modifier, peerId: PeerId, state: SecretChatStateBridge) -> PeerChatState {
-    return addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate, state: state.state as! SecretChatState).withUpdatedEmbeddedState(.terminated)
+    return addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: false), state: state.state as! SecretChatState).withUpdatedEmbeddedState(.terminated)
 }

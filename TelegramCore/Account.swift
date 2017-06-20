@@ -233,6 +233,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SuggestedLocalizationEntry.self, f: { SuggestedLocalizationEntry(decoder: $0) })
     declareEncodable(SynchronizeLocalizationUpdatesOperation.self, f: { SynchronizeLocalizationUpdatesOperation(decoder: $0) })
     declareEncodable(ChannelMessageStateVersionAttribute.self, f: { ChannelMessageStateVersionAttribute(decoder: $0) })
+    declareEncodable(CachedSecretChatData.self, f: { CachedSecretChatData(decoder: $0) })
     
     return
 }()
