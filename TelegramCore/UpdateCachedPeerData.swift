@@ -33,10 +33,10 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 return postbox.modify { modifier -> Void in
                     let reportStatus: PeerReportStatus
-                    if let peer = modifier.getPeer(peerId), let associatedPeerId = peer.associatedPeerId, modifier.isPeerContact(peerId: associatedPeerId) {
+                    if let peer = modifier.getPeer(peerId), let associatedPeerId = peer.associatedPeerId, !modifier.isPeerContact(peerId: associatedPeerId) {
                         reportStatus = .canReport
                     } else {
-                        reportStatus = .canReport
+                        reportStatus = .none
                     }
                     
                     modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
