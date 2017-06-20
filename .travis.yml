@@ -10,12 +10,12 @@ env:
   matrix:
     - SCHEME="HockeySDK"             DESTINATION="OS=8.1,name=iPad Air"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=8.2,name=iPhone 6 Plus"            RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=8.3,name=iPad 2"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=8.3,name=iPad 2"                   RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=8.4,name=iPhone 4s"                RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.0,name=iPad Air"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.1,name=iPhone 6 Plus"            RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=10.2,name=iPad Pro (9.7-inch)"                 RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=10.3.1,name=iPhone 6s"                RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=10.2,name=iPad Pro (9.7-inch)"     RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=10.3.1,name=iPhone 6s"             RUN_TESTS="YES"
     - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,OS=10.3.1,name=iPhone 6" RUN_TESTS="YES"
     - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO" LINT="YES"
 
@@ -31,15 +31,16 @@ script:
   - set -o pipefail
   - COMMAND="env NSUnbufferedIO=YES xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
 
+  # Add xcpretty
+  - COMMAND_SUFFIX=" | tee xcodebuild.log | xcpretty -f `xcpretty-travis-formatter`"
+  
   # Run tests
   - if [ $RUN_TESTS == "YES" ]; then
-      COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS="CI=1" clean test";
+      COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS=\"CI=1\" "
+      COMMAND="$COMMAND clean build-for-testing $COMMAND_SUFFIX && travis_retry $COMMAND test-without-building $COMMAND_SUFFIX";
+    else
+      COMMAND+="$COMMAND_SUFFIX";
     fi
-
-  - COMMAND+=" | tee xcodebuild.log"
-
-  # Add xcpretty
-  - COMMAND+=" | xcpretty -f `xcpretty-travis-formatter`"
 
   - echo $COMMAND
   - eval $COMMAND && rm xcodebuild.log
