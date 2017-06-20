@@ -243,6 +243,15 @@ public final class Modifier {
         }
     }
     
+    public func isPeerContact(peerId: PeerId) -> Bool {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.contactsTable.isContact(peerId: peerId)
+        } else {
+            return false
+        }
+    }
+    
     public func replaceContactPeerIds(_ peerIds: Set<PeerId>) {
         assert(!self.disposed)
         self.postbox?.replaceContactPeerIds(peerIds)

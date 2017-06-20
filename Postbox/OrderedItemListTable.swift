@@ -42,7 +42,8 @@ final class OrderedItemListTable: Table {
     
     func getItemIds(collectionId: Int32) -> [MemoryBuffer] {
         var itemIds: [MemoryBuffer] = []
-        self.valueBox.range(self.table, start: self.keyIndexToId(collectionId: collectionId, itemIndex: 0).predecessor, end: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32.max), values: { _, value in
+        self.valueBox.range(self.table, start: self.keyIndexToId(collectionId: collectionId, itemIndex: 0).predecessor, end: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32.max), values: { key, value in
+            assert(key.getUInt8(0) == OrderedItemListKeyNamespace.indexToId.rawValue)
             itemIds.append(value)
             return true
         }, limit: 0)
@@ -159,19 +160,24 @@ final class OrderedItemListTable: Table {
         if let index = self.getIndex(collectionId: collectionId, id: itemId) {
             var orderedIds = self.getItemIds(collectionId: collectionId)
             
-            self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: itemId))
-            self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: index))
-            
-            for i in (Int(index) + 1) ..< orderedIds.count {
-                var updatedIndex: UInt32 = UInt32(i - 1)
-                self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[i]), value: MemoryBuffer(memory: &updatedIndex, capacity: 4, length: 4, freeWhenDone: false))
-                self.valueBox.set(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: updatedIndex), value: orderedIds[i])
+            if !orderedIds.isEmpty {
+                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: itemId))
+                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: index))
+                
+                for i in (Int(index) + 1) ..< orderedIds.count {
+                    var updatedIndex: UInt32 = UInt32(i - 1)
+                    self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[i]), value: MemoryBuffer(memory: &updatedIndex, capacity: 4, length: 4, freeWhenDone: false))
+                    self.valueBox.set(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: updatedIndex), value: orderedIds[i])
+                }
+                
+                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[orderedIds.count - 1]))
+                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(orderedIds.count - 1)))
+                
+                if operations[collectionId] == nil {
+                    operations[collectionId] = []
+                }
+                operations[collectionId]!.append(.remove(itemId))
             }
-            
-            if operations[collectionId] == nil {
-                operations[collectionId] = []
-            }
-            operations[collectionId]!.append(.remove(itemId))
         }
     }
     
