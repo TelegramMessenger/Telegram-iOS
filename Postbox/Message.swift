@@ -313,10 +313,6 @@ public struct MessageFlags: OptionSet {
             rawValue |= MessageFlags.Incoming.rawValue
         }
         
-        if flags.contains(StoreMessageFlags.Personal) {
-            rawValue |= MessageFlags.Personal.rawValue
-        }
-        
         if flags.contains(StoreMessageFlags.TopIndexable) {
             rawValue |= MessageFlags.TopIndexable.rawValue
         }
@@ -331,9 +327,9 @@ public struct MessageFlags: OptionSet {
     public static let Unsent = MessageFlags(rawValue: 1)
     public static let Failed = MessageFlags(rawValue: 2)
     public static let Incoming = MessageFlags(rawValue: 4)
-    public static let Personal = MessageFlags(rawValue: 8)
     public static let TopIndexable = MessageFlags(rawValue: 16)
     public static let Sending = MessageFlags(rawValue: 32)
+    
 }
 
 public struct StoreMessageForwardInfo {
@@ -461,10 +457,7 @@ public struct StoreMessageFlags: OptionSet {
         if flags.contains(.Incoming) {
             rawValue |= StoreMessageFlags.Incoming.rawValue
         }
-        
-        if flags.contains(.Personal) {
-            rawValue |= StoreMessageFlags.Personal.rawValue
-        }
+    
         
         if flags.contains(.TopIndexable) {
             rawValue |= StoreMessageFlags.TopIndexable.rawValue
@@ -480,7 +473,6 @@ public struct StoreMessageFlags: OptionSet {
     public static let Unsent = StoreMessageFlags(rawValue: 1)
     public static let Failed = StoreMessageFlags(rawValue: 2)
     public static let Incoming = StoreMessageFlags(rawValue: 4)
-    public static let Personal = StoreMessageFlags(rawValue: 8)
     public static let TopIndexable = StoreMessageFlags(rawValue: 16)
     public static let Sending = StoreMessageFlags(rawValue: 32)
 }
