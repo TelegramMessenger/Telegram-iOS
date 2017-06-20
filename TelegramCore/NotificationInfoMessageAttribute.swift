@@ -1,0 +1,40 @@
+import Foundation
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
+
+
+
+public struct NotificationInfoMessageAttributeFlags : OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let muted = NotificationInfoMessageAttributeFlags(rawValue: 1)
+    public static let personal = NotificationInfoMessageAttributeFlags(rawValue: 2)
+
+}
+
+public class NotificationInfoMessageAttribute: MessageAttribute {
+
+    public let flags:NotificationInfoMessageAttributeFlags
+    public init(flags: NotificationInfoMessageAttributeFlags) {
+        self.flags = flags
+    }
+    
+    required public init(decoder: Decoder) {
+        self.flags = NotificationInfoMessageAttributeFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeInt32(self.flags.rawValue, forKey: "f")
+    }
+}

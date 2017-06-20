@@ -29,7 +29,7 @@ public extension Message {
             if let attribute = attribute as? ReplyMarkupMessageAttribute {
                 if !attribute.flags.contains(.inline) && !attribute.rows.isEmpty {
                     if attribute.flags.contains(.personal) {
-                        if !self.flags.contains(.Personal) {
+                        if !personal {
                             return nil
                         }
                     }
@@ -40,12 +40,30 @@ public extension Message {
         return nil
     }
     
+    public var muted: Bool {
+        for attribute in self.attributes {
+            if let attribute = attribute as? NotificationInfoMessageAttribute {
+                return attribute.flags.contains(.muted)
+            }
+        }
+        return false
+    }
+    
+    public var personal: Bool {
+        for attribute in self.attributes {
+            if let attribute = attribute as? NotificationInfoMessageAttribute {
+                return attribute.flags.contains(.personal)
+            }
+        }
+        return false
+    }
+    
     var requestsSetupReply: Bool {
         for attribute in self.attributes {
             if let attribute = attribute as? ReplyMarkupMessageAttribute {
                 if !attribute.flags.contains(.inline) {
                     if attribute.flags.contains(.personal) {
-                        if !self.flags.contains(.Personal) {
+                        if !personal {
                             return false
                         }
                     }

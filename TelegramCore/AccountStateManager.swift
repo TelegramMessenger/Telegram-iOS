@@ -722,7 +722,7 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
             Logger.shared.log("AccountStateManager", "read state for \(id.peerId) is undefined")
         }
         
-        if notify || message.flags.contains(.Personal) {
+        if notify || message.personal {
             return (message, isUnread)
         } else {
             return (alwaysReturnMessage ? message : nil, false)

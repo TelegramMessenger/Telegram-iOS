@@ -32,6 +32,8 @@
 		C27982511E72C97800262BFD /* MacosLegacy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982501E72C97800262BFD /* MacosLegacy.swift */; };
 		C27982531E73077800262BFD /* SecretChatStateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982521E73077800262BFD /* SecretChatStateBridge.swift */; };
 		C27982541E73078400262BFD /* SecretChatStateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982521E73077800262BFD /* SecretChatStateBridge.swift */; };
+		C28725421EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */; };
+		C28725431EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */; };
 		C2A315C01E2E776A00D89000 /* RequestStartBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749581E1092BC0057C89A /* RequestStartBot.swift */; };
 		C2E064681ECEEF0A00387BB8 /* TelegramMediaInvoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E064671ECEEF0A00387BB8 /* TelegramMediaInvoice.swift */; };
 		C2E064691ECEEF0B00387BB8 /* TelegramMediaInvoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E064671ECEEF0A00387BB8 /* TelegramMediaInvoice.swift */; };
@@ -567,6 +569,7 @@
 		C251D7421E65E50500283EDE /* StickerSetInstallation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerSetInstallation.swift; sourceTree = "<group>"; };
 		C27982501E72C97800262BFD /* MacosLegacy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacosLegacy.swift; sourceTree = "<group>"; };
 		C27982521E73077800262BFD /* SecretChatStateBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatStateBridge.swift; sourceTree = "<group>"; };
+		C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationInfoMessageAttribute.swift; sourceTree = "<group>"; };
 		C2E064671ECEEF0A00387BB8 /* TelegramMediaInvoice.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramMediaInvoice.swift; sourceTree = "<group>"; };
 		C2E0646C1ECF171D00387BB8 /* TelegramMediaWebDocument.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramMediaWebDocument.swift; sourceTree = "<group>"; };
 		C2F4ED1C1EC60064005F2696 /* RateCall.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RateCall.swift; sourceTree = "<group>"; };
@@ -1062,6 +1065,7 @@
 				D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */,
 				D00D343E1E6ED6E50057B307 /* ConsumableContentMessageAttribute.swift */,
 				D099D7451EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift */,
+				C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */,
 			);
 			name = Attributes;
 			sourceTree = "<group>";
@@ -1823,6 +1827,7 @@
 				D0FA8BB61E223C16001E855B /* SecretApiLayer8.swift in Sources */,
 				D0B843C71DA7FF30005F29E1 /* NBPhoneNumberDefines.m in Sources */,
 				D049EAF51E44DF3300A2CD3A /* AccountState.swift in Sources */,
+				C28725421EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */,
 				D03B0D5D1D631A6900955575 /* MultipartFetch.swift in Sources */,
 				D058E0D11E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */,
 				D0BC38751E40A7F70044D6FE /* RemovePeerChat.swift in Sources */,
@@ -2092,6 +2097,7 @@
 				D0F7B1E41E045C7B007EB8A5 /* InstantPage.swift in Sources */,
 				D03E5E0D1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */,
 				D0B418AD1D7E0597004562A4 /* Serialization.swift in Sources */,
+				C28725431EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */,
 				D099D7471EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift in Sources */,
 				D058E0D21E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */,
 				D03C536F1DAD5CA9004C17B3 /* BotInfo.swift in Sources */,
