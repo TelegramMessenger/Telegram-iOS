@@ -780,6 +780,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
                 int attachmentIndex = 0;
                 for (BITFeedbackMessageAttachment *attachment in matchingSendInProgressOrInConflictMessage.attachments) {
                   attachment.identifier = feedbackAttachments[attachmentIndex][@"id"];
+                  attachment.sourceURL = feedbackAttachments[attachmentIndex][@"url"];
                   attachmentIndex++;
                 }
               }

@@ -652,6 +652,7 @@
       [attachment replaceData:responseData];
       [[NSNotificationCenter defaultCenter] postNotificationName:kBITFeedbackUpdateAttachmentThumbnail object:attachment];
       [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
+      [self.tableView reloadData];
     });
   }
 }
