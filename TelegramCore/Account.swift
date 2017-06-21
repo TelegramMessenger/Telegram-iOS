@@ -376,11 +376,40 @@ public enum AccountServiceTaskMasterMode {
     case never
 }
 
-public enum AccountNetworkState {
+public enum AccountNetworkState: Equatable {
     case waitingForNetwork
-    case connecting
+    case connecting(toProxy: Bool)
     case updating
     case online
+    
+    public static func ==(lhs: AccountNetworkState, rhs: AccountNetworkState) -> Bool {
+        switch lhs {
+            case .waitingForNetwork:
+                if case .waitingForNetwork = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .connecting(toProxy):
+                if case .connecting(toProxy) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .updating:
+                if case .updating = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .online:
+                if case .online = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public final class AccountAuxiliaryMethods {
@@ -432,7 +461,7 @@ public class Account {
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
     
-    private let networkStateValue = Promise<AccountNetworkState>(.connecting)
+    private let networkStateValue = Promise<AccountNetworkState>(.waitingForNetwork)
     public var networkState: Signal<AccountNetworkState, NoError> {
         return self.networkStateValue.get()
     }
@@ -470,13 +499,13 @@ public class Account {
         let networkStateSignal = combineLatest(self.stateManager.isUpdating, network.connectionStatus)
             |> map { isUpdating, connectionStatus -> AccountNetworkState in
                 switch connectionStatus {
-                    case .WaitingForNetwork:
+                    case .waitingForNetwork:
                         return .waitingForNetwork
-                    case .Connecting:
-                        return .connecting
-                    case .Updating:
+                    case let .connecting(toProxy):
+                        return .connecting(toProxy: toProxy)
+                    case .updating:
                         return .updating
-                    case .Online:
+                    case .online:
                         if isUpdating {
                             return .updating
                         } else {
