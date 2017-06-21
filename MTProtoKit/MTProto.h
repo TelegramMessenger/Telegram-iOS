@@ -16,12 +16,19 @@
 
 @class MTProto;
 
+@interface MTProtoConnectionState : NSObject
+
+@property (nonatomic, readonly) bool isConnected;
+@property (nonatomic, readonly) bool isUsingProxy;
+
+@end
+
 @protocol MTProtoDelegate <NSObject>
 
 @optional
 
 - (void)mtProtoNetworkAvailabilityChanged:(MTProto *)mtProto isNetworkAvailable:(bool)isNetworkAvailable;
-- (void)mtProtoConnectionStateChanged:(MTProto *)mtProto isConnected:(bool)isConnected;
+- (void)mtProtoConnectionStateChanged:(MTProto *)mtProto state:(MTProtoConnectionState *)state;
 - (void)mtProtoConnectionContextUpdateStateChanged:(MTProto *)mtProto isUpdatingConnectionContext:(bool)isUpdatingConnectionContext;
 - (void)mtProtoServiceTasksStateChanged:(MTProto *)mtProto isPerformingServiceTasks:(bool)isPerformingServiceTasks;
 
