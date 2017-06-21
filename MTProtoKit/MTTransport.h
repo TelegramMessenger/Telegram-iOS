@@ -30,7 +30,7 @@
 @optional
 
 - (void)transportNetworkAvailabilityChanged:(MTTransport *)transport isNetworkAvailable:(bool)isNetworkAvailable;
-- (void)transportConnectionStateChanged:(MTTransport *)transport isConnected:(bool)isConnected;
+- (void)transportConnectionStateChanged:(MTTransport *)transport isConnected:(bool)isConnected isUsingProxy:(bool)isUsingProxy;
 - (void)transportConnectionContextUpdateStateChanged:(MTTransport *)transport isUpdatingConnectionContext:(bool)isUpdatingConnectionContext;
 - (void)transportConnectionProblemsStatusChanged:(MTTransport *)transport hasConnectionProblems:(bool)hasConnectionProblems isProbablyHttp:(bool)isProbablyHttp;
 
