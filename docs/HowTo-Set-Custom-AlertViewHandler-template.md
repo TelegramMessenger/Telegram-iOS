@@ -2,7 +2,7 @@
 
 HockeySDK lets the user decide wether to send a crash report or lets the developer send crash reports automatically without user interaction. In addition it is possible to attach more data like logs, a binary, or the users name, email or a user ID if this is already known.
 
-Starting HockeySDK version 3.6 it is now possible to customize this even further and implement your own flow to e.g. ask the user for more details about what happened or his name and email address if your app doesn't know that yet.
+Starting with HockeySDK version 3.6 it is possible to customize this even further and implement your own flow to e.g. ask the user for more details about what happened or his name and email address if your app doesn't know that yet.
 
 The following example shows how this could be implemented. We'll present a custom UIAlertView asking the user for more details and attaching that to the crash report.
 

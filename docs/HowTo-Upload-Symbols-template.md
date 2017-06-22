@@ -1,6 +1,6 @@
 ## Introduction
 
-Mac and iOS crash reports show the stack traces for all running threads of your app of the time a crash occured. But the stack traces only contain memory addresses and don't show class names, methods, file names and line numbers that are needed to understand them.
+Mac and iOS crash reports show the stack traces for all running threads of your app of the time a crash occurred. But the stack traces only contain memory addresses and don't show class names, methods, file names and line numbers that are needed to understand them.
 
 To get these memory addresses translated you need to upload a dSYM package to the server, which contains all information required to make this happen. The symbolication process will then check the binary images section of the crash report and grab the UUID of the binary that caused the crash. Next it will get the UUID of the dSYM package to make sure they are identical and process the data if so.
 

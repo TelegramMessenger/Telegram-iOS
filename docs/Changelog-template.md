@@ -6,7 +6,7 @@
 - [IMPROVEMENT] The crash-only flavor of the SDK now doesn't contain the Metrics feature.
 - [IMPROVEMENT] The SDK can be compiled using Xcode 9 [#423](https://github.com/bitstadium/HockeySDK-iOS/pull/423) – thx to [Stephan](https://github.com/diederich) and [Piet](https://github.com/pietbrauer) for the contribution!
 - [IMPROVEMENT] Metrics info will be send to the backend every time the application goes from foreground to background [#429](https://github.com/bitstadium/HockeySDK-iOS/pull/429) - thx to [Ivan](https://github.com/MatkovIvan) for the contribution.
-- [IMPROVEMENT] Our readme.md now uses gender-neutral language [#427](https://github.com/bitstadium/HockeySDK-iOS/pull/427).
+- [IMPROVEMENT] Our README.md now use gender-neutral language [#427](https://github.com/bitstadium/HockeySDK-iOS/pull/427).
 
 ## 4.1.5
 
@@ -155,7 +155,7 @@ This SDK release explicitly includes the Application Support directory into back
 
 ## Version 3.8.6
 
-- [UPDATE] Some minor refactorings
+- [UPDATE] Some minor refactoring
 - [BUGFIX] Fix crash in `BITCrashReportTextFormatter` in cases where processPath is unexpectedly nil
 - [BUGFIX] Fix bug where feedback image could only be added once
 - [BUGFIX] Fix URL encoding bug in BITUpdateManager
@@ -278,7 +278,7 @@ This SDK release explicitly includes the Application Support directory into back
 
 - [NEW] `BITCrashManager`: Added launch time to crash reports
 - [NEW] `BITFeedbackManager`: Added support for setting tintColor for feedback list buttons
-- [NEW] `BITFeedbackManager`: Added `feedbackComposerPreparedItems` to prefill feedback compose UI message with given items
+- [NEW] `BITFeedbackManager`: Added `feedbackComposerPreparedItems` to pre-fill feedback compose UI message with given items
 - [NEW] `BITUpdateManagerDelegate`: Added `willStartDownloadAndUpdate` to be notified before beta update starts
 - [UPDATE] Improved CocoaPods support to allow building as a native iOS 8 framework
 - [UPDATE] Keychain is now accessed with `kSecAttrAccessibleAlwaysThisDeviceOnly` to support apps that are running in the background and the device is still locked

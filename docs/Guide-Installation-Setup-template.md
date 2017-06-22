@@ -419,7 +419,7 @@ This feature can be disabled as follows:
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
-#### 3.6.2 Autosend crash reports
+#### 3.6.2 Auto send crash reports
 
 Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide whether they want to send the report or not.
 
@@ -490,9 +490,9 @@ and set the delegate:
 
 HockeyApp automatically provides you with nice, intelligible, and informative metrics about how your app is used and by whom. 
 
-- **Sessions**: A new session is tracked by the SDK whenever the containing app is restarted (this refers to a 'cold start', i.e. when the app has not already been in memory prior to being launched) or whenever it becomes active again after having been in the background for 20 seconds or more.
-- **Users**: The SDK anonymously tracks the users of your app by creating a random UUID that is then securely stored in the iOS keychain. Because this anonymous ID is stored in the keychain it persists across reinstallations.
-- **Custom Events**: With HockeySDK 4.1.0 you can now track Custom Events in your app, understand user actions and see the aggregates on the HockeyApp portal.
+- **Sessions**: A new session is tracked by the SDK whenever the containing app is restarted (this refers to a 'cold start', i.e., when the app has not already been in memory prior to being launched) or whenever it becomes active again after having been in the background for 20 seconds or more.
+- **Users**: The SDK anonymously tracks the users of your app by creating a random UUID that is then securely stored in the iOS keychain. This anonymous ID is stored in the keychain, as of iOS 10, it no longer persists across re-installations.
+- **Custom Events**: With HockeySDK 4.1.0 and later, you can now track Custom Events in your app, understand user actions and see the aggregates on the HockeyApp portal.
 - **Batching & offline behavior**: The SDK batches up to 50 events or waits for 15s and then persist and send the events, whichever comes first. So for sessions, this might actually mean we send 1 single event per batch. If you are sending Custom Events, it can be 1 session event plus X of your Custom Events (up to 50 events per batch total). In case the device is offline, up to 300 events are stored until the SDK starts to drop new events.
 
 Just in case you want to opt-out of the automatic collection of anonymous users and sessions statistics, there is a way to turn this functionality off at any time:
@@ -506,7 +506,7 @@ Just in case you want to opt-out of the automatic collection of anonymous users 
 By tracking custom events, you can now get insight into how your customers use your app, understand their behavior and answer important business or user experience questions while improving your app.
 
 - Before starting to track events, ask yourself the questions that you want to get answers to. For instance, you might be interested in business, performance/quality or user experience aspects.
-- Name your events in a meaningful way and keep in mind that you will use these names when searching for events in the HockeyApp web portal. It is your reponsibility to not collect personal information as part of the events tracking.
+- Name your events in a meaningful way and keep in mind that you will use these names when searching for events in the HockeyApp web portal. It is your responsibility to not collect personal information as part of the events tracking.
 
 **Objective-C**
 
@@ -569,7 +569,7 @@ As of HockeySDK 4.1.1, Feedback is no longer part of the default SDK. To use fee
 
 #### 3.8.1 Integrate the full-featured SDK.
 
-If you're integrating the binary yourself, use the `HockeySDK.embeddedframework` in the subfolder `HockeySDKAllFeatures`. If you're using cocoapods, use
+If you're integrating the binary yourself, use the `HockeySDK.embeddedframework` in the subfolder `HockeySDKAllFeatures`. If you're using Cocoapods, use
 
 ```ruby
 pod "HockeySDK", :subspecs => ['AllFeaturesLib']
@@ -591,7 +591,7 @@ Please check the [documentation](#documentation) of the `BITFeedbackManager` and
 
 As of iOS 10, developers have to add UsageDescription-strings before using system frameworks with privacy features (read more on this in [Apple's own documentation](https://developer.apple.com/library/prerelease/content/releasenotes/General/WhatsNewIniOS/Articles/iOS10.html#//apple_ref/doc/uid/TP40017084-SW3)). To make allow users to attach photos to feedback, add the `NSPhotoLibraryUsageDescription` to your `Info.plist` and provide a description. Make sure to localize your description as described in [Apple's documentation about localizing Info.plist strings](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
 
-If the value is missing from your `Info.plist`, the SDK will disable attaching potos to feedback and disable the creation of a new feedback item in case of a screenshot. 
+If the value is missing from your `Info.plist`, the SDK will disable attaching photos to feedback and disable the creation of a new feedback item in case of a screenshot. 
 
 
 <a name="storeupdates"></a>
@@ -652,7 +652,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.5/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.6/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -666,7 +666,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-4.1.5.docset`
+  - `de.bitstadium.HockeySDK-iOS-4.1.6.docset`
 
 ### Feature are not working as expected
 
