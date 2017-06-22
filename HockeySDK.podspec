@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK'
-  s.version           = '4.1.5'
+  s.version           = '4.1.6'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
