@@ -1,9 +1,19 @@
+## 4.1.6
+
+- [BUGFIX] Fixed a string in the Italian translation [#430](https://github.com/bitstadium/HockeySDK-iOS/pull/430).
+- [BUGFIX] Fix bug that prevented images that were attached to Feedback from loading [#428](https://github.com/bitstadium/HockeySDK-iOS/pull/428) – thx to [Zoltan](https://github.com/Xperion-meszaroz) for the contribution.
+- [IMPROVEMENT] Improved the accessibility of the Feedback UI, it now uses the proper accessibility traits.
+- [IMPROVEMENT] The crash-only flavor of the SDK now doesn't contain the Metrics feature.
+- [IMPROVEMENT] The SDK can be compiled using Xcode 9 [#423](https://github.com/bitstadium/HockeySDK-iOS/pull/423) – thx to [Stephan](https://github.com/diederich) and [Piet](https://github.com/pietbrauer) for the contribution!
+- [IMPROVEMENT] Metrics info will be send to the backend every time the application goes from foreground to background [#429](https://github.com/bitstadium/HockeySDK-iOS/pull/429) - thx to [Ivan](https://github.com/MatkovIvan) for the contribution.
+- [IMPROVEMENT] Our readme.md now uses gender-neutral language [#427](https://github.com/bitstadium/HockeySDK-iOS/pull/427).
+
 ## 4.1.5
 
-This release officially dropps the support for iOS 6.
+This release officially drops the support for iOS 6.
 
-- [FIX] Remove the dependency for AssetLibrary for the default subspec in our podspec [#403](https://github.com/bitstadium/HockeySDK-iOS/pull/403). Thanks to [@tschob](https://github.com/tschob) for the pointer.
-- [FIX] A couple of visual bugs have been fixed [#404](https://github.com/bitstadium/HockeySDK-iOS/pull/404) thanks to [@dweston](https://github.com/dtweston).
+- [BUGFIX] Remove the dependency for AssetLibrary for the default subspec in our podspec [#403](https://github.com/bitstadium/HockeySDK-iOS/pull/403). Thanks to [@tschob](https://github.com/tschob) for the pointer.
+- [BUGFIX] A couple of visual bugs have been fixed [#404](https://github.com/bitstadium/HockeySDK-iOS/pull/404) thanks to [@dweston](https://github.com/dtweston).
 - [IMPROVEMENT] We have improved accessibility of our feedback UI [#409](https://github.com/bitstadium/HockeySDK-iOS/pull/409) with help by [@erychagov](https://github.com/erychagov).
 
 ## 4.1.4
