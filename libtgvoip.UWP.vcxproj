@@ -25,18 +25,6 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Preview|ARM">
-      <Configuration>Preview</Configuration>
-      <Platform>ARM</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Preview|Win32">
-      <Configuration>Preview</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Preview|x64">
-      <Configuration>Preview</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{88803693-7606-484b-9d2f-4bb789d57c29}</ProjectGuid>
@@ -85,51 +73,30 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Preview|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v141</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Preview|ARM'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v141</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Preview|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v141</PlatformToolset>
-  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props" Condition="exists('$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props')" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props" Condition="exists('$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props')" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props" Condition="exists('$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props')" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props" Condition="exists('$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props')" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props" Condition="exists('$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props')" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Preview|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Preview|ARM'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Preview|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props" Condition="exists('$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformExtensionSDKLocation(`WindowsMobile, Version=10.0.15063.0`, $(TargetPlatformIdentifier), $(TargetPlatformVersion),  $(SDKReferenceDirectoryRoot), $(SDKExtensionDirectoryRoot), $(SDKReferenceRegistryRoot)))\DesignTime\CommonConfiguration\Neutral\WindowsMobile.props')" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
@@ -156,18 +123,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
     <MappedPlatform>x64\Release</MappedPlatform>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Preview|Win32'">
-    <GenerateManifest>false</GenerateManifest>
-    <MappedPlatform>Preview</MappedPlatform>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Preview|ARM'">
-    <GenerateManifest>false</GenerateManifest>
-    <MappedPlatform>ARM\Preview</MappedPlatform>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Preview|x64'">
-    <GenerateManifest>false</GenerateManifest>
-    <MappedPlatform>x64\Preview</MappedPlatform>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -256,57 +211,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>_WINRT_DLL;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;WEBRTC_APM_DEBUG_DUMP=0;NDEBUG;TGVOIP_USE_CUSTOM_CRYPTO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>webrtc_dsp;../libopus/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <AdditionalDependencies>libopus.lib;ws2_32.lib;mmdevapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(MappedPlatform)\libopus\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Preview|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>_WINRT_DLL;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;WEBRTC_APM_DEBUG_DUMP=0;NDEBUG;TGVOIP_USE_CUSTOM_CRYPTO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>webrtc_dsp;../libopus/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <AdditionalDependencies>libopus.lib;ws2_32.lib;mmdevapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(MappedPlatform)\libopus\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Preview|ARM'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>_WINRT_DLL;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;WEBRTC_APM_DEBUG_DUMP=0;NDEBUG;TGVOIP_USE_CUSTOM_CRYPTO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>webrtc_dsp;../libopus/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <AdditionalDependencies>libopus.lib;ws2_32.lib;mmdevapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(MappedPlatform)\libopus\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Preview|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>_WINRT_DLL;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;WEBRTC_APM_DEBUG_DUMP=0;NDEBUG;TGVOIP_USE_CUSTOM_CRYPTO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -596,6 +500,9 @@
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\utility\ooura_fft_neon.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\modules\audio_processing\utility\ooura_fft_sse2.cc" />
     <ClCompile Include="webrtc_dsp\webrtc\system_wrappers\source\cpu_features.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <SDKReference Include="WindowsMobile, Version=10.0.15063.0" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
