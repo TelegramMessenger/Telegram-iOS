@@ -517,6 +517,7 @@
       cell.textLabel.textAlignment = NSTextAlignmentCenter;
     }
     
+    cell.textLabel.accessibilityTraits = UIAccessibilityTraitStaticText;
     cell.textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
                            [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
     
@@ -545,6 +546,9 @@
       cell.selectionStyle = UITableViewCellSelectionStyleGray;
     }
     
+    // Set accessibilityTraits to UIAccessibilityTraitNone to make sure we're not setting the trait to an incorrect type for recycled cells.
+    cell.textLabel.accessibilityTraits = UIAccessibilityTraitNone;
+    
     // button
     NSString *titleString = nil;
     
@@ -554,6 +558,7 @@
     }
 
     if (indexPath.section == 0) {
+      cell.textLabel.accessibilityTraits = UIAccessibilityTraitButton;
       if ([self.manager numberOfMessages] == 0) {
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonWriteFeedback");
       } else {
@@ -563,17 +568,22 @@
       if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
           ([self.manager requireUserName] == BITFeedbackUserDataElementOptional && [self.manager userName] != nil)
           ) {
+        cell.textLabel.accessibilityTraits = UIAccessibilityTraitStaticText;
         titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataWithName"), [self.manager userName] ?: @"-"];
       } else if ([self.manager requireUserEmail] == BITFeedbackUserDataElementRequired ||
                  ([self.manager requireUserEmail] == BITFeedbackUserDataElementOptional && [self.manager userEmail] != nil)
                  ) {
+        cell.textLabel.accessibilityTraits = UIAccessibilityTraitStaticText;
         titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataWithEmail"), [self.manager userEmail] ?: @"-"];
       } else if ([self.manager requireUserName] == BITFeedbackUserDataElementOptional) {
+        cell.textLabel.accessibilityTraits = UIAccessibilityTraitButton;
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataSetName");
       } else {
+        cell.textLabel.accessibilityTraits = UIAccessibilityTraitButton;
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataSetEmail");
       }
     } else {
+      cell.textLabel.accessibilityTraits = UIAccessibilityTraitButton;
       titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages");
       titleColor = BIT_RGBCOLOR(251, 35, 35);
     }
