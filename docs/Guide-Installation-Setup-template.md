@@ -1,7 +1,8 @@
 [![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=master)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
-
+ [![Slack Status](https://slack.hockeyapp.net/badge.svg)](https://slack.hockeyapp.net)
+ 
 ## Version 4.1.6
 
 - [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Changelog.html)
@@ -54,8 +55,9 @@ This document contains the following sections:
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
-  1. [Code of Conduct](#codeofconduct)
-  2. [Contributor License](#contributorlicense)
+  1. [Development Environment](#developmentenvironment)
+  2. [Code of Conduct](#codeofconduct)
+  3. [Contributor License](#contributorlicense)
 7. [Contact](#contact)
 
 <a id="requirements"></a> 
@@ -297,7 +299,7 @@ This will integrate the **full-featured SDK** so you must include the `NSPhotoLi
 
 `carthage build --platform iOS --configuration ReleaseDefault HockeySDK-iOS`
 
-#### Crash-only Version
+#### Crash-only version
 
 `carthage build --platform iOS --configuration ReleaseCrashOnly HockeySDK-iOS`
 
@@ -484,7 +486,6 @@ and set the delegate:
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
-
 <a name="user-metrics"></a>
 ### 3.7 User Metrics
 
@@ -634,6 +635,8 @@ This feature can be disabled manually as follows:
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
+Please note that the SDK expects your CFBundleVersion values to always increase and never reset to detect a new update.
+
 If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Authenticating Users on iOS](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/authenticating-users-on-ios)
 
 <a id="debug"></a>
@@ -668,18 +671,29 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
   - `de.bitstadium.HockeySDK-iOS-4.1.6.docset`
 
-### Feature are not working as expected
+### Features are not working as expected
 
   Enable debug output to the console to see additional information from the SDK initializing the modules,  sending and receiving network requests and more by adding the following code before calling `startManager`:
 
   `[BITHockeyManager sharedHockeyManager].logLevel = BITLogLevelDebug;`
 
+### Wrong strings or "Missing HockeySDKResources.bundle" error
+
+1. Please check if the `HockeySDKResources.bundle` is added to your app bundle. Use Finder to inspect your `.app` bundle to see if the bundle is added.
+    
+2. If it is missing, please check if the resources bundle is mentioned in your app target's `Copy Bundle Resources` build step in the `Build Phases` tab. Add the resource bundle manually if necessary.  
+
+3. Make a clean build and try again.
+    
+![Screenshot_2015-12-22_01.07.27.png](https://support.hockeyapp.net/help/assets/0e9d2eb58de8355363b89bd491d6fcf4c14f596e/normal/Screenshot_2015-12-22_01.07.27.png)
+    
 <a id="contributing"></a>
 ## 6. Contributing
 
 We're looking forward to your contributions via pull requests.
 
-**Development environment**
+<a id="developmentenvironment"></a>
+### 6.1 Development environment
 
 * Mac running the latest version of OS X
 * Get the latest Xcode from the Mac App Store
@@ -688,16 +702,16 @@ We're looking forward to your contributions via pull requests.
 * [Carthage](https://github.com/Carthage/Carthage)
 
 <a id="codeofconduct"></a>
-### 6.1 Code of Conduct
+### 6.2 Code of Conduct
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
 <a id="contributorlicense"></a>
-### 6.2 Contributor License
+### 6.3 Contributor License
 
 You must sign a [Contributor License Agreement](https://cla.microsoft.com/) before submitting your pull request. To complete the Contributor License Agreement (CLA), you will need to submit a request via the [form](https://cla.microsoft.com/) and then electronically sign the CLA when you receive the email containing the link to the document. You need to sign the CLA only once to cover submission to any Microsoft OSS project. 
 
 <a id="contact"></a>
 ## 7. Contact
 
-If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net) [![Slack Status](https://slack.hockeyapp.net/badge.svg)](https://slack.hockeyapp.net)
+If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net).
