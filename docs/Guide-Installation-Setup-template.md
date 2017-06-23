@@ -703,7 +703,7 @@ We're looking forward to your contributions via pull requests on our [GitHub rep
 
 <a id="codeofconduct"></a>
 ### 6.2 Code of Conduct
-F
+
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
 <a id="contributorlicense"></a>
