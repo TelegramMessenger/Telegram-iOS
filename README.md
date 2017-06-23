@@ -9,7 +9,7 @@ HockeySDK-iOS implements support for using HockeyApp in your iOS applications.
 
 The following features are currently supported:
 
-1. **Crash Reporting:** If your app crashes, a crash log with the same format as from the Apple Crash Reporter is written to the device's storage. If the user starts the app again, they are asked to submit the crash report to HockeyApp. This works for both beta and live apps, i.e. those submitted to the App Store.
+1. **Crash Reporting:** If your app crashes, a crash log with the same format as from the Apple Crash Reporter is written to the device's storage. If the user starts the app again, they are asked to submit the crash report to HockeyApp. This works for both beta and live apps, i.e., those submitted to the App Store.
 
 2. **User Metrics:** Understand user behavior to improve your app. Track usage through daily and monthly active users, monitor crash impacted users, as well as customer engagement through session count. You can now track **Custom Events** in your app, understand user actions and see the aggregates on the HockeyApp portal.
 
@@ -23,7 +23,7 @@ The following features are currently supported:
 
 ## 2. Setup
 
-It is super easy to use HockeyApp in your iOS app. Have a look at our [documentation]() and onboard your app within minutes.
+It is super easy to use HockeyApp in your iOS app. Have a look at our [documentation](https://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Guide-Installation-Setup.html) and onboard your app within minutes.
 
 ## 3. Documentation
 
@@ -37,7 +37,7 @@ We're looking forward to your contributions via pull requests.
 
 ### 4.1 Development environment
 
-* A mac running the latest version of OS X.
+* A Mac running the latest version of OS X.
 * Get the latest Xcode from the Mac App Store.
 * [AppleDoc](https://github.com/tomaz/appledoc) 
 * [CocoaPods](https://cocoapods.org/)
@@ -53,4 +53,4 @@ You must sign a [Contributor License Agreement](https://cla.microsoft.com/) befo
 
 ## 5. Contact
 
-If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net).
+If you have further questions or are running into trouble that cannot be resolved by any of the steps [in our troubleshooting section](https://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Guide-Installation-Setup.html#troubleshooting), feel free to open an issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net).
