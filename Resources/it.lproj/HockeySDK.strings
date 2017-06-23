@@ -11,7 +11,7 @@
 "HockeyYes" = "Sì";
 
 /* For dialogs no buttons */
-"HockeyNo" = "Non inviare";
+"HockeyNo" = "No";
 
 /* For dialogs ok buttons */
 "HockeyOK" = "OK";

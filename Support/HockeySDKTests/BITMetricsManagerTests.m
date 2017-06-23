@@ -78,7 +78,8 @@
   self.sut = [BITMetricsManager new];
   [self.sut startManager];
   
-  [verify((id)self.mockNotificationCenter) addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:(id)anything()];
+  // 1 for BITMetricsManager + 1 for BITChannel
+  [verifyCount((id)self.mockNotificationCenter, times(2)) addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:(id)anything()];
   [verify((id)self.mockNotificationCenter) addObserverForName:UIApplicationWillEnterForegroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:(id)anything()];
 }
 

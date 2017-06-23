@@ -184,18 +184,4 @@ typedef NS_ENUM(NSInteger, BITHockeyErrorReason) {
   BITHockeyErrorUnknown
 };
 
-/**
- *  SDK Environment
- */
-typedef NS_ENUM (NSUInteger, BITSdkEnvironment) {
-  /**
-   *  A regular native iOS environment
-   */
-  BITSdkEnvironmentNative = 0,
-  /**
-   *  A xamarin environment
-   */
-  BITSdkEnvironmentXamarin = 1
-};
-
 #endif /* HockeySDK_HockeyEnums_h */

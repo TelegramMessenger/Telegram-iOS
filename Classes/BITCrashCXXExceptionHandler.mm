@@ -58,7 +58,7 @@ static pthread_key_t _BITCrashCXXExceptionInfoTSDKey = 0;
 
 @implementation BITCrashUncaughtCXXExceptionHandlerManager
 
-extern "C" void LIBCXXABI_NORETURN __cxa_throw(void *exception_object, std::type_info *tinfo, void (*dest)(void *))
+extern "C" void __attribute__((noreturn)) __cxa_throw(void *exception_object, std::type_info *tinfo, void (*dest)(void *))
 {
   // Purposely do not take a lock in this function. The aim is to be as fast as
   // possible. While we could really use some of the info set up by the real
@@ -72,7 +72,7 @@ extern "C" void LIBCXXABI_NORETURN __cxa_throw(void *exception_object, std::type
   // implementation changing in a future version. (Or not existing in an earlier
   // version).
   
-  typedef void (*cxa_throw_func)(void *, std::type_info *, void (*)(void *)) LIBCXXABI_NORETURN;
+  typedef void (*cxa_throw_func)(void *, std::type_info *, void (*)(void *)) __attribute__((noreturn));
   static dispatch_once_t predicate = 0;
   static cxa_throw_func __original__cxa_throw = nullptr;
   static const void **__real_objc_ehtype_vtable = nullptr;
