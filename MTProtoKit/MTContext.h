@@ -79,7 +79,7 @@
 - (void)enumerateAddressSetsForDatacenters:(void (^)(NSInteger datacenterId, MTDatacenterAddressSet *addressSet, BOOL *stop))block;
 
 - (MTDatacenterAddressSet *)addressSetForDatacenterWithId:(NSInteger)datacenterId;
-- (MTTransportScheme *)transportSchemeForDatacenterWithid:(NSInteger)datacenterId media:(bool)media;
+- (MTTransportScheme *)transportSchemeForDatacenterWithid:(NSInteger)datacenterId media:(bool)media optimal:(bool)optimal;
 - (void)transportSchemeForDatacenterWithIdRequired:(NSInteger)datacenterId media:(bool)media;
 - (void)invalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme isProbablyHttp:(bool)isProbablyHttp media:(bool)media;
 - (void)revalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme media:(bool)media;

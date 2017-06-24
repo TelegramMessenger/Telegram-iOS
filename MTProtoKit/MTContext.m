@@ -672,7 +672,7 @@
     return result;
 }
 
-- (MTTransportScheme *)transportSchemeForDatacenterWithid:(NSInteger)datacenterId media:(bool)media
+- (MTTransportScheme *)transportSchemeForDatacenterWithid:(NSInteger)datacenterId media:(bool)media optimal:(bool)optimal
 {
     __block MTTransportScheme *result = nil;
     [[MTContext contextQueue] dispatchOnQueue:^
@@ -694,7 +694,11 @@
             
             if (result != nil && ![result isOptimal])
             {
-                [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:result beginWithHttp:false media:media];
+                if (optimal) {
+                    result = [self defaultTransportSchemeForDatacenterWithId:datacenterId media:media];
+                } else {
+                    [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:result beginWithHttp:false media:media];
+                }
             }
         }
     } synchronous:true];
