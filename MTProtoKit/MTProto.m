@@ -284,7 +284,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [self setTransport:nil];
         }
         
-        _transportScheme = [_context transportSchemeForDatacenterWithid:_datacenterId media:_media optimal:_apiEnvironment.socksProxySettings != nil];
+        _transportScheme = [_context transportSchemeForDatacenterWithId:_datacenterId media:_media isProxy:_apiEnvironment.socksProxySettings != nil];
         
         if (_transportScheme == nil)
         {
