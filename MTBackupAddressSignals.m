@@ -142,68 +142,38 @@
             
             __weak MTContext *weakCurrentContext = currentContext;
             return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-                return [[MTBlockDisposable alloc] initWithBlock:^{
-                    [request setCompleted:^(MTDatacenterAddressListData *result, __unused NSTimeInterval completionTimestamp, id error)
-                     {
-                         if (error == nil) {
-                             __strong MTContext *strongCurrentContext = weakCurrentContext;
-                             if (strongCurrentContext != nil) {
-                                 [result.addressList enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, NSArray *list, __unused BOOL *stop) {
-                                     MTDatacenterAddressSet *addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:list];
-                                     
-                                     MTDatacenterAddressSet *currentAddressSet = [context addressSetForDatacenterWithId:[nDatacenterId integerValue]];
-                                     
-                                     if (currentAddressSet == nil || ![addressSet isEqual:currentAddressSet])
-                                     {
-                                         if (MTLogEnabled()) {
-                                             MTLog(@"[Backup address fetch (%@): updating datacenter %d address set to %@]", isTestingEnvironment ? @"testing" : @"production", [nDatacenterId intValue], addressSet);
-                                         }
-                                         
-                                         [strongCurrentContext updateAddressSetForDatacenterWithId:[nDatacenterId integerValue] addressSet:addressSet forceUpdateSchemes:true];
+                [request setCompleted:^(MTDatacenterAddressListData *result, __unused NSTimeInterval completionTimestamp, id error)
+                 {
+                     if (error == nil) {
+                         __strong MTContext *strongCurrentContext = weakCurrentContext;
+                         if (strongCurrentContext != nil) {
+                             [result.addressList enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, NSArray *list, __unused BOOL *stop) {
+                                 MTDatacenterAddressSet *addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:list];
+                                 
+                                 MTDatacenterAddressSet *currentAddressSet = [context addressSetForDatacenterWithId:[nDatacenterId integerValue]];
+                                 
+                                 if (currentAddressSet == nil || ![addressSet isEqual:currentAddressSet])
+                                 {
+                                     if (MTLogEnabled()) {
+                                         MTLog(@"[Backup address fetch (%@): updating datacenter %d address set to %@]", isTestingEnvironment ? @"testing" : @"production", [nDatacenterId intValue], addressSet);
                                      }
-                                 }];
-                             }
-                         } else {
-                             [subscriber putCompletion];
+                                     
+                                     [strongCurrentContext updateAddressSetForDatacenterWithId:[nDatacenterId integerValue] addressSet:addressSet forceUpdateSchemes:true];
+                                 }
+                             }];
                          }
-                     }];
-                    
-                    [requestService addRequest:request];
+                     } else {
+                         [subscriber putCompletion];
+                     }
+                 }];
+                
+                [requestService addRequest:request];
+                
+                id requestId = request.internalId;
+                return [[MTBlockDisposable alloc] initWithBlock:^{
+                    [requestService removeRequestByInternalId:requestId];
                 }];
             }];
-            
-            /*return [[[[self requestSignal:[[TLRPChelp_getConfig$help_getConfig alloc] init] requestService:requestService] onNext:^(TLConfig *config) {
-             
-                
-                for (TLDcOption$modernDcOption *dcOption in config.dc_options)
-                {
-                    MTDatacenterAddress *configAddress = [[MTDatacenterAddress alloc] initWithIp:dcOption.ip_address port:(uint16_t)dcOption.port preferForMedia:dcOption.flags & (1 << 1) restrictToTcp:dcOption.flags & (1 << 2) cdn:dcOption.flags & (1 << 3) preferForProxy:dcOption.flags & (1 << 4)];
-                    
-                    NSMutableArray *array = addressListByDatacenterId[@(dcOption.n_id)];
-                    if (array == nil)
-                    {
-                        array = [[NSMutableArray alloc] init];
-                        addressListByDatacenterId[@(dcOption.n_id)] = array;
-                    }
-                    
-                    if (![array containsObject:configAddress])
-                        [array addObject:configAddress];
-                }
-                
-                [addressListByDatacenterId enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, NSArray *addressList, __unused BOOL *stop) {
-                    MTDatacenterAddressSet *addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:addressList];
-                    
-                    MTDatacenterAddressSet *currentAddressSet = [context addressSetForDatacenterWithId:[nDatacenterId integerValue]];
-                    
-                    if (currentAddressSet == nil || ![addressSet isEqual:currentAddressSet])
-                    {
-                        TGLog(@"[Backup address fetch (%@): updating datacenter %d address set to %@]", isTestingEnvironment ? @"testing" : @"production", [nDatacenterId intValue], addressSet);
-                        [[TGTelegramNetworking instance].context updateAddressSetForDatacenterWithId:[nDatacenterId integerValue] addressSet:addressSet forceUpdateSchemes:true];
-                    }
-                }];
-            }] onDispose:^{
-                [mtProto stop];
-            }] delay:2.0 onQueue:[SQueue concurrentDefaultQueue]];*/
         }
         return [MTSignal complete];
     }];
