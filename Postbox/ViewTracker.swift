@@ -400,10 +400,10 @@ final class ViewTracker {
             }
         }
         
-        if !transaction.chatListOperations.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty {
+        if !transaction.chatListOperations.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentUpdatedPeers.isEmpty {
             for (mutableView, pipe) in self.chatListViews.copyItems() {
                 let context = MutableChatListViewReplayContext()
-                if mutableView.replay(transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, context: context) {
+                if mutableView.replay(transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, context: context) {
                     mutableView.complete(context: context, fetchEarlier: self.fetchEarlierChatEntries, fetchLater: self.fetchLaterChatEntries)
                     mutableView.render(self.renderMessage, getPeer: { id in
                         return self.getPeer(id)

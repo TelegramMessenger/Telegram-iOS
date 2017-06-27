@@ -589,6 +589,24 @@ public final class Modifier {
             return []
         }
     }
+    
+    public func unorderedItemListDifference(tag: UnorderedItemListEntryTag, updatedEntryInfos: [ValueBoxKey: UnorderedItemListEntryInfo]) -> (metaInfo: UnorderedItemListTagMetaInfo?, added: [ValueBoxKey], removed: [UnorderedItemListEntry], updated: [UnorderedItemListEntry]) {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.unorderedItemListTable.difference(tag: tag, updatedEntryInfos: updatedEntryInfos)
+        } else {
+            return (nil, [], [], [])
+        }
+    }
+    
+    public func unorderedItemListApplyDifference(tag: UnorderedItemListEntryTag, previousInfo: UnorderedItemListTagMetaInfo?, updatedInfo: UnorderedItemListTagMetaInfo, setItems: [UnorderedItemListEntry], removeItemIds: [ValueBoxKey]) -> Bool {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.unorderedItemListTable.applyDifference(tag: tag, previousInfo: previousInfo, updatedInfo: updatedInfo, setItems: setItems, removeItemIds: removeItemIds)
+        } else {
+            return false
+        }
+    }
 }
 
 fileprivate class PipeNotifier: NSObject {
@@ -778,6 +796,7 @@ public final class Postbox {
     let orderedItemListTable: OrderedItemListTable
     let orderedItemListIndexTable: OrderedItemListIndexTable
     let textIndexTable: MessageHistoryTextIndexTable
+    let unorderedItemListTable: UnorderedItemListTable
     
     //temporary
     let peerRatingTable: RatingTable<PeerId>
@@ -851,6 +870,7 @@ public final class Postbox {
         self.preferencesTable = PreferencesTable(valueBox: self.valueBox, table: PreferencesTable.tableSpec(35))
         self.orderedItemListIndexTable = OrderedItemListIndexTable(valueBox: self.valueBox, table: OrderedItemListIndexTable.tableSpec(37))
         self.orderedItemListTable = OrderedItemListTable(valueBox: self.valueBox, table: OrderedItemListTable.tableSpec(38), indexTable: self.orderedItemListIndexTable)
+        self.unorderedItemListTable = UnorderedItemListTable(valueBox: self.valueBox, table: UnorderedItemListTable.tableSpec(42))
         
         var tables: [Table] = []
         tables.append(self.metadataTable)
@@ -893,6 +913,7 @@ public final class Postbox {
         tables.append(self.preferencesTable)
         tables.append(self.orderedItemListTable)
         tables.append(self.orderedItemListIndexTable)
+        tables.append(self.unorderedItemListTable)
         
         self.tables = tables
         
@@ -1221,7 +1242,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(index, message, embeddedState):
-                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), self.peerNotificationSettingsTable.get(index.messageIndex.id.peerId), embeddedState))
+                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), embeddedState))
                 case let .Hole(hole):
                     entries.append(.HoleEntry(hole))
             }
@@ -1230,7 +1251,7 @@ public final class Postbox {
         if let intermediateLower = intermediateLower {
             switch intermediateLower {
                 case let .Message(index, message, embeddedState):
-                    lower = .IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), self.peerNotificationSettingsTable.get(index.messageIndex.id.peerId), embeddedState)
+                    lower = .IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), embeddedState)
                 case let .Hole(hole):
                     lower = .HoleEntry(hole)
             }
@@ -1239,7 +1260,7 @@ public final class Postbox {
         if let intermediateUpper = intermediateUpper {
             switch intermediateUpper {
                 case let .Message(index, message, embeddedState):
-                    upper = .IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), self.peerNotificationSettingsTable.get(index.messageIndex.id.peerId), embeddedState)
+                    upper = .IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), embeddedState)
                 case let .Hole(hole):
                     upper = .HoleEntry(hole)
             }
@@ -1254,7 +1275,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(index, message, embeddedState):
-                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), self.peerNotificationSettingsTable.get(index.messageIndex.id.peerId), embeddedState))
+                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), embeddedState))
                 case let .Hole(hole):
                     entries.append(.HoleEntry(hole))
             }
@@ -1268,7 +1289,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(index, message, embeddedState):
-                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), self.peerNotificationSettingsTable.get(index.messageIndex.id.peerId), embeddedState))
+                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(index.messageIndex.id.peerId), embeddedState))
                 case let .Hole(index):
                     entries.append(.HoleEntry(index))
             }

@@ -190,6 +190,14 @@ public struct ValueBoxKey: Hashable, CustomStringConvertible, Comparable {
         return string as String
     }
     
+    public var stringValue: String {
+        if let string = String(data: Data(bytes: self.memory, count: self.length), encoding: .utf8) {
+            return string
+        } else {
+            return "<unavailable>"
+        }
+    }
+    
     public var hashValue: Int {
         var hash = 37
         let bytes = self.memory.assumingMemoryBound(to: Int8.self)

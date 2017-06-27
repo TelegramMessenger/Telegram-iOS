@@ -108,3 +108,19 @@ public func arePeersEqual(_ lhs: Peer?, _ rhs: Peer?) -> Bool {
         return (lhs != nil) == (rhs != nil)
     }
 }
+
+public func arePeerDictionariesEqual(_ lhs: SimpleDictionary<PeerId, Peer>, _ rhs: SimpleDictionary<PeerId, Peer>) -> Bool {
+    if lhs.count != rhs.count {
+        return false
+    }
+    for (id, lhsPeer) in lhs {
+        if let rhsPeer = rhs[id] {
+            if !lhsPeer.isEqual(rhsPeer) {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    return true
+}

@@ -28,6 +28,8 @@
 		D01BAA561ED1D70C00295217 /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA541ED1D70C00295217 /* ManagedFile.swift */; };
 		D01C7EDE1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */; };
 		D01C7EDF1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */; };
+		D01C7F071EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7F061EFC1ED3008305F1 /* UnorderedItemListTable.swift */; };
+		D01C7F081EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7F061EFC1ED3008305F1 /* UnorderedItemListTable.swift */; };
 		D01F7D9B1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */; };
 		D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */; };
 		D021E0D41DB4FAE100C6B04F /* ItemCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0D31DB4FAE100C6B04F /* ItemCollection.swift */; };
@@ -304,6 +306,7 @@
 		D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageGloballyUniqueIdTable.swift; sourceTree = "<group>"; };
 		D01BAA541ED1D70C00295217 /* ManagedFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedFile.swift; sourceTree = "<group>"; };
 		D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTextIndexTable.swift; sourceTree = "<group>"; };
+		D01C7F061EFC1ED3008305F1 /* UnorderedItemListTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UnorderedItemListTable.swift; sourceTree = "<group>"; };
 		D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryInvalidatedReadStateTable.swift; sourceTree = "<group>"; };
 		D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizePeerReadStatesView.swift; sourceTree = "<group>"; };
 		D021E0D31DB4FAE100C6B04F /* ItemCollection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCollection.swift; sourceTree = "<group>"; };
@@ -597,6 +600,7 @@
 				D08774FF1E3E3D9F00A97350 /* PreferencesTable.swift */,
 				D0F82CFC1E4345D7007E499C /* OrderedItemListTable.swift */,
 				D0F82D0E1E43A024007E499C /* OrderedItemListIndexTable.swift */,
+				D01C7F061EFC1ED3008305F1 /* UnorderedItemListTable.swift */,
 			);
 			name = Tables;
 			sourceTree = "<group>";
@@ -932,6 +936,7 @@
 			files = (
 				D050F2661E4A5B5A00988324 /* MessageGloballyUniqueIdTable.swift in Sources */,
 				D03229EF1E6B33FD0000AF9C /* SqliteInterface.swift in Sources */,
+				D01C7F081EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */,
 				D050F2671E4A5B5A00988324 /* TimestampBasedMessageAttributesTable.swift in Sources */,
 				D050F2681E4A5B5A00988324 /* TimestampBasedMessageAttributesIndexTable.swift in Sources */,
 				D050F2691E4A5B5A00988324 /* MultiplePeersView.swift in Sources */,
@@ -1062,6 +1067,7 @@
 			files = (
 				D08775061E3E3F2100A97350 /* PreferencesView.swift in Sources */,
 				D03229EE1E6B33FD0000AF9C /* SqliteInterface.swift in Sources */,
+				D01C7F071EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */,
 				D0F9E8631C579F0200037222 /* MediaCleanupTable.swift in Sources */,
 				D0F3CC741DDE1EB9008148FA /* ItemCacheMetaTable.swift in Sources */,
 				D08D451F1D5D2CA700A7428A /* RatingTable.swift in Sources */,

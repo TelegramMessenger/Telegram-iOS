@@ -95,4 +95,3 @@ public struct SimpleDictionary<K: Hashable, V>: Sequence {
         return true
     }
 }
-
