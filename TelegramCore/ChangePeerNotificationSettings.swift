@@ -10,7 +10,12 @@ import Foundation
 public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId) {
-            let currentSettings = modifier.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings
+            var notificationPeerId = peerId
+            if let associatedPeerId = peer.associatedPeerId {
+                notificationPeerId = associatedPeerId
+            }
+            
+            let currentSettings = modifier.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings
             let previousSettings: TelegramPeerNotificationSettings
             if let currentSettings = currentSettings {
                 previousSettings = currentSettings
@@ -25,7 +30,7 @@ public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, No
                 case .muted:
                     updatedSettings = previousSettings.withUpdatedMuteState(.unmuted)
             }
-            return changePeerNotificationSettings(account: account, peerId: peerId, settings: updatedSettings)
+            return changePeerNotificationSettings(account: account, peerId: notificationPeerId, settings: updatedSettings)
         } else {
             return .complete()
         }
@@ -33,9 +38,14 @@ public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, No
 }
 
 public func changePeerNotificationSettings(account: Account, peerId: PeerId, settings: TelegramPeerNotificationSettings) -> Signal<Void, NoError> {
-    return account.postbox.loadedPeerWithId(peerId)
-        |> mapToSignal { peer -> Signal<Void, NoError> in
-            if let inputPeer = apiInputPeer(peer) {
+    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+        if let peer = modifier.getPeer(peerId) {
+            var notificationPeerId = peerId
+            if let associatedPeerId = peer.associatedPeerId {
+                notificationPeerId = associatedPeerId
+            }
+            
+            if let notificationPeer = modifier.getPeer(notificationPeerId), let inputPeer = apiInputPeer(notificationPeer) {
                 return account.network.request(Api.functions.account.getNotifySettings(peer: .inputNotifyPeer(peer: inputPeer)))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
@@ -62,12 +72,15 @@ public func changePeerNotificationSettings(account: Account, peerId: PeerId, set
                             |> retryRequest
                             |> mapToSignal { result -> Signal<Void, NoError> in
                                 return account.postbox.modify { modifier -> Void in
-                                    modifier.updatePeerNotificationSettings([peerId: settings])
+                                    modifier.updatePeerNotificationSettings([notificationPeerId: settings])
                                 }
-                            }
-                    }
+                        }
+                }
             } else {
                 return .complete()
             }
-    }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
 }

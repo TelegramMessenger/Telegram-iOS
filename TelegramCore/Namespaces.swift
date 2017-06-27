@@ -54,6 +54,14 @@ public struct Namespaces {
     struct CachedItemCollection {
         public static let resolvedByNamePeers: Int8 = 0
     }
+    
+    struct UnorderedItemList {
+        static let synchronizedDeviceContacts: UnorderedItemListEntryTag = {
+            let key = ValueBoxKey(length: 1)
+            key.setUInt8(0, value: 0)
+            return UnorderedItemListEntryTag(value: key)
+        }()
+    }
 }
 
 public extension MessageTags {
