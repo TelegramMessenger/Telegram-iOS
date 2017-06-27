@@ -71,3 +71,4 @@ FOUNDATION_EXPORT const unsigned char MtProtoKitMacVersionString[];
 #import <MtProtoKitMac/MTSignal.h>
 #import <MtProtoKitMac/MTNetworkUsageCalculationInfo.h>
 #import <MtProtoKitMac/MTNetworkUsageManager.h>
+#import <MtProtoKitMac/MTBackupAddressSignals.h>

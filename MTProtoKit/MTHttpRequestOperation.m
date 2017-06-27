@@ -16,8 +16,15 @@
 @implementation MTHttpRequestOperation
 
 + (MTSignal *)dataForHttpUrl:(NSURL *)url {
+    return [self dataForHttpUrl:url headers:nil];
+}
+
++ (MTSignal *)dataForHttpUrl:(NSURL *)url headers:(NSDictionary *)headers {
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        NSURLRequest *request = [NSURLRequest requestWithURL:url];
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+        [headers enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, __unused BOOL *stop) {
+            [request setValue:value forHTTPHeaderField:key];
+        }];
         AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
         
         [operation setSuccessCallbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];

@@ -222,7 +222,15 @@ struct ctr_state {
             _socket.usageCalculationInfo = _usageCalculationInfo;
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
+                if (_socksIp != nil) {
+                    if (_socksUsername.length == 0) {
+                        MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d]", (int)self, _address.ip, (int)_address.port, _socksIp, (int)_socksPort);
+                    } else {
+                        MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)self, _address.ip, (int)_address.port, _socksIp, (int)_socksPort, _socksUsername, _socksPassword);
+                    }
+                } else {
+                    MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
+                }
             }
             
             NSString *ip = _address.ip;
