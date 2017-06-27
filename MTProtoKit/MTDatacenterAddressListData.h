@@ -2,8 +2,8 @@
 
 @interface MTDatacenterAddressListData : NSObject
 
-@property (nonatomic, strong, readonly) NSArray *addressList;
+@property (nonatomic, strong, readonly) NSDictionary<NSNumber *, NSArray *> *addressList;
 
-- (instancetype)initWithAddressList:(NSArray *)addressList;
+- (instancetype)initWithAddressList:(NSDictionary<NSNumber *, NSArray *> *)addressList;
 
 @end

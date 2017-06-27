@@ -31,6 +31,6 @@ typedef MTDatacenterAddressListData *(^MTRequestDatacenterAddressListParser)(NSD
 - (MTExportAuthorizationResponseParser)exportAuthorization:(int32_t)datacenterId data:(__autoreleasing NSData **)data;
 - (NSData *)importAuthorization:(int32_t)authId bytes:(NSData *)bytes;
 
-- (MTRequestDatacenterAddressListParser)requestDatacenterAddressList:(int32_t)datacenterId data:(__autoreleasing NSData **)data;
+- (MTRequestDatacenterAddressListParser)requestDatacenterAddressWithData:(__autoreleasing NSData **)data;
 
 @end

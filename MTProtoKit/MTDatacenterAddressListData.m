@@ -2,7 +2,7 @@
 
 @implementation MTDatacenterAddressListData
 
-- (instancetype)initWithAddressList:(NSArray *)addressList
+- (instancetype)initWithAddressList:(NSDictionary<NSNumber *, NSArray *> *)addressList
 {
     self = [super init];
     if (self != nil)
