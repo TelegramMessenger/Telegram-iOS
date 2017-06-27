@@ -25,7 +25,8 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                                     }
                                     let restrictToTcp = (flags & (1 << 2)) != 0
                                     let isCdn = (flags & (1 << 3)) != 0
-                                    addressList[Int(id)]!.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn))
+                                    let preferForProxy = (flags & (1 << 4)) != 0
+                                    addressList[Int(id)]!.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn, preferForProxy: preferForProxy))
                             }
                         }
                         network.context.performBatchUpdates {

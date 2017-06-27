@@ -49,7 +49,7 @@ public struct BotPaymentNativeProvider {
     public let params: String
 }
 
-public struct BotPaymentShippingAddress {
+public struct BotPaymentShippingAddress: Equatable {
     public let streetLine1: String
     public let streetLine2: String
     public let city: String
@@ -65,9 +65,31 @@ public struct BotPaymentShippingAddress {
         self.countryIso2 = countryIso2
         self.postCode = postCode
     }
+    
+    public static func ==(lhs: BotPaymentShippingAddress, rhs: BotPaymentShippingAddress) -> Bool {
+        if lhs.streetLine1 != rhs.streetLine1 {
+            return false
+        }
+        if lhs.streetLine2 != rhs.streetLine2 {
+            return false
+        }
+        if lhs.city != rhs.city {
+            return false
+        }
+        if lhs.state != rhs.state {
+            return false
+        }
+        if lhs.countryIso2 != rhs.countryIso2 {
+            return false
+        }
+        if lhs.postCode != rhs.postCode {
+            return false
+        }
+        return true
+    }
 }
 
-public struct BotPaymentRequestedInfo {
+public struct BotPaymentRequestedInfo: Equatable {
     public let name: String?
     public let phone: String?
     public let email: String?
@@ -78,6 +100,22 @@ public struct BotPaymentRequestedInfo {
         self.phone = phone
         self.email = email
         self.shippingAddress = shippingAddress
+    }
+    
+    public static func ==(lhs: BotPaymentRequestedInfo, rhs: BotPaymentRequestedInfo) -> Bool {
+        if lhs.name != rhs.name {
+            return false
+        }
+        if lhs.phone != rhs.phone {
+            return false
+        }
+        if lhs.email != rhs.email {
+            return false
+        }
+        if lhs.shippingAddress != rhs.shippingAddress {
+            return false
+        }
+        return true
     }
 }
 
@@ -96,13 +134,13 @@ public struct BotPaymentForm {
     public let savedCredentials: BotPaymentSavedCredentials?
 }
 
-public enum BotPaymentFormReuestError {
+public enum BotPaymentFormRequestError {
     case generic
 }
 
-public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<BotPaymentForm, BotPaymentFormReuestError> {
+public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
     return network.request(Api.functions.payments.getPaymentForm(msgId: messageId.id))
-        |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormReuestError> in
+        |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
             return .fail(.generic)
         }
         |> map { result -> BotPaymentForm in
@@ -164,5 +202,112 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
                     }
                     return BotPaymentForm(canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: providerId, url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
             }
+        }
+}
+
+public enum ValidateBotPaymentFormError {
+    case generic
+}
+
+public struct BotPaymentShippingOption {
+    public let id: String
+    public let title: String
+    public let prices: [BotPaymentPrice]
+}
+
+public struct BotPaymentValidatedFormInfo {
+    public let id: String?
+    public let shippingOptions: [BotPaymentShippingOption]?
+}
+
+public func validateBotPaymentForm(network: Network, saveInfo: Bool, messageId: MessageId, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError>  {
+    var flags: Int32 = 0
+    if saveInfo {
+        flags |= (1 << 0)
+    }
+    var infoFlags: Int32 = 0
+    if let _ = formInfo.name {
+        infoFlags |= (1 << 0)
+    }
+    if let _ = formInfo.phone {
+        infoFlags |= (1 << 1)
+    }
+    if let _ = formInfo.email {
+        infoFlags |= (1 << 2)
+    }
+    var apiShippingAddress: Api.PostAddress?
+    if let address = formInfo.shippingAddress {
+        infoFlags |= (1 << 3)
+        apiShippingAddress = .postAddress(streetLine1: address.streetLine1, streetLine2: address.streetLine2, city: address.city, state: address.state, countryIso2: address.countryIso2, postCode: address.postCode)
+    }
+    return network.request(Api.functions.payments.validateRequestedInfo(flags: flags, msgId: messageId.id, info: .paymentRequestedInfo(flags: infoFlags, name: formInfo.name, phone: formInfo.phone, email: formInfo.email, shippingAddress: apiShippingAddress)))
+        |> mapError { error -> ValidateBotPaymentFormError in
+            return .generic
+        }
+        |> map { result -> BotPaymentValidatedFormInfo in
+            switch result {
+                case let .validatedRequestedInfo(_, id, shippingOptions):
+                    return BotPaymentValidatedFormInfo(id: id, shippingOptions: shippingOptions.flatMap {
+                        return $0.map {
+                            switch $0 {
+                                case let .shippingOption(id, title, prices):
+                                    return BotPaymentShippingOption(id: id, title: title, prices: prices.map {
+                                        switch $0 {
+                                            case let .labeledPrice(label, amount):
+                                                return BotPaymentPrice(label: label, amount: amount)
+                                        }
+                                    })
+                            }
+                        }
+                    })
+            }
+        }
+}
+
+public enum BotPaymentCredentials {
+    case generic(data: String, saveOnServer: Bool)
+    case saved(id: String, tempPassword: Data)
+}
+
+public enum SendBotPaymentFormError {
+    case generic
+}
+
+public enum SendBotPaymentResult {
+    case done
+    case externalVerificationRequired(url: String)
+}
+
+public func sendBotPaymentForm(account: Account, messageId: MessageId, validatedInfoId: String?, shippingOptionId: String?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+    let apiCredentials: Api.InputPaymentCredentials
+    switch credentials {
+        case let .generic(data, saveOnServer):
+            var credentialsFlags: Int32 = 0
+            if saveOnServer {
+                credentialsFlags |= (1 << 0)
+            }
+            apiCredentials = .inputPaymentCredentials(flags: credentialsFlags, data: .dataJSON(data: data))
+        case let .saved(id, tempPassword):
+            apiCredentials = .inputPaymentCredentialsSaved(id: id, tmpPassword: Buffer(data: tempPassword))
+    }
+    var flags: Int32 = 0
+    if validatedInfoId != nil {
+        flags |= (1 << 0)
+    }
+    if shippingOptionId != nil {
+        flags |= (1 << 1)
+    }
+    return account.network.request(Api.functions.payments.sendPaymentForm(flags: flags, msgId: messageId.id, requestedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, credentials: apiCredentials))
+        |> map { result -> SendBotPaymentResult in
+            switch result {
+                case let .paymentResult(updates):
+                    account.stateManager.addUpdates(updates)
+                    return .done
+                case let .paymentVerficationNeeded(url):
+                    return .externalVerificationRequired(url: url)
+            }
+        }
+        |> `catch` { _ -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+            return .fail(.generic)
         }
 }

@@ -235,6 +235,8 @@ private var declaredEncodables: Void = {
     declareEncodable(SynchronizeLocalizationUpdatesOperation.self, f: { SynchronizeLocalizationUpdatesOperation(decoder: $0) })
     declareEncodable(ChannelMessageStateVersionAttribute.self, f: { ChannelMessageStateVersionAttribute(decoder: $0) })
     declareEncodable(CachedSecretChatData.self, f: { CachedSecretChatData(decoder: $0) })
+    declareEncodable(ManagedDeviceContactsMetaInfo.self, f: { ManagedDeviceContactsMetaInfo(decoder: $0) })
+    declareEncodable(ManagedDeviceContactEntryContents.self, f: { ManagedDeviceContactEntryContents(decoder: $0) })
     
     return
 }()
@@ -458,6 +460,9 @@ public class Account {
     private let notificationTokenDisposable = MetaDisposable()
     private let voipTokenDisposable = MetaDisposable()
     
+    public let deviceContactList = Promise<[DeviceContact]>()
+    private let deviceContactListDisposable = MetaDisposable()
+    
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
     
@@ -666,6 +671,8 @@ public class Account {
                 }
             }
         self.updatedPresenceDisposable.set(updatedPresence.start())
+        
+        self.deviceContactListDisposable.set(managedDeviceContacts(postbox: self.postbox, network: self.network, deviceContacts: self.deviceContactList.get()).start())
     }
     
     deinit {
@@ -673,6 +680,7 @@ public class Account {
         self.managedStickerPacksDisposable.dispose()
         self.notificationTokenDisposable.dispose()
         self.voipTokenDisposable.dispose()
+        self.deviceContactListDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.updatedPresenceDisposable.dispose()
         self.managedOperationsDisposable.dispose()

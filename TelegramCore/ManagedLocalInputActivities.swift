@@ -108,6 +108,10 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
 private func requestActivity(postbox: Postbox, network: Network, peerId: PeerId, activity: PeerInputActivity?) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId) {
+            if let channel = peer as? TelegramChannel, case .group = channel.info {
+                return .complete()
+            }
+            
             if let inputPeer = apiInputPeer(peer) {
                 return network.request(Api.functions.messages.setTyping(peer: inputPeer, action: actionFromActivity(activity)))
                     |> `catch` { _ -> Signal<Api.Bool, NoError> in

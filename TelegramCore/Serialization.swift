@@ -50,27 +50,29 @@ public class Serialization: NSObject, MTSerialization {
         return Api.functions.auth.importAuthorization(id: authId, bytes: Buffer(data: bytes)).1.makeData()
     }
     
-    public func requestDatacenterAddressList(_ datacenterId: Int32, data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTRequestDatacenterAddressListParser! {
+    public func requestDatacenterAddress(with data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTRequestDatacenterAddressListParser! {
         let (_, buffer, parse) = Api.functions.help.getConfig()
         data.pointee = buffer.makeData() as NSData
         return { response -> MTDatacenterAddressListData! in
             if let config = parse(Buffer(data: response)) {
                 switch config {
                     case let .config(_, _, _, _, _, dcOptions, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                        var addressList = [MTDatacenterAddress]()
+                        var addressDict: [NSNumber: [Any]] = [:]
                         for option in dcOptions {
                             switch option {
-                                case let .dcOption(flags, id, ipAddress, port) where id == datacenterId:
+                                case let .dcOption(flags, id, ipAddress, port):
+                                    if addressDict[id as NSNumber] == nil {
+                                        addressDict[id as NSNumber] = []
+                                    }
                                     let preferForMedia = (flags & (1 << 1)) != 0
                                     let restrictToTcp = (flags & (1 << 2)) != 0
                                     let isCdn = (flags & (1 << 3)) != 0
-                                    addressList.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn))
-                                    break
-                                default:
+                                    let preferForProxy = (flags & (1 << 4)) != 0
+                                    addressDict[id as NSNumber]!.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn, preferForProxy: preferForProxy)!)
                                     break
                             }
                         }
-                        return MTDatacenterAddressListData(addressList: addressList)
+                        return MTDatacenterAddressListData(addressList: addressDict)
                 }
                 
             }

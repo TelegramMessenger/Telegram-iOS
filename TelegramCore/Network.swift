@@ -384,10 +384,19 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             }
             
             for (id, ip) in seedAddressList {
-                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false)]))
+                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false)]))
             }
             
             context.keychain = keychain
+            
+            if testingEnvironment {
+                for (id, ip) in seedAddressList {
+                    context.updateAddressSetForDatacenter(withId: id, addressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false)]), forceUpdateSchemes: true)
+                }
+            }
+            
+            context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context))
+            
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
             
             let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
