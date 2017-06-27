@@ -727,11 +727,8 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
     }
     
     BIGNUM x, y;
-    static BN_CTX *bnContext = nil;
+    BN_CTX *bnContext = BN_CTX_new();
     uint8_t *bytes = buffer;
-    if (bnContext == nil) {
-        bnContext = BN_CTX_new();
-    }
     BN_init(&x);
     BN_init(&y);
     BN_bin2bn(bytes, 256, &x);
@@ -777,6 +774,7 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
     BN_free(&y);
     RSA_free(rsaKey);
     BIO_free(keyBio);
+    BN_CTX_free(bnContext);
     return result;
 }
 
