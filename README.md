@@ -21,21 +21,21 @@ The following features are currently supported:
 
 6. **Authenticate:** Identify and authenticate users of Ad-Hoc or Enterprise builds
 
-## 2. Setup
+## 1. Setup
 
 It is super easy to use HockeyApp in your iOS app. Have a look at our [documentation](https://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Guide-Installation-Setup.html) and onboard your app within minutes.
 
-## 3. Documentation
+## 2. Documentation
 
 Please visit [our landing page](https://www.hockeyapp.net/help/sdk/ios/4.1.6/index.html) as a starting point for all of our documentation.
 
 Please check out our [getting started documentation](https://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Guide-Installation-Setup.html), [changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Changelog.html), [header docs](https://www.hockeyapp.net/help/sdk/ios/4.1.6/index.html) as well as our [troubleshooting section](https://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Guide-Installation-Setup.html#troubleshooting).
 
-## 4. Contributing
+## 3. Contributing
 
 We're looking forward to your contributions via pull requests.
 
-### 4.1 Development environment
+### 3.1 Development environment
 
 * A Mac running the latest version of OS X.
 * Get the latest Xcode from the Mac App Store.
@@ -43,14 +43,14 @@ We're looking forward to your contributions via pull requests.
 * [CocoaPods](https://cocoapods.org/)
 * [Carthage](https://github.com/Carthage/Carthage)
 
-### 4.2 Code of Conduct
+### 3.2 Code of Conduct
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
-### 4.3 Contributor License
+### 3.3 Contributor License
 
 You must sign a [Contributor License Agreement](https://cla.microsoft.com/) before submitting your pull request. To complete the Contributor License Agreement (CLA), you will need to submit a request via the [form](https://cla.microsoft.com/) and then electronically sign the CLA when you receive the email containing the link to the document. You need to sign the CLA only once to cover submission to any Microsoft OSS project. 
 
-## 5. Contact
+## 4. Contact
 
 If you have further questions or are running into trouble that cannot be resolved by any of the steps [in our troubleshooting section](https://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Guide-Installation-Setup.html#troubleshooting), feel free to open an issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net).
