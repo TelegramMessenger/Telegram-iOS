@@ -38,6 +38,7 @@ public struct TelegramChannelAdminRightsFlags: OptionSet {
     
     public static var broadcastSpecific: TelegramChannelAdminRightsFlags = [
         .canChangeInfo,
+        .canInviteUsers,
         .canPostMessages,
         .canEditMessages,
         .canDeleteMessages,
