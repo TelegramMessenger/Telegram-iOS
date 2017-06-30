@@ -1,0 +1,92 @@
+<div class="task-group">
+  {{#name}}
+  <div class="task-name-container">
+    <a name="/{{uid}}"></a>
+    <a name="//apple_ref/{{language_stub}}/Section/{{name}}" class="dashAnchor"></a>
+    <a href="#/{{uid}}">
+      <h3 class="section-name">{{name}}</h3>
+    </a>
+  </div>
+  {{/name}}
+  <ul>
+    {{#items}}
+    <li class="item">
+      <div>
+        <code>
+        <a name="/{{usr}}"></a>
+        <a name="//apple_ref/{{language_stub}}/{{dash_type}}/{{name}}" class="dashAnchor"></a>
+        <a class="token" href="#/{{usr}}">{{name}}</a>
+        </code>
+        {{#default_impl_abstract}}
+          <span class="declaration-note">
+            Default implementation
+          </span>
+        {{/default_impl_abstract}}
+        {{#from_protocol_extension}}
+          <span class="declaration-note">
+            Extension method
+          </span>
+        {{/from_protocol_extension}}
+      </div>
+      <div class="height-container">
+        <div class="pointer-container"></div>
+        <section class="section">
+          <div class="pointer"></div>
+          {{#abstract}}
+          <div class="abstract">
+            {{{abstract}}}
+            {{#url}}
+            <a href="{{{path_to_root}}}{{{url}}}" class="slightly-smaller">See more</a>
+            {{/url}}
+          </div>
+          {{/abstract}}
+          {{#default_impl_abstract}}
+          <h4>Default Implementation</h4>
+          <div class="default_impl abstract">
+            {{{default_impl_abstract}}}
+          </div>
+          {{/default_impl_abstract}}
+          {{#declaration}}
+          <div class="declaration">
+            <h4>Declaration</h4>
+            <div class="language">
+              <p class="aside-title">{{language}}</p>
+              {{{declaration}}}
+            </div>
+            {{#other_language_declaration}}
+            <div class="language">
+              <p class="aside-title">Swift</p>
+              {{{other_language_declaration}}}
+            </div>
+            {{/other_language_declaration}}
+          </div>
+          {{/declaration}}
+          {{#parameters.count}}
+          <div>
+            <h4>Parameters</h4>
+            <table class="graybox">
+              <tbody>
+                {{#parameters}}
+                {{> parameter}}
+                {{/parameters}}
+              </tbody>
+            </table>
+          </div>
+          {{/parameters.count}}
+          {{#return}}
+          <div>
+            <h4>Return Value</h4>
+            {{{return}}}
+          </div>
+          {{/return}}
+          {{#github_token_url}}
+          <div class="slightly-smaller">
+            <a href="{{{github_token_url}}}">Show on GitHub</a>
+          </div>
+          {{/github_token_url}}
+        </section>
+      </div>
+    </li>
+    {{/items}}
+  </ul>
+</div>

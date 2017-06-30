@@ -1,0 +1,37 @@
+objc: true
+clean: true
+sdk: iphonesimulator
+
+theme: ../Themes/apple
+
+module: HockeySDK
+module_version: 4.1.6
+author: Microsoft Corp
+author_url: https://www.microsoft.com
+
+readme: ../../README.md
+documentation: ../Guides/[^index]*.md
+custom_categories:
+  - name: Guides
+    children:
+    - Guide Installation Setup
+    - Migration Kits template
+  - name: How To
+    children:
+    - App Versioning
+    - Set Custom AlertViewHandler
+    - Upload Symbols
+  - name: Troubleshooting
+    children:
+    - Crash Reporting Not Working
+
+umbrella_header: ../../Products/HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDK.framework/Headers/HockeySDK.h
+framework_root: ../../Products/HockeySDK-iOS
+
+root_url: https://support.hockeyapp.net/kb/api
+github_url: https://github.com/bitstadium/HockeySDK-iOS/
+github_file_prefix: "https://github.com/bitstadium/HockeySDK-iOS/"
+
+skip_undocumented: true
+
+output: Generated/
