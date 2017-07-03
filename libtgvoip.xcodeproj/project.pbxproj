@@ -56,6 +56,8 @@
 		69791A4E1EE8262400BB85FB /* NetworkSocketPosix.h in Headers */ = {isa = PBXBuildFile; fileRef = 69791A4C1EE8262400BB85FB /* NetworkSocketPosix.h */; };
 		69791A571EE8272A00BB85FB /* Resampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69791A551EE8272A00BB85FB /* Resampler.cpp */; };
 		69791A581EE8272A00BB85FB /* Resampler.h in Headers */ = {isa = PBXBuildFile; fileRef = 69791A561EE8272A00BB85FB /* Resampler.h */; };
+		69960A041EF85C2900F9D091 /* DarwinSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 69960A021EF85C2900F9D091 /* DarwinSpecific.h */; };
+		69960A051EF85C2900F9D091 /* DarwinSpecific.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69960A031EF85C2900F9D091 /* DarwinSpecific.mm */; };
 		69A6DD941E95EC7700000E69 /* array_view.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD011E95EC7700000E69 /* array_view.h */; };
 		69A6DD951E95EC7700000E69 /* atomicops.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD021E95EC7700000E69 /* atomicops.h */; };
 		69A6DD961E95EC7700000E69 /* basictypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD031E95EC7700000E69 /* basictypes.h */; };
@@ -235,6 +237,13 @@
 			remoteGlobalIDString = D020FB0A1D99637100F279AA;
 			remoteInfo = LegacyDatabase;
 		};
+		69960A0D1EF85C2900F9D091 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 692AB9071E675E8800706ACC /* Telegraph.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 099120C01EEAA63400F1366E;
+			remoteInfo = Widget;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -288,6 +297,8 @@
 		69791A4C1EE8262400BB85FB /* NetworkSocketPosix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetworkSocketPosix.h; path = os/posix/NetworkSocketPosix.h; sourceTree = SOURCE_ROOT; };
 		69791A551EE8272A00BB85FB /* Resampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Resampler.cpp; sourceTree = "<group>"; };
 		69791A561EE8272A00BB85FB /* Resampler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Resampler.h; sourceTree = "<group>"; };
+		69960A021EF85C2900F9D091 /* DarwinSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DarwinSpecific.h; sourceTree = "<group>"; };
+		69960A031EF85C2900F9D091 /* DarwinSpecific.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DarwinSpecific.mm; sourceTree = "<group>"; };
 		69A6DD011E95EC7700000E69 /* array_view.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = array_view.h; sourceTree = "<group>"; };
 		69A6DD021E95EC7700000E69 /* atomicops.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = atomicops.h; sourceTree = "<group>"; };
 		69A6DD031E95EC7700000E69 /* basictypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = basictypes.h; sourceTree = "<group>"; };
@@ -522,6 +533,8 @@
 				692AB8C31E6759DD00706ACC /* AudioUnitIO.h */,
 				692AB8C41E6759DD00706ACC /* TGLogWrapper.h */,
 				692AB8C51E6759DD00706ACC /* TGLogWrapper.m */,
+				69960A021EF85C2900F9D091 /* DarwinSpecific.h */,
+				69960A031EF85C2900F9D091 /* DarwinSpecific.mm */,
 			);
 			path = darwin;
 			sourceTree = "<group>";
@@ -546,6 +559,7 @@
 				692AB9171E675E8800706ACC /* watchkitapp Extension.appex */,
 				692AB9191E675E8800706ACC /* SiriIntents.appex */,
 				692AB91B1E675E8800706ACC /* LegacyDatabase.framework */,
+				69960A0E1EF85C2900F9D091 /* Widget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -930,6 +944,7 @@
 				69A6DD9A1E95EC7700000E69 /* safe_compare.h in Headers */,
 				69A6DDEF1E95EC7700000E69 /* digital_agc.h in Headers */,
 				69A6DDF21E95EC7700000E69 /* apm_data_dumper.h in Headers */,
+				69960A041EF85C2900F9D091 /* DarwinSpecific.h in Headers */,
 				69A6DDC21E95EC7700000E69 /* spl_inl_mips.h in Headers */,
 				69791A581EE8272A00BB85FB /* Resampler.h in Headers */,
 				692AB8DB1E6759DD00706ACC /* EchoCanceller.h in Headers */,
@@ -1045,6 +1060,13 @@
 			remoteRef = 692AB91A1E675E8800706ACC /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
+		69960A0E1EF85C2900F9D091 /* Widget.appex */ = {
+			isa = PBXReferenceProxy;
+			fileType = "wrapper.app-extension";
+			path = Widget.appex;
+			remoteRef = 69960A0D1EF85C2900F9D091 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 /* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
@@ -1075,6 +1097,7 @@
 				69A6DDA41E95EC7700000E69 /* fft4g.c in Sources */,
 				692AB9021E6759DD00706ACC /* VoIPController.cpp in Sources */,
 				69A6DDB61E95EC7700000E69 /* energy.c in Sources */,
+				69960A051EF85C2900F9D091 /* DarwinSpecific.mm in Sources */,
 				69A6DDA11E95EC7700000E69 /* audio_util.cc in Sources */,
 				69A6DDE31E95EC7700000E69 /* echo_cancellation.cc in Sources */,
 				69A6DDD71E95EC7700000E69 /* sqrt_of_one_minus_x_squared.c in Sources */,
@@ -1287,7 +1310,6 @@
 				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				OTHER_CFLAGS = (
-					"-DTGVOIP_USE_AUDIO_SESSION",
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DWEBRTC_POSIX",
@@ -1323,7 +1345,6 @@
 				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				OTHER_CFLAGS = (
-					"-DTGVOIP_USE_AUDIO_SESSION",
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DWEBRTC_POSIX",
@@ -1410,7 +1431,6 @@
 				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				OTHER_CFLAGS = (
-					"-DTGVOIP_USE_AUDIO_SESSION",
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DWEBRTC_POSIX",
@@ -1491,7 +1511,6 @@
 				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				OTHER_CFLAGS = (
-					"-DTGVOIP_USE_AUDIO_SESSION",
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
 					"-DWEBRTC_POSIX",

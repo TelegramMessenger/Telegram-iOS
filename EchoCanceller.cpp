@@ -75,7 +75,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		webrtc::WebRtcAec_set_config(aec, config);
 #endif
 
-		farendQueue=new BlockingQueue(11);
+		farendQueue=new BlockingQueue<int16_t*>(11);
 		farendBufferPool=new BufferPool(960*2, 10);
 		running=true;
 
@@ -170,7 +170,7 @@ void EchoCanceller::SpeakerOutCallback(unsigned char* data, size_t len){
 		WebRtcAecm_BufferFarend(state, (int16_t*)(data+offset), AEC_FRAME_SIZE);
 		offset+=OFFSET_STEP;
 	}*/
-	unsigned char* buf=farendBufferPool->Get();
+	int16_t* buf=(int16_t*)farendBufferPool->Get();
 	if(buf){
 		memcpy(buf, data, 960*2);
 		farendQueue->Put(buf);
@@ -184,7 +184,7 @@ void *EchoCanceller::StartBufferFarendThread(void *arg){
 
 void EchoCanceller::RunBufferFarendThread(){
 	while(running){
-		int16_t* samplesIn=(int16_t *) farendQueue->GetBlocking();
+		int16_t* samplesIn=farendQueue->GetBlocking();
 		if(samplesIn){
 			webrtc::IFChannelBuffer* bufIn=(webrtc::IFChannelBuffer*) splittingFilterFarendIn;
 			webrtc::IFChannelBuffer* bufOut=(webrtc::IFChannelBuffer*) splittingFilterFarendOut;

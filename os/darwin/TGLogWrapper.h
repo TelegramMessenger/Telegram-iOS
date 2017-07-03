@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-void __tgvoip_call_tglog(char* format, ...);
+void __tgvoip_call_tglog(const char* format, ...);
 	
 #if defined __cplusplus
 };

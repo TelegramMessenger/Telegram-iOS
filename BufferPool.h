@@ -17,10 +17,13 @@ public:
 	~BufferPool();
 	unsigned char* Get();
 	void Reuse(unsigned char* buffer);
+	size_t GetSingleBufferSize();
+	size_t GetBufferCount();
 
 private:
 	uint64_t usedBuffers;
 	int bufferCount;
+	size_t size;
 	unsigned char* buffers[64];
 	tgvoip_mutex_t mutex;
 };

@@ -37,11 +37,11 @@ void tgvoip_log_file_write_header();
 
 #include "os/darwin/TGLogWrapper.h"
 
-#define LOGV(msg, ...) __tgvoip_call_tglog("V/tgvoip: " msg, ##__VA_ARGS__)
-#define LOGD(msg, ...) __tgvoip_call_tglog("D/tgvoip: " msg, ##__VA_ARGS__)
-#define LOGI(msg, ...) __tgvoip_call_tglog("I/tgvoip: " msg, ##__VA_ARGS__)
-#define LOGW(msg, ...) __tgvoip_call_tglog("W/tgvoip: " msg, ##__VA_ARGS__)
-#define LOGE(msg, ...) __tgvoip_call_tglog("E/tgvoip: " msg, ##__VA_ARGS__)
+#define LOGV(msg, ...) {__tgvoip_call_tglog("V/tgvoip: " msg, ##__VA_ARGS__); tgvoip_log_file_printf('V', msg, ##__VA_ARGS__);}
+#define LOGD(msg, ...) {__tgvoip_call_tglog("D/tgvoip: " msg, ##__VA_ARGS__); tgvoip_log_file_printf('D', msg, ##__VA_ARGS__);}
+#define LOGI(msg, ...) {__tgvoip_call_tglog("I/tgvoip: " msg, ##__VA_ARGS__); tgvoip_log_file_printf('I', msg, ##__VA_ARGS__);}
+#define LOGW(msg, ...) {__tgvoip_call_tglog("W/tgvoip: " msg, ##__VA_ARGS__); tgvoip_log_file_printf('W', msg, ##__VA_ARGS__);}
+#define LOGE(msg, ...) {__tgvoip_call_tglog("E/tgvoip: " msg, ##__VA_ARGS__); tgvoip_log_file_printf('E', msg, ##__VA_ARGS__);}
 
 #elif defined(_WIN32) && defined(_DEBUG)
 

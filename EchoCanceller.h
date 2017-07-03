@@ -40,7 +40,7 @@ private:
 	void* splittingFilterFarendIn; // webrtc::IFChannelBuffer
 	void* splittingFilterFarendOut; // webrtc::IFChannelBuffer
 	tgvoip_thread_t bufferFarendThread;
-	BlockingQueue* farendQueue;
+	BlockingQueue<int16_t*>* farendQueue;
 	BufferPool* farendBufferPool;
 	bool running;
 	void* ns; // NsxHandle

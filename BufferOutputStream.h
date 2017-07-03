@@ -15,6 +15,7 @@ class BufferOutputStream{
 
 public:
 	BufferOutputStream(size_t size);
+	BufferOutputStream(unsigned char* buffer, size_t size);
 	~BufferOutputStream();
 	void WriteByte(unsigned char byte);
 	void WriteInt64(int64_t i);
@@ -30,6 +31,7 @@ private:
 	unsigned char* buffer;
 	size_t size;
 	size_t offset;
+	bool bufferProvided;
 };
 }
 

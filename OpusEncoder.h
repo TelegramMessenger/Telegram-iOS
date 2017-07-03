@@ -42,7 +42,7 @@ private:
 	uint32_t requestedBitrate;
 	uint32_t currentBitrate;
 	tgvoip_thread_t thread;
-	BlockingQueue queue;
+	BlockingQueue<unsigned char*> queue;
 	BufferPool bufferPool;
 	EchoCanceller* echoCanceller;
 	int complexity;

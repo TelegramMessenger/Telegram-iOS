@@ -37,7 +37,7 @@ private:
 	static void* StartThread(void* param);
 	void RunThread();
 	::OpusDecoder* dec;
-	BlockingQueue* decodedQueue;
+	BlockingQueue<unsigned char*>* decodedQueue;
 	BufferPool* bufferPool;
 	unsigned char* buffer;
 	unsigned char* lastDecoded;

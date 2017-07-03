@@ -21,6 +21,7 @@ BufferPool::BufferPool(unsigned int size, unsigned int count){
 		buffers[i]=buffers[0]+i*size;
 	}
 	usedBuffers=0;
+	this->size=size;
 }
 
 BufferPool::~BufferPool(){
@@ -56,3 +57,10 @@ void BufferPool::Reuse(unsigned char* buffer){
 	abort();
 }
 
+size_t BufferPool::GetSingleBufferSize(){
+	return size;
+}
+
+size_t BufferPool::GetBufferCount(){
+	return (size_t) bufferCount;
+}

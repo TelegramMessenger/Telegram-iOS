@@ -2,9 +2,9 @@
 
 #import <ASCommon.h>
 
-void __tgvoip_call_tglog(char* format, ...){
+void __tgvoip_call_tglog(const char* format, ...){
 	va_list args;
 	va_start(args, format);
-	TGLogv([[NSString alloc]initWithCString:format], args);
+	TGLogv([[NSString alloc]initWithUTF8String:format], args);
 	va_end(args);
 }

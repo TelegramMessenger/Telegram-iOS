@@ -6,7 +6,6 @@
 
 #include <jni.h>
 #include <string.h>
-#include <wchar.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -86,6 +85,18 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeConnect(JNIEnv* env, jobject thiz, jlong inst){
 	((VoIPController*)(intptr_t)inst)->Connect();
+}
+
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetProxy(JNIEnv* env, jobject thiz, jlong inst, jstring _address, jint port, jstring _username, jstring _password){
+	const char* address=env->GetStringUTFChars(_address, NULL);
+	const char* username=_username ? env->GetStringUTFChars(_username, NULL) : NULL;
+	const char* password=_password ? env->GetStringUTFChars(_password, NULL) : NULL;
+	((VoIPController*)(intptr_t)inst)->SetProxy(PROXY_SOCKS5, address, (uint16_t)port, username ? username : "", password ? password : "");
+	env->ReleaseStringUTFChars(_address, address);
+	if(username)
+		env->ReleaseStringUTFChars(_username, username);
+	if(password)
+		env->ReleaseStringUTFChars(_password, password);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetEncryptionKey(JNIEnv* env, jobject thiz, jlong inst, jbyteArray key, jboolean isOutgoing){

@@ -5,6 +5,7 @@
 //
 
 #include "BufferOutputStream.h"
+#include <stdexcept>
 #include <string.h>
 
 using namespace tgvoip;
@@ -13,10 +14,19 @@ BufferOutputStream::BufferOutputStream(size_t size){
 	buffer=(unsigned char*) malloc(size);
 	offset=0;
 	this->size=size;
+	bufferProvided=false;
+}
+
+BufferOutputStream::BufferOutputStream(unsigned char *buffer, size_t size){
+	this->buffer=buffer;
+	this->size=size;
+	offset=0;
+	bufferProvided=true;
 }
 
 BufferOutputStream::~BufferOutputStream(){
-	free(buffer);
+	if(!bufferProvided)
+		free(buffer);
 }
 
 void BufferOutputStream::WriteByte(unsigned char byte){
@@ -69,6 +79,9 @@ size_t BufferOutputStream::GetLength(){
 
 void BufferOutputStream::ExpandBufferIfNeeded(size_t need){
 	if(offset+need>size){
+		if(bufferProvided){
+			throw std::out_of_range("buffer overflow");
+		}
 		if(need<1024){
 			buffer=(unsigned char *) realloc(buffer, size+1024);
 			size+=1024;

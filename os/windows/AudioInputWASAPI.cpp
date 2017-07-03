@@ -347,10 +347,8 @@ void AudioInputWASAPI::RunThread() {
 		}else if(waitResult==WAIT_OBJECT_0+2){ // audioSamplesReadyEvent
 			if(!audioClient)
 				continue;
-			if(bufferSize==0){
-				res=audioClient->GetBufferSize(&bufferSize);
-				CHECK_RES(res, "audioClient->GetBufferSize");
-			}
+			res=captureClient->GetNextPacketSize(&bufferSize);
+			CHECK_RES(res, "captureClient->GetNextPacketSize");
 			BYTE* data;
 			uint32_t framesAvailable=bufferSize;
 			DWORD flags;

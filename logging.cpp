@@ -19,9 +19,7 @@
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
-#if TARGET_OS_OSX
 #include "os/darwin/DarwinSpecific.h"
-#endif
 #endif
 
 FILE* tgvoipLogFile=NULL;
@@ -69,11 +67,17 @@ void tgvoip_log_file_write_header(){
 		char systemVersion[128];
 		snprintf(systemVersion, sizeof(systemVersion), "%s %s (%s)", sysname.sysname, sysname.release, sysname.version);
 #endif
-#elif defined(__APPLE__) && TARGET_OS_OSX
+#elif defined(__APPLE__)
 		char osxVer[128];
 		tgvoip::DarwinSpecific::GetSystemName(osxVer, sizeof(osxVer));
 		char systemVersion[128];
+#if TARGET_OS_OSX
 		snprintf(systemVersion, sizeof(systemVersion), "OS X %s", osxVer);
+#elif TARGET_OS_IPHONE
+		snprintf(systemVersion, sizeof(systemVersion), "iOS %s", osxVer);
+#else
+		snprintf(systemVersion, sizeof(systemVersion), "Unknown Darwin %s", osxVer);
+#endif
 #else
 		const char* systemVersion="Unknown OS";
 #endif

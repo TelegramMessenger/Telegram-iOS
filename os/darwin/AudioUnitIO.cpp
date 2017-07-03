@@ -33,8 +33,13 @@ AudioUnitIO::AudioUnitIO(){
 	inBufferList.mBuffers[0].mData=malloc(10240);
 	inBufferList.mBuffers[0].mDataByteSize=10240;
 	inBufferList.mNumberBuffers=1;
+#ifdef TGVOIP_USE_AUDIO_SESSION
 	if(haveAudioSession)
 		ProcessAudioSessionAcquired();
+#else
+	haveAudioSession=true;
+	ProcessAudioSessionAcquired();
+#endif
 }
 
 AudioUnitIO::~AudioUnitIO(){
@@ -98,9 +103,11 @@ void AudioUnitIO::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_
 	if(configured)
 		return;
 	
+#ifdef TGVOIP_USE_AUDIO_SESSION
 	runFakeIO=true;
 	start_thread(fakeIOThread, AudioUnitIO::StartFakeIOThread, this);
 	set_thread_priority(fakeIOThread, get_thread_max_priority());
+#endif
 	
 	if(haveAudioSession){
 		ActuallyConfigure(sampleRate, bitsPerSample, channels);

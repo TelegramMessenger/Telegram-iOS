@@ -24,7 +24,7 @@ tgvoip::OpusDecoder::OpusDecoder(MediaStreamItf *dst) : semaphore(32, 0){
 	lastDecodedLen=0;
 	outputBufferSize=0;
 	lastDecodedOffset=0;
-	decodedQueue=new BlockingQueue(33);
+	decodedQueue=new BlockingQueue<unsigned char*>(33);
 	bufferPool=new BufferPool(PACKET_SIZE, 32);
 	echoCanceller=NULL;
 	frameDuration=20;
