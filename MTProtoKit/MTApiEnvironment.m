@@ -366,6 +366,7 @@ typedef enum {
     result.disableUpdates = self.disableUpdates;
     result.tcpPayloadPrefix = self.tcpPayloadPrefix;
     result.datacenterAddressOverrides = self.datacenterAddressOverrides;
+    result->_socksProxySettings = self.socksProxySettings;
     
     [result _updateApiInitializationHash];
     
