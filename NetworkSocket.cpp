@@ -479,6 +479,7 @@ void NetworkSocketSOCKS5Proxy::Close(){
 
 void NetworkSocketSOCKS5Proxy::Connect(NetworkAddress *address, uint16_t port){
 	if(!failed){
+		tcp->SetTimeouts(1, 2);
 		unsigned char buf[1024];
 		BufferOutputStream out(buf, sizeof(buf));
 		out.WriteByte(5); // VER
@@ -521,6 +522,7 @@ void NetworkSocketSOCKS5Proxy::Connect(NetworkAddress *address, uint16_t port){
 		connectedAddress=v4 ? (NetworkAddress*)new IPv4Address(*v4) : (NetworkAddress*)new IPv6Address(*v6);
 		connectedPort=port;
 		LOGV("socks5: connect succeeded");
+		tcp->SetTimeouts(5, 60);
 	}
 }
 
@@ -530,6 +532,7 @@ NetworkSocket *NetworkSocketSOCKS5Proxy::GetWrapped(){
 
 void NetworkSocketSOCKS5Proxy::InitConnection(){
 	unsigned char buf[1024];
+	tcp->SetTimeouts(1, 2);
 	BufferOutputStream p(buf, sizeof(buf));
 	p.WriteByte(5); // VER
 	if(!username.empty()){
@@ -589,6 +592,7 @@ void NetworkSocketSOCKS5Proxy::InitConnection(){
 		failed=true;
 		return;
 	}
+	tcp->SetTimeouts(5, 60);
 }
 
 bool NetworkSocketSOCKS5Proxy::IsFailed(){

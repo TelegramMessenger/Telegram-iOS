@@ -1774,9 +1774,9 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint* ep){
 					return;
 				}
 				s=proxy;
-			}else if(proxyProtocol==PROXY_HTTP){
+			}/*else if(proxyProtocol==PROXY_HTTP){
 				s=NetworkSocket::Create(PROTO_TCP);
-			}else{
+			}*/else{
 				LOGE("Unsupported proxy protocol %d", proxyProtocol);
 				SetState(STATE_FAILED);
 				return;
