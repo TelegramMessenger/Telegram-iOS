@@ -542,7 +542,7 @@
 		D0D2689E1D7A055400C422DA /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD990F1D75C16100F41187 /* libcrypto.a */; };
 		D0E9B9ED1F0176DA00F079A4 /* MTBackupAddressSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0E9B9EE1F0176DA00F079A4 /* MTBackupAddressSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0E9B9EF1F0176DA00F079A4 /* MTBackupAddressSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */; };
+		D0E9B9EF1F0176DA00F079A4 /* MTBackupAddressSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0E9B9F01F0176DA00F079A4 /* MTBackupAddressSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9B9EC1F0176DA00F079A4 /* MTBackupAddressSignals.m */; };
 		D0E9B9F11F0176DA00F079A4 /* MTBackupAddressSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9B9EC1F0176DA00F079A4 /* MTBackupAddressSignals.m */; };
 		D0E9B9F21F0176DA00F079A4 /* MTBackupAddressSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9B9EC1F0176DA00F079A4 /* MTBackupAddressSignals.m */; };
