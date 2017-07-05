@@ -25,8 +25,8 @@ custom_categories:
     children:
     - Crash Reporting Not Working
 
-umbrella_header: ../../Products/HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDK.framework/Headers/HockeySDK.h
-framework_root: ../../Products/HockeySDK-iOS
+umbrella_header: ../../Classes/HockeySDK.h
+framework_root: ../../
 
 root_url: https://support.hockeyapp.net/kb/api
 github_url: https://github.com/bitstadium/HockeySDK-iOS/
