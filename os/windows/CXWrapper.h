@@ -53,6 +53,11 @@ namespace libtgvoip{
 		Always
 	};
 
+	public enum class ProxyProtocol{
+		None=0,
+		SOCKS5
+	};
+
 	public interface class IStateCallback{
 		void OnCallStateChanged(CallState newState);
 	};
@@ -69,6 +74,7 @@ namespace libtgvoip{
 		void SetMicMute(bool mute);
 		void SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing);
 		void SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath);
+		void SetProxy(ProxyProtocol protocol, Platform::String^ address, uint16_t port, Platform::String^ username, Platform::String^ password);
 		Platform::String^ GetDebugString();
 		Platform::String^ GetDebugLog();
 		Error GetLastError();
