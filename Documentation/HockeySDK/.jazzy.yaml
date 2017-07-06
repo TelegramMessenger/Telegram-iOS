@@ -10,12 +10,12 @@ author: Microsoft Corp
 author_url: https://www.microsoft.com
 
 readme: ../../README.md
-documentation: ../Guides/[^index]*.md
+documentation: ../Guides/*.md
 custom_categories:
   - name: Guides
     children:
-    - Guide Installation Setup
-    - Migration Kits template
+    - Installation & Setup
+    - Migration Kits
   - name: How To
     children:
     - App Versioning
@@ -24,6 +24,9 @@ custom_categories:
   - name: Troubleshooting
     children:
     - Crash Reporting Not Working
+  - name: Release Notes
+    children:
+    - Changelog
 
 umbrella_header: ../../Classes/HockeySDK.h
 framework_root: ../../

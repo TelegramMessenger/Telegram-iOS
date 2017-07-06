@@ -26,6 +26,7 @@
 				1E8E66B215BC3D8200632A2E /* ShellScript */,
 			);
 			dependencies = (
+				F84D04411F0D1D92004161BC /* PBXTargetDependency */,
 			);
 			name = "HockeySDK Documentation";
 			productName = Documentation;
@@ -478,6 +479,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1E8E66AD15BC3D7700632A2E;
 			remoteInfo = "HockeySDK Documentation";
+		};
+		F84D04401F0D1D92004161BC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E4005611148D79B500EB22B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EB6173E1B0A30480035A986;
+			remoteInfo = "HockeySDK Framework";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -1792,7 +1800,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#--no-download-badge -> https://github.com/realm/jazzy/issues/824\njazzy --no-download-badge --config ../Documentation/HockeySDK/.jazzy.yaml\n\nFMK_NAME=HockeySDK\nPRODUCTS_DIR=${SRCROOT}/../Products/HockeySDK-iOS/\nINSTALL_DIR=${PRODUCTS_DIR}/HockeySDKAllFeatures/${FMK_NAME}.framework\nDOCUMENTATION_DIR=${PRODUCTS_DIR}/Documentation/${FMK_NAME}\n\n# Create Documentation directory within folder.\nif [ ! -d \"${DOCUMENTATION_DIR}\" ]\nthen\nmkdir -p \"${DOCUMENTATION_DIR}\"\nfi\n\n# Copy generated documentation into the documentation folder\ncp -R \"${SRCROOT}/../Documentation/${FMK_NAME}/Generated/\" \"${DOCUMENTATION_DIR}\"";
+			shellScript = "#cd -> https://github.com/realm/jazzy/issues/772\n#--no-download-badge -> https://github.com/realm/jazzy/issues/824\ncd ../Documentation/HockeySDK\njazzy --no-download-badge\n\nFMK_NAME=HockeySDK\nPRODUCTS_DIR=${SRCROOT}/../Products/HockeySDK-iOS/\nINSTALL_DIR=${PRODUCTS_DIR}/HockeySDKAllFeatures/${FMK_NAME}.framework\nDOCUMENTATION_DIR=${PRODUCTS_DIR}/Documentation/${FMK_NAME}\n\n# Create Documentation directory within folder.\nif [ ! -d \"${DOCUMENTATION_DIR}\" ]\nthen\nmkdir -p \"${DOCUMENTATION_DIR}\"\nfi\n\n# Copy generated documentation into the documentation folder\ncp -R \"${SRCROOT}/../Documentation/${FMK_NAME}/Generated/\" \"${DOCUMENTATION_DIR}\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -2027,6 +2035,11 @@
 			isa = PBXTargetDependency;
 			target = 1E8E66AD15BC3D7700632A2E /* HockeySDK Documentation */;
 			targetProxy = 846A906A1B20D4BB0076BB80 /* PBXContainerItemProxy */;
+		};
+		F84D04411F0D1D92004161BC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EB6173E1B0A30480035A986 /* HockeySDK Framework */;
+			targetProxy = F84D04401F0D1D92004161BC /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
