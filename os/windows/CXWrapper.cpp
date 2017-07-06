@@ -149,13 +149,25 @@ void VoIPControllerWrapper::SetConfig(double initTimeout, double recvTimeout, Da
 	config.enableAEC=enableAEC;
 	config.enableAGC=enableAGC;
 	config.enableNS=enableNS;
-	if(logFilePath!=nullptr){
+	if(logFilePath!=nullptr&&!logFilePath->IsEmpty()){
 		WideCharToMultiByte(CP_UTF8, 0, logFilePath->Data(), -1, config.logFilePath, sizeof(config.logFilePath), NULL, NULL);
 	}
-	if(statsDumpFilePath!=nullptr){
+	if(statsDumpFilePath!=nullptr&&!statsDumpFilePath->IsEmpty()){
 		WideCharToMultiByte(CP_UTF8, 0, statsDumpFilePath->Data(), -1, config.statsDumpFilePath, sizeof(config.statsDumpFilePath), NULL, NULL);
 	}
 	controller->SetConfig(&config);
+}
+
+void VoIPControllerWrapper::SetProxy(ProxyProtocol protocol, Platform::String^ address, uint16_t port, Platform::String^ username, Platform::String^ password){
+	char _address[2000];
+	char _username[256];
+	char _password[256];
+
+	WideCharToMultiByte(CP_UTF8, 0, address->Data(), -1, _address, sizeof(_address), NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, username->Data(), -1, _username, sizeof(_username), NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, password->Data(), -1, _password, sizeof(_password), NULL, NULL);
+
+	controller->SetProxy((int)protocol, _address, port, _username, _password);
 }
 
 void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
