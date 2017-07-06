@@ -28,6 +28,7 @@ namespace tgvoip {
 		virtual std::string ToString()=0;
 		bool operator==(const NetworkAddress& other);
 		bool operator!=(const NetworkAddress& other);
+		virtual ~NetworkAddress()=default;
 	};
 
 	class IPv4Address : public NetworkAddress{
