@@ -292,7 +292,7 @@ void NetworkSocketTCPObfuscated::Receive(NetworkPacket *packet){
 	}
 
 	if(packetLen>packet->length){
-		LOGW("packet too big to fit into buffer (%u vs %u)", packetLen, packet->length);
+		LOGW("packet too big to fit into buffer (%u vs %u)", (unsigned int)packetLen, (unsigned int)packet->length);
 		packet->length=0;
 		return;
 	}
