@@ -29,7 +29,6 @@ custom_categories:
     - Changelog
 
 umbrella_header: ../../Classes/HockeySDK.h
-framework_root: ../../
 
 root_url: https://support.hockeyapp.net/kb/api
 github_url: https://github.com/bitstadium/HockeySDK-iOS/
