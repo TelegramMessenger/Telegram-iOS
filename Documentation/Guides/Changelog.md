@@ -71,7 +71,7 @@ Additionally, we now also provide a new flavor in our binary distribution. To us
 This SDK release explicitly includes the Application Support directory into backups. If you want to opt-out of this fix and keep the Application Directory's backup flag untouched, add the following line above the SDK setup code:
 
   - Objective-C:
-        ```objectivec
+        ```objc
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"BITExcludeApplicationSupportFromBackup"];
         ```
 
@@ -116,7 +116,7 @@ This SDK release explicitly includes the Application Support directory into back
 This SDK release explicitly includes the Application Support directory into backups. If you want to opt-out of this fix and keep the Application Directory's backup flag untouched, add the following line above the SDK setup code:
 
   - Objective-C:
-        ```objectivec
+        ```objc
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"kBITExcludeApplicationSupportFromBackup"];
         ```
 

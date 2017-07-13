@@ -55,7 +55,7 @@ After you finished the steps for either of the installation procedures, we have 
 
 In your application delegate (for example `AppDelegate.m`) search for the following lines:
 
-	```objectivec
+	```objc
     [[BWQuincyManager sharedQuincyManager] setAppIdentifier:@"0123456789abcdef"];
     
     [[BWHockeyManager sharedHockeyManager] setAppIdentifier:@"0123456789abcdef"];
@@ -64,7 +64,7 @@ In your application delegate (for example `AppDelegate.m`) search for the follow
 
 If you use (as recommended) different identifiers for beta and store distribution some lines may be wrapped with compiler macros like this:
 
-	```objectivec
+	```objc
     #if defined (CONFIGURATION_Beta)
       [[BWQuincyManager sharedQuincyManager] setAppIdentifier:@"BETA_IDENTIFIER"];
     #endif
@@ -78,13 +78,13 @@ For now comment out all lines with either `[BWQuincyManager sharedQuincyManager]
 
 Open the header file of your application delegate (for example `AppDelegate.m`) or just press ^ + ⌘ + ↑ there should be a line like this (AppDelegate should match the name of the file)
 
-	```objectivec
+	```objc
     @interface AppDelegate : NSObject <UIApplicationDelegate, UITabBarControllerDelegate, BWHockeyManagerDelegate> {  
 	```
 
 Remove the `BWHockeyManagerDelegate`. Also look for the following line: 
   
-	```objectivec
+	```objc
     #import "BWHockeyManager.h"
 	```
 
@@ -98,7 +98,7 @@ After you have finished the setup guide make sure everything works as expected a
 
 In your application delegate (for example `AppDelegate.m`) search for the following lines:
 
-	```objectivec
+	```objc
     [[CNSHockeyManager sharedHockeyManager] configureWithBetaIdentifier:BETA_IDENTIFIER 
                                                        liveIdentifier:LIVE_IDENTIFIER
                                                              delegate:self];
@@ -106,13 +106,13 @@ In your application delegate (for example `AppDelegate.m`) search for the follow
 
 For now comment out all lines with `[CNSHockeyManager sharedHockeyManager]`. Open the header file of your application delegate by pressing ^ + ⌘ + ↑. There should be a line like this: 
 
-	```objectivec
+	```objc
     @interface AppDelegate : NSObject <UIApplicationDelegate, CNSHockeyManagerDelegate> {
 	```
 
 Remove `CNSHockeyManagerDelegate`, also look for this line:
 
-	```objectivec
+	```objc
     #import "CNSHockeyManager.h"
 	```
 
@@ -135,7 +135,7 @@ The following delegates in `BITCrashManagerDelegate` moved to `BITHockeyManagerD
 
 Instead of implementing the individual protocols in your app delegate, you can now simply add `BITHockeyManagerDelegate` alone, e.g.:
 
-	```objectivec
+	```objc
     @interface BITAppDelegate () <BITHockeyManagerDelegate> {}
 
     @end
