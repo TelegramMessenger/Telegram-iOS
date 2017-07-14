@@ -5,12 +5,24 @@ import Foundation
     import Postbox
 #endif
 
-public func tagsForStoreMessage(incoming: Bool, media: [Media], textEntities: [MessageTextEntity]?) -> (MessageTags, GlobalMessageTags) {
+public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?) -> (MessageTags, GlobalMessageTags) {
+    var isSecret = false
+    for attribute in attributes {
+        if let timerAttribute = attribute as? AutoremoveTimeoutMessageAttribute {
+            if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
+                isSecret = true
+            }
+            break
+        }
+    }
+    
     var tags = MessageTags()
     var globalTags = GlobalMessageTags()
     for attachment in media {
         if let _ = attachment as? TelegramMediaImage {
-            tags.insert(.PhotoOrVideo)
+            if !isSecret {
+                tags.insert(.PhotoOrVideo)
+            }
         } else if let file = attachment as? TelegramMediaFile {
             var refinedTag: MessageTags? = .File
             inner: for attribute in file.attributes {
@@ -19,7 +31,11 @@ public func tagsForStoreMessage(incoming: Bool, media: [Media], textEntities: [M
                         if flags.contains(.instantRoundVideo) {
                             refinedTag = .VoiceOrInstantVideo
                         } else {
-                            refinedTag = .PhotoOrVideo
+                            if !isSecret {
+                                refinedTag = .PhotoOrVideo
+                            } else {
+                                refinedTag = nil
+                            }
                         }
                         break inner
                     case let .Audio(isVoice, _, _, _, _):
@@ -471,7 +487,7 @@ extension StoreMessage {
                     attributes.append(NotificationInfoMessageAttribute(flags: notificationFlags))
                 }
                 
-                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), media: medias, textEntities: entitiesAttribute?.entities)
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities)
                 
                 self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
@@ -529,7 +545,7 @@ extension StoreMessage {
                     media.append(action)
                 }
                 
-                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), media: media, textEntities: nil)
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil)
                 
                 self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
