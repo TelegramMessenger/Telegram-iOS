@@ -462,7 +462,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
-                let (minWidth, buttonsLayout) = actionButtonsLayout(item.theme, replyMarkup, maximumNodeWidth)
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.theme, item.strings, replyMarkup, item.message, maximumNodeWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
@@ -1166,7 +1166,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: "@\(addressName) \(query)")), nil)
                     }
                 case .payment:
-                    break
+                    controllerInteraction.openCheckoutOrReceipt(item.message.id)
             }
         }
     }

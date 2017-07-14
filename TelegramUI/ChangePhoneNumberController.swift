@@ -68,14 +68,14 @@ final class ChangePhoneNumberController: ViewController {
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
                 let controller = AuthorizationSequenceCountrySelectionController()
-                controller.completeWithCountryCode = { code in
+                controller.completeWithCountryCode = { code, _ in
                     if let strongSelf = self {
                         strongSelf.updateData(countryCode: Int32(code), number: strongSelf.controllerNode.codeAndNumber.1)
                         strongSelf.controllerNode.activateInput()
                     }
                 }
                 strongSelf.controllerNode.view.endEditing(true)
-                strongSelf.present(controller, in: .window)
+                strongSelf.present(controller, in: .window(.root))
             }
         }
     }
@@ -123,7 +123,7 @@ final class ChangePhoneNumberController: ViewController {
                             text = "An error occurred. Please try again later."
                     }
                     
-                    strongSelf.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window)
+                    strongSelf.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
                 }
             }))
         } else {

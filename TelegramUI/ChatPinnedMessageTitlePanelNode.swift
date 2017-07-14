@@ -88,7 +88,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var theme: PresentationTheme?
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
-        let panelHeight: CGFloat = 44.0
+        let panelHeight: CGFloat = 50.0
         
         if self.theme !== interfaceState.theme {
             self.theme = interfaceState.theme
@@ -116,10 +116,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         let leftInset: CGFloat = 10.0
         let rightInset: CGFloat = 18.0
         
-        transition.updateFrame(node: self.lineNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 5.0), size: CGSize(width: 2.0, height: panelHeight - 10.0)))
+        transition.updateFrame(node: self.lineNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: CGSize(width: 2.0, height: panelHeight - 14.0)))
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - rightInset - closeButtonSize.width, y: 16.0), size: closeButtonSize))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - rightInset - closeButtonSize.width - 4.0, height: panelHeight))
@@ -154,9 +154,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     let _ = titleApply()
                     let _ = textApply()
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 5.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 8.0), size: titleLayout.size)
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 23.0), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 26.0), size: textLayout.size)
                 }
             }
         }

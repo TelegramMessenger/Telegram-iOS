@@ -175,6 +175,7 @@ public func notificationSoundSelectionController(account: Account, isModal: Bool
         }
     
     let controller = ItemListController(account: account, state: signal)
+    controller.enableInteractiveDismiss = true
     
     let result = Promise<PeerMessageSound?>()
     

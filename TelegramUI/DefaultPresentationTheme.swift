@@ -133,7 +133,7 @@ private let bubble = PresentationThemeChatBubble(
     shareButtonFillColor: UIColor(rgb: 0x748391, alpha: 0.45),
     shareButtonForegroundColor: .white,
     mediaOverlayControlBackgroundColor: UIColor(white: 0.0, alpha: 0.6),
-    mediaOverlayControlForegroundColor: UIColor(white: 1.0, alpha: 0.6),
+    mediaOverlayControlForegroundColor: UIColor(white: 1.0, alpha: 1.0),
     actionButtonsFillColor: UIColor(rgb: 0x596E89),
     actionButtonsTextColor: .white
 )

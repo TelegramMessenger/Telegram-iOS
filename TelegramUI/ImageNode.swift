@@ -121,6 +121,10 @@ public class ImageNode: ASDisplayNode {
         super.init()
     }
     
+    deinit {
+        self.disposable.dispose()
+    }
+    
     public func setSignal(_ signal: Signal<UIImage?, NoError>) {
         var reportedHasImage = false
         self.disposable.set((signal |> deliverOnMainQueue).start(next: {[weak self] next in

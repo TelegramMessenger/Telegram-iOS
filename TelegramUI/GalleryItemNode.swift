@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import Postbox
 
 public enum GalleryItemNodeNavigationStyle {
     case light
@@ -19,6 +20,9 @@ open class GalleryItemNode: ASDisplayNode {
     }
     
     var toggleControlsVisibility: () -> Void = { }
+    var beginCustomDismiss: () -> Void = { }
+    var completeCustomDismiss: () -> Void = { }
+    var baseNavigationController: () -> NavigationController? = { return nil }
     
     override init() {
         super.init(viewBlock: {
@@ -35,6 +39,10 @@ open class GalleryItemNode: ASDisplayNode {
     }
     
     open func titleView() -> Signal<UIView?, NoError> {
+        return .single(nil)
+    }
+    
+    open func rightBarButtonItem() -> Signal<UIBarButtonItem?, NoError> {
         return .single(nil)
     }
     

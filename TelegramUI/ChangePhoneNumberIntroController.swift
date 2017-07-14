@@ -132,6 +132,6 @@ final class ChangePhoneNumberIntroController: ViewController {
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChangePhoneNumberController(account: strongSelf.account), animated: true)
             }
-        })]), in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        })]), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
 }

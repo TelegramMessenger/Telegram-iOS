@@ -291,6 +291,7 @@ public func usernameSetupController(account: Account) -> ViewController {
     }
     
     let controller = ItemListController(account: account, state: signal)
+    controller.enableInteractiveDismiss = true
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }

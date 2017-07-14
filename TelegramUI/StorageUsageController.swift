@@ -374,7 +374,7 @@ func storageUsageController(account: Account) -> ViewController {
     
     let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     
     return controller

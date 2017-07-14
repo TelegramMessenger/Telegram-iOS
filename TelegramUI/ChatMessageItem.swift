@@ -149,6 +149,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 } else {
                     viewClassName = ChatMessageActionItemNode.self
                 }
+            } else if let _ = media as? TelegramMediaExpiredContent {
+                viewClassName = ChatMessageActionItemNode.self
             }
         }
         

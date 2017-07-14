@@ -24,17 +24,18 @@ public final class OverlayMediaController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    func addVideoContext(mediaManager: MediaManager, postbox: Postbox, id: ManagedMediaId, resource: MediaResource, priority: Int32) {
-        self.controllerNode.addVideoContext(mediaManager: mediaManager, postbox: postbox, id: id, resource: resource, priority: priority)
+    func addNode(_ node: OverlayMediaItemNode, customTransition: Bool = false) {
+        self.controllerNode.addNode(node, customTransition: customTransition)
     }
     
-    func removeVideoContext(id: ManagedMediaId) {
-        self.controllerNode.removeVideoContext(id: id)
+    func removeNode(_ node: OverlayMediaItemNode, customTransition: Bool = false) {
+        self.controllerNode.removeNode(node, customTransition: customTransition)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, transition: transition)
+        let updatedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: UIEdgeInsets(top: 20.0 + 44.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight)
+        self.controllerNode.containerLayoutUpdated(updatedLayout, transition: transition)
     }
 }

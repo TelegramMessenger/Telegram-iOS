@@ -7,10 +7,32 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private let rightTimestampNode: MediaPlayerTimeTextNode
     private let scrubberNode: MediaPlayerScrubbingNode
     
+    private var playbackStatus: MediaPlayerStatus?
+    
+    var hideWhenDurationIsUnknown = false {
+        didSet {
+            if self.hideWhenDurationIsUnknown {
+                if let playbackStatus = self.playbackStatus, !playbackStatus.duration.isZero {
+                    self.scrubberNode.isHidden = false
+                    self.leftTimestampNode.isHidden = false
+                    self.rightTimestampNode.isHidden = false
+                } else {
+                    self.scrubberNode.isHidden = true
+                    self.leftTimestampNode.isHidden = true
+                    self.rightTimestampNode.isHidden = true
+                }
+            } else {
+                self.scrubberNode.isHidden = false
+                self.leftTimestampNode.isHidden = false
+                self.rightTimestampNode.isHidden = false
+            }
+        }
+    }
+    
     var seek: (Double) -> Void = { _ in }
     
     override init(frame: CGRect) {
-        self.scrubberNode = MediaPlayerScrubbingNode(lineHeight: 3.0, lineCap: .round, scrubberHandle: true, backgroundColor: .gray, foregroundColor: .white)
+        self.scrubberNode = MediaPlayerScrubbingNode(lineHeight: 3.0, lineCap: .round, scrubberHandle: true, backgroundColor: UIColor(white: 1.0, alpha: 0.42), foregroundColor: .white)
         
         self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
@@ -21,6 +43,27 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         
         self.scrubberNode.seek = { [weak self] timestamp in
             self?.seek(timestamp)
+        }
+        
+        self.scrubberNode.playerStatusUpdated = { [weak self] status in
+            if let strongSelf = self {
+                strongSelf.playbackStatus = status
+                if strongSelf.hideWhenDurationIsUnknown {
+                    if let playbackStatus = status, !playbackStatus.duration.isZero {
+                        strongSelf.scrubberNode.isHidden = false
+                        strongSelf.leftTimestampNode.isHidden = false
+                        strongSelf.rightTimestampNode.isHidden = false
+                    } else {
+                        strongSelf.scrubberNode.isHidden = true
+                        strongSelf.leftTimestampNode.isHidden = true
+                        strongSelf.rightTimestampNode.isHidden = true
+                    }
+                } else {
+                    strongSelf.scrubberNode.isHidden = false
+                    strongSelf.leftTimestampNode.isHidden = false
+                    strongSelf.rightTimestampNode.isHidden = false
+                }
+            }
         }
         
         self.addSubnode(self.scrubberNode)

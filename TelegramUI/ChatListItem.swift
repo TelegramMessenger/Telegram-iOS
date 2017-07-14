@@ -456,6 +456,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                             messageText = text.string
                                         }
                                 }
+                            case _ as TelegramMediaExpiredContent:
+                                if let text = serviceMessageString(theme: item.theme, strings: item.strings, message: message, accountPeerId: item.account.peerId) {
+                                    messageText = text.string
+                                }
                             default:
                                 break
                         }
@@ -464,6 +468,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             } else {
                 peer = item.peer.chatMainPeer
                 messageText = ""
+                if item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                    if let secretChat = item.peer.peers[item.peer.peerId] as? TelegramSecretChat {
+                        switch secretChat.embeddedState {
+                            case .active:
+                                messageText = item.strings.Notification_EncryptedChatAccepted
+                            case .terminated:
+                                messageText = item.strings.DialogList_EncryptionRejected
+                            case .handshake:
+                                switch secretChat.role {
+                                    case .creator:
+                                        messageText = item.strings.Notification_EncryptedChatRequested
+                                    case .participant:
+                                        messageText = item.strings.DialogList_EncryptionProcessing
+                                }
+                        }
+                    }
+                }
             }
             
             let attributedText: NSAttributedString

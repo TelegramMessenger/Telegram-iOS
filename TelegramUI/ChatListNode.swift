@@ -157,6 +157,7 @@ final class ChatListNode: ListView {
     var peerSelected: ((PeerId) -> Void)?
     var activateSearch: (() -> Void)?
     var deletePeerChat: ((PeerId) -> Void)?
+    var presentAlert: ((String) -> Void)?
     
     private let viewProcessingQueue = Queue()
     private var chatListView: ChatListNodeView?
@@ -202,7 +203,16 @@ final class ChatListNode: ListView {
                 }
             }
         }, setPeerPinned: { peerId, _ in
-            let _ = togglePeerChatPinned(postbox: account.postbox, peerId: peerId).start()
+            let _ = (togglePeerChatPinned(postbox: account.postbox, peerId: peerId) |> deliverOnMainQueue).start(next: { [weak self] result in
+                if let strongSelf = self {
+                    switch result {
+                        case .done:
+                            break
+                        case .limitExceeded:
+                            strongSelf.presentAlert?(strongSelf.currentState.strings.DialogList_PinLimitError("5").0)
+                    }
+                }
+            })
         }, setPeerMuted: { peerId, _ in
             let _ = togglePeerMuted(account: account, peerId: peerId).start()
         }, deletePeer: { [weak self] peerId in

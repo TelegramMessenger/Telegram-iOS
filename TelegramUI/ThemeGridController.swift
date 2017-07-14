@@ -65,7 +65,7 @@ final class ThemeGridController: TelegramController {
     
     override func loadDisplayNode() {
         self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, present: { [weak self] controller, arguments in
-            self?.present(controller, in: .window, with: arguments)
+            self?.present(controller, in: .window(.root), with: arguments)
         })
         self._ready.set(self.controllerNode.ready.get())
         

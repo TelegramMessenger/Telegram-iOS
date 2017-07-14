@@ -530,7 +530,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
     }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
-            controller.present(c, in: .window, with: p)
+            controller.present(c, in: .window(.root), with: p)
         }
     }
     

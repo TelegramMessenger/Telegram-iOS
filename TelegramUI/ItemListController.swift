@@ -114,9 +114,17 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         return self._ready
     }
     
+    var enableInteractiveDismiss = false {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).enableInteractiveDismiss = self.enableInteractiveDismiss
+            }
+        }
+    }
+    
     var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)? {
         didSet {
-            (self.displayNode as! ItemListNode<Entry>).visibleEntriesUpdated = self.visibleEntriesUpdated
+            (self.displayNode as! ItemListControllerNode<Entry>).visibleEntriesUpdated = self.visibleEntriesUpdated
         }
     }
     
@@ -130,7 +138,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         self.statusBar.statusBarStyle = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme.rootController.statusBar.style.style
         
         self.scrollToTop = { [weak self] in
-            (self?.displayNode as! ItemListNode<Entry>).scrollToTop()
+            (self?.displayNode as! ItemListControllerNode<Entry>).scrollToTop()
         }
         
         if let tabBarItem = tabBarItem {
@@ -250,19 +258,24 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                 }
             }
         } |> map { ($0.theme, $1) }
-        let displayNode = ItemListNode<Entry>(state: nodeState)
+        let displayNode = ItemListControllerNode<Entry>(updateNavigationOffset: { [weak self] offset in
+            if let strongSelf = self {
+                strongSelf.navigationOffset = offset
+            }
+        }, state: nodeState)
         displayNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
+        displayNode.enableInteractiveDismiss = self.enableInteractiveDismiss
         self.displayNode = displayNode
         super.displayNodeDidLoad()
-        self._ready.set((self.displayNode as! ItemListNode<Entry>).ready)
+        self._ready.set((self.displayNode as! ItemListControllerNode<Entry>).ready)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! ItemListNode<Entry>).containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        (self.displayNode as! ItemListControllerNode<Entry>).containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
 
     @objc func leftNavigationButtonPressed() {
@@ -276,23 +289,23 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        (self.displayNode as! ItemListNode<Entry>).listNode.preloadPages = true
+        (self.displayNode as! ItemListControllerNode<Entry>).listNode.preloadPages = true
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             if case .modalSheet = presentationArguments.presentationAnimation {
-                (self.displayNode as! ItemListNode<Entry>).animateIn()
+                (self.displayNode as! ItemListControllerNode<Entry>).animateIn()
             }
         }
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {
-        (self.displayNode as! ItemListNode<Entry>).animateOut(completion: completion)
+        (self.displayNode as! ItemListControllerNode<Entry>).animateOut(completion: completion)
     }
     
     func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
         var result: CGRect?
-        (self.displayNode as! ItemListNode<Entry>).listNode.forEachItemNode { itemNode in
+        (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ListViewItemNode {
                 if predicate(itemNode) {
                     result = itemNode.convert(itemNode.bounds, to: self.displayNode)
@@ -303,7 +316,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     }
     
     func forEachItemNode(_ f: (ListViewItemNode) -> Void) {
-        (self.displayNode as! ItemListNode<Entry>).listNode.forEachItemNode { itemNode in
+        (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ListViewItemNode {
                 f(itemNode)
             }

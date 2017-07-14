@@ -6,9 +6,7 @@ import Postbox
 import TelegramCore
 
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
-    let backgroundNode: ASImageNode
-    let videoNode: ManagedVideoNode
-    var progressNode: RadialProgressNode?
+    var hostedVideoNode: InstantVideoNode?
     var tapRecognizer: UITapGestureRecognizer?
     
     private var selectionNode: ChatMessageSelectionNode?
@@ -26,25 +24,23 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     private let playbackStatusDisposable = MetaDisposable()
     
+    private var shouldAcquireVideoContext: Bool {
+        if case .visible = self.visibility {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             if self.visibility != oldValue {
-                if let item = self.item, let telegramFile = self.telegramFile, case .visible = self.visibility {
-                    self.videoNode.acquireContext(account: item.account, mediaManager: item.account.telegramApplicationContext.mediaManager, id: PeerMessageManagedMediaId(messageId: item.message.id), resource: telegramFile.resource, priority: 1)
-                } else {
-                    self.videoNode.discardContext()
-                }
+                self.hostedVideoNode?.setShouldAcquireContext(self.shouldAcquireVideoContext)
             }
         }
     }
     
     required init() {
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.displayWithoutProcessing = true
-        
-        self.videoNode = ManagedVideoNode()
-        
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.muteIconNode = ASImageNode()
         self.muteIconNode.isLayerBacked = true
@@ -53,8 +49,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         
         super.init(layerBacked: false)
         
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.videoNode)
         self.addSubnode(self.dateAndStatusNode)
         self.addSubnode(self.muteIconNode)
     }
@@ -93,11 +87,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         return { item, width, mergedTop, mergedBottom, dateHeaderAtBottom in
             var updatedTheme: PresentationTheme?
             
-            var updatedBackgroundImage: UIImage?
             var updatedMuteIconImage: UIImage?
             if item.theme !== currentItem?.theme {
                 updatedTheme = item.theme
-                updatedBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(item.theme)
                 updatedMuteIconImage = PresentationResourcesChat.chatInstantMessageMuteIconImage(item.theme)
             }
             
@@ -216,20 +208,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
                     
-                    if let updatedBackgroundImage = updatedBackgroundImage {
-                        strongSelf.backgroundNode.image = updatedBackgroundImage
-                    }
-                    
                     if let updatedMuteIconImage = updatedMuteIconImage {
                         strongSelf.muteIconNode.image = updatedMuteIconImage
                     }
                     
                     strongSelf.telegramFile = updatedFile
-                    
-                    strongSelf.videoNode.frame = videoFrame
-                    strongSelf.videoNode.transformArguments = arguments
-                    
-                    strongSelf.backgroundNode.frame = videoFrame.insetBy(dx: -2.0, dy: -2.0)
                     
                     if let image = strongSelf.muteIconNode.image {
                         strongSelf.muteIconNode.frame = CGRect(origin: CGPoint(x: floor(videoFrame.minX + (videoFrame.size.width - image.size.width) / 2.0), y: videoFrame.maxY - image.size.height - 8.0), size: image.size)
@@ -268,11 +251,31 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     dateAndStatusApply(false)
                     strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 70.0, width - dateAndStatusSize.width - 4.0), y: videoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
                     
-                    if let telegramFile = updatedFile, updatedMedia, let context = item.account.applicationContext as? TelegramApplicationContext, strongSelf.visibility == .visible {
-                        strongSelf.videoNode.acquireContext(account: item.account, mediaManager: context.mediaManager, id: PeerMessageManagedMediaId(messageId: item.message.id), resource: telegramFile.resource, priority: 1)
+                    if let telegramFile = updatedFile, updatedMedia, let context = item.account.applicationContext as? TelegramApplicationContext {
+                        if let hostedVideoNode = strongSelf.hostedVideoNode {
+                            hostedVideoNode.removeFromSupernode()
+                        }
+                        let hostedVideoNode = InstantVideoNode(theme: item.theme, manager: context.mediaManager, account: item.account, source: .messageMedia(stableId: item.message.stableId, file: telegramFile), priority: 1, withSound: false)
+                        hostedVideoNode.tapped = {
+                            if let strongSelf = self {
+                                if let item = strongSelf.item {
+                                    if strongSelf.muteIconNode.alpha.isZero {
+                                        item.account.telegramApplicationContext.mediaManager.playlistPlayerControl(.stop)
+                                    } else {
+                                        strongSelf.controllerInteraction?.openMessage(item.message.id)
+                                    }
+                                }
+                            }
+                        }
+                        strongSelf.hostedVideoNode = hostedVideoNode
+                        strongSelf.insertSubnode(hostedVideoNode, belowSubnode: strongSelf.dateAndStatusNode)
+                        hostedVideoNode.setShouldAcquireContext(strongSelf.shouldAcquireVideoContext)
                     }
                     
-                    strongSelf.progressNode?.position = strongSelf.videoNode.position
+                    if let hostedVideoNode = strongSelf.hostedVideoNode {
+                        hostedVideoNode.frame = videoFrame
+                        hostedVideoNode.updateLayout(arguments.boundingSize)
+                    }
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {
@@ -320,37 +323,37 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
-                case .tap:
-                    if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                        if let item = self.item, let author = item.message.author {
-                            self.controllerInteraction?.openPeer(author.id, .info, item.message.id)
+                    case .tap:
+                        if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
+                            if let item = self.item, let author = item.message.author {
+                                self.controllerInteraction?.openPeer(author.id, .info, item.message.id)
+                            }
+                            return
                         }
-                        return
-                    }
-                    
-                    if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
-                        if let item = self.item {
-                            for attribute in item.message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    self.controllerInteraction?.navigateToMessage(item.message.id, attribute.messageId)
-                                    return
+                        
+                        if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                            if let item = self.item {
+                                for attribute in item.message.attributes {
+                                    if let attribute = attribute as? ReplyMessageAttribute {
+                                        self.controllerInteraction?.navigateToMessage(item.message.id, attribute.messageId)
+                                        return
+                                    }
                                 }
                             }
                         }
-                    }
-                    
-                    if let item = self.item, self.videoNode.frame.contains(location) {
-                        self.controllerInteraction?.openMessage(item.message.id)
-                        return
-                    }
-                    
-                    self.controllerInteraction?.clickThroughMessage()
-                case .longTap, .doubleTap:
-                    if let item = self.item, self.videoNode.frame.contains(location) {
-                        self.controllerInteraction?.openMessageContextMenu(item.message.id, self, self.videoNode.frame)
-                    }
-                case .hold:
-                    break
+                        
+                        if let item = self.item, let hostedVideoNode = self.hostedVideoNode, hostedVideoNode.frame.contains(location) {
+                            self.controllerInteraction?.openMessage(item.message.id)
+                            return
+                        }
+                        
+                        self.controllerInteraction?.clickThroughMessage()
+                    case .longTap, .doubleTap:
+                        if let item = self.item, let hostedVideoNode = self.hostedVideoNode, hostedVideoNode.frame.contains(location) {
+                            self.controllerInteraction?.openMessageContextMenu(item.message.id, self, hostedVideoNode.frame)
+                        }
+                    case .hold:
+                        break
                 }
             }
         default:

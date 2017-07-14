@@ -127,7 +127,7 @@ public class ComposeController: ViewController {
                         }, error: { _ in
                             if let controller = controller {
                                 controller.displayNavigationActivity = false
-                                controller.present(standardTextAlertController(title: nil, text: "An error occurred.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window)
+                                controller.present(standardTextAlertController(title: nil, text: "An error occurred.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
                             }
                         }))
                     }

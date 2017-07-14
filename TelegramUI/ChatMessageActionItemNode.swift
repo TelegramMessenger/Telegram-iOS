@@ -283,6 +283,51 @@ func serviceMessageString(theme: PresentationTheme, strings: PresentationStrings
                 var argumentAttributes = peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)])
                 argumentAttributes[1] = MarkdownAttributeSet(font: titleBoldFont, textColor: theme.serviceMessagePrimaryTextColor, additionalAttributes: [:])
                 attributedString = addAttributesToStringWithRanges(formatWithArgumentRanges(baseString, ranges, [authorName, gameTitle ?? ""]), body: bodyAttributes, argumentAttributes: argumentAttributes)
+            case let .paymentSent(currency, totalAmount):
+                var invoiceMessage: Message?
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        invoiceMessage = message
+                    }
+                }
+                
+                var invoiceTitle: String?
+                if let invoiceMessage = invoiceMessage {
+                    for media in invoiceMessage.media {
+                        if let invoice = media as? TelegramMediaInvoice {
+                            invoiceTitle = invoice.title
+                        }
+                    }
+                }
+                
+                if let invoiceTitle = invoiceTitle {
+                    let botString: String
+                    if let peer = messageMainPeer(message) {
+                        botString = peer.compactDisplayTitle
+                    } else {
+                        botString = ""
+                    }
+                    let mutableString = NSMutableAttributedString()
+                    mutableString.append(NSAttributedString(string: strings.Notification_PaymentSent, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor))
+                    
+                    var range = NSRange(location: NSNotFound, length: 0)
+                    
+                    range = (mutableString.string as NSString).range(of: "{amount}")
+                    if range.location != NSNotFound {
+                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: theme.serviceMessagePrimaryTextColor))
+                    }
+                    range = (mutableString.string as NSString).range(of: "{name}")
+                    if range.location != NSNotFound {
+                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: botString, font: titleBoldFont, textColor: theme.serviceMessagePrimaryTextColor))
+                    }
+                    range = (mutableString.string as NSString).range(of: "{title}")
+                    if range.location != NSNotFound {
+                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: invoiceTitle, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor))
+                    }
+                    attributedString = mutableString
+                } else {
+                    attributedString = NSAttributedString(string: strings.Message_PaymentSent(formatCurrencyAmount(totalAmount, currency: currency)).0, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
+                }
             case .phoneCall:
                 break
             default:
@@ -290,6 +335,13 @@ func serviceMessageString(theme: PresentationTheme, strings: PresentationStrings
             }
             
             break
+        } else if let expiredMedia = media as? TelegramMediaExpiredContent {
+            switch expiredMedia.data {
+                case .image:
+                    attributedString = NSAttributedString(string: strings.Message_ImageExpired, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
+                case .file:
+                    attributedString = NSAttributedString(string: strings.Message_VideoExpired, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
+            }
         }
     }
     

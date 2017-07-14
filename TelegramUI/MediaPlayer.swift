@@ -40,7 +40,6 @@ enum MediaPlayerActionAtEnd {
 private final class MediaPlayerContext {
     private let queue: Queue
     private let audioSessionManager: ManagedAudioSession
-    private let overlayMediaManager: OverlayMediaManager
     
     private let postbox: Postbox
     private let resource: MediaResource
@@ -60,12 +59,11 @@ private final class MediaPlayerContext {
     
     fileprivate var actionAtEnd: MediaPlayerActionAtEnd = .stop
     
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, enableSound: Bool) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, enableSound: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
         self.audioSessionManager = audioSessionManager
-        self.overlayMediaManager = overlayMediaManager
         self.playerStatus = playerStatus
         self.postbox = postbox
         self.resource = resource
@@ -79,7 +77,7 @@ private final class MediaPlayerContext {
         self.videoRenderer.visibilityUpdated = { [weak self] value in
             assert(queue.isCurrent())
             
-            if let strongSelf = self {
+            if let strongSelf = self, !strongSelf.enableSound {
                 switch strongSelf.state {
                     case .empty:
                         if value {
@@ -261,11 +259,7 @@ private final class MediaPlayerContext {
                 renderer = MediaPlayerAudioRenderer(audioSessionManager: self.audioSessionManager, audioPaused: { [weak self] in
                     queue.async {
                         if let strongSelf = self {
-                            if case .loopDisablingSound = strongSelf.actionAtEnd {
-                                strongSelf.continuePlayingWithoutSound()
-                            } else {
-                                strongSelf.pause()
-                            }
+                            strongSelf.pause()
                         }
                     }
                 })
@@ -339,31 +333,34 @@ private final class MediaPlayerContext {
     fileprivate func playOnceWithSound() {
         assert(self.queue.isCurrent())
         
-        self.lastStatusUpdateTimestamp = nil
-        self.enableSound = true
-        self.seek(timestamp: 0.0, action: .play)
+        if !self.enableSound {
+            self.lastStatusUpdateTimestamp = nil
+            self.enableSound = true
+            self.seek(timestamp: 0.0, action: .play)
+        }
     }
     
     fileprivate func continuePlayingWithoutSound() {
-        self.lastStatusUpdateTimestamp = nil
-        self.enableSound = true
-        
-        var loadedState: MediaPlayerLoadedState?
-        switch self.state {
-            case .empty:
-                break
-            case let .playing(currentLoadedState):
-                loadedState = currentLoadedState
-            case let .paused(currentLoadedState):
-                loadedState = currentLoadedState
-            case let .seeking(previousFrameSource, previousTimestamp, previousDisposable, _):
+        if self.enableSound {
+            self.lastStatusUpdateTimestamp = nil
+            
+            var loadedState: MediaPlayerLoadedState?
+            switch self.state {
+                case .empty:
+                    break
+                case let .playing(currentLoadedState):
+                    loadedState = currentLoadedState
+                case let .paused(currentLoadedState):
+                    loadedState = currentLoadedState
+                case let .seeking:
+                    self.enableSound = false
+            }
+            
+            if let loadedState = loadedState {
                 self.enableSound = false
-        }
-        
-        if let loadedState = loadedState {
-            self.enableSound = false
-            let timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
-            self.seek(timestamp: timestamp, action: .play)
+                let timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
+                self.seek(timestamp: timestamp, action: .play)
+            }
         }
     }
     
@@ -663,9 +660,9 @@ final class MediaPlayer {
         }
     }
     
-    init(audioSessionManager: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, enableSound: Bool) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, enableSound: Bool) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, overlayMediaManager: overlayMediaManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: enableSound)
+            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: enableSound)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

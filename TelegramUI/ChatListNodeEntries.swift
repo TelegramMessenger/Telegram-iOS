@@ -140,6 +140,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                         if lhsPeer != rhsPeer {
                             return false
                         }
+                        
                         return true
                     default:
                         return false

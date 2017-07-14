@@ -27,6 +27,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         super.init()
         
         self.addSubnode(self.contentNode)
+        self.contentNode.openMedia = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item, let controllerInteraction = strongSelf.controllerInteraction {
+                controllerInteraction.openMessage(item.message.id)
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -68,9 +73,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 if let file = webpage.file {
-                    mediaAndFlags = (file, [])
+                    if let image = webpage.image, let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
+                        mediaAndFlags = (image, [])
+                    } else {
+                        mediaAndFlags = (file, [])
+                    }
                 } else if let image = webpage.image {
-                    if let type = webpage.type, ["photo"].contains(type) {
+                    if let type = webpage.type, ["photo", "video", "embed"].contains(type) {
                         var flags = ChatMessageAttachedContentNodeMediaFlags()
                         if webpage.instantPage != nil {
                             flags.insert(.preferMediaBeforeText)
@@ -92,6 +101,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     return (size, { [weak self] animation in
                         if let strongSelf = self {
+                            strongSelf.item = item
                             strongSelf.webPage = webPage
                             
                             apply(animation)
@@ -132,10 +142,42 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func updateHiddenMedia(_ media: [Media]?) {
-        self.contentNode.updateHiddenMedia(media)
+        if let media = media {
+            var updatedMedia: [Media]?
+            for item in media {
+                if let webpage = item as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(current) {
+                    var mediaList: [Media] = [webpage]
+                    if case let .Loaded(content) = webpage.content {
+                        if let image = content.image {
+                            mediaList.append(image)
+                        }
+                        if let file = content.file {
+                            mediaList.append(file)
+                        }
+                    }
+                    updatedMedia = mediaList
+                }
+            }
+            self.contentNode.updateHiddenMedia(updatedMedia)
+        } else {
+            self.contentNode.updateHiddenMedia(nil)
+        }
     }
     
     override func transitionNode(media: Media) -> ASDisplayNode? {
-        return self.contentNode.transitionNode(media: media)
+        if let result = self.contentNode.transitionNode(media: media) {
+            return result
+        }
+        if let webpage = media as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(current) {
+            if case let .Loaded(content) = webpage.content {
+                if let image = content.image, let result = self.contentNode.transitionNode(media: image) {
+                    return result
+                }
+                if let file = content.file, let result = self.contentNode.transitionNode(media: file) {
+                    return result
+                }
+            }
+        }
+        return nil
     }
 }

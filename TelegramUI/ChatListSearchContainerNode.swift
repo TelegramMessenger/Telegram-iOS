@@ -405,9 +405,15 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             |> mapToSignal { [weak self] peers, themeAndStrings -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
                 var entries: [ChatListRecentEntry] = []
                 entries.append(.topPeers([], themeAndStrings.0, themeAndStrings.1))
+                var peerIds = Set<PeerId>()
                 var index = 0
-                for renderedPeer in peers {
+                loop: for renderedPeer in peers {
                     if let peer = renderedPeer.peers[renderedPeer.peerId] {
+                        if peerIds.contains(peer.id) {
+                            continue loop
+                        }
+                        peerIds.insert(peer.id)
+                        
                         var associatedPeer: Peer?
                         if let associatedPeerId = peer.associatedPeerId {
                             associatedPeer = renderedPeer.peers[associatedPeerId]

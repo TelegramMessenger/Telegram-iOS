@@ -121,7 +121,7 @@ public func debugAccountsController(account: Account, accountManager: AccountMan
     
     let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window, with: a)
+        controller?.present(c, in: .window(.root), with: a)
     }
     return controller
 }

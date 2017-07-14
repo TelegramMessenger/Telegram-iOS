@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 
-private final class NotificationContainerControllerNodeView: UITracingLayerView {
+private final class OverlayMediaControllerNodeView: UITracingLayerView {
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -12,167 +12,340 @@ private final class NotificationContainerControllerNodeView: UITracingLayerView 
     }
 }
 
-private final class OverlayVideoContext {
-    var player: MediaPlayer?
-    let disposable = MetaDisposable()
-    var playerNode: MediaPlayerNode?
+private final class OverlayMediaVideoNodeData {
+    var node: OverlayMediaItemNode
+    var location: CGPoint
+    var isMinimized: Bool
     
-    deinit {
-        self.disposable.dispose()
+    init(node: OverlayMediaItemNode, location: CGPoint, isMinimized: Bool) {
+        self.node = node
+        self.location = location
+        self.isMinimized = isMinimized
     }
 }
 
-final class OverlayMediaControllerNode: ASDisplayNode {
-    private var videoContexts: [WrappedManagedMediaId: OverlayVideoContext] = [:]
+final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+    private var videoNodes: [OverlayMediaVideoNodeData] = []
     private var validLayout: ContainerViewLayout?
+    
+    private var locationByGroup: [OverlayMediaItemNodeGroup: CGPoint] = [:]
+    
+    private weak var draggingNode: OverlayMediaItemNode?
+    private var draggingStartPosition = CGPoint()
     
     override init() {
         super.init(viewBlock: {
-            return NotificationContainerControllerNodeView()
+            return OverlayMediaControllerNodeView()
         }, didLoad: nil)
         
-        (self.view as! NotificationContainerControllerNodeView).hitTestImpl = { [weak self] point, event in
+        (self.view as! OverlayMediaControllerNodeView).hitTestImpl = { [weak self] point, event in
             return self?.hitTest(point, with: event)
         }
+        
+        let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        panRecognizer.cancelsTouchesInView = false
+        panRecognizer.delegate = self
+        self.view.addGestureRecognizer(panRecognizer)
     }
     
     deinit {
-        for (_, context) in self.videoContexts {
-            context.disposable.dispose()
-        }
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        for item in self.videoNodes {
+            if item.node.frame.contains(point) {
+                if let result = item.node.hitTest(point.offsetBy(dx: -item.node.frame.origin.x, dy: -item.node.frame.origin.y), with: event) {
+                    return result
+                } else {
+                    return item.node.view
+                }
+            }
+        }
         return nil
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
-        for (_, context) in self.videoContexts {
-            if let playerNode = context.playerNode {
-                let videoSize = CGSize(width: 100.0, height: 100.0)
-                transition.updateFrame(node: playerNode, frame: CGRect(origin: CGPoint(x: layout.size.width - 4.0 - videoSize.width, y: 20.0 + 44.0 + 38.0 + 4.0), size: videoSize))
+        for item in self.videoNodes {
+            let nodeSize = item.node.preferredSizeForOverlayDisplay()
+            transition.updateFrame(node: item.node, frame: CGRect(origin: self.nodePosition(layout: layout, size: nodeSize, location: item.location, hidden: !item.node.hasAttachedContext, isMinimized: item.isMinimized, tempExtendedTopInset: item.node.tempExtendedTopInset), size: nodeSize))
+            item.node.updateLayout(nodeSize)
+        }
+    }
+    
+    private func nodePosition(layout: ContainerViewLayout, size: CGSize, location: CGPoint, hidden: Bool, isMinimized: Bool, tempExtendedTopInset: Bool) -> CGPoint {
+        var layoutInsets = layout.insets(options: [.input])
+        layoutInsets.bottom += 48.0
+        if tempExtendedTopInset {
+            layoutInsets.top += 38.0
+        }
+        let inset: CGFloat = 4.0
+        var result = CGPoint()
+        if location.x.isZero {
+            if isMinimized {
+                result.x = inset - size.width + 40.0
+            } else if hidden {
+                result.x = -size.width - inset
+            } else {
+                result.x = inset
+            }
+        } else {
+            if isMinimized {
+                result.x = layout.size.width - inset - 40.0
+            } else if hidden {
+                result.x = layout.size.width + inset
+            } else {
+                result.x = layout.size.width - inset - size.width
             }
         }
-    }
-    
-    func addVideoContext(mediaManager: MediaManager, postbox: Postbox, id: ManagedMediaId, resource: MediaResource, priority: Int32) {
-        let wrappedId = WrappedManagedMediaId(id: id)
-        if self.videoContexts[wrappedId] == nil {
-            let context = OverlayVideoContext()
-            self.videoContexts[wrappedId] = context
-            let (player, disposable) = mediaManager.videoContext(postbox: postbox, id: id, resource: resource, preferSoftwareDecoding: false, backgroundThread: false, priority: priority, initiatePlayback: true, activate: { [weak self] playerNode in
-                if let strongSelf = self, let context = strongSelf.videoContexts[wrappedId] {
-                    if context.playerNode !== playerNode {
-                        if context.playerNode?.supernode === self {
-                            context.playerNode?.removeFromSupernode()
-                        }
-                        
-                        context.playerNode = playerNode
-                    
-                        strongSelf.addSubnode(playerNode)
-                        playerNode.transformArguments = TransformImageArguments(corners: ImageCorners(radius: 50.0), imageSize: CGSize(width: 100.0, height: 100.0), boundingSize: CGSize(width: 100.0, height: 100.0), intrinsicInsets: UIEdgeInsets())
-                        if let validLayout = strongSelf.validLayout {
-                            strongSelf.containerLayoutUpdated(validLayout, transition: .immediate)
-                            playerNode.layer.animatePosition(from: CGPoint(x: 104.0, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                        }
-                    }
-                }
-            }, deactivate: { [weak self] in
-                if let strongSelf = self, let context = strongSelf.videoContexts[wrappedId], let playerNode = context.playerNode {
-                    if let snapshot = playerNode.view.snapshotView(afterScreenUpdates: false) {
-                        snapshot.frame = playerNode.view.frame
-                        strongSelf.view.addSubview(snapshot)
-                        let fromPosition = playerNode.layer.position
-                        playerNode.layer.position = CGPoint(x: playerNode.layer.position.x + 104.0, y: playerNode.layer.position.y)
-                        snapshot.layer.animatePosition(from: fromPosition, to: playerNode.layer.position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak snapshot] _ in
-                            snapshot?.removeFromSuperview()
-                        })
-                    }
-                    context.playerNode = nil
-                    if playerNode.supernode === self {
-                        playerNode.removeFromSupernode()
-                    }
-                    return .complete()
-                } else {
-                    return .complete()
-                }
-                
-                /*return Signal { subscriber in
-                    if let strongSelf = self, let context = strongSelf.videoContexts[wrappedId] {
-                        if let playerNode = context.playerNode {
-                            let fromPosition = playerNode.layer.position
-                            playerNode.layer.position = CGPoint(x: playerNode.layer.position.x + 104.0, y: playerNode.layer.position.y)
-                            context.playerNode = nil
-                            playerNode.layer.animatePosition(from: fromPosition, to: playerNode.layer.position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
-                                subscriber.putCompletion()
-                            })
-                        } else {
-                            subscriber.putCompletion()
-                        }
-                    } else {
-                        subscriber.putCompletion()
-                    }
-                    return EmptyDisposable
-                }*/
-            })
-            context.player = player
-            context.disposable.set(disposable)
+        if location.y.isZero {
+            result.y = layoutInsets.top + inset
+        } else {
+            result.y = layout.size.height - layoutInsets.bottom - inset - size.height
         }
+        return result
     }
     
-    /*func addVideoContext(id: ManagedMediaId, contextSignal: Signal<ManagedVideoContext, NoError>) {
-        let wrappedId = WrappedManagedMediaId(id: id)
-        if self.videoContexts[wrappedId] == nil {
-            let context = OverlayVideoContext()
-            self.videoContexts[wrappedId] = context
+    private func nodeLocationForPosition(layout: ContainerViewLayout, position: CGPoint, velocity: CGPoint, size: CGSize, tempExtendedTopInset: Bool) -> (CGPoint, Bool) {
+        var layoutInsets = layout.insets(options: [.input])
+        layoutInsets.bottom += 48.0
+        if tempExtendedTopInset {
+            layoutInsets.top += 38.0
+        }
+        var result = CGPoint()
+        if position.x < layout.size.width / 2.0 {
+            result.x = 0.0
+        } else {
+            result.x = 1.0
+        }
+        if position.y < layoutInsets.top + (layout.size.height - layoutInsets.bottom - layoutInsets.top) / 2.0 {
+            result.y = 0.0
+        } else {
+            result.y = 1.0
+        }
+        
+        let currentPosition = result
+        
+        let TGVideoMessagePIPAngleEpsilon: CGFloat = 30.0
+        var shouldHide = false
+        
+        if (velocity.x * velocity.x + velocity.y * velocity.y) >= 500.0 * 500.0 {
+            let x = velocity.x
+            let y = velocity.y
             
-            context.disposable.set((contextSignal |> deliverOnMainQueue).start(next: { [weak self] videoContext in
-                if let strongSelf = self, let context = strongSelf.videoContexts[wrappedId] {
-                    if context.video?.playerNode !== videoContext.playerNode {
-                        if context.video?.playerNode?.supernode === self {
-                            context.video?.playerNode?.removeFromSupernode()
-                        }
-                        
-                        context.video = videoContext
-                        
-                        if let playerNode = videoContext.playerNode {
-                            strongSelf.addSubnode(playerNode)
-                            playerNode.transformArguments = TransformImageArguments(corners: ImageCorners(radius: 50.0), imageSize: CGSize(width: 100.0, height: 100.0), boundingSize: CGSize(width: 100.0, height: 100.0), intrinsicInsets: UIEdgeInsets())
-                            if let validLayout = strongSelf.validLayout {
-                                strongSelf.containerLayoutUpdated(validLayout, transition: .immediate)
-                                playerNode.layer.animatePosition(from: CGPoint(x: 104.0, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                            }
-                        }
-                    } else {
-                        context.video = videoContext
-                    }
+            var angle = atan2(y, x) * 180.0 / CGFloat.pi * -1.0
+            if angle < 0.0 {
+                angle += 360.0
+            }
+            
+            if currentPosition.x.isZero && currentPosition.y.isZero {
+                if ((angle > 0 && angle < 90 - TGVideoMessagePIPAngleEpsilon) || angle > 360 - TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 1.0
+                    result.y = 0.0
+                } else if (angle > 180 + TGVideoMessagePIPAngleEpsilon && angle < 270 + TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 0.0
+                    result.y = 1.0
+                } else if (angle > 270 + TGVideoMessagePIPAngleEpsilon && angle < 360 - TGVideoMessagePIPAngleEpsilon) {
+                    result.x = 1.0
+                    result.y = 1.0
+                } else {
+                    shouldHide = true
                 }
-            }))
+            } else if !currentPosition.x.isZero && currentPosition.y.isZero {
+                if (angle > 90 + TGVideoMessagePIPAngleEpsilon && angle < 180 + TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 0.0
+                    result.y = 0.0
+                }
+                else if (angle > 270 - TGVideoMessagePIPAngleEpsilon && angle < 360 - TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 1.0
+                    result.y = 1.0
+                }
+                else if (angle > 180 + TGVideoMessagePIPAngleEpsilon && angle < 270 - TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 0.0
+                    result.y = 1.0
+                }
+                else
+                {
+                    shouldHide = true
+                }
+            } else if currentPosition.x.isZero && !currentPosition.y.isZero {
+                if (angle > 90 - TGVideoMessagePIPAngleEpsilon && angle < 180 - TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 0.0
+                    result.y = 0.0
+                }
+                else if (angle < TGVideoMessagePIPAngleEpsilon || angle > 270 + TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 1.0
+                    result.y = 1.0
+                }
+                else if (angle > TGVideoMessagePIPAngleEpsilon && angle < 90 - TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 1.0
+                    result.y = 0.0
+                }
+                else if (!shouldHide)
+                {
+                    shouldHide = true
+                }
+            } else if !currentPosition.x.isZero && !currentPosition.y.isZero {
+                if (angle > TGVideoMessagePIPAngleEpsilon && angle < 90 + TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 1.0
+                    result.y = 0.0
+                }
+                else if (angle > 180 - TGVideoMessagePIPAngleEpsilon && angle < 270 - TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 0.0
+                    result.y = 1.0
+                }
+                else if (angle > 90 + TGVideoMessagePIPAngleEpsilon && angle < 180 - TGVideoMessagePIPAngleEpsilon)
+                {
+                    result.x = 0.0
+                    result.y = 0.0
+                }
+                else if (!shouldHide)
+                {
+                    shouldHide = true
+                }
+            }
         }
-    }*/
+        
+        return (result, shouldHide)
+    }
     
-    func removeVideoContext(id: ManagedMediaId) {
-        let wrappedId = WrappedManagedMediaId(id: id)
-        if let context = self.videoContexts[wrappedId] {
-            if let playerNode = context.playerNode {
-                if let snapshot = playerNode.view.snapshotView(afterScreenUpdates: false) {
-                    snapshot.frame = playerNode.view.frame
-                    self.view.addSubview(snapshot)
-                    let fromPosition = playerNode.layer.position
-                    playerNode.layer.position = CGPoint(x: playerNode.layer.position.x + 104.0, y: playerNode.layer.position.y)
-                    snapshot.layer.animatePosition(from: fromPosition, to: playerNode.layer.position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak snapshot] _ in
-                        snapshot?.removeFromSuperview()
+    func addNode(_ node: OverlayMediaItemNode, customTransition: Bool) {
+        var location = CGPoint(x: 1.0, y: 0.0)
+        if let group = node.group {
+            if let groupLocation = self.locationByGroup[group] {
+                location = groupLocation
+            }
+        }
+        self.videoNodes.append(OverlayMediaVideoNodeData(node: node, location: location, isMinimized: false))
+        self.addSubnode(node)
+        if let validLayout = self.validLayout {
+            let nodeSize = node.preferredSizeForOverlayDisplay()
+            if self.draggingNode !== node {
+                if customTransition {
+                    node.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: location, hidden: false, isMinimized: false, tempExtendedTopInset: node.tempExtendedTopInset), size: nodeSize)
+                } else {
+                    node.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: location, hidden: true, isMinimized: false, tempExtendedTopInset: node.tempExtendedTopInset), size: nodeSize)
+                }
+            }
+            node.updateLayout(nodeSize)
+            
+            self.containerLayoutUpdated(validLayout, transition: .immediate)
+        }
+        node.hasAttachedContextUpdated = { [weak self] _ in
+            if let strongSelf = self, let validLayout = strongSelf.validLayout, !customTransition {
+                strongSelf.containerLayoutUpdated(validLayout, transition: .animated(duration: 0.3, curve: .spring))
+            }
+        }
+        node.unminimize = { [weak self, weak node] in
+            if let strongSelf = self, let node = node {
+                if let index = strongSelf.videoNodes.index(where: { $0.node === node }), let validLayout = strongSelf.validLayout, node !== strongSelf.draggingNode, strongSelf.videoNodes[index].isMinimized {
+                    strongSelf.videoNodes[index].isMinimized = false
+                    node.updateMinimizedEdge(nil, adjusting: true)
+                    strongSelf.containerLayoutUpdated(validLayout, transition: .animated(duration: 0.3, curve: .spring))
+                }
+            }
+        }
+        node.setShouldAcquireContext(true)
+    }
+    
+    func removeNode(_ node: OverlayMediaItemNode, customTransition: Bool) {
+        if node.supernode === self {
+            node.hasAttachedContextUpdated = nil
+            node.setShouldAcquireContext(false)
+            if let index = self.videoNodes.index(where: { $0.node === node }), let validLayout = self.validLayout {
+                if customTransition {
+                    node.removeFromSupernode()
+                } else {
+                    let nodeSize = node.preferredSizeForOverlayDisplay()
+                    node.layer.animateFrame(from: node.layer.frame, to: CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: self.videoNodes[index].location, hidden: true, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: node.tempExtendedTopInset), size: nodeSize), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak node] _ in
+                        node?.removeFromSupernode()
                     })
                 }
-                
-                context.playerNode = nil
-                playerNode.removeFromSupernode()
-                
+            } else {
+                node.removeFromSupernode()
             }
-            context.disposable.dispose()
-            self.videoContexts.removeValue(forKey: wrappedId)
+            if let index = self.videoNodes.index(where: { $0.node === node }) {
+                self.videoNodes.remove(at: index)
+            }
+        }
+    }
+    
+    @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+            case .began:
+                if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.index(where: { $0.node === draggingNode }){
+                    let nodeSize = draggingNode.preferredSizeForOverlayDisplay()
+                    let previousFrame = draggingNode.frame
+                    draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: self.videoNodes[index].location, hidden: !draggingNode.hasAttachedContext, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
+                    draggingNode.layer.animateFrame(from: previousFrame, to: draggingNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    self.draggingNode = nil
+                }
+                loop: for item in self.videoNodes {
+                    if item.node.frame.contains(recognizer.location(in: self.view)) {
+                        self.draggingNode = item.node
+                        self.draggingStartPosition = item.node.frame.origin
+                        break loop
+                    }
+                }
+            case .changed:
+                if let draggingNode = self.draggingNode, let validLayout = self.validLayout {
+                    let translation = recognizer.translation(in: self.view)
+                    var nodeFrame = draggingNode.frame
+                    nodeFrame.origin = self.draggingStartPosition.offsetBy(dx: translation.x, dy: translation.y)
+                    if nodeFrame.midX < 0.0 {
+                        draggingNode.updateMinimizedEdge(.left, adjusting: true)
+                    } else if nodeFrame.midX > validLayout.size.width {
+                        draggingNode.updateMinimizedEdge(.right, adjusting: true)
+                    } else {
+                        draggingNode.updateMinimizedEdge(nil, adjusting: true)
+                    }
+                    draggingNode.frame = nodeFrame
+                }
+            case .ended, .cancelled:
+                if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.index(where: { $0.node === draggingNode }){
+                    let nodeSize = draggingNode.preferredSizeForOverlayDisplay()
+                    let previousFrame = draggingNode.frame
+                    
+                    let (updatedLocation, shouldDismiss) = self.nodeLocationForPosition(layout: validLayout, position: previousFrame.origin, velocity: recognizer.velocity(in: self.view), size: nodeSize, tempExtendedTopInset: draggingNode.tempExtendedTopInset)
+                    
+                    if shouldDismiss && draggingNode.isMinimizeable {
+                        draggingNode.updateMinimizedEdge(updatedLocation.x.isZero ? .left : .right, adjusting: false)
+                        self.videoNodes[index].isMinimized = true
+                    } else {
+                        draggingNode.updateMinimizedEdge(nil, adjusting: true)
+                        self.videoNodes[index].isMinimized = false
+                    }
+                    
+                    if let group = draggingNode.group {
+                        self.locationByGroup[group] = updatedLocation
+                    }
+                    self.videoNodes[index].location = updatedLocation
+                    
+                    draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: updatedLocation, hidden: !draggingNode.hasAttachedContext, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
+                    draggingNode.layer.animateFrame(from: previousFrame, to: draggingNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    self.draggingNode = nil
+                    
+                    if shouldDismiss && !draggingNode.isMinimizeable {
+                        draggingNode.dismiss()
+                    }
+                }
+            default:
+                break
         }
     }
 }

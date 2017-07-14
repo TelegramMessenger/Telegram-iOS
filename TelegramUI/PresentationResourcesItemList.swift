@@ -2,7 +2,12 @@ import Foundation
 import Display
 
 private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {
-    return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/DisclosureArrow"), color: theme.list.disclosureArrowColor)
+    return generateImage(CGSize(width: 8.0, height: 14.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(theme.list.disclosureArrowColor.cgColor)
+        
+        let _ = try? drawSvgPath(context, path: "M5.41663691,6.58336309 L0,12 L1.16672619,13.1667262 L7.75008928,6.58336309 L1.16672619,0 L0,1.16672619 Z ")
+    })
 }
 
 private func generateCheckIcon(_ theme: PresentationTheme) -> UIImage? {

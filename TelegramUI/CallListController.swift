@@ -215,7 +215,7 @@ public final class CallListController: ViewController {
                                         let _ = strongSelf.account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
                                         began?()
                                     }
-                                })]), in: .window)
+                                })]), in: .window(.root))
                             }
                         })
                 }

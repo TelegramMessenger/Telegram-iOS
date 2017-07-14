@@ -27,6 +27,8 @@ public final class TelegramApplicationContext {
     
     public let mediaManager = MediaManager()
     
+    public let contactsManager = DeviceContactsManager()
+    
     public let currentPresentationData: Atomic<PresentationData>
     private let _presentationData = Promise<PresentationData>()
     public var presentationData: Signal<PresentationData, NoError> {

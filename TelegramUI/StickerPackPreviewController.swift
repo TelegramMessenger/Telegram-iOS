@@ -52,7 +52,7 @@ final class StickerPackPreviewController: ViewController {
             self?.dismiss()
         }
         self.controllerNode.presentPreview = { [weak self] controller, arguments in
-            self?.present(controller, in: .window, with: arguments)
+            self?.present(controller, in: .window(.root), with: arguments)
         }
         self.controllerNode.sendSticker = { [weak self] file in
             self?.sendSticker?(file)

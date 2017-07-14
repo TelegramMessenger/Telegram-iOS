@@ -420,7 +420,7 @@ func networkUsageStatsController(account: Account) -> ViewController {
     }
     
     presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     
     return controller

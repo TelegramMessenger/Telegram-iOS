@@ -11,3 +11,4 @@ extension UIImage {
         self.init(named: bundleImageName, in: frameworkBundle, compatibleWith: nil)
     }
 }
+

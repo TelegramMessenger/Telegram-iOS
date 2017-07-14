@@ -546,9 +546,12 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                             strongSelf.statusNode.alpha = 0.0
                             strongSelf.nameNode.layer.animateAlpha(from: CGFloat(strongSelf.nameNode.layer.opacity), to: 0.0, duration: 0.3)
                             strongSelf.nameNode.alpha = 0.0
+                            strongSelf.callButton.layer.animateAlpha(from: CGFloat(strongSelf.callButton.layer.opacity), to: 0.0, duration: 0.3)
+                            strongSelf.callButton.alpha = 0.0
                         } else {
                             strongSelf.statusNode.alpha = 0.0
                             strongSelf.nameNode.alpha = 0.0
+                            strongSelf.callButton.alpha = 0.0
                         }
                     } else {
                         var animateOut = false
@@ -587,11 +590,16 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                         if animated && animateOut {
                             strongSelf.statusNode.layer.animateAlpha(from: CGFloat(strongSelf.statusNode.layer.opacity), to: 1.0, duration: 0.3)
                             strongSelf.statusNode.alpha = 1.0
+                            
                             strongSelf.nameNode.layer.animateAlpha(from: CGFloat(strongSelf.nameNode.layer.opacity), to: 1.0, duration: 0.3)
                             strongSelf.nameNode.alpha = 1.0
+                            
+                            strongSelf.callButton.layer.animateAlpha(from: CGFloat(strongSelf.callButton.layer.opacity), to: 1.0, duration: 0.3)
+                            strongSelf.callButton.alpha = 1.0
                         } else {
                             strongSelf.statusNode.alpha = 1.0
                             strongSelf.nameNode.alpha = 1.0
+                            strongSelf.callButton.alpha = 1.0
                         }
                     }
                     if let presence = item.presence as? TelegramUserPresence {

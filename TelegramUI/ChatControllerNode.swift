@@ -295,7 +295,7 @@ class ChatControllerNode: ASDisplayNode {
         }
         insets.top += navigationBarHeight
         
-        transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 44.0)))
+        transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 50.0)))
         
         var titleAccessoryPanelFrame: CGRect?
         if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {

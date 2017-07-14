@@ -431,7 +431,7 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
     presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window)
+        controller?.present(c, in: .window(.root))
     }
     dismissImpl = { [weak controller] in
         let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)

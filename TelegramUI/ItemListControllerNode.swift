@@ -84,7 +84,7 @@ final class ItemListNodeVisibleEntries<Entry: ItemListNodeEntry>: Sequence {
     }
 }
 
-final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
+class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollViewDelegate {
     private var _ready = ValuePromise<Bool>()
     public var ready: Signal<Bool, NoError> {
         return self._ready.get()
@@ -94,6 +94,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
     let listNode: ListView
     private var emptyStateItem: ItemListControllerEmptyStateItem?
     private var emptyStateNode: ItemListControllerEmptyStateItemNode?
+    private let scrollNode: ASScrollNode
     
     private let transitionDisposable = MetaDisposable()
     
@@ -103,20 +104,47 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
     private var theme: PresentationTheme?
     private var listStyle: ItemListStyle?
     
+    let updateNavigationOffset: (CGFloat) -> Void
     var dismiss: (() -> Void)?
     
     var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)?
     
-    init(state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
+    var enableInteractiveDismiss = false {
+        didSet {
+            self.scrollNode.view.isScrollEnabled = self.enableInteractiveDismiss
+        }
+    }
+    
+    init(updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
+        self.updateNavigationOffset = updateNavigationOffset
+        
         self.listNode = ListView()
+        self.scrollNode = ASScrollNode()
         
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)
         
-        self.addSubnode(self.listNode)
+        self.backgroundColor = nil
+        self.isOpaque = false
         
-        self.backgroundColor = UIColor(rgb: 0xefeff4)
+        self.scrollNode.view.showsVerticalScrollIndicator = false
+        self.scrollNode.view.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.alwaysBounceHorizontal = false
+        self.scrollNode.view.alwaysBounceVertical = false
+        self.scrollNode.view.clipsToBounds = false
+        self.scrollNode.view.delegate = self
+        self.scrollNode.view.scrollsToTop = false
+        self.scrollNode.view.isScrollEnabled = false
+        self.addSubnode(self.scrollNode)
+        
+        self.scrollNode.backgroundColor = nil
+        self.scrollNode.isOpaque = false
+        
+        self.scrollNode.addSubnode(self.listNode)
+        self.addSubnode(self.scrollNode)
+        
+        self.listNode.backgroundColor = UIColor(rgb: 0xefeff4)
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self, let visibleEntriesUpdated = strongSelf.visibleEntriesUpdated, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState<Entry>)?.mergedEntries {
@@ -173,6 +201,18 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let previousContentHeight = self.scrollNode.view.contentSize.height
+        let previousVerticalOffset = self.scrollNode.view.contentOffset.y
+        
+        self.scrollNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.scrollNode.view.contentSize = CGSize(width: 0.0, height: layout.size.height * 3.0)
+        
+        if previousContentHeight.isEqual(to: 0.0) {
+            self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: self.scrollNode.view.contentSize.height / 3.0)
+        } else {
+            self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: previousVerticalOffset * self.scrollNode.view.contentSize.height / previousContentHeight)
+        }
+        
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
@@ -199,7 +239,7 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
         insets.top += navigationBarHeight
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-        self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height + layout.size.height / 2.0)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
@@ -231,9 +271,9 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
                 if let listStyle = self.listStyle {
                     switch listStyle {
                         case .plain:
-                            self.backgroundColor = transition.theme.list.plainBackgroundColor
+                            self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
                         case .blocks:
-                            self.backgroundColor = transition.theme.list.blocksBackgroundColor
+                            self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
             }
@@ -241,12 +281,12 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
             if let updateStyle = transition.updateStyle {
                 self.listStyle = updateStyle
                 
-                if let theme = self.theme {
+                if let _ = self.theme {
                     switch updateStyle {
                         case .plain:
-                            self.backgroundColor = transition.theme.list.plainBackgroundColor
+                            self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
                         case .blocks:
-                            self.backgroundColor = transition.theme.list.blocksBackgroundColor
+                            self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
             }
@@ -311,5 +351,29 @@ final class ItemListNode<Entry: ItemListNodeEntry>: ASDisplayNode {
     
     func scrollToTop() {
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let distanceFromEquilibrium = scrollView.contentOffset.y - scrollView.contentSize.height / 3.0
+        
+        let transition = 1.0 - min(1.0, max(0.0, abs(distanceFromEquilibrium) / 50.0))
+        
+        self.updateNavigationOffset(-distanceFromEquilibrium)
+        
+        /*if let toolbarNode = toolbarNode {
+            toolbarNode.layer.position = CGPoint(x: toolbarNode.layer.position.x, y: self.bounds.size.height - toolbarNode.bounds.size.height / 2.0 + (1.0 - transition) * toolbarNode.bounds.size.height)
+        }*/
+    }
+    
+    func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+        targetContentOffset.pointee = scrollView.contentOffset
+        
+        let scrollVelocity = scrollView.panGestureRecognizer.velocity(in: scrollView)
+        
+        if abs(scrollVelocity.y) > 200.0 {
+           self.animateOut()
+        } else {
+            self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: self.scrollNode.view.contentSize.height / 3.0), animated: true)
+        }
     }
 }

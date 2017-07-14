@@ -25,11 +25,11 @@ class ChatVideoGalleryItem: GalleryItem {
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile, (file.isVideo || file.mimeType.hasPrefix("video/")) {
-                node.setFile(account: account, file: file, loopVideo: file.isAnimated || self.message.containsSecretMedia)
+                node.setFile(account: account, stableId: self.message.stableId, file: file, loopVideo: file.isAnimated || self.message.containsSecretMedia)
                 break
             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let file = content.file, (file.isVideo || file.mimeType.hasPrefix("video/")) {
-                    node.setFile(account: account, file: file, loopVideo: file.isAnimated || self.message.containsSecretMedia)
+                    node.setFile(account: account, stableId: self.message.stableId, file: file, loopVideo: file.isAnimated || self.message.containsSecretMedia)
                     break
                 }
             }
@@ -51,14 +51,15 @@ class ChatVideoGalleryItem: GalleryItem {
     }
 }
 
+private let pictureInPictureButtonImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PictureInPictureButton"), color: .white)
+
 final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
     fileprivate let _titleView = Promise<UIView?>()
+    fileprivate let _rightBarButtonItem = Promise<UIBarButtonItem?>()
     
-    private var player: MediaPlayer?
-    private let snapshotNode: TransformImageNode
-    private let videoNode: MediaPlayerNode
+    private var videoNode: TelegramVideoNode?
     private let scrubberView: ChatVideoGalleryItemScrubberView
     
     private let progressButtonNode: HighlightableButtonNode
@@ -76,10 +77,6 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.videoNode = MediaPlayerNode()
-        self.snapshotNode = TransformImageNode()
-        self.snapshotNode.backgroundColor = UIColor.black
-        self.videoNode.snapshotNode = snapshotNode
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
         self.progressButtonNode = HighlightableButtonNode()
@@ -89,13 +86,9 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         super.init()
         
-        self.snapshotNode.imageUpdated = { [weak self] in
-            self?._ready.set(.single(Void()))
-        }
-        
         self._titleView.set(.single(self.scrubberView))
         self.scrubberView.seek = { [weak self] timestamp in
-            self?.player?.seek(timestamp: timestamp)
+            self?.videoNode?.seek(timestamp)
         }
         
         self.progressButtonNode.addSubnode(self.progressNode)
@@ -122,16 +115,36 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     fileprivate func setMessage(_ message: Message) {
         self.footerContentNode.setMessage(message)
+        
+        self.message = message
+        
+        var rightBarButtonItem: UIBarButtonItem?
+        for media in message.media {
+            if let file = media as? TelegramMediaFile {
+                if file.isVideo {
+                    rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
+                    break
+                }
+            }
+        }
+        self._rightBarButtonItem.set(.single(rightBarButtonItem))
     }
     
-    func setFile(account: Account, file: TelegramMediaFile, loopVideo: Bool) {
+    func setFile(account: Account, stableId: UInt32, file: TelegramMediaFile, loopVideo: Bool) {
         if self.accountAndFile == nil || !self.accountAndFile!.1.isEqual(file) || !self.accountAndFile!.2 != loopVideo {
+            if let videoNode = self.videoNode {
+                videoNode.pause()
+                videoNode.removeFromSupernode()
+                self.videoNode = nil
+            }
             if let largestSize = file.dimensions {
-                self.snapshotNode.alphaTransitionOnFirstUpdate = false
-                let displaySize = largestSize.dividedByScreenScale()
-                self.snapshotNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.snapshotNode.setSignal(account: account, signal: chatMessageImageFile(account: account, file: file, progressive: false), dispatchOnDisplayLink: false)
-                self.zoomableContent = (largestSize, self.videoNode)
+                let videoNode = TelegramVideoNode(manager: account.telegramApplicationContext.mediaManager, account: account, source: .messageMedia(stableId: stableId, file: file), priority: 0, withSound: true)
+                videoNode.setShouldAcquireContext(true)
+                self.videoNode = videoNode
+                self.scrubberView.setStatusSignal(videoNode.status)
+                self.zoomableContent = (largestSize, videoNode)
+                
+                self._ready.set(.single(Void()))
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -146,7 +159,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             strongSelf.progressButtonNode.isHidden = false
                         case .Local:
                             strongSelf.progressNode.state = .Play
-                            strongSelf.progressButtonNode.isHidden = strongSelf.player != nil
+                            strongSelf.progressButtonNode.isHidden = strongSelf.videoNode != nil
                         case .Remote:
                             strongSelf.progressNode.state = .Remote
                             strongSelf.progressButtonNode.isHidden = false
@@ -161,43 +174,60 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.accountAndFile = (account, file, loopVideo)
             if shouldPlayVideo && self.isCentral {
                 self.progressButtonPressed()
-                //self.playVideo()
             }
         }
     }
     
     private func playVideo() {
-        if let (account, file, loopVideo) = self.accountAndFile {
-            var dimensions: CGSize? = file.dimensions
-            if dimensions == nil || dimensions!.width.isLessThanOrEqualTo(0.0) || dimensions!.height.isLessThanOrEqualTo(0.0) {
-                dimensions = largestImageRepresentation(file.previewRepresentations)?.dimensions.aspectFitted(CGSize(width: 1920, height: 1080))
-            }
-            if dimensions == nil || dimensions!.width.isLessThanOrEqualTo(0.0) || dimensions!.height.isLessThanOrEqualTo(0.0) {
-                dimensions = CGSize(width: 1920, height: 1080)
-            }
-            
-            if let dimensions = dimensions, !dimensions.width.isLessThanOrEqualTo(0.0) && !dimensions.height.isLessThanOrEqualTo(0.0) {
-                /*let source = VideoPlayerSource(account: account, resource: CloudFileMediaResource(location: file.location, size: file.size))
-                self.videoNode.player = VideoPlayer(source: source)*/
-                
-                let player = MediaPlayer(audioSessionManager: (account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, overlayMediaManager: (account.applicationContext as! TelegramApplicationContext).mediaManager.overlayMediaManager, postbox: account.postbox, resource: file.resource, streamable: false, video: true, preferSoftwareDecoding: false, enableSound: true)
-                if loopVideo {
-                    player.actionAtEnd = .loop
+        if let videoNode = self.videoNode {
+            videoNode.play()
+        } else {
+            if let (account, file, loop) = self.accountAndFile, let message = self.message {
+                if let largestSize = file.dimensions {
+                    let videoNode = TelegramVideoNode(manager: account.telegramApplicationContext.mediaManager, account: account, source: .messageMedia(stableId: message.stableId, file: file), priority: 0, withSound: true)
+                    videoNode.setShouldAcquireContext(true)
+                    self.scrubberView.setStatusSignal(videoNode.status)
+                    self.videoNode = videoNode
+                    self.zoomableContent = (largestSize, videoNode)
+                    
+                    self._ready.set(.single(Void()))
+                } else {
+                    self.scrubberView.setStatusSignal(nil)
+                    self._ready.set(.single(Void()))
                 }
-                player.attachPlayerNode(self.videoNode)
-                self.progressButtonNode.isHidden = true
-                self.player = player
-                self.scrubberView.setStatusSignal(player.status)
-                player.play()
                 
-                self.zoomableContent = (dimensions, self.videoNode)
+                self.resourceStatus = nil
+                self.fetchStatusDisposable.set((account.postbox.mediaBox.resourceStatus(file.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
+                    if let strongSelf = self {
+                        strongSelf.resourceStatus = status
+                        switch status {
+                        case let .Fetching(progress):
+                            strongSelf.progressNode.state = .Fetching(progress: progress)
+                            strongSelf.progressButtonNode.isHidden = false
+                        case .Local:
+                            strongSelf.progressNode.state = .Play
+                            strongSelf.progressButtonNode.isHidden = strongSelf.videoNode != nil
+                        case .Remote:
+                            strongSelf.progressNode.state = .Remote
+                            strongSelf.progressButtonNode.isHidden = false
+                        }
+                    }
+                }))
+                if self.progressButtonNode.supernode == nil {
+                    self.addSubnode(self.progressButtonNode)
+                }
             }
         }
     }
     
     private func stopVideo() {
-        self.player = nil
-        self.progressButtonNode.isHidden = false
+        if let videoNode = self.videoNode {
+            videoNode.pause()
+            self.progressButtonNode.isHidden = false
+            
+            self.videoNode = nil
+            self.zoomableContent = nil
+        }
     }
     
     override func centralityUpdated(isCentral: Bool) {
@@ -214,22 +244,45 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func animateIn(from node: ASDisplayNode) {
-        var transformedFrame = node.view.convert(node.view.bounds, to: self.videoNode.view)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.videoNode.view.superview)
+        guard let videoNode = self.videoNode else {
+            return
+        }
         
-        self.videoNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.videoNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
-        
-        transformedFrame.origin = CGPoint()
-        
-        let transform = CATransform3DScale(self.videoNode.layer.transform, transformedFrame.size.width / self.videoNode.layer.bounds.size.width, transformedFrame.size.height / self.videoNode.layer.bounds.size.height, 1.0)
-        self.videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+        if let node = node as? TelegramVideoNode, let account = self.accountAndFile?.0 {
+            var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
+            let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
+            
+            videoNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: videoNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            transformedFrame.origin = CGPoint()
+            
+            let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
+            videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+            
+            account.telegramApplicationContext.mediaManager.setOverlayVideoNode(nil)
+        } else {
+            var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
+            let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
+            
+            videoNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: videoNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            transformedFrame.origin = CGPoint()
+            
+            let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
+            videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+        }
     }
     
     override func animateOut(to node: ASDisplayNode, completion: @escaping () -> Void) {
-        var transformedFrame = node.view.convert(node.view.bounds, to: self.videoNode.view)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.videoNode.view.superview)
+        guard let videoNode = self.videoNode else {
+            completion()
+            return
+        }
+        
+        var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
+        let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
         let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
-        let transformedCopyViewInitialFrame = self.videoNode.view.convert(self.videoNode.view.bounds, to: self.view)
+        let transformedCopyViewInitialFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
         
         var positionCompleted = false
         var boundsCompleted = false
@@ -256,12 +309,12 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             intermediateCompletion()
         })
         
-        self.videoNode.layer.animatePosition(from: self.videoNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        videoNode.layer.animatePosition(from: videoNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             positionCompleted = true
             intermediateCompletion()
         })
         
-        self.videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         
         self.progressNode.layer.animatePosition(from: self.progressNode.layer.position, to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             //positionCompleted = true
@@ -270,24 +323,95 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.progressNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         self.progressNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
         
-        self.videoNode.snapshotNode?.isHidden = true
-        
         transformedFrame.origin = CGPoint()
         
-        let transform = CATransform3DScale(self.videoNode.layer.transform, transformedFrame.size.width / self.videoNode.layer.bounds.size.width, transformedFrame.size.height / self.videoNode.layer.bounds.size.height, 1.0)
-        self.videoNode.layer.animate(from: NSValue(caTransform3D: self.videoNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+        let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
+        videoNode.layer.animate(from: NSValue(caTransform3D: videoNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
             boundsCompleted = true
             intermediateCompletion()
         })
     }
     
+    func animateOut(toOverlay node: ASDisplayNode, completion: @escaping () -> Void) {
+        guard let videoNode = self.videoNode else {
+            completion()
+            return
+        }
+        
+        var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
+        let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
+        let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+        let transformedCopyViewInitialFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
+        let transformedSelfTargetSuperFrame = videoNode.view.convert(videoNode.view.bounds, to: node.view.superview)
+        
+        var positionCompleted = false
+        var boundsCompleted = false
+        var copyCompleted = false
+        var nodeCompleted = false
+        
+        let copyView = node.view.snapshotContentTree()!
+        
+        //self.view.insertSubview(copyView, belowSubview: self.scrollView)
+        videoNode.isHidden = true
+        copyView.frame = transformedSelfFrame
+        
+        let intermediateCompletion = { [weak copyView] in
+            if positionCompleted && boundsCompleted && copyCompleted && nodeCompleted {
+                copyView?.removeFromSuperview()
+                completion()
+            }
+        }
+        
+        copyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, removeOnCompletion: false)
+        
+        copyView.layer.animatePosition(from: CGPoint(x: transformedCopyViewInitialFrame.midX, y: transformedCopyViewInitialFrame.midY), to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        let scale = CGSize(width: transformedCopyViewInitialFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewInitialFrame.size.height / transformedSelfFrame.size.height)
+        copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            copyCompleted = true
+            intermediateCompletion()
+        })
+        
+        videoNode.layer.animatePosition(from: videoNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            positionCompleted = true
+            intermediateCompletion()
+        })
+        
+        videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        
+        self.progressNode.layer.animatePosition(from: self.progressNode.layer.position, to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            //positionCompleted = true
+            //intermediateCompletion()
+        })
+        self.progressNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        self.progressNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
+        
+        transformedFrame.origin = CGPoint()
+        
+        let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
+        videoNode.layer.animate(from: NSValue(caTransform3D: videoNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            boundsCompleted = true
+            intermediateCompletion()
+        })
+        
+        //node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        let nodeTransform = CATransform3DScale(node.layer.transform, videoNode.layer.bounds.size.width / transformedFrame.size.width, videoNode.layer.bounds.size.height / transformedFrame.size.height, 1.0)
+        node.layer.animatePosition(from: CGPoint(x: transformedSelfTargetSuperFrame.midX, y: transformedSelfTargetSuperFrame.midY), to: node.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        node.layer.animate(from: NSValue(caTransform3D: nodeTransform), to: NSValue(caTransform3D: node.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            nodeCompleted = true
+            intermediateCompletion()
+        })
+    }
+    
     override func title() -> Signal<String, NoError> {
-        //return self._title.get()
         return .single("")
     }
     
     override func titleView() -> Signal<UIView?, NoError> {
         return self._titleView.get()
+    }
+    
+    override func rightBarButtonItem() -> Signal<UIBarButtonItem?, NoError> {
+        return self._rightBarButtonItem.get()
     }
     
     private func activateVideo() {
@@ -316,6 +440,44 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Remote:
                         self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .video)).start())
                 }
+            }
+        }
+    }
+    
+    @objc func pictureInPictureButtonPressed() {
+        if let account = self.accountAndFile?.0, let message = self.message, let file = self.accountAndFile?.1 {
+            let overlayNode = TelegramVideoNode(manager: account.telegramApplicationContext.mediaManager, account: account, source: TelegramVideoNodeSource.messageMedia(stableId: message.stableId, file: file), priority: 1, withSound: true, withOverlayControls: true)
+            overlayNode.dismissed = { [weak account, weak overlayNode] in
+                if let account = account, let overlayNode = overlayNode {
+                    if overlayNode.supernode != nil {
+                        account.telegramApplicationContext.mediaManager.setOverlayVideoNode(nil)
+                    }
+                }
+            }
+            let baseNavigationController = self.baseNavigationController()
+            overlayNode.unembed = { [weak account, weak overlayNode, weak baseNavigationController] in
+                if let account = account {
+                    let gallery = GalleryController(account: account, messageId: message.id, replaceRootController: { controller, ready in
+                        if let baseNavigationController = baseNavigationController {
+                            baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
+                        }
+                    }, baseNavigationController: baseNavigationController)
+                    
+                    (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { _, _ in
+                        if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
+                            return GalleryTransitionArguments(transitionNode: overlayNode, transitionContainerNode: overlaySupernode, transitionBackgroundNode: ASDisplayNode())
+                        }
+                        return nil
+                    }))
+                }
+            }
+            overlayNode.setShouldAcquireContext(true)
+            account.telegramApplicationContext.mediaManager.setOverlayVideoNode(overlayNode)
+            if overlayNode.supernode != nil {
+                self.beginCustomDismiss()
+                self.animateOut(toOverlay: overlayNode, completion: { [weak self] in
+                    self?.completeCustomDismiss()
+                })
             }
         }
     }

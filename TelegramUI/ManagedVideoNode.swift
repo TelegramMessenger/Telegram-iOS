@@ -5,6 +5,8 @@ import Postbox
 import TelegramCore
 
 class ManagedVideoNode: ASDisplayNode {
+    private let thumbnailNode: TransformImageNode
+    
     private var videoPlayer: MediaPlayer?
     private var playerNode: MediaPlayerNode?
     private let videoContextDisposable = MetaDisposable()
@@ -26,7 +28,11 @@ class ManagedVideoNode: ASDisplayNode {
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.backgroundThread = backgroundThread
         
+        self.thumbnailNode = TransformImageNode()
+        
         super.init()
+        
+        self.addSubnode(self.thumbnailNode)
     }
     
     deinit {

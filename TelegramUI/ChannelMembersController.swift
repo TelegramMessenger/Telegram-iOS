@@ -279,7 +279,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                                 result.set(true)
                             })
                         ])
-                        contactsController.present(alertController, in: .window)
+                        contactsController.present(alertController, in: .window(.root))
                     }
                     
                     return result.get()
@@ -419,7 +419,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
-            controller.present(c, in: .window, with: p)
+            controller.present(c, in: .window(.root), with: p)
         }
     }
     return controller

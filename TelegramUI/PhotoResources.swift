@@ -430,6 +430,21 @@ private func addCorners(_ context: DrawingContext, arguments: TransformImageArgu
     }
 }
 
+func rawMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<UIImage?, NoError> {
+    return chatMessagePhotoDatas(account: account, photo: photo, autoFetchFullSize: true)
+        |> map { (thumbnailData, fullSizeData, fullSizeComplete) -> UIImage? in
+            if let fullSizeData = fullSizeData {
+                if fullSizeComplete {
+                    return UIImage(data: fullSizeData)?.precomposed()
+                }
+            }
+            if let thumbnailData = thumbnailData {
+                return UIImage(data: thumbnailData)?.precomposed()
+            }
+            return nil
+        }
+}
+
 func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoDatas(account: account, photo: photo)
     

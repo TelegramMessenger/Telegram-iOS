@@ -36,7 +36,7 @@ func presentedLegacyCamera(cameraView: TGAttachmentCameraView?, menuController: 
     controller.presentOverlayController = { [weak legacyController] controller in
         if let legacyController = legacyController {
             let childController = LegacyController(legacyController: controller!, presentation: .custom)
-            legacyController.present(childController, in: .window)
+            legacyController.present(childController, in: .window(.root))
             return { [weak childController] in
                 childController?.dismiss()
             }
@@ -99,7 +99,7 @@ func presentedLegacyCamera(cameraView: TGAttachmentCameraView?, menuController: 
         menuController?.dismiss(animated: false)
     }
     
-    parentController.present(legacyController, in: .window)
+    parentController.present(legacyController, in: .window(.root))
     
     /*
     

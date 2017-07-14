@@ -507,7 +507,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
         (controller?.navigationController as? NavigationController)?.pushViewController(c, animated: false)
     }
     presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window, with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     
     return controller

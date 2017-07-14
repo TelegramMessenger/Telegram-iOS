@@ -1073,7 +1073,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                             result.set(true)
                         })
                     ])
-                    contactsController.present(alertController, in: .window)
+                    contactsController.present(alertController, in: .window(.root))
                 }
                 
                 return result.get()
@@ -1292,7 +1292,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
-        controller?.present(value, in: .window, with: presentationArguments)
+        controller?.present(value, in: .window(.root), with: presentationArguments)
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {

@@ -255,12 +255,14 @@ private final class AudioPlayerRendererContext {
                 case .paused:
                     break
             }
-            
-            completion()
         }
+        
+        completion()
     }
     
     fileprivate func start() {
+        assert(audioPlayerRendererQueue.isCurrent())
+        
         if self.paused {
             self.paused = false
             self.startAudioUnit()
@@ -268,6 +270,8 @@ private final class AudioPlayerRendererContext {
     }
     
     fileprivate func stop() {
+        assert(audioPlayerRendererQueue.isCurrent())
+        
         if !self.paused {
             self.paused = true
             self.setPlaying(false)
@@ -276,6 +280,8 @@ private final class AudioPlayerRendererContext {
     }
     
     private func startAudioUnit() {
+        assert(audioPlayerRendererQueue.isCurrent())
+        
         if self.audioUnit == nil {
             var desc = AudioComponentDescription()
             desc.componentType = kAudioUnitType_Output
@@ -331,22 +337,24 @@ private final class AudioPlayerRendererContext {
                     strongSelf.audioSessionAcquired()
                 }
             }
-            }, deactivate: { [weak self] in
-                return Signal { subscriber in
-                    audioPlayerRendererQueue.async {
-                        if let strongSelf = self {
-                            strongSelf.audioPaused()
-                            strongSelf.stop()
-                            subscriber.putCompletion()
-                        }
+        }, deactivate: { [weak self] in
+            return Signal { subscriber in
+                audioPlayerRendererQueue.async {
+                    if let strongSelf = self {
+                        strongSelf.audioPaused()
+                        strongSelf.stop()
+                        subscriber.putCompletion()
                     }
-                    
-                    return EmptyDisposable
                 }
+                
+                return EmptyDisposable
+            }
         }))
     }
     
     private func audioSessionAcquired() {
+        assert(audioPlayerRendererQueue.isCurrent())
+        
         if let audioUnit = self.audioUnit {
             guard AudioOutputUnitStart(audioUnit) == noErr else {
                 self.closeAudioUnit()
@@ -480,6 +488,8 @@ private final class AudioPlayerRendererContext {
     }
     
     fileprivate func beginRequestingFrames(queue: DispatchQueue, takeFrame: @escaping () -> MediaTrackFrameResult) {
+        assert(audioPlayerRendererQueue.isCurrent())
+        
         if let _ = self.requestingFramesContext {
             return
         }
@@ -490,6 +500,8 @@ private final class AudioPlayerRendererContext {
     }
     
     func endRequestingFrames() {
+        assert(audioPlayerRendererQueue.isCurrent())
+        
         self.requestingFramesContext = nil
     }
 }

@@ -1,6 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 import TelegramCore
+import Postbox
 import Display
 
 private let titleFont = Font.medium(16.0)
@@ -52,13 +53,25 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ theme: PresentationTheme, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))) {
         let titleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         
-        return { theme, button, constrainedWidth, position in
+        return { theme, strings, message, button, constrainedWidth, position in
             let sideInset: CGFloat = 8.0
             let minimumSideInset: CGFloat = 4.0
-            let (titleSize, titleApply) = titleLayout(NSAttributedString(string: button.title, font: titleFont, textColor: theme.chat.bubble.actionButtonsTextColor), nil, 1, .end, CGSize(width: max(1.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            
+            var title = button.title
+            if case .payment = button.action {
+                for media in message.media {
+                    if let invoice = media as? TelegramMediaInvoice {
+                        if invoice.receiptMessageId != nil {
+                            title = strings.Message_ReplyActionButtonShowReceipt
+                        }
+                    }
+                }
+            }
+            
+            let (titleSize, titleApply) = titleLayout(NSAttributedString(string: title, font: titleFont, textColor: theme.chat.bubble.actionButtonsTextColor), nil, 1, .end, CGSize(width: max(1.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let backgroundImage: UIImage?
             switch position {
@@ -119,12 +132,10 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         }
     }
     
-    //(_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (maxWidth: CGFloat, layout: (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void)))
-    
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ theme: PresentationTheme, _ replyMarkup: ReplyMarkupMessageAttribute, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)) {
         let currentButtonLayouts = maybeNode?.buttonNodes.map { ChatMessageActionButtonNode.asyncLayout($0) } ?? []
         
-        return { theme, replyMarkup, constrainedWidth in
+        return { theme, strings, replyMarkup, message, constrainedWidth in
             let buttonHeight: CGFloat = 42.0
             let buttonSpacing: CGFloat = 4.0
             
@@ -157,9 +168,9 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                     
                     let prepareButtonLayout: (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode)))
                     if buttonIndex < currentButtonLayouts.count {
-                        prepareButtonLayout = currentButtonLayouts[buttonIndex](theme, button, maximumButtonWidth, buttonPosition)
+                        prepareButtonLayout = currentButtonLayouts[buttonIndex](theme, strings, message, button, maximumButtonWidth, buttonPosition)
                     } else {
-                        prepareButtonLayout = ChatMessageActionButtonNode.asyncLayout(nil)(theme, button, maximumButtonWidth, buttonPosition)
+                        prepareButtonLayout = ChatMessageActionButtonNode.asyncLayout(nil)(theme, strings, message, button, maximumButtonWidth, buttonPosition)
                     }
                     
                     maximumRowButtonWidth = max(maximumRowButtonWidth, prepareButtonLayout.minimumWidth)

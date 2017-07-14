@@ -13,4 +13,10 @@ module TelegramUIPrivateModule {
     header "../RingBuffer.h"
     header "../TelegramUIIncludes.h"
     header "../../third-party/RMIntro/platform/ios/RMIntroViewController.h"
+    header "../STPPaymentCardTextField.h"
+    header "../STPAPIClient.h"
+    header "../STPAPIClient+ApplePay.h"
+    header "../STPPaymentConfiguration.h"
+    header "../STPCard.h"
+    header "../STPToken.h"
 }

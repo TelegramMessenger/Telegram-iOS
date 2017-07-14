@@ -20,11 +20,13 @@ private final class DebugControllerArguments {
 
 private enum DebugControllerSection: Int32 {
     case logs
+    case payments
 }
 
 private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
     case accounts(PresentationTheme)
+    case clearPaymentData(PresentationTheme)
     
     var section: ItemListSectionId {
         switch self {
@@ -32,6 +34,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logs.rawValue
             case .accounts:
                 return DebugControllerSection.logs.rawValue
+            case .clearPaymentData:
+                return DebugControllerSection.payments.rawValue
         }
     }
     
@@ -41,6 +45,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 0
             case .accounts:
                 return 1
+            case .clearPaymentData:
+                return 2
         }
     }
     
@@ -54,6 +60,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }
             case let .accounts(lhsTheme):
                 if case let .accounts(rhsTheme) = rhs, lhsTheme === rhsTheme {
+                    return true
+                } else {
+                    return false
+                }
+            case let .clearPaymentData(lhsTheme):
+                if case let .clearPaymentData(rhsTheme) = rhs, lhsTheme === rhsTheme {
                     return true
                 } else {
                     return false
@@ -91,6 +103,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.pushController(debugAccountsController(account: arguments.account, accountManager: arguments.accountManager))
                 })
+            case let .clearPaymentData(theme):
+                return ItemListDisclosureItem(theme: theme, title: "Clear Payment Data", label: "", sectionId: self.section, style: .blocks, action: {
+                    let _ = cacheTwoStepPasswordToken(postbox: arguments.account.postbox, token: nil).start()
+                })
         }
     }
 }
@@ -100,6 +116,7 @@ private func debugControllerEntries(presentationData: PresentationData) -> [Debu
     
     entries.append(.sendLogs(presentationData.theme))
     entries.append(.accounts(presentationData.theme))
+    entries.append(.clearPaymentData(presentationData.theme))
     
     return entries
 }
@@ -124,7 +141,7 @@ public func debugController(account: Account, accountManager: AccountManager) ->
     
     let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window, with: a)
+        controller?.present(c, in: .window(.root), with: a)
     }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)

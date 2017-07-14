@@ -448,7 +448,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: (strongSelf.unreadNode.isHidden ? 0.0 : 10.0) + leftInset + revealOffset + editingOffset, y: 11.0), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 32.0), size: statusLayout.size))
                     
-                    transition.updateFrame(node: strongSelf.imageNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + 15.0, y: 12.0), size: CGSize(width: 34.0, height: 34.0)))
+                    transition.updateFrame(node: strongSelf.imageNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + 15.0, y: 11.0), size: CGSize(width: 34.0, height: 34.0)))
                     
                     if let updatedImageSignal = updatedImageSignal {
                         strongSelf.imageNode.setSignal(account: item.account, signal: updatedImageSignal)

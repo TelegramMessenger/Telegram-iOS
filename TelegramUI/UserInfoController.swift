@@ -409,16 +409,17 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         entries.append(UserInfoEntry.groupsInCommon(presentationData.theme, presentationData.strings.UserInfo_GroupsInCommon, groupsInCommon))
     }
     
-    if peer is TelegramSecretChat, let peerChatState = peerChatState as? SecretChatKeyState, let keyFingerprint = peerChatState.keyFingerprint {
-        entries.append(UserInfoEntry.secretEncryptionKey(presentationData.theme, presentationData.strings.Profile_EncryptionKey, keyFingerprint))
-    }
-    
     if isEditing {
         entries.append(UserInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, "Default"))
+        
         if view.peerIsContact {
             entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .removeContact), .removeContact))
         }
     } else {
+        if peer is TelegramSecretChat, let peerChatState = peerChatState as? SecretChatKeyState, let keyFingerprint = peerChatState.keyFingerprint {
+            entries.append(UserInfoEntry.secretEncryptionKey(presentationData.theme, presentationData.strings.Profile_EncryptionKey, keyFingerprint))
+        }
+        
         if let cachedData = view.cachedData as? CachedUserData {
             if cachedData.isBlocked {
                 entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .unblock), .unblock))
@@ -636,7 +637,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
-        controller?.present(value, in: .window, with: presentationArguments)
+        controller?.present(value, in: .window(.root), with: presentationArguments)
     }
     openChatImpl = { [weak controller] in
         if let navigationController = (controller?.navigationController as? NavigationController) {
@@ -661,7 +662,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text("Copy"), action: {
                     UIPasteboard.general.string = text
                 })])
-                strongController.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
                     if let resultItemNode = resultItemNode {
                         return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0))
                     } else {

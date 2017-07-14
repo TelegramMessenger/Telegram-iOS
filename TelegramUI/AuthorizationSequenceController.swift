@@ -93,7 +93,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                     text = "An error occurred. Please try again later."
                             }
                             
-                            controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window)
+                            controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
                         }
                     }))
                 }
@@ -135,7 +135,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         text = "An error occured."
                                 }
                                 
-                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window)
+                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -178,7 +178,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         text = "An error occured. Please try again later."
                                 }
                                 
-                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window)
+                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -225,7 +225,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         text = "An error occured. Please try again later."
                                 }
                                 
-                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window)
+                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
                             }
                         }
                     }))

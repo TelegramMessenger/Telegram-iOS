@@ -587,7 +587,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value, arguments in
-        controller?.present(value, in: .window, with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {

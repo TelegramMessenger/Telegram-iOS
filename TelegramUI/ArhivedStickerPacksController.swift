@@ -336,7 +336,7 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
     let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
-            controller.present(c, in: .window, with: p)
+            controller.present(c, in: .window(.root), with: p)
         }
     }
     

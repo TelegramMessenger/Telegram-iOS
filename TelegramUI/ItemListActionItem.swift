@@ -226,9 +226,9 @@ class ItemListActionItemNode: ListViewItemNode {
                     
                     switch item.alignment {
                         case .natural:
-                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleLayout.size)
+                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
                         case .center:
-                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((width - titleLayout.size.width) / 2.0), y: 12.0), size: titleLayout.size)
+                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((width - titleLayout.size.width) / 2.0), y: 11.0), size: titleLayout.size)
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: 44.0 + UIScreenPixel + UIScreenPixel))

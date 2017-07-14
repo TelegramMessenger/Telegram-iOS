@@ -57,6 +57,10 @@ final class GameController: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        assert(true)
+    }
+    
     @objc func closePressed() {
         self.dismiss()
     }

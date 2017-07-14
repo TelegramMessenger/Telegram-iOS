@@ -49,14 +49,14 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
                 let controller = AuthorizationSequenceCountrySelectionController()
-                controller.completeWithCountryCode = { code in
+                controller.completeWithCountryCode = { code, _ in
                     if let strongSelf = self, let currentData = strongSelf.currentData {
                         strongSelf.updateData(countryCode: Int32(code), number: currentData.1)
                         strongSelf.controllerNode.activateInput()
                     }
                 }
                 strongSelf.controllerNode.view.endEditing(true)
-                strongSelf.present(controller, in: .window)
+                strongSelf.present(controller, in: .window(.root))
             }
         }
     }

@@ -91,7 +91,7 @@ public class PeerMediaCollectionController: ViewController {
                             if let strongSelf = self {
                                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
                             }
-                        })
+                        }, baseNavigationController: nil)
                         
                         strongSelf.galleryHiddenMesageAndMediaDisposable.set(gallery.hiddenMedia.start(next: { [weak strongSelf] messageIdAndMedia in
                             if let strongSelf = strongSelf {
@@ -112,7 +112,7 @@ public class PeerMediaCollectionController: ViewController {
                             }
                         }))
                         
-                        strongSelf.present(gallery, in: .window, with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
+                        strongSelf.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
                             if let strongSelf = self {
                                 var transitionNode: ASDisplayNode?
                                 strongSelf.mediaCollectionDisplayNode.historyNode.forEachItemNode { itemNode in
@@ -150,7 +150,7 @@ public class PeerMediaCollectionController: ViewController {
                 if let strongSelf = self, strongSelf.isNodeLoaded {
                     if let message = strongSelf.mediaCollectionDisplayNode.historyNode.messageInCurrentHistoryView(id) {
                         /*if let contextMenuController = contextMenuForChatPresentationIntefaceState(strongSelf.presentationInterfaceState, account: strongSelf.account, message: message, interfaceInteraction: strongSelf.interfaceInteraction) {
-                            strongSelf.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak strongSelf, weak node] in
+                            strongSelf.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak strongSelf, weak node] in
                                 if let node = node {
                                     return (node, frame)
                                 } else {
@@ -205,6 +205,7 @@ public class PeerMediaCollectionController: ViewController {
             }, presentController: { _ in
             }, callPeer: { _ in
             }, longTap: { _ in
+            }, openCheckoutOrReceipt: { _ in
             })
         
         self.controllerInteraction = controllerInteraction
@@ -258,7 +259,7 @@ public class PeerMediaCollectionController: ViewController {
                                     actionSheet?.dismissAnimated()
                                 })
                                 ])])
-                            strongSelf.present(actionSheet, in: .window)
+                            strongSelf.present(actionSheet, in: .window(.root))
                         }
                     }))
                 }
@@ -296,7 +297,7 @@ public class PeerMediaCollectionController: ViewController {
                             })
                         }
                     }
-                    strongSelf.present(controller, in: .window)
+                    strongSelf.present(controller, in: .window(.root))
                 }
             }
         }, updateTextInputState: { _ in

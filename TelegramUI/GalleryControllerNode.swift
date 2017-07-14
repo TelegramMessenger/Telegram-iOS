@@ -1,6 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import Postbox
 
 class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var statusBar: StatusBar?
@@ -14,6 +15,10 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var backgroundNode: ASDisplayNode
     var scrollView: UIScrollView
     var pager: GalleryPagerNode
+    
+    var beginCustomDismiss: () -> Void = { }
+    var completeCustomDismiss: () -> Void = { }
+    var baseNavigationController: () -> NavigationController? = { return nil }
     
     private var presentationState = GalleryControllerPresentationState()
     
@@ -47,6 +52,22 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     strongSelf.footerNode.alpha = alpha
                 })
             }
+        }
+        
+        self.pager.beginCustomDismiss = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.beginCustomDismiss()
+            }
+        }
+        
+        self.pager.completeCustomDismiss = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.completeCustomDismiss()
+            }
+        }
+        
+        self.pager.baseNavigationController = { [weak self] in
+            return self?.baseNavigationController()
         }
         
         self.addSubnode(self.backgroundNode)

@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import Postbox
 
 final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private let pageGap: CGFloat
@@ -23,6 +24,9 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var centralItemIndexUpdated: (Int?) -> Void = { _ in }
     var toggleControlsVisibility: () -> Void = { }
+    var beginCustomDismiss: () -> Void = { }
+    var completeCustomDismiss: () -> Void = { }
+    var baseNavigationController: () -> NavigationController? = { return nil }
     
     init(pageGap: CGFloat) {
         self.pageGap = pageGap
@@ -104,6 +108,9 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private func makeNodeForItem(at index: Int) -> GalleryItemNode {
         let node = self.items[index].node()
         node.toggleControlsVisibility = self.toggleControlsVisibility
+        node.beginCustomDismiss = self.beginCustomDismiss
+        node.completeCustomDismiss = self.completeCustomDismiss
+        node.baseNavigationController = self.baseNavigationController
         node.index = index
         return node
     }

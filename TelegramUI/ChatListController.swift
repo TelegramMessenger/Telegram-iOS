@@ -59,8 +59,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 switch state {
                     case .waitingForNetwork:
                         strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true)
-                    case .connecting:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Connecting, activity: true)
+                    case let .connecting(toProxy):
+                        strongSelf.titleView.title = NetworkStatusTitle(text: toProxy ? strongSelf.presentationData.strings.State_ConnectingToProxy : strongSelf.presentationData.strings.State_Connecting, activity: true)
                     case .updating:
                         strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true)
                     case .online:
@@ -164,6 +164,12 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             self?.activateSearch()
         }
         
+        self.chatListDisplayNode.chatListNode.presentAlert = { [weak self] text in
+            if let strongSelf = self {
+                self?.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }
+        }
+        
         self.chatListDisplayNode.chatListNode.deletePeerChat = { [weak self] peerId in
             if let strongSelf = self {
                 let actionSheet = ActionSheetController()
@@ -180,7 +186,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                             actionSheet?.dismissAnimated()
                 })
                 ])])
-                strongSelf.present(actionSheet, in: .window)
+                strongSelf.present(actionSheet, in: .window(.root))
             }
         }
         

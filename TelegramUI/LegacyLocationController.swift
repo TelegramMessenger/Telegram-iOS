@@ -37,7 +37,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
             let shareController = ShareController(account: account, shareAction: { peerIds in
                 shareAction?(peerIds)
             }, defaultAction: nil)
-            legacyController.present(shareController, in: .window)
+            legacyController.present(shareController, in: .window(.root))
             shareAction = { [weak shareController] peerIds in
                 shareController?.dismiss()
                 

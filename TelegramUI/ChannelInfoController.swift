@@ -760,7 +760,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
-        controller?.present(value, in: .window, with: presentationArguments)
+        controller?.present(value, in: .window(.root), with: presentationArguments)
     }
     popToRootControllerImpl = { [weak controller] in
         (controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
@@ -784,7 +784,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(presentationData.strings.Conversation_ContextMenuCopy), action: {
                     UIPasteboard.general.string = text
                 })])
-                strongController.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
                     if let resultItemNode = resultItemNode {
                         return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0))
                     } else {

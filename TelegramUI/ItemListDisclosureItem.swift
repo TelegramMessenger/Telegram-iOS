@@ -162,7 +162,7 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: titleFont, textColor: item.theme.list.itemSecondaryTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: titleFont, textColor: item.theme.list.itemSecondaryTextColor), nil, 1, .end, CGSize(width: width - 40 - titleLayout.size.width - 10.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -233,11 +233,11 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleLayout.size)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: width - rightInset - labelLayout.size.width, y: 12.0), size: labelLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: width - rightInset - labelLayout.size.width, y: 11.0), size: labelLayout.size)
                     
                     if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: width - 15.0 - arrowImage.size.width, y: 18.0), size: arrowImage.size)
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: width - 15.0 - arrowImage.size.width, y: 15.0), size: arrowImage.size)
                     }
                     
                     switch item.disclosureStyle {
@@ -293,6 +293,10 @@ class ItemListDisclosureItemNode: ListViewItemNode {
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+    }
+    
+    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {

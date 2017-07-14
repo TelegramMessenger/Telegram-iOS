@@ -276,16 +276,28 @@ final class TextNode: ASDisplayNode {
                 
                 let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, lastLineCharacterIndex, Double(lineConstrainedWidth))
                 
+                var isLastLine = false
                 if maximumNumberOfLines != 0 && lines.count == maximumNumberOfLines - 1 && lineCharacterCount > 0 {
+                    isLastLine = true
+                } else if layoutSize.height + (fontLineSpacing + fontLineHeight) * 2.0 > constrainedSize.height {
+                    isLastLine = true
+                }
+                
+                if isLastLine {
                     if first {
                         first = false
                     } else {
                         layoutSize.height += fontLineSpacing
                     }
                     
+                    let lineRange = CFRange(location: lastLineCharacterIndex, length: stringLength - lastLineCharacterIndex)
+                    
+                    if lineRange.length == 0 {
+                        break
+                    }
+                    
                     let coreTextLine: CTLine
                     
-                    let lineRange = CFRange(location: lastLineCharacterIndex, length: stringLength - lastLineCharacterIndex)
                     let originalLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 0.0)
                     
                     if CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(constrainedSize.width) {

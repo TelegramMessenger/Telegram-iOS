@@ -1,5 +1,6 @@
 import Foundation
 import TelegramCore
+import Postbox
 
 private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case inAppNotificationSettings = 0

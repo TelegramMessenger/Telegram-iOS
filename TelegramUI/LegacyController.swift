@@ -87,7 +87,7 @@ private final class LegacyControllerApplicationInterface: NSObject, TGLegacyAppl
     
     public func makeOverlayControllerWindow(_ parentController: TGViewController!, contentController: TGOverlayController!, keepKeyboard: Bool) -> TGOverlayControllerWindow! {
         return LegacyOverlayWindowHost(presentInWindow: { [weak self] c in
-            self?.controller?.present(c, in: .window)
+            self?.controller?.present(c, in: .window(.root))
         }, parentController: parentController, contentController: contentController, keepKeyboard: keepKeyboard)
     }
 }

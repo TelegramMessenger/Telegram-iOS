@@ -728,7 +728,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                 let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text("Copy"), action: {
                     UIPasteboard.general.string = text
                 })])
-                strongController.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
                     if let resultItemNode = resultItemNode {
                         return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0))
                     } else {

@@ -8,6 +8,7 @@ protocol ItemListItem {
     var sectionId: ItemListSectionId { get }
     var tag: ItemListItemTag? { get }
     var isAlwaysPlain: Bool { get }
+    var requestsNoInset: Bool { get }
 }
 
 extension ItemListItem {
@@ -17,6 +18,10 @@ extension ItemListItem {
     
     var tag: ItemListItemTag? {
         return nil
+    }
+    
+    var requestsNoInset: Bool {
+        return false
     }
 }
 
@@ -30,7 +35,7 @@ protocol ItemListItemFocusableNode {
 
 enum ItemListNeighbor {
     case none
-    case otherSection
+    case otherSection(requestsNoInset: Bool)
     case sameSection(alwaysPlain: Bool)
 }
 
@@ -43,7 +48,7 @@ func itemListNeighbors(item: ItemListItem, topItem: ItemListItem?, bottomItem: I
     let topNeighbor: ItemListNeighbor
     if let topItem = topItem {
         if topItem.sectionId != item.sectionId {
-            topNeighbor = .otherSection
+            topNeighbor = .otherSection(requestsNoInset: topItem.requestsNoInset)
         } else {
             topNeighbor = .sameSection(alwaysPlain: topItem.isAlwaysPlain)
         }
@@ -54,7 +59,7 @@ func itemListNeighbors(item: ItemListItem, topItem: ItemListItem?, bottomItem: I
     let bottomNeighbor: ItemListNeighbor
     if let bottomItem = bottomItem {
         if bottomItem.sectionId != item.sectionId {
-            bottomNeighbor = .otherSection
+            bottomNeighbor = .otherSection(requestsNoInset: bottomItem.requestsNoInset)
         } else {
             bottomNeighbor = .sameSection(alwaysPlain: bottomItem.isAlwaysPlain)
         }
@@ -89,8 +94,12 @@ func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors) -> UIEdgeIns
             topInset = UIScreenPixel + 35.0
         case .sameSection:
             topInset = 0.0
-        case .otherSection:
-            topInset = UIScreenPixel + 35.0
+        case let .otherSection(requestsNoInset):
+            if requestsNoInset {
+                topInset = 0.0
+            } else {
+                topInset = UIScreenPixel + 35.0
+            }
     }
     let bottomInset: CGFloat
     switch neighbors.bottom {

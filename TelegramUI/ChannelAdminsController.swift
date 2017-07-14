@@ -670,7 +670,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     let controller = ItemListController(account: account, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
-            controller.present(c, in: .window, with: p)
+            controller.present(c, in: .window(.root), with: p)
         }
     }
     return controller

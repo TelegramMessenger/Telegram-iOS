@@ -76,6 +76,7 @@ enum AudioPlaylistPlayback {
 enum AudioPlaylistControl {
     case navigation(AudioPlaylistNavigation)
     case playback(AudioPlaylistPlayback)
+    case stop
 }
 
 protocol AudioPlaylistId {
@@ -119,14 +120,50 @@ struct AudioPlaylistStateAndStatus: Equatable {
 
 private enum AudioPlaylistItemPlayer {
     case player(MediaPlayer)
-    case videoContext(ManagedMediaId, MediaResource, MediaPlayer, Disposable)
+    case sharedVideo(InstantVideoNode)
     
-    var player: MediaPlayer {
+    func play() {
         switch self {
             case let .player(player):
-                return player
-            case let .videoContext(_, _, player, _):
-                return player
+                player.play()
+            case let .sharedVideo(node):
+                node.play()
+        }
+    }
+    
+    func pause() {
+        switch self {
+            case let .player(player):
+                player.pause()
+            case let .sharedVideo(node):
+                node.pause()
+        }
+    }
+    
+    func togglePlayPause() {
+        switch self {
+            case let .player(player):
+                player.togglePlayPause()
+            case let .sharedVideo(node):
+                node.togglePlayPause()
+        }
+    }
+    
+    func seek(_ timestamp: Double) {
+        switch self {
+            case let .player(player):
+                player.seek(timestamp: timestamp)
+            case let .sharedVideo(node):
+                node.seek(timestamp)
+        }
+    }
+    
+    func setSoundEnabled(_ value: Bool) {
+        switch self {
+            case .player:
+                break
+            case let .sharedVideo(node):
+                node.setSoundEnabled(value)
         }
     }
 }
@@ -150,45 +187,40 @@ private final class AudioPlaylistInternalState {
 final class ManagedAudioPlaylistPlayer {
     private let audioSessionManager: ManagedAudioSession
     private let overlayMediaManager: OverlayMediaManager
+    private weak var account: Account?
     private weak var mediaManager: MediaManager?
     private let postbox: Postbox
     let playlist: AudioPlaylist
     
     private let currentState = Atomic<AudioPlaylistInternalState>(value: AudioPlaylistInternalState())
     private let currentStateAndStatusValue = Promise<AudioPlaylistStateAndStatus?>()
-    private let overlayContextValue = Promise<(ManagedMediaId, MediaResource, Disposable)?>(nil)
+    private let overlayContextValue = Promise<InstantVideoNode?>(nil)
     
     var stateAndStatus: Signal<AudioPlaylistStateAndStatus?, NoError> {
         return self.currentStateAndStatusValue.get()
     }
     
-    var currentContext: (ManagedMediaId, MediaResource, Disposable)?
-    
+    var currentVideoNode: InstantVideoNode?
     var overlayContextDisposable: Disposable?
     
-    init(audioSessionManager: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, mediaManager: MediaManager, postbox: Postbox, playlist: AudioPlaylist) {
+    init(audioSessionManager: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, mediaManager: MediaManager, account: Account, postbox: Postbox, playlist: AudioPlaylist) {
         self.audioSessionManager = audioSessionManager
         self.overlayMediaManager = overlayMediaManager
         self.mediaManager = mediaManager
+        self.account = account
         self.postbox = postbox
         self.playlist = playlist
         
-        self.overlayContextDisposable = (self.overlayContextValue.get() |> deliverOnMainQueue).start(next: { [weak self] context in
+        self.overlayContextDisposable = (self.overlayContextValue.get() |> deliverOnMainQueue).start(next: { [weak self] node in
             if let strongSelf = self {
-                var updated = false
-                if let lhsId = strongSelf.currentContext?.0, let rhsId = context?.0 {
-                    updated = !lhsId.isEqual(to: rhsId)
-                } else if (strongSelf.currentContext?.0 != nil) != (context?.0 != nil) {
-                    updated = true
-                }
-                if updated {
-                    strongSelf.currentContext?.2.dispose()
-                    if let id = strongSelf.currentContext?.0 {
-                        strongSelf.overlayMediaManager.controller?.removeVideoContext(id: id)
+                if strongSelf.currentVideoNode !== node {
+                    if let currentVideoNode = strongSelf.currentVideoNode {
+                        currentVideoNode.setSoundEnabled(false)
+                        strongSelf.overlayMediaManager.controller?.removeNode(currentVideoNode)
                     }
-                    strongSelf.currentContext = context
-                    if let (id, resource, _) = context, let mediaManager = strongSelf.mediaManager {
-                        strongSelf.overlayMediaManager.controller?.addVideoContext(mediaManager: mediaManager, postbox: postbox, id: id, resource: resource, priority: 0)
+                    strongSelf.currentVideoNode = node
+                    if let node = node {
+                        strongSelf.overlayMediaManager.controller?.addNode(node)
                     }
                 }
             }
@@ -197,10 +229,10 @@ final class ManagedAudioPlaylistPlayer {
     
     deinit {
         self.overlayContextDisposable?.dispose()
-        if let id = self.currentContext?.0 {
-            self.overlayMediaManager.controller?.removeVideoContext(id: id)
+        if let currentVideoNode = self.currentVideoNode {
+            self.overlayMediaManager.controller?.removeNode(currentVideoNode)
+            currentVideoNode.setSoundEnabled(false)
         }
-        self.currentContext?.2.dispose()
         self.currentState.with { state -> Void in
             state.navigationDisposable.dispose()
         }
@@ -213,13 +245,13 @@ final class ManagedAudioPlaylistPlayer {
                     if let item = state.currentItem {
                         switch playback {
                             case .play:
-                                item.player?.player.play()
+                                item.player?.play()
                             case .pause:
-                                item.player?.player.pause()
+                                item.player?.pause()
                             case .togglePlayPause:
-                                item.player?.player.togglePlayPause()
+                                item.player?.togglePlayPause()
                             case let .seek(timestamp):
-                                item.player?.player.seek(timestamp: timestamp)
+                                item.player?.seek(timestamp)
                         }
                     }
                 }
@@ -232,20 +264,20 @@ final class ManagedAudioPlaylistPlayer {
                 }
                 let postbox = self.postbox
                 let audioSessionManager = self.audioSessionManager
-                let overlayMediaManager = self.overlayMediaManager
                 let mediaManager = self.mediaManager
+                let account = self.account
                 disposable.set((self.playlist.navigate(currentItem, navigation)
                     |> deliverOnMainQueue
                     |> mapToSignal { [weak mediaManager] item -> Signal<(AudioPlaylistItem, AudioPlaylistItemState)?, NoError> in
                         if let item = item {
-                            var instantVideo: (MediaResource, MessageId)?
+                            var instantVideo: (TelegramMediaFile, MessageId, UInt32)?
                             if let item = item as? PeerMessageHistoryAudioPlaylistItem {
                                 switch item.entry {
                                 case let .MessageEntry(message, _, _, _):
                                     for media in message.media {
                                         if let file = media as? TelegramMediaFile {
                                             if file.isInstantVideo {
-                                                instantVideo = (file.resource, message.id)
+                                                instantVideo = (file, message.id, message.stableId)
                                             }
                                         }
                                     }
@@ -267,15 +299,16 @@ final class ManagedAudioPlaylistPlayer {
                             if let resource = item.resource {
                                 var itemPlayer: AudioPlaylistItemPlayer?
                                 if let instantVideo = instantVideo {
-                                    if let mediaManager = mediaManager {
-                                        let (player, disposable) = mediaManager.videoContext(postbox: postbox, id: PeerMessageManagedMediaId(messageId: instantVideo.1), resource: instantVideo.0, preferSoftwareDecoding: false, backgroundThread: false, priority: -1, initiatePlayback: true, activate: { _ in
-                                        }, deactivate: {
-                                            return .complete()
-                                        })
-                                        itemPlayer = .videoContext(PeerMessageManagedMediaId(messageId: instantVideo.1), instantVideo.0, player, disposable)
+                                    if let mediaManager = mediaManager, let account = account {
+                                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                        let videoNode = InstantVideoNode(theme: presentationData.theme, manager: mediaManager, account: account, source: .messageMedia(stableId: instantVideo.2, file: instantVideo.0), priority: 0, withSound: true)
+                                        videoNode.tapped = { [weak videoNode] in
+                                            videoNode?.togglePlayPause()
+                                        }
+                                        itemPlayer = .sharedVideo(videoNode)
                                     }
                                 } else {
-                                    let player = MediaPlayer(audioSessionManager: audioSessionManager, overlayMediaManager: overlayMediaManager, postbox: postbox, resource: resource, streamable: item.streamable, video: false, preferSoftwareDecoding: false, enableSound: true)
+                                    let player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: resource, streamable: item.streamable, video: false, preferSoftwareDecoding: false, enableSound: true)
                                     itemPlayer = .player(player)
                                 }
                                 return .single((item, AudioPlaylistItemState(item: item, player: itemPlayer)))
@@ -290,6 +323,7 @@ final class ManagedAudioPlaylistPlayer {
                             let updatedStateAndStatus = strongSelf.currentState.with { state -> AudioPlaylistStateAndStatus in
                                 if let (item, itemState) = next {
                                     state.currentItem = itemState
+                                    var status: Signal<MediaPlayerStatus, NoError>?
                                     if let player = itemState.player {
                                         switch player {
                                             case let .player(player):
@@ -299,33 +333,53 @@ final class ManagedAudioPlaylistPlayer {
                                                         strongSelf.control(.navigation(.next))
                                                     }
                                                 })
-                                            case let .videoContext(_, _, player, _):
-                                                player.actionAtEnd = .loopDisablingSound({
-                                                    if let strongSelf = self {
-                                                        strongSelf.control(.navigation(.next))
+                                                status = player.status
+                                            case let .sharedVideo(videoNode):
+                                                videoNode.playbackEnded = { [weak videoNode] in
+                                                    Queue.mainQueue().async {
+                                                        if let videoNode = videoNode {
+                                                            videoNode.setSoundEnabled(false)
+                                                            videoNode.play()
+                                                        }
+                                                        if let strongSelf = self {
+                                                            strongSelf.control(.navigation(.next))
+                                                        }
                                                     }
-                                                })
-                                                player.playOnceWithSound()
+                                                }
+                                                videoNode.dismissed = {
+                                                    if let strongSelf = self {
+                                                        strongSelf.control(.stop)
+                                                    }
+                                                }
+                                                status = videoNode.status
                                         }
                                     }
                                     let playbackId = state.nextPlaybackId
                                     state.nextPlaybackId += 1
-                                    return AudioPlaylistStateAndStatus(state: AudioPlaylistState(playlistId: strongSelf.playlist.id, item: item), playbackId: playbackId, status: itemState.player?.player.status)
+                                    return AudioPlaylistStateAndStatus(state: AudioPlaylistState(playlistId: strongSelf.playlist.id, item: item), playbackId: playbackId, status: status)
                                 } else {
                                     state.currentItem = nil
                                     return AudioPlaylistStateAndStatus(state: AudioPlaylistState(playlistId: strongSelf.playlist.id, item: nil), playbackId: 0, status: nil)
                                 }
                             }
                             strongSelf.currentStateAndStatusValue.set(.single(updatedStateAndStatus))
-                            var overlayContextValue: (ManagedMediaId, MediaResource, Disposable)?
+                            var overlayContextValue: InstantVideoNode?
                             if let (_, itemState) = next {
-                                if let player = itemState.player, case let .videoContext(id, resource, _, disposable) = player {
-                                    overlayContextValue = (id, resource, disposable)
+                                if let player = itemState.player, case let .sharedVideo(node) = player {
+                                    overlayContextValue = node
+                                    node.setSoundEnabled(true)
                                 }
                             }
                             strongSelf.overlayContextValue.set(.single(overlayContextValue))
                         }
                     }))
+            case .stop:
+                let updatedStateAndStatus = self.currentState.with { state -> AudioPlaylistStateAndStatus in
+                    state.currentItem = nil
+                    return AudioPlaylistStateAndStatus(state: AudioPlaylistState(playlistId: self.playlist.id, item: nil), playbackId: 0, status: nil)
+                }
+                self.currentStateAndStatusValue.set(.single(updatedStateAndStatus))
+                self.overlayContextValue.set(.single(nil))
         }
     }
 }

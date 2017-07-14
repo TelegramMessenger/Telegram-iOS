@@ -11,6 +11,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(GeneratedMediaStoreSettings.self, f: { GeneratedMediaStoreSettings(decoder: $0) })
     declareEncodable(PresentationThemeSettings.self, f: { PresentationThemeSettings(decoder: $0) })
     declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
+    declareEncodable(ApplicationSpecificBoolNotice.self, f: { ApplicationSpecificBoolNotice(decoder: $0) })
     return
 }()
 

@@ -52,7 +52,9 @@ private func mediaForMessage(message: Message) -> Media? {
         } else if let webpage = media as? TelegramMediaWebpage {
             switch webpage.content {
                 case let .Loaded(content):
-                    if let image = content.image {
+                    if let embedUrl = content.embedUrl, !embedUrl.isEmpty {
+                        return webpage
+                    } else if let image = content.image {
                         if let result = galleryMediaForMedia(media: image) {
                             return result
                         }
@@ -85,6 +87,8 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
                             return ChatDocumentGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                         }
                     }
+                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                    return EmbedVideoGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                 }
             }
         default:
@@ -151,6 +155,7 @@ class GalleryController: ViewController {
     
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
+    private let centralItemRightBarButtonItem = Promise<UIBarButtonItem?>()
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
     private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
     private let centralItemAttributesDisposable = DisposableSet();
@@ -161,10 +166,12 @@ class GalleryController: ViewController {
     }
     
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
+    private let baseNavigationController: NavigationController?
     
-    init(account: Account, messageId: MessageId, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
+    init(account: Account, messageId: MessageId, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.account = account
         self.replaceRootController = replaceRootController
+        self.baseNavigationController = baseNavigationController
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
@@ -225,6 +232,10 @@ class GalleryController: ViewController {
         
         self.centralItemAttributesDisposable.add(self.centralItemTitleView.get().start(next: { [weak self] titleView in
             self?.navigationItem.titleView = titleView
+        }))
+        
+        self.centralItemAttributesDisposable.add(self.centralItemRightBarButtonItem.get().start(next: { [weak self] rightBarButtonItem in
+            self?.navigationItem.rightBarButtonItem = rightBarButtonItem
         }))
         
         self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in
@@ -296,7 +307,7 @@ class GalleryController: ViewController {
     override func loadDisplayNode() {
         let controllerInteraction = GalleryControllerInteraction(presentController: { [weak self] controller, arguments in
             if let strongSelf = self {
-                strongSelf.present(controller, in: .window, with: arguments)
+                strongSelf.present(controller, in: .window(.root), with: arguments)
             }
         }, dismissController: { [weak self] in
             self?.dismiss(forceAway: true)
@@ -328,6 +339,48 @@ class GalleryController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
+        self.galleryNode.beginCustomDismiss = { [weak self] in
+            if let strongSelf = self {
+                strongSelf._hiddenMedia.set(.single(nil))
+                
+                var animatedOutNode = true
+                var animatedOutInterface = false
+                
+                let completion = {
+                    if animatedOutNode && animatedOutInterface {
+                        //self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                    }
+                }
+                
+                /*if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
+                    if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
+                        if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
+                            animatedOutNode = false
+                            centralItemNode.animateOut(to: transitionArguments.transitionNode, completion: {
+                                animatedOutNode = true
+                                completion()
+                            })
+                        }
+                    }
+                }*/
+                
+                strongSelf.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
+                    animatedOutInterface = true
+                    //completion()
+                })
+            }
+        }
+        
+        self.galleryNode.completeCustomDismiss = { [weak self] in
+            self?._hiddenMedia.set(.single(nil))
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
+        
+        let baseNavigationController = self.baseNavigationController
+        self.galleryNode.baseNavigationController = { [weak baseNavigationController] in
+            return baseNavigationController
+        }
+        
         self.galleryNode.pager.replaceItems(self.entries.map({ galleryItemForEntry(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: $0) }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
@@ -341,6 +394,7 @@ class GalleryController: ViewController {
                     if let node = strongSelf.galleryNode.pager.centralItemNode() {
                         strongSelf.centralItemTitle.set(node.title())
                         strongSelf.centralItemTitleView.set(node.titleView())
+                        strongSelf.centralItemRightBarButtonItem.set(node.rightBarButtonItem())
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
                         strongSelf.centralItemFooterContentNode.set(node.footerContent())
                     }
@@ -361,6 +415,7 @@ class GalleryController: ViewController {
             if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
                 self.centralItemTitle.set(centralItemNode.title())
                 self.centralItemTitleView.set(centralItemNode.titleView())
+                self.centralItemRightBarButtonItem.set(centralItemNode.rightBarButtonItem())
                 self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
                 self.centralItemFooterContentNode.set(centralItemNode.footerContent())
                 

@@ -94,9 +94,10 @@ final class MediaPlayerNode: ASDisplayNode {
                     videoLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(rotationAngle)))
                 }
                 
-                if requestFrames {
-                    //print("request")
-                    self.startPolling()
+                if self.videoInHierarchy {
+                    if requestFrames {
+                        self.startPolling()
+                    }
                 }
             }
         }
@@ -113,7 +114,7 @@ final class MediaPlayerNode: ASDisplayNode {
                     switch status {
                         case let .delay(delay):
                             strongSelf.timer = SwiftSignalKit.Timer(timeout: delay, repeat: true, completion: {
-                                if let strongSelf = self, let videoLayer = strongSelf.videoLayer, let (_, requestFrames, _) = strongSelf.state, requestFrames {
+                                if let strongSelf = self, let videoLayer = strongSelf.videoLayer, let (_, requestFrames, _) = strongSelf.state, requestFrames, strongSelf.videoInHierarchy {
                                     if videoLayer.isReadyForMoreMediaData {
                                         strongSelf.timer?.invalidate()
                                         strongSelf.timer = nil
@@ -223,7 +224,9 @@ final class MediaPlayerNode: ASDisplayNode {
             if let strongSelf = self {
                 if strongSelf.videoInHierarchy != value {
                     strongSelf.videoInHierarchy = value
-                    //strongSelf.videoNode.playerLayer.flush()
+                    if value {
+                        strongSelf.updateState()
+                    }
                 }
                 strongSelf.updateVideoInHierarchy?(value)
             }
@@ -246,6 +249,7 @@ final class MediaPlayerNode: ASDisplayNode {
     
     deinit {
         assert(Queue.mainQueue().isCurrent())
+        self.videoLayer?.removeFromSuperlayer()
         
         if let (takeFrameQueue, _) = self.takeFrameAndQueue {
             if let videoLayer = self.videoLayer {

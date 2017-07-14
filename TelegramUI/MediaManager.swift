@@ -19,34 +19,6 @@ private struct WrappedAudioPlaylistItemId: Hashable, Equatable {
     }
 }
 
-private final class ManagedAudioPlaylistPlayerStatusesContext {
-    private var subscribers: [WrappedAudioPlaylistItemId: Bag<(AudioPlaylistState?) -> Void>] = [:]
-    
-    func addSubscriber(id: WrappedAudioPlaylistItemId, _ f: @escaping (AudioPlaylistState?) -> Void) -> Int {
-        let bag: Bag<(AudioPlaylistState?) -> Void>
-        if let currentBag = self.subscribers[id] {
-            bag = currentBag
-        } else {
-            bag = Bag()
-            self.subscribers[id] = bag
-        }
-        return bag.add(f)
-    }
-    
-    func removeSubscriber(id: WrappedAudioPlaylistItemId, index: Int) {
-        if let bag = subscribers[id] {
-            bag.remove(index)
-            if bag.isEmpty {
-                self.subscribers.removeValue(forKey: id)
-            }
-        }
-    }
-    
-    func subscribersForId(_ id: WrappedAudioPlaylistItemId) -> [(AudioPlaylistState) -> Void]? {
-        return self.subscribers[id]?.copyItems()
-    }
-}
-
 struct WrappedManagedMediaId: Hashable {
     let id: ManagedMediaId
     
@@ -181,11 +153,17 @@ private final class ActiveManagedVideoContext {
     }
 }
 
+enum SharedMediaPlayerGroup: Int {
+    case music = 0
+    case voiceAndInstantVideo = 1
+}
+
 public final class MediaManager: NSObject {
     private let queue = Queue.mainQueue()
     
     public let audioSession: ManagedAudioSession
     let overlayMediaManager = OverlayMediaManager()
+    let sharedVideoContextManager = SharedVideoContextManager()
     
     private let playlistPlayer = Atomic<ManagedAudioPlaylistPlayer?>(value: nil)
     private let playlistPlayerStateAndStatusValue = Promise<AudioPlaylistStateAndStatus?>(nil)
@@ -193,7 +171,9 @@ public final class MediaManager: NSObject {
         return self.playlistPlayerStateAndStatusValue.get()
     }
     private let playlistPlayerStateValueDisposable = MetaDisposable()
-    private let playlistPlayerStatusesContext = Atomic(value: ManagedAudioPlaylistPlayerStatusesContext())
+    
+    private let sharedPlayerByGroup: [SharedMediaPlayerGroup: SharedMediaPlayer] = [:]
+    private var currentOverlayVideoNode: OverlayMediaItemNode?
     
     private let globalControlsStatus = Promise<MediaPlayerStatus?>(nil)
     
@@ -314,8 +294,6 @@ public final class MediaManager: NSObject {
         self.globalControlsStatusDisposable.dispose()
     }
     
-    //func push(audioSessionType: ManagedAudioSessionType, activate: @escaping () -> Void, deactivate: @escaping () -> Signal<Void, NoError>, once: Bool = false) -> Disposable {
-    
     func videoContext(postbox: Postbox, id: ManagedMediaId, resource: MediaResource, preferSoftwareDecoding: Bool, backgroundThread: Bool, priority: Int32, initiatePlayback: Bool, activate: @escaping (MediaPlayerNode) -> Void, deactivate: @escaping () -> Signal<Void, NoError>) -> (MediaPlayer, Disposable) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -325,7 +303,7 @@ public final class MediaManager: NSObject {
         if let currentActiveContext = self.managedVideoContexts[wrappedId] {
             activeContext = currentActiveContext
         } else {
-            let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, overlayMediaManager: self.overlayMediaManager, postbox: postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: false)
+            let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, postbox: postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: false)
             mediaPlayer.actionAtEnd = .loop
             let playerNode = MediaPlayerNode(backgroundThread: backgroundThread)
             mediaPlayer.attachPlayerNode(playerNode)
@@ -402,10 +380,6 @@ public final class MediaManager: NSObject {
         }
     }
     
-    private func updatePlaylistPlayerStateValue() {
-        
-    }
-    
     func playlistPlayerControl(_ control: AudioPlaylistControl) {
         var player: ManagedAudioPlaylistPlayer?
         self.playlistPlayer.with { currentPlayer -> Void in
@@ -425,24 +399,6 @@ public final class MediaManager: NSObject {
                 }
                 return nil
             }
-        /*return Signal { subscriber in
-            let id = WrappedAudioPlaylistItemId(playlistId: playlistId, itemId: itemId)
-            let index = self.playlistPlayerStatusesContext.with { context -> Int in
-                context.addSubscriber(id: id, { state in
-                    subscriber.putNext(state)
-                })
-            }
-            
-            
-            
-            return ActionDisposable { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.playlistPlayerStatusesContext.with { context -> Void in
-                        context.removeSubscriber(id: id, index: index)
-                    }
-                }
-            }
-        }*/
     }
     
     @objc func playCommandEvent(_ command: AnyObject) {
@@ -463,5 +419,17 @@ public final class MediaManager: NSObject {
     
     @objc func togglePlayPauseCommandEvent(_ command: AnyObject) {
         self.playlistPlayerControl(.playback(.togglePlayPause))
+    }
+    
+    func setOverlayVideoNode(_ node: OverlayMediaItemNode?) {
+        if let currentOverlayVideoNode = self.currentOverlayVideoNode {
+            self.overlayMediaManager.controller?.removeNode(currentOverlayVideoNode, customTransition: true)
+            self.currentOverlayVideoNode = nil
+        }
+        
+        if let node = node {
+            self.currentOverlayVideoNode = node
+            self.overlayMediaManager.controller?.addNode(node, customTransition: true)
+        }
     }
 }
