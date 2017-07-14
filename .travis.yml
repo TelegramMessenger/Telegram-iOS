@@ -24,6 +24,7 @@ before_install:
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
   - gem install xcpretty-travis-formatter --no-rdoc --no-ri --no-document --quiet
   - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
+  - gem install jazzy --no-rdoc --no-ri --no-document --quiet
   - brew install carthage
 
 script:
@@ -47,7 +48,7 @@ script:
   - if [ $LINT == "YES" ]; then
       cp -R Products/HockeySDK-iOS/ HockeySDK-iOS;
       pod lib lint;
-      carthage build --no-skip-current ;
+      carthage build --no-skip-current;
     fi
 
 # Use better failure diagnostics, copied from https://github.com/0xced/XCDYouTubeKit

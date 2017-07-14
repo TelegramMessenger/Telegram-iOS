@@ -111,14 +111,14 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
 1. Open your `AppDelegate.m` file.
 2. Add the following line at the top of the file below your own `import` statements:
 
-  ```objectivec
+  ```objc
   @import HockeySDK;
   ```
 
 3. Search for the method `application:didFinishLaunchingWithOptions:`
 4. Add the following lines to setup and start the HockeyApp SDK:
 
-  ```objectivec
+  ```objc
   [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
   // Do some additional configuration if needed here
   [[BITHockeyManager sharedHockeyManager] startManager];
@@ -315,7 +315,7 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 1. Each extension is required to use the same values for version (`CFBundleShortVersionString`) and build number (`CFBundleVersion`) as the main app uses. (This is required only if you are using the same `APP_IDENTIFIER` for your app and extensions).
 2. You need to make sure the SDK setup code is only invoked **once**. Since there is no `applicationDidFinishLaunching:` equivalent and `viewDidLoad` can run multiple times, you need to use a setup like the following example:
 
-  ```objectivec
+  ```objc
   static BOOL didSetupHockeySDK = NO;
 
   @interface TodayViewController () <NCWidgetProviding>
@@ -345,7 +345,7 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
 
   To make sure that the HockeySDK is only instantiated once in the WatchKit extension's lifecycle we recommend using a helper class similar to this:
 
-  ```objectivec
+  ```objc
   @import Foundation;
   
   @interface BITWatchSDKSetup : NSObject
@@ -355,7 +355,7 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
   @end
   ```
 
-  ```objectivec
+  ```objc
   #import "BITWatchSDKSetup.h"
   @import HockeySDK
   
@@ -376,7 +376,7 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
 
   Then, in each of your WKInterfaceControllers where you want to use the HockeySDK, you should do this:
 
-  ```objectivec
+  ```objc
   #import "InterfaceController.h"
   @import HockeySDK
   #import "BITWatchSDKSetup.h"
@@ -413,7 +413,7 @@ To provide you with the best crash reporting, we are using a build of [PLCrashRe
 
 This feature can be disabled as follows:
 
-```objectivec
+```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [[BITHockeyManager sharedHockeyManager] setDisableCrashManager: YES]; //disable crash reporting
@@ -425,7 +425,7 @@ This feature can be disabled as follows:
 
 Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide whether they want to send the report or not.
 
-```objectivec
+```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [[BITHockeyManager sharedHockeyManager].crashManager setCrashManagerStatus: BITCrashManagerStatusAutoSend];
@@ -445,7 +445,7 @@ We strongly advice _NOT_ to enable Mach exception handler in release versions of
 
 *Warning:* The Mach exception handler executes in-process, and will interfere with debuggers when they attempt to suspend all active threads (which will include the Mach exception handler). Mach-based handling should _NOT_ be used when a debugger is attached. The SDK will not enabled catching exceptions if the app is started with the debugger running. If you attach the debugger during runtime, this may cause issues the Mach exception handler is enabled!
  
-```objectivec
+```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [[BITHockeyManager sharedHockeyManager].crashManager setEnableMachExceptionHandler: YES];
@@ -470,7 +470,7 @@ The `BITCrashManagerDelegate` protocol (which is automatically included in `BITH
 
 Make sure to implement the protocol
 
-```objectivec
+```objc
 @interface YourAppDelegate () <BITHockeyManagerDelegate> {}
 
 @end
@@ -478,7 +478,7 @@ Make sure to implement the protocol
 
 and set the delegate:
 
-```objectivec
+```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [[BITHockeyManager sharedHockeyManager] setDelegate: self];
@@ -498,7 +498,7 @@ HockeyApp automatically provides you with nice, intelligible, and informative me
 
 Just in case you want to opt-out of the automatic collection of anonymous users and sessions statistics, there is a way to turn this functionality off at any time:
 
-```objectivec
+```objc
 [BITHockeyManager sharedHockeyManager].disableMetricsManager = YES;
 ```
 
@@ -511,7 +511,7 @@ By tracking custom events, you can now get insight into how your customers use y
 
 **Objective-C**
 
-```objectivec
+```objc
 BITMetricsManager *metricsManager = [BITHockeyManager sharedHockeyManager].metricsManager;
 
 [metricsManager trackEventWithName:eventName]
@@ -540,7 +540,7 @@ It's possible to attach properties and/or measurements to a custom event. There 
 
 **Objective-C**
 
-```objectivec
+```objc
 BITMetricsManager *metricsManager = [BITHockeyManager sharedHockeyManager].metricsManager;
 
 NSDictionary *myProperties = @{@"Property 1" : @"Something",
@@ -582,7 +582,7 @@ in your podfile.
  
 You should never create your own instance of `BITFeedbackManager` but use the one provided by the `[BITHockeyManager sharedHockeyManager]`:
  
-```objectivec
+```objc
 [BITHockeyManager sharedHockeyManager].feedbackManager
 ```
 
@@ -604,7 +604,7 @@ When an update is detected, this module will show an alert asking the user if he
 
 By default this module is **NOT** enabled! To enable it use the following code:
 
-```objectivec
+```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [[BITHockeyManager sharedHockeyManager] setEnableStoreUpdateManager: YES];
@@ -627,7 +627,7 @@ This module automatically disables itself when running in an App Store build by 
 
 This feature can be disabled manually as follows:
 
-```objectivec
+```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable auto updating
@@ -644,7 +644,7 @@ If you want to see beta analytics, use the beta distribution feature with in-app
 
 To check if data is send properly to HockeyApp and also see some additional SDK debug log data in the console, add the following line before `startManager`:
 
-```objectivec
+```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [BITHockeyManager sharedHockeyManager].logLevel = BITLogLevelDebug;
