@@ -54,6 +54,14 @@
         _contextIsPasswordRequiredUpdated(context, datacenterId);
 }
 
+- (MTSignal *)fetchContextDatacenterPublicKeys:(MTContext *)context datacenterId:(NSInteger)datacenterId {
+    if (_fetchContextDatacenterPublicKeys) {
+        return _fetchContextDatacenterPublicKeys(context, datacenterId);
+    } else {
+        return nil;
+    }
+}
+
 @end
 
 @interface MTContext () <MTDiscoverDatacenterAddressActionDelegate, MTDatacenterAuthActionDelegate, MTDatacenterTransferAuthActionDelegate>
@@ -782,21 +790,23 @@
     [[MTContext contextQueue] dispatchOnQueue:^{
         if (_fetchPublicKeysActions[@(datacenterId)] == nil) {
             for (id<MTContextChangeListener> listener in _changeListeners) {
-                MTSignal *signal = [listener fetchContextDatacenterPublicKeys:self datacenterId:datacenterId];
-                if (signal != nil) {
-                    __weak MTContext *weakSelf = self;
-                    MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
-                    _fetchPublicKeysActions[@(datacenterId)] = disposable;
-                    [disposable setDisposable:[signal startWithNext:^(NSArray<NSDictionary *> *next) {
-                        [[MTContext contextQueue] dispatchOnQueue:^{
-                            __strong MTContext *strongSelf = weakSelf;
-                            if (strongSelf != nil) {
-                                [strongSelf->_fetchPublicKeysActions removeObjectForKey:@(datacenterId)];
-                                [strongSelf updatePublicKeysForDatacenterWithId:datacenterId publicKeys:next];
-                            }
-                        } synchronous:false];
-                    }]];
-                    break;
+                if ([listener respondsToSelector:@selector(fetchContextDatacenterPublicKeys:datacenterId:)]) {
+                    MTSignal *signal = [listener fetchContextDatacenterPublicKeys:self datacenterId:datacenterId];
+                    if (signal != nil) {
+                        __weak MTContext *weakSelf = self;
+                        MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
+                        _fetchPublicKeysActions[@(datacenterId)] = disposable;
+                        [disposable setDisposable:[signal startWithNext:^(NSArray<NSDictionary *> *next) {
+                            [[MTContext contextQueue] dispatchOnQueue:^{
+                                __strong MTContext *strongSelf = weakSelf;
+                                if (strongSelf != nil) {
+                                    [strongSelf->_fetchPublicKeysActions removeObjectForKey:@(datacenterId)];
+                                    [strongSelf updatePublicKeysForDatacenterWithId:datacenterId publicKeys:next];
+                                }
+                            } synchronous:false];
+                        }]];
+                        break;
+                    }
                 }
             }
         }
