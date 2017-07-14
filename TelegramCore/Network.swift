@@ -535,6 +535,10 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.shouldKeepConnectionDisposable.dispose()
     }
     
+    public var globalTime:TimeInterval {
+        return context.globalTime()
+    }
+    
     public func requestMessageServiceAuthorizationRequired(_ requestMessageService: MTRequestMessageService!) {
         self.loggedOut?()
     }

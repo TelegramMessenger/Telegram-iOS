@@ -5,7 +5,7 @@ public final class LocalizationInfo {
     public let title: String
     public let localizedTitle: String
     
-    init(languageCode: String, title: String, localizedTitle: String) {
+    public init(languageCode: String, title: String, localizedTitle: String) {
         self.languageCode = languageCode
         self.title = title
         self.localizedTitle = localizedTitle
