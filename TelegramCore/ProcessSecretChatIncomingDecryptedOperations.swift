@@ -532,7 +532,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                 }
             }
             
-            let (tags, globalTags) = tagsForStoreMessage(incoming: true, media: parsedMedia, textEntities: entitiesAttribute?.entities)
+            let (tags, globalTags) = tagsForStoreMessage(incoming: true, attributes: attributes, media: parsedMedia, textEntities: entitiesAttribute?.entities)
 
             return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, timestamp: timestamp, flags: [.Incoming], tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia), resources)
         case let .decryptedMessageService(randomId, action):
