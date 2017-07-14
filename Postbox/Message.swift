@@ -337,12 +337,14 @@ public struct StoreMessageForwardInfo {
     public let sourceId: PeerId?
     public let sourceMessageId: MessageId?
     public let date: Int32
+    public let authorSignature: String?
     
-    public init(authorId: PeerId, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32) {
+    public init(authorId: PeerId, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
         self.authorId = authorId
         self.sourceId = sourceId
         self.sourceMessageId = sourceMessageId
         self.date = date
+        self.authorSignature = authorSignature
     }
 }
 
@@ -351,6 +353,7 @@ public struct MessageForwardInfo: Equatable {
     public let source: Peer?
     public let sourceMessageId: MessageId?
     public let date: Int32
+    public let authorSignature: String?
 }
 
 public func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
@@ -368,6 +371,9 @@ public func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
         return false
     }
     if lhs.date != rhs.date {
+        return false
+    }
+    if lhs.authorSignature != rhs.authorSignature {
         return false
     }
     

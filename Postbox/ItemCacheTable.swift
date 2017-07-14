@@ -60,6 +60,10 @@ final class ItemCacheTable: Table {
         return nil
     }
     
+    func remove(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) {
+        self.valueBox.remove(self.table, key: self.itemKey(id: id))
+    }
+    
     override func clearMemoryCache() {
         
     }

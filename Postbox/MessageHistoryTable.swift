@@ -666,6 +666,9 @@ final class MessageHistoryTable: Table {
             if forwardInfo.sourceMessageId != nil {
                 forwardInfoFlags |= 4
             }
+            if forwardInfo.authorSignature != nil {
+                forwardInfoFlags |= 8
+            }
             sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
             var forwardAuthorId: Int64 = forwardInfo.authorId.toInt64()
             var forwardDate: Int32 = forwardInfo.date
@@ -684,6 +687,17 @@ final class MessageHistoryTable: Table {
                 sharedBuffer.write(&sourceMessageIdPeerId, offset: 0, length: 8)
                 sharedBuffer.write(&sourceMessageIdNamespace, offset: 0, length: 4)
                 sharedBuffer.write(&sourceMessageIdId, offset: 0, length: 4)
+            }
+            
+            if let authorSignature = forwardInfo.authorSignature {
+                if let data = authorSignature.data(using: .utf8, allowLossyConversion: true) {
+                    var length: Int32 = Int32(data.count)
+                    sharedBuffer.write(&length, offset: 0, length: 4)
+                    sharedBuffer.write(data)
+                } else {
+                    var length: Int32 = 0
+                    sharedBuffer.write(&length, offset: 0, length: 4)
+                }
             }
         } else {
             var forwardInfoFlags: Int8 = 0
@@ -1130,6 +1144,9 @@ final class MessageHistoryTable: Table {
                 if forwardInfo.sourceMessageId != nil {
                     forwardInfoFlags |= 4
                 }
+                if forwardInfo.authorSignature != nil {
+                    forwardInfoFlags |= 8
+                }
                 sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
                 var forwardAuthorId: Int64 = forwardInfo.authorId.toInt64()
                 var forwardDate: Int32 = forwardInfo.date
@@ -1148,6 +1165,17 @@ final class MessageHistoryTable: Table {
                     sharedBuffer.write(&sourceMessageIdPeerId, offset: 0, length: 8)
                     sharedBuffer.write(&sourceMessageIdNamespace, offset: 0, length: 4)
                     sharedBuffer.write(&sourceMessageIdId, offset: 0, length: 4)
+                }
+                
+                if let authorSignature = forwardInfo.authorSignature {
+                    if let data = authorSignature.data(using: .utf8, allowLossyConversion: true) {
+                        var length: Int32 = Int32(data.count)
+                        sharedBuffer.write(&length, offset: 0, length: 4)
+                        sharedBuffer.write(data)
+                    } else {
+                        var length: Int32 = 0
+                        sharedBuffer.write(&length, offset: 0, length: 4)
+                    }
                 }
             } else {
                 var forwardInfoFlags: Int8 = 0
@@ -1350,6 +1378,9 @@ final class MessageHistoryTable: Table {
             if forwardInfo.sourceMessageId != nil {
                 forwardInfoFlags |= 4
             }
+            if forwardInfo.authorSignature != nil {
+                forwardInfoFlags |= 8
+            }
             sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
             var forwardAuthorId: Int64 = forwardInfo.authorId.toInt64()
             var forwardDate: Int32 = forwardInfo.date
@@ -1368,6 +1399,17 @@ final class MessageHistoryTable: Table {
                 sharedBuffer.write(&sourceMessageIdPeerId, offset: 0, length: 8)
                 sharedBuffer.write(&sourceMessageIdNamespace, offset: 0, length: 4)
                 sharedBuffer.write(&sourceMessageIdId, offset: 0, length: 4)
+            }
+            
+            if let authorSignature = forwardInfo.authorSignature {
+                if let data = authorSignature.data(using: .utf8, allowLossyConversion: true) {
+                    var length: Int32 = Int32(data.count)
+                    sharedBuffer.write(&length, offset: 0, length: 4)
+                    sharedBuffer.write(data)
+                } else {
+                    var length: Int32 = 0
+                    sharedBuffer.write(&length, offset: 0, length: 4)
+                }
             }
         } else {
             var forwardInfoFlags: Int8 = 0
@@ -1494,6 +1536,7 @@ final class MessageHistoryTable: Table {
                 var forwardDate: Int32 = 0
                 var forwardSourceId: PeerId?
                 var forwardSourceMessageId: MessageId?
+                var authorSignature: String? = nil
                 
                 value.read(&forwardAuthorId, offset: 0, length: 8)
                 value.read(&forwardDate, offset: 0, length: 4)
@@ -1514,7 +1557,14 @@ final class MessageHistoryTable: Table {
                     forwardSourceMessageId = MessageId(peerId: PeerId(forwardSourceMessagePeerId), namespace: forwardSourceMessageNamespace, id: forwardSourceMessageIdId)
                 }
                 
-                forwardInfo = IntermediateMessageForwardInfo(authorId: PeerId(forwardAuthorId), sourceId: forwardSourceId, sourceMessageId: forwardSourceMessageId, date: forwardDate)
+                if (forwardInfoFlags & 8) != 0 {
+                    var signatureLength: Int32 = 0
+                    value.read(&signatureLength, offset: 0, length: 4)
+                    authorSignature = String(data: Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self).advanced(by: value.offset), count: Int(signatureLength)), encoding: .utf8)
+                    value.skip(Int(signatureLength))
+                }
+                
+                forwardInfo = IntermediateMessageForwardInfo(authorId: PeerId(forwardAuthorId), sourceId: forwardSourceId, sourceMessageId: forwardSourceMessageId, date: forwardDate, authorSignature: authorSignature)
             }
             
             var hasAuthor: Int8 = 0
@@ -1529,7 +1579,6 @@ final class MessageHistoryTable: Table {
             var textLength: Int32 = 0
             value.read(&textLength, offset: 0, length: 4)
             let text = String(data: Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self).advanced(by: value.offset), count: Int(textLength)), encoding: .utf8) ?? ""
-            //let text = NSString(bytes: value.memory + value.offset, length: Int(textLength), encoding: NSUTF8StringEncoding) ?? ""
             value.skip(Int(textLength))
             
             let attributesOffset = value.offset
@@ -1630,7 +1679,7 @@ final class MessageHistoryTable: Table {
             if let sourceId = internalForwardInfo.sourceId {
                 source = peerTable.get(sourceId)
             }
-            forwardInfo = MessageForwardInfo(author: forwardAuthor, source: source, sourceMessageId: internalForwardInfo.sourceMessageId, date: internalForwardInfo.date)
+            forwardInfo = MessageForwardInfo(author: forwardAuthor, source: source, sourceMessageId: internalForwardInfo.sourceMessageId, date: internalForwardInfo.date, authorSignature: internalForwardInfo.authorSignature)
         }
         
         var author: Peer?

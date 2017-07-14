@@ -5,12 +5,14 @@ struct IntermediateMessageForwardInfo {
     let sourceId: PeerId?
     let sourceMessageId: MessageId?
     let date: Int32
+    let authorSignature: String?
     
-    init(authorId: PeerId, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32) {
+    init(authorId: PeerId, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
         self.authorId = authorId
         self.sourceId = sourceId
         self.sourceMessageId = sourceMessageId
         self.date = date
+        self.authorSignature = authorSignature
     }
     
     init(_ storeInfo: StoreMessageForwardInfo) {
@@ -18,6 +20,7 @@ struct IntermediateMessageForwardInfo {
         self.sourceId = storeInfo.sourceId
         self.sourceMessageId = storeInfo.sourceMessageId
         self.date = storeInfo.date
+        self.authorSignature = storeInfo.authorSignature
     }
 }
 

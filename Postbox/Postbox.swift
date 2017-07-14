@@ -457,6 +457,11 @@ public final class Modifier {
         self.postbox?.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
     }
     
+    public func removeItemCacheEntry(id: ItemCacheEntryId) {
+        assert(!self.disposed)
+        self.postbox?.removeItemCacheEntry(id: id)
+    }
+    
     public func retrieveItemCacheEntry(id: ItemCacheEntryId) -> Coding? {
         assert(!self.disposed)
         return self.postbox?.retrieveItemCacheEntry(id: id)
@@ -606,6 +611,20 @@ public final class Modifier {
         } else {
             return false
         }
+    }
+    
+    public func getNoticeEntry(key: NoticeEntryKey) -> Coding? {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.noticeTable.get(key: key)
+        } else {
+            return nil
+        }
+    }
+    
+    public func setNoticeEntry(key: NoticeEntryKey, value: Coding?) {
+        assert(!self.disposed)
+        self.postbox?.noticeTable.set(key: key, value: value)
     }
 }
 
@@ -797,6 +816,7 @@ public final class Postbox {
     let orderedItemListIndexTable: OrderedItemListIndexTable
     let textIndexTable: MessageHistoryTextIndexTable
     let unorderedItemListTable: UnorderedItemListTable
+    let noticeTable: NoticeTable
     
     //temporary
     let peerRatingTable: RatingTable<PeerId>
@@ -871,6 +891,7 @@ public final class Postbox {
         self.orderedItemListIndexTable = OrderedItemListIndexTable(valueBox: self.valueBox, table: OrderedItemListIndexTable.tableSpec(37))
         self.orderedItemListTable = OrderedItemListTable(valueBox: self.valueBox, table: OrderedItemListTable.tableSpec(38), indexTable: self.orderedItemListIndexTable)
         self.unorderedItemListTable = UnorderedItemListTable(valueBox: self.valueBox, table: UnorderedItemListTable.tableSpec(42))
+        self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(43))
         
         var tables: [Table] = []
         tables.append(self.metadataTable)
@@ -914,6 +935,7 @@ public final class Postbox {
         tables.append(self.orderedItemListTable)
         tables.append(self.orderedItemListIndexTable)
         tables.append(self.unorderedItemListTable)
+        tables.append(self.noticeTable)
         
         self.tables = tables
         
@@ -1585,6 +1607,10 @@ public final class Postbox {
     
     fileprivate func retrieveItemCacheEntry(id: ItemCacheEntryId) -> Coding? {
         return self.itemCacheTable.retrieve(id: id, metaTable: self.itemCacheMetaTable)
+    }
+    
+    fileprivate func removeItemCacheEntry(id: ItemCacheEntryId) {
+        self.itemCacheTable.remove(id: id, metaTable: self.itemCacheMetaTable)
     }
     
     fileprivate func replaceGlobalMessageTagsHole(globalTags: GlobalMessageTags, index: MessageIndex, with updatedIndex: MessageIndex?, messages: [StoreMessage]) {
