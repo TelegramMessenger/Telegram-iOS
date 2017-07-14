@@ -139,7 +139,8 @@ public final class WindowHostView {
     
     let updateSupportedInterfaceOrientations: (UIInterfaceOrientationMask) -> Void
     
-    var present: ((ViewController) -> Void)?
+    var present: ((ViewController, PresentationSurfaceLevel) -> Void)?
+    var presentNative: ((UIViewController) -> Void)?
     var updateSize: ((CGSize) -> Void)?
     var layoutSubviews: (() -> Void)?
     var updateToInterfaceOrientation: (() -> Void)?
@@ -159,7 +160,7 @@ public struct WindowTracingTags {
 }
 
 public protocol WindowHost {
-    func present(_ controller: ViewController)
+    func present(_ controller: ViewController, on level: PresentationSurfaceLevel)
 }
 
 private func layoutMetricsForScreenSize(_ size: CGSize) -> LayoutMetrics {
@@ -216,8 +217,12 @@ public class Window1 {
         self.windowLayout = WindowLayout(size: self.hostView.view.bounds.size, metrics: layoutMetricsForScreenSize(self.hostView.view.bounds.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, inputMinimized: minimized)
         self.presentationContext = PresentationContext()
         
-        self.hostView.present = { [weak self] controller in
-            self?.present(controller)
+        self.hostView.present = { [weak self] controller, level in
+            self?.present(controller, on: level)
+        }
+        
+        self.hostView.presentNative = { [weak self] controller in
+            self?.presentNative(controller)
         }
         
         self.hostView.updateSize = { [weak self] size in
@@ -487,11 +492,19 @@ public class Window1 {
                 
                 self._rootController?.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)
                 self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)
+                
+                for controller in self.topLevelOverlayControllers {
+                    controller.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)
+                }
             }
         }
     }
     
-    public func present(_ controller: ViewController) {
-        self.presentationContext.present(controller)
+    public func present(_ controller: ViewController, on level: PresentationSurfaceLevel) {
+        self.presentationContext.present(controller, on: level)
+    }
+    
+    public func presentNative(_ controller: UIViewController) {
+        
     }
 }

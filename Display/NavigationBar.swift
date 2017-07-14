@@ -413,9 +413,7 @@ open class NavigationBar: ASDisplayNode {
             }
         }
         self.backButtonNode.pressed = { [weak self] in
-            if let backPressed = self?.backPressed {
-                backPressed()
-            }
+            self?.backPressed()
         }
         
         self.leftButtonNode.pressed = { [weak self] in

@@ -1,8 +1,16 @@
 import SwiftSignalKit
 
+public struct PresentationSurfaceLevel: RawRepresentable {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+}
+
 public enum PresentationContextType {
     case current
-    case window
+    case window(PresentationSurfaceLevel)
 }
 
 final class PresentationContext {
@@ -35,7 +43,7 @@ final class PresentationContext {
     
     var topLevelSubview: UIView?
     
-    public func present(_ controller: ViewController) {
+    public func present(_ controller: ViewController, on: PresentationSurfaceLevel) {
         let controllerReady = controller.ready.get()
             |> filter({ $0 })
             |> take(1)
@@ -54,8 +62,8 @@ final class PresentationContext {
                     
                     strongSelf.controllers.append(controller)
                     if let view = strongSelf.view, let layout = strongSelf.layout {
-                        controller.navigation_setDismiss({ [weak strongSelf, weak controller] in
-                            if let strongSelf = strongSelf, let controller = controller {
+                        controller.navigation_setDismiss({ [weak controller] in
+                            if let strongSelf = self, let controller = controller {
                                 strongSelf.dismiss(controller)
                             }
                         }, rootController: nil)

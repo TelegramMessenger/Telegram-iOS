@@ -208,7 +208,7 @@ public func textAlertController(title: NSAttributedString?, text: NSAttributedSt
 
 public func standardTextAlertController(title: String?, text: String, actions: [TextAlertAction]) -> AlertController {
     var dismissImpl: (() -> Void)?
-    let controller = AlertController(contentNode: TextAlertContentNode(title: title != nil ? NSAttributedString(string: title!, font: Font.medium(17.0), textColor: .black, paragraphAlignment: .center) : nil, text: NSAttributedString(string: text, font: title == nil ? Font.medium(17.0) : Font.regular(13.0), textColor: .black, paragraphAlignment: .center), actions: actions.map { action in
+    let controller = AlertController(contentNode: TextAlertContentNode(title: title != nil ? NSAttributedString(string: title!, font: Font.medium(17.0), textColor: .black, paragraphAlignment: .center) : nil, text: NSAttributedString(string: text, font: title == nil ? Font.semibold(17.0) : Font.regular(13.0), textColor: .black, paragraphAlignment: .center), actions: actions.map { action in
         return TextAlertAction(type: action.type, title: action.title, action: {
             dismissImpl?()
             action.action()

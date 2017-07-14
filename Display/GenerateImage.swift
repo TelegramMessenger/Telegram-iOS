@@ -96,7 +96,7 @@ public func generateImage(_ size: CGSize, opaque: Bool = false, scale: CGFloat? 
     return UIImage(cgImage: image, scale: selectedScale, orientation: .up)
 }
 
-public func generateFilledCircleImage(diameter: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+public func generateFilledCircleImage(diameter: CGFloat, color: UIColor?, strokeColor: UIColor? = nil, strokeWidth: CGFloat? = nil, backgroundColor: UIColor? = nil) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         if let backgroundColor = backgroundColor {
@@ -104,17 +104,30 @@ public func generateFilledCircleImage(diameter: CGFloat, color: UIColor?, backgr
             context.fill(CGRect(origin: CGPoint(), size: size))
         }
         
-        if let color = color {
-            context.setFillColor(color.cgColor)
+        if let strokeColor = strokeColor, let strokeWidth = strokeWidth {
+            context.setFillColor(strokeColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+            
+            if let color = color {
+                context.setFillColor(color.cgColor)
+            } else {
+                context.setFillColor(UIColor.clear.cgColor)
+                context.setBlendMode(.copy)
+            }
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: strokeWidth, y: strokeWidth), size: CGSize(width: size.width - strokeWidth * 2.0, height: size.height - strokeWidth * 2.0)))
         } else {
-            context.setFillColor(UIColor.clear.cgColor)
-            context.setBlendMode(.copy)
+            if let color = color {
+                context.setFillColor(color.cgColor)
+            } else {
+                context.setFillColor(UIColor.clear.cgColor)
+                context.setBlendMode(.copy)
+            }
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         }
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
     })
 }
 
-public func generateCircleImage(diameter: CGFloat, lineWidth: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+public func generateCircleImage(diameter: CGFloat, lineWidth: CGFloat, color: UIColor?, strokeColor: UIColor? = nil, strokeWidth: CGFloat? = nil, backgroundColor: UIColor? = nil) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         if let backgroundColor = backgroundColor {
@@ -139,7 +152,7 @@ public func generateStretchableFilledCircleImage(radius: CGFloat, color: UIColor
     return generateFilledCircleImage(diameter: radius * 2.0, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: cap, topCapHeight: cap)
 }
 
-public func generateStretchableFilledCircleImage(diameter: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+public func generateStretchableFilledCircleImage(diameter: CGFloat, color: UIColor?, strokeColor: UIColor? = nil, strokeWidth: CGFloat? = nil, backgroundColor: UIColor? = nil) -> UIImage? {
     let intRadius = Int(diameter / 2.0)
     let intDiameter = Int(diameter)
     let cap: Int
@@ -151,7 +164,7 @@ public func generateStretchableFilledCircleImage(diameter: CGFloat, color: UICol
         cap = intRadius
     }
     
-    return generateFilledCircleImage(diameter: diameter, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: cap, topCapHeight: cap)
+    return generateFilledCircleImage(diameter: diameter, color: color, strokeColor: strokeColor, strokeWidth: strokeWidth, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: cap, topCapHeight: cap)
 }
 
 public func generateVerticallyStretchableFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
@@ -307,6 +320,9 @@ public class DrawingContext {
             var srcY = 0
             let dstX = Int(at.x * self.scale)
             var dstY = Int(at.y * self.scale)
+            if dstX < 0 || dstY < 0 {
+                return
+            }
             
             let width = min(Int(self.size.width * self.scale) - dstX, Int(other.size.width * self.scale))
             let height = min(Int(self.size.height * self.scale) - dstY, Int(other.size.height * self.scale))

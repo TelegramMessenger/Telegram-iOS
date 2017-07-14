@@ -71,6 +71,18 @@ open class ViewControllerPresentationArguments {
     private weak var activeInputViewCandidate: UIResponder?
     private weak var activeInputView: UIResponder?
     
+    private var navigationBarOrigin: CGFloat = 0.0
+    
+    public var navigationOffset: CGFloat = 0.0 {
+        didSet {
+            if let navigationBar = self.navigationBar {
+                var navigationBarFrame = navigationBar.frame
+                navigationBarFrame.origin.y = self.navigationBarOrigin + self.navigationOffset
+                navigationBar.frame = navigationBarFrame
+            }
+        }
+    }
+    
     open var navigationHeight: CGFloat {
         if let navigationBar = self.navigationBar {
             return navigationBar.frame.maxY
@@ -151,13 +163,15 @@ open class ViewControllerPresentationArguments {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: max(0.0, statusBarHeight - 20.0)), size: CGSize(width: layout.size.width, height: 64.0))
         if layout.statusBarHeight == nil {
-            //navigationBarFrame.origin.y -= 20.0
             navigationBarFrame.size.height = 44.0
         }
         
         if !self.displayNavigationBar {
             navigationBarFrame.origin.y = -navigationBarFrame.size.height
         }
+        
+        navigationBarOrigin = navigationBarFrame.origin.y
+        navigationBarFrame.origin.y += self.navigationOffset
         
         if let navigationBar = self.navigationBar {
             transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
@@ -214,12 +228,6 @@ open class ViewControllerPresentationArguments {
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         super.present(viewControllerToPresent, animated: flag, completion: completion)
         return
-        
-        if let controller = viewControllerToPresent as? ViewController {
-            self.present(controller, in: .window)
-        } else {
-            preconditionFailure("use present(_:in) for \(viewControllerToPresent)")
-        }
     }
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
@@ -247,9 +255,9 @@ open class ViewControllerPresentationArguments {
         controller.presentationArguments = arguments
         switch context {
             case .current:
-                self.presentationContext.present(controller)
-            case .window:
-                self.window?.present(controller)
+                self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0))
+            case let .window(level):
+                self.window?.present(controller, on: level)
         }
     }
     

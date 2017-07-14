@@ -10,7 +10,7 @@ private let defaultOrientations: UIInterfaceOrientationMask = {
 }()
 
 private class WindowRootViewController: UIViewController {
-    var presentController: ((UIViewController, Bool, (() -> Void)?) -> Void)?
+    var presentController: ((UIViewController, PresentationSurfaceLevel, Bool, (() -> Void)?) -> Void)?
     var orientations: UIInterfaceOrientationMask = defaultOrientations {
         didSet {
             if oldValue != self.orientations {
@@ -44,8 +44,9 @@ private final class NativeWindow: UIWindow, WindowHost {
     var layoutSubviewsEvent: (() -> Void)?
     var updateIsUpdatingOrientationLayout: ((Bool) -> Void)?
     var updateToInterfaceOrientation: (() -> Void)?
-    var presentController: ((ViewController) -> Void)?
+    var presentController: ((ViewController, PresentationSurfaceLevel) -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
+    var presentNativeImpl: ((UIViewController) -> Void)?
     
     override var frame: CGRect {
         get {
@@ -88,8 +89,12 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.updateToInterfaceOrientation?()
     }
     
-    func present(_ controller: ViewController) {
-        self.presentController?(controller)
+    func present(_ controller: ViewController, on level: PresentationSurfaceLevel) {
+        self.presentController?(controller, level)
+    }
+    
+    func presentNative(_ controller: UIViewController) {
+        self.presentNativeImpl?(controller)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -128,17 +133,21 @@ public func nativeWindowHostView() -> WindowHostView {
         hostView?.updateToInterfaceOrientation?()
     }
     
-    window.presentController = { [weak hostView] controller in
-        hostView?.present?(controller)
+    window.presentController = { [weak hostView] controller, level in
+        hostView?.present?(controller, level)
+    }
+    
+    window.presentNativeImpl = { [weak hostView] controller in
+        hostView?.presentNative?(controller)
     }
     
     window.hitTestImpl = { [weak hostView] point, event in
         return hostView?.hitTest?(point, event)
     }
     
-    rootViewController.presentController = { [weak hostView] controller, animated, completion in
+    rootViewController.presentController = { [weak hostView] controller, level, animated, completion in
         if let strongSelf = hostView {
-            strongSelf.present?(LegacyPresentedController(legacyController: controller, presentation: .custom))
+            strongSelf.present?(LegacyPresentedController(legacyController: controller, presentation: .custom), level)
             if let completion = completion {
                 completion()
             }

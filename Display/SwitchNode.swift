@@ -1,6 +1,17 @@
 import Foundation
 import AsyncDisplayKit
 
+private final class SwitchNodeViewLayer: CALayer {
+    override func setNeedsDisplay() {
+    }
+}
+
+private final class SwitchNodeView: UISwitch {
+    override class var layerClass: AnyClass {
+        return SwitchNodeViewLayer.self
+    }
+}
+
 open class SwitchNode: ASDisplayNode {
     public var valueUpdated: ((Bool) -> Void)?
     
@@ -14,7 +25,7 @@ open class SwitchNode: ASDisplayNode {
     public var handleColor = UIColor(rgb: 0xffffff) {
         didSet {
             if self.isNodeLoaded {
-                (self.view as! UISwitch).thumbTintColor = self.handleColor
+                //(self.view as! UISwitch).thumbTintColor = self.handleColor
             }
         }
     }
@@ -42,7 +53,7 @@ open class SwitchNode: ASDisplayNode {
     
     override public init() {
         super.init(viewBlock: {
-            return UISwitch()
+            return SwitchNodeView()
         }, didLoad: nil)
     }
     
@@ -51,7 +62,7 @@ open class SwitchNode: ASDisplayNode {
         
         (self.view as! UISwitch).backgroundColor = self.backgroundColor
         (self.view as! UISwitch).tintColor = self.frameColor
-        (self.view as! UISwitch).onTintColor = self.contentColor
+        //(self.view as! UISwitch).thumbTintColor = self.handleColor
         (self.view as! UISwitch).onTintColor = self.contentColor
         
         (self.view as! UISwitch).setOn(self._isOn, animated: false)
