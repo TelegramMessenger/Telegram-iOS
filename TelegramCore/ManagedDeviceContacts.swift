@@ -240,7 +240,7 @@ private func applyAddedOrUpdatedContacts(network: Network, contacts: [ManagedDev
         }
         |> mapToSignal { result -> Signal<([Peer], [PeerId: PeerPresence], [ValueBoxKey: ManagedDeviceContactEntryContents]), ManagedDeviceContactsError> in
             switch result {
-                case let .importedContacts(imported, retryContacts, users):
+                case let .importedContacts(imported, _, retryContacts, users):
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     var importedContents: [ValueBoxKey: ManagedDeviceContactEntryContents] = [:]

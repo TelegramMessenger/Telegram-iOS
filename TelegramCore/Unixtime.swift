@@ -124,5 +124,3 @@ public func secondsSinceEpochToDateTime(_ secondsSinceEpoch: Int64) -> DateTime 
     
     return DateTime(seconds: Int32(sec), minutes: Int32(min), hours: Int32(hour), dayOfMonth: Int32(mday), month: Int32(month - 1), year: Int32(year - 1900), dayOfWeek: Int32(wday), dayOfYear: Int32(yday))
 }
-
-

@@ -235,3 +235,79 @@ public func recoverTwoStepVerificationPassword(account: Account, code: String) -
             return .complete()
         }
 }
+
+public struct TemporaryTwoStepPasswordToken: Coding, Equatable {
+    public let token: Data
+    public let validUntilDate: Int32
+    public let requiresBiometrics: Bool
+    
+    public init(token: Data, validUntilDate: Int32, requiresBiometrics: Bool) {
+        self.token = token
+        self.validUntilDate = validUntilDate
+        self.requiresBiometrics = requiresBiometrics
+    }
+    
+    public init(decoder: Decoder) {
+        self.token = decoder.decodeBytesForKey("t")!.makeData()
+        self.validUntilDate = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.requiresBiometrics = decoder.decodeInt32ForKey("b", orElse: 0) != 0
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeBytes(MemoryBuffer(data: self.token), forKey: "t")
+        encoder.encodeInt32(self.validUntilDate, forKey: "d")
+        encoder.encodeInt32(self.requiresBiometrics ? 1 : 0, forKey: "b")
+    }
+    
+    public static func ==(lhs: TemporaryTwoStepPasswordToken, rhs: TemporaryTwoStepPasswordToken) -> Bool {
+        return lhs.token == rhs.token && lhs.validUntilDate == rhs.validUntilDate && lhs.requiresBiometrics == rhs.requiresBiometrics
+    }
+}
+
+public func cachedTwoStepPasswordToken(postbox: Postbox) -> Signal<TemporaryTwoStepPasswordToken?, NoError> {
+    return postbox.modify { modifier -> TemporaryTwoStepPasswordToken? in
+        let key = ValueBoxKey(length: 1)
+        key.setUInt8(0, value: 0)
+        return modifier.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key)) as? TemporaryTwoStepPasswordToken
+    }
+}
+
+public func cacheTwoStepPasswordToken(postbox: Postbox, token: TemporaryTwoStepPasswordToken?) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Void in
+        let key = ValueBoxKey(length: 1)
+        key.setUInt8(0, value: 0)
+        if let token = token {
+            modifier.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key), entry: token, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+        } else {
+            modifier.removeItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key))
+        }
+    }
+}
+
+public func requestTemporaryTwoStepPasswordToken(account: Account, password: String, period: Int32, requiresBiometrics: Bool) -> Signal<TemporaryTwoStepPasswordToken, AuthorizationPasswordVerificationError> {
+    return twoStepAuthData(account.network)
+        |> mapToSignal { authData -> Signal<TemporaryTwoStepPasswordToken, MTRpcError> in
+            var data = Data()
+            data.append(authData.currentSalt!)
+            data.append(password.data(using: .utf8, allowLossyConversion: true)!)
+            data.append(authData.currentSalt!)
+            let currentPasswordHash = sha256Digest(data)
+            
+            return account.network.request(Api.functions.account.getTmpPassword(passwordHash: Buffer(data: currentPasswordHash), period: period), automaticFloodWait: false)
+                |> map { result -> TemporaryTwoStepPasswordToken in
+                    switch result {
+                        case let .tmpPassword(tmpPassword, validUntil):
+                            return TemporaryTwoStepPasswordToken(token: tmpPassword.makeData(), validUntilDate: validUntil, requiresBiometrics: requiresBiometrics)
+                    }
+                }
+        }
+        |> `catch` { error -> Signal<TemporaryTwoStepPasswordToken, AuthorizationPasswordVerificationError> in
+            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                return .fail(.limitExceeded)
+            } else if error.errorDescription == "PASSWORD_HASH_INVALID" {
+                return .fail(.invalidPassword)
+            } else {
+                return .fail(.generic)
+            }
+        }
+}

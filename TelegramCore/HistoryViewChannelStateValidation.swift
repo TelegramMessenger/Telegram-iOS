@@ -170,7 +170,7 @@ private func validateBatch(postbox: Postbox, network: Network, messageIds: [Mess
                 }
             }
             if let (minId, maxId) = currentRange {
-                ranges.append(Api.MessageRange.messageRange(minId: minId - 1, maxId: maxId + 1))
+                ranges.append(Api.MessageRange.messageRange(minId: minId, maxId: maxId))
             }
             return network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilter(flags: 1 << 1, ranges: ranges), pts: minValidatedPts ?? 1, limit: 100))
                 |> `catch` { _ -> Signal<Api.updates.ChannelDifference, NoError> in
@@ -263,7 +263,7 @@ private func validateBatch(postbox: Postbox, network: Network, messageIds: [Mess
                                 modifier.updateMessage(messageId, update: { currentMessage in
                                     var storeForwardInfo: StoreMessageForwardInfo?
                                     if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                                     }
                                     var attributes = currentMessage.attributes
                                     for j in 0 ..< attributes.count {

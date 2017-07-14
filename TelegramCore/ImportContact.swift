@@ -19,7 +19,7 @@ public func importContact(account:Account, firstName:String, lastName:String, ph
             return account.postbox.modify { modifier -> PeerId? in
                 if let result = result {
                     switch result {
-                    case let .importedContacts(_, _, users):
+                    case let .importedContacts(_, _, _, users):
                         if let first = users.first {
                             let user = TelegramUser(user: first)
                             let peerId = user.id

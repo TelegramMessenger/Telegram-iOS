@@ -433,7 +433,28 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
     }
 }
 
-public class Network: NSObject, MTRequestMessageServiceDelegate {
+private final class NetworkHelper: NSObject, MTContextChangeListener {
+    private let requestPublicKeys: (Int) -> Signal<NSArray, NoError>
+    
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>) {
+        self.requestPublicKeys = requestPublicKeys
+    }
+    
+    func fetchContextDatacenterPublicKeys(_ context: MTContext!, datacenterId: Int) -> MTSignal! {
+        return MTSignal { subscriber in
+            let disposable = self.requestPublicKeys(datacenterId).start(next: { next in
+                subscriber?.putNext(next)
+                subscriber?.putCompletion()
+            })
+            
+            return MTBlockDisposable(block: {
+                disposable.dispose()
+            })
+        }
+    }
+}
+
+public final class Network: NSObject, MTRequestMessageServiceDelegate {
     let datacenterId: Int
     let context: MTContext
     let mtProto: MTProto
@@ -462,6 +483,37 @@ public class Network: NSObject, MTRequestMessageServiceDelegate {
         
         super.init()
         
+        context.add(NetworkHelper(requestPublicKeys: { [weak self] id in
+            if let strongSelf = self {
+                return strongSelf.request(Api.functions.help.getCdnConfig())
+                    |> map { Optional($0) }
+                    |> `catch` { _ -> Signal<Api.CdnConfig?, NoError> in
+                        return .single(nil)
+                    }
+                    |> map { result -> NSArray in
+                        let array = NSMutableArray()
+                        if let result = result {
+                            switch result {
+                                case let .cdnConfig(publicKeys):
+                                    for key in publicKeys {
+                                        switch key {
+                                            case let .cdnPublicKey(dcId, publicKey):
+                                                if id == Int(dcId) {
+                                                    let dict = NSMutableDictionary()
+                                                    dict["key"] = publicKey
+                                                    dict["fingerprint"] = MTRsaFingerprint(publicKey)
+                                                    array.add(dict)
+                                                }
+                                        }
+                                    }
+                            }
+                        }
+                        return array
+                    }
+            } else {
+                return .never()
+            }
+        }))
         requestService.delegate = self
         
         let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
@@ -487,10 +539,10 @@ public class Network: NSObject, MTRequestMessageServiceDelegate {
         self.loggedOut?()
     }
     
-    func download(datacenterId: Int, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
+    func download(datacenterId: Int, isCdn: Bool = false, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                subscriber.putNext(Download(datacenterId: datacenterId, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory)))
+                subscriber.putNext(Download(datacenterId: datacenterId, isCdn: isCdn, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory)))
             }
             subscriber.putCompletion()
             
@@ -498,6 +550,10 @@ public class Network: NSObject, MTRequestMessageServiceDelegate {
                 
             }
         }
+    }
+    
+    public func getApproximateRemoteTimestamp() -> Int32 {
+        return Int32(self.context.globalTime())
     }
     
     public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
@@ -551,8 +607,8 @@ public class Network: NSObject, MTRequestMessageServiceDelegate {
             
             requestService.add(request)
             
-            return ActionDisposable {
-                self.requestService.removeRequest(byInternalId: internalId)
+            return ActionDisposable { [weak requestService] in
+                requestService?.removeRequest(byInternalId: internalId)
             }
         }
     }

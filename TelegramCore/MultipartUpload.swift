@@ -147,7 +147,7 @@ private final class MultipartUploadManager {
     var committedOffset: Int
     let uploadPart: (UploadPart) -> Signal<Void, NoError>
     let progress: (Float) -> Void
-    let completed: (MultipartIntermediateResult) -> Void
+    let completed: (MultipartIntermediateResult?) -> Void
     
     var uploadingParts: [Int: (Int, Disposable)] = [:]
     var uploadedParts: [Int: Int] = [:]
@@ -159,7 +159,7 @@ private final class MultipartUploadManager {
     
     let state: MultipartUploadState
     
-    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult) -> Void) {
+    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult?) -> Void) {
         self.dataSignal = data
         
         var fileId: Int64 = 0
@@ -287,20 +287,24 @@ private final class MultipartUploadManager {
                             case let .data(data):
                                 fileData = data
                         }
-                        let partData = self.state.transform(data: fileData!.subdata(in: partOffset ..< (partOffset + partSize)))
-                        var currentBigTotalParts = self.bigTotalParts
-                        if let _ = self.bigTotalParts, resourceData.complete && partOffset + partSize == resourceData.size {
-                            currentBigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
-                        }
-                        let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts))
-                            |> deliverOn(self.queue)
-                        self.uploadingParts[nextOffset] = (partSize, part.start(completed: { [weak self] in
-                            if let strongSelf = self {
-                                let _ = strongSelf.uploadingParts.removeValue(forKey: nextOffset)
-                                strongSelf.uploadedParts[partOffset] = partSize
-                                strongSelf.checkState()
+                        if let fileData = fileData {
+                            let partData = self.state.transform(data: fileData.subdata(in: partOffset ..< (partOffset + partSize)))
+                            var currentBigTotalParts = self.bigTotalParts
+                            if let _ = self.bigTotalParts, resourceData.complete && partOffset + partSize == resourceData.size {
+                                currentBigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
                             }
-                        }))
+                            let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts))
+                                |> deliverOn(self.queue)
+                            self.uploadingParts[nextOffset] = (partSize, part.start(completed: { [weak self] in
+                                if let strongSelf = self {
+                                    let _ = strongSelf.uploadingParts.removeValue(forKey: nextOffset)
+                                    strongSelf.uploadedParts[partOffset] = partSize
+                                    strongSelf.checkState()
+                                }
+                            }))
+                        } else {
+                            self.completed(nil)
+                        }
                     } else {
                         break
                     }
@@ -323,9 +327,13 @@ enum MultipartUploadSource {
     case data(Data)
 }
 
-func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int? = nil) -> Signal<MultipartUploadResult, NoError> {
+enum MultipartUploadError {
+    case generic
+}
+
+func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int? = nil) -> Signal<MultipartUploadResult, MultipartUploadError> {
     return network.download(datacenterId: network.datacenterId, tag: tag)
-        |> mapToSignal { download -> Signal<MultipartUploadResult, NoError> in
+        |> mapToSignalPromotingError { download -> Signal<MultipartUploadResult, MultipartUploadError> in
             return Signal { subscriber in
                 var encryptionKey: SecretFileEncryptionKey?
                 if encrypt {
@@ -361,35 +369,39 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                 }, progress: { progress in
                     subscriber.putNext(.progress(progress))
                 }, completed: { result in
-                    if let encryptionKey = encryptionKey {
-                        let keyDigest = md5(encryptionKey.aesKey + encryptionKey.aesIv)
-                        var fingerprint: Int32 = 0
-                        keyDigest.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                            withUnsafeMutableBytes(of: &fingerprint, { ptr -> Void in
-                                let uintPtr = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)
-                                uintPtr[0] = bytes[0] ^ bytes[4]
-                                uintPtr[1] = bytes[1] ^ bytes[5]
-                                uintPtr[2] = bytes[2] ^ bytes[6]
-                                uintPtr[3] = bytes[3] ^ bytes[7]
-                            })
-                        }
-                        if let _ = result.bigTotalParts {
-                            let inputFile = Api.InputEncryptedFile.inputEncryptedFileBigUploaded(id: result.id, parts: result.partCount, keyFingerprint: fingerprint)
-                            subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                    if let result = result {
+                        if let encryptionKey = encryptionKey {
+                            let keyDigest = md5(encryptionKey.aesKey + encryptionKey.aesIv)
+                            var fingerprint: Int32 = 0
+                            keyDigest.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                                withUnsafeMutableBytes(of: &fingerprint, { ptr -> Void in
+                                    let uintPtr = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                    uintPtr[0] = bytes[0] ^ bytes[4]
+                                    uintPtr[1] = bytes[1] ^ bytes[5]
+                                    uintPtr[2] = bytes[2] ^ bytes[6]
+                                    uintPtr[3] = bytes[3] ^ bytes[7]
+                                })
+                            }
+                            if let _ = result.bigTotalParts {
+                                let inputFile = Api.InputEncryptedFile.inputEncryptedFileBigUploaded(id: result.id, parts: result.partCount, keyFingerprint: fingerprint)
+                                subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                            } else {
+                                let inputFile = Api.InputEncryptedFile.inputEncryptedFileUploaded(id: result.id, parts: result.partCount, md5Checksum: result.md5Digest, keyFingerprint: fingerprint)
+                                subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                            }
                         } else {
-                            let inputFile = Api.InputEncryptedFile.inputEncryptedFileUploaded(id: result.id, parts: result.partCount, md5Checksum: result.md5Digest, keyFingerprint: fingerprint)
-                            subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                            if let _ = result.bigTotalParts {
+                                let inputFile = Api.InputFile.inputFileBig(id: result.id, parts: result.partCount, name: "file.jpg")
+                                subscriber.putNext(.inputFile(inputFile))
+                            } else {
+                                let inputFile = Api.InputFile.inputFile(id: result.id, parts: result.partCount, name: "file.jpg", md5Checksum: result.md5Digest)
+                                subscriber.putNext(.inputFile(inputFile))
+                            }
                         }
+                        subscriber.putCompletion()
                     } else {
-                        if let _ = result.bigTotalParts {
-                            let inputFile = Api.InputFile.inputFileBig(id: result.id, parts: result.partCount, name: "file.jpg")
-                            subscriber.putNext(.inputFile(inputFile))
-                        } else {
-                            let inputFile = Api.InputFile.inputFile(id: result.id, parts: result.partCount, name: "file.jpg", md5Checksum: result.md5Digest)
-                            subscriber.putNext(.inputFile(inputFile))
-                        }
+                        subscriber.putError(.generic)
                     }
-                    subscriber.putCompletion()
                 })
 
                 manager.start()

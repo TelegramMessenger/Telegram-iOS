@@ -119,8 +119,19 @@ public struct BotPaymentRequestedInfo: Equatable {
     }
 }
 
-public enum BotPaymentSavedCredentials {
+public enum BotPaymentSavedCredentials: Equatable {
     case card(id: String, title: String)
+    
+    public static func ==(lhs: BotPaymentSavedCredentials, rhs: BotPaymentSavedCredentials) -> Bool {
+        switch lhs {
+            case let .card(id, title):
+                if case .card(id, title) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public struct BotPaymentForm {
@@ -138,75 +149,101 @@ public enum BotPaymentFormRequestError {
     case generic
 }
 
+extension BotPaymentInvoice {
+    init(apiInvoice: Api.Invoice) {
+        switch apiInvoice {
+            case let .invoice(flags, currency, prices):
+                var fields = BotPaymentInvoiceFields()
+                if (flags & (1 << 1)) != 0 {
+                    fields.insert(.name)
+                }
+                if (flags & (1 << 2)) != 0 {
+                    fields.insert(.phone)
+                }
+                if (flags & (1 << 3)) != 0 {
+                    fields.insert(.email)
+                }
+                if (flags & (1 << 4)) != 0 {
+                    fields.insert(.shippingAddress)
+                }
+                if (flags & (1 << 5)) != 0 {
+                    fields.insert(.flexibleShipping)
+                }
+                self.init(isTest: (flags & (1 << 0)) != 0, requestedFields: fields, currency: currency, prices: prices.map {
+                    switch $0 {
+                        case let .labeledPrice(label, amount):
+                            return BotPaymentPrice(label: label, amount: amount)
+                    }
+                })
+        }
+    }
+}
+
+extension BotPaymentRequestedInfo {
+    init(apiInfo: Api.PaymentRequestedInfo) {
+        switch apiInfo {
+            case let .paymentRequestedInfo(_, name, phone, email, shippingAddress):
+                var parsedShippingAddress: BotPaymentShippingAddress?
+                if let shippingAddress = shippingAddress {
+                    switch shippingAddress {
+                    case let .postAddress(streetLine1, streetLine2, city, state, countryIso2, postCode):
+                        parsedShippingAddress = BotPaymentShippingAddress(streetLine1: streetLine1, streetLine2: streetLine2, city: city, state: state, countryIso2: countryIso2, postCode: postCode)
+                    }
+                }
+                self.init(name: name, phone: phone, email: email, shippingAddress: parsedShippingAddress)
+        }
+    }
+}
+
 public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
     return network.request(Api.functions.payments.getPaymentForm(msgId: messageId.id))
         |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
             return .fail(.generic)
         }
-        |> map { result -> BotPaymentForm in
-            switch result {
-                case let .paymentForm(flags, _, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, _):
-                    let parsedInvoice: BotPaymentInvoice
-                    switch invoice {
-                        case let .invoice(flags, currency, prices):
-                            var fields = BotPaymentInvoiceFields()
-                            if (flags & (1 << 1)) != 0 {
-                                fields.insert(.name)
-                            }
-                            if (flags & (1 << 2)) != 0 {
-                                fields.insert(.phone)
-                            }
-                            if (flags & (1 << 3)) != 0 {
-                                fields.insert(.email)
-                            }
-                            if (flags & (1 << 4)) != 0 {
-                                fields.insert(.shippingAddress)
-                            }
-                            if (flags & (1 << 5)) != 0 {
-                                fields.insert(.flexibleShipping)
-                            }
-                            parsedInvoice = BotPaymentInvoice(isTest: (flags & (1 << 0)) != 0, requestedFields: fields, currency: currency, prices: prices.map {
-                                switch $0 {
-                                    case let .labeledPrice(label, amount):
-                                        return BotPaymentPrice(label: label, amount: amount)
-                                }
-                            })
-                    }
-                    var parsedNativeProvider: BotPaymentNativeProvider?
-                    if let nativeProvider = nativeProvider, let nativeParams = nativeParams {
-                        switch nativeParams {
-                            case let .dataJSON(data):
-                            parsedNativeProvider = BotPaymentNativeProvider(name: nativeProvider, params: data)
+        |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
+            return postbox.modify { modifier -> BotPaymentForm in
+                switch result {
+                    case let .paymentForm(flags, _, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
+                        var peers: [Peer] = []
+                        for user in apiUsers {
+                            let parsed = TelegramUser(user: user)
+                            peers.append(parsed)
                         }
-                    }
-                    var parsedSavedInfo: BotPaymentRequestedInfo?
-                    if let savedInfo = savedInfo {
-                        switch savedInfo {
-                            case let .paymentRequestedInfo(_, name, phone, email, shippingAddress):
-                                var parsedShippingAddress: BotPaymentShippingAddress?
-                                if let shippingAddress = shippingAddress {
-                                    switch shippingAddress {
-                                        case let .postAddress(streetLine1, streetLine2, city, state, countryIso2, postCode):
-                                            parsedShippingAddress = BotPaymentShippingAddress(streetLine1: streetLine1, streetLine2: streetLine2, city: city, state: state, countryIso2: countryIso2, postCode: postCode)
-                                    }
-                                }
-                                parsedSavedInfo = BotPaymentRequestedInfo(name: name, phone: phone, email: email, shippingAddress: parsedShippingAddress)
+                        updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+                            return updated
+                        })
+                        
+                        let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                        var parsedNativeProvider: BotPaymentNativeProvider?
+                        if let nativeProvider = nativeProvider, let nativeParams = nativeParams {
+                            switch nativeParams {
+                                case let .dataJSON(data):
+                                parsedNativeProvider = BotPaymentNativeProvider(name: nativeProvider, params: data)
+                            }
                         }
-                    }
-                    var parsedSavedCredentials: BotPaymentSavedCredentials?
-                    if let savedCredentials = savedCredentials {
-                        switch savedCredentials {
-                            case let .paymentSavedCredentialsCard(id, title):
-                                parsedSavedCredentials = .card(id: id, title: title)
+                        let parsedSavedInfo = savedInfo.flatMap(BotPaymentRequestedInfo.init)
+                        var parsedSavedCredentials: BotPaymentSavedCredentials?
+                        if let savedCredentials = savedCredentials {
+                            switch savedCredentials {
+                                case let .paymentSavedCredentialsCard(id, title):
+                                    parsedSavedCredentials = .card(id: id, title: title)
+                            }
                         }
-                    }
-                    return BotPaymentForm(canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: providerId, url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
-            }
+                        return BotPaymentForm(canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: providerId, url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
+                }
+            } |> mapError { _ -> BotPaymentFormRequestError in return .generic }
         }
 }
 
 public enum ValidateBotPaymentFormError {
     case generic
+    case shippingNotAvailable
+    case addressStateInvalid
+    case addressPostcodeInvalid
+    case addressCityInvalid
+    case nameInvalid
+    case emailInvalid
+    case phoneInvalid
 }
 
 public struct BotPaymentShippingOption {
@@ -218,6 +255,20 @@ public struct BotPaymentShippingOption {
 public struct BotPaymentValidatedFormInfo {
     public let id: String?
     public let shippingOptions: [BotPaymentShippingOption]?
+}
+
+extension BotPaymentShippingOption {
+    init(apiOption: Api.ShippingOption) {
+        switch apiOption {
+            case let .shippingOption(id, title, prices):
+                self.init(id: id, title: title, prices: prices.map {
+                    switch $0 {
+                        case let .labeledPrice(label, amount):
+                            return BotPaymentPrice(label: label, amount: amount)
+                        }
+                })
+        }
+    }
 }
 
 public func validateBotPaymentForm(network: Network, saveInfo: Bool, messageId: MessageId, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError>  {
@@ -242,23 +293,29 @@ public func validateBotPaymentForm(network: Network, saveInfo: Bool, messageId: 
     }
     return network.request(Api.functions.payments.validateRequestedInfo(flags: flags, msgId: messageId.id, info: .paymentRequestedInfo(flags: infoFlags, name: formInfo.name, phone: formInfo.phone, email: formInfo.email, shippingAddress: apiShippingAddress)))
         |> mapError { error -> ValidateBotPaymentFormError in
-            return .generic
+            if error.errorDescription == "SHIPPING_NOT_AVAILABLE" {
+                return .shippingNotAvailable
+            } else if error.errorDescription == "ADDRESS_STATE_INVALID" {
+                return .addressStateInvalid
+            } else if error.errorDescription == "ADDRESS_POSTCODE_INVALID" {
+                return .addressPostcodeInvalid
+            } else if error.errorDescription == "ADDRESS_CITY_INVALID" {
+                return .addressCityInvalid
+            } else if error.errorDescription == "REQ_INFO_NAME_INVALID" {
+                return .nameInvalid
+            } else if error.errorDescription == "REQ_INFO_EMAIL_INVALID" {
+                return .emailInvalid
+            } else if error.errorDescription == "REQ_INFO_PHONE_INVALID" {
+                return .phoneInvalid
+            } else {
+                return .generic
+            }
         }
         |> map { result -> BotPaymentValidatedFormInfo in
             switch result {
                 case let .validatedRequestedInfo(_, id, shippingOptions):
                     return BotPaymentValidatedFormInfo(id: id, shippingOptions: shippingOptions.flatMap {
-                        return $0.map {
-                            switch $0 {
-                                case let .shippingOption(id, title, prices):
-                                    return BotPaymentShippingOption(id: id, title: title, prices: prices.map {
-                                        switch $0 {
-                                            case let .labeledPrice(label, amount):
-                                                return BotPaymentPrice(label: label, amount: amount)
-                                        }
-                                    })
-                            }
-                        }
+                        return $0.map(BotPaymentShippingOption.init)
                     })
             }
         }
@@ -271,6 +328,9 @@ public enum BotPaymentCredentials {
 
 public enum SendBotPaymentFormError {
     case generic
+    case precheckoutFailed
+    case paymentFailed
+    case alreadyPaid
 }
 
 public enum SendBotPaymentResult {
@@ -307,7 +367,35 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, validated
                     return .externalVerificationRequired(url: url)
             }
         }
-        |> `catch` { _ -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+        |> `catch` { error -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+            if error.errorDescription == "BOT_PRECHECKOUT_FAILED" {
+                return .fail(.precheckoutFailed)
+            } else if error.errorDescription == "PAYMENT_FAILED" {
+                return .fail(.paymentFailed)
+            } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
+                return .fail(.alreadyPaid)
+            }
             return .fail(.generic)
+        }
+}
+
+public struct BotPaymentReceipt {
+    public let invoice: BotPaymentInvoice
+    public let info: BotPaymentRequestedInfo?
+    public let shippingOption: BotPaymentShippingOption?
+    public let credentialsTitle: String
+}
+
+public func requestBotPaymentReceipt(network: Network, messageId: MessageId) -> Signal<BotPaymentReceipt, NoError> {
+    return network.request(Api.functions.payments.getPaymentReceipt(msgId: messageId.id))
+        |> retryRequest
+        |> map { result -> BotPaymentReceipt in
+            switch result {
+                case let .paymentReceipt(_, _, _, invoice, _, info, shipping, _, _, credentialsTitle, _):
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
+                    let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
+                    return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
+            }
         }
 }

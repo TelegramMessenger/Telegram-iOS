@@ -33,7 +33,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var updatedTimestamp: Int32?
         if let apiMessage = apiMessage {
             switch apiMessage {
-                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _):
+                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _):
                     updatedTimestamp = date
                 case .messageEmpty:
                     break
@@ -68,7 +68,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 attributes = updatedMessage.attributes
                 text = updatedMessage.text
             } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities) = result {
-                let (_, mediaValue) = textAndMediaFromApiMedia(apiMedia, currentMessage.id.peerId)
+                let (_, mediaValue, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                 if let mediaValue = mediaValue {
                     media = [mediaValue]
                 } else {
@@ -85,6 +85,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                     }
                     updatedAttributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
                 }
+                
                 attributes = updatedAttributes
                 text = currentMessage.text
             } else {
@@ -95,7 +96,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             
             var storeForwardInfo: StoreMessageForwardInfo?
             if let forwardInfo = currentMessage.forwardInfo {
-                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
             }
             
             if let fromMedia = currentMessage.media.first, let toMedia = media.first {

@@ -24,16 +24,19 @@ private func roundUp(_ value: Int, to multiple: Int) -> Int {
 
 class Download: NSObject, MTRequestMessageServiceDelegate {
     let datacenterId: Int
+    let isCdn: Bool
     let context: MTContext
     let mtProto: MTProto
     let requestService: MTRequestMessageService
     
-    init(datacenterId: Int, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?) {
+    init(datacenterId: Int, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?) {
         self.datacenterId = datacenterId
+        self.isCdn = isCdn
         self.context = context
 
         self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: usageInfo)
-        if datacenterId != masterDatacenterId {
+        self.mtProto.cdn = isCdn
+        if !isCdn && datacenterId != masterDatacenterId {
             self.mtProto.authTokenMasterDatacenterId = masterDatacenterId
             self.mtProto.requiredAuthToken = Int(datacenterId) as NSNumber
         }
@@ -93,7 +96,6 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         } |> retryRequest
     }
     
-    
     func webFilePart(location: Api.InputWebFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
@@ -119,11 +121,9 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                     subscriber.putError(error)
                 } else {
                     if let result = (boxedResponse as! BoxedMessage).body as? Api.upload.WebFile {
-                        //upload.webFile#21e753bc size:int mime_type:string file_type:storage.FileType mtime:int bytes:bytes = upload.WebFile;
-                        
                         switch result {
-                        case .webFile(_, _, _, _, let bytes):
-                            subscriber.putNext(bytes.makeData())
+                            case .webFile(_, _, _, _, let bytes):
+                                subscriber.putNext(bytes.makeData())
                         }
                         subscriber.putCompletion()
                     }
@@ -140,7 +140,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             return ActionDisposable {
                 self.requestService.removeRequest(byInternalId: internalId)
             }
-            } |> retryRequest
+        } |> retryRequest
     }
     
     func part(location: Api.InputFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
@@ -171,7 +171,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                         switch result {
                             case let .file(_, _, bytes):
                                 subscriber.putNext(bytes.makeData())
-                            case let .fileCdnRedirect(dcId, fileToken, encryptionKey, encryptionIv):
+                            case .fileCdnRedirect:
                                 break
                         }
                         subscriber.putCompletion()
@@ -224,8 +224,8 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             requestService.add(request)
             
-            return ActionDisposable {
-                self.requestService.removeRequest(byInternalId: internalId)
+            return ActionDisposable { [weak requestService] in
+                requestService?.removeRequest(byInternalId: internalId)
             }
         }
     }

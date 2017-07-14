@@ -233,7 +233,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
                         let forwardInfo: StoreMessageForwardInfo?
                         if let sourceForwardInfo = sourceMessage.forwardInfo {
-                            forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date)
+                            forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature)
                         } else {
                             if sourceMessage.id.peerId != account.peerId {
                                 var sourceId:PeerId? = nil
@@ -242,7 +242,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                                     sourceId = peer.id
                                     sourceMessageId = sourceMessage.id
                                 }
-                                forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp)
+                                forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: nil)
                             } else {
                                 forwardInfo = nil
                             }

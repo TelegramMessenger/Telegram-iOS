@@ -53,6 +53,7 @@ public struct Namespaces {
     
     struct CachedItemCollection {
         public static let resolvedByNamePeers: Int8 = 0
+        public static let cachedTwoStepToken: Int8 = 1
     }
     
     struct UnorderedItemList {

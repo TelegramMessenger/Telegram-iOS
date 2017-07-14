@@ -20,7 +20,7 @@ public func applyMaxReadIndexInteractively(postbox: Postbox, network: Network, i
                                 modifier.updateMessage(message.id, update: { currentMessage in
                                     var storeForwardInfo: StoreMessageForwardInfo?
                                     if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                                     }
                                     let updatedAttributes = currentMessage.attributes.map({ currentAttribute -> MessageAttribute in
                                         if let currentAttribute = currentAttribute as? AutoremoveTimeoutMessageAttribute {
@@ -53,7 +53,7 @@ func applyOutgoingReadMaxIndex(modifier: Modifier, index: MessageIndex, beginAt 
                             modifier.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
-                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                                 }
                                 let updatedAttributes = currentMessage.attributes.map({ currentAttribute -> MessageAttribute in
                                     if let currentAttribute = currentAttribute as? AutoremoveTimeoutMessageAttribute {

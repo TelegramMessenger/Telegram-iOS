@@ -51,9 +51,9 @@ public func recentPeers(account: Account) -> Signal<[Peer], NoError> {
 public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let remotePeers = network.request(Api.functions.contacts.getTopPeers(flags: 1 << 2, offset: 0, limit: 16, hash: 0))
         |> retryRequest
-        |> map { result -> ([Peer], [PeerId: PeerPresence])? in
+        |> map { result -> ([Peer], [PeerId: PeerPresence], [(PeerId, Double)])? in
             switch result {
-                case let .topPeers(_, _, users):
+                case let .topPeers(categories, _, users):
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     for user in users {
@@ -63,21 +63,36 @@ public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network) ->
                             peerPresences[telegramUser.id] = presence
                         }
                     }
-                    return (peers, peerPresences)
+                    var peersWithRating: [(PeerId, Double)] = []
+                    for category in categories {
+                        switch category {
+                            case let .topPeerCategoryPeers(_, _, topPeers):
+                                for topPeer in topPeers {
+                                    switch topPeer {
+                                        case let .topPeer(apiPeer, rating):
+                                            peersWithRating.append((apiPeer.peerId, rating))
+                                    }
+                                }
+                        }
+                    }
+                    return (peers, peerPresences, peersWithRating)
                 case .topPeersNotModified:
                     break
             }
-            return ([], [:])
+            return ([], [:], [])
     }
     
     let updatedRemotePeers = remotePeers
         |> mapToSignal { peersAndPresences -> Signal<Void, NoError> in
-            if let (peers, peerPresences) = peersAndPresences {
+            if let (peers, peerPresences, peersWithRating) = peersAndPresences {
                 return postbox.modify { modifier -> Void in
                     updatePeers(modifier: modifier, peers: peers, update: { return $1 })
                     modifier.updatePeerPresences(peerPresences)
-                    modifier.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, items: peers.map { peer in
-                        return OrderedItemListEntry(id: RecentPeerItemId(peer.id).rawValue, contents: RecentPeerItem())
+                    
+                    let sortedPeersWithRating = peersWithRating.sorted(by: { $0.1 > $1.1 })
+                    
+                    modifier.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, items: sortedPeersWithRating.map { (peerId, rating) in
+                        return OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: RecentPeerItem(rating: rating))
                     })
                 }
             } else {
@@ -90,21 +105,27 @@ public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network) ->
 
 public func addRecentlyUsedInlineBot(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
-        modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, item: OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: RecentPeerItem()), removeTailIfCountExceeds: 20)
+        var maxRating = 1.0
+        for entry in modifier.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots) {
+            if let contents = entry.contents as? RecentPeerItem {
+                maxRating = max(maxRating, contents.rating)
+            }
+        }
+        modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, item: OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: RecentPeerItem(rating: maxRating)), removeTailIfCountExceeds: 20)
     }
 }
 
-public func recentlyUsedInlineBots(postbox: Postbox) -> Signal<[Peer], NoError> {
+public func recentlyUsedInlineBots(postbox: Postbox) -> Signal<[(Peer, Double)], NoError> {
     return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentInlineBots)])
         |> take(1)
-        |> mapToSignal { view -> Signal<[Peer], NoError> in
-            return postbox.modify { modifier -> [Peer] in
-                var peers: [Peer] = []
+        |> mapToSignal { view -> Signal<[(Peer, Double)], NoError> in
+            return postbox.modify { modifier -> [(Peer, Double)] in
+                var peers: [(Peer, Double)] = []
                 if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentInlineBots)] as? OrderedItemListView {
                     for item in view.items {
                         let peerId = RecentPeerItemId(item.id).peerId
-                        if let peer = modifier.getPeer(peerId) {
-                            peers.append(peer)
+                        if let peer = modifier.getPeer(peerId), let contents = item.contents as? RecentPeerItem {
+                            peers.append((peer, contents.rating))
                         }
                     }
                 }

@@ -26,12 +26,17 @@ public struct RecentPeerItemId {
 }
 
 public final class RecentPeerItem: OrderedItemListEntryContents {
-    init() {
+    public let rating: Double
+    
+    init(rating: Double) {
+        self.rating = rating
     }
     
     public init(decoder: Decoder) {
+        self.rating = decoder.decodeDoubleForKey("r", orElse: 0.0)
     }
     
     public func encode(_ encoder: Encoder) {
+        encoder.encodeDouble(self.rating, forKey: "r")
     }
 }

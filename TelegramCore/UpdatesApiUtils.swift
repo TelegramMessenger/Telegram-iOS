@@ -8,34 +8,40 @@ import Foundation
 extension Api.MessageMedia {
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-            case let .messageMediaPhoto(photo, _):
-                switch photo {
-                    case let .photo(_, _, _, _, sizes):
-                        for size in sizes {
-                            switch size {
-                                case let .photoCachedSize(_, location, _, _, bytes):
-                                    switch location {
-                                        case let .fileLocation(dcId, volumeId, localId, secret):
-                                            let data = bytes.makeData()
-                                            let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count)
-                                            return [(resource, data)]
-                                        default:
-                                            break
-                                    }
-                                default:
-                                    break
+            case let .messageMediaPhoto(_, photo, _, _):
+                if let photo = photo {
+                    switch photo {
+                        case let .photo(_, _, _, _, sizes):
+                            for size in sizes {
+                                switch size {
+                                    case let .photoCachedSize(_, location, _, _, bytes):
+                                        switch location {
+                                            case let .fileLocation(dcId, volumeId, localId, secret):
+                                                let data = bytes.makeData()
+                                                let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count)
+                                                return [(resource, data)]
+                                            default:
+                                                break
+                                        }
+                                    default:
+                                        break
+                                }
                             }
-                        }
-                        return nil
-                    default:
-                        return nil
+                            return nil
+                        default:
+                            return nil
+                    }
+                } else {
+                    return nil
                 }
-            case let .messageMediaDocument(document, _):
-                switch document {
-                    case .document:
-                        break
-                    default:
-                        break
+            case let .messageMediaDocument(_, document, _, _):
+                if let document = document {
+                    switch document {
+                        case .document:
+                            break
+                        default:
+                            break
+                    }
                 }
                 return nil
             default:
@@ -47,7 +53,7 @@ extension Api.MessageMedia {
 extension Api.Message {
     var rawId: Int32 {
         switch self {
-            case let .message(_, id, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .message(_, id, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return id
             case let .messageEmpty(id):
                 return id
@@ -58,7 +64,7 @@ extension Api.Message {
     
     var id: MessageId? {
         switch self {
-            case let .message(flags, id, fromId, toId, _, _, _, _, _, _, _, _, _, _):
+            case let .message(flags, id, fromId, toId, _, _, _, _, _, _, _, _, _, _, _):
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
@@ -88,7 +94,7 @@ extension Api.Message {
 
     var timestamp: Int32? {
         switch self {
-            case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _):
+            case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _):
                 return date
             case let .messageService(_, _, _, _, _, date, _):
                 return date
@@ -99,7 +105,7 @@ extension Api.Message {
     
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-            case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _):
+            case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _):
                 return media?.preCachedResources
             default:
                 return nil

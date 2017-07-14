@@ -6,7 +6,6 @@ import Foundation
 #endif
 
 protocol TelegramCloudMediaResource: TelegramMediaResource {
-    
     var apiInputLocation: Api.InputFileLocation { get }
 }
 

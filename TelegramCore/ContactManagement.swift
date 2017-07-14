@@ -103,7 +103,7 @@ public func addContactPeerInteractively(account: Account, peerId: PeerId) -> Sig
                     return account.postbox.modify { modifier -> Void in
                         if let result = result {
                             switch result {
-                                case let .importedContacts(_, _, users):
+                                case let .importedContacts(_, _, _, users):
                                     if let first = users.first {
                                         let user = TelegramUser(user: first)
                                         updatePeers(modifier: modifier, peers: [user], update: { _, updated in

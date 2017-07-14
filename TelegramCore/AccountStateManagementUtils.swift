@@ -778,12 +778,15 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         var messageText = text
                         var medias: [Media] = []
                         
-                        let (mediaText, mediaValue) = textAndMediaFromApiMedia(media, peerId)
+                        let (mediaText, mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                         if let mediaText = mediaText {
                             messageText = mediaText
                         }
                         if let mediaValue = mediaValue {
                             medias.append(mediaValue)
+                        }
+                        if let expirationTimer = expirationTimer {
+                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
                         }
                         
                         let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
@@ -1603,7 +1606,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 modifier.updateMessage(id, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
-                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                     }
                     var attributes = currentMessage.attributes
                     loop: for j in 0 ..< attributes.count {

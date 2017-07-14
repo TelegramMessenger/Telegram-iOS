@@ -64,7 +64,27 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
                 let signal = Signal<Void, NoError>.complete()
                     |> delay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
                     |> then(postbox.modify { modifier -> Void in
-                        modifier.deleteMessages([entry.messageId])
+                        if let message = modifier.getMessage(entry.messageId) {
+                            if message.id.namespace == Namespaces.Peer.SecretChat {
+                                modifier.deleteMessages([entry.messageId])
+                            } else {
+                                modifier.updateMessage(message.id, update: { currentMessage in
+                                    var storeForwardInfo: StoreMessageForwardInfo?
+                                    if let forwardInfo = currentMessage.forwardInfo {
+                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                    }
+                                    var updatedMedia = currentMessage.media
+                                    for i in 0 ..< updatedMedia.count {
+                                        if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                        } else if let _ = updatedMedia[i] as? TelegramMediaFile {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                        }
+                                    }
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                                })
+                            }
+                        }
                         modifier.removeTimestampBasedMessageAttribute(tag: 0, messageId: entry.messageId)
                     })
                 disposable.set(signal.start())

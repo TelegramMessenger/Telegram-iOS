@@ -69,7 +69,7 @@ public func tagsForStoreMessage(incoming: Bool, media: [Media], textEntities: [M
 extension Api.Message {
     var peerId: PeerId? {
         switch self {
-            case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _):
+            case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _, _):
                 switch toId {
                     case let .peerUser(userId):
                         return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
@@ -94,7 +94,7 @@ extension Api.Message {
     
     var peerIds: [PeerId] {
         switch self {
-            case let .message(flags, _, fromId, toId, fwdFrom, viaBotId, _, _, _, media, _, entities, _, _):
+            case let .message(flags, _, fromId, toId, fwdFrom, viaBotId, _, _, _, media, _, entities, _, _, _):
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
@@ -113,7 +113,7 @@ extension Api.Message {
             
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, _, channelId, _):
+                        case let .messageFwdHeader(_, fromId, _, channelId, _, _):
                             if let channelId = channelId {
                                 result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
                             }
@@ -201,7 +201,7 @@ extension Api.Message {
     
     var associatedMessageIds: [MessageId]? {
         switch self {
-            case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _):
+            case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _):
                 if let replyToMsgId = replyToMsgId {
                     let peerId: PeerId
                         switch toId {
@@ -236,38 +236,45 @@ extension Api.Message {
     }
 }
 
-func textAndMediaFromApiMedia(_ media: Api.MessageMedia?, _ peerId:PeerId) -> (String?, Media?) {
+func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerId:PeerId) -> (String?, Media?, Int32?) {
     if let media = media {
         switch media {
-            case let .messageMediaPhoto(photo, caption):
-                if let mediaImage = telegramMediaImageFromApiPhoto(photo) {
-                    return (caption, mediaImage)
+            case let .messageMediaPhoto(_, photo, caption, ttlSeconds):
+                if let photo = photo {
+                    if let mediaImage = telegramMediaImageFromApiPhoto(photo) {
+                        return (caption, mediaImage, ttlSeconds)
+                    }
+                } else {
+                    return (nil, TelegramMediaExpiredContent(data: .image), nil)
                 }
-                break
             case let .messageMediaContact(phoneNumber, firstName, lastName, userId):
                 let contactPeerId: PeerId? = userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                 let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId)
-                return (nil, mediaContact)
+                return (nil, mediaContact, nil)
             case let .messageMediaGeo(geo):
                 let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil)
-                return (nil, mediaMap)
+                return (nil, mediaMap, nil)
             case let .messageMediaVenue(geo, title, address, provider, venueId):
                 let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId)
-                return (nil, mediaMap)
-            case let .messageMediaDocument(document, caption):
-                if let mediaFile = telegramMediaFileFromApiDocument(document) {
-                    return (caption, mediaFile)
+                return (nil, mediaMap, nil)
+            case let .messageMediaDocument(_, document, caption, ttlSeconds):
+                if let document = document {
+                    if let mediaFile = telegramMediaFileFromApiDocument(document) {
+                        return (caption, mediaFile, ttlSeconds)
+                    }
+                } else {
+                    return (nil, TelegramMediaExpiredContent(data: .file), nil)
                 }
             case let .messageMediaWebPage(webpage):
                 if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage) {
-                    return (nil, mediaWebpage)
+                    return (nil, mediaWebpage, nil)
                 }
             case .messageMediaUnsupported:
-                return (nil, TelegramMediaUnsupported())
+                return (nil, TelegramMediaUnsupported(), nil)
             case .messageMediaEmpty:
                 break
             case let .messageMediaGame(game):
-                return (nil, TelegramMediaGame(apiGame: game))
+                return (nil, TelegramMediaGame(apiGame: game), nil)
             case let .messageMediaInvoice(flags, title, description, photo, receiptMsgId, currency, totalAmount, startParam):
                 var parsedFlags = TelegramMediaInvoiceFlags()
                 if (flags & (1 << 3)) != 0 {
@@ -276,11 +283,11 @@ func textAndMediaFromApiMedia(_ media: Api.MessageMedia?, _ peerId:PeerId) -> (S
                 if (flags & (1 << 1)) != 0 {
                     parsedFlags.insert(.shippingAddressRequested)
                 }
-                return (nil, TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, flags: parsedFlags))
+                return (nil, TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, flags: parsedFlags), nil)
         }
     }
     
-    return (nil, nil)
+    return (nil, nil, nil)
 }
 
 func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [MessageTextEntity] {
@@ -319,7 +326,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -349,7 +356,7 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, date, channelId, channelPost):
+                        case let .messageFwdHeader(_, fromId, date, channelId, channelPost, postAuthor):
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
@@ -367,9 +374,9 @@ extension StoreMessage {
                             }
                         
                             if let authorId = authorId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date)
+                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
                             } else if let sourceId = sourceId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: nil, sourceMessageId: sourceMessageId, date: date)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
                             }
                     }
                 }
@@ -378,26 +385,42 @@ extension StoreMessage {
                 var medias: [Media] = []
                 var attributes: [MessageAttribute] = []
                 
+                var consumableContent: (Bool, Bool)? = nil
+                
                 if let media = media {
-                    let (mediaText, mediaValue) = textAndMediaFromApiMedia(media, peerId)
+                    let (mediaText, mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                     if let mediaText = mediaText {
                         messageText = mediaText
                     }
                     if let mediaValue = mediaValue {
                         medias.append(mediaValue)
+                    
+                        if let expirationTimer = expirationTimer, expirationTimer > 0 {
+                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                            
+                            consumableContent = (true, false)
+                        }
                     }
+                }
+                
+                if let postAuthor = postAuthor {
+                    attributes.append(AuthorSignatureMessageAttribute(signature: postAuthor))
                 }
                 
                 for case let file as TelegramMediaFile in medias {
                     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
                         if file.isVoice {
-                            attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) == 0))
+                            consumableContent = (true, (flags & (1 << 5)) == 0)
                             break
                         } else if file.isInstantVideo {
-                            attributes.append(ConsumableContentMessageAttribute(consumed: (flags & (1 << 5)) == 0))
+                            consumableContent = (true, (flags & (1 << 5)) == 0)
                             break
                         }
                     }
+                }
+                
+                if let (value, consumed) = consumableContent, value {
+                    attributes.append(ConsumableContentMessageAttribute(consumed: consumed))
                 }
                 
                 if let viaBotId = viaBotId {

@@ -237,6 +237,9 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedSecretChatData.self, f: { CachedSecretChatData(decoder: $0) })
     declareEncodable(ManagedDeviceContactsMetaInfo.self, f: { ManagedDeviceContactsMetaInfo(decoder: $0) })
     declareEncodable(ManagedDeviceContactEntryContents.self, f: { ManagedDeviceContactEntryContents(decoder: $0) })
+    declareEncodable(TemporaryTwoStepPasswordToken.self, f: { TemporaryTwoStepPasswordToken(decoder: $0) })
+    declareEncodable(AuthorSignatureMessageAttribute.self, f: { AuthorSignatureMessageAttribute(decoder: $0) })
+    declareEncodable(TelegramMediaExpiredContent.self, f: { TelegramMediaExpiredContent(decoder: $0) })
     
     return
 }()
@@ -498,7 +501,10 @@ public class Account {
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)
         
         self.network.loggedOut = { [weak self] in
-            self?._loggedOut.set(true)
+            if let strongSelf = self {
+                strongSelf._loggedOut.set(true)
+                strongSelf.callSessionManager.dropAll()
+            }
         }
         
         let networkStateSignal = combineLatest(self.stateManager.isUpdating, network.connectionStatus)

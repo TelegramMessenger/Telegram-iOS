@@ -326,6 +326,13 @@ private final class CallSessionManagerContext {
         }
     }
     
+    func dropAll() {
+        let contexts = self.contexts
+        for (internalId, context) in contexts {
+            self.drop(internalId: internalId, reason: .hangUp)
+        }
+    }
+    
     func accept(internalId: CallSessionInternalId) {
         if let context = self.contexts[internalId] {
             switch context.state {
@@ -612,6 +619,12 @@ public final class CallSessionManager {
     func drop(stableId: CallSessionStableId, reason: DropCallReason) {
         self.withContext { context in
             context.drop(stableId: stableId, reason: reason)
+        }
+    }
+    
+    func dropAll() {
+        self.withContext { context in
+            context.dropAll()
         }
     }
     

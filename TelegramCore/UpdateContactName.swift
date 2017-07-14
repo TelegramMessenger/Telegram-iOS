@@ -23,7 +23,7 @@ public func updateContactName(account: Account, peerId: PeerId, firstName: Strin
                 |> mapToSignal { result -> Signal<Void, UpdateContactNameError> in
                     return account.postbox.modify { modifier -> Void in
                         switch result {
-                            case let .importedContacts(_, _, users):
+                            case let .importedContacts(_, _, _, users):
                                 if let first = users.first {
                                     let user = TelegramUser(user: first)
                                     updatePeers(modifier: modifier, peers: [user], update: { _, updated in

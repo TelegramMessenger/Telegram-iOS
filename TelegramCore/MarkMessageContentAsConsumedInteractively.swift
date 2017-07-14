@@ -25,16 +25,16 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                 }
             }
             
-            if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
-                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                for i in 0 ..< updatedAttributes.count {
-                    if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
-                        if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
-                            updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
-                            updateMessage = true
-                            
-                            modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
-                            
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+            for i in 0 ..< updatedAttributes.count {
+                if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
+                    if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
+                        updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
+                        updateMessage = true
+                        
+                        modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
+                        
+                        if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
                             var layer: SecretChatLayer?
                             let state = modifier.getPeerChatState(message.id.peerId) as? SecretChatState
                             if let state = state {
@@ -55,8 +55,8 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                                 }
                             }
                         }
-                        break
                     }
+                    break
                 }
             }
             
@@ -64,7 +64,7 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                 modifier.updateMessage(message.id, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
-                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                     }
                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags,forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
                 })
@@ -77,6 +77,7 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
     if let message = modifier.getMessage(messageId) {
         var updateMessage = false
         var updatedAttributes = message.attributes
+        var updatedMedia = message.media
         
         for i in 0 ..< updatedAttributes.count {
             if let attribute = updatedAttributes[i] as? ConsumableContentMessageAttribute {
@@ -88,17 +89,26 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
             }
         }
         
-        if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
-            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            for i in 0 ..< updatedAttributes.count {
-                if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
-                    if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
-                        updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
-                        updateMessage = true
+        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        for i in 0 ..< updatedAttributes.count {
+            if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
+                if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
+                    updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
+                    updateMessage = true
+                    
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                         modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
+                    } else {
+                        for i in 0 ..< updatedMedia.count {
+                            if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                            } else if let _ = updatedMedia[i] as? TelegramMediaFile {
+                                updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                            }
+                        }
                     }
-                    break
                 }
+                break
             }
         }
         
@@ -106,9 +116,9 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
             modifier.updateMessage(message.id, update: { currentMessage in
                 var storeForwardInfo: StoreMessageForwardInfo?
                 if let forwardInfo = currentMessage.forwardInfo {
-                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                 }
-                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
+                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: updatedMedia))
             })
         }
     }
