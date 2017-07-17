@@ -533,6 +533,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1892568281] = { return Api.MessageAction.parse_messageActionPaymentSentMe($0) }
     dict[1080663248] = { return Api.MessageAction.parse_messageActionPaymentSent($0) }
     dict[-2132731265] = { return Api.MessageAction.parse_messageActionPhoneCall($0) }
+    dict[1200788123] = { return Api.MessageAction.parse_messageActionScreenshotTaken($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[462375633] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
     dict[-2089411356] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
@@ -15357,6 +15358,7 @@ public struct Api {
         case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
         case messageActionPaymentSent(currency: String, totalAmount: Int64)
         case messageActionPhoneCall(flags: Int32, callId: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
+        case messageActionScreenshotTaken
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -15482,6 +15484,12 @@ public struct Api {
                     serializeInt64(callId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {reason!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
+                    break
+                case .messageActionScreenshotTaken:
+                    if boxed {
+                        buffer.appendInt32(1200788123)
+                    }
+                    
                     break
     }
     return true
@@ -15693,6 +15701,9 @@ public struct Api {
                 return nil
             }
         }
+        fileprivate static func parse_messageActionScreenshotTaken(_ reader: BufferReader) -> MessageAction? {
+            return Api.MessageAction.messageActionScreenshotTaken
+        }
     
         public var description: String {
             get {
@@ -15731,6 +15742,8 @@ public struct Api {
                         return "(messageActionPaymentSent currency: \(currency), totalAmount: \(totalAmount))"
                     case .messageActionPhoneCall(let flags, let callId, let reason, let duration):
                         return "(messageActionPhoneCall flags: \(flags), callId: \(callId), reason: \(reason), duration: \(duration))"
+                    case .messageActionScreenshotTaken:
+                        return "(messageActionScreenshotTaken)"
                 }
             }
         }
@@ -21436,6 +21449,22 @@ public struct Api {
                         return result
                     })
                 }
+            
+                public static func sendScreenshotNotification(peer: Api.InputPeer, replyToMsgId: Int32, randomId: Int64) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-914493408)
+                    peer.serialize(buffer, true)
+                    serializeInt32(replyToMsgId, buffer: buffer, boxed: false)
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(messages.sendScreenshotNotification peer: \(peer), replyToMsgId: \(replyToMsgId), randomId: \(randomId))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
@@ -22835,16 +22864,16 @@ public struct Api {
                     })
                 }
             
-                public static func reuploadCdnFile(fileToken: Buffer, requestToken: Buffer) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                public static func reuploadCdnFile(fileToken: Buffer, requestToken: Buffer) -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.CdnFileHash]?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(779755552)
+                    buffer.appendInt32(452533257)
                     serializeBytes(fileToken, buffer: buffer, boxed: false)
                     serializeBytes(requestToken, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(upload.reuploadCdnFile fileToken: \(fileToken), requestToken: \(requestToken))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription({return "(upload.reuploadCdnFile fileToken: \(fileToken), requestToken: \(requestToken))"}), buffer, { (buffer: Buffer) -> [Api.CdnFileHash]? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        var result: [Api.CdnFileHash]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.CdnFileHash.self)
                         }
                         return result
                     })

@@ -127,60 +127,162 @@ private func roundUp(_ value: Int, to multiple: Int) -> Int {
     return value + multiple - remainder
 }
 
-private final class MultipartCdnHashSourceState {
-    private var hashes: [Int32: Data]
-    private var requestOffsetAndDisposable: (Int32, Disposable)?
-    private var requestedOffsets = Set<Int32>()
-    
-    init(hashes: [Int32: Data]) {
-        self.hashes = hashes
-    }
-    
-    func dispose() -> Disposable? {
-        let disposable = self.requestOffsetAndDisposable?.1
-        self.requestOffsetAndDisposable = nil
-        return disposable
-    }
-    
-    func get(offset: Int32) -> (Data?, MetaDisposable?) {
-        if let data = self.hashes[offset] {
-            return (data, nil)
-        } else {
-            requestedOffsets.insert(offset)
-            if self.requestOffsetAndDisposable == nil {
-                let disposable = MetaDisposable()
-                self.requestOffsetAndDisposable = (offset, disposable)
-                return (nil, disposable)
-            } else {
-                return (nil, nil)
-            }
-        }
-    }
-    
-    func add(requestedOffset: Int32, addedHashes: [Int32: Data]) -> (Int32, MetaDisposable)? {
-        
-        return nil
-    }
-}
+private let dataHashLength: Int32 = 128 * 1024
 
 private final class MultipartCdnHashSource {
-    private let state: Atomic<MultipartCdnHashSourceState>
+    private let queue: Queue
+    
+    private let fileToken: Data
     private let masterDownload: DownloadWrapper
     
-    init(hashes: [Int32: Data], masterDownload: DownloadWrapper) {
-        self.state = Atomic(value: MultipartCdnHashSourceState(hashes: hashes))
+    private var knownUpperBound: Int32
+    private var hashes: [Int32: Data]
+    private var requestOffsetAndDisposable: (Int32, Disposable)?
+    private var requestedUpperBound: Int32?
+    
+    private var subscribers = Bag<(Int32, Int32, ([Int32: Data]) -> Void)>()
+    
+    init(queue: Queue, fileToken: Data, hashes: [Int32: Data], masterDownload: DownloadWrapper) {
+        assert(queue.isCurrent())
+        
+        self.queue = queue
+        self.fileToken = fileToken
         self.masterDownload = masterDownload
+        
+        self.hashes = hashes
+        var knownUpperBound: Int32 = 0
+        /*for (offset, _) in hashes {
+            assert(offset % dataHashLength == 0)
+            knownUpperBound = max(knownUpperBound, offset + dataHashLength)
+        }*/
+        self.knownUpperBound = knownUpperBound
     }
     
     deinit {
-        let disposable = self.state.with {
-            return $0.dispose()
-        }
-        disposable?.dispose()
+        assert(self.queue.isCurrent())
+        
+        self.requestOffsetAndDisposable?.1.dispose()
     }
     
-    func get(offset: Int32) -> Signal<Data, MultipartFetchDownloadError> {
-        return .never()
+    private func take(offset: Int32, limit: Int32) -> [Int32: Data]? {
+        assert(offset % dataHashLength == 0)
+        assert(limit % dataHashLength == 0)
+        
+        var result: [Int32: Data] = [:]
+        
+        var localOffset: Int32 = 0
+        while localOffset < limit {
+            if let hash = self.hashes[offset + localOffset] {
+                result[offset + localOffset] = hash
+            } else {
+                return nil
+            }
+            localOffset += dataHashLength
+        }
+        
+        return result
+    }
+    
+    func get(offset: Int32, limit: Int32) -> Signal<[Int32: Data], MultipartFetchDownloadError> {
+        assert(self.queue.isCurrent())
+        
+        let queue = self.queue
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+            
+            queue.async {
+                if let strongSelf = self {
+                    if let result = strongSelf.take(offset: offset, limit: limit) {
+                        subscriber.putNext(result)
+                        subscriber.putCompletion()
+                    } else {
+                        let index = strongSelf.subscribers.add((offset, limit, { result in
+                            subscriber.putNext(result)
+                            subscriber.putCompletion()
+                        }))
+                        
+                        disposable.set(ActionDisposable {
+                            queue.async {
+                                if let strongSelf = self {
+                                    strongSelf.subscribers.remove(index)
+                                }
+                            }
+                        })
+                        
+                        if let requestedUpperBound = strongSelf.requestedUpperBound {
+                            strongSelf.requestedUpperBound = max(requestedUpperBound, offset + limit)
+                        } else {
+                            strongSelf.requestedUpperBound = offset + limit
+                        }
+                        
+                        if strongSelf.requestOffsetAndDisposable == nil {
+                            strongSelf.requestMore()
+                        } else {
+                            if let requestedUpperBound = strongSelf.requestedUpperBound {
+                                strongSelf.requestedUpperBound = max(requestedUpperBound, offset + limit)
+                            } else {
+                                strongSelf.requestedUpperBound = offset + limit
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    private func requestMore() {
+        assert(self.queue.isCurrent())
+        
+        let requestOffset = self.knownUpperBound
+        let disposable = MetaDisposable()
+        self.requestOffsetAndDisposable = (requestOffset, disposable)
+        let queue = self.queue
+        let fileToken = self.fileToken
+        disposable.set((self.masterDownload.get() |> mapToSignal { download -> Signal<[Int32: Data], NoError> in
+            return download.request(Api.functions.upload.getCdnFileHashes(fileToken: Buffer(data: fileToken), offset: requestOffset))
+                |> map { partHashes -> [Int32: Data] in
+                    var parsedPartHashes: [Int32: Data] = [:]
+                    for part in partHashes {
+                        switch part {
+                        case let .cdnFileHash(offset, limit, bytes):
+                            assert(limit == 128 * 1024)
+                            parsedPartHashes[offset] = bytes.makeData()
+                        }
+                    }
+                    return parsedPartHashes
+                }
+                |> `catch` { _ -> Signal<[Int32: Data], NoError> in
+                    return .single([:])
+                }
+        } |> deliverOn(queue)).start(next: { [weak self] result in
+            if let strongSelf = self {
+                if strongSelf.requestOffsetAndDisposable?.0 == requestOffset {
+                    strongSelf.requestOffsetAndDisposable = nil
+                    
+                    for (hashOffset, hashData) in result {
+                        assert(hashOffset % dataHashLength == 0)
+                        strongSelf.knownUpperBound = max(strongSelf.knownUpperBound, hashOffset + dataHashLength)
+                        strongSelf.hashes[hashOffset] = hashData
+                    }
+                    
+                    for (index, item) in strongSelf.subscribers.copyItemsWithIndices() {
+                        let (offset, limit, subscriber) = item
+                        if let data = strongSelf.take(offset: offset, limit: limit) {
+                            strongSelf.subscribers.remove(index)
+                            subscriber(data)
+                        }
+                    }
+                    
+                    if let requestedUpperBound = strongSelf.requestedUpperBound, requestedUpperBound > strongSelf.knownUpperBound {
+                        strongSelf.requestMore()
+                    }
+                } else {
+                    assertionFailure()
+                }
+            }
+        }))
     }
 }
 
@@ -274,7 +376,7 @@ private enum MultipartFetchSource {
                             }
                         }
                     }
-                return combineLatest(part, hashSource.get(offset: offset))
+                return combineLatest(part, hashSource.get(offset: offset, limit: limit))
                     |> mapToSignal { partData, hashData -> Signal<Data, MultipartFetchDownloadError> in
                         return .single(partData)
                     }
@@ -285,6 +387,7 @@ private enum MultipartFetchSource {
 private final class MultipartFetchManager {
     let parallelParts: Int
     let defaultPartSize = 128 * 1024
+    let partAlignment = 128 * 1024
     
     let queue = Queue()
     
@@ -314,7 +417,6 @@ private final class MultipartFetchManager {
         self.completeSize = size
         if let size = size {
             if size <= range.lowerBound {
-                //assertionFailure()
                 self.range = range
                 self.parallelParts = 0
             } else {
@@ -433,7 +535,7 @@ private final class MultipartFetchManager {
                                 case let .switchToCdn(id, token, key, iv, partHashes):
                                     switch strongSelf.source {
                                         case let .master(location, download):
-                                            strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, fileToken: token, key: key, iv: iv, download: DownloadWrapper(id: id, cdn: true, take: strongSelf.takeDownloader), masterDownload: download, hashSource: MultipartCdnHashSource(hashes: partHashes, masterDownload: download))
+                                            strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, fileToken: token, key: key, iv: iv, download: DownloadWrapper(id: id, cdn: true, take: strongSelf.takeDownloader), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download))
                                             strongSelf.checkState()
                                         case .cdn, .none:
                                             break
@@ -445,13 +547,13 @@ private final class MultipartFetchManager {
                                         case let .cdn(_, fileToken, _, _, _, masterDownload, _):
                                             if !strongSelf.reuploadingToCdn {
                                                 strongSelf.reuploadingToCdn = true
-                                                let reupload: Signal<Api.Bool, NoError> = masterDownload.get() |> mapToSignal { download -> Signal<Api.Bool, NoError> in
+                                                let reupload: Signal<[Api.CdnFileHash], NoError> = masterDownload.get() |> mapToSignal { download -> Signal<[Api.CdnFileHash], NoError> in
                                                     return download.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)))
-                                                        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                                                            return .single(.boolFalse)
+                                                        |> `catch` { _ -> Signal<[Api.CdnFileHash], NoError> in
+                                                            return .single([])
                                                         }
                                                 }
-                                                strongSelf.reuploadToCdnDisposable.set((reupload |> deliverOn(strongSelf.queue)).start(next: { result in
+                                                strongSelf.reuploadToCdnDisposable.set((reupload |> deliverOn(strongSelf.queue)).start(next: { _ in
                                                     if let strongSelf = self {
                                                         strongSelf.reuploadingToCdn = false
                                                         strongSelf.checkState()

@@ -328,6 +328,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .paymentSent(currency: currency, totalAmount: totalAmount))
         case .messageActionPaymentSentMe:
             return nil
+        case .messageActionScreenshotTaken:
+            return TelegramMediaAction(action: .historyScreenshot)
     }
 }
 
