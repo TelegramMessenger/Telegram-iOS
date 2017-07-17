@@ -136,7 +136,7 @@ private final class MultipartCdnHashSource {
     private let masterDownload: DownloadWrapper
     
     private var knownUpperBound: Int32
-    private var hashes: [Int32: Data]
+    private var hashes: [Int32: Data] = [:]
     private var requestOffsetAndDisposable: (Int32, Disposable)?
     private var requestedUpperBound: Int32?
     
@@ -149,9 +149,9 @@ private final class MultipartCdnHashSource {
         self.fileToken = fileToken
         self.masterDownload = masterDownload
         
-        self.hashes = hashes
         var knownUpperBound: Int32 = 0
-        /*for (offset, _) in hashes {
+        /*self.hashes = hashes
+        for (offset, _) in hashes {
             assert(offset % dataHashLength == 0)
             knownUpperBound = max(knownUpperBound, offset + dataHashLength)
         }*/
@@ -246,9 +246,9 @@ private final class MultipartCdnHashSource {
                     var parsedPartHashes: [Int32: Data] = [:]
                     for part in partHashes {
                         switch part {
-                        case let .cdnFileHash(offset, limit, bytes):
-                            assert(limit == 128 * 1024)
-                            parsedPartHashes[offset] = bytes.makeData()
+                            case let .cdnFileHash(offset, limit, bytes):
+                                assert(limit == 128 * 1024)
+                                parsedPartHashes[offset] = bytes.makeData()
                         }
                     }
                     return parsedPartHashes
@@ -378,6 +378,20 @@ private enum MultipartFetchSource {
                     }
                 return combineLatest(part, hashSource.get(offset: offset, limit: limit))
                     |> mapToSignal { partData, hashData -> Signal<Data, MultipartFetchDownloadError> in
+                        var localOffset = 0
+                        while localOffset < partData.count {
+                            let dataToHash = partData.subdata(in: localOffset ..< min(partData.count, localOffset + Int(dataHashLength)))
+                            if let hash = hashData[offset + Int32(localOffset)] {
+                                let localHash = MTSha256(dataToHash)
+                                if localHash != hash {
+                                    return .fail(.generic)
+                                }
+                            } else {
+                                return .fail(.generic)
+                            }
+                            
+                            localOffset += Int(dataHashLength)
+                        }
                         return .single(partData)
                     }
         }
@@ -503,8 +517,9 @@ private final class MultipartFetchManager {
                 }
                 
                 if nextOffset < self.range.upperBound {
-                    let partSize = min(self.range.upperBound - nextOffset, self.defaultPartSize)
-                    let part = self.source.request(offset: Int32(nextOffset), limit: Int32(partSize))
+                    let requestPartSize = self.defaultPartSize
+                    let partSize = min(requestPartSize, self.range.upperBound - nextOffset)
+                    let part = self.source.request(offset: Int32(nextOffset), limit: Int32(requestPartSize))
                         |> deliverOn(self.queue)
                     let partOffset = nextOffset
                     self.fetchingParts[nextOffset] = (partSize, part.start(next: { [weak self] data in

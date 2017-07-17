@@ -389,11 +389,11 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             
             context.keychain = keychain
             
-            if testingEnvironment {
+            /*if testingEnvironment {
                 for (id, ip) in seedAddressList {
                     context.updateAddressSetForDatacenter(withId: id, addressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false)]), forceUpdateSchemes: true)
                 }
-            }
+            }*/
             
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context))
             
