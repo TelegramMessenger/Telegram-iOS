@@ -28,8 +28,8 @@
 - (instancetype)initWithCoder:(NSCoder *)coder {
   self = [super initWithCoder:coder];
   if(self) {
-    _envelopeTypeName = [coder decodeObjectForKey:@"_envelopeTypeName"];
-    _dataTypeName = [coder decodeObjectForKey:@"_dataTypeName"];
+    _envelopeTypeName = (NSString *)[coder decodeObjectForKey:@"_envelopeTypeName"];
+    _dataTypeName = (NSString *)[coder decodeObjectForKey:@"_dataTypeName"];
   }
 
   return self;

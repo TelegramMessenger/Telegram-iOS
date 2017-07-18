@@ -16,9 +16,9 @@
 - (instancetype)initWithCoder:(NSCoder *)coder {
   self = [super initWithCoder:coder];
   if(self) {
-    _version = [coder decodeObjectForKey:@"self.version"];
-    _name = [coder decodeObjectForKey:@"self.name"];
-    _properties = [coder decodeObjectForKey:@"self.properties"];
+    _version = (NSNumber *)[coder decodeObjectForKey:@"self.version"];
+    _name = (NSString *)[coder decodeObjectForKey:@"self.name"];
+    _properties = (NSDictionary *)[coder decodeObjectForKey:@"self.properties"];
   }
   return self;
 }

@@ -212,7 +212,7 @@ NS_ASSUME_NONNULL_BEGIN
     BITHockeyLogError(@"ERROR: JSONSerialization error: %@", error.localizedDescription);
     return @"{}";
   } else {
-    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    return (NSString *)[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
   }
 }
 
@@ -264,7 +264,7 @@ void bit_resetSafeJsonStream(char **string) {
 
 - (void)invalidateTimer {
   if ([self timerIsRunning]) {
-    dispatch_source_cancel(self.timerSource);
+    dispatch_source_cancel((dispatch_source_t)self.timerSource);
     self.timerSource = nil;
   }
 }
@@ -280,10 +280,10 @@ void bit_resetSafeJsonStream(char **string) {
   }
   
   self.timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.dataItemsOperations);
-  dispatch_source_set_timer(self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * self.batchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
+  dispatch_source_set_timer((dispatch_source_t)self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * self.batchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
   
   __weak typeof(self) weakSelf = self;
-  dispatch_source_set_event_handler(self.timerSource, ^{
+  dispatch_source_set_event_handler((dispatch_source_t)self.timerSource, ^{
     typeof(self) strongSelf = weakSelf;
     
     if(strongSelf) {
@@ -296,7 +296,7 @@ void bit_resetSafeJsonStream(char **string) {
     }
   });
   
-  dispatch_resume(self.timerSource);
+  dispatch_resume((dispatch_source_t)self.timerSource);
 }
 
 /**

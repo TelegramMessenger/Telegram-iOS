@@ -916,7 +916,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   NSString *url = [NSString stringWithFormat:@"%@%@%@", self.serverURL, urlEncodedPath, urlEncodedParameters];
   BITHockeyLogDebug(@"INFO: Sending api request to %@", url);
   
-  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]
+  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:url]
                                                          cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
                                                      timeoutInterval:10.0];
   [request setHTTPMethod:@"GET"];
@@ -1047,7 +1047,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       }
       
       NSError *error = nil;
-      NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
+      NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:(NSData *)[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
       
       self.companyName = (([[json valueForKey:@"company"] isKindOfClass:[NSString class]]) ? [json valueForKey:@"company"] : nil);
       

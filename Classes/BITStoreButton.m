@@ -161,7 +161,7 @@
     // register for touch events
 		[self addTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
-    [self bringSubviewToFront:self.titleLabel];
+    [self bringSubviewToFront:(UILabel *)self.titleLabel];
   }
   return self;
 }
@@ -192,7 +192,7 @@
       [_inActiveBorderLayer setHidden:YES];
     }
     
-    [self bringSubviewToFront:self.titleLabel];
+    [self bringSubviewToFront:(UILabel *)self.titleLabel];
   }
   return self;
 }

@@ -10,7 +10,7 @@
 
 /// Initializes a new instance of the class.
 - (instancetype)init {
-  if (self = [super init]) {
+  if ((self = [super init])) {
     _envelopeTypeName = @"Microsoft.ApplicationInsights.Event";
     _dataTypeName = @"EventData";
     _version = @2;
@@ -46,8 +46,8 @@
   if(self) {
     _envelopeTypeName = [coder decodeObjectForKey:@"self.envelopeTypeName"];
     _dataTypeName = [coder decodeObjectForKey:@"self.dataTypeName"];
-    _version = [coder decodeObjectForKey:@"self.version"];
-    _properties = [coder decodeObjectForKey:@"self.properties"];
+    _version = (NSNumber *)[coder decodeObjectForKey:@"self.version"];
+    _properties = (NSDictionary *)[coder decodeObjectForKey:@"self.properties"];
     _measurements = [coder decodeObjectForKey:@"self.measurements"];
   }
   return self;

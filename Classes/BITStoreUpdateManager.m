@@ -356,7 +356,7 @@
   
   BITHockeyLogDebug(@"INFO: Sending request to %@", url);
   
-  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
+  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:@"GET"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
@@ -531,7 +531,7 @@
   [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
   
   if (_appStoreURLString) {
-    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURLString]];
+    [[UIApplication sharedApplication] openURL:(NSURL *)[NSURL URLWithString:_appStoreURLString]];
   } else {
     BITHockeyLogWarning(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
   }

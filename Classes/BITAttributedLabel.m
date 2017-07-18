@@ -1806,7 +1806,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
 #pragma clang diagnostic pop
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(linkBackgroundEdgeInset))]) {
-        self.linkBackgroundEdgeInset = UIEdgeInsetsFromString([coder decodeObjectForKey:NSStringFromSelector(@selector(linkBackgroundEdgeInset))]);
+        self.linkBackgroundEdgeInset = UIEdgeInsetsFromString((NSString *)[coder decodeObjectForKey:NSStringFromSelector(@selector(linkBackgroundEdgeInset))]);
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(attributedText))]) {
@@ -1860,7 +1860,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
                 _accessibilityValue = self.result.phoneNumber;
                 break;
             case NSTextCheckingTypeDate:
-                _accessibilityValue = [NSDateFormatter localizedStringFromDate:self.result.date
+                _accessibilityValue = [NSDateFormatter localizedStringFromDate:(NSDate *)self.result.date
                                                                      dateStyle:NSDateFormatterLongStyle
                                                                      timeStyle:NSDateFormatterLongStyle];
                 break;

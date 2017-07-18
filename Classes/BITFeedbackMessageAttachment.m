@@ -116,7 +116,7 @@
 }
 
 - (BOOL)needsLoadingFromURL {
-  return (self.sourceURL && ![_fm fileExistsAtPath:[self.localURL path]]);
+  return (self.sourceURL && ![_fm fileExistsAtPath:(NSString *)[self.localURL path]]);
 }
 
 - (BOOL)isImage {
@@ -189,7 +189,7 @@
       CGSize scaledSize = CGSizeApplyAffineTransform(size, CGAffineTransformMakeScale(scale, scale));
       UIImage *thumbnail = bit_imageToFitSize(image, scaledSize, YES) ;
       
-      UIImage *scaledThumbnail = [UIImage imageWithCGImage:thumbnail.CGImage scale:scale orientation:thumbnail.imageOrientation];
+      UIImage *scaledThumbnail = [UIImage imageWithCGImage:(CGImageRef)thumbnail.CGImage scale:scale orientation:thumbnail.imageOrientation];
       if (thumbnail) {
         [self.thumbnailRepresentations setObject:scaledThumbnail forKey:cacheKey];
       }
@@ -266,7 +266,7 @@
     }
   }
   
-  return [NSURL URLWithString:[[NSBundle mainBundle] pathForResource:@"FeedbackPlaceholder" ofType:@"png"]];
+  return [NSURL URLWithString:(NSString *)[[NSBundle mainBundle] pathForResource:@"FeedbackPlaceholder" ofType:@"png"]];
 }
 
 @end

@@ -228,7 +228,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
   NSArray *preparedItems = [NSArray array];
   if ([self.delegate respondsToSelector:@selector(preparedItemsForFeedbackManager:)]) {
-    preparedItems = [preparedItems arrayByAddingObjectsFromArray:[self.delegate preparedItemsForFeedbackManager:self]];
+    preparedItems = [preparedItems arrayByAddingObjectsFromArray:(NSArray *)[self.delegate preparedItemsForFeedbackManager:self]];
   }
 
   [composeViewController prepareWithItems:preparedItems];
@@ -470,7 +470,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     self.lastMessageID = [unarchiver decodeObjectForKey:kBITFeedbackLastMessageID];
 
   if ([unarchiver containsValueForKey:kBITFeedbackMessages]) {
-    [self.feedbackList setArray:[unarchiver decodeObjectForKey:kBITFeedbackMessages]];
+    [self.feedbackList setArray:(NSArray *)[unarchiver decodeObjectForKey:kBITFeedbackMessages]];
 
     [self sortFeedbackList];
 
@@ -926,7 +926,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   NSString *url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
   BITHockeyLogDebug(@"INFO: sending api request to %@", url);
 
-  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
+  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:httpMethod];
   [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
@@ -977,7 +977,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       photoIndex++;
     }
 
-    [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+    [postBody appendData:(NSData *)[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
 
 
     [request setHTTPBody:postBody];
@@ -1052,7 +1052,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
         NSError *error = NULL;
 
-        NSDictionary *feedDict = (NSDictionary *) [NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
+        NSDictionary *feedDict = (NSDictionary *) [NSJSONSerialization JSONObjectWithData:(NSData *)[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
 
         // server returned empty response?
         if (error) {
@@ -1353,7 +1353,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
       [imageManager requestImageDataForAsset:latestImageAsset options:options resultHandler:^(NSData *_Nullable imageData, NSString *_Nullable dataUTI, UIImageOrientation orientation, NSDictionary *_Nullable info) {
           if (imageData) {
-            completionHandler([UIImage imageWithData:imageData]);
+            completionHandler((UIImage *)[UIImage imageWithData:(NSData *)imageData]);
           } else {
             BITHockeyLogDebug(@"INFO: The latest image could not be fetched, requested image data was empty.");
           }

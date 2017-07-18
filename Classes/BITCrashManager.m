@@ -154,7 +154,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   char *demangled_name = &__cxa_demangle ? __cxa_demangle(info->exception_type_name ?: "", NULL, NULL, NULL) : NULL;
 
   if ((self = [super
-                initWithName:[NSString stringWithUTF8String:demangled_name ?: info->exception_type_name ?: ""]
+                initWithName:(NSString *)[NSString stringWithUTF8String:demangled_name ?: info->exception_type_name ?: ""]
                 reason:[NSString stringWithUTF8String:info->exception_message ?: ""]
                 userInfo:nil])) {
     _info = info;
@@ -319,7 +319,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                              error:&error];
     
     if ([rootObj objectForKey:kBITCrashApprovedReports])
-      [_approvedCrashReports setDictionary:[rootObj objectForKey:kBITCrashApprovedReports]];
+      [_approvedCrashReports setDictionary:(NSDictionary *)[rootObj objectForKey:kBITCrashApprovedReports]];
   } else {
     BITHockeyLogError(@"ERROR: Reading crash manager settings.");
   }
@@ -798,7 +798,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                             options:0
                                                               error:&error];
   if (plist) {
-    BOOL success = [plist writeToFile:[_crashesDir stringByAppendingPathComponent: [filename stringByAppendingPathExtension:@"meta"]] atomically:YES];
+    BOOL success = [plist writeToFile:[_crashesDir stringByAppendingPathComponent:(NSString *)[filename stringByAppendingPathExtension:@"meta"]] atomically:YES];
     if (!success) {
       BITHockeyLogError(@"ERROR: Writing crash meta data failed.");
     }
@@ -1394,7 +1394,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                             options:0
                                                               error:&error];
   if (plist) {
-    if ([plist writeToFile:[_crashesDir stringByAppendingPathComponent:[fakeReportFilename stringByAppendingPathExtension:@"fake"]] atomically:YES]) {
+    if ([plist writeToFile:[_crashesDir stringByAppendingPathComponent:(NSString *)[fakeReportFilename stringByAppendingPathExtension:@"fake"]] atomically:YES]) {
       [self storeMetaDataForCrashReportFilename:fakeReportFilename];
     }
   } else {
@@ -1458,7 +1458,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       metaFilename = [cacheFilename stringByReplacingOccurrencesOfString:@".fake" withString:@".meta"];
       attachmentFilename = [attachmentFilename stringByReplacingOccurrencesOfString:@".fake" withString:@""];
       
-      if ([appBundleVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
+      if ([appBundleVersion compare:(NSString *)[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
         _crashIdenticalCurrentVersion = YES;
       }
       
@@ -1489,12 +1489,12 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       osVersion = report.systemInfo.operatingSystemVersion;
       deviceModel = [self getDevicePlatform];
       appBinaryUUIDs = [self extractAppUUIDs:report];
-      if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
+      if ([report.applicationInfo.applicationVersion compare:(NSString *)[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
         _crashIdenticalCurrentVersion = YES;
       }
     }
     
-    if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
+    if ([report.applicationInfo.applicationVersion compare:(NSString *)[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
       _crashIdenticalCurrentVersion = YES;
     }
     
@@ -1615,7 +1615,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                       filename:attachmentFilename]];
   }
   
-  [postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+  [postBody appendData:(NSData *)[[NSString stringWithFormat:@"\r\n--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
   
   return postBody;
 }

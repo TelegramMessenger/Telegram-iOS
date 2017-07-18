@@ -617,7 +617,7 @@
     for (BITFeedbackMessageAttachment *attachment in message.attachments){
       if (attachment.needsLoadingFromURL && !attachment.isLoading){
         attachment.isLoading = YES;
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:attachment.sourceURL]];
         __weak typeof (self) weakSelf = self;
         if ([BITHockeyHelper isURLSessionSupported]) {
           NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
@@ -808,7 +808,7 @@
     }
   } else {
     if (buttonIndex == [alertView firstOtherButtonIndex]) {
-      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:alertView.title]];
+      [[UIApplication sharedApplication] openURL:(NSURL *)[NSURL URLWithString:alertView.title]];
     } else {
       UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
       pasteboard.URL = [NSURL URLWithString:alertView.title];
@@ -830,7 +830,7 @@
     }
   } else {
     if (buttonIndex == [actionSheet firstOtherButtonIndex]) {
-      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:actionSheet.title]];
+      [[UIApplication sharedApplication] openURL:(NSURL *)[NSURL URLWithString:actionSheet.title]];
     } else {
       UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
       pasteboard.URL = [NSURL URLWithString:actionSheet.title];
@@ -879,7 +879,7 @@
     
     if (attachment.needsLoadingFromURL && !attachment.isLoading) {
       attachment.isLoading = YES;
-      NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+      NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:attachment.sourceURL]];
       
       __weak typeof (self) weakSelf = self;
       if ([BITHockeyHelper isURLSessionSupported]) {

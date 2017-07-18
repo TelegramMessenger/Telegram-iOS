@@ -506,11 +506,11 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 
 - (NSString *)version {
-  return [NSString stringWithUTF8String:bitstadium_library_info.hockey_version];
+  return (NSString *)[NSString stringWithUTF8String:bitstadium_library_info.hockey_version];
 }
 
 - (NSString *)build {
-  return [NSString stringWithUTF8String:bitstadium_library_info.hockey_build];
+  return (NSString *)[NSString stringWithUTF8String:bitstadium_library_info.hockey_build];
 }
 
 
