@@ -36,13 +36,10 @@
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
 
-
-#define kLightGrayColor BIT_RGBCOLOR(235, 235, 235)
 #define kDarkGrayColor  BIT_RGBCOLOR(186, 186, 186)
 #define kWhiteBackgroundColorDefault  BIT_RGBCOLOR(245, 245, 245)
 #define kWhiteBackgroundColorOS7  BIT_RGBCOLOR(255, 255, 255)
 #define kImageHeight 72
-#define kImageBorderRadius 12
 #define kImageBorderRadiusiOS7 16.5
 #define kImageLeftMargin 14
 #define kImageTopMargin 12
