@@ -119,7 +119,7 @@
   tableViewContentHeight += [UIApplication sharedApplication].statusBarFrame.size.height;
   
   NSUInteger footerViewSize = kMinPreviousVersionButtonHeight;
-  NSUInteger frameHeight = self.view.frame.size.height;
+  NSUInteger frameHeight = (NSUInteger)self.view.frame.size.height;
   if(tableViewContentHeight < frameHeight && (frameHeight - tableViewContentHeight > 100)) {
     footerViewSize = frameHeight - tableViewContentHeight;
   }
@@ -188,7 +188,7 @@
     UIButton *footerButton = [UIButton buttonWithType:UIButtonTypeCustom];
     //footerButton.layer.shadowOffset = CGSizeMake(-2, 2);
     footerButton.layer.shadowColor = [[UIColor blackColor] CGColor];
-    footerButton.layer.shadowRadius = 2.0f;
+    footerButton.layer.shadowRadius = 2.0;
     footerButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
     [footerButton setTitle:BITHockeyLocalizedString(@"UpdateShowPreviousVersions") forState:UIControlStateNormal];
     [footerButton setTitleColor:BIT_RGBCOLOR(61, 61, 61) forState:UIControlStateNormal];

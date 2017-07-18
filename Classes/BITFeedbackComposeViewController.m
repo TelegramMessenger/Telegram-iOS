@@ -116,7 +116,7 @@
       self.text = [(self.text ? self.text : @"") stringByAppendingFormat:@"%@%@", (self.text ? @" " : @""), [(NSURL *)item absoluteString]];
     } else if ([item isKindOfClass:[UIImage class]]) {
       UIImage *image = item;
-      BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(image, 0.7f) contentType:@"image/jpeg"];
+      BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(image, (CGFloat)0.7) contentType:@"image/jpeg"];
       attachment.originalFilename = [NSString stringWithFormat:@"Image_%li.jpg", (unsigned long)[self.attachments count]];
       [self.attachments addObject:attachment];
       [self.imageAttachments addObject:attachment];
@@ -181,7 +181,7 @@
       }
     } else {
       windowHeight = windowSize.width - 20;
-      CGFloat modalGap = 0.0f;
+      CGFloat modalGap = 0.0;
       if (windowHeight - kbSize.width < self.view.bounds.size.height) {
         modalGap = 30;
       } else {
@@ -192,7 +192,7 @@
   }
   [self.contentViewContainer setFrame:frame];
   
-  [self performSelector:@selector(refreshAttachmentScrollview) withObject:nil afterDelay:0.0f];
+  [self performSelector:@selector(refreshAttachmentScrollview) withObject:nil afterDelay:0.0];
   
 }
 
@@ -239,7 +239,7 @@
   // Add Photo Button + Container that's displayed above the keyboard.
   if([BITHockeyHelper isPhotoAccessPossible]) {
     self.textAccessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44)];
-    self.textAccessoryView.backgroundColor = [UIColor colorWithRed:0.9f green:0.9f blue:0.9f alpha:1.0f];
+    self.textAccessoryView.backgroundColor = [UIColor colorWithRed:(CGFloat)0.9 green:(CGFloat)0.9 blue:(CGFloat)0.9 alpha:(CGFloat)1.0];
   
     self.addPhotoButton = [UIButton buttonWithType:UIButtonTypeCustom];
     [self.addPhotoButton setTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentAddImage") forState:UIControlStateNormal];
@@ -382,7 +382,7 @@
   
   int index = 0;
   
-  CGFloat currentYOffset = 0.0f;
+  CGFloat currentYOffset = 0.0;
   
   NSEnumerator *reverseAttachments = self.imageAttachments.reverseObjectEnumerator;
   
@@ -520,7 +520,7 @@
   UIImage *pickedImage = info[UIImagePickerControllerOriginalImage];
   
   if (pickedImage){
-    NSData *imageData = UIImageJPEGRepresentation(pickedImage, 0.7f);
+    NSData *imageData = UIImageJPEGRepresentation(pickedImage, (CGFloat)0.7);
     BITFeedbackMessageAttachment *newAttachment = [BITFeedbackMessageAttachment attachmentWithData:imageData contentType:@"image/jpeg"];
     NSURL *imagePath = [info objectForKey:@"UIImagePickerControllerReferenceURL"];
     NSString *imageName = [imagePath lastPathComponent];
@@ -693,7 +693,7 @@
 - (void)annotationController:(BITImageAnnotationViewController *)annotationController didFinishWithImage:(UIImage *)image {
   if (self.selectedAttachmentIndex != NSNotFound){
     BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
-    [attachment replaceData:UIImageJPEGRepresentation(image, 0.7f)];
+    [attachment replaceData:UIImageJPEGRepresentation(image, (CGFloat)0.7)];
   }
   
   self.selectedAttachmentIndex = NSNotFound;

@@ -170,7 +170,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     _installString = bit_appAnonID(NO);
     _disableInstallTracking = NO;
     
-    [self performSelector:@selector(validateStartManagerIsInvoked) withObject:nil afterDelay:0.0f];
+    [self performSelector:@selector(validateStartManagerIsInvoked) withObject:nil afterDelay:0.0];
   }
   return self;
 }
@@ -269,7 +269,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     if (_serverURL) {
       [_storeUpdateManager setServerURL:_serverURL];
     }
-    [_storeUpdateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+    [_storeUpdateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5];
   }
 #endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
 
@@ -280,7 +280,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     if (_serverURL) {
       [_feedbackManager setServerURL:_serverURL];
     }
-    [_feedbackManager performSelector:@selector(startManager) withObject:nil afterDelay:1.0f];
+    [_feedbackManager performSelector:@selector(startManager) withObject:nil afterDelay:1.0];
   }
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
   
@@ -294,7 +294,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     if (_serverURL) {
       [_authenticator setServerURL:_serverURL];
     }
-    [_authenticator performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+    [_authenticator performSelector:@selector(startManager) withObject:nil afterDelay:0.5];
   }
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
   
@@ -642,7 +642,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     [_updateManager setInstallationIdentified:[self.authenticator isIdentified]];
   }
 #endif
-  [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+  [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5];
 }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 

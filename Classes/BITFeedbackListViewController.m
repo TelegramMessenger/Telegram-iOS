@@ -471,8 +471,8 @@
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
   if (section == 0) {
-    UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 30.0f)];
-    UILabel *textLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 5.0f, self.view.frame.size.width - 32.0f, 25.0f)];
+    UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 30.0)];
+    UILabel *textLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0, 5.0, self.view.frame.size.width - (CGFloat)32.0, 25.0)];
     textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
                       [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
     textLabel.font = [UIFont systemFontOfSize:10];
@@ -917,7 +917,7 @@
 - (BITFeedbackMessageAttachment *)placeholder {
   UIImage *placeholderImage = bit_imageNamed(@"FeedbackPlaceHolder", BITHOCKEYSDK_BUNDLE);
 
-  BITFeedbackMessageAttachment *placeholder = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(placeholderImage, 0.7f) contentType:@"image/jpeg"];
+  BITFeedbackMessageAttachment *placeholder = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(placeholderImage, (CGFloat)0.7) contentType:@"image/jpeg"];
   
   return placeholder;
 }

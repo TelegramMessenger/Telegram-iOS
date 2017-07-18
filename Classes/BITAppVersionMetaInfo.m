@@ -187,7 +187,7 @@
 }
 
 - (void)setDateWithTimestamp:(NSTimeInterval)timestamp {
-  if (timestamp) {
+  if (timestamp != 0) {
     NSDate *appDate = [NSDate dateWithTimeIntervalSince1970:timestamp];
     self.date = appDate;
   } else {

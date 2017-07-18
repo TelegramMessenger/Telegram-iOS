@@ -140,7 +140,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 }
 
 - (BOOL)prefersStatusBarHidden {
-  return self.navigationController.navigationBarHidden || self.navigationController.navigationBar.alpha == 0.0f;
+  return self.navigationController.navigationBarHidden || self.navigationController.navigationBar.alpha == 0;
 }
 
 - (void)orientationDidChange:(NSNotification *)notification {
@@ -198,7 +198,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   UIGraphicsBeginImageContextWithOptions(self.image.size, YES, 0.0);
   CGContextRef ctx = UIGraphicsGetCurrentContext();
   [self.image drawInRect:CGRectMake(0, 0, self.image.size.width, self.image.size.height)];
-  CGContextScaleCTM(ctx,1.0/self.scaleFactor,1.0f/self.scaleFactor);
+  CGContextScaleCTM(ctx,((CGFloat)1.0)/self.scaleFactor,((CGFloat)1.0)/self.scaleFactor);
   
   // Drawing all the annotations onto the final image.
   for (BITImageAnnotation *annotation in self.objects){
@@ -355,7 +355,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   
   if (self.navigationController.navigationBar.alpha == 0 || self.navigationController.navigationBarHidden ){
     
-    [UIView animateWithDuration:0.35f animations:^{
+    [UIView animateWithDuration:0.35 animations:^{
       [self.navigationController setNavigationBarHidden:NO animated:NO];
       
       if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
@@ -372,7 +372,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
       
     }];
   } else {
-    [UIView animateWithDuration:0.35f animations:^{
+    [UIView animateWithDuration:0.35 animations:^{
       [self.navigationController setNavigationBarHidden:YES animated:NO];
       
       if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {

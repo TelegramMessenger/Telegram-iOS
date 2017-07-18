@@ -25,6 +25,7 @@
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
 #import "BITAttributedLabel.h"
+#import "tgmath.h"
 
 #import <QuartzCore/QuartzCore.h>
 #import <Availability.h>
@@ -165,12 +166,12 @@ static inline CGFLOAT_TYPE CGFloat_sqrt(CGFLOAT_TYPE cgfloat) {
 static inline CGFloat BITFlushFactorForTextAlignment(NSTextAlignment textAlignment) {
     switch (textAlignment) {
         case BITTextAlignmentCenter:
-            return 0.5f;
+            return 0.5;
         case BITTextAlignmentRight:
-            return 1.0f;
+            return 1.0;
         case BITTextAlignmentLeft:
         default:
-            return 0.0f;
+            return 0.0;
     }
 }
 
@@ -292,7 +293,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     } else if (numberOfLines > 0) {
         // If the line count of the label more than 1, limit the range to size to the number of lines that have been set
         CGMutablePathRef path = CGPathCreateMutable();
-        CGPathAddRect(path, NULL, CGRectMake(0.0f, 0.0f, constraints.width, BITFLOAT_MAX));
+        CGPathAddRect(path, NULL, CGRectMake(0.0, 0.0, constraints.width, BITFLOAT_MAX));
         CTFrameRef frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, 0), path, NULL);
         CFArrayRef lines = CTFrameGetLines(frame);
         
@@ -382,11 +383,11 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     self.multipleTouchEnabled = NO;
     
     self.textInsets = UIEdgeInsetsZero;
-    self.lineHeightMultiple = 1.0f;
+    self.lineHeightMultiple = 1.0;
     
     self.linkModels = [NSArray array];
     
-    self.linkBackgroundEdgeInset = UIEdgeInsetsMake(0.0f, -1.0f, 0.0f, -1.0f);
+    self.linkBackgroundEdgeInset = UIEdgeInsetsMake(0.0, -1.0, 0.0, -1.0);
     
     NSMutableDictionary *mutableLinkAttributes = [NSMutableDictionary dictionary];
     [mutableLinkAttributes setObject:[NSNumber numberWithBool:YES] forKey:(NSString *)kCTUnderlineStyleAttributeName];
@@ -675,18 +676,18 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
 - (BITAttributedLabelLink *)linkAtPoint:(CGPoint)point {
     
     // Stop quickly if none of the points to be tested are in the bounds.
-    if (!CGRectContainsPoint(CGRectInset(self.bounds, -15.f, -15.f), point) || self.links.count == 0) {
+    if (!CGRectContainsPoint(CGRectInset(self.bounds, -15.0, -15.0), point) || self.links.count == 0) {
         return nil;
     }
     
     BITAttributedLabelLink *result = [self linkAtCharacterIndex:[self characterIndexAtPoint:point]];
     
     if (!result && self.extendsLinkTouchArea) {
-        result = [self linkAtRadius:2.5f aroundPoint:point]
-        ?: [self linkAtRadius:5.f aroundPoint:point]
-        ?: [self linkAtRadius:7.5f aroundPoint:point]
-        ?: [self linkAtRadius:12.5f aroundPoint:point]
-        ?: [self linkAtRadius:15.f aroundPoint:point];
+        result = [self linkAtRadius:2.5 aroundPoint:point]
+        ?: [self linkAtRadius:5.0 aroundPoint:point]
+        ?: [self linkAtRadius:7.5 aroundPoint:point]
+        ?: [self linkAtRadius:12.5 aroundPoint:point]
+        ?: [self linkAtRadius:15.0 aroundPoint:point];
     }
     
     return result;
@@ -770,14 +771,14 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
         CTLineRef line = CFArrayGetValueAtIndex(lines, lineIndex);
         
         // Get bounding information of line
-        CGFloat ascent = 0.0f, descent = 0.0f, leading = 0.0f;
+        CGFloat ascent = 0.0, descent = 0.0, leading = 0.0;
         CGFloat width = (CGFloat)CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
         CGFloat yMin = (CGFloat)floor(lineOrigin.y - descent);
         CGFloat yMax = (CGFloat)ceil(lineOrigin.y + ascent);
         
         // Apply penOffset using flushFactor for horizontal alignment to set lineOrigin since this is the horizontal offset from drawFramesetter
         CGFloat flushFactor = BITFlushFactorForTextAlignment(self.textAlignment);
-        CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, textRect.size.width);
+        CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, (double)textRect.size.width);
         lineOrigin.x = penOffset;
         
         // Check if we've already passed the line
@@ -845,7 +846,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
         CGContextSetTextPosition(c, lineOrigin.x, lineOrigin.y);
         CTLineRef line = CFArrayGetValueAtIndex(lines, lineIndex);
         
-        CGFloat descent = 0.0f;
+        CGFloat descent = 0.0;
         CTLineGetTypographicBounds((CTLineRef)line, NULL, &descent, NULL);
         
         // Adjust pen offset for flush depending on text alignment
@@ -919,13 +920,13 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 CTLineRef truncationLine = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)truncationString);
                 
                 // Truncate the line in case it is too long.
-                CTLineRef truncatedLine = CTLineCreateTruncatedLine(truncationLine, rect.size.width, truncationType, truncationToken);
+                CTLineRef truncatedLine = CTLineCreateTruncatedLine(truncationLine, (double)rect.size.width, truncationType, truncationToken);
                 if (!truncatedLine) {
                     // If the line is not as wide as the truncationToken, truncatedLine is NULL
                     truncatedLine = CFRetain(truncationToken);
                 }
                 
-                CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(truncatedLine, flushFactor, rect.size.width);
+                CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(truncatedLine, flushFactor, (double)rect.size.width);
                 CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
                 
                 CTLineDraw(truncatedLine, c);
@@ -942,12 +943,12 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 CFRelease(truncationLine);
                 CFRelease(truncationToken);
             } else {
-                CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, rect.size.width);
+                CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, (double)rect.size.width);
                 CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
                 CTLineDraw(line, c);
             }
         } else {
-            CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, rect.size.width);
+            CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, (double)rect.size.width);
             CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
             CTLineDraw(line, c);
         }
@@ -969,7 +970,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     
     CFIndex lineIndex = 0;
     for (id line in lines) {
-        CGFloat ascent = 0.0f, descent = 0.0f, leading = 0.0f;
+        CGFloat ascent = 0.0, descent = 0.0, leading = 0.0;
         CGFloat width = (CGFloat)CTLineGetTypographicBounds((__bridge CTLineRef)line, &ascent, &descent, &leading) ;
         
         for (id glyphRun in (__bridge NSArray *)CTLineGetGlyphRuns((__bridge CTLineRef)line)) {
@@ -977,18 +978,18 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
             CGColorRef strokeColor = (__bridge CGColorRef)[attributes objectForKey:kBITBackgroundStrokeColorAttributeName];
             CGColorRef fillColor = (__bridge CGColorRef)[attributes objectForKey:kBITBackgroundFillColorAttributeName];
             UIEdgeInsets fillPadding = [[attributes objectForKey:kBITBackgroundFillPaddingAttributeName] UIEdgeInsetsValue];
-            CGFloat cornerRadius = [[attributes objectForKey:kBITBackgroundCornerRadiusAttributeName] floatValue];
-            CGFloat lineWidth = [[attributes objectForKey:kBITBackgroundLineWidthAttributeName] floatValue];
+            CGFloat cornerRadius = (CGFloat)[[attributes objectForKey:kBITBackgroundCornerRadiusAttributeName] floatValue];
+            CGFloat lineWidth = (CGFloat)[[attributes objectForKey:kBITBackgroundLineWidthAttributeName] floatValue];
             
             if (strokeColor || fillColor) {
                 CGRect runBounds = CGRectZero;
-                CGFloat runAscent = 0.0f;
-                CGFloat runDescent = 0.0f;
+                CGFloat runAscent = 0.0;
+                CGFloat runDescent = 0.0;
                 
                 runBounds.size.width = (CGFloat)CTRunGetTypographicBounds((__bridge CTRunRef)glyphRun, CFRangeMake(0, 0), &runAscent, &runDescent, NULL) + fillPadding.left + fillPadding.right;
                 runBounds.size.height = runAscent + runDescent + fillPadding.top + fillPadding.bottom;
                 
-                CGFloat xOffset = 0.0f;
+                CGFloat xOffset = 0.0;
                 CFRange glyphRange = CTRunGetStringRange((__bridge CTRunRef)glyphRun);
                 switch (CTRunGetStatus((__bridge CTRunRef)glyphRun)) {
                     case kCTRunStatusRightToLeft:
@@ -1040,7 +1041,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     
     CFIndex lineIndex = 0;
     for (id line in lines) {
-        CGFloat ascent = 0.0f, descent = 0.0f, leading = 0.0f;
+        CGFloat ascent = 0.0, descent = 0.0, leading = 0.0;
         CGFloat width = (CGFloat)CTLineGetTypographicBounds((__bridge CTLineRef)line, &ascent, &descent, &leading) ;
         
         for (id glyphRun in (__bridge NSArray *)CTLineGetGlyphRuns((__bridge CTLineRef)line)) {
@@ -1050,13 +1051,13 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
             
             if (strikeOut) {
                 CGRect runBounds = CGRectZero;
-                CGFloat runAscent = 0.0f;
-                CGFloat runDescent = 0.0f;
+                CGFloat runAscent = 0.0;
+                CGFloat runDescent = 0.0;
                 
                 runBounds.size.width = (CGFloat)CTRunGetTypographicBounds((__bridge CTRunRef)glyphRun, CFRangeMake(0, 0), &runAscent, &runDescent, NULL);
                 runBounds.size.height = runAscent + runDescent;
                 
-                CGFloat xOffset = 0.0f;
+                CGFloat xOffset = 0.0;
                 CFRange glyphRange = CTRunGetStringRange((__bridge CTRunRef)glyphRun);
                 switch (CTRunGetStatus((__bridge CTRunRef)glyphRun)) {
                     case kCTRunStatusRightToLeft:
@@ -1077,10 +1078,10 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 
                 switch (superscriptStyle) {
                     case 1:
-                        runBounds.origin.y -= runAscent * 0.47f;
+                        runBounds.origin.y -= runAscent * (CGFloat)0.47;
                         break;
                     case -1:
-                        runBounds.origin.y += runAscent * 0.25f;
+                        runBounds.origin.y += runAscent * (CGFloat)0.25;
                         break;
                     default:
                         break;
@@ -1095,14 +1096,14 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                         CGContextSetStrokeColorWithColor(c, (__bridge CGColorRef)color);
                     }
                 } else {
-                    CGContextSetGrayStrokeColor(c, 0.0f, 1.0);
+                    CGContextSetGrayStrokeColor(c, 0.0, 1.0);
                 }
                 
                 CTFontRef font = CTFontCreateWithName((__bridge CFStringRef)self.font.fontName, self.font.pointSize, NULL);
                 CGContextSetLineWidth(c, CTFontGetUnderlineThickness(font));
                 CFRelease(font);
                 
-                CGFloat y = CGFloat_round(runBounds.origin.y + runBounds.size.height / 2.0f);
+                CGFloat y = CGFloat_round(runBounds.origin.y + runBounds.size.height / 2);
                 CGContextMoveToPoint(c, runBounds.origin.x, y);
                 CGContextAddLineToPoint(c, runBounds.origin.x + runBounds.size.width, y);
                 
@@ -1257,10 +1258,10 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
     textSize = CGSizeMake(CGFloat_ceil(textSize.width), CGFloat_ceil(textSize.height)); // Fix for iOS 4, CTFramesetterSuggestFrameSizeWithConstraints sometimes returns fractional sizes
     
     if (textSize.height < bounds.size.height) {
-        CGFloat yOffset = 0.0f;
+        CGFloat yOffset = 0.0;
         switch (self.verticalAlignment) {
             case BITAttributedLabelVerticalAlignmentCenter:
-                yOffset = CGFloat_floor((bounds.size.height - textSize.height) / 2.0f);
+                yOffset = CGFloat_floor((bounds.size.height - textSize.height) / 2);
                 break;
             case BITAttributedLabelVerticalAlignmentBottom:
                 yOffset = bounds.size.height - textSize.height;
@@ -1296,7 +1297,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
             textWidth *= kBITLineBreakWordWrapTextWidthScalingFactor;
         }
         
-        if (textWidth > availableWidth && textWidth > 0.0f) {
+        if (textWidth > availableWidth && textWidth > 0) {
             originalAttributedText = [self.attributedText copy];
             
             CGFloat scaleFactor = availableWidth / textWidth;
@@ -1314,8 +1315,8 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
         CGContextSetTextMatrix(c, CGAffineTransformIdentity);
         
         // Inverts the CTM to match iOS coordinates (otherwise text draws upside-down; Mac OS's system is different)
-        CGContextTranslateCTM(c, 0.0f, insetRect.size.height);
-        CGContextScaleCTM(c, 1.0f, -1.0f);
+        CGContextTranslateCTM(c, 0.0, insetRect.size.height);
+        CGContextScaleCTM(c, 1.0, -1.0);
         
         CFRange textRange = CFRangeMake(0, (CFIndex)[self.attributedText length]);
         
@@ -1486,7 +1487,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
 - (UIView *)hitTest:(CGPoint)point
           withEvent:(UIEvent *)event
 {
-    if (![self linkAtPoint:point] || !self.userInteractionEnabled || self.hidden || self.alpha < 0.01) {
+    if (![self linkAtPoint:point] || !self.userInteractionEnabled || self.hidden || self.alpha < (CGFloat)0.01) {
         return [super hitTest:point withEvent:event];
     }
     
@@ -1751,11 +1752,11 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(shadowRadius))]) {
-        self.shadowRadius = [[coder decodeObjectForKey:NSStringFromSelector(@selector(shadowRadius))] floatValue];
+        self.shadowRadius = (CGFloat)[[coder decodeObjectForKey:NSStringFromSelector(@selector(shadowRadius))] floatValue];
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(highlightedShadowRadius))]) {
-        self.highlightedShadowRadius = [[coder decodeObjectForKey:NSStringFromSelector(@selector(highlightedShadowRadius))] floatValue];
+        self.highlightedShadowRadius = (CGFloat)[[coder decodeObjectForKey:NSStringFromSelector(@selector(highlightedShadowRadius))] floatValue];
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(highlightedShadowOffset))]) {
@@ -1767,27 +1768,27 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(kern))]) {
-        self.kern = [[coder decodeObjectForKey:NSStringFromSelector(@selector(kern))] floatValue];
+        self.kern = (CGFloat)[[coder decodeObjectForKey:NSStringFromSelector(@selector(kern))] floatValue];
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(firstLineIndent))]) {
-        self.firstLineIndent = [[coder decodeObjectForKey:NSStringFromSelector(@selector(firstLineIndent))] floatValue];
+        self.firstLineIndent = (CGFloat)[[coder decodeObjectForKey:NSStringFromSelector(@selector(firstLineIndent))] floatValue];
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(lineSpacing))]) {
-        self.lineSpacing = [[coder decodeObjectForKey:NSStringFromSelector(@selector(lineSpacing))] floatValue];
+        self.lineSpacing = (CGFloat)[[coder decodeObjectForKey:NSStringFromSelector(@selector(lineSpacing))] floatValue];
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(minimumLineHeight))]) {
-        self.minimumLineHeight = [[coder decodeObjectForKey:NSStringFromSelector(@selector(minimumLineHeight))] floatValue];
+        self.minimumLineHeight = (CGFloat)[[coder decodeObjectForKey:NSStringFromSelector(@selector(minimumLineHeight))] floatValue];
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(maximumLineHeight))]) {
-        self.maximumLineHeight = [[coder decodeObjectForKey:NSStringFromSelector(@selector(maximumLineHeight))] floatValue];
+        self.maximumLineHeight = (CGFloat)[[coder decodeObjectForKey:NSStringFromSelector(@selector(maximumLineHeight))] floatValue];
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(lineHeightMultiple))]) {
-        self.lineHeightMultiple = [[coder decodeObjectForKey:NSStringFromSelector(@selector(lineHeightMultiple))] floatValue];
+        self.lineHeightMultiple = (CGFloat)[[coder decodeObjectForKey:NSStringFromSelector(@selector(lineHeightMultiple))] floatValue];
     }
     
     if ([coder containsValueForKey:NSStringFromSelector(@selector(textInsets))]) {

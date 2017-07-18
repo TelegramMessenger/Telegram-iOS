@@ -1101,7 +1101,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (void)submitPendingMessages {
   if (_networkRequestInProgress) {
     [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(submitPendingMessages) object:nil];
-    [self performSelector:@selector(submitPendingMessages) withObject:nil afterDelay:2.0f];
+    [self performSelector:@selector(submitPendingMessages) withObject:nil afterDelay:2.0];
     return;
   }
 

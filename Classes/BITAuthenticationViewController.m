@@ -35,6 +35,7 @@
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
+#import "tgmath.h"
 
 @interface BITAuthenticationViewController ()<UITextFieldDelegate> {
   __weak UITextField *_emailField;
@@ -98,7 +99,7 @@
 
 - (void) updateWebLoginButton {
   if(self.showsLoginViaWebButton) {
-    static const CGFloat kFooterHeight = 60.f;
+    static const CGFloat kFooterHeight = 60.0;
     UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0,
                                                                      CGRectGetWidth(self.tableView.bounds),
                                                                      kFooterHeight)];
@@ -106,8 +107,8 @@
     [button setTitle:BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginButtonTitle") forState:UIControlStateNormal];
     CGSize buttonSize = [button sizeThatFits:CGSizeMake(CGRectGetWidth(self.tableView.bounds),
                                                         kFooterHeight)];
-    button.frame = CGRectMake(floorf((CGRectGetWidth(containerView.bounds) - buttonSize.width) / 2.f),
-                              floorf((kFooterHeight - buttonSize.height) / 2.f),
+    button.frame = CGRectMake(floor((CGRectGetWidth(containerView.bounds) - buttonSize.width) / (CGFloat)2.0),
+                              floor((kFooterHeight - buttonSize.height) / (CGFloat)2.0),
                               buttonSize.width,
                               buttonSize.height);
     button.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;

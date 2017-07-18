@@ -64,7 +64,7 @@
   if ([self shouldCancelProcessing]) return;
   
   if ([self isCheckingForUpdateOnLaunch] && [self shouldAutoCheckForUpdates]) {
-    [self performSelector:@selector(checkForUpdateDelayed) withObject:nil afterDelay:1.0f];
+    [self performSelector:@selector(checkForUpdateDelayed) withObject:nil afterDelay:1.0];
   }
 }
 

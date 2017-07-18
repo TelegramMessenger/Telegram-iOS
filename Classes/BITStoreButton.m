@@ -36,10 +36,10 @@
 #import "HockeySDKPrivate.h"
 #import <QuartzCore/QuartzCore.h>
 
-#define BIT_MIN_HEIGHT 25.0f
-#define BIT_MAX_WIDTH 120.0f
-#define BIT_PADDING 12.0f
-#define kDefaultButtonAnimationTime 0.25f
+#define BIT_MIN_HEIGHT 25.0
+#define BIT_MAX_WIDTH 120.0
+#define BIT_PADDING 12.0
+#define kDefaultButtonAnimationTime 0.25
 
 
 @implementation BITStoreButtonData
@@ -220,8 +220,8 @@
 #pragma clang diagnostic pop
   }
   
-  CGFloat newWidth = newSize.width + (BIT_PADDING * 2);
-  CGFloat newHeight = BIT_MIN_HEIGHT > newSize.height ? BIT_MIN_HEIGHT : newSize.height;
+  CGFloat newWidth = newSize.width + ((CGFloat)BIT_PADDING * 2);
+  CGFloat newHeight = (CGFloat)BIT_MIN_HEIGHT > newSize.height ? (CGFloat)BIT_MIN_HEIGHT : newSize.height;
   
   CGSize sizeThatFits = CGSizeMake(newWidth, newHeight);
   return sizeThatFits;

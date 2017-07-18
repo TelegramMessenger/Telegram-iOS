@@ -53,7 +53,7 @@
       self.selectedLayer = [CALayer layer];
       [self.layer insertSublayer:self.selectedLayer above:self.imageLayer];
       
-      self.selectedLayer.backgroundColor = [[UIColor redColor] colorWithAlphaComponent:0.5f].CGColor;
+      self.selectedLayer.backgroundColor = [[UIColor redColor] colorWithAlphaComponent:0.5].CGColor;
       self.selectedLayer.opacity = 0.6f;
       self.clipsToBounds = YES;
     }

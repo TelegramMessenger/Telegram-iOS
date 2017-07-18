@@ -84,7 +84,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
     else
       _webView.frame = webViewRect;
     
-    NSString *deviceWidth = [NSString stringWithFormat:@"%.0f", CGRectGetWidth(self.bounds)];
+    NSString *deviceWidth = [NSString stringWithFormat:@"%.0f", (double)CGRectGetWidth(self.bounds)];
     
     //HockeySDKLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
     NSString *contentHtml = [NSString stringWithFormat:BITWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent];

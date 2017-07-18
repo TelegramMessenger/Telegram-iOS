@@ -37,6 +37,8 @@
 #import "BITActivityIndicatorButton.h"
 #import "BITFeedbackManagerPrivate.h"
 
+#import "tgmath.h"
+
 #define BACKGROUNDCOLOR_DEFAULT_OS7 BIT_RGBCOLOR(255, 255, 255)
 #define BACKGROUNDCOLOR_ALTERNATE_OS7 BIT_RGBCOLOR(255, 255, 255)
 
@@ -189,7 +191,7 @@
   
   CGFloat baseHeight = [self heightForTextInRowWithMessage:message tableViewWidth:width];
   
-  CGFloat attachmentsPerRow = floorf(width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
+  CGFloat attachmentsPerRow = floor(width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
   
   CGFloat calculatedHeight = baseHeight + (FRAME_TOP_BORDER + ATTACHMENT_SIZE) * ceil([message previewableAttachments].count / attachmentsPerRow);
   
@@ -316,7 +318,7 @@
   
   int i = 0;
   
-  CGFloat attachmentsPerRow = floorf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
+  CGFloat attachmentsPerRow = floor(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
   
   for (BITActivityIndicatorButton *imageButton in self.attachmentViews) {
     imageButton.contentMode = UIViewContentModeScaleAspectFit;
