@@ -384,7 +384,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   return @{self.installationIdentifierParameterString:self.installationIdentifier};
 }
 
-+ (BOOL)isValidationResponseValid:(id)response error:(NSError **)error {
++ (BOOL)isValidationResponseValid:(id)response error:(NSError *__autoreleasing *)error {
   NSParameterAssert(response);
   
   NSError *jsonParseError = nil;
@@ -585,7 +585,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   }
 }
 
-+ (NSString *)authenticationTokenFromURLResponse:(NSHTTPURLResponse *)urlResponse data:(NSData *)data error:(NSError **)error {
++ (NSString *)authenticationTokenFromURLResponse:(NSHTTPURLResponse *)urlResponse data:(NSData *)data error:(NSError *__autoreleasing *)error {
   if (nil == urlResponse) {
     if (error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
@@ -770,7 +770,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   return udid;
 }
 
-+ (void)email:(NSString **)email andIUID:(NSString **)iuid fromOpenURL:(NSURL *)url {
++ (void)email:(NSString *__autoreleasing *)email andIUID:(NSString *__autoreleasing *)iuid fromOpenURL:(NSURL *)url {
   NSString *query = [url query];
   //there should actually only one
   static NSString *const EmailQuerySpecifier = @"email";

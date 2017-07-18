@@ -34,7 +34,7 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 
 @implementation BITKeychainUtils
 
-+ (NSString *) getPasswordForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error {
++ (NSString *) getPasswordForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError *__autoreleasing *) error {
 	if (!username || !serviceName) {
 		if (error != nil) {
 			*error = [NSError errorWithDomain: BITKeychainUtilsErrorDomain code: -2000 userInfo: nil];
@@ -122,11 +122,11 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 	return password;
 }
 
-+ (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error {
++ (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError *__autoreleasing *) error {
   return [self storeUsername:username andPassword:password forServiceName:serviceName updateExisting:updateExisting accessibility:kSecAttrAccessibleAlways error:error];
 }
 
-+ (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting accessibility:(CFTypeRef) accessibility error: (NSError **) error
++ (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting accessibility:(CFTypeRef) accessibility error: (NSError *__autoreleasing *) error
 {
 	if (!username || !password || !serviceName)
   {
@@ -240,7 +240,7 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
   return YES;
 }
 
-+ (BOOL) deleteItemForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error
++ (BOOL) deleteItemForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError *__autoreleasing *) error
 {
 	if (!username || !serviceName)
   {
@@ -273,7 +273,7 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
   return YES;
 }
 
-+ (BOOL) purgeItemsForServiceName:(NSString *) serviceName error: (NSError **) error {
++ (BOOL) purgeItemsForServiceName:(NSString *) serviceName error: (NSError *__autoreleasing *) error {
   if (!serviceName)
   {
 		if (error != nil)
