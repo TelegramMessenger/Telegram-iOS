@@ -8,12 +8,308 @@
 
 /* Begin PBXBuildFile section */
 		D017772C1F1F8F100044446D /* LegacyComponents.h in Headers */ = {isa = PBXBuildFile; fileRef = D017772A1F1F8F100044446D /* LegacyComponents.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777511F1F8FE60044446D /* LegacyComponentsGlobals.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777381F1F8FE60044446D /* LegacyComponentsGlobals.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777531F1F8FE60044446D /* PSCoding.h in Headers */ = {isa = PBXBuildFile; fileRef = D017773A1F1F8FE60044446D /* PSCoding.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777541F1F8FE60044446D /* PSData.h in Headers */ = {isa = PBXBuildFile; fileRef = D017773B1F1F8FE60044446D /* PSData.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777551F1F8FE60044446D /* PSKeyValueCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = D017773C1F1F8FE60044446D /* PSKeyValueCoder.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777561F1F8FE60044446D /* PSKeyValueCoder.m in Sources */ = {isa = PBXBuildFile; fileRef = D017773D1F1F8FE60044446D /* PSKeyValueCoder.m */; };
+		D01777571F1F8FE60044446D /* PSKeyValueDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = D017773E1F1F8FE60044446D /* PSKeyValueDecoder.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777581F1F8FE60044446D /* PSKeyValueDecoder.m in Sources */ = {isa = PBXBuildFile; fileRef = D017773F1F1F8FE60044446D /* PSKeyValueDecoder.m */; };
+		D01777591F1F8FE60044446D /* PSKeyValueEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777401F1F8FE60044446D /* PSKeyValueEncoder.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017775A1F1F8FE60044446D /* PSKeyValueEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777411F1F8FE60044446D /* PSKeyValueEncoder.m */; };
+		D017775B1F1F8FE60044446D /* PSKeyValueReader.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777421F1F8FE60044446D /* PSKeyValueReader.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017775C1F1F8FE60044446D /* PSKeyValueStore.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777431F1F8FE60044446D /* PSKeyValueStore.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017775D1F1F8FE60044446D /* PSKeyValueWriter.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777441F1F8FE60044446D /* PSKeyValueWriter.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017775E1F1F8FE60044446D /* TGBotComandInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777451F1F8FE60044446D /* TGBotComandInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017775F1F1F8FE60044446D /* TGBotComandInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777461F1F8FE60044446D /* TGBotComandInfo.m */; };
+		D01777601F1F8FE60044446D /* TGBotInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777471F1F8FE60044446D /* TGBotInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777611F1F8FE60044446D /* TGBotInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777481F1F8FE60044446D /* TGBotInfo.m */; };
+		D01777621F1F8FE60044446D /* TGLocalization.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777491F1F8FE60044446D /* TGLocalization.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777631F1F8FE60044446D /* TGLocalization.m in Sources */ = {isa = PBXBuildFile; fileRef = D017774A1F1F8FE60044446D /* TGLocalization.m */; };
+		D01777641F1F8FE60044446D /* TGPluralization.h in Headers */ = {isa = PBXBuildFile; fileRef = D017774B1F1F8FE60044446D /* TGPluralization.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777651F1F8FE60044446D /* TGPluralization.m in Sources */ = {isa = PBXBuildFile; fileRef = D017774C1F1F8FE60044446D /* TGPluralization.m */; };
+		D01777661F1F8FE60044446D /* TGStringUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D017774D1F1F8FE60044446D /* TGStringUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777671F1F8FE60044446D /* TGStringUtils.mm in Sources */ = {isa = PBXBuildFile; fileRef = D017774E1F1F8FE60044446D /* TGStringUtils.mm */; };
+		D01777681F1F8FE60044446D /* TGUser.h in Headers */ = {isa = PBXBuildFile; fileRef = D017774F1F1F8FE60044446D /* TGUser.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777691F1F8FE60044446D /* TGUser.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777501F1F8FE60044446D /* TGUser.m */; };
+		D017776B1F1F909E0044446D /* LegacyComponentsGlobals.m in Sources */ = {isa = PBXBuildFile; fileRef = D017776A1F1F909E0044446D /* LegacyComponentsGlobals.m */; };
+		D01777721F1F92420044446D /* TGPhoneUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777701F1F92420044446D /* TGPhoneUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777731F1F92420044446D /* TGPhoneUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777711F1F92420044446D /* TGPhoneUtils.m */; };
+		D01777761F1F92570044446D /* RMPhoneFormat.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777741F1F92570044446D /* RMPhoneFormat.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777771F1F92570044446D /* RMPhoneFormat.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777751F1F92570044446D /* RMPhoneFormat.m */; };
+		D017777A1F1F927A0044446D /* NSObject+TGLock.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777781F1F927A0044446D /* NSObject+TGLock.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017777B1F1F927A0044446D /* NSObject+TGLock.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777791F1F927A0044446D /* NSObject+TGLock.m */; };
+		D017777E1F1F930B0044446D /* TGConversation.h in Headers */ = {isa = PBXBuildFile; fileRef = D017777C1F1F930B0044446D /* TGConversation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017777F1F1F930B0044446D /* TGConversation.m in Sources */ = {isa = PBXBuildFile; fileRef = D017777D1F1F930B0044446D /* TGConversation.m */; };
+		D01777821F1F93250044446D /* TGImageInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777801F1F93250044446D /* TGImageInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777831F1F93250044446D /* TGImageInfo.mm in Sources */ = {isa = PBXBuildFile; fileRef = D01777811F1F93250044446D /* TGImageInfo.mm */; };
+		D01777871F1F93550044446D /* TGMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777851F1F93550044446D /* TGMessage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777881F1F93550044446D /* TGMessage.mm in Sources */ = {isa = PBXBuildFile; fileRef = D01777861F1F93550044446D /* TGMessage.mm */; };
+		D01777F41F1F961D0044446D /* TGTextCheckingResult.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777891F1F961C0044446D /* TGTextCheckingResult.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777F51F1F961D0044446D /* TGTextCheckingResult.m in Sources */ = {isa = PBXBuildFile; fileRef = D017778A1F1F961C0044446D /* TGTextCheckingResult.m */; };
+		D01777F61F1F961D0044446D /* TGPeerIdAdapter.h in Headers */ = {isa = PBXBuildFile; fileRef = D017778B1F1F961C0044446D /* TGPeerIdAdapter.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777F71F1F961D0044446D /* TGChannelBannedRights.h in Headers */ = {isa = PBXBuildFile; fileRef = D017778C1F1F961C0044446D /* TGChannelBannedRights.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777F81F1F961D0044446D /* TGChannelBannedRights.m in Sources */ = {isa = PBXBuildFile; fileRef = D017778D1F1F961D0044446D /* TGChannelBannedRights.m */; };
+		D01777F91F1F961D0044446D /* TGChannelAdminRights.h in Headers */ = {isa = PBXBuildFile; fileRef = D017778E1F1F961D0044446D /* TGChannelAdminRights.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777FA1F1F961D0044446D /* TGChannelAdminRights.m in Sources */ = {isa = PBXBuildFile; fileRef = D017778F1F1F961D0044446D /* TGChannelAdminRights.m */; };
+		D01777FB1F1F961D0044446D /* TGDatabaseMessageDraft.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777901F1F961D0044446D /* TGDatabaseMessageDraft.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777FC1F1F961D0044446D /* TGDatabaseMessageDraft.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777911F1F961D0044446D /* TGDatabaseMessageDraft.m */; };
+		D01777FD1F1F961D0044446D /* TGMessageGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777921F1F961D0044446D /* TGMessageGroup.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01777FE1F1F961D0044446D /* TGMessageGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777931F1F961D0044446D /* TGMessageGroup.m */; };
+		D01777FF1F1F961D0044446D /* TGMessageHole.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777941F1F961D0044446D /* TGMessageHole.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778001F1F961D0044446D /* TGMessageHole.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777951F1F961D0044446D /* TGMessageHole.m */; };
+		D01778011F1F961D0044446D /* TGMessageViewCountContentProperty.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777961F1F961D0044446D /* TGMessageViewCountContentProperty.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778021F1F961D0044446D /* TGMessageViewCountContentProperty.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777971F1F961D0044446D /* TGMessageViewCountContentProperty.m */; };
+		D01778031F1F961D0044446D /* TGAuthorSignatureMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777981F1F961D0044446D /* TGAuthorSignatureMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778041F1F961D0044446D /* TGAuthorSignatureMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777991F1F961D0044446D /* TGAuthorSignatureMediaAttachment.m */; };
+		D01778051F1F961D0044446D /* TGWebDocument.h in Headers */ = {isa = PBXBuildFile; fileRef = D017779A1F1F961D0044446D /* TGWebDocument.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778061F1F961D0044446D /* TGWebDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = D017779B1F1F961D0044446D /* TGWebDocument.m */; };
+		D01778071F1F961D0044446D /* TGInvoiceMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D017779C1F1F961D0044446D /* TGInvoiceMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778081F1F961D0044446D /* TGInvoiceMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D017779D1F1F961D0044446D /* TGInvoiceMediaAttachment.m */; };
+		D01778091F1F961D0044446D /* TGGameMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D017779E1F1F961D0044446D /* TGGameMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017780A1F1F961D0044446D /* TGGameMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D017779F1F1F961D0044446D /* TGGameMediaAttachment.m */; };
+		D017780B1F1F961D0044446D /* TGViaUserAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777A01F1F961D0044446D /* TGViaUserAttachment.m */; };
+		D017780C1F1F961D0044446D /* TGViaUserAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777A11F1F961D0044446D /* TGViaUserAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017780D1F1F961D0044446D /* TGBotContextResultAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777A21F1F961D0044446D /* TGBotContextResultAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017780E1F1F961D0044446D /* TGBotContextResultAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777A31F1F961D0044446D /* TGBotContextResultAttachment.m */; };
+		D017780F1F1F961D0044446D /* TGMessageEntity.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777A41F1F961D0044446D /* TGMessageEntity.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778101F1F961D0044446D /* TGMessageEntity.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777A51F1F961D0044446D /* TGMessageEntity.m */; };
+		D01778111F1F961D0044446D /* TGMessageEntityBold.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777A61F1F961D0044446D /* TGMessageEntityBold.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778121F1F961D0044446D /* TGMessageEntityBold.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777A71F1F961D0044446D /* TGMessageEntityBold.m */; };
+		D01778131F1F961D0044446D /* TGMessageEntityBotCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777A81F1F961D0044446D /* TGMessageEntityBotCommand.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778141F1F961D0044446D /* TGMessageEntityBotCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777A91F1F961D0044446D /* TGMessageEntityBotCommand.m */; };
+		D01778151F1F961D0044446D /* TGMessageEntityCode.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777AA1F1F961D0044446D /* TGMessageEntityCode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778161F1F961D0044446D /* TGMessageEntityCode.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777AB1F1F961D0044446D /* TGMessageEntityCode.m */; };
+		D01778171F1F961D0044446D /* TGMessageEntityEmail.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777AC1F1F961D0044446D /* TGMessageEntityEmail.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778181F1F961D0044446D /* TGMessageEntityEmail.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777AD1F1F961D0044446D /* TGMessageEntityEmail.m */; };
+		D01778191F1F961D0044446D /* TGMessageEntityHashtag.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777AE1F1F961D0044446D /* TGMessageEntityHashtag.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017781A1F1F961D0044446D /* TGMessageEntityHashtag.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777AF1F1F961D0044446D /* TGMessageEntityHashtag.m */; };
+		D017781B1F1F961D0044446D /* TGMessageEntityItalic.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777B01F1F961D0044446D /* TGMessageEntityItalic.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017781C1F1F961D0044446D /* TGMessageEntityItalic.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777B11F1F961D0044446D /* TGMessageEntityItalic.m */; };
+		D017781D1F1F961D0044446D /* TGMessageEntityMention.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777B21F1F961D0044446D /* TGMessageEntityMention.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017781E1F1F961D0044446D /* TGMessageEntityMention.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777B31F1F961D0044446D /* TGMessageEntityMention.m */; };
+		D017781F1F1F961D0044446D /* TGMessageEntityMentionName.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777B41F1F961D0044446D /* TGMessageEntityMentionName.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778201F1F961D0044446D /* TGMessageEntityMentionName.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777B51F1F961D0044446D /* TGMessageEntityMentionName.m */; };
+		D01778211F1F961D0044446D /* TGMessageEntityPre.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777B61F1F961D0044446D /* TGMessageEntityPre.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778221F1F961D0044446D /* TGMessageEntityPre.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777B71F1F961D0044446D /* TGMessageEntityPre.m */; };
+		D01778231F1F961D0044446D /* TGMessageEntityTextUrl.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777B81F1F961D0044446D /* TGMessageEntityTextUrl.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778241F1F961D0044446D /* TGMessageEntityTextUrl.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777B91F1F961D0044446D /* TGMessageEntityTextUrl.m */; };
+		D01778251F1F961D0044446D /* TGMessageEntityUrl.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777BA1F1F961D0044446D /* TGMessageEntityUrl.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778261F1F961D0044446D /* TGMessageEntityUrl.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777BB1F1F961D0044446D /* TGMessageEntityUrl.m */; };
+		D01778271F1F961D0044446D /* TGMessageEntitiesAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777BC1F1F961D0044446D /* TGMessageEntitiesAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778281F1F961D0044446D /* TGMessageEntitiesAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777BD1F1F961D0044446D /* TGMessageEntitiesAttachment.m */; };
+		D01778291F1F961D0044446D /* TGBotReplyMarkup.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777BE1F1F961D0044446D /* TGBotReplyMarkup.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017782A1F1F961D0044446D /* TGBotReplyMarkup.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777BF1F1F961D0044446D /* TGBotReplyMarkup.m */; };
+		D017782B1F1F961D0044446D /* TGBotReplyMarkupButton.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777C01F1F961D0044446D /* TGBotReplyMarkupButton.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017782C1F1F961D0044446D /* TGBotReplyMarkupButton.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777C11F1F961D0044446D /* TGBotReplyMarkupButton.m */; };
+		D017782D1F1F961D0044446D /* TGBotReplyMarkupRow.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777C21F1F961D0044446D /* TGBotReplyMarkupRow.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017782E1F1F961D0044446D /* TGBotReplyMarkupRow.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777C31F1F961D0044446D /* TGBotReplyMarkupRow.m */; };
+		D017782F1F1F961D0044446D /* TGReplyMarkupAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777C41F1F961D0044446D /* TGReplyMarkupAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778301F1F961D0044446D /* TGReplyMarkupAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777C51F1F961D0044446D /* TGReplyMarkupAttachment.m */; };
+		D01778311F1F961D0044446D /* TGInstantPage.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777C61F1F961D0044446D /* TGInstantPage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778321F1F961D0044446D /* TGInstantPage.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777C71F1F961D0044446D /* TGInstantPage.m */; };
+		D01778331F1F961D0044446D /* TGWebPageMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777C81F1F961D0044446D /* TGWebPageMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778341F1F961D0044446D /* TGWebPageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777C91F1F961D0044446D /* TGWebPageMediaAttachment.m */; };
+		D01778351F1F961D0044446D /* TGReplyMessageMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777CA1F1F961D0044446D /* TGReplyMessageMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778361F1F961D0044446D /* TGReplyMessageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777CB1F1F961D0044446D /* TGReplyMessageMediaAttachment.m */; };
+		D01778371F1F961D0044446D /* TGAudioMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777CC1F1F961D0044446D /* TGAudioMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778381F1F961D0044446D /* TGAudioMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777CD1F1F961D0044446D /* TGAudioMediaAttachment.m */; };
+		D01778391F1F961D0044446D /* TGAudioWaveform.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777CE1F1F961D0044446D /* TGAudioWaveform.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017783A1F1F961D0044446D /* TGAudioWaveform.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777CF1F1F961D0044446D /* TGAudioWaveform.m */; };
+		D017783B1F1F961D0044446D /* TGStickerPackReference.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777D01F1F961D0044446D /* TGStickerPackReference.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017783C1F1F961D0044446D /* TGStickerPackReference.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777D11F1F961D0044446D /* TGStickerPackReference.m */; };
+		D017783D1F1F961D0044446D /* TGDocumentAttributeFilename.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777D21F1F961D0044446D /* TGDocumentAttributeFilename.m */; };
+		D017783E1F1F961D0044446D /* TGDocumentAttributeImageSize.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777D31F1F961D0044446D /* TGDocumentAttributeImageSize.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017783F1F1F961D0044446D /* TGDocumentAttributeImageSize.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777D41F1F961D0044446D /* TGDocumentAttributeImageSize.m */; };
+		D01778401F1F961D0044446D /* TGDocumentAttributeSticker.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777D51F1F961D0044446D /* TGDocumentAttributeSticker.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778411F1F961D0044446D /* TGDocumentAttributeSticker.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777D61F1F961D0044446D /* TGDocumentAttributeSticker.m */; };
+		D01778421F1F961D0044446D /* TGDocumentAttributeVideo.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777D71F1F961D0044446D /* TGDocumentAttributeVideo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778431F1F961D0044446D /* TGDocumentAttributeVideo.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777D81F1F961D0044446D /* TGDocumentAttributeVideo.m */; };
+		D01778441F1F961D0044446D /* TGDocumentAttributeAnimated.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777D91F1F961D0044446D /* TGDocumentAttributeAnimated.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778451F1F961D0044446D /* TGDocumentAttributeAnimated.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777DA1F1F961D0044446D /* TGDocumentAttributeAnimated.m */; };
+		D01778461F1F961D0044446D /* TGDocumentAttributeAudio.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777DB1F1F961D0044446D /* TGDocumentAttributeAudio.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778471F1F961D0044446D /* TGDocumentAttributeAudio.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777DC1F1F961D0044446D /* TGDocumentAttributeAudio.m */; };
+		D01778481F1F961D0044446D /* TGDocumentAttributeFilename.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777DD1F1F961D0044446D /* TGDocumentAttributeFilename.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778491F1F961D0044446D /* TGDocumentMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777DE1F1F961D0044446D /* TGDocumentMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017784A1F1F961D0044446D /* TGDocumentMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777DF1F1F961D0044446D /* TGDocumentMediaAttachment.m */; };
+		D017784B1F1F961D0044446D /* TGUnsupportedMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777E01F1F961D0044446D /* TGUnsupportedMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017784C1F1F961D0044446D /* TGUnsupportedMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777E11F1F961D0044446D /* TGUnsupportedMediaAttachment.m */; };
+		D017784D1F1F961D0044446D /* TGForwardedMessageMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777E21F1F961D0044446D /* TGForwardedMessageMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017784E1F1F961D0044446D /* TGForwardedMessageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777E31F1F961D0044446D /* TGForwardedMessageMediaAttachment.m */; };
+		D017784F1F1F961D0044446D /* TGContactMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777E41F1F961D0044446D /* TGContactMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778501F1F961D0044446D /* TGContactMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777E51F1F961D0044446D /* TGContactMediaAttachment.m */; };
+		D01778511F1F961D0044446D /* TGVideoInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777E61F1F961D0044446D /* TGVideoInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778521F1F961D0044446D /* TGVideoInfo.mm in Sources */ = {isa = PBXBuildFile; fileRef = D01777E71F1F961D0044446D /* TGVideoInfo.mm */; };
+		D01778531F1F961D0044446D /* TGVideoMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777E81F1F961D0044446D /* TGVideoMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778541F1F961D0044446D /* TGVideoMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777E91F1F961D0044446D /* TGVideoMediaAttachment.m */; };
+		D01778551F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777EA1F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778561F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777EB1F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.m */; };
+		D01778571F1F961D0044446D /* TGLocationMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777EC1F1F961D0044446D /* TGLocationMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778581F1F961D0044446D /* TGLocationMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777ED1F1F961D0044446D /* TGLocationMediaAttachment.m */; };
+		D01778591F1F961D0044446D /* TGImageMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777EE1F1F961D0044446D /* TGImageMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017785A1F1F961D0044446D /* TGImageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777EF1F1F961D0044446D /* TGImageMediaAttachment.m */; };
+		D017785B1F1F961D0044446D /* TGMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777F01F1F961D0044446D /* TGMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017785C1F1F961D0044446D /* TGMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777F11F1F961D0044446D /* TGMediaAttachment.m */; };
+		D017785D1F1F961D0044446D /* TGActionMediaAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777F21F1F961D0044446D /* TGActionMediaAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017785E1F1F961D0044446D /* TGActionMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = D01777F31F1F961D0044446D /* TGActionMediaAttachment.m */; };
+		D01778691F1F99180044446D /* NSInputStream+TL.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778671F1F99180044446D /* NSInputStream+TL.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D017786A1F1F99180044446D /* NSInputStream+TL.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778681F1F99180044446D /* NSInputStream+TL.m */; };
+		D017789D1F1FC99A0044446D /* LegacyComponentsInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = D017789B1F1FC99A0044446D /* LegacyComponentsInternal.h */; };
+		D017789E1F1FC99A0044446D /* LegacyComponentsInternal.m in Sources */ = {isa = PBXBuildFile; fileRef = D017789C1F1FC99A0044446D /* LegacyComponentsInternal.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		D01777271F1F8F100044446D /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D017772A1F1F8F100044446D /* LegacyComponents.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LegacyComponents.h; sourceTree = "<group>"; };
 		D017772B1F1F8F100044446D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D01777381F1F8FE60044446D /* LegacyComponentsGlobals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LegacyComponentsGlobals.h; sourceTree = "<group>"; };
+		D017773A1F1F8FE60044446D /* PSCoding.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSCoding.h; sourceTree = "<group>"; };
+		D017773B1F1F8FE60044446D /* PSData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSData.h; sourceTree = "<group>"; };
+		D017773C1F1F8FE60044446D /* PSKeyValueCoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSKeyValueCoder.h; sourceTree = "<group>"; };
+		D017773D1F1F8FE60044446D /* PSKeyValueCoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSKeyValueCoder.m; sourceTree = "<group>"; };
+		D017773E1F1F8FE60044446D /* PSKeyValueDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSKeyValueDecoder.h; sourceTree = "<group>"; };
+		D017773F1F1F8FE60044446D /* PSKeyValueDecoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSKeyValueDecoder.m; sourceTree = "<group>"; };
+		D01777401F1F8FE60044446D /* PSKeyValueEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSKeyValueEncoder.h; sourceTree = "<group>"; };
+		D01777411F1F8FE60044446D /* PSKeyValueEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSKeyValueEncoder.m; sourceTree = "<group>"; };
+		D01777421F1F8FE60044446D /* PSKeyValueReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSKeyValueReader.h; sourceTree = "<group>"; };
+		D01777431F1F8FE60044446D /* PSKeyValueStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSKeyValueStore.h; sourceTree = "<group>"; };
+		D01777441F1F8FE60044446D /* PSKeyValueWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSKeyValueWriter.h; sourceTree = "<group>"; };
+		D01777451F1F8FE60044446D /* TGBotComandInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBotComandInfo.h; sourceTree = "<group>"; };
+		D01777461F1F8FE60044446D /* TGBotComandInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBotComandInfo.m; sourceTree = "<group>"; };
+		D01777471F1F8FE60044446D /* TGBotInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBotInfo.h; sourceTree = "<group>"; };
+		D01777481F1F8FE60044446D /* TGBotInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBotInfo.m; sourceTree = "<group>"; };
+		D01777491F1F8FE60044446D /* TGLocalization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocalization.h; sourceTree = "<group>"; };
+		D017774A1F1F8FE60044446D /* TGLocalization.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocalization.m; sourceTree = "<group>"; };
+		D017774B1F1F8FE60044446D /* TGPluralization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPluralization.h; sourceTree = "<group>"; };
+		D017774C1F1F8FE60044446D /* TGPluralization.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPluralization.m; sourceTree = "<group>"; };
+		D017774D1F1F8FE60044446D /* TGStringUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGStringUtils.h; sourceTree = "<group>"; };
+		D017774E1F1F8FE60044446D /* TGStringUtils.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGStringUtils.mm; sourceTree = "<group>"; };
+		D017774F1F1F8FE60044446D /* TGUser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGUser.h; sourceTree = "<group>"; };
+		D01777501F1F8FE60044446D /* TGUser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGUser.m; sourceTree = "<group>"; };
+		D017776A1F1F909E0044446D /* LegacyComponentsGlobals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LegacyComponentsGlobals.m; sourceTree = "<group>"; };
+		D01777701F1F92420044446D /* TGPhoneUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPhoneUtils.h; sourceTree = "<group>"; };
+		D01777711F1F92420044446D /* TGPhoneUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPhoneUtils.m; sourceTree = "<group>"; };
+		D01777741F1F92570044446D /* RMPhoneFormat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RMPhoneFormat.h; sourceTree = "<group>"; };
+		D01777751F1F92570044446D /* RMPhoneFormat.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RMPhoneFormat.m; sourceTree = "<group>"; };
+		D01777781F1F927A0044446D /* NSObject+TGLock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSObject+TGLock.h"; sourceTree = "<group>"; };
+		D01777791F1F927A0044446D /* NSObject+TGLock.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSObject+TGLock.m"; sourceTree = "<group>"; };
+		D017777C1F1F930B0044446D /* TGConversation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGConversation.h; sourceTree = "<group>"; };
+		D017777D1F1F930B0044446D /* TGConversation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGConversation.m; sourceTree = "<group>"; };
+		D01777801F1F93250044446D /* TGImageInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGImageInfo.h; sourceTree = "<group>"; };
+		D01777811F1F93250044446D /* TGImageInfo.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGImageInfo.mm; sourceTree = "<group>"; };
+		D01777851F1F93550044446D /* TGMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessage.h; sourceTree = "<group>"; };
+		D01777861F1F93550044446D /* TGMessage.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGMessage.mm; sourceTree = "<group>"; };
+		D01777891F1F961C0044446D /* TGTextCheckingResult.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGTextCheckingResult.h; sourceTree = "<group>"; };
+		D017778A1F1F961C0044446D /* TGTextCheckingResult.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGTextCheckingResult.m; sourceTree = "<group>"; };
+		D017778B1F1F961C0044446D /* TGPeerIdAdapter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPeerIdAdapter.h; sourceTree = "<group>"; };
+		D017778C1F1F961C0044446D /* TGChannelBannedRights.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGChannelBannedRights.h; sourceTree = "<group>"; };
+		D017778D1F1F961D0044446D /* TGChannelBannedRights.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGChannelBannedRights.m; sourceTree = "<group>"; };
+		D017778E1F1F961D0044446D /* TGChannelAdminRights.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGChannelAdminRights.h; sourceTree = "<group>"; };
+		D017778F1F1F961D0044446D /* TGChannelAdminRights.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGChannelAdminRights.m; sourceTree = "<group>"; };
+		D01777901F1F961D0044446D /* TGDatabaseMessageDraft.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDatabaseMessageDraft.h; sourceTree = "<group>"; };
+		D01777911F1F961D0044446D /* TGDatabaseMessageDraft.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDatabaseMessageDraft.m; sourceTree = "<group>"; };
+		D01777921F1F961D0044446D /* TGMessageGroup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageGroup.h; sourceTree = "<group>"; };
+		D01777931F1F961D0044446D /* TGMessageGroup.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageGroup.m; sourceTree = "<group>"; };
+		D01777941F1F961D0044446D /* TGMessageHole.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageHole.h; sourceTree = "<group>"; };
+		D01777951F1F961D0044446D /* TGMessageHole.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageHole.m; sourceTree = "<group>"; };
+		D01777961F1F961D0044446D /* TGMessageViewCountContentProperty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageViewCountContentProperty.h; sourceTree = "<group>"; };
+		D01777971F1F961D0044446D /* TGMessageViewCountContentProperty.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageViewCountContentProperty.m; sourceTree = "<group>"; };
+		D01777981F1F961D0044446D /* TGAuthorSignatureMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAuthorSignatureMediaAttachment.h; sourceTree = "<group>"; };
+		D01777991F1F961D0044446D /* TGAuthorSignatureMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAuthorSignatureMediaAttachment.m; sourceTree = "<group>"; };
+		D017779A1F1F961D0044446D /* TGWebDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGWebDocument.h; sourceTree = "<group>"; };
+		D017779B1F1F961D0044446D /* TGWebDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGWebDocument.m; sourceTree = "<group>"; };
+		D017779C1F1F961D0044446D /* TGInvoiceMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGInvoiceMediaAttachment.h; sourceTree = "<group>"; };
+		D017779D1F1F961D0044446D /* TGInvoiceMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGInvoiceMediaAttachment.m; sourceTree = "<group>"; };
+		D017779E1F1F961D0044446D /* TGGameMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGGameMediaAttachment.h; sourceTree = "<group>"; };
+		D017779F1F1F961D0044446D /* TGGameMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGGameMediaAttachment.m; sourceTree = "<group>"; };
+		D01777A01F1F961D0044446D /* TGViaUserAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGViaUserAttachment.m; sourceTree = "<group>"; };
+		D01777A11F1F961D0044446D /* TGViaUserAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGViaUserAttachment.h; sourceTree = "<group>"; };
+		D01777A21F1F961D0044446D /* TGBotContextResultAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBotContextResultAttachment.h; sourceTree = "<group>"; };
+		D01777A31F1F961D0044446D /* TGBotContextResultAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBotContextResultAttachment.m; sourceTree = "<group>"; };
+		D01777A41F1F961D0044446D /* TGMessageEntity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntity.h; sourceTree = "<group>"; };
+		D01777A51F1F961D0044446D /* TGMessageEntity.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntity.m; sourceTree = "<group>"; };
+		D01777A61F1F961D0044446D /* TGMessageEntityBold.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityBold.h; sourceTree = "<group>"; };
+		D01777A71F1F961D0044446D /* TGMessageEntityBold.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityBold.m; sourceTree = "<group>"; };
+		D01777A81F1F961D0044446D /* TGMessageEntityBotCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityBotCommand.h; sourceTree = "<group>"; };
+		D01777A91F1F961D0044446D /* TGMessageEntityBotCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityBotCommand.m; sourceTree = "<group>"; };
+		D01777AA1F1F961D0044446D /* TGMessageEntityCode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityCode.h; sourceTree = "<group>"; };
+		D01777AB1F1F961D0044446D /* TGMessageEntityCode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityCode.m; sourceTree = "<group>"; };
+		D01777AC1F1F961D0044446D /* TGMessageEntityEmail.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityEmail.h; sourceTree = "<group>"; };
+		D01777AD1F1F961D0044446D /* TGMessageEntityEmail.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityEmail.m; sourceTree = "<group>"; };
+		D01777AE1F1F961D0044446D /* TGMessageEntityHashtag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityHashtag.h; sourceTree = "<group>"; };
+		D01777AF1F1F961D0044446D /* TGMessageEntityHashtag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityHashtag.m; sourceTree = "<group>"; };
+		D01777B01F1F961D0044446D /* TGMessageEntityItalic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityItalic.h; sourceTree = "<group>"; };
+		D01777B11F1F961D0044446D /* TGMessageEntityItalic.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityItalic.m; sourceTree = "<group>"; };
+		D01777B21F1F961D0044446D /* TGMessageEntityMention.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityMention.h; sourceTree = "<group>"; };
+		D01777B31F1F961D0044446D /* TGMessageEntityMention.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityMention.m; sourceTree = "<group>"; };
+		D01777B41F1F961D0044446D /* TGMessageEntityMentionName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityMentionName.h; sourceTree = "<group>"; };
+		D01777B51F1F961D0044446D /* TGMessageEntityMentionName.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityMentionName.m; sourceTree = "<group>"; };
+		D01777B61F1F961D0044446D /* TGMessageEntityPre.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityPre.h; sourceTree = "<group>"; };
+		D01777B71F1F961D0044446D /* TGMessageEntityPre.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityPre.m; sourceTree = "<group>"; };
+		D01777B81F1F961D0044446D /* TGMessageEntityTextUrl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityTextUrl.h; sourceTree = "<group>"; };
+		D01777B91F1F961D0044446D /* TGMessageEntityTextUrl.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityTextUrl.m; sourceTree = "<group>"; };
+		D01777BA1F1F961D0044446D /* TGMessageEntityUrl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityUrl.h; sourceTree = "<group>"; };
+		D01777BB1F1F961D0044446D /* TGMessageEntityUrl.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityUrl.m; sourceTree = "<group>"; };
+		D01777BC1F1F961D0044446D /* TGMessageEntitiesAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMessageEntitiesAttachment.h; sourceTree = "<group>"; };
+		D01777BD1F1F961D0044446D /* TGMessageEntitiesAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntitiesAttachment.m; sourceTree = "<group>"; };
+		D01777BE1F1F961D0044446D /* TGBotReplyMarkup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBotReplyMarkup.h; sourceTree = "<group>"; };
+		D01777BF1F1F961D0044446D /* TGBotReplyMarkup.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBotReplyMarkup.m; sourceTree = "<group>"; };
+		D01777C01F1F961D0044446D /* TGBotReplyMarkupButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBotReplyMarkupButton.h; sourceTree = "<group>"; };
+		D01777C11F1F961D0044446D /* TGBotReplyMarkupButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBotReplyMarkupButton.m; sourceTree = "<group>"; };
+		D01777C21F1F961D0044446D /* TGBotReplyMarkupRow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBotReplyMarkupRow.h; sourceTree = "<group>"; };
+		D01777C31F1F961D0044446D /* TGBotReplyMarkupRow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBotReplyMarkupRow.m; sourceTree = "<group>"; };
+		D01777C41F1F961D0044446D /* TGReplyMarkupAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGReplyMarkupAttachment.h; sourceTree = "<group>"; };
+		D01777C51F1F961D0044446D /* TGReplyMarkupAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGReplyMarkupAttachment.m; sourceTree = "<group>"; };
+		D01777C61F1F961D0044446D /* TGInstantPage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGInstantPage.h; sourceTree = "<group>"; };
+		D01777C71F1F961D0044446D /* TGInstantPage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGInstantPage.m; sourceTree = "<group>"; };
+		D01777C81F1F961D0044446D /* TGWebPageMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGWebPageMediaAttachment.h; sourceTree = "<group>"; };
+		D01777C91F1F961D0044446D /* TGWebPageMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGWebPageMediaAttachment.m; sourceTree = "<group>"; };
+		D01777CA1F1F961D0044446D /* TGReplyMessageMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGReplyMessageMediaAttachment.h; sourceTree = "<group>"; };
+		D01777CB1F1F961D0044446D /* TGReplyMessageMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGReplyMessageMediaAttachment.m; sourceTree = "<group>"; };
+		D01777CC1F1F961D0044446D /* TGAudioMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAudioMediaAttachment.h; sourceTree = "<group>"; };
+		D01777CD1F1F961D0044446D /* TGAudioMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAudioMediaAttachment.m; sourceTree = "<group>"; };
+		D01777CE1F1F961D0044446D /* TGAudioWaveform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAudioWaveform.h; sourceTree = "<group>"; };
+		D01777CF1F1F961D0044446D /* TGAudioWaveform.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAudioWaveform.m; sourceTree = "<group>"; };
+		D01777D01F1F961D0044446D /* TGStickerPackReference.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGStickerPackReference.h; sourceTree = "<group>"; };
+		D01777D11F1F961D0044446D /* TGStickerPackReference.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGStickerPackReference.m; sourceTree = "<group>"; };
+		D01777D21F1F961D0044446D /* TGDocumentAttributeFilename.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDocumentAttributeFilename.m; sourceTree = "<group>"; };
+		D01777D31F1F961D0044446D /* TGDocumentAttributeImageSize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDocumentAttributeImageSize.h; sourceTree = "<group>"; };
+		D01777D41F1F961D0044446D /* TGDocumentAttributeImageSize.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDocumentAttributeImageSize.m; sourceTree = "<group>"; };
+		D01777D51F1F961D0044446D /* TGDocumentAttributeSticker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDocumentAttributeSticker.h; sourceTree = "<group>"; };
+		D01777D61F1F961D0044446D /* TGDocumentAttributeSticker.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDocumentAttributeSticker.m; sourceTree = "<group>"; };
+		D01777D71F1F961D0044446D /* TGDocumentAttributeVideo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDocumentAttributeVideo.h; sourceTree = "<group>"; };
+		D01777D81F1F961D0044446D /* TGDocumentAttributeVideo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDocumentAttributeVideo.m; sourceTree = "<group>"; };
+		D01777D91F1F961D0044446D /* TGDocumentAttributeAnimated.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDocumentAttributeAnimated.h; sourceTree = "<group>"; };
+		D01777DA1F1F961D0044446D /* TGDocumentAttributeAnimated.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDocumentAttributeAnimated.m; sourceTree = "<group>"; };
+		D01777DB1F1F961D0044446D /* TGDocumentAttributeAudio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDocumentAttributeAudio.h; sourceTree = "<group>"; };
+		D01777DC1F1F961D0044446D /* TGDocumentAttributeAudio.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDocumentAttributeAudio.m; sourceTree = "<group>"; };
+		D01777DD1F1F961D0044446D /* TGDocumentAttributeFilename.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDocumentAttributeFilename.h; sourceTree = "<group>"; };
+		D01777DE1F1F961D0044446D /* TGDocumentMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDocumentMediaAttachment.h; sourceTree = "<group>"; };
+		D01777DF1F1F961D0044446D /* TGDocumentMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDocumentMediaAttachment.m; sourceTree = "<group>"; };
+		D01777E01F1F961D0044446D /* TGUnsupportedMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGUnsupportedMediaAttachment.h; sourceTree = "<group>"; };
+		D01777E11F1F961D0044446D /* TGUnsupportedMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGUnsupportedMediaAttachment.m; sourceTree = "<group>"; };
+		D01777E21F1F961D0044446D /* TGForwardedMessageMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGForwardedMessageMediaAttachment.h; sourceTree = "<group>"; };
+		D01777E31F1F961D0044446D /* TGForwardedMessageMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGForwardedMessageMediaAttachment.m; sourceTree = "<group>"; };
+		D01777E41F1F961D0044446D /* TGContactMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGContactMediaAttachment.h; sourceTree = "<group>"; };
+		D01777E51F1F961D0044446D /* TGContactMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGContactMediaAttachment.m; sourceTree = "<group>"; };
+		D01777E61F1F961D0044446D /* TGVideoInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoInfo.h; sourceTree = "<group>"; };
+		D01777E71F1F961D0044446D /* TGVideoInfo.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGVideoInfo.mm; sourceTree = "<group>"; };
+		D01777E81F1F961D0044446D /* TGVideoMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoMediaAttachment.h; sourceTree = "<group>"; };
+		D01777E91F1F961D0044446D /* TGVideoMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGVideoMediaAttachment.m; sourceTree = "<group>"; };
+		D01777EA1F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocalMessageMetaMediaAttachment.h; sourceTree = "<group>"; };
+		D01777EB1F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocalMessageMetaMediaAttachment.m; sourceTree = "<group>"; };
+		D01777EC1F1F961D0044446D /* TGLocationMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationMediaAttachment.h; sourceTree = "<group>"; };
+		D01777ED1F1F961D0044446D /* TGLocationMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationMediaAttachment.m; sourceTree = "<group>"; };
+		D01777EE1F1F961D0044446D /* TGImageMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGImageMediaAttachment.h; sourceTree = "<group>"; };
+		D01777EF1F1F961D0044446D /* TGImageMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGImageMediaAttachment.m; sourceTree = "<group>"; };
+		D01777F01F1F961D0044446D /* TGMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAttachment.h; sourceTree = "<group>"; };
+		D01777F11F1F961D0044446D /* TGMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAttachment.m; sourceTree = "<group>"; };
+		D01777F21F1F961D0044446D /* TGActionMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGActionMediaAttachment.h; sourceTree = "<group>"; };
+		D01777F31F1F961D0044446D /* TGActionMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGActionMediaAttachment.m; sourceTree = "<group>"; };
+		D01778671F1F99180044446D /* NSInputStream+TL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSInputStream+TL.h"; sourceTree = "<group>"; };
+		D01778681F1F99180044446D /* NSInputStream+TL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSInputStream+TL.m"; sourceTree = "<group>"; };
+		D017789B1F1FC99A0044446D /* LegacyComponentsInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LegacyComponentsInternal.h; sourceTree = "<group>"; };
+		D017789C1F1FC99A0044446D /* LegacyComponentsInternal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LegacyComponentsInternal.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,10 +342,190 @@
 		D01777291F1F8F100044446D /* LegacyComponents */ = {
 			isa = PBXGroup;
 			children = (
+				D017776F1F1F91B00044446D /* Utils */,
+				D017776D1F1F91850044446D /* PS Coding */,
+				D017776C1F1F91780044446D /* Peers */,
+				D01777841F1F93430044446D /* Message */,
 				D017772A1F1F8F100044446D /* LegacyComponents.h */,
 				D017772B1F1F8F100044446D /* Info.plist */,
 			);
 			path = LegacyComponents;
+			sourceTree = "<group>";
+		};
+		D017776C1F1F91780044446D /* Peers */ = {
+			isa = PBXGroup;
+			children = (
+				D017778B1F1F961C0044446D /* TGPeerIdAdapter.h */,
+				D01777471F1F8FE60044446D /* TGBotInfo.h */,
+				D01777481F1F8FE60044446D /* TGBotInfo.m */,
+				D017774F1F1F8FE60044446D /* TGUser.h */,
+				D01777501F1F8FE60044446D /* TGUser.m */,
+				D017777C1F1F930B0044446D /* TGConversation.h */,
+				D017777D1F1F930B0044446D /* TGConversation.m */,
+			);
+			name = Peers;
+			sourceTree = "<group>";
+		};
+		D017776D1F1F91850044446D /* PS Coding */ = {
+			isa = PBXGroup;
+			children = (
+				D017773A1F1F8FE60044446D /* PSCoding.h */,
+				D017773B1F1F8FE60044446D /* PSData.h */,
+				D017773C1F1F8FE60044446D /* PSKeyValueCoder.h */,
+				D017773D1F1F8FE60044446D /* PSKeyValueCoder.m */,
+				D017773E1F1F8FE60044446D /* PSKeyValueDecoder.h */,
+				D017773F1F1F8FE60044446D /* PSKeyValueDecoder.m */,
+				D01777401F1F8FE60044446D /* PSKeyValueEncoder.h */,
+				D01777411F1F8FE60044446D /* PSKeyValueEncoder.m */,
+				D01777421F1F8FE60044446D /* PSKeyValueReader.h */,
+				D01777431F1F8FE60044446D /* PSKeyValueStore.h */,
+				D01777441F1F8FE60044446D /* PSKeyValueWriter.h */,
+			);
+			name = "PS Coding";
+			sourceTree = "<group>";
+		};
+		D017776F1F1F91B00044446D /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				D01777381F1F8FE60044446D /* LegacyComponentsGlobals.h */,
+				D017776A1F1F909E0044446D /* LegacyComponentsGlobals.m */,
+				D017789B1F1FC99A0044446D /* LegacyComponentsInternal.h */,
+				D017789C1F1FC99A0044446D /* LegacyComponentsInternal.m */,
+				D01777491F1F8FE60044446D /* TGLocalization.h */,
+				D017774A1F1F8FE60044446D /* TGLocalization.m */,
+				D017774B1F1F8FE60044446D /* TGPluralization.h */,
+				D017774C1F1F8FE60044446D /* TGPluralization.m */,
+				D017774D1F1F8FE60044446D /* TGStringUtils.h */,
+				D017774E1F1F8FE60044446D /* TGStringUtils.mm */,
+				D01777701F1F92420044446D /* TGPhoneUtils.h */,
+				D01777711F1F92420044446D /* TGPhoneUtils.m */,
+				D01777781F1F927A0044446D /* NSObject+TGLock.h */,
+				D01777791F1F927A0044446D /* NSObject+TGLock.m */,
+				D01777741F1F92570044446D /* RMPhoneFormat.h */,
+				D01777751F1F92570044446D /* RMPhoneFormat.m */,
+				D01778671F1F99180044446D /* NSInputStream+TL.h */,
+				D01778681F1F99180044446D /* NSInputStream+TL.m */,
+			);
+			name = Utils;
+			sourceTree = "<group>";
+		};
+		D01777841F1F93430044446D /* Message */ = {
+			isa = PBXGroup;
+			children = (
+				D01777891F1F961C0044446D /* TGTextCheckingResult.h */,
+				D017778A1F1F961C0044446D /* TGTextCheckingResult.m */,
+				D017778C1F1F961C0044446D /* TGChannelBannedRights.h */,
+				D017778D1F1F961D0044446D /* TGChannelBannedRights.m */,
+				D017778E1F1F961D0044446D /* TGChannelAdminRights.h */,
+				D017778F1F1F961D0044446D /* TGChannelAdminRights.m */,
+				D01777901F1F961D0044446D /* TGDatabaseMessageDraft.h */,
+				D01777911F1F961D0044446D /* TGDatabaseMessageDraft.m */,
+				D01777451F1F8FE60044446D /* TGBotComandInfo.h */,
+				D01777461F1F8FE60044446D /* TGBotComandInfo.m */,
+				D01777921F1F961D0044446D /* TGMessageGroup.h */,
+				D01777931F1F961D0044446D /* TGMessageGroup.m */,
+				D01777941F1F961D0044446D /* TGMessageHole.h */,
+				D01777951F1F961D0044446D /* TGMessageHole.m */,
+				D01777961F1F961D0044446D /* TGMessageViewCountContentProperty.h */,
+				D01777971F1F961D0044446D /* TGMessageViewCountContentProperty.m */,
+				D01777981F1F961D0044446D /* TGAuthorSignatureMediaAttachment.h */,
+				D01777991F1F961D0044446D /* TGAuthorSignatureMediaAttachment.m */,
+				D017779A1F1F961D0044446D /* TGWebDocument.h */,
+				D017779B1F1F961D0044446D /* TGWebDocument.m */,
+				D017779C1F1F961D0044446D /* TGInvoiceMediaAttachment.h */,
+				D017779D1F1F961D0044446D /* TGInvoiceMediaAttachment.m */,
+				D017779E1F1F961D0044446D /* TGGameMediaAttachment.h */,
+				D017779F1F1F961D0044446D /* TGGameMediaAttachment.m */,
+				D01777A11F1F961D0044446D /* TGViaUserAttachment.h */,
+				D01777A01F1F961D0044446D /* TGViaUserAttachment.m */,
+				D01777A21F1F961D0044446D /* TGBotContextResultAttachment.h */,
+				D01777A31F1F961D0044446D /* TGBotContextResultAttachment.m */,
+				D01777A41F1F961D0044446D /* TGMessageEntity.h */,
+				D01777A51F1F961D0044446D /* TGMessageEntity.m */,
+				D01777A61F1F961D0044446D /* TGMessageEntityBold.h */,
+				D01777A71F1F961D0044446D /* TGMessageEntityBold.m */,
+				D01777A81F1F961D0044446D /* TGMessageEntityBotCommand.h */,
+				D01777A91F1F961D0044446D /* TGMessageEntityBotCommand.m */,
+				D01777AA1F1F961D0044446D /* TGMessageEntityCode.h */,
+				D01777AB1F1F961D0044446D /* TGMessageEntityCode.m */,
+				D01777AC1F1F961D0044446D /* TGMessageEntityEmail.h */,
+				D01777AD1F1F961D0044446D /* TGMessageEntityEmail.m */,
+				D01777AE1F1F961D0044446D /* TGMessageEntityHashtag.h */,
+				D01777AF1F1F961D0044446D /* TGMessageEntityHashtag.m */,
+				D01777B01F1F961D0044446D /* TGMessageEntityItalic.h */,
+				D01777B11F1F961D0044446D /* TGMessageEntityItalic.m */,
+				D01777B21F1F961D0044446D /* TGMessageEntityMention.h */,
+				D01777B31F1F961D0044446D /* TGMessageEntityMention.m */,
+				D01777B41F1F961D0044446D /* TGMessageEntityMentionName.h */,
+				D01777B51F1F961D0044446D /* TGMessageEntityMentionName.m */,
+				D01777B61F1F961D0044446D /* TGMessageEntityPre.h */,
+				D01777B71F1F961D0044446D /* TGMessageEntityPre.m */,
+				D01777B81F1F961D0044446D /* TGMessageEntityTextUrl.h */,
+				D01777B91F1F961D0044446D /* TGMessageEntityTextUrl.m */,
+				D01777BA1F1F961D0044446D /* TGMessageEntityUrl.h */,
+				D01777BB1F1F961D0044446D /* TGMessageEntityUrl.m */,
+				D01777BC1F1F961D0044446D /* TGMessageEntitiesAttachment.h */,
+				D01777BD1F1F961D0044446D /* TGMessageEntitiesAttachment.m */,
+				D01777BE1F1F961D0044446D /* TGBotReplyMarkup.h */,
+				D01777BF1F1F961D0044446D /* TGBotReplyMarkup.m */,
+				D01777C01F1F961D0044446D /* TGBotReplyMarkupButton.h */,
+				D01777C11F1F961D0044446D /* TGBotReplyMarkupButton.m */,
+				D01777C21F1F961D0044446D /* TGBotReplyMarkupRow.h */,
+				D01777C31F1F961D0044446D /* TGBotReplyMarkupRow.m */,
+				D01777C41F1F961D0044446D /* TGReplyMarkupAttachment.h */,
+				D01777C51F1F961D0044446D /* TGReplyMarkupAttachment.m */,
+				D01777C61F1F961D0044446D /* TGInstantPage.h */,
+				D01777C71F1F961D0044446D /* TGInstantPage.m */,
+				D01777C81F1F961D0044446D /* TGWebPageMediaAttachment.h */,
+				D01777C91F1F961D0044446D /* TGWebPageMediaAttachment.m */,
+				D01777CA1F1F961D0044446D /* TGReplyMessageMediaAttachment.h */,
+				D01777CB1F1F961D0044446D /* TGReplyMessageMediaAttachment.m */,
+				D01777CC1F1F961D0044446D /* TGAudioMediaAttachment.h */,
+				D01777CD1F1F961D0044446D /* TGAudioMediaAttachment.m */,
+				D01777CE1F1F961D0044446D /* TGAudioWaveform.h */,
+				D01777CF1F1F961D0044446D /* TGAudioWaveform.m */,
+				D01777D01F1F961D0044446D /* TGStickerPackReference.h */,
+				D01777D11F1F961D0044446D /* TGStickerPackReference.m */,
+				D01777DD1F1F961D0044446D /* TGDocumentAttributeFilename.h */,
+				D01777D21F1F961D0044446D /* TGDocumentAttributeFilename.m */,
+				D01777D31F1F961D0044446D /* TGDocumentAttributeImageSize.h */,
+				D01777D41F1F961D0044446D /* TGDocumentAttributeImageSize.m */,
+				D01777D51F1F961D0044446D /* TGDocumentAttributeSticker.h */,
+				D01777D61F1F961D0044446D /* TGDocumentAttributeSticker.m */,
+				D01777D71F1F961D0044446D /* TGDocumentAttributeVideo.h */,
+				D01777D81F1F961D0044446D /* TGDocumentAttributeVideo.m */,
+				D01777D91F1F961D0044446D /* TGDocumentAttributeAnimated.h */,
+				D01777DA1F1F961D0044446D /* TGDocumentAttributeAnimated.m */,
+				D01777DB1F1F961D0044446D /* TGDocumentAttributeAudio.h */,
+				D01777DC1F1F961D0044446D /* TGDocumentAttributeAudio.m */,
+				D01777DE1F1F961D0044446D /* TGDocumentMediaAttachment.h */,
+				D01777DF1F1F961D0044446D /* TGDocumentMediaAttachment.m */,
+				D01777E01F1F961D0044446D /* TGUnsupportedMediaAttachment.h */,
+				D01777E11F1F961D0044446D /* TGUnsupportedMediaAttachment.m */,
+				D01777E21F1F961D0044446D /* TGForwardedMessageMediaAttachment.h */,
+				D01777E31F1F961D0044446D /* TGForwardedMessageMediaAttachment.m */,
+				D01777E41F1F961D0044446D /* TGContactMediaAttachment.h */,
+				D01777E51F1F961D0044446D /* TGContactMediaAttachment.m */,
+				D01777E61F1F961D0044446D /* TGVideoInfo.h */,
+				D01777E71F1F961D0044446D /* TGVideoInfo.mm */,
+				D01777E81F1F961D0044446D /* TGVideoMediaAttachment.h */,
+				D01777E91F1F961D0044446D /* TGVideoMediaAttachment.m */,
+				D01777EA1F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.h */,
+				D01777EB1F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.m */,
+				D01777EC1F1F961D0044446D /* TGLocationMediaAttachment.h */,
+				D01777ED1F1F961D0044446D /* TGLocationMediaAttachment.m */,
+				D01777EE1F1F961D0044446D /* TGImageMediaAttachment.h */,
+				D01777EF1F1F961D0044446D /* TGImageMediaAttachment.m */,
+				D01777F01F1F961D0044446D /* TGMediaAttachment.h */,
+				D01777F11F1F961D0044446D /* TGMediaAttachment.m */,
+				D01777F21F1F961D0044446D /* TGActionMediaAttachment.h */,
+				D01777F31F1F961D0044446D /* TGActionMediaAttachment.m */,
+				D01777801F1F93250044446D /* TGImageInfo.h */,
+				D01777811F1F93250044446D /* TGImageInfo.mm */,
+				D01777851F1F93550044446D /* TGMessage.h */,
+				D01777861F1F93550044446D /* TGMessage.mm */,
+			);
+			name = Message;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -59,7 +535,84 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D01778691F1F99180044446D /* NSInputStream+TL.h in Headers */,
+				D01777531F1F8FE60044446D /* PSCoding.h in Headers */,
+				D017781D1F1F961D0044446D /* TGMessageEntityMention.h in Headers */,
+				D01778031F1F961D0044446D /* TGAuthorSignatureMediaAttachment.h in Headers */,
+				D01778511F1F961D0044446D /* TGVideoInfo.h in Headers */,
+				D01777601F1F8FE60044446D /* TGBotInfo.h in Headers */,
+				D01778191F1F961D0044446D /* TGMessageEntityHashtag.h in Headers */,
+				D01777721F1F92420044446D /* TGPhoneUtils.h in Headers */,
+				D01777761F1F92570044446D /* RMPhoneFormat.h in Headers */,
+				D01777F61F1F961D0044446D /* TGPeerIdAdapter.h in Headers */,
+				D017782F1F1F961D0044446D /* TGReplyMarkupAttachment.h in Headers */,
+				D01778371F1F961D0044446D /* TGAudioMediaAttachment.h in Headers */,
+				D017775C1F1F8FE60044446D /* PSKeyValueStore.h in Headers */,
+				D01777511F1F8FE60044446D /* LegacyComponentsGlobals.h in Headers */,
+				D01778211F1F961D0044446D /* TGMessageEntityPre.h in Headers */,
 				D017772C1F1F8F100044446D /* LegacyComponents.h in Headers */,
+				D01778111F1F961D0044446D /* TGMessageEntityBold.h in Headers */,
+				D017789D1F1FC99A0044446D /* LegacyComponentsInternal.h in Headers */,
+				D01777621F1F8FE60044446D /* TGLocalization.h in Headers */,
+				D01778481F1F961D0044446D /* TGDocumentAttributeFilename.h in Headers */,
+				D01778171F1F961D0044446D /* TGMessageEntityEmail.h in Headers */,
+				D01777F41F1F961D0044446D /* TGTextCheckingResult.h in Headers */,
+				D01778231F1F961D0044446D /* TGMessageEntityTextUrl.h in Headers */,
+				D01778391F1F961D0044446D /* TGAudioWaveform.h in Headers */,
+				D01777FF1F1F961D0044446D /* TGMessageHole.h in Headers */,
+				D017777E1F1F930B0044446D /* TGConversation.h in Headers */,
+				D017781F1F1F961D0044446D /* TGMessageEntityMentionName.h in Headers */,
+				D01777551F1F8FE60044446D /* PSKeyValueCoder.h in Headers */,
+				D01778011F1F961D0044446D /* TGMessageViewCountContentProperty.h in Headers */,
+				D017777A1F1F927A0044446D /* NSObject+TGLock.h in Headers */,
+				D01778311F1F961D0044446D /* TGInstantPage.h in Headers */,
+				D01778271F1F961D0044446D /* TGMessageEntitiesAttachment.h in Headers */,
+				D017775B1F1F8FE60044446D /* PSKeyValueReader.h in Headers */,
+				D01778131F1F961D0044446D /* TGMessageEntityBotCommand.h in Headers */,
+				D017782B1F1F961D0044446D /* TGBotReplyMarkupButton.h in Headers */,
+				D017784D1F1F961D0044446D /* TGForwardedMessageMediaAttachment.h in Headers */,
+				D01777F71F1F961D0044446D /* TGChannelBannedRights.h in Headers */,
+				D01778401F1F961D0044446D /* TGDocumentAttributeSticker.h in Headers */,
+				D017783E1F1F961D0044446D /* TGDocumentAttributeImageSize.h in Headers */,
+				D017780F1F1F961D0044446D /* TGMessageEntity.h in Headers */,
+				D01777681F1F8FE60044446D /* TGUser.h in Headers */,
+				D01778571F1F961D0044446D /* TGLocationMediaAttachment.h in Headers */,
+				D01778531F1F961D0044446D /* TGVideoMediaAttachment.h in Headers */,
+				D01777641F1F8FE60044446D /* TGPluralization.h in Headers */,
+				D017783B1F1F961D0044446D /* TGStickerPackReference.h in Headers */,
+				D01777571F1F8FE60044446D /* PSKeyValueDecoder.h in Headers */,
+				D017780D1F1F961D0044446D /* TGBotContextResultAttachment.h in Headers */,
+				D01778071F1F961D0044446D /* TGInvoiceMediaAttachment.h in Headers */,
+				D01778421F1F961D0044446D /* TGDocumentAttributeVideo.h in Headers */,
+				D01778331F1F961D0044446D /* TGWebPageMediaAttachment.h in Headers */,
+				D01777821F1F93250044446D /* TGImageInfo.h in Headers */,
+				D017782D1F1F961D0044446D /* TGBotReplyMarkupRow.h in Headers */,
+				D017775E1F1F8FE60044446D /* TGBotComandInfo.h in Headers */,
+				D01777871F1F93550044446D /* TGMessage.h in Headers */,
+				D01777591F1F8FE60044446D /* PSKeyValueEncoder.h in Headers */,
+				D017784B1F1F961D0044446D /* TGUnsupportedMediaAttachment.h in Headers */,
+				D01778461F1F961D0044446D /* TGDocumentAttributeAudio.h in Headers */,
+				D017785B1F1F961D0044446D /* TGMediaAttachment.h in Headers */,
+				D01778351F1F961D0044446D /* TGReplyMessageMediaAttachment.h in Headers */,
+				D017780C1F1F961D0044446D /* TGViaUserAttachment.h in Headers */,
+				D017775D1F1F8FE60044446D /* PSKeyValueWriter.h in Headers */,
+				D01777FD1F1F961D0044446D /* TGMessageGroup.h in Headers */,
+				D01777541F1F8FE60044446D /* PSData.h in Headers */,
+				D01778091F1F961D0044446D /* TGGameMediaAttachment.h in Headers */,
+				D01778551F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.h in Headers */,
+				D01778151F1F961D0044446D /* TGMessageEntityCode.h in Headers */,
+				D01778251F1F961D0044446D /* TGMessageEntityUrl.h in Headers */,
+				D01777F91F1F961D0044446D /* TGChannelAdminRights.h in Headers */,
+				D01778051F1F961D0044446D /* TGWebDocument.h in Headers */,
+				D017781B1F1F961D0044446D /* TGMessageEntityItalic.h in Headers */,
+				D01777661F1F8FE60044446D /* TGStringUtils.h in Headers */,
+				D017785D1F1F961D0044446D /* TGActionMediaAttachment.h in Headers */,
+				D017784F1F1F961D0044446D /* TGContactMediaAttachment.h in Headers */,
+				D01778491F1F961D0044446D /* TGDocumentMediaAttachment.h in Headers */,
+				D01778441F1F961D0044446D /* TGDocumentAttributeAnimated.h in Headers */,
+				D01778591F1F961D0044446D /* TGImageMediaAttachment.h in Headers */,
+				D01778291F1F961D0044446D /* TGBotReplyMarkup.h in Headers */,
+				D01777FB1F1F961D0044446D /* TGDatabaseMessageDraft.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -95,8 +648,7 @@
 				TargetAttributes = {
 					D01777261F1F8F100044446D = {
 						CreatedOnToolsVersion = 8.3.2;
-						DevelopmentTeam = X834Q8SBVP;
-						ProvisioningStyle = Automatic;
+						ProvisioningStyle = Manual;
 					};
 				};
 			};
@@ -132,13 +684,226 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D01778241F1F961D0044446D /* TGMessageEntityTextUrl.m in Sources */,
+				D01778471F1F961D0044446D /* TGDocumentAttributeAudio.m in Sources */,
+				D01778181F1F961D0044446D /* TGMessageEntityEmail.m in Sources */,
+				D017784A1F1F961D0044446D /* TGDocumentMediaAttachment.m in Sources */,
+				D017782E1F1F961D0044446D /* TGBotReplyMarkupRow.m in Sources */,
+				D01778561F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.m in Sources */,
+				D01778081F1F961D0044446D /* TGInvoiceMediaAttachment.m in Sources */,
+				D017782C1F1F961D0044446D /* TGBotReplyMarkupButton.m in Sources */,
+				D01777771F1F92570044446D /* RMPhoneFormat.m in Sources */,
+				D017781E1F1F961D0044446D /* TGMessageEntityMention.m in Sources */,
+				D01777FC1F1F961D0044446D /* TGDatabaseMessageDraft.m in Sources */,
+				D017777F1F1F930B0044446D /* TGConversation.m in Sources */,
+				D01777F51F1F961D0044446D /* TGTextCheckingResult.m in Sources */,
+				D01778581F1F961D0044446D /* TGLocationMediaAttachment.m in Sources */,
+				D017785C1F1F961D0044446D /* TGMediaAttachment.m in Sources */,
+				D01778061F1F961D0044446D /* TGWebDocument.m in Sources */,
+				D01778001F1F961D0044446D /* TGMessageHole.m in Sources */,
+				D01777FA1F1F961D0044446D /* TGChannelAdminRights.m in Sources */,
+				D01778041F1F961D0044446D /* TGAuthorSignatureMediaAttachment.m in Sources */,
+				D01778411F1F961D0044446D /* TGDocumentAttributeSticker.m in Sources */,
+				D01778221F1F961D0044446D /* TGMessageEntityPre.m in Sources */,
+				D01777561F1F8FE60044446D /* PSKeyValueCoder.m in Sources */,
+				D01777831F1F93250044446D /* TGImageInfo.mm in Sources */,
+				D017780E1F1F961D0044446D /* TGBotContextResultAttachment.m in Sources */,
+				D017781A1F1F961D0044446D /* TGMessageEntityHashtag.m in Sources */,
+				D01777881F1F93550044446D /* TGMessage.mm in Sources */,
+				D017782A1F1F961D0044446D /* TGBotReplyMarkup.m in Sources */,
+				D01778321F1F961D0044446D /* TGInstantPage.m in Sources */,
+				D017776B1F1F909E0044446D /* LegacyComponentsGlobals.m in Sources */,
+				D01778301F1F961D0044446D /* TGReplyMarkupAttachment.m in Sources */,
+				D01778501F1F961D0044446D /* TGContactMediaAttachment.m in Sources */,
+				D017786A1F1F99180044446D /* NSInputStream+TL.m in Sources */,
+				D017777B1F1F927A0044446D /* NSObject+TGLock.m in Sources */,
+				D01778281F1F961D0044446D /* TGMessageEntitiesAttachment.m in Sources */,
+				D01777581F1F8FE60044446D /* PSKeyValueDecoder.m in Sources */,
+				D017783F1F1F961D0044446D /* TGDocumentAttributeImageSize.m in Sources */,
+				D017783D1F1F961D0044446D /* TGDocumentAttributeFilename.m in Sources */,
+				D017780B1F1F961D0044446D /* TGViaUserAttachment.m in Sources */,
+				D01777671F1F8FE60044446D /* TGStringUtils.mm in Sources */,
+				D017783C1F1F961D0044446D /* TGStickerPackReference.m in Sources */,
+				D017775A1F1F8FE60044446D /* PSKeyValueEncoder.m in Sources */,
+				D01778021F1F961D0044446D /* TGMessageViewCountContentProperty.m in Sources */,
+				D01778261F1F961D0044446D /* TGMessageEntityUrl.m in Sources */,
+				D017785A1F1F961D0044446D /* TGImageMediaAttachment.m in Sources */,
+				D017784C1F1F961D0044446D /* TGUnsupportedMediaAttachment.m in Sources */,
+				D01777611F1F8FE60044446D /* TGBotInfo.m in Sources */,
+				D01778521F1F961D0044446D /* TGVideoInfo.mm in Sources */,
+				D01777651F1F8FE60044446D /* TGPluralization.m in Sources */,
+				D01777F81F1F961D0044446D /* TGChannelBannedRights.m in Sources */,
+				D01778451F1F961D0044446D /* TGDocumentAttributeAnimated.m in Sources */,
+				D01778141F1F961D0044446D /* TGMessageEntityBotCommand.m in Sources */,
+				D01778541F1F961D0044446D /* TGVideoMediaAttachment.m in Sources */,
+				D01778361F1F961D0044446D /* TGReplyMessageMediaAttachment.m in Sources */,
+				D01778341F1F961D0044446D /* TGWebPageMediaAttachment.m in Sources */,
+				D01778431F1F961D0044446D /* TGDocumentAttributeVideo.m in Sources */,
+				D01778101F1F961D0044446D /* TGMessageEntity.m in Sources */,
+				D01778381F1F961D0044446D /* TGAudioMediaAttachment.m in Sources */,
+				D017775F1F1F8FE60044446D /* TGBotComandInfo.m in Sources */,
+				D01777FE1F1F961D0044446D /* TGMessageGroup.m in Sources */,
+				D01778121F1F961D0044446D /* TGMessageEntityBold.m in Sources */,
+				D01778201F1F961D0044446D /* TGMessageEntityMentionName.m in Sources */,
+				D017780A1F1F961D0044446D /* TGGameMediaAttachment.m in Sources */,
+				D017783A1F1F961D0044446D /* TGAudioWaveform.m in Sources */,
+				D01777631F1F8FE60044446D /* TGLocalization.m in Sources */,
+				D01777731F1F92420044446D /* TGPhoneUtils.m in Sources */,
+				D017781C1F1F961D0044446D /* TGMessageEntityItalic.m in Sources */,
+				D01777691F1F8FE60044446D /* TGUser.m in Sources */,
+				D017789E1F1FC99A0044446D /* LegacyComponentsInternal.m in Sources */,
+				D017784E1F1F961D0044446D /* TGForwardedMessageMediaAttachment.m in Sources */,
+				D01778161F1F961D0044446D /* TGMessageEntityCode.m in Sources */,
+				D017785E1F1F961D0044446D /* TGActionMediaAttachment.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D017772D1F1F8F100044446D /* Debug */ = {
+		D017772D1F1F8F100044446D /* Debug AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = "Debug AppStore";
+		};
+		D017772E1F1F8F100044446D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		D01777301F1F8F100044446D /* Debug AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "";
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = LegacyComponents/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.LegacyComponents;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+			};
+			name = "Debug AppStore";
+		};
+		D01777311F1F8F100044446D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "";
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = LegacyComponents/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.LegacyComponents;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		D01778931F1FA58C0044446D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -190,7 +955,29 @@
 			};
 			name = Debug;
 		};
-		D017772E1F1F8F100044446D /* Release */ = {
+		D01778941F1FA58C0044446D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "";
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = LegacyComponents/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.LegacyComponents;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		D01778951F1FA5960044446D /* Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -234,43 +1021,29 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = Release;
+			name = Hockeyapp;
 		};
-		D01777301F1F8F100044446D /* Debug */ = {
+		D01778961F1FA5960044446D /* Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_IDENTITY = "";
 				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
+				DEVELOPMENT_TEAM = "";
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.LegacyComponents;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 			};
-			name = Debug;
-		};
-		D01777311F1F8F100044446D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = LegacyComponents/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.LegacyComponents;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-			};
-			name = Release;
+			name = Hockeyapp;
 		};
 /* End XCBuildConfiguration section */
 
@@ -278,8 +1051,10 @@
 		D01777211F1F8F100044446D /* Build configuration list for PBXProject "LegacyComponents" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D017772D1F1F8F100044446D /* Debug */,
+				D017772D1F1F8F100044446D /* Debug AppStore */,
+				D01778931F1FA58C0044446D /* Debug */,
 				D017772E1F1F8F100044446D /* Release */,
+				D01778951F1FA5960044446D /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -287,10 +1062,13 @@
 		D017772F1F1F8F100044446D /* Build configuration list for PBXNativeTarget "LegacyComponents" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D01777301F1F8F100044446D /* Debug */,
+				D01777301F1F8F100044446D /* Debug AppStore */,
+				D01778941F1FA58C0044446D /* Debug */,
 				D01777311F1F8F100044446D /* Release */,
+				D01778961F1FA5960044446D /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
