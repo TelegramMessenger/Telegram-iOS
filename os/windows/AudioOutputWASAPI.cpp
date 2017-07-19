@@ -281,7 +281,9 @@ void AudioOutputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 	audioClient = audioClient2;
 #endif
 
-	res = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST | 0x80000000/*AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM*/, 60 * 10000, 0, &format, NULL);
+	// {2C693079-3F59-49FD-964F-61C005EAA5D3}
+	const GUID guid = { 0x2c693079, 0x3f59, 0x49fd, { 0x96, 0x4f, 0x61, 0xc0, 0x5, 0xea, 0xa5, 0xd3 } };
+	res = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST | 0x80000000/*AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM*/, 60 * 10000, 0, &format, &guid);
 	CHECK_RES(res, "audioClient->Initialize");
 
 	uint32_t bufSize;

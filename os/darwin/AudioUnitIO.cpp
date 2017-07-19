@@ -10,6 +10,7 @@
 #include "AudioOutputAudioUnit.h"
 #include "../../logging.h"
 #include "../../VoIPController.h"
+#include "../../VoIPServerConfig.h"
 
 #define CHECK_AU_ERROR(res, msg) if(res!=noErr){ LOGE(msg": OSStatus=%d", (int)res); return; }
 #define BUFFER_SIZE 960 // 20 ms
@@ -127,7 +128,7 @@ void AudioUnitIO::ActuallyConfigure(uint32_t sampleRate, uint32_t bitsPerSample,
 	status = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, kInputBus, &flag, sizeof(flag));
 	CHECK_AU_ERROR(status, "Error enabling AudioUnit input");
 	
-	flag=0;
+	flag=ServerConfig::GetSharedInstance()->GetBoolean("use_ios_vpio_agc", true) ? 1 : 0;
 	status=AudioUnitSetProperty(unit, kAUVoiceIOProperty_VoiceProcessingEnableAGC, kAudioUnitScope_Global, kInputBus, &flag, sizeof(flag));
 	CHECK_AU_ERROR(status, "Error disabling AGC");
 	
