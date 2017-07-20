@@ -28,22 +28,25 @@
 
 #import "BITHTTPOperation.h"
 
-@interface BITHTTPOperation()<NSURLConnectionDelegate>
+@interface BITHTTPOperation() <NSURLConnectionDelegate>
+
+@property (nonatomic, strong) NSURLRequest *URLRequest;
+@property (nonatomic, strong) NSURLConnection *connection;
+@property (nonatomic, strong) NSMutableData *mutableData;
+@property (nonatomic) BOOL isExecuting;
+@property (nonatomic) BOOL isFinished;
+
+// Redeclare BITHTTPOperation properties with readwrite attribute.
+@property (nonatomic, readwrite) NSHTTPURLResponse *response;
+@property (nonatomic, readwrite) NSError *error;
+
 @end
 
-@implementation BITHTTPOperation {
-  NSURLRequest *_URLRequest;
-  NSURLConnection *_connection;
-  NSMutableData *_data;
-  
-  BOOL _isExecuting;
-  BOOL _isFinished;
-}
-
+@implementation BITHTTPOperation
 
 + (instancetype)operationWithRequest:(NSURLRequest *)urlRequest {
   BITHTTPOperation *op = [[self class] new];
-  op->_URLRequest = urlRequest;
+  op.URLRequest = urlRequest;
   return op;
 }
 
@@ -53,7 +56,7 @@
 }
 
 - (void)cancel {
-  [_connection cancel];
+  [self.connection cancel];
   [super cancel];
 }
 
@@ -74,12 +77,12 @@
   }
 
   [self willChangeValueForKey:@"isExecuting"];
-  _isExecuting = YES;
+  self.isExecuting = YES;
   [self didChangeValueForKey:@"isExecuting"];
   
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  _connection = [[NSURLConnection alloc] initWithRequest:_URLRequest
+  self.connection = [[NSURLConnection alloc] initWithRequest:self.URLRequest
                                                 delegate:self
                                         startImmediately:YES];
 #pragma clang diagnostic pop
@@ -88,26 +91,26 @@
 - (void) finish {
   [self willChangeValueForKey:@"isExecuting"];
   [self willChangeValueForKey:@"isFinished"];
-  _isExecuting = NO;
-  _isFinished = YES;
+  self.isExecuting = NO;
+  self.isFinished = YES;
   [self didChangeValueForKey:@"isExecuting"];
   [self didChangeValueForKey:@"isFinished"];
 }
 
 #pragma mark - NSURLConnectionDelegate
 -(void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse*)response {
-  _data = [[NSMutableData alloc] init];
-  _response = (id)response;
+  self.mutableData = [[NSMutableData alloc] init];
+  self.response = (id)response;
 }
 
 -(void)connection:(NSURLConnection*)connection didReceiveData:(NSData*)data {
-  [_data appendData:data];
+  [self.mutableData appendData:data];
 }
 
 -(void)connection:(NSURLConnection*)connection didFailWithError:(NSError*)error {
   //FINISHED and failed
-  _error = error;
-  _data = nil;
+  self.error = error;
+  self.mutableData = nil;
   
   [self finish];
 }
@@ -118,7 +121,7 @@
 
 #pragma mark - Public interface
 - (NSData *)data {
-  return _data;
+  return self.mutableData;
 }
 
 - (void)setCompletion:(BITNetworkCompletionBlock)completion {
@@ -131,7 +134,7 @@
       if(strongSelf) {
         dispatch_async(dispatch_get_main_queue(), ^{
           if(!strongSelf.isCancelled) {
-            completion(strongSelf, strongSelf->_data, strongSelf->_error);
+            completion(strongSelf, strongSelf.data, strongSelf.error);
           }
           [strongSelf setCompletionBlock:nil];
         });

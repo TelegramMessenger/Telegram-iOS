@@ -66,6 +66,9 @@
 @property (nonatomic) NSInteger selectedAttachmentIndex;
 @property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
 
+@property (nonatomic) BOOL blockUserDataScreen;
+@property (nonatomic) BOOL actionSheetVisible;
+
 /**
  * Workaround for UIImagePickerController bug.
  * The statusBar shows up when the UIImagePickerController opens.
@@ -77,11 +80,7 @@
 @end
 
 
-@implementation BITFeedbackComposeViewController {
-  BOOL _blockUserDataScreen;
-  
-  BOOL _actionSheetVisible;
-}
+@implementation BITFeedbackComposeViewController
 
 
 #pragma mark - NSObject
@@ -280,8 +279,8 @@
   
   [super viewWillAppear:animated];
   
-  if (_text && self.textView.text.length == 0) {
-    self.textView.text = _text;
+  if (self.text && self.textView.text.length == 0) {
+    self.textView.text = self.text;
   }
   
   if (self.isStatusBarHiddenBeforeShowingPhotoPicker) {
@@ -316,7 +315,7 @@
       ([self.manager requireManualUserDataMissing] ||
        ![self.manager didAskUserData])
       ) {
-    if (!_blockUserDataScreen)
+    if (!self.blockUserDataScreen)
       [self setUserDataAction];
   } else {
     // Invoke delayed to fix iOS 7 iPad landscape bug, where this view will be moved if not called delayed
@@ -491,7 +490,7 @@
 }
 
 - (void)addPhotoAction:(id)sender {
-  if (_actionSheetVisible) return;
+  if (self.actionSheetVisible) return;
   
   self.isStatusBarHiddenBeforeShowingPhotoPicker = @([[UIApplication sharedApplication] isStatusBarHidden]);
   
@@ -597,7 +596,7 @@
 #pragma clang diagnostic push
   /*}*/
   
-  _actionSheetVisible = YES;
+  self.actionSheetVisible = YES;
   if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] respondsToSelector:@selector(isOperatingSystemAtLeastVersion:)] && [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
     [self.textView resignFirstResponder];
   }
@@ -607,7 +606,7 @@
 #pragma mark - BITFeedbackUserDataDelegate
 
 - (void)userDataUpdateCancelled {
-  _blockUserDataScreen = YES;
+  self.blockUserDataScreen = YES;
   
   if ([self.manager requireManualUserDataMissing]) {
     if ([self.navigationController respondsToSelector:@selector(dismissViewControllerAnimated:completion:)]) {
@@ -684,7 +683,7 @@
   } else {
     [self cancelAction];
   }
-  _actionSheetVisible = NO;
+  self.actionSheetVisible = NO;
 }
 
 

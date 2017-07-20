@@ -61,24 +61,22 @@
 @property (nonatomic) BOOL userDataComposeFlow;
 @property (nonatomic, strong) NSArray *cachedPreviewItems;
 @property (nonatomic, strong) NSOperationQueue *thumbnailQueue;
+@property (nonatomic) NSInteger deleteButtonSection;
+@property (nonatomic) NSInteger userButtonSection;
+@property (nonatomic) NSInteger numberOfSectionsBeforeRotation;
+@property (nonatomic) NSInteger numberOfMessagesBeforeRotation;
 
 @end
 
 
-@implementation BITFeedbackListViewController {
-  NSInteger _deleteButtonSection;
-  NSInteger _userButtonSection;
-  
-  NSInteger _numberOfSectionsBeforeRotation;
-  NSInteger _numberOfMessagesBeforeRotation;
-}
+@implementation BITFeedbackListViewController
 
 - (instancetype)initWithStyle:(UITableViewStyle)style {
   if ((self = [super initWithStyle:style])) {
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
     
     _deleteButtonSection = -1;
-    _userButtonSection = -1;
+    self.userButtonSection = -1;
     _userDataComposeFlow = NO;
     
     _numberOfSectionsBeforeRotation = -1;
@@ -253,7 +251,7 @@
 }
 
 - (void)deleteAllMessages {
-  [_manager deleteAllMessages];
+  [self.manager deleteAllMessages];
   [self refreshPreviewItems];
   
   [self.tableView reloadData];
@@ -411,14 +409,14 @@
 #pragma mark - UIViewController Rotation
 
 - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
-  _numberOfSectionsBeforeRotation = [self numberOfSectionsInTableView:self.tableView];
-  _numberOfMessagesBeforeRotation = [self.manager numberOfMessages];
+  self.numberOfSectionsBeforeRotation = [self numberOfSectionsInTableView:self.tableView];
+  self.numberOfMessagesBeforeRotation = [self.manager numberOfMessages];
   [self.tableView reloadData];
   [self.tableView beginUpdates];
   [self.tableView endUpdates];
   
-  _numberOfSectionsBeforeRotation = -1;
-  _numberOfMessagesBeforeRotation = -1;
+  self.numberOfSectionsBeforeRotation = -1;
+  self.numberOfMessagesBeforeRotation = -1;
   [self.tableView reloadData];
   
   [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
@@ -432,20 +430,20 @@
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-  if (_numberOfSectionsBeforeRotation >= 0)
-    return _numberOfSectionsBeforeRotation;
+  if (self.numberOfSectionsBeforeRotation >= 0)
+    return self.numberOfSectionsBeforeRotation;
   
   NSInteger sections = 2;
-  _deleteButtonSection = -1;
-  _userButtonSection = -1;
+  self.deleteButtonSection = -1;
+  self.userButtonSection = -1;
   
   if ([self.manager isManualUserDataAvailable] || [self.manager didAskUserData]) {
-    _userButtonSection = sections;
+    self.userButtonSection = sections;
     sections++;
   }
   
   if ([self.manager numberOfMessages] > 0) {
-    _deleteButtonSection = sections;
+    self.deleteButtonSection = sections;
     sections++;
   }
   
@@ -454,8 +452,8 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
   if (section == 1) {
-    if (_numberOfMessagesBeforeRotation >= 0)
-      return _numberOfMessagesBeforeRotation;
+    if (self.numberOfMessagesBeforeRotation >= 0)
+      return self.numberOfMessagesBeforeRotation;
     return [self.manager numberOfMessages];
   } else {
     return 1;
@@ -516,7 +514,7 @@
     
     if (indexPath.section == 0) {
       identifier = ButtonTopIdentifier;
-    } else if (indexPath.section == _userButtonSection) {
+    } else if (indexPath.section == self.userButtonSection) {
       identifier = ButtonBottomIdentifier;
     } else {
       identifier = ButtonDeleteIdentifier;
@@ -551,7 +549,7 @@
       } else {
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonWriteResponse");
       }
-    } else if (indexPath.section == _userButtonSection) {
+    } else if (indexPath.section == self.userButtonSection) {
       if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
           ([self.manager requireUserName] == BITFeedbackUserDataElementOptional && [self.manager userName] != nil)
           ) {
@@ -667,8 +665,8 @@
     BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
     BOOL messageHasAttachments = ([message attachments].count > 0);
     
-    if ([_manager deleteMessageAtIndex:indexPath.row]) {
-      if ([_manager numberOfMessages] > 0) {
+    if ([self.manager deleteMessageAtIndex:indexPath.row]) {
+      if ([self.manager numberOfMessages] > 0) {
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
       } else {
         [tableView reloadData];
@@ -701,9 +699,9 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 0) {
     [self newFeedbackAction:self];
-  } else if (indexPath.section == _userButtonSection) {
+  } else if (indexPath.section == self.userButtonSection) {
     [self setUserDataAction:self];
-  } else if (indexPath.section == _deleteButtonSection) {
+  } else if (indexPath.section == self.deleteButtonSection) {
     [self deleteAllMessagesAction:self];
   }
 }

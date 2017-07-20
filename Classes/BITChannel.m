@@ -27,9 +27,13 @@ static NSInteger const BITDebugBatchInterval = 3;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@implementation BITChannel {
-  id _appDidEnterBackgroundObserver;
-}
+@interface BITChannel ()
+
+@property (nonatomic, weak, nullable)  id appDidEnterBackgroundObserver;
+
+@end
+
+@implementation BITChannel
 
 @synthesize persistence = _persistence;
 @synthesize channelBlocked = _channelBlocked;
@@ -72,7 +76,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void) registerObservers {
   __weak typeof(self) weakSelf = self;
-  if(nil == _appDidEnterBackgroundObserver) {
+  if(nil == self.appDidEnterBackgroundObserver) {
     void (^notificationBlock)(NSNotification *note) = ^(NSNotification *note) {
       typeof(self) strongSelf = weakSelf;
       if ([strongSelf timerIsRunning]) {
@@ -91,7 +95,7 @@ NS_ASSUME_NONNULL_BEGIN
         }];
       }
     };
-    _appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
                                                                                        object:nil
                                                                                         queue:NSOperationQueue.mainQueue
                                                                                    usingBlock:notificationBlock];
@@ -99,9 +103,9 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (void) unregisterObservers {
-  if(_appDidEnterBackgroundObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_appDidEnterBackgroundObserver];
-    _appDidEnterBackgroundObserver = nil;
+  if(self.appDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidEnterBackgroundObserver];
+    self.appDidEnterBackgroundObserver = nil;
   }
 }
 
@@ -133,7 +137,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)resetQueue {
   bit_resetSafeJsonStream(&BITSafeJsonEventsString);
-  _dataItemCount = 0;
+  self.dataItemCount = 0;
 }
 
 #pragma mark - Adding to queue
@@ -163,11 +167,11 @@ NS_ASSUME_NONNULL_BEGIN
     NSDictionary *dict = [self dictionaryForTelemetryData:item];
     [strongSelf appendDictionaryToJsonStream:dict];
     
-    if (strongSelf->_dataItemCount >= self.maxBatchSize) {
+    if (strongSelf.dataItemCount >= self.maxBatchSize) {
       // Case 3: Max batch count has been reached, so write queue to disk and delete all items.
       [strongSelf persistDataItemQueue];
       
-    } else if (strongSelf->_dataItemCount == 1) {
+    } else if (strongSelf.dataItemCount == 1) {
       // Case 4: It is the first item, let's start the timer.
       if (![strongSelf timerIsRunning]) {
         [strongSelf startTimer];
@@ -194,9 +198,9 @@ NS_ASSUME_NONNULL_BEGIN
   
   BITEnvelope *envelope = [BITEnvelope new];
   envelope.time = bit_utcDateString([NSDate date]);
-  envelope.iKey = _telemetryContext.appIdentifier;
+  envelope.iKey = self.telemetryContext.appIdentifier;
   
-  envelope.tags = _telemetryContext.contextDictionary;
+  envelope.tags = self.telemetryContext.contextDictionary;
   envelope.data = data;
   envelope.name = telemetryData.envelopeTypeName;
   
@@ -225,7 +229,7 @@ NS_ASSUME_NONNULL_BEGIN
     // Since we can't persist every event right away, we write it to a simple C string.
     // This can then be written to disk by a signal handler in case of a crash.
     bit_appendStringToSafeJsonStream(string, &(BITSafeJsonEventsString));
-    _dataItemCount += 1;
+    self.dataItemCount += 1;
   }
 }
 
@@ -287,7 +291,7 @@ void bit_resetSafeJsonStream(char **string) {
     typeof(self) strongSelf = weakSelf;
     
     if(strongSelf) {
-      if (strongSelf->_dataItemCount > 0) {
+      if (strongSelf.dataItemCount > 0) {
         [strongSelf persistDataItemQueue];
       } else {
         strongSelf.channelBlocked = NO;
