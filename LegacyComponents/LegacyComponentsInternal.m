@@ -2,6 +2,8 @@
 
 #import "TGLocalization.h"
 
+#import <UIKit/UIKit.h>
+
 TGLocalization *effectiveLocalization() {
     return [[LegacyComponentsGlobals provider] effectiveLocalization];
 }
@@ -33,4 +35,76 @@ void TGLog(NSString *format, ...)
     va_start(L, format);
     [[LegacyComponentsGlobals provider] log:format :L];
     va_end(L);
+}
+
+int iosMajorVersion()
+{
+    static bool initialized = false;
+    static int version = 7;
+    if (!initialized)
+    {
+        switch ([[[UIDevice currentDevice] systemVersion] intValue])
+        {
+            case 4:
+                version = 4;
+                break;
+            case 5:
+                version = 5;
+                break;
+            case 6:
+                version = 6;
+                break;
+            case 7:
+                version = 7;
+                break;
+            case 8:
+                version = 8;
+                break;
+            case 9:
+                version = 9;
+                break;
+            case 10:
+                version = 10;
+                break;
+            case 11:
+                version = 11;
+                break;
+            default:
+                version = 9;
+                break;
+        }
+        
+        initialized = true;
+    }
+    return version;
+}
+
+int iosMinorVersion()
+{
+    static bool initialized = false;
+    static int version = 0;
+    if (!initialized)
+    {
+        NSString *versionString = [[UIDevice currentDevice] systemVersion];
+        NSRange range = [versionString rangeOfString:@"."];
+        if (range.location != NSNotFound)
+            version = [[versionString substringFromIndex:range.location + 1] intValue];
+        
+        initialized = true;
+    }
+    return version;
+}
+
+NSString *TGEncodeText(NSString *string, int key)
+{
+    NSMutableString *result = [[NSMutableString alloc] init];
+    
+    for (int i = 0; i < (int)[string length]; i++)
+    {
+        unichar c = [string characterAtIndex:i];
+        c += key;
+        [result appendString:[NSString stringWithCharacters:&c length:1]];
+    }
+    
+    return result;
 }

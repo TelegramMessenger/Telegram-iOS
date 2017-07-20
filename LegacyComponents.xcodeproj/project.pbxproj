@@ -156,6 +156,47 @@
 		D017786A1F1F99180044446D /* NSInputStream+TL.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778681F1F99180044446D /* NSInputStream+TL.m */; };
 		D017789D1F1FC99A0044446D /* LegacyComponentsInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = D017789B1F1FC99A0044446D /* LegacyComponentsInternal.h */; };
 		D017789E1F1FC99A0044446D /* LegacyComponentsInternal.m in Sources */ = {isa = PBXBuildFile; fileRef = D017789C1F1FC99A0044446D /* LegacyComponentsInternal.m */; };
+		D01778A71F1FD0900044446D /* TGFont.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778A31F1FD0900044446D /* TGFont.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778A81F1FD0900044446D /* TGFont.mm in Sources */ = {isa = PBXBuildFile; fileRef = D01778A41F1FD0900044446D /* TGFont.mm */; };
+		D01778A91F1FD0900044446D /* TGImageUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778A51F1FD0900044446D /* TGImageUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778AA1F1FD0900044446D /* TGImageUtils.mm in Sources */ = {isa = PBXBuildFile; fileRef = D01778A61F1FD0900044446D /* TGImageUtils.mm */; };
+		D01778AD1F1FFDB80044446D /* TGDateUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778AB1F1FFDB80044446D /* TGDateUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778AE1F1FFDB80044446D /* TGDateUtils.mm in Sources */ = {isa = PBXBuildFile; fileRef = D01778AC1F1FFDB80044446D /* TGDateUtils.mm */; };
+		D01778B21F1FFF810044446D /* TGLabel.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778B01F1FFF810044446D /* TGLabel.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778B31F1FFF810044446D /* TGLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778B11F1FFF810044446D /* TGLabel.m */; };
+		D01778B61F1FFFE30044446D /* TGToolbarButton.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778B41F1FFFE30044446D /* TGToolbarButton.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778B71F1FFFE30044446D /* TGToolbarButton.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778B51F1FFFE30044446D /* TGToolbarButton.m */; };
+		D01778BA1F2009880044446D /* Freedom.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778B81F2009880044446D /* Freedom.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778BB1F2009880044446D /* Freedom.mm in Sources */ = {isa = PBXBuildFile; fileRef = D01778B91F2009880044446D /* Freedom.mm */; };
+		D01778BE1F200A9A0044446D /* UIScrollView+TGHacks.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778BC1F200A9A0044446D /* UIScrollView+TGHacks.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778BF1F200A9A0044446D /* UIScrollView+TGHacks.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778BD1F200A9A0044446D /* UIScrollView+TGHacks.m */; };
+		D01778C21F200AF70044446D /* TGAnimationBlockDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778C01F200AF70044446D /* TGAnimationBlockDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778C31F200AF70044446D /* TGAnimationBlockDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778C11F200AF70044446D /* TGAnimationBlockDelegate.m */; };
+		D01778CB1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778C91F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778CC1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778CA1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.m */; };
+		D01778D71F2014E10044446D /* TGPopoverController.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778D51F2014E10044446D /* TGPopoverController.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778D81F2014E10044446D /* TGPopoverController.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778D61F2014E10044446D /* TGPopoverController.m */; };
+		D01778E51F20CAE60044446D /* TGNavigationController.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778D91F20CAE60044446D /* TGNavigationController.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778E61F20CAE60044446D /* TGNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778DA1F20CAE60044446D /* TGNavigationController.m */; };
+		D01778E71F20CAE60044446D /* TGNavigationBar.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778DB1F20CAE60044446D /* TGNavigationBar.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778E81F20CAE60044446D /* TGNavigationBar.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778DC1F20CAE60044446D /* TGNavigationBar.m */; };
+		D01778E91F20CAE60044446D /* TGViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778DD1F20CAE60044446D /* TGViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778EA1F20CAE60044446D /* TGViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = D01778DE1F20CAE60044446D /* TGViewController.mm */; };
+		D01778EB1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778DF1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778EC1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778E01F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.m */; };
+		D01778ED1F20CAE60044446D /* TGOverlayController.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778E11F20CAE60044446D /* TGOverlayController.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778EE1F20CAE60044446D /* TGOverlayController.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778E21F20CAE60044446D /* TGOverlayController.m */; };
+		D01778EF1F20CAE60044446D /* TGOverlayControllerWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778E31F20CAE60044446D /* TGOverlayControllerWindow.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778F01F20CAE60044446D /* TGOverlayControllerWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778E41F20CAE60044446D /* TGOverlayControllerWindow.m */; };
+		D01778F31F20CC7A0044446D /* TGRootControllerProtocol.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778F11F20CC7A0044446D /* TGRootControllerProtocol.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778F71F20CDAC0044446D /* TGHacks.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778F51F20CDAC0044446D /* TGHacks.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778F81F20CDAC0044446D /* TGHacks.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778F61F20CDAC0044446D /* TGHacks.m */; };
+		D01778FB1F20CF6B0044446D /* TGBackdropView.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778F91F20CF6B0044446D /* TGBackdropView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01778FC1F20CF6B0044446D /* TGBackdropView.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778FA1F20CF6B0044446D /* TGBackdropView.m */; };
+		D01778FF1F20D0040044446D /* TGColor.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778FD1F20D0040044446D /* TGColor.h */; };
+		D01779001F20D0040044446D /* TGColor.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778FE1F20D0040044446D /* TGColor.m */; };
+		D01779031F20D16B0044446D /* FreedomUIKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D01779011F20D16B0044446D /* FreedomUIKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D01779041F20D16B0044446D /* FreedomUIKit.m in Sources */ = {isa = PBXBuildFile; fileRef = D01779021F20D16B0044446D /* FreedomUIKit.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -310,6 +351,47 @@
 		D01778681F1F99180044446D /* NSInputStream+TL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSInputStream+TL.m"; sourceTree = "<group>"; };
 		D017789B1F1FC99A0044446D /* LegacyComponentsInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LegacyComponentsInternal.h; sourceTree = "<group>"; };
 		D017789C1F1FC99A0044446D /* LegacyComponentsInternal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LegacyComponentsInternal.m; sourceTree = "<group>"; };
+		D01778A31F1FD0900044446D /* TGFont.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGFont.h; sourceTree = "<group>"; };
+		D01778A41F1FD0900044446D /* TGFont.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGFont.mm; sourceTree = "<group>"; };
+		D01778A51F1FD0900044446D /* TGImageUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGImageUtils.h; sourceTree = "<group>"; };
+		D01778A61F1FD0900044446D /* TGImageUtils.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGImageUtils.mm; sourceTree = "<group>"; };
+		D01778AB1F1FFDB80044446D /* TGDateUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDateUtils.h; sourceTree = "<group>"; };
+		D01778AC1F1FFDB80044446D /* TGDateUtils.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGDateUtils.mm; sourceTree = "<group>"; };
+		D01778B01F1FFF810044446D /* TGLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLabel.h; sourceTree = "<group>"; };
+		D01778B11F1FFF810044446D /* TGLabel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLabel.m; sourceTree = "<group>"; };
+		D01778B41F1FFFE30044446D /* TGToolbarButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGToolbarButton.h; sourceTree = "<group>"; };
+		D01778B51F1FFFE30044446D /* TGToolbarButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGToolbarButton.m; sourceTree = "<group>"; };
+		D01778B81F2009880044446D /* Freedom.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Freedom.h; sourceTree = "<group>"; };
+		D01778B91F2009880044446D /* Freedom.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Freedom.mm; sourceTree = "<group>"; };
+		D01778BC1F200A9A0044446D /* UIScrollView+TGHacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIScrollView+TGHacks.h"; sourceTree = "<group>"; };
+		D01778BD1F200A9A0044446D /* UIScrollView+TGHacks.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIScrollView+TGHacks.m"; sourceTree = "<group>"; };
+		D01778C01F200AF70044446D /* TGAnimationBlockDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAnimationBlockDelegate.h; sourceTree = "<group>"; };
+		D01778C11F200AF70044446D /* TGAnimationBlockDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAnimationBlockDelegate.m; sourceTree = "<group>"; };
+		D01778C91F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGRTLScreenEdgePanGestureRecognizer.h; path = LegacyComponents/TGRTLScreenEdgePanGestureRecognizer.h; sourceTree = "<group>"; };
+		D01778CA1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGRTLScreenEdgePanGestureRecognizer.m; path = LegacyComponents/TGRTLScreenEdgePanGestureRecognizer.m; sourceTree = "<group>"; };
+		D01778D51F2014E10044446D /* TGPopoverController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGPopoverController.h; path = LegacyComponents/TGPopoverController.h; sourceTree = "<group>"; };
+		D01778D61F2014E10044446D /* TGPopoverController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGPopoverController.m; path = LegacyComponents/TGPopoverController.m; sourceTree = "<group>"; };
+		D01778D91F20CAE60044446D /* TGNavigationController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGNavigationController.h; path = LegacyComponents/TGNavigationController.h; sourceTree = "<group>"; };
+		D01778DA1F20CAE60044446D /* TGNavigationController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGNavigationController.m; path = LegacyComponents/TGNavigationController.m; sourceTree = "<group>"; };
+		D01778DB1F20CAE60044446D /* TGNavigationBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGNavigationBar.h; path = LegacyComponents/TGNavigationBar.h; sourceTree = "<group>"; };
+		D01778DC1F20CAE60044446D /* TGNavigationBar.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGNavigationBar.m; path = LegacyComponents/TGNavigationBar.m; sourceTree = "<group>"; };
+		D01778DD1F20CAE60044446D /* TGViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGViewController.h; path = LegacyComponents/TGViewController.h; sourceTree = "<group>"; };
+		D01778DE1F20CAE60044446D /* TGViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = TGViewController.mm; path = LegacyComponents/TGViewController.mm; sourceTree = "<group>"; };
+		D01778DF1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "TGViewController+TGRecursiveEnumeration.h"; path = "LegacyComponents/TGViewController+TGRecursiveEnumeration.h"; sourceTree = "<group>"; };
+		D01778E01F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "TGViewController+TGRecursiveEnumeration.m"; path = "LegacyComponents/TGViewController+TGRecursiveEnumeration.m"; sourceTree = "<group>"; };
+		D01778E11F20CAE60044446D /* TGOverlayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGOverlayController.h; path = LegacyComponents/TGOverlayController.h; sourceTree = "<group>"; };
+		D01778E21F20CAE60044446D /* TGOverlayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGOverlayController.m; path = LegacyComponents/TGOverlayController.m; sourceTree = "<group>"; };
+		D01778E31F20CAE60044446D /* TGOverlayControllerWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGOverlayControllerWindow.h; path = LegacyComponents/TGOverlayControllerWindow.h; sourceTree = "<group>"; };
+		D01778E41F20CAE60044446D /* TGOverlayControllerWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGOverlayControllerWindow.m; path = LegacyComponents/TGOverlayControllerWindow.m; sourceTree = "<group>"; };
+		D01778F11F20CC7A0044446D /* TGRootControllerProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGRootControllerProtocol.h; sourceTree = "<group>"; };
+		D01778F51F20CDAC0044446D /* TGHacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGHacks.h; sourceTree = "<group>"; };
+		D01778F61F20CDAC0044446D /* TGHacks.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGHacks.m; sourceTree = "<group>"; };
+		D01778F91F20CF6B0044446D /* TGBackdropView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBackdropView.h; sourceTree = "<group>"; };
+		D01778FA1F20CF6B0044446D /* TGBackdropView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBackdropView.m; sourceTree = "<group>"; };
+		D01778FD1F20D0040044446D /* TGColor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGColor.h; sourceTree = "<group>"; };
+		D01778FE1F20D0040044446D /* TGColor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGColor.m; sourceTree = "<group>"; };
+		D01779011F20D16B0044446D /* FreedomUIKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FreedomUIKit.h; sourceTree = "<group>"; };
+		D01779021F20D16B0044446D /* FreedomUIKit.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FreedomUIKit.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -346,6 +428,8 @@
 				D017776D1F1F91850044446D /* PS Coding */,
 				D017776C1F1F91780044446D /* Peers */,
 				D01777841F1F93430044446D /* Message */,
+				D01778AF1F1FFF6E0044446D /* Basic UI Components */,
+				D01778C81F200B810044446D /* Navigation UI Components */,
 				D017772A1F1F8F100044446D /* LegacyComponents.h */,
 				D017772B1F1F8F100044446D /* Info.plist */,
 			);
@@ -405,6 +489,20 @@
 				D01777751F1F92570044446D /* RMPhoneFormat.m */,
 				D01778671F1F99180044446D /* NSInputStream+TL.h */,
 				D01778681F1F99180044446D /* NSInputStream+TL.m */,
+				D01778A31F1FD0900044446D /* TGFont.h */,
+				D01778A41F1FD0900044446D /* TGFont.mm */,
+				D01778A51F1FD0900044446D /* TGImageUtils.h */,
+				D01778A61F1FD0900044446D /* TGImageUtils.mm */,
+				D01778AB1F1FFDB80044446D /* TGDateUtils.h */,
+				D01778AC1F1FFDB80044446D /* TGDateUtils.mm */,
+				D01778B81F2009880044446D /* Freedom.h */,
+				D01778B91F2009880044446D /* Freedom.mm */,
+				D01779011F20D16B0044446D /* FreedomUIKit.h */,
+				D01779021F20D16B0044446D /* FreedomUIKit.m */,
+				D01778F51F20CDAC0044446D /* TGHacks.h */,
+				D01778F61F20CDAC0044446D /* TGHacks.m */,
+				D01778FD1F20D0040044446D /* TGColor.h */,
+				D01778FE1F20D0040044446D /* TGColor.m */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -528,6 +626,48 @@
 			name = Message;
 			sourceTree = "<group>";
 		};
+		D01778AF1F1FFF6E0044446D /* Basic UI Components */ = {
+			isa = PBXGroup;
+			children = (
+				D01778B01F1FFF810044446D /* TGLabel.h */,
+				D01778B11F1FFF810044446D /* TGLabel.m */,
+				D01778B41F1FFFE30044446D /* TGToolbarButton.h */,
+				D01778B51F1FFFE30044446D /* TGToolbarButton.m */,
+				D01778BC1F200A9A0044446D /* UIScrollView+TGHacks.h */,
+				D01778BD1F200A9A0044446D /* UIScrollView+TGHacks.m */,
+				D01778C01F200AF70044446D /* TGAnimationBlockDelegate.h */,
+				D01778C11F200AF70044446D /* TGAnimationBlockDelegate.m */,
+				D01778F91F20CF6B0044446D /* TGBackdropView.h */,
+				D01778FA1F20CF6B0044446D /* TGBackdropView.m */,
+			);
+			name = "Basic UI Components";
+			sourceTree = "<group>";
+		};
+		D01778C81F200B810044446D /* Navigation UI Components */ = {
+			isa = PBXGroup;
+			children = (
+				D01778C91F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.h */,
+				D01778CA1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.m */,
+				D01778D51F2014E10044446D /* TGPopoverController.h */,
+				D01778D61F2014E10044446D /* TGPopoverController.m */,
+				D01778D91F20CAE60044446D /* TGNavigationController.h */,
+				D01778DA1F20CAE60044446D /* TGNavigationController.m */,
+				D01778DB1F20CAE60044446D /* TGNavigationBar.h */,
+				D01778DC1F20CAE60044446D /* TGNavigationBar.m */,
+				D01778DD1F20CAE60044446D /* TGViewController.h */,
+				D01778DE1F20CAE60044446D /* TGViewController.mm */,
+				D01778DF1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.h */,
+				D01778E01F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.m */,
+				D01778E11F20CAE60044446D /* TGOverlayController.h */,
+				D01778E21F20CAE60044446D /* TGOverlayController.m */,
+				D01778E31F20CAE60044446D /* TGOverlayControllerWindow.h */,
+				D01778E41F20CAE60044446D /* TGOverlayControllerWindow.m */,
+				D01778F11F20CC7A0044446D /* TGRootControllerProtocol.h */,
+			);
+			name = "Navigation UI Components";
+			path = ..;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -538,12 +678,20 @@
 				D01778691F1F99180044446D /* NSInputStream+TL.h in Headers */,
 				D01777531F1F8FE60044446D /* PSCoding.h in Headers */,
 				D017781D1F1F961D0044446D /* TGMessageEntityMention.h in Headers */,
+				D01778ED1F20CAE60044446D /* TGOverlayController.h in Headers */,
+				D01778F71F20CDAC0044446D /* TGHacks.h in Headers */,
+				D01779031F20D16B0044446D /* FreedomUIKit.h in Headers */,
+				D01778A91F1FD0900044446D /* TGImageUtils.h in Headers */,
 				D01778031F1F961D0044446D /* TGAuthorSignatureMediaAttachment.h in Headers */,
+				D01778D71F2014E10044446D /* TGPopoverController.h in Headers */,
 				D01778511F1F961D0044446D /* TGVideoInfo.h in Headers */,
 				D01777601F1F8FE60044446D /* TGBotInfo.h in Headers */,
 				D01778191F1F961D0044446D /* TGMessageEntityHashtag.h in Headers */,
+				D01778E51F20CAE60044446D /* TGNavigationController.h in Headers */,
 				D01777721F1F92420044446D /* TGPhoneUtils.h in Headers */,
+				D01778FB1F20CF6B0044446D /* TGBackdropView.h in Headers */,
 				D01777761F1F92570044446D /* RMPhoneFormat.h in Headers */,
+				D01778BE1F200A9A0044446D /* UIScrollView+TGHacks.h in Headers */,
 				D01777F61F1F961D0044446D /* TGPeerIdAdapter.h in Headers */,
 				D017782F1F1F961D0044446D /* TGReplyMarkupAttachment.h in Headers */,
 				D01778371F1F961D0044446D /* TGAudioMediaAttachment.h in Headers */,
@@ -554,7 +702,9 @@
 				D01778111F1F961D0044446D /* TGMessageEntityBold.h in Headers */,
 				D017789D1F1FC99A0044446D /* LegacyComponentsInternal.h in Headers */,
 				D01777621F1F8FE60044446D /* TGLocalization.h in Headers */,
+				D01778E71F20CAE60044446D /* TGNavigationBar.h in Headers */,
 				D01778481F1F961D0044446D /* TGDocumentAttributeFilename.h in Headers */,
+				D01778BA1F2009880044446D /* Freedom.h in Headers */,
 				D01778171F1F961D0044446D /* TGMessageEntityEmail.h in Headers */,
 				D01777F41F1F961D0044446D /* TGTextCheckingResult.h in Headers */,
 				D01778231F1F961D0044446D /* TGMessageEntityTextUrl.h in Headers */,
@@ -563,8 +713,11 @@
 				D017777E1F1F930B0044446D /* TGConversation.h in Headers */,
 				D017781F1F1F961D0044446D /* TGMessageEntityMentionName.h in Headers */,
 				D01777551F1F8FE60044446D /* PSKeyValueCoder.h in Headers */,
+				D01778EB1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.h in Headers */,
 				D01778011F1F961D0044446D /* TGMessageViewCountContentProperty.h in Headers */,
 				D017777A1F1F927A0044446D /* NSObject+TGLock.h in Headers */,
+				D01778A71F1FD0900044446D /* TGFont.h in Headers */,
+				D01778CB1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.h in Headers */,
 				D01778311F1F961D0044446D /* TGInstantPage.h in Headers */,
 				D01778271F1F961D0044446D /* TGMessageEntitiesAttachment.h in Headers */,
 				D017775B1F1F8FE60044446D /* PSKeyValueReader.h in Headers */,
@@ -572,13 +725,16 @@
 				D017782B1F1F961D0044446D /* TGBotReplyMarkupButton.h in Headers */,
 				D017784D1F1F961D0044446D /* TGForwardedMessageMediaAttachment.h in Headers */,
 				D01777F71F1F961D0044446D /* TGChannelBannedRights.h in Headers */,
+				D01778C21F200AF70044446D /* TGAnimationBlockDelegate.h in Headers */,
 				D01778401F1F961D0044446D /* TGDocumentAttributeSticker.h in Headers */,
 				D017783E1F1F961D0044446D /* TGDocumentAttributeImageSize.h in Headers */,
 				D017780F1F1F961D0044446D /* TGMessageEntity.h in Headers */,
 				D01777681F1F8FE60044446D /* TGUser.h in Headers */,
 				D01778571F1F961D0044446D /* TGLocationMediaAttachment.h in Headers */,
 				D01778531F1F961D0044446D /* TGVideoMediaAttachment.h in Headers */,
+				D01778EF1F20CAE60044446D /* TGOverlayControllerWindow.h in Headers */,
 				D01777641F1F8FE60044446D /* TGPluralization.h in Headers */,
+				D01778F31F20CC7A0044446D /* TGRootControllerProtocol.h in Headers */,
 				D017783B1F1F961D0044446D /* TGStickerPackReference.h in Headers */,
 				D01777571F1F8FE60044446D /* PSKeyValueDecoder.h in Headers */,
 				D017780D1F1F961D0044446D /* TGBotContextResultAttachment.h in Headers */,
@@ -592,6 +748,7 @@
 				D01777591F1F8FE60044446D /* PSKeyValueEncoder.h in Headers */,
 				D017784B1F1F961D0044446D /* TGUnsupportedMediaAttachment.h in Headers */,
 				D01778461F1F961D0044446D /* TGDocumentAttributeAudio.h in Headers */,
+				D01778AD1F1FFDB80044446D /* TGDateUtils.h in Headers */,
 				D017785B1F1F961D0044446D /* TGMediaAttachment.h in Headers */,
 				D01778351F1F961D0044446D /* TGReplyMessageMediaAttachment.h in Headers */,
 				D017780C1F1F961D0044446D /* TGViaUserAttachment.h in Headers */,
@@ -604,13 +761,17 @@
 				D01778251F1F961D0044446D /* TGMessageEntityUrl.h in Headers */,
 				D01777F91F1F961D0044446D /* TGChannelAdminRights.h in Headers */,
 				D01778051F1F961D0044446D /* TGWebDocument.h in Headers */,
+				D01778E91F20CAE60044446D /* TGViewController.h in Headers */,
 				D017781B1F1F961D0044446D /* TGMessageEntityItalic.h in Headers */,
 				D01777661F1F8FE60044446D /* TGStringUtils.h in Headers */,
+				D01778B21F1FFF810044446D /* TGLabel.h in Headers */,
 				D017785D1F1F961D0044446D /* TGActionMediaAttachment.h in Headers */,
 				D017784F1F1F961D0044446D /* TGContactMediaAttachment.h in Headers */,
 				D01778491F1F961D0044446D /* TGDocumentMediaAttachment.h in Headers */,
+				D01778B61F1FFFE30044446D /* TGToolbarButton.h in Headers */,
 				D01778441F1F961D0044446D /* TGDocumentAttributeAnimated.h in Headers */,
 				D01778591F1F961D0044446D /* TGImageMediaAttachment.h in Headers */,
+				D01778FF1F20D0040044446D /* TGColor.h in Headers */,
 				D01778291F1F961D0044446D /* TGBotReplyMarkup.h in Headers */,
 				D01777FB1F1F961D0044446D /* TGDatabaseMessageDraft.h in Headers */,
 			);
@@ -684,33 +845,44 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D01778D81F2014E10044446D /* TGPopoverController.m in Sources */,
 				D01778241F1F961D0044446D /* TGMessageEntityTextUrl.m in Sources */,
 				D01778471F1F961D0044446D /* TGDocumentAttributeAudio.m in Sources */,
 				D01778181F1F961D0044446D /* TGMessageEntityEmail.m in Sources */,
 				D017784A1F1F961D0044446D /* TGDocumentMediaAttachment.m in Sources */,
+				D01778B31F1FFF810044446D /* TGLabel.m in Sources */,
 				D017782E1F1F961D0044446D /* TGBotReplyMarkupRow.m in Sources */,
 				D01778561F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.m in Sources */,
+				D01778FC1F20CF6B0044446D /* TGBackdropView.m in Sources */,
 				D01778081F1F961D0044446D /* TGInvoiceMediaAttachment.m in Sources */,
 				D017782C1F1F961D0044446D /* TGBotReplyMarkupButton.m in Sources */,
 				D01777771F1F92570044446D /* RMPhoneFormat.m in Sources */,
 				D017781E1F1F961D0044446D /* TGMessageEntityMention.m in Sources */,
+				D01779041F20D16B0044446D /* FreedomUIKit.m in Sources */,
 				D01777FC1F1F961D0044446D /* TGDatabaseMessageDraft.m in Sources */,
 				D017777F1F1F930B0044446D /* TGConversation.m in Sources */,
 				D01777F51F1F961D0044446D /* TGTextCheckingResult.m in Sources */,
 				D01778581F1F961D0044446D /* TGLocationMediaAttachment.m in Sources */,
 				D017785C1F1F961D0044446D /* TGMediaAttachment.m in Sources */,
+				D01778BB1F2009880044446D /* Freedom.mm in Sources */,
 				D01778061F1F961D0044446D /* TGWebDocument.m in Sources */,
 				D01778001F1F961D0044446D /* TGMessageHole.m in Sources */,
+				D01778B71F1FFFE30044446D /* TGToolbarButton.m in Sources */,
 				D01777FA1F1F961D0044446D /* TGChannelAdminRights.m in Sources */,
 				D01778041F1F961D0044446D /* TGAuthorSignatureMediaAttachment.m in Sources */,
 				D01778411F1F961D0044446D /* TGDocumentAttributeSticker.m in Sources */,
 				D01778221F1F961D0044446D /* TGMessageEntityPre.m in Sources */,
+				D01778EC1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.m in Sources */,
 				D01777561F1F8FE60044446D /* PSKeyValueCoder.m in Sources */,
+				D01778C31F200AF70044446D /* TGAnimationBlockDelegate.m in Sources */,
 				D01777831F1F93250044446D /* TGImageInfo.mm in Sources */,
 				D017780E1F1F961D0044446D /* TGBotContextResultAttachment.m in Sources */,
 				D017781A1F1F961D0044446D /* TGMessageEntityHashtag.m in Sources */,
+				D01778EE1F20CAE60044446D /* TGOverlayController.m in Sources */,
 				D01777881F1F93550044446D /* TGMessage.mm in Sources */,
 				D017782A1F1F961D0044446D /* TGBotReplyMarkup.m in Sources */,
+				D01778CC1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.m in Sources */,
+				D01778EA1F20CAE60044446D /* TGViewController.mm in Sources */,
 				D01778321F1F961D0044446D /* TGInstantPage.m in Sources */,
 				D017776B1F1F909E0044446D /* LegacyComponentsGlobals.m in Sources */,
 				D01778301F1F961D0044446D /* TGReplyMarkupAttachment.m in Sources */,
@@ -720,11 +892,14 @@
 				D01778281F1F961D0044446D /* TGMessageEntitiesAttachment.m in Sources */,
 				D01777581F1F8FE60044446D /* PSKeyValueDecoder.m in Sources */,
 				D017783F1F1F961D0044446D /* TGDocumentAttributeImageSize.m in Sources */,
+				D01778E61F20CAE60044446D /* TGNavigationController.m in Sources */,
 				D017783D1F1F961D0044446D /* TGDocumentAttributeFilename.m in Sources */,
 				D017780B1F1F961D0044446D /* TGViaUserAttachment.m in Sources */,
+				D01778BF1F200A9A0044446D /* UIScrollView+TGHacks.m in Sources */,
 				D01777671F1F8FE60044446D /* TGStringUtils.mm in Sources */,
 				D017783C1F1F961D0044446D /* TGStickerPackReference.m in Sources */,
 				D017775A1F1F8FE60044446D /* PSKeyValueEncoder.m in Sources */,
+				D01778F81F20CDAC0044446D /* TGHacks.m in Sources */,
 				D01778021F1F961D0044446D /* TGMessageViewCountContentProperty.m in Sources */,
 				D01778261F1F961D0044446D /* TGMessageEntityUrl.m in Sources */,
 				D017785A1F1F961D0044446D /* TGImageMediaAttachment.m in Sources */,
@@ -732,11 +907,14 @@
 				D01777611F1F8FE60044446D /* TGBotInfo.m in Sources */,
 				D01778521F1F961D0044446D /* TGVideoInfo.mm in Sources */,
 				D01777651F1F8FE60044446D /* TGPluralization.m in Sources */,
+				D01778AE1F1FFDB80044446D /* TGDateUtils.mm in Sources */,
 				D01777F81F1F961D0044446D /* TGChannelBannedRights.m in Sources */,
 				D01778451F1F961D0044446D /* TGDocumentAttributeAnimated.m in Sources */,
 				D01778141F1F961D0044446D /* TGMessageEntityBotCommand.m in Sources */,
 				D01778541F1F961D0044446D /* TGVideoMediaAttachment.m in Sources */,
 				D01778361F1F961D0044446D /* TGReplyMessageMediaAttachment.m in Sources */,
+				D01778E81F20CAE60044446D /* TGNavigationBar.m in Sources */,
+				D01778F01F20CAE60044446D /* TGOverlayControllerWindow.m in Sources */,
 				D01778341F1F961D0044446D /* TGWebPageMediaAttachment.m in Sources */,
 				D01778431F1F961D0044446D /* TGDocumentAttributeVideo.m in Sources */,
 				D01778101F1F961D0044446D /* TGMessageEntity.m in Sources */,
@@ -744,13 +922,16 @@
 				D017775F1F1F8FE60044446D /* TGBotComandInfo.m in Sources */,
 				D01777FE1F1F961D0044446D /* TGMessageGroup.m in Sources */,
 				D01778121F1F961D0044446D /* TGMessageEntityBold.m in Sources */,
+				D01779001F20D0040044446D /* TGColor.m in Sources */,
 				D01778201F1F961D0044446D /* TGMessageEntityMentionName.m in Sources */,
+				D01778AA1F1FD0900044446D /* TGImageUtils.mm in Sources */,
 				D017780A1F1F961D0044446D /* TGGameMediaAttachment.m in Sources */,
 				D017783A1F1F961D0044446D /* TGAudioWaveform.m in Sources */,
 				D01777631F1F8FE60044446D /* TGLocalization.m in Sources */,
 				D01777731F1F92420044446D /* TGPhoneUtils.m in Sources */,
 				D017781C1F1F961D0044446D /* TGMessageEntityItalic.m in Sources */,
 				D01777691F1F8FE60044446D /* TGUser.m in Sources */,
+				D01778A81F1FD0900044446D /* TGFont.mm in Sources */,
 				D017789E1F1FC99A0044446D /* LegacyComponentsInternal.m in Sources */,
 				D017784E1F1F961D0044446D /* TGForwardedMessageMediaAttachment.m in Sources */,
 				D01778161F1F961D0044446D /* TGMessageEntityCode.m in Sources */,

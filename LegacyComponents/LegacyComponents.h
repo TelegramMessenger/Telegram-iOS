@@ -15,6 +15,12 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/NSObject+TGLock.h>
 #import <LegacyComponents/RMPhoneFormat.h>
 #import <LegacyComponents/NSInputStream+TL.h>
+#import <LegacyComponents/TGFont.h>
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGDateUtils.h>
+#import <LegacyComponents/Freedom.h>
+#import <LegacyComponents/FreedomUIKit.h>
+#import <LegacyComponents/TGHacks.h>
 
 #import <LegacyComponents/PSCoding.h>
 #import <LegacyComponents/PSData.h>
@@ -84,3 +90,19 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGMediaAttachment.h>
 #import <LegacyComponents/TGImageInfo.h>
 #import <LegacyComponents/TGMessage.h>
+
+#import <LegacyComponents/TGLabel.h>
+#import <LegacyComponents/TGToolbarButton.h>
+#import <LegacyComponents/UIScrollView+TGHacks.h>
+#import <LegacyComponents/TGAnimationBlockDelegate.h>
+#import <LegacyComponents/TGBackdropView.h>
+
+#import <LegacyComponents/TGRTLScreenEdgePanGestureRecognizer.h>
+#import <LegacyComponents/TGPopoverController.h>
+#import <LegacyComponents/TGNavigationController.h>
+#import <LegacyComponents/TGNavigationBar.h>
+#import <LegacyComponents/TGViewController.h>
+#import <LegacyComponents/TGViewController+TGRecursiveEnumeration.h>
+#import <LegacyComponents/TGOverlayController.h>
+#import <LegacyComponents/TGOverlayControllerWindow.h>
+#import <LegacyComponents/TGRootControllerProtocol.h>
