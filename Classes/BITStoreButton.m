@@ -60,16 +60,19 @@
 
 @end
 
+@interface BITStoreButton ()
 
-@implementation BITStoreButton {
-  CALayer *_defaultBorderLayer;
-  CALayer *_inActiveBorderLayer;
-}
+@property (nonatomic, strong) CALayer *defaultBorderLayer;
+@property (nonatomic, strong) CALayer *inActiveBorderLayer;
+
+@end
+
+@implementation BITStoreButton
 
 #pragma mark - private
 
 - (void)buttonPressed:(id)sender {
-  [_buttonDelegate storeButtonFired:self];
+  [self.buttonDelegate storeButtonFired:self];
 }
 
 - (void)animationDidStop:(NSString *)animationID finished:(NSNumber *)finished context:(void *)context {
@@ -97,13 +100,13 @@
   // show white or gray text, depending on the state
   if (self.buttonData.isEnabled) {
     [self setTitleColor:BIT_RGBCOLOR(35, 111, 251) forState:UIControlStateNormal];
-    [_defaultBorderLayer setHidden:NO];
-    [_inActiveBorderLayer setHidden:YES];
+    [self.defaultBorderLayer setHidden:NO];
+    [self.inActiveBorderLayer setHidden:YES];
   } else {
     [self setTitleColor:BIT_RGBCOLOR(148, 150, 151) forState:UIControlStateNormal];
     if (self.style == BITStoreButtonStyleOS7) {
-      [_defaultBorderLayer setHidden:YES];
-      [_inActiveBorderLayer setHidden:NO];
+      [self.defaultBorderLayer setHidden:YES];
+      [self.inActiveBorderLayer setHidden:NO];
     }
   }
   
@@ -142,8 +145,8 @@
   [self sizeToFit];
   if (self.superview) {
     CGRect cr = self.frame;
-    cr.origin.y = _customPadding.y;
-    cr.origin.x = self.superview.frame.size.width - cr.size.width - _customPadding.x * 2;
+    cr.origin.y = self.customPadding.y;
+    cr.origin.x = self.superview.frame.size.width - cr.size.width - self.customPadding.x * 2;
     self.frame = cr;
   }
 }
@@ -248,7 +251,7 @@
 }
 
 - (void)setButtonData:(BITStoreButtonData *)aButtonData animated:(BOOL)animated {
-  if (_buttonData != aButtonData) {
+  if (self.buttonData != aButtonData) {
     _buttonData = aButtonData;
   }
   

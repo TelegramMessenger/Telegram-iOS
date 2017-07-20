@@ -102,7 +102,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   if (self.appEnvironment != BITEnvironmentOther) { return; }
   
   // make sure this is called after startManager so all modules are fully setup
-  if (!_isSetup) {
+  if (!self.isSetup) {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(authenticateInstallation) object:nil];
     [self performSelector:@selector(authenticateInstallation) withObject:nil afterDelay:0.1];
   } else {
@@ -136,7 +136,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 #pragma mark - Identification
 
 - (void)identifyWithCompletion:(void (^)(BOOL identified, NSError *))completion {
-  if (_authenticationController) {
+  if (self.authenticationController) {
     BITHockeyLogDebug(@"Authentication controller already visible. Ignoring identify request");
     if (completion) { completion(NO, nil); }
     return;
@@ -441,14 +441,14 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
  * This method has to be called on the main queue
  */
 - (void)dismissAuthenticationControllerAnimated:(BOOL)animated completion:(void (^)(void))completion {
-  if (!_authenticationController) { return; }
-  UIViewController *presentingViewController = [_authenticationController presentingViewController];
+  if (!self.authenticationController) { return; }
+  UIViewController *presentingViewController = [self.authenticationController presentingViewController];
   
   // If there is no presenting view controller just remove view
   if (presentingViewController) {
-    [_authenticationController dismissViewControllerAnimated:animated completion:completion];
+    [self.authenticationController dismissViewControllerAnimated:animated completion:completion];
   } else {
-    [_authenticationController.navigationController.view removeFromSuperview];
+    [self.authenticationController.navigationController.view removeFromSuperview];
     if (completion) {
       completion();
     }

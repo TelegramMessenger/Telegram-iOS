@@ -37,10 +37,9 @@
 #import "BITHockeyAppClient.h"
 #import "tgmath.h"
 
-@interface BITAuthenticationViewController ()<UITextFieldDelegate> {
-  __weak UITextField *_emailField;
-}
+@interface BITAuthenticationViewController ()<UITextFieldDelegate>
 
+@property (nonatomic, weak) UITextField *emailField;
 @property (nonatomic, copy) NSString *password;
 
 @end
@@ -132,7 +131,7 @@
 - (void)setEmail:(NSString *)email {
   _email = email;
   if(self.isViewLoaded) {
-    _emailField.text = email;
+    self.emailField.text = email;
   }
 }
 
@@ -210,7 +209,7 @@
       textField.placeholder = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerEmailPlaceholder");
       textField.accessibilityHint = BITHockeyLocalizedString(@"HockeyAccessibilityHintRequired");
       textField.text = self.email;
-      _emailField = textField;
+      self.emailField = textField;
       
       textField.keyboardType = UIKeyboardTypeEmailAddress;
       if ([self requirePassword])

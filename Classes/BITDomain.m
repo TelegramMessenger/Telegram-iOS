@@ -37,8 +37,8 @@
 
 - (void)encodeWithCoder:(NSCoder *)coder {
   [super encodeWithCoder:coder];
-  [coder encodeObject:_envelopeTypeName forKey:@"_envelopeTypeName"];
-  [coder encodeObject:_dataTypeName forKey:@"_dataTypeName"];
+  [coder encodeObject:self.envelopeTypeName forKey:@"_envelopeTypeName"];
+  [coder encodeObject:self.dataTypeName forKey:@"_dataTypeName"];
 }
 
 

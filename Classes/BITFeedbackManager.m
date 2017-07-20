@@ -303,7 +303,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (void)updateMessagesListIfRequired {
   double now = [[NSDate date] timeIntervalSince1970];
-  if ((now - [_lastCheck timeIntervalSince1970] > 30)) {
+  if ((now - [self.lastCheck timeIntervalSince1970] > 30)) {
     [self updateMessagesList];
   }
 }
