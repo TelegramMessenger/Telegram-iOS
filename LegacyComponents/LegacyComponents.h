@@ -8,6 +8,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 
 
 #import <LegacyComponents/LegacyComponentsGlobals.h>
+#import <LegacyComponents/LegacyComponentsContext.h>
 #import <LegacyComponents/TGLocalization.h>
 #import <LegacyComponents/TGPluralization.h>
 #import <LegacyComponents/TGStringUtils.h>
@@ -21,6 +22,31 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/Freedom.h>
 #import <LegacyComponents/FreedomUIKit.h>
 #import <LegacyComponents/TGHacks.h>
+#import <LegacyComponents/TGImageBlur.h>
+#import <LegacyComponents/UIDevice+PlatformInfo.h>
+#import <LegacyComponents/TGObserverProxy.h>
+#import <LegacyComponents/TGModernCache.h>
+#import <LegacyComponents/TGMemoryImageCache.h>
+#import <LegacyComponents/LegacyComponentsAccessChecker.h>
+#import <LegacyComponents/TGTimerTarget.h>
+#import <LegacyComponents/TGKeyCommand.h>
+#import <LegacyComponents/TGKeyCommandController.h>
+
+#import <LegacyComponents/JNWSpringAnimation.h>
+#import <LegacyComponents/POPAnimationEvent.h>
+#import <LegacyComponents/POPAnimationTracer.h>
+#import <LegacyComponents/POPAnimation.h>
+#import <LegacyComponents/POPBasicAnimation.h>
+#import <LegacyComponents/POPCustomAnimation.h>
+#import <LegacyComponents/POPDecayAnimation.h>
+#import <LegacyComponents/POPPropertyAnimation.h>
+#import <LegacyComponents/POPSpringAnimation.h>
+
+#import <LegacyComponents/lmdb.h>
+#import <LegacyComponents/PSLMDBTable.h>
+#import <LegacyComponents/PSLMDBKeyValueStore.h>
+#import <LegacyComponents/PSLMDBKeyValueReaderWriter.h>
+#import <LegacyComponents/PSLMDBKeyValueCursor.h>
 
 #import <LegacyComponents/PSCoding.h>
 #import <LegacyComponents/PSData.h>
@@ -96,6 +122,15 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/UIScrollView+TGHacks.h>
 #import <LegacyComponents/TGAnimationBlockDelegate.h>
 #import <LegacyComponents/TGBackdropView.h>
+#import <LegacyComponents/UIImage+TG.h>
+#import <LegacyComponents/TGStaticBackdropAreaData.h>
+#import <LegacyComponents/TGStaticBackdropImageData.h>
+#import <LegacyComponents/TGImageLuminanceMap.h>
+#import <LegacyComponents/TGFullscreenContainerView.h>
+#import <LegacyComponents/TGDoubleTapGestureRecognizer.h>
+#import <LegacyComponents/TGModernButton.h>
+#import <LegacyComponents/TGModernToolbarButton.h>
+#import <LegacyComponents/TGModernBackToolbarButton.h>
 
 #import <LegacyComponents/TGRTLScreenEdgePanGestureRecognizer.h>
 #import <LegacyComponents/TGPopoverController.h>
@@ -106,3 +141,51 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGOverlayController.h>
 #import <LegacyComponents/TGOverlayControllerWindow.h>
 #import <LegacyComponents/TGRootControllerProtocol.h>
+
+#import <LegacyComponents/TGMediaAssetsLibrary.h>
+#import <LegacyComponents/TGMediaAssetsModernLibrary.h>
+#import <LegacyComponents/TGMediaAsset.h>
+#import <LegacyComponents/TGMediaAssetFetchResult.h>
+#import <LegacyComponents/TGMediaAssetFetchResultChange.h>
+#import <LegacyComponents/TGMediaAssetGroup.h>
+#import <LegacyComponents/TGMediaAssetMoment.h>
+#import <LegacyComponents/TGMediaAssetMomentList.h>
+#import <LegacyComponents/TGMediaAssetImageSignals.h>
+#import <LegacyComponents/TGMediaSelectionContext.h>
+#import <LegacyComponents/TGMediaEditingContext.h>
+
+#import <LegacyComponents/TGModernGalleryZoomableItemViewContent.h>
+#import <LegacyComponents/TGModernGalleryZoomableScrollView.h>
+#import <LegacyComponents/TGModernGalleryZoomableScrollViewSwipeGestureRecognizer.h>
+#import <LegacyComponents/TGModernGalleryVideoView.h>
+#import <LegacyComponents/TGModernGalleryScrollView.h>
+#import <LegacyComponents/TGModernGalleryItem.h>
+#import <LegacyComponents/TGModernGalleryItemView.h>
+#import <LegacyComponents/TGModernGalleryDefaultFooterAccessoryView.h>
+#import <LegacyComponents/TGModernGalleryDefaultFooterView.h>
+#import <LegacyComponents/TGModernGalleryDefaultHeaderView.h>
+#import <LegacyComponents/TGModernGalleryDefaultInterfaceView.h>
+#import <LegacyComponents/TGModernGalleryInterfaceView.h>
+#import <LegacyComponents/TGModernGalleryImageItemContainerView.h>
+#import <LegacyComponents/TGModernGalleryZoomableItemView.h>
+#import <LegacyComponents/TGModernGalleryModel.h>
+#import <LegacyComponents/TGModernGalleryTransitionView.h>
+#import <LegacyComponents/TGModernGalleryView.h>
+#import <LegacyComponents/TGModernGalleryContainerView.h>
+#import <LegacyComponents/TGModernGalleryEmbeddedStickersHeaderView.h>
+#import <LegacyComponents/TGModernGalleryController.h>
+
+#import <LegacyComponents/TGPhotoEditorUtils.h>
+#import <LegacyComponents/PGPhotoEditorValues.h>
+#import <LegacyComponents/TGVideoEditAdjustments.h>
+#import <LegacyComponents/AVURLAsset+TGMediaItem.h>
+#import <LegacyComponents/UIImage+TGMediaEditableItem.h>
+#import <LegacyComponents/TGMediaVideoConverter.h>
+
+#import <LegacyComponents/TGPhotoEditorAnimation.h>
+
+#import <LegacyComponents/TGPaintingData.h>
+#import <LegacyComponents/TGPaintUtils.h>
+#import <LegacyComponents/TGPhotoPaintEntity.h>
+#import <LegacyComponents/TGPhotoPaintStickerEntity.h>
+#import <LegacyComponents/TGPaintUndoManager.h>

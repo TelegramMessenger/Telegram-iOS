@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 
 #import <LegacyComponents/TGRootControllerProtocol.h>
+#import <LegacyComponents/LegacyComponentsAccessChecker.h>
 
 @class TGLocalization;
 @class UIViewController;
@@ -22,6 +23,13 @@
 - (void)forceStatusBarAppearanceUpdate;
 
 - (void)disableUserInteractionFor:(NSTimeInterval)timeInterval;
+- (void)setIdleTimerDisabled:(bool)value;
+
+- (void)pauseMusicPlayback;
+
+- (NSString *)dataStoragePath;
+
+- (id<LegacyComponentsAccessChecker>)accessChecker;
 
 @end
 
