@@ -486,7 +486,7 @@
 }
 
 - (void)setAppStoreButtonState:(AppStoreButtonState)anAppStoreButtonState animated:(BOOL)animated {
-  self.appStoreButtonState = anAppStoreButtonState;
+  _appStoreButtonState = anAppStoreButtonState;
   
   switch (anAppStoreButtonState) {
     case AppStoreButtonStateOffline:

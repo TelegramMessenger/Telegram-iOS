@@ -315,25 +315,29 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
 }
 
 @interface BITAttributedLabel ()
+
 @property (readwrite, nonatomic, copy) NSAttributedString *inactiveAttributedText;
 @property (readwrite, nonatomic, copy) NSAttributedString *renderedAttributedText;
 @property (readwrite, atomic, strong) NSDataDetector *dataDetector;
 @property (readwrite, nonatomic, strong) NSArray *linkModels;
 @property (readwrite, nonatomic, strong) BITAttributedLabelLink *activeLink;
 @property (readwrite, nonatomic, strong) NSArray *accessibilityElements;
+@property (readwrite, nonatomic) CTFramesetterRef framesetter;
+@property (readwrite, nonatomic) CTFramesetterRef highlightFramesetter;
+@property (readwrite, nonatomic) BOOL needsFramesetter;
+
+// Redeclare BITAttributedLabel properties with readwrite attribute
+@property (nonatomic, strong, readwrite) UILongPressGestureRecognizer *longPressGestureRecognizer;
 
 - (void) longPressGestureDidFire:(UILongPressGestureRecognizer *)sender;
 @end
 
-@implementation BITAttributedLabel {
-@private
-    BOOL _needsFramesetter;
-    CTFramesetterRef _framesetter;
-    CTFramesetterRef _highlightFramesetter;
-}
+@implementation BITAttributedLabel
 
 @dynamic text;
 @synthesize attributedText = _attributedText;
+@synthesize framesetter = _framesetter;
+@synthesize highlightFramesetter = _highlightFramesetter;
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 70000
 
@@ -411,16 +415,16 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     self.linkAttributes = [NSDictionary dictionaryWithDictionary:mutableLinkAttributes];
     self.activeLinkAttributes = [NSDictionary dictionaryWithDictionary:mutableActiveLinkAttributes];
     self.inactiveLinkAttributes = [NSDictionary dictionaryWithDictionary:mutableInactiveLinkAttributes];
-    _extendsLinkTouchArea = YES;
-    _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self
+    self.extendsLinkTouchArea = YES;
+    self.longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self
                                                                                 action:@selector(longPressGestureDidFire:)];
     self.longPressGestureRecognizer.delegate = self;
     [self addGestureRecognizer:self.longPressGestureRecognizer];
 }
 
 - (void)dealloc {
-    if (_framesetter) {
-        CFRelease(_framesetter);
+    if (self.framesetter) {
+        CFRelease(self.framesetter);
     }
     
     if (_highlightFramesetter) {
@@ -481,7 +485,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
 }
 
 - (NSArray *) links {
-    return [_linkModels valueForKey:@"result"];
+    return [self.linkModels valueForKey:@"result"];
 }
 
 - (void)setLinkModels:(NSArray *)linkModels {
@@ -494,16 +498,16 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     // Reset the rendered attributed text so it has a chance to regenerate
     self.renderedAttributedText = nil;
     
-    _needsFramesetter = YES;
+    self.needsFramesetter = YES;
 }
 
 - (CTFramesetterRef)framesetter {
-    if (_needsFramesetter) {
+    if (self.needsFramesetter) {
         @synchronized(self) {
             CTFramesetterRef framesetter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)self.renderedAttributedText);
             [self setFramesetter:framesetter];
             [self setHighlightFramesetter:nil];
-            _needsFramesetter = NO;
+            self.needsFramesetter = NO;
             
             if (framesetter) {
                 CFRelease(framesetter);
@@ -1352,7 +1356,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
         // If we adjusted the font size, set it back to its original size
         if (originalAttributedText) {
             // Use ivar directly to avoid clearing out framesetter and renderedAttributedText
-            _attributedText = originalAttributedText;
+            self.attributedText = originalAttributedText;
         }
     }
     CGContextRestoreGState(c);
