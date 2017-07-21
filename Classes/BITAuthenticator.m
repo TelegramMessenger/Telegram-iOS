@@ -202,9 +202,9 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
       viewController.tableViewTitle = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataEmailDescription");
       break;
   }
-  
-  if ([self.delegate respondsToSelector:@selector(authenticator:willShowAuthenticationController:)]) {
-    [self.delegate authenticator:self willShowAuthenticationController:viewController];
+  id strongDelegate = self.delegate;
+  if ([strongDelegate respondsToSelector:@selector(authenticator:willShowAuthenticationController:)]) {
+    [strongDelegate authenticator:self willShowAuthenticationController:viewController];
   }
   
   NSAssert(viewController, @"ViewController should've been created");

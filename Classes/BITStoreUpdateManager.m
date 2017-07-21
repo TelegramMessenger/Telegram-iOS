@@ -93,12 +93,14 @@
 }
 
 - (void) unregisterObservers {
-  if(self.appDidBecomeActiveObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidBecomeActiveObserver];
+  id strongAppDidBecomeActiveObserver = self.appDidBecomeActiveObserver;
+  id strongNetworkDidBecomeReachableObserver = self.networkDidBecomeReachableObserver;
+  if(strongAppDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongAppDidBecomeActiveObserver];
     self.appDidBecomeActiveObserver = nil;
   }
-  if(self.networkDidBecomeReachableObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.networkDidBecomeReachableObserver];
+  if(strongNetworkDidBecomeReachableObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongNetworkDidBecomeReachableObserver];
     self.networkDidBecomeReachableObserver = nil;
   }
 }
@@ -302,8 +304,9 @@
   }
   
   if ([self isUpdateAvailable]) {
-    if ([self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:storeURL:)]) {
-      [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:self.latestStoreVersion storeURL:[NSURL URLWithString:self.appStoreURLString]];
+    id strongDelegate = self.delegate;
+    if ([strongDelegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:storeURL:)]) {
+      [strongDelegate detectedUpdateFromStoreUpdateManager:self newVersion:self.latestStoreVersion storeURL:[NSURL URLWithString:self.appStoreURLString]];
     }
     
     if (self.updateUIEnabled && BITHockeyBundle()) {

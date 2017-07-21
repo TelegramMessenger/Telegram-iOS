@@ -345,11 +345,12 @@
 }
 
 - (void)imageButtonPressed:(id)sender {
-  if ([self.delegate respondsToSelector:@selector(listCell:didSelectAttachment:)]) {
+  id strongDelegate = self.delegate;
+  if ([strongDelegate respondsToSelector:@selector(listCell:didSelectAttachment:)]) {
     NSUInteger index = [self.attachmentViews indexOfObject:sender];
     if (index != NSNotFound && [self.message previewableAttachments].count > index) {
       BITFeedbackMessageAttachment *attachment = [self.message previewableAttachments][index];
-      [self.delegate listCell:self didSelectAttachment:attachment];
+      [strongDelegate listCell:self didSelectAttachment:attachment];
     }
   }
 }

@@ -310,10 +310,10 @@
 
 - (void)viewDidAppear:(BOOL)animated {
   [super viewDidAppear:animated];
-  
-  if ([self.manager askManualUserDataAvailable] &&
-      ([self.manager requireManualUserDataMissing] ||
-       ![self.manager didAskUserData])
+  BITFeedbackManager *strongManager = self.manager;
+  if ([strongManager askManualUserDataAvailable] &&
+      ([strongManager requireManualUserDataMissing] ||
+       ![strongManager didAskUserData])
       ) {
     if (!self.blockUserDataScreen)
       [self setUserDataAction];
@@ -482,8 +482,9 @@
 }
 
 - (void)dismissWithResult:(BITFeedbackComposeResult) result {
-  if([self.delegate respondsToSelector:@selector(feedbackComposeViewController:didFinishWithResult:)]) {
-    [self.delegate feedbackComposeViewController:self didFinishWithResult:result];
+  id strongDelegate = self.delegate;
+  if([strongDelegate respondsToSelector:@selector(feedbackComposeViewController:didFinishWithResult:)]) {
+    [strongDelegate feedbackComposeViewController:self didFinishWithResult:result];
   } else {
     [self dismissViewControllerAnimated:YES completion:nil];
   }

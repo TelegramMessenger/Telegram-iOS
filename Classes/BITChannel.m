@@ -103,8 +103,9 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (void) unregisterObservers {
-  if(self.appDidEnterBackgroundObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:(id)self.appDidEnterBackgroundObserver];
+  id strongObserver = self.appDidEnterBackgroundObserver;
+  if(strongObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongObserver];
     self.appDidEnterBackgroundObserver = nil;
   }
 }

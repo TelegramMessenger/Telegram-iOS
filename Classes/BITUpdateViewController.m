@@ -79,9 +79,10 @@
 }
 
 - (void)updateAppStoreHeader {
-  BITAppVersionMetaInfo *appVersion = self.updateManager.newestAppVersion;
+  BITUpdateManager *strongManager = self.updateManager;
+  BITAppVersionMetaInfo *appVersion = strongManager.newestAppVersion;
   self.appStoreHeader.headerText = appVersion.name;
-  self.appStoreHeader.subHeaderText = self.updateManager.companyName;
+  self.appStoreHeader.subHeaderText = strongManager.companyName;
 }
 
 - (void)appDidBecomeActive {
@@ -220,11 +221,12 @@
   }
   
   NSString *installed = @"";
-  if ([appVersion.version isEqualToString:[self.updateManager currentAppVersion]]) {
+  BITUpdateManager *strongManager = self.updateManager;
+  if ([appVersion.version isEqualToString:[strongManager currentAppVersion]]) {
     installed = [NSString stringWithFormat:@"<span style=\"float:right;\"><b>%@</b></span>", BITHockeyLocalizedString(@"UpdateInstalled")];
   }
   
-  if ([appVersion isEqual:self.updateManager.newestAppVersion]) {
+  if ([appVersion isEqual:strongManager.newestAppVersion]) {
     if ([appVersion.notes length] > 0) {
       cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, appVersion.notes];
     } else {
@@ -259,13 +261,13 @@
 
 - (void)dealloc {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
-  
+  BITUpdateManager *strongManager = self.updateManager;
   // test if KVO's are registered. if class is destroyed before it was shown(viewDidLoad) no KVOs are registered.
   if (self.kvoRegistered) {
-    [self.updateManager removeObserver:self forKeyPath:@"checkInProgress"];
-    [self.updateManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
-    [self.updateManager removeObserver:self forKeyPath:@"updateAvailable"];
-    [self.updateManager removeObserver:self forKeyPath:@"appVersions"];
+    [strongManager removeObserver:self forKeyPath:@"checkInProgress"];
+    [strongManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
+    [strongManager removeObserver:self forKeyPath:@"updateAvailable"];
+    [strongManager removeObserver:self forKeyPath:@"appVersions"];
     self.kvoRegistered = NO;
   }
   
@@ -284,12 +286,13 @@
   // add notifications only to loaded view
   NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
   [dnc addObserver:self selector:@selector(appDidBecomeActive) name:UIApplicationDidBecomeActiveNotification object:nil];
-  
+
   // hook into manager with kvo!
-  [self.updateManager addObserver:self forKeyPath:@"checkInProgress" options:0 context:nil];
-  [self.updateManager addObserver:self forKeyPath:@"isUpdateURLOffline" options:0 context:nil];
-  [self.updateManager addObserver:self forKeyPath:@"updateAvailable" options:0 context:nil];
-  [self.updateManager addObserver:self forKeyPath:@"appVersions" options:0 context:nil];
+  BITUpdateManager *strongManager = self.updateManager;
+  [strongManager addObserver:self forKeyPath:@"checkInProgress" options:0 context:nil];
+  [strongManager addObserver:self forKeyPath:@"isUpdateURLOffline" options:0 context:nil];
+  [strongManager addObserver:self forKeyPath:@"updateAvailable" options:0 context:nil];
+  [strongManager addObserver:self forKeyPath:@"appVersions" options:0 context:nil];
   self.kvoRegistered = YES;
   
   self.tableView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);

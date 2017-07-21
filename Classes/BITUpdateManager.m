@@ -133,9 +133,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     // we only care about iOS 8 or later
     if (bit_isPreiOS8Environment()) return;
-    
-    if ([self.delegate respondsToSelector:@selector(updateManagerWillExitApp:)]) {
-      [self.delegate updateManagerWillExitApp:self];
+    id strongDelegate = self.delegate;
+    if ([strongDelegate respondsToSelector:@selector(updateManagerWillExitApp:)]) {
+      [strongDelegate updateManagerWillExitApp:self];
     }
     
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
@@ -203,16 +203,19 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void) unregisterObservers {
-  if(self.appDidEnterBackgroundObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidEnterBackgroundObserver];
+  id strongDidEnterBackgroundObserver = self.appDidEnterBackgroundObserver;
+  id strongDidBecomeActiveObserver = self.appDidBecomeActiveObserver;
+  id strongNetworkDidBecomeReachableObserver = self.networkDidBecomeReachableObserver;
+  if(strongDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongDidEnterBackgroundObserver];
     self.appDidEnterBackgroundObserver = nil;
   }
-  if(self.appDidBecomeActiveObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidBecomeActiveObserver];
+  if(strongDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongDidBecomeActiveObserver];
     self.appDidBecomeActiveObserver = nil;
   }
-  if(self.networkDidBecomeReachableObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.networkDidBecomeReachableObserver];
+  if(strongNetworkDidBecomeReachableObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongNetworkDidBecomeReachableObserver];
     self.networkDidBecomeReachableObserver = nil;
   }
 }
@@ -236,9 +239,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (![self expiryDateReached]) return;
   
   BOOL shouldShowDefaultAlert = YES;
-  
-  if ([self.delegate respondsToSelector:@selector(shouldDisplayExpiryAlertForUpdateManager:)]) {
-    shouldShowDefaultAlert = [self.delegate shouldDisplayExpiryAlertForUpdateManager:self];
+  id strongDelegate = self.delegate;
+  if ([strongDelegate respondsToSelector:@selector(shouldDisplayExpiryAlertForUpdateManager:)]) {
+    shouldShowDefaultAlert = [strongDelegate shouldDisplayExpiryAlertForUpdateManager:self];
   }
   
   if (shouldShowDefaultAlert) {
@@ -247,8 +250,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       self.blockingScreenMessage = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName];
     [self showBlockingScreen:self.blockingScreenMessage image:@"authorize_denied.png"];
 
-    if ([self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
-      [self.delegate didDisplayExpiryAlertForUpdateManager:self];
+    if ([strongDelegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
+      [strongDelegate didDisplayExpiryAlertForUpdateManager:self];
     }
     
     // the UI is now blocked, make sure we don't add our UI on top of it over and over again
@@ -544,9 +547,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)showCheckForUpdateAlert {
   if (self.appEnvironment != BITEnvironmentOther) return;
   if ([self isUpdateManagerDisabled]) return;
-
-  if ([self.delegate respondsToSelector:@selector(shouldDisplayUpdateAlertForUpdateManager:forShortVersion:forVersion:)] &&
-      ![self.delegate shouldDisplayUpdateAlertForUpdateManager:self forShortVersion:[self.newestAppVersion shortVersion] forVersion:[self.newestAppVersion version]]) {
+  id strongDelegate = self.delegate;
+  if ([strongDelegate respondsToSelector:@selector(shouldDisplayUpdateAlertForUpdateManager:forShortVersion:forVersion:)] &&
+      ![strongDelegate shouldDisplayUpdateAlertForUpdateManager:self forShortVersion:[self.newestAppVersion shortVersion] forVersion:[self.newestAppVersion version]]) {
     return;
   }
 
@@ -995,9 +998,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     if ([self isUpdateManagerDisabled]) return;
     
     BITHockeyLogDebug(@"INFO: Starting UpdateManager");
-    
-    if ([self.delegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
-      self.sendUsageData = [self.delegate updateManagerShouldSendUsageData:self];
+    id strongDelegate = self.delegate;
+    if ([strongDelegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
+      self.sendUsageData = [strongDelegate updateManagerShouldSendUsageData:self];
     }
     
     [self checkExpiryDateReached];

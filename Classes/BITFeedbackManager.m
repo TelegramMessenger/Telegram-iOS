@@ -171,16 +171,19 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)unregisterObservers {
-  if (self.appDidEnterBackgroundObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidEnterBackgroundObserver];
+  id strongDidEnterBackgroundObserver = self.appDidEnterBackgroundObserver;
+  id strongDidBecomeActiveObserver = self.appDidBecomeActiveObserver;
+  id strongNetworkDidBecomeReachableObserver = self.networkDidBecomeReachableObserver;
+  if (strongDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongDidEnterBackgroundObserver];
     self.appDidEnterBackgroundObserver = nil;
   }
-  if (self.appDidBecomeActiveObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidBecomeActiveObserver];
+  if (strongDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongDidBecomeActiveObserver];
     self.appDidBecomeActiveObserver = nil;
   }
-  if (self.networkDidBecomeReachableObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.networkDidBecomeReachableObserver];
+  if (strongNetworkDidBecomeReachableObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongNetworkDidBecomeReachableObserver];
     self.networkDidBecomeReachableObserver = nil;
   }
 }
@@ -224,15 +227,16 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BITFeedbackComposeViewController *composeViewController = [[BITFeedbackComposeViewController alloc] init];
 
   NSArray *preparedItems = [NSArray array];
-  if ([self.delegate respondsToSelector:@selector(preparedItemsForFeedbackManager:)]) {
-    preparedItems = [preparedItems arrayByAddingObjectsFromArray:(NSArray *)[self.delegate preparedItemsForFeedbackManager:self]];
+  id strongDelegate = self.delegate;
+  if ([strongDelegate respondsToSelector:@selector(preparedItemsForFeedbackManager:)]) {
+    preparedItems = [preparedItems arrayByAddingObjectsFromArray:(NSArray *)[strongDelegate preparedItemsForFeedbackManager:self]];
   }
 
   [composeViewController prepareWithItems:preparedItems];
   [composeViewController setHideImageAttachmentButton:self.feedbackComposeHideImageAttachmentButton];
 
   // by default set the delegate to be identical to the one of BITFeedbackManager
-  [composeViewController setDelegate:self.delegate];
+  [composeViewController setDelegate:strongDelegate];
   return composeViewController;
 }
 
@@ -283,9 +287,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (BOOL)allowFetchingNewMessages {
   BOOL fetchNewMessages = YES;
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(allowAutomaticFetchingForNewFeedbackForManager:)]) {
-    fetchNewMessages = [[BITHockeyManager sharedHockeyManager].delegate
-            allowAutomaticFetchingForNewFeedbackForManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(allowAutomaticFetchingForNewFeedbackForManager:)]) {
+    fetchNewMessages = [strongDelegate allowAutomaticFetchingForNewFeedbackForManager:self];
   }
   return fetchNewMessages;
 }
@@ -312,11 +316,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL availableViaDelegate = NO;
 
   NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID];
-
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
-    userID = [[BITHockeyManager sharedHockeyManager].delegate
-            userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                  componentManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+    userID = [strongDelegate userIDForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
 
   if (userID) {
@@ -331,11 +333,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL availableViaDelegate = NO;
 
   NSString *userName = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName];
-
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
-    userName = [[BITHockeyManager sharedHockeyManager].delegate
-            userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                    componentManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
+    userName = [strongDelegate userNameForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
 
   if (userName) {
@@ -351,11 +351,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL availableViaDelegate = NO;
 
   NSString *userEmail = [self stringValueFromKeychainForKey:kBITHockeyMetaUserEmail];
-
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
-    userEmail = [[BITHockeyManager sharedHockeyManager].delegate
-            userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                     componentManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
+    userEmail = [strongDelegate userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
 
   if (userEmail) {
@@ -650,8 +648,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (BOOL)shouldForceNewThread {
-  if (self.delegate && [self.delegate respondsToSelector:@selector(forceNewFeedbackThreadForFeedbackManager:)]) {
-    return [self.delegate forceNewFeedbackThreadForFeedbackManager:self];
+  id strongDelegate = self.delegate;
+  if (strongDelegate && [strongDelegate respondsToSelector:@selector(forceNewFeedbackThreadForFeedbackManager:)]) {
+    return [strongDelegate forceNewFeedbackThreadForFeedbackManager:self];
   } else {
     return NO;
   }
@@ -826,10 +825,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
       if (self.userEmail && latestMessage.email && [self.userEmail compare:latestMessage.email] == NSOrderedSame)
         latestMessageFromUser = YES;
-
+      id strongDelegate = self.delegate;
       if (!latestMessageFromUser) {
-        if ([self.delegate respondsToSelector:@selector(feedbackManagerDidReceiveNewFeedback:)]) {
-          [self.delegate feedbackManagerDidReceiveNewFeedback:self];
+        if ([strongDelegate respondsToSelector:@selector(feedbackManagerDidReceiveNewFeedback:)]) {
+          [strongDelegate feedbackManagerDidReceiveNewFeedback:self];
         }
 
         if (self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
