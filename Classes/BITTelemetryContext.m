@@ -8,7 +8,7 @@
 #import "BITPersistence.h"
 #import "BITPersistencePrivate.h"
 
-NSString *const kBITUserMetaData = @"BITUserMetaData";
+static NSString *const kBITUserMetaData = @"BITUserMetaData";
 
 static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQueue";
 

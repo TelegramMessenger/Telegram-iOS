@@ -75,7 +75,7 @@ typedef struct {
   const char    bit_build[16];
 } bit_info_t;
 
-bit_info_t hockeyapp_library_info __attribute__((section("__TEXT,__bit_ios,regular,no_dead_strip"))) = {
+static bit_info_t hockeyapp_library_info __attribute__((section("__TEXT,__bit_ios,regular,no_dead_strip"))) = {
   .info_version = 1,
   .bit_version = BITHOCKEY_C_VERSION,
   .bit_build = BITHOCKEY_C_BUILD

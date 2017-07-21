@@ -46,18 +46,18 @@ NSString * const kBITBackgroundLineWidthAttributeName = @"BITBackgroundLineWidth
 NSString * const kBITBackgroundCornerRadiusAttributeName = @"BITBackgroundCornerRadius";
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 60000
-const NSTextAlignment BITTextAlignmentLeft = NSTextAlignmentLeft;
-const NSTextAlignment BITTextAlignmentCenter = NSTextAlignmentCenter;
-const NSTextAlignment BITTextAlignmentRight = NSTextAlignmentRight;
-const NSTextAlignment BITTextAlignmentJustified = NSTextAlignmentJustified;
-const NSTextAlignment BITTextAlignmentNatural = NSTextAlignmentNatural;
+static const NSTextAlignment BITTextAlignmentLeft = NSTextAlignmentLeft;
+static const NSTextAlignment BITTextAlignmentCenter = NSTextAlignmentCenter;
+static const NSTextAlignment BITTextAlignmentRight = NSTextAlignmentRight;
+static const NSTextAlignment BITTextAlignmentJustified = NSTextAlignmentJustified;
+static const NSTextAlignment BITTextAlignmentNatural = NSTextAlignmentNatural;
 
-const NSLineBreakMode BITLineBreakByWordWrapping = NSLineBreakByWordWrapping;
-const NSLineBreakMode BITLineBreakByCharWrapping = NSLineBreakByCharWrapping;
-const NSLineBreakMode BITLineBreakByClipping = NSLineBreakByClipping;
-const NSLineBreakMode BITLineBreakByTruncatingHead = NSLineBreakByTruncatingHead;
-const NSLineBreakMode BITLineBreakByTruncatingMiddle = NSLineBreakByTruncatingMiddle;
-const NSLineBreakMode BITLineBreakByTruncatingTail = NSLineBreakByTruncatingTail;
+static const NSLineBreakMode BITLineBreakByWordWrapping = NSLineBreakByWordWrapping;
+static const NSLineBreakMode BITLineBreakByCharWrapping = NSLineBreakByCharWrapping;
+static const NSLineBreakMode BITLineBreakByClipping = NSLineBreakByClipping;
+static const NSLineBreakMode BITLineBreakByTruncatingHead = NSLineBreakByTruncatingHead;
+static const NSLineBreakMode BITLineBreakByTruncatingMiddle = NSLineBreakByTruncatingMiddle;
+static const NSLineBreakMode BITLineBreakByTruncatingTail = NSLineBreakByTruncatingTail;
 
 typedef NSTextAlignment BITTextAlignment;
 typedef NSLineBreakMode BITLineBreakMode;
