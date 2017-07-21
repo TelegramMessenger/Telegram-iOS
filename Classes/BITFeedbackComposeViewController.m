@@ -195,7 +195,7 @@
   
 }
 
-- (void)keyboardWillBeHidden:(NSNotification*)aNotification {
+- (void)keyboardWillBeHidden:(NSNotification*) __unused aNotification {
   CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
   [self.contentViewContainer setFrame:frame];
 }
@@ -437,11 +437,11 @@
 
 #pragma mark - UIViewController Rotation
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation) __unused orientation {
   return YES;
 }
 
-- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation) __unused fromInterfaceOrientation {
   [self removeAttachmentScrollView];
   
   [self refreshAttachmentScrollview];
@@ -462,7 +462,7 @@
 
 #pragma mark - Actions
 
-- (void)dismissAction:(id)sender {
+- (void)dismissAction:(id) __unused sender {
   for (BITFeedbackMessageAttachment *attachment in self.attachments){
     [attachment deleteContents];
   }
@@ -470,7 +470,7 @@
   [self dismissWithResult:BITFeedbackComposeResultCancelled];
 }
 
-- (void)sendAction:(id)sender {
+- (void)sendAction:(id) __unused sender {
   if ([self.textView isFirstResponder])
     [self.textView resignFirstResponder];
   
@@ -489,7 +489,7 @@
   }
 }
 
-- (void)addPhotoAction:(id)sender {
+- (void)addPhotoAction:(id) __unused sender {
   if (self.actionSheetVisible) return;
   
   self.isStatusBarHiddenBeforeShowingPhotoPicker = @([[UIApplication sharedApplication] isStatusBarHidden]);
@@ -503,13 +503,13 @@
   [self presentViewController:pickerController animated:YES completion:nil];
 }
 
-- (void)scrollViewTapped:(id)unused {
+- (void)scrollViewTapped:(id) __unused unused {
   UIMenuController *menuController = [UIMenuController sharedMenuController];
   [menuController setTargetRect:CGRectMake([self.tapRecognizer locationInView:self.view].x, [self.tapRecognizer locationInView:self.view].x, 1, 1) inView:self.view];
   [menuController setMenuVisible:YES animated:YES];
 }
 
-- (void)paste:(id)sender {
+- (void)paste:(id) __unused sender {
   
 }
 
@@ -632,7 +632,7 @@
 
 #pragma mark - UITextViewDelegate
 
-- (void)textViewDidChange:(UITextView *)textView {
+- (void)textViewDidChange:(UITextView *) __unused textView {
   [self updateBarButtonState];
 }
 
@@ -689,7 +689,7 @@
 
 #pragma mark - Image Annotation Delegate
 
-- (void)annotationController:(BITImageAnnotationViewController *)annotationController didFinishWithImage:(UIImage *)image {
+- (void)annotationController:(BITImageAnnotationViewController *) __unused annotationController didFinishWithImage:(UIImage *)image {
   if (self.selectedAttachmentIndex != NSNotFound){
     BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
     [attachment replaceData:UIImageJPEGRepresentation(image, (CGFloat)0.7)];
@@ -698,7 +698,7 @@
   self.selectedAttachmentIndex = NSNotFound;
 }
 
-- (void)annotationControllerDidCancel:(BITImageAnnotationViewController *)annotationController {
+- (void)annotationControllerDidCancel:(BITImageAnnotationViewController *) __unused annotationController {
   self.selectedAttachmentIndex = NSNotFound;
 }
 

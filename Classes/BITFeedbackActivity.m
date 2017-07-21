@@ -138,7 +138,7 @@
   return self.activityViewController;
 }
 
-- (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController didFinishWithResult:(BITFeedbackComposeResult)composeResult {
+- (void)feedbackComposeViewController:(BITFeedbackComposeViewController *) __unused composeViewController didFinishWithResult:(BITFeedbackComposeResult)composeResult {
   [self activityDidFinish:composeResult == BITFeedbackComposeResultSubmitted];
 }
 

@@ -75,7 +75,7 @@
 
 #pragma mark - View lifecycle
 
-- (void)onDismissModal:(id)sender {
+- (void)onDismissModal:(id) __unused sender {
   if (self.modal) {
     UIViewController *presentingViewController = [self presentingViewController];
     

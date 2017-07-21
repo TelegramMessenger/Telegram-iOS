@@ -231,7 +231,7 @@
   [self.navigationController pushViewController:userController animated:YES];
 }
 
-- (void)setUserDataAction:(id)sender {
+- (void)setUserDataAction:(id) __unused sender {
   BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
   userController.delegate = self;
   
@@ -241,7 +241,7 @@
   [self presentViewController:navController animated:YES completion:nil];
 }
 
-- (void)newFeedbackAction:(id)sender {
+- (void)newFeedbackAction:(id) __unused sender {
   BITFeedbackComposeViewController *composeController = [self.manager feedbackComposeViewController];
   
   UINavigationController *navController = [self.manager customNavigationControllerWithRootViewController:composeController
@@ -257,7 +257,7 @@
   [self.tableView reloadData];
 }
 
-- (void)deleteAllMessagesAction:(id)sender {
+- (void)deleteAllMessagesAction:(id) __unused sender {
   /* We won't use this for now until we have a more robust solution for displaying UIAlertController
   // requires iOS 8
   id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
@@ -422,14 +422,14 @@
   [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation) __unused orientation {
   return YES;
 }
 
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+- (NSInteger)numberOfSectionsInTableView:(UITableView *) __unused tableView {
   if (self.numberOfSectionsBeforeRotation >= 0)
     return self.numberOfSectionsBeforeRotation;
   
@@ -450,7 +450,7 @@
   return sections;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *) __unused tableView numberOfRowsInSection:(NSInteger)section {
   if (section == 1) {
     if (self.numberOfMessagesBeforeRotation >= 0)
       return self.numberOfMessagesBeforeRotation;
@@ -609,7 +609,7 @@
           __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
           
           NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                                  completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                                  completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError *error) {
                                                     typeof (self) strongSelf = weakSelf;
                                                     
                                                     [session finishTasksAndInvalidate];
@@ -620,7 +620,7 @@
         }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-          [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+          [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse __unused *response, NSData *responseData, NSError *err) {
 #pragma clang diagnostic pop
             typeof (self) strongSelf = weakSelf;
             [strongSelf handleResponseForAttachment:attachment responseData:responseData error:err];
@@ -640,7 +640,7 @@
   }
 }
 
-- (void)handleResponseForAttachment:(BITFeedbackMessageAttachment *)attachment responseData:(NSData *)responseData error:(NSError *)error {
+- (void)handleResponseForAttachment:(BITFeedbackMessageAttachment *)attachment responseData:(NSData *)responseData error:(NSError *) __unused error {
   attachment.isLoading = NO;
   if (responseData.length) {
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -653,7 +653,7 @@
 }
 
 
-- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+- (BOOL)tableView:(UITableView *) __unused tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 1)
     return YES;
   
@@ -682,7 +682,7 @@
 
 #pragma mark - Table view delegate
 
-- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (CGFloat)tableView:(UITableView *) __unused tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 0 ) {
     return 44;
   }
@@ -696,7 +696,7 @@
   return [BITFeedbackListViewCell heightForRowWithMessage:message tableViewWidth:self.view.frame.size.width];
 }
 
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+- (void)tableView:(UITableView *) __unused tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 0) {
     [self newFeedbackAction:self];
   } else if (indexPath.section == self.userButtonSection) {
@@ -708,7 +708,7 @@
 
 #pragma mark - BITAttributedLabelDelegate
 
-- (void)attributedLabel:(BITAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url {
+- (void)attributedLabel:(BITAttributedLabel *) __unused label didSelectLinkWithURL:(NSURL *)url {
   /*
   // requires iOS 8
   id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
@@ -826,7 +826,7 @@
 
 #pragma mark - ListViewCellDelegate
 
-- (void)listCell:(id)cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
+- (void)listCell:(id) __unused cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
   QLPreviewController *previewController = [[QLPreviewController alloc] init];
   previewController.dataSource = self;
   
@@ -849,7 +849,7 @@
   self.cachedPreviewItems = collectedAttachments;
 }
 
-- (NSInteger)numberOfPreviewItemsInPreviewController:(QLPreviewController *)controller {
+- (NSInteger)numberOfPreviewItemsInPreviewController:(QLPreviewController *) __unused controller {
   if (!self.cachedPreviewItems){
     [self refreshPreviewItems];
   }
@@ -872,7 +872,7 @@
         __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
         
         NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                                completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                                completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError __unused *error) {
                                                   dispatch_async(dispatch_get_main_queue(), ^{
                                                     typeof (self) strongSelf = weakSelf;
                                                     
@@ -885,7 +885,7 @@
       }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+        [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse __unused *response, NSData *responseData, NSError __unused *err) {
 #pragma clang diagnostic pop
           typeof (self) strongSelf = weakSelf;
           [strongSelf previewController:blockController updateAttachment:attachment data:responseData];

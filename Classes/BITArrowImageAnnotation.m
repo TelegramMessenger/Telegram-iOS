@@ -188,7 +188,7 @@
 
 #pragma mark - UIView 
 
-- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *) __unused event {
 
   CGPathRef strokePath = CGPathCreateCopyByStrokingPath(self.shapeLayer.path, NULL, fmax(90.0f, self.shapeLayer.lineWidth), kCGLineCapRound,kCGLineJoinMiter,0);
   

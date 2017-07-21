@@ -47,7 +47,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   [center addObserverForName:BITPersistenceSuccessNotification
                       object:nil
                        queue:nil
-                  usingBlock:^(NSNotification *notification) {
+                  usingBlock:^(NSNotification __unused *notification) {
                     typeof(self) strongSelf = weakSelf;
                     [strongSelf sendSavedDataAsync];
                   }];
@@ -55,7 +55,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   [center addObserverForName:BITChannelBlockedNotification
                       object:nil
                        queue:nil
-                  usingBlock:^(NSNotification *notification) {
+                  usingBlock:^(NSNotification __unused *notification) {
                     typeof(self) strongSelf = weakSelf;
                     [strongSelf sendSavedDataAsync];
                   }];

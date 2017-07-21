@@ -157,7 +157,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
 
 #pragma mark - UIWebViewDelegate
 
-- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
+- (BOOL)webView:(UIWebView *) __unused webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
   switch (navigationType) {
     case UIWebViewNavigationTypeLinkClicked:
       [self openURL:request.URL];
@@ -175,7 +175,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
   }
 }
 
-- (void)webViewDidFinishLoad:(UIWebView *)webView {
+- (void)webViewDidFinishLoad:(UIWebView *) __unused webView {
   if(self.webViewContent)
     [self showWebView];
   

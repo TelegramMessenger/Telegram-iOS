@@ -216,7 +216,7 @@
   
   __block BOOL hasUUID = NO;
   
-  [self.uuids enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop){
+  [self.uuids enumerateKeysAndObjectsUsingBlock:^(id __unused key, id obj, BOOL *stop){
     if (obj && [uuid compare:obj] == NSOrderedSame) {
       hasUUID = YES;
       *stop = YES;

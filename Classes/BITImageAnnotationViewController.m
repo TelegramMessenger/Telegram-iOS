@@ -143,7 +143,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   return self.navigationController.navigationBarHidden || self.navigationController.navigationBar.alpha == 0;
 }
 
-- (void)orientationDidChange:(NSNotification *)notification {
+- (void)orientationDidChange:(NSNotification *) __unused notification {
   [self fitImageViewFrame];
 }
 
@@ -167,7 +167,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   self.imageView.frame = baseFrame;
 }
 
-- (void)editingAction:(id)sender {
+- (void)editingAction:(id) __unused sender {
   
 }
 
@@ -183,12 +183,12 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 
 #pragma mark - Actions
 
-- (void)discard:(id)sender {
+- (void)discard:(id) __unused sender {
   [self.delegate annotationControllerDidCancel:self];
   [self dismissViewControllerAnimated:YES completion:nil];
 }
 
-- (void)save:(id)sender {
+- (void)save:(id) __unused sender {
   UIImage *image = [self extractImage];
   [self.delegate annotationController:self didFinishWithImage:image];
   [self dismissViewControllerAnimated:YES completion:nil];
@@ -348,7 +348,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   }
 }
 
-- (void)tapped:(UIGestureRecognizer *)tapRecognizer {
+- (void)tapped:(UIGestureRecognizer *) __unused tapRecognizer {
   // This toggles the nav and status bar. Since iOS7 and pre-iOS7 behave weirdly different,
   // this might look rather hacky, but hiding the navbar under iOS6 leads to some ugly
   // animation effect which is avoided by simply hiding the navbar setting it's alpha to 0. // moritzh
@@ -367,7 +367,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 #pragma clang diagnostic pop
       }
       
-    } completion:^(BOOL finished) {
+    } completion:^(BOOL __unused finished) {
       [self fitImageViewFrame];
       
     }];
@@ -384,7 +384,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 #pragma clang diagnostic pop
       }
       
-    } completion:^(BOOL finished) {
+    } completion:^(BOOL __unused finished) {
       [self fitImageViewFrame];
       
     }];

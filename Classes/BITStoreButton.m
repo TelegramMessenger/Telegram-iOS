@@ -71,11 +71,11 @@
 
 #pragma mark - private
 
-- (void)buttonPressed:(id)sender {
+- (void)buttonPressed:(id) __unused sender {
   [self.buttonDelegate storeButtonFired:self];
 }
 
-- (void)animationDidStop:(NSString *)animationID finished:(NSNumber *)finished context:(void *)context {
+- (void)animationDidStop:(NSString *) __unused animationID finished:(NSNumber *)finished context:(void *) __unused context {
   // show text again, but only if animation did finish (or else another animation is on the way)
   if ([finished boolValue]) {
     [self setTitle:self.buttonData.label forState:UIControlStateNormal];
@@ -204,7 +204,7 @@
 
 #pragma mark - UIView
 
-- (CGSize)sizeThatFits:(CGSize)size {
+- (CGSize)sizeThatFits:(CGSize) __unused size {
   CGSize constr = (CGSize){.height = self.frame.size.height, .width = BIT_MAX_WIDTH};
   CGSize newSize;
   

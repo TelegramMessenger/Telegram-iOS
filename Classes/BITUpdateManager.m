@@ -177,7 +177,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
                                                                                     object:nil
                                                                                      queue:NSOperationQueue.mainQueue
-                                                                                usingBlock:^(NSNotification *note) {
+                                                                                usingBlock:^(NSNotification __unused *note) {
                                                                                   typeof(self) strongSelf = weakSelf;
                                                                                   [strongSelf didEnterBackgroundActions];
                                                                                 }];
@@ -186,7 +186,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
                                                                                      object:nil
                                                                                       queue:NSOperationQueue.mainQueue
-                                                                                 usingBlock:^(NSNotification *note) {
+                                                                                 usingBlock:^(NSNotification __unused *note) {
                                                                                    typeof(self) strongSelf = weakSelf;
                                                                                    [strongSelf didBecomeActiveActions];
                                                                                  }];
@@ -195,7 +195,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     self.networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
                                                                                      object:nil
                                                                                       queue:NSOperationQueue.mainQueue
-                                                                                 usingBlock:^(NSNotification *note) {
+                                                                                 usingBlock:^(NSNotification __unused *note) {
                                                                                    typeof(self) strongSelf = weakSelf;
                                                                                    [strongSelf didBecomeActiveActions];
                                                                                  }];
@@ -289,7 +289,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     @try {
       unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:codedData];
     }
-    @catch (NSException *exception) {
+    @catch (NSException __unused *exception) {
       return;
     }
     
@@ -1166,7 +1166,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 #pragma mark - NSURLRequest
 
-- (NSURLRequest *)connection:(NSURLConnection *)connection willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)redirectResponse {
+- (NSURLRequest *)connection:(NSURLConnection *) __unused connection willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)redirectResponse {
   NSURLRequest *newRequest = request;
   if (redirectResponse) {
     newRequest = nil;
@@ -1192,22 +1192,22 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [self.receivedData setLength:0];
 }
 
-- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
+- (void)connection:(NSURLConnection *) __unused connection didReceiveData:(NSData *)data {
   [self.receivedData appendData:data];
 }
 
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
+- (void)connection:(NSURLConnection *) __unused connection didFailWithError:(NSError *)error {
   [self handleError:error];
 }
 
 // api call returned, parsing
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection {
+- (void)connectionDidFinishLoading:(NSURLConnection *) __unused connection {
   [self finishLoading];
 }
 
 #pragma mark - NSURLSession
 
-- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *) __unused task didCompleteWithError:(NSError *)error {
   
   dispatch_async(dispatch_get_main_queue(), ^{
     [session finishTasksAndInvalidate];
@@ -1220,11 +1220,11 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   });
 }
 
-- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data {
+- (void)URLSession:(NSURLSession *) __unused session dataTask:(NSURLSessionDataTask *) __unused dataTask didReceiveData:(NSData *)data {
   [self.receivedData appendData:data];
 }
 
-- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition disposition))completionHandler {
+- (void)URLSession:(NSURLSession *) __unused session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition disposition))completionHandler {
   
   if ([response respondsToSelector:@selector(statusCode)]) {
     NSInteger statusCode = [((NSHTTPURLResponse *)response) statusCode];
@@ -1244,7 +1244,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [self.receivedData setLength:0];
 }
 
-- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest *))completionHandler {
+- (void)URLSession:(NSURLSession *) __unused session task:(NSURLSessionTask *) __unused task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest *))completionHandler {
   NSURLRequest *newRequest = request;
   if (response) {
     newRequest = nil;

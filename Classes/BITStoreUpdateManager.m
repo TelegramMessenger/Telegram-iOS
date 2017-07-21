@@ -76,7 +76,7 @@
     self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
                                                                                     object:nil
                                                                                      queue:NSOperationQueue.mainQueue
-                                                                                usingBlock:^(NSNotification *note) {
+                                                                                usingBlock:^(NSNotification __unused *note) {
                                                                                   typeof(self) strongSelf = weakSelf;
                                                                                   [strongSelf didBecomeActiveActions];
                                                                                 }];
@@ -85,7 +85,7 @@
     self.networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
                                                                                      object:nil
                                                                                       queue:NSOperationQueue.mainQueue
-                                                                                 usingBlock:^(NSNotification *note) {
+                                                                                 usingBlock:^(NSNotification __unused *note) {
                                                                                    typeof(self) strongSelf = weakSelf;
                                                                                    [strongSelf didBecomeActiveActions];
                                                                                  }];
@@ -366,7 +366,7 @@
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                            completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError *error) {
                                               typeof (self) strongSelf = weakSelf;
                                               
                                               [session finishTasksAndInvalidate];
@@ -377,7 +377,7 @@
   }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error){
+    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse __unused *response, NSData *responseData, NSError *error){
 #pragma clang diagnostic pop
       typeof (self) strongSelf = weakSelf;
       [strongSelf handleResponeWithData:responseData error:error];

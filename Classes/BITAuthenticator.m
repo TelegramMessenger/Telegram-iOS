@@ -330,7 +330,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                                            completionHandler:^(NSData *data, NSURLResponse __unused *response, NSError *error) {
                                               typeof(self) strongSelf = weakSelf;
                                               
                                               [session finishTasksAndInvalidate];
@@ -341,7 +341,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   } else {
     [self.hockeyAppClient getPath:validationPath
                        parameters:[self validationParameters]
-                       completion:^(BITHTTPOperation *operation, NSData *responseData, NSError *error) {
+                       completion:^(BITHTTPOperation __unused *operation, NSData *responseData, NSError *error) {
                          typeof(self) strongSelf = weakSelf;
                          [strongSelf handleValidationResponseWithData:responseData error:error completion:completion];
                        }];
@@ -476,7 +476,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   [self authenticationViewController:viewController handleAuthenticationWithEmail:email request:request completion:completion];
 }
 
-- (void)authenticationViewController:(UIViewController *)viewController
+- (void)authenticationViewController:(UIViewController *) __unused viewController
        handleAuthenticationWithEmail:(NSString *)email
                              request:(NSURLRequest *)request
                           completion:(void (^)(BOOL, NSError *))completion {
@@ -488,7 +488,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                                            completionHandler:^(NSData *data, NSURLResponse *response, NSError __unused *error) {
                                               typeof(self) strongSelf = weakSelf;
                                               NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
                                               
@@ -499,7 +499,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     [task resume];
   } else {
     BITHTTPOperation *operation = [self.hockeyAppClient operationWithURLRequest:request
-                                                                     completion:^(BITHTTPOperation *operation, NSData *responseData, NSError *error) {
+                                                                     completion:^(BITHTTPOperation *operation, NSData *responseData, NSError __unused *error) {
                                                                        typeof(self) strongSelf = weakSelf;
                                                                        [strongSelf handleAuthenticationWithResponse:operation.response
                                                                                                               email:email
@@ -510,7 +510,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   }
 }
 
-- (void)authenticationViewControllerDidTapWebButton:(UIViewController *)viewController {
+- (void)authenticationViewControllerDidTapWebButton:(UIViewController *) __unused viewController {
   NSURL *url = [self deviceAuthenticationURL];
   if (url) {
     [[UIApplication sharedApplication] openURL:url];
@@ -689,7 +689,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 }
 
 - (BOOL)handleOpenURL:(NSURL *)url
-    sourceApplication:(NSString *)sourceApplication
+    sourceApplication:(NSString *) __unused sourceApplication
            annotation:(id)annotation {
   //check if this URL was meant for us, if not return NO so the user can
   //handle it
@@ -755,7 +755,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   return YES;
 }
 
-+ (NSString *)UDIDFromOpenURL:(NSURL *)url annotation:(id)annotation {
++ (NSString *)UDIDFromOpenURL:(NSURL *)url annotation:(id) __unused annotation {
   NSString *query = [url query];
   NSString *udid = nil;
   //there should actually only one
@@ -1019,11 +1019,11 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 #pragma mark - Application Lifecycle
 
-- (void)applicationDidBecomeActive:(NSNotification *)note {
+- (void)applicationDidBecomeActive:(NSNotification *) __unused note {
   [self authenticate];
 }
 
-- (void)applicationDidEnterBackground:(NSNotification *)note {
+- (void)applicationDidEnterBackground:(NSNotification *) __unused note {
   if (BITAuthenticatorAppRestrictionEnforcementOnAppActive == self.restrictionEnforcementFrequency) {
     self.validated = NO;
   }
@@ -1033,7 +1033,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger) __unused buttonIndex {
   if (alertView.tag == 0) {
     [self validate];
   }

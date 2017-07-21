@@ -98,7 +98,7 @@ static BITCrashManagerCallbacks bitCrashCallbacks = {
 };
 
 #if HOCKEYSDK_FEATURE_METRICS
-static void bit_save_events_callback(siginfo_t *info, ucontext_t *uap, void *context) {
+static void bit_save_events_callback(siginfo_t __unused *info, ucontext_t __unused *uap, void __unused *context) {
   
   // Do not flush metrics queue if queue is empty (metrics module disabled) to not freeze the app
   if (!BITSafeJsonEventsString) {
@@ -425,7 +425,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   @try {
     unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:codedData];
   }
-  @catch (NSException *exception) {
+  @catch (NSException __unused *exception) {
     return nil;
   }
   
@@ -471,7 +471,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
                                                                                     object:nil
                                                                                      queue:NSOperationQueue.mainQueue
-                                                                                usingBlock:^(NSNotification *note) {
+                                                                                usingBlock:^(NSNotification __unused *note) {
                                                                                   typeof(self) strongSelf = weakSelf;
                                                                                   [strongSelf triggerDelayedProcessing];
                                                                                 }];
@@ -481,7 +481,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     self.networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
                                                                                            object:nil
                                                                                             queue:NSOperationQueue.mainQueue
-                                                                                       usingBlock:^(NSNotification *note) {
+                                                                                       usingBlock:^(NSNotification __unused *note) {
                                                                                          typeof(self) strongSelf = weakSelf;
                                                                                          [strongSelf triggerDelayedProcessing];
                                                                                        }];
@@ -491,7 +491,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     self.appWillTerminateObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillTerminateNotification
                                                                                   object:nil
                                                                                    queue:NSOperationQueue.mainQueue
-                                                                              usingBlock:^(NSNotification *note) {
+                                                                              usingBlock:^(NSNotification __unused *note) {
                                                                                 typeof(self) strongSelf = weakSelf;
                                                                                 [strongSelf leavingAppSafely];
                                                                               }];
@@ -501,7 +501,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
                                                                                        object:nil
                                                                                         queue:NSOperationQueue.mainQueue
-                                                                                   usingBlock:^(NSNotification *note) {
+                                                                                   usingBlock:^(NSNotification __unused *note) {
                                                                                      typeof(self) strongSelf = weakSelf;
                                                                                      [strongSelf leavingAppSafely];
                                                                                    }];
@@ -511,7 +511,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     self.appWillEnterForegroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillEnterForegroundNotification
                                                                                         object:nil
                                                                                          queue:NSOperationQueue.mainQueue
-                                                                                    usingBlock:^(NSNotification *note) {
+                                                                                    usingBlock:^(NSNotification __unused *note) {
                                                                                       typeof(self) strongSelf = weakSelf;
                                                                                       [strongSelf appEnteredForeground];
                                                                                     }];
@@ -521,7 +521,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     self.appDidReceiveLowMemoryWarningObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification
                                                                                                object:nil
                                                                                                 queue:NSOperationQueue.mainQueue
-                                                                                           usingBlock:^(NSNotification *note) {
+                                                                                           usingBlock:^(NSNotification __unused *note) {
                                                                                              // we only need to log this once
                                                                                              if (!self.didLogLowMemoryWarning) {
                                                                                                [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
@@ -1565,7 +1565,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+- (void)alertView:(UIAlertView *) __unused alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   switch (buttonIndex) {
     case 0:
       [self handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedMetaData:nil];

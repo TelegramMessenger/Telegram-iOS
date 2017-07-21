@@ -402,7 +402,7 @@ NSString *bit_URLEncodedString(NSString *inputString) {
   }
 }
 
-NSString *bit_base64String(NSData * data, unsigned long length) {
+NSString *bit_base64String(NSData * data, unsigned long __unused length) {
   SEL base64EncodingSelector = NSSelectorFromString(@"base64EncodedStringWithOptions:");
   if ([data respondsToSelector:base64EncodingSelector]) {
     return [data base64EncodedStringWithOptions:0];

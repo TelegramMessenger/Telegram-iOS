@@ -77,7 +77,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void) registerObservers {
   __weak typeof(self) weakSelf = self;
   if(nil == self.appDidEnterBackgroundObserver) {
-    void (^notificationBlock)(NSNotification *note) = ^(NSNotification *note) {
+    void (^notificationBlock)(NSNotification *note) = ^(NSNotification __unused *note) {
       typeof(self) strongSelf = weakSelf;
       if ([strongSelf timerIsRunning]) {
         [strongSelf persistDataItemQueue];
@@ -104,7 +104,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void) unregisterObservers {
   if(self.appDidEnterBackgroundObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidEnterBackgroundObserver];
+    [[NSNotificationCenter defaultCenter] removeObserver:(id)self.appDidEnterBackgroundObserver];
     self.appDidEnterBackgroundObserver = nil;
   }
 }

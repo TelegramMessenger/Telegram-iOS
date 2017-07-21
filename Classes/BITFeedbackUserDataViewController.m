@@ -95,7 +95,7 @@
 
 #pragma mark - UIViewController Rotation
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation) __unused orientation {
   return YES;
 }
 
@@ -125,11 +125,11 @@
   self.navigationItem.rightBarButtonItem.enabled = [self allRequiredFieldsEntered];
 }
 
-- (void)dismissAction:(id)sender {
+- (void)dismissAction:(id) __unused sender {
   [self.delegate userDataUpdateCancelled];
 }
 
-- (void)saveAction:(id)sender {
+- (void)saveAction:(id) __unused sender {
   
   if ([self.manager requireUserName]) {
     [self.manager setUserName:self.name];
@@ -144,11 +144,11 @@
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+- (NSInteger)numberOfSectionsInTableView:(UITableView *) __unused tableView {
   return 1;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *) __unused tableView numberOfRowsInSection:(NSInteger) __unused section {
   NSInteger rows = 0;
   
   if ([self.manager requireUserName] != BITFeedbackUserDataElementDontShow)
@@ -160,7 +160,7 @@
   return rows;
 }
 
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+- (NSString *)tableView:(UITableView *) __unused tableView titleForFooterInSection:(NSInteger)section {
   if (section == 0) {
     return BITHockeyLocalizedString(@"HockeyFeedbackUserDataDescription");
   }
@@ -168,7 +168,7 @@
   return nil;
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (UITableViewCell *)tableView:(UITableView *) __unused tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   static NSString *CellIdentifier = @"InputCell";
   
   UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:CellIdentifier];

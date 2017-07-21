@@ -98,16 +98,16 @@
 }
 
 #pragma mark - NSURLConnectionDelegate
--(void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse*)response {
+-(void)connection:(NSURLConnection*) __unused connection didReceiveResponse:(NSURLResponse*)response {
   self.mutableData = [[NSMutableData alloc] init];
   self.response = (id)response;
 }
 
--(void)connection:(NSURLConnection*)connection didReceiveData:(NSData*)data {
+-(void)connection:(NSURLConnection*) __unused connection didReceiveData:(NSData*)data {
   [self.mutableData appendData:data];
 }
 
--(void)connection:(NSURLConnection*)connection didFailWithError:(NSError*)error {
+-(void)connection:(NSURLConnection*) __unused connection didFailWithError:(NSError*)error {
   //FINISHED and failed
   self.error = error;
   self.mutableData = nil;
@@ -115,7 +115,7 @@
   [self finish];
 }
 
--(void)connectionDidFinishLoading:(NSURLConnection*)connection {
+-(void)connectionDidFinishLoading:(NSURLConnection*) __unused connection {
   [self finish];
 }
 

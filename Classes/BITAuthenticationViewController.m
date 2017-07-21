@@ -124,7 +124,7 @@
   }
 }
 
-- (IBAction) handleWebLoginButton:(id)sender {
+- (IBAction) handleWebLoginButton:(id) __unused sender {
   [self.delegate authenticationViewControllerDidTapWebButton:self];
 }
 
@@ -143,7 +143,7 @@
 }
 #pragma mark - UIViewController Rotation
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation) __unused orientation {
   return YES;
 }
 
@@ -160,11 +160,11 @@
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+- (NSInteger)numberOfSectionsInTableView:(UITableView *) __unused tableView {
   return 2;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *) __unused tableView numberOfRowsInSection:(NSInteger)section {
   if (section == 0) return 0;
   
   if(self.showsLoginViaWebButton) {
@@ -178,7 +178,7 @@
   }
 }
 
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+- (NSString *)tableView:(UITableView *) __unused tableView titleForFooterInSection:(NSInteger)section {
   if (section == 0) {
     return self.tableViewTitle;
   }
@@ -186,7 +186,7 @@
   return nil;
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (UITableViewCell *)tableView:(UITableView *) __unused tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   static NSString *CellIdentifier = @"InputCell";
   
   UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -284,7 +284,7 @@
 }
 
 #pragma mark - Actions
-- (void)saveAction:(id)sender {
+- (void)saveAction:(id) __unused sender {
   [self setLoginUIEnabled:NO];
   
   __weak typeof(self) weakSelf = self;

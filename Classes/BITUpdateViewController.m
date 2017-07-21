@@ -244,7 +244,7 @@
 
 #pragma mark - Init
 
-- (instancetype)initWithStyle:(UITableViewStyle)style {
+- (instancetype)initWithStyle:(UITableViewStyle) __unused style {
   if ((self = [super initWithStyle:UITableViewStylePlain])) {
     self.updateManager = [BITHockeyManager sharedHockeyManager].updateManager ;
     self.appEnvironment = [BITHockeyManager sharedHockeyManager].appEnvironment;
@@ -405,11 +405,11 @@
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+- (NSInteger)numberOfSectionsInTableView:(UITableView *) __unused tableView {
   return 1;
 }
 
-- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (CGFloat)tableView:(UITableView *) __unused tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
   CGFloat rowHeight = 0;
   
   if ([self.cells count] > (NSUInteger)indexPath.row) {
@@ -429,7 +429,7 @@
   return rowHeight;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *) __unused tableView numberOfRowsInSection:(NSInteger) __unused section {
   NSInteger cellCount = [self.cells count];
   return cellCount;
 }
@@ -437,7 +437,7 @@
 
 #pragma mark - KVO
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id) __unused object change:(NSDictionary *) __unused change context:(void *) __unused context {
   // only make changes if we are visible
   if(self.view.window) {
     if ([keyPath isEqualToString:@"webViewSize"]) {
@@ -460,7 +460,7 @@
 }
 
 // Customize the appearance of table view cells.
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (UITableViewCell *)tableView:(UITableView *) __unused tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   if ([self.cells count] > (NSUInteger)indexPath.row) {
     return [self.cells objectAtIndex:indexPath.row];
   } else {
@@ -473,7 +473,7 @@
 
 #pragma mark - Rotation
 
-- (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
+- (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation) __unused interfaceOrientation duration:(NSTimeInterval) __unused duration {
   // update all cells
   [self.cells makeObjectsPerformSelector:@selector(addWebView)];
 }
@@ -509,7 +509,7 @@
   }
 }
 
-- (void)storeButtonFired:(BITStoreButton *)button {
+- (void)storeButtonFired:(BITStoreButton *) __unused button {
   switch (self.appStoreButtonState) {
     case AppStoreButtonStateCheck:
       [self.updateManager checkForUpdateShowFeedback:YES];

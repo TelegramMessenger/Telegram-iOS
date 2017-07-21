@@ -72,7 +72,7 @@ NSString * const kBITHockeyAppClientBoundary = @"----FOO";
       [request setValue:contentType forHTTPHeaderField:@"Content-type"];
       
       NSMutableData *postBody = [NSMutableData data];
-      [params enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, BOOL *stop) {
+      [params enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, BOOL __unused *stop) {
         [postBody appendData:[[self class] dataWithPostValue:value forKey:key boundary:kBITHockeyAppClientBoundary]];
       }];
       
@@ -111,9 +111,9 @@ NSString * const kBITHockeyAppClientBoundary = @"----FOO";
 }
 
 
-+ (NSString *) queryStringFromParameters:(NSDictionary *) params withEncoding:(NSStringEncoding) encoding {
++ (NSString *) queryStringFromParameters:(NSDictionary *) params withEncoding:(NSStringEncoding) __unused encoding {
   NSMutableString *queryString = [NSMutableString new];
-  [params enumerateKeysAndObjectsUsingBlock:^(NSString* key, NSString* value, BOOL *stop) {
+  [params enumerateKeysAndObjectsUsingBlock:^(NSString* key, NSString* value, BOOL __unused *stop) {
     NSAssert([key isKindOfClass:[NSString class]], @"Query parameters can only be string-string pairs");
     NSAssert([value isKindOfClass:[NSString class]], @"Query parameters can only be string-string pairs");
     
