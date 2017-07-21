@@ -15,7 +15,8 @@ public enum TogglePeerChatPinnedResult {
 public func togglePeerChatPinned(postbox: Postbox, peerId: PeerId) -> Signal<TogglePeerChatPinnedResult, NoError> {
     return postbox.modify { modifier -> TogglePeerChatPinnedResult in
         var peerIds = modifier.getPinnedPeerIds()
-        let sameKind = peerIds.filter { ($0.namespace == Namespaces.Peer.SecretChat) == (peerId.namespace == Namespaces.Peer.SecretChat) }
+        let sameKind = peerIds.filter { ($0.namespace == Namespaces.Peer.SecretChat) == (peerId.namespace == Namespaces.Peer.SecretChat) && $0 != peerId }
+        
         if sameKind.count + 1 > 5 {
             return .limitExceeded
         } else {
