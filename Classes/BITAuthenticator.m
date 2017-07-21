@@ -330,20 +330,20 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler:^(NSData *data, NSURLResponse __unused *response, NSError *error) {
+                                            completionHandler:^(NSData *data, NSURLResponse __unused *response, NSError *innerError) {
                                               typeof(self) strongSelf = weakSelf;
                                               
                                               [session finishTasksAndInvalidate];
                                               
-                                              [strongSelf handleValidationResponseWithData:data error:error completion:completion];
+                                              [strongSelf handleValidationResponseWithData:data error:innerError completion:completion];
                                             }];
     [task resume];
   } else {
     [self.hockeyAppClient getPath:validationPath
                        parameters:[self validationParameters]
-                       completion:^(BITHTTPOperation __unused *operation, NSData *responseData, NSError *error) {
+                       completion:^(BITHTTPOperation __unused *operation, NSData *responseData, NSError *innerError) {
                          typeof(self) strongSelf = weakSelf;
-                         [strongSelf handleValidationResponseWithData:responseData error:error completion:completion];
+                         [strongSelf handleValidationResponseWithData:responseData error:innerError completion:completion];
                        }];
   }
 }
@@ -356,11 +356,11 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
       dict[NSUnderlyingErrorKey] = error;
       userInfo = dict;
     }
-    NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+    NSError *localError = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                          code:BITAuthenticatorNetworkError
                                      userInfo:userInfo];
     self.validated = NO;
-    if (completion) { completion(NO, error); }
+    if (completion) { completion(NO, localError); }
   } else {
     NSError *validationParseError = nil;
     BOOL valid = [self.class isValidationResponseValid:responseData error:&validationParseError];
@@ -499,9 +499,9 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     [task resume];
   } else {
     BITHTTPOperation *operation = [self.hockeyAppClient operationWithURLRequest:request
-                                                                     completion:^(BITHTTPOperation *operation, NSData *responseData, NSError __unused *error) {
+                                                                     completion:^(BITHTTPOperation *innerOperation, NSData *responseData, NSError __unused *error) {
                                                                        typeof(self) strongSelf = weakSelf;
-                                                                       [strongSelf handleAuthenticationWithResponse:operation.response
+                                                                       [strongSelf handleAuthenticationWithResponse:innerOperation.response
                                                                                                               email:email
                                                                                                                data:responseData
                                                                                                          completion:completion];

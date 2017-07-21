@@ -116,8 +116,8 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)sendUsingURLConnectionWithRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)filePath {
   BITHTTPOperation *operation = [BITHTTPOperation operationWithRequest:request];
-  [operation setCompletion:^(BITHTTPOperation *operation, NSData *responseData, NSError *error) {
-    NSInteger statusCode = [operation.response statusCode];
+  [operation setCompletion:^(BITHTTPOperation *innerOperation, NSData *responseData, NSError *error) {
+    NSInteger statusCode = [innerOperation.response statusCode];
     [self handleResponseWithStatusCode:statusCode responseData:responseData filePath:filePath error:error];
   }];
 

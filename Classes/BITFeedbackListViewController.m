@@ -506,7 +506,6 @@
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
       cell.textLabel.textAlignment = NSTextAlignmentCenter;
     }
-    BITFeedbackManager *strongManager = self.manager;
     cell.textLabel.accessibilityTraits = UIAccessibilityTraitStaticText;
     cell.textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
                            [strongManager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[strongManager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];

@@ -1738,10 +1738,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     __weak typeof (self) weakSelf = self;
     BITHTTPOperation *operation = [self.hockeyAppClient
                                    operationWithURLRequest:request
-                                   completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
+                                   completion:^(BITHTTPOperation *innerOperation, NSData* responseData, NSError *error) {
                                      typeof (self) strongSelf = weakSelf;
                                      
-                                     NSInteger statusCode = [operation.response statusCode];
+                                     NSInteger statusCode = [innerOperation.response statusCode];
                                      [strongSelf processUploadResultWithFilename:filename responseData:responseData statusCode:statusCode error:error];
                                    }];
     

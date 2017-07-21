@@ -1046,13 +1046,13 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       BITHockeyLogDebug(@"INFO: Received API response: %@", responseString);
 
       if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
-        NSError *error = NULL;
+        NSError *localError = NULL;
 
-        NSDictionary *feedDict = (NSDictionary *) [NSJSONSerialization JSONObjectWithData:(NSData *)[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
+        NSDictionary *feedDict = (NSDictionary *) [NSJSONSerialization JSONObjectWithData:(NSData *)[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&localError];
 
         // server returned empty response?
-        if (error) {
-          [self reportError:error];
+        if (localError) {
+          [self reportError:localError];
         } else if (![feedDict count]) {
           [self reportError:[NSError errorWithDomain:kBITFeedbackErrorDomain
                                                 code:BITFeedbackAPIServerReturnedEmptyResponse
