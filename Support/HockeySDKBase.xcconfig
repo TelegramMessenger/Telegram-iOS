@@ -16,7 +16,7 @@ OTHER_LDFLAGS=$(inherited) -framework CrashReporter -framework AssetsLibrary -fr
 HOCKEYSDK_DOCSET_NAME=HockeySDK-iOS
 HOCKEYSDK_GCC_PREPROCESSOR_DEFINITIONS=$(inherited) $(XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS)
 HOCKEYSDK_WARNING_FLAGS = -Wshorten-64-to-32 -Wall
-WARNING_CFLAGS = -Weverything -Wno-objc-missing-property-synthesis -Wno-float-equal -Wno-pedantic -Wno-padded -Wno-sign-conversion -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-auto-import -Wno-assign-enum -Wno-exit-time-destructors -Wno-global-constructors -Wno-cast-align -Wno-reserved-id-macro -Wno-disabled-macro-expansion -Wno-objc-interface-ivars -Wno-documentation-unknown-command
+WARNING_CFLAGS = -Weverything -Wno-objc-missing-property-synthesis -Wno-float-equal -Wno-pedantic -Wno-padded -Wno-sign-conversion -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-auto-import -Wno-assign-enum -Wno-exit-time-destructors -Wno-global-constructors -Wno-cast-align -Wno-reserved-id-macro -Wno-disabled-macro-expansion -Wno-objc-interface-ivars -Wno-documentation-unknown-command -Wno-covered-switch-default -Wno-switch-enum -Wno-format-nonliteral 
 
 // These are all partially (but not completely?) independent of WARNING_CFLAGS
 // and need to be specified explicitly.
