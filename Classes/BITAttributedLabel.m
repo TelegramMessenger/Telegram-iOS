@@ -86,10 +86,7 @@ static inline CTTextAlignment CTTextAlignmentFromBITTextAlignment(BITTextAlignme
         case NSTextAlignmentLeft: return kCTLeftTextAlignment;
         case NSTextAlignmentCenter: return kCTCenterTextAlignment;
         case NSTextAlignmentRight: return kCTRightTextAlignment;
-        case BITTextAlignmentJustified:
-        case BITTextAlignmentNatural:
-        default:
-            return kCTNaturalTextAlignment;
+        default: return kCTNaturalTextAlignment;
     }
 #else
     switch (alignment) {
