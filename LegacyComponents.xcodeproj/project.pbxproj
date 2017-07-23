@@ -386,6 +386,29 @@
 		D0177AA41F2222990044446D /* TGKeyCommandController.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AA01F2222990044446D /* TGKeyCommandController.m */; };
 		D0177AA71F22239A0044446D /* TGModernGalleryController.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AA51F22239A0044446D /* TGModernGalleryController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0177AA81F22239A0044446D /* TGModernGalleryController.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AA61F22239A0044446D /* TGModernGalleryController.m */; };
+		D0177AC51F23D92C0044446D /* ActionStage.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AC11F23D92C0044446D /* ActionStage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177AC61F23D92C0044446D /* ActionStage.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0177AC21F23D92C0044446D /* ActionStage.mm */; };
+		D0177AC71F23D92C0044446D /* ASActor.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AC31F23D92C0044446D /* ASActor.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177AC81F23D92C0044446D /* ASActor.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AC41F23D92C0044446D /* ASActor.m */; };
+		D0177ACE1F23D9810044446D /* ASHandle.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AC91F23D9810044446D /* ASHandle.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177ACF1F23D9810044446D /* ASHandle.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177ACA1F23D9810044446D /* ASHandle.m */; };
+		D0177AD01F23D9810044446D /* ASQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177ACB1F23D9810044446D /* ASQueue.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177AD11F23D9810044446D /* ASQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177ACC1F23D9810044446D /* ASQueue.m */; };
+		D0177AD21F23D9810044446D /* ASWatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177ACD1F23D9810044446D /* ASWatcher.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177AD91F23D9B80044446D /* SGraphListNode.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AD31F23D9B80044446D /* SGraphListNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177ADA1F23D9B80044446D /* SGraphListNode.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AD41F23D9B80044446D /* SGraphListNode.m */; };
+		D0177ADB1F23D9B80044446D /* SGraphNode.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AD51F23D9B80044446D /* SGraphNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177ADC1F23D9B80044446D /* SGraphNode.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AD61F23D9B80044446D /* SGraphNode.m */; };
+		D0177ADD1F23D9B80044446D /* SGraphObjectNode.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AD71F23D9B80044446D /* SGraphObjectNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177ADE1F23D9B80044446D /* SGraphObjectNode.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AD81F23D9B80044446D /* SGraphObjectNode.m */; };
+		D0177AEF1F23DF6D0044446D /* TGImageDataSource.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AE91F23DF6D0044446D /* TGImageDataSource.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177AF01F23DF6D0044446D /* TGImageDataSource.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AEA1F23DF6D0044446D /* TGImageDataSource.m */; };
+		D0177AF11F23DF6D0044446D /* TGImageManager.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AEB1F23DF6D0044446D /* TGImageManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177AF21F23DF6D0044446D /* TGImageManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AEC1F23DF6D0044446D /* TGImageManager.m */; };
+		D0177AF31F23DF6D0044446D /* TGImageManagerTask.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AED1F23DF6D0044446D /* TGImageManagerTask.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177AF41F23DF6D0044446D /* TGImageManagerTask.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AEE1F23DF6D0044446D /* TGImageManagerTask.m */; };
+		D0177AF71F23DFC70044446D /* TGDataResource.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AF51F23DFC70044446D /* TGDataResource.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177AF81F23DFC70044446D /* TGDataResource.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AF61F23DFC70044446D /* TGDataResource.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -770,6 +793,29 @@
 		D0177AA01F2222990044446D /* TGKeyCommandController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGKeyCommandController.m; sourceTree = "<group>"; };
 		D0177AA51F22239A0044446D /* TGModernGalleryController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGModernGalleryController.h; sourceTree = "<group>"; };
 		D0177AA61F22239A0044446D /* TGModernGalleryController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGModernGalleryController.m; sourceTree = "<group>"; };
+		D0177AC11F23D92C0044446D /* ActionStage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ActionStage.h; sourceTree = "<group>"; };
+		D0177AC21F23D92C0044446D /* ActionStage.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ActionStage.mm; sourceTree = "<group>"; };
+		D0177AC31F23D92C0044446D /* ASActor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASActor.h; sourceTree = "<group>"; };
+		D0177AC41F23D92C0044446D /* ASActor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ASActor.m; sourceTree = "<group>"; };
+		D0177AC91F23D9810044446D /* ASHandle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASHandle.h; sourceTree = "<group>"; };
+		D0177ACA1F23D9810044446D /* ASHandle.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ASHandle.m; sourceTree = "<group>"; };
+		D0177ACB1F23D9810044446D /* ASQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASQueue.h; sourceTree = "<group>"; };
+		D0177ACC1F23D9810044446D /* ASQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ASQueue.m; sourceTree = "<group>"; };
+		D0177ACD1F23D9810044446D /* ASWatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASWatcher.h; sourceTree = "<group>"; };
+		D0177AD31F23D9B80044446D /* SGraphListNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGraphListNode.h; sourceTree = "<group>"; };
+		D0177AD41F23D9B80044446D /* SGraphListNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGraphListNode.m; sourceTree = "<group>"; };
+		D0177AD51F23D9B80044446D /* SGraphNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGraphNode.h; sourceTree = "<group>"; };
+		D0177AD61F23D9B80044446D /* SGraphNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGraphNode.m; sourceTree = "<group>"; };
+		D0177AD71F23D9B80044446D /* SGraphObjectNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGraphObjectNode.h; sourceTree = "<group>"; };
+		D0177AD81F23D9B80044446D /* SGraphObjectNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGraphObjectNode.m; sourceTree = "<group>"; };
+		D0177AE91F23DF6D0044446D /* TGImageDataSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGImageDataSource.h; sourceTree = "<group>"; };
+		D0177AEA1F23DF6D0044446D /* TGImageDataSource.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGImageDataSource.m; sourceTree = "<group>"; };
+		D0177AEB1F23DF6D0044446D /* TGImageManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGImageManager.h; sourceTree = "<group>"; };
+		D0177AEC1F23DF6D0044446D /* TGImageManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGImageManager.m; sourceTree = "<group>"; };
+		D0177AED1F23DF6D0044446D /* TGImageManagerTask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGImageManagerTask.h; sourceTree = "<group>"; };
+		D0177AEE1F23DF6D0044446D /* TGImageManagerTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGImageManagerTask.m; sourceTree = "<group>"; };
+		D0177AF51F23DFC70044446D /* TGDataResource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDataResource.h; sourceTree = "<group>"; };
+		D0177AF61F23DFC70044446D /* TGDataResource.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDataResource.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -810,7 +856,9 @@
 				D017776D1F1F91850044446D /* PS Coding */,
 				D017776C1F1F91780044446D /* Peers */,
 				D01777841F1F93430044446D /* Message */,
+				D0177AC01F23D9160044446D /* ActionStage */,
 				D01778AF1F1FFF6E0044446D /* Basic UI Components */,
+				D0177AE81F23DF040044446D /* Image Manager */,
 				D01778C81F200B810044446D /* Navigation UI Components */,
 				D01779281F20FEC90044446D /* Assets Library */,
 				D0177A451F21F6E50044446D /* Gallery */,
@@ -1300,6 +1348,43 @@
 			name = Gallery;
 			sourceTree = "<group>";
 		};
+		D0177AC01F23D9160044446D /* ActionStage */ = {
+			isa = PBXGroup;
+			children = (
+				D0177AC11F23D92C0044446D /* ActionStage.h */,
+				D0177AC21F23D92C0044446D /* ActionStage.mm */,
+				D0177AC31F23D92C0044446D /* ASActor.h */,
+				D0177AC41F23D92C0044446D /* ASActor.m */,
+				D0177AC91F23D9810044446D /* ASHandle.h */,
+				D0177ACA1F23D9810044446D /* ASHandle.m */,
+				D0177ACB1F23D9810044446D /* ASQueue.h */,
+				D0177ACC1F23D9810044446D /* ASQueue.m */,
+				D0177ACD1F23D9810044446D /* ASWatcher.h */,
+				D0177AD31F23D9B80044446D /* SGraphListNode.h */,
+				D0177AD41F23D9B80044446D /* SGraphListNode.m */,
+				D0177AD51F23D9B80044446D /* SGraphNode.h */,
+				D0177AD61F23D9B80044446D /* SGraphNode.m */,
+				D0177AD71F23D9B80044446D /* SGraphObjectNode.h */,
+				D0177AD81F23D9B80044446D /* SGraphObjectNode.m */,
+			);
+			name = ActionStage;
+			sourceTree = "<group>";
+		};
+		D0177AE81F23DF040044446D /* Image Manager */ = {
+			isa = PBXGroup;
+			children = (
+				D0177AEB1F23DF6D0044446D /* TGImageManager.h */,
+				D0177AEC1F23DF6D0044446D /* TGImageManager.m */,
+				D0177AF51F23DFC70044446D /* TGDataResource.h */,
+				D0177AF61F23DFC70044446D /* TGDataResource.m */,
+				D0177AE91F23DF6D0044446D /* TGImageDataSource.h */,
+				D0177AEA1F23DF6D0044446D /* TGImageDataSource.m */,
+				D0177AED1F23DF6D0044446D /* TGImageManagerTask.h */,
+				D0177AEE1F23DF6D0044446D /* TGImageManagerTask.m */,
+			);
+			name = "Image Manager";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1309,6 +1394,7 @@
 			files = (
 				D0177A001F2139980044446D /* POPLayerExtras.h in Headers */,
 				D01778691F1F99180044446D /* NSInputStream+TL.h in Headers */,
+				D0177ADD1F23D9B80044446D /* SGraphObjectNode.h in Headers */,
 				D01777531F1F8FE60044446D /* PSCoding.h in Headers */,
 				D0177A131F213B440044446D /* NSValue+JNWAdditions.h in Headers */,
 				D017781D1F1F961D0044446D /* TGMessageEntityMention.h in Headers */,
@@ -1347,6 +1433,7 @@
 				D0177A6F1F2201F00044446D /* TGModernGalleryDefaultFooterView.h in Headers */,
 				D01777F61F1F961D0044446D /* TGPeerIdAdapter.h in Headers */,
 				D01779431F20FFF60044446D /* TGMediaAssetFetchResult.h in Headers */,
+				D0177AD01F23D9810044446D /* ASQueue.h in Headers */,
 				D0177A521F21F7C90044446D /* TGModernGalleryZoomableScrollViewSwipeGestureRecognizer.h in Headers */,
 				D01779261F20FE480044446D /* TGObserverProxy.h in Headers */,
 				D017782F1F1F961D0044446D /* TGReplyMarkupAttachment.h in Headers */,
@@ -1354,6 +1441,7 @@
 				D01779EA1F2139980044446D /* POPAnimationPrivate.h in Headers */,
 				D017775C1F1F8FE60044446D /* PSKeyValueStore.h in Headers */,
 				D0177A8F1F221BB10044446D /* TGModernGalleryModel.h in Headers */,
+				D0177AF11F23DF6D0044446D /* TGImageManager.h in Headers */,
 				D01777511F1F8FE60044446D /* LegacyComponentsGlobals.h in Headers */,
 				D01778211F1F961D0044446D /* TGMessageEntityPre.h in Headers */,
 				D0177A661F21FB9B0044446D /* TGModernGalleryItem.h in Headers */,
@@ -1387,12 +1475,15 @@
 				D0177A711F2201F00044446D /* TGModernGalleryDefaultInterfaceView.h in Headers */,
 				D01779491F20FFF60044446D /* TGMediaAssetMoment.h in Headers */,
 				D01779841F2107D70044446D /* lmdb.h in Headers */,
+				D0177AF71F23DFC70044446D /* TGDataResource.h in Headers */,
 				D0177A071F2139980044446D /* POPSpringAnimation.h in Headers */,
 				D0177A341F21F1980044446D /* UIImage+TGMediaEditableItem.h in Headers */,
 				D017777E1F1F930B0044446D /* TGConversation.h in Headers */,
 				D017781F1F1F961D0044446D /* TGMessageEntityMentionName.h in Headers */,
+				D0177AD91F23D9B80044446D /* SGraphListNode.h in Headers */,
 				D0177A041F2139980044446D /* POPPropertyAnimation.h in Headers */,
 				D01777551F1F8FE60044446D /* PSKeyValueCoder.h in Headers */,
+				D0177AC71F23D92C0044446D /* ASActor.h in Headers */,
 				D01778EB1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.h in Headers */,
 				D01778011F1F961D0044446D /* TGMessageViewCountContentProperty.h in Headers */,
 				D0177A6E1F2201F00044446D /* TGModernGalleryDefaultFooterAccessoryView.h in Headers */,
@@ -1432,9 +1523,11 @@
 				D017783E1F1F961D0044446D /* TGDocumentAttributeImageSize.h in Headers */,
 				D017780F1F1F961D0044446D /* TGMessageEntity.h in Headers */,
 				D017795C1F2103440044446D /* PGPhotoEditorValues.h in Headers */,
+				D0177AEF1F23DF6D0044446D /* TGImageDataSource.h in Headers */,
 				D01777681F1F8FE60044446D /* TGUser.h in Headers */,
 				D01779581F21031F0044446D /* TGPhotoEditorUtils.h in Headers */,
 				D01778571F1F961D0044446D /* TGLocationMediaAttachment.h in Headers */,
+				D0177ADB1F23D9B80044446D /* SGraphNode.h in Headers */,
 				D01778531F1F961D0044446D /* TGVideoMediaAttachment.h in Headers */,
 				D01778EF1F20CAE60044446D /* TGOverlayControllerWindow.h in Headers */,
 				D017797B1F21075C0044446D /* TGModernCache.h in Headers */,
@@ -1445,6 +1538,8 @@
 				D017783B1F1F961D0044446D /* TGStickerPackReference.h in Headers */,
 				D01779DF1F2139980044446D /* POPAction.h in Headers */,
 				D017791E1F20F7090044446D /* UIDevice+PlatformInfo.h in Headers */,
+				D0177AF31F23DF6D0044446D /* TGImageManagerTask.h in Headers */,
+				D0177ACE1F23D9810044446D /* ASHandle.h in Headers */,
 				D0177A671F21FB9B0044446D /* TGModernGalleryItemView.h in Headers */,
 				D0177A561F21F7F40044446D /* TGDoubleTapGestureRecognizer.h in Headers */,
 				D017796D1F2103DB0044446D /* TGPhotoPaintStickerEntity.h in Headers */,
@@ -1499,6 +1594,8 @@
 				D017784F1F1F961D0044446D /* TGContactMediaAttachment.h in Headers */,
 				D0177A381F21F2520044446D /* TGFullscreenContainerView.h in Headers */,
 				D01778491F1F961D0044446D /* TGDocumentMediaAttachment.h in Headers */,
+				D0177AD21F23D9810044446D /* ASWatcher.h in Headers */,
+				D0177AC51F23D92C0044446D /* ActionStage.h in Headers */,
 				D0177A1C1F213BBE0044446D /* FloatConversion.h in Headers */,
 				D01779FD1F2139980044446D /* POPDefines.h in Headers */,
 				D01779E91F2139980044446D /* POPAnimationInternal.h in Headers */,
@@ -1591,10 +1688,12 @@
 				D01779851F2107D70044446D /* mdb.c in Sources */,
 				D017784A1F1F961D0044446D /* TGDocumentMediaAttachment.m in Sources */,
 				D0177A0C1F2139980044446D /* POPVector.mm in Sources */,
+				D0177ADA1F23D9B80044446D /* SGraphListNode.m in Sources */,
 				D01778B31F1FFF810044446D /* TGLabel.m in Sources */,
 				D017782E1F1F961D0044446D /* TGBotReplyMarkupRow.m in Sources */,
 				D01779271F20FE480044446D /* TGObserverProxy.m in Sources */,
 				D017795D1F2103440044446D /* PGPhotoEditorValues.m in Sources */,
+				D0177ADC1F23D9B80044446D /* SGraphNode.m in Sources */,
 				D017794A1F20FFF60044446D /* TGMediaAssetMoment.m in Sources */,
 				D01778561F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.m in Sources */,
 				D01778FC1F20CF6B0044446D /* TGBackdropView.m in Sources */,
@@ -1656,6 +1755,7 @@
 				D01778CC1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.m in Sources */,
 				D01779EE1F2139980044446D /* POPAnimationTracer.mm in Sources */,
 				D01778EA1F20CAE60044446D /* TGViewController.mm in Sources */,
+				D0177ACF1F23D9810044446D /* ASHandle.m in Sources */,
 				D0177A7A1F2204360044446D /* TGModernToolbarButton.m in Sources */,
 				D0177A921F221BB10044446D /* TGModernGalleryTransitionView.m in Sources */,
 				D017790F1F20F4370044446D /* UIImage+TG.m in Sources */,
@@ -1666,8 +1766,11 @@
 				D01779FB1F2139980044446D /* POPDecayAnimation.mm in Sources */,
 				D0177A941F221BB10044446D /* TGModernGalleryView.m in Sources */,
 				D01778501F1F961D0044446D /* TGContactMediaAttachment.m in Sources */,
+				D0177AF81F23DFC70044446D /* TGDataResource.m in Sources */,
 				D017786A1F1F99180044446D /* NSInputStream+TL.m in Sources */,
+				D0177AF21F23DF6D0044446D /* TGImageManager.m in Sources */,
 				D0177A331F21F1980044446D /* AVURLAsset+TGMediaItem.m in Sources */,
+				D0177ADE1F23D9B80044446D /* SGraphObjectNode.m in Sources */,
 				D017790B1F20F3F90044446D /* TGImageBlur.m in Sources */,
 				D0177A441F21F62A0044446D /* TGMediaVideoConverter.m in Sources */,
 				D01779A51F210A120044446D /* TGMediaAssetLegacyImageSignals.m in Sources */,
@@ -1676,6 +1779,7 @@
 				D01777581F1F8FE60044446D /* PSKeyValueDecoder.m in Sources */,
 				D01779761F2104320044446D /* TGVideoEditAdjustments.m in Sources */,
 				D0177A721F2201F00044446D /* TGModernGalleryDefaultInterfaceView.m in Sources */,
+				D0177AF41F23DF6D0044446D /* TGImageManagerTask.m in Sources */,
 				D017783F1F1F961D0044446D /* TGDocumentAttributeImageSize.m in Sources */,
 				D01778E61F20CAE60044446D /* TGNavigationController.m in Sources */,
 				D0177A901F221BB10044446D /* TGModernGalleryModel.m in Sources */,
@@ -1683,6 +1787,7 @@
 				D017783D1F1F961D0044446D /* TGDocumentAttributeFilename.m in Sources */,
 				D017796C1F2103DB0044446D /* TGPhotoPaintEntity.m in Sources */,
 				D017780B1F1F961D0044446D /* TGViaUserAttachment.m in Sources */,
+				D0177AF01F23DF6D0044446D /* TGImageDataSource.m in Sources */,
 				D01778BF1F200A9A0044446D /* UIScrollView+TGHacks.m in Sources */,
 				D0177A051F2139980044446D /* POPPropertyAnimation.mm in Sources */,
 				D0177A011F2139980044446D /* POPLayerExtras.mm in Sources */,
@@ -1694,6 +1799,7 @@
 				D01779911F2108130044446D /* PSLMDBKeyValueReaderWriter.m in Sources */,
 				D0177A851F2218AB0044446D /* TGModernGalleryImageItemContainerView.m in Sources */,
 				D017775A1F1F8FE60044446D /* PSKeyValueEncoder.m in Sources */,
+				D0177AD11F23D9810044446D /* ASQueue.m in Sources */,
 				D01778F81F20CDAC0044446D /* TGHacks.m in Sources */,
 				D01779301F20FFAC0044446D /* TGMediaAssetsLegacyLibrary.m in Sources */,
 				D01778021F1F961D0044446D /* TGMessageViewCountContentProperty.m in Sources */,
@@ -1717,6 +1823,7 @@
 				D01778541F1F961D0044446D /* TGVideoMediaAttachment.m in Sources */,
 				D01779341F20FFAC0044446D /* TGMediaAssetsModernLibrary.m in Sources */,
 				D01778361F1F961D0044446D /* TGReplyMessageMediaAttachment.m in Sources */,
+				D0177AC61F23D92C0044446D /* ActionStage.mm in Sources */,
 				D0177A291F2144700044446D /* TGPhotoEditorAnimation.m in Sources */,
 				D01779651F2103910044446D /* TGPaintUtils.m in Sources */,
 				D01779AB1F210A2C0044446D /* TGMediaAssetImageSignals.m in Sources */,
@@ -1742,6 +1849,7 @@
 				D0177A9C1F22204A0044446D /* TGModernGalleryEmbeddedStickersHeaderView.m in Sources */,
 				D017783A1F1F961D0044446D /* TGAudioWaveform.m in Sources */,
 				D01777631F1F8FE60044446D /* TGLocalization.m in Sources */,
+				D0177AC81F23D92C0044446D /* ASActor.m in Sources */,
 				D01777731F1F92420044446D /* TGPhoneUtils.m in Sources */,
 				D017781C1F1F961D0044446D /* TGMessageEntityItalic.m in Sources */,
 				D0177A391F21F2520044446D /* TGFullscreenContainerView.m in Sources */,

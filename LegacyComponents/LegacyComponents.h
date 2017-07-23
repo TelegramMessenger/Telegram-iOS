@@ -117,6 +117,15 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGImageInfo.h>
 #import <LegacyComponents/TGMessage.h>
 
+#import <LegacyComponents/ActionStage.h>
+#import <LegacyComponents/ASActor.h>
+#import <LegacyComponents/ASHandle.h>
+#import <LegacyComponents/ASQueue.h>
+#import <LegacyComponents/ASWatcher.h>
+#import <LegacyComponents/SGraphListNode.h>
+#import <LegacyComponents/SGraphNode.h>
+#import <LegacyComponents/SGraphObjectNode.h>
+
 #import <LegacyComponents/TGLabel.h>
 #import <LegacyComponents/TGToolbarButton.h>
 #import <LegacyComponents/UIScrollView+TGHacks.h>
@@ -131,6 +140,11 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGModernButton.h>
 #import <LegacyComponents/TGModernToolbarButton.h>
 #import <LegacyComponents/TGModernBackToolbarButton.h>
+
+#import <LegacyComponents/TGImageManager.h>
+#import <LegacyComponents/TGDataResource.h>
+#import <LegacyComponents/TGImageDataSource.h>
+#import <LegacyComponents/TGImageManagerTask.h>
 
 #import <LegacyComponents/TGRTLScreenEdgePanGestureRecognizer.h>
 #import <LegacyComponents/TGPopoverController.h>
