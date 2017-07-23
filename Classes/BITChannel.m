@@ -41,7 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Initialisation
 
 - (instancetype)init {
-  if (self = [super init]) {
+  if ((self = [super init])) {
     bit_resetSafeJsonStream(&BITSafeJsonEventsString);
     _dataItemCount = 0;
     if (bit_isDebuggerAttached()) {
@@ -60,7 +60,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (instancetype)initWithTelemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *)persistence {
-  if (self = [self init]) {
+  if ((self = [self init])) {
     _telemetryContext = telemetryContext;
     _persistence = persistence;
   }

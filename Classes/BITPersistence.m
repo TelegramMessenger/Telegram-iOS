@@ -174,7 +174,7 @@ static NSUInteger const BITDefaultFileCount = 50;
       filePath = [self.appHockeySDKDirectoryPath stringByAppendingPathComponent:kBITMetaDataDirectory];
       break;
     };
-    default: {
+    case BITPersistenceTypeTelemetry: {
       NSString *uuid = bit_UUID();
       fileName = [NSString stringWithFormat:@"%@%@", kBITFileBaseString, uuid];
       filePath = [self.appHockeySDKDirectoryPath stringByAppendingPathComponent:kBITTelemetryDirectory];

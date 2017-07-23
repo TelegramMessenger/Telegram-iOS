@@ -11,7 +11,8 @@ BITLogHandler const defaultLogHandler = ^(BITLogMessageProvider messageProvider,
     if (_currentLogLevel < logLevel) {
       return;
     }
-    NSLog((@"[HockeySDK] %s/%d %@"), function, line, messageProvider());
+    NSString *functionString = [NSString stringWithUTF8String:function];
+    NSLog((@"[HockeySDK] %@/%d %@"), functionString, line, messageProvider());
   }
 };
 

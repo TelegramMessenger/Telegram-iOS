@@ -44,7 +44,7 @@
 @interface BITFeedbackActivity()
 
 @property (nonatomic, strong) NSMutableArray *items;
-@property (nonatomic, strong) UIViewController *activityViewController;
+@property (nonatomic, strong, readwrite) UIViewController *activityViewController;
 
 @end
 

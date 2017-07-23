@@ -86,7 +86,10 @@ static inline CTTextAlignment CTTextAlignmentFromBITTextAlignment(BITTextAlignme
         case NSTextAlignmentLeft: return kCTLeftTextAlignment;
         case NSTextAlignmentCenter: return kCTCenterTextAlignment;
         case NSTextAlignmentRight: return kCTRightTextAlignment;
-        default: return kCTNaturalTextAlignment;
+        case BITTextAlignmentJustified:
+        case BITTextAlignmentNatural:
+        default:
+            return kCTNaturalTextAlignment;
     }
 #else
     switch (alignment) {
@@ -170,6 +173,8 @@ static inline CGFloat BITFlushFactorForTextAlignment(NSTextAlignment textAlignme
         case BITTextAlignmentRight:
             return 1.0;
         case BITTextAlignmentLeft:
+        case BITTextAlignmentJustified:
+        case BITTextAlignmentNatural:
         default:
             return 0.0;
     }
@@ -179,9 +184,9 @@ static inline NSDictionary * NSAttributedStringAttributesFromLabel(BITAttributed
     NSMutableDictionary *mutableAttributes = [NSMutableDictionary dictionary];
     
     if ([NSMutableParagraphStyle class]) {
-        [mutableAttributes setObject:label.font forKey:(NSString *)kCTFontAttributeName];
-        [mutableAttributes setObject:label.textColor forKey:(NSString *)kCTForegroundColorAttributeName];
-        [mutableAttributes setObject:@(label.kern) forKey:(NSString *)kCTKernAttributeName];
+        [mutableAttributes setObject:label.font forKey:(const NSString *)kCTFontAttributeName];
+        [mutableAttributes setObject:label.textColor forKey:(const NSString *)kCTForegroundColorAttributeName];
+        [mutableAttributes setObject:@(label.kern) forKey:(const NSString *)kCTKernAttributeName];
         
         NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
         paragraphStyle.alignment = label.textAlignment;
@@ -197,14 +202,14 @@ static inline NSDictionary * NSAttributedStringAttributesFromLabel(BITAttributed
             paragraphStyle.lineBreakMode = NSLineBreakByWordWrapping;
         }
         
-        [mutableAttributes setObject:paragraphStyle forKey:(NSString *)kCTParagraphStyleAttributeName];
+        [mutableAttributes setObject:paragraphStyle forKey:(const NSString *)kCTParagraphStyleAttributeName];
     } else {
         CTFontRef font = CTFontCreateWithName((__bridge CFStringRef)label.font.fontName, label.font.pointSize, NULL);
-        [mutableAttributes setObject:(__bridge id)font forKey:(NSString *)kCTFontAttributeName];
+        [mutableAttributes setObject:(__bridge id)font forKey:(const NSString *)kCTFontAttributeName];
         CFRelease(font);
         
-        [mutableAttributes setObject:(id)[label.textColor CGColor] forKey:(NSString *)kCTForegroundColorAttributeName];
-        [mutableAttributes setObject:@(label.kern) forKey:(NSString *)kCTKernAttributeName];
+        [mutableAttributes setObject:(id)[label.textColor CGColor] forKey:(const NSString *)kCTForegroundColorAttributeName];
+        [mutableAttributes setObject:@(label.kern) forKey:(const NSString *)kCTKernAttributeName];
         
         CTTextAlignment alignment = CTTextAlignmentFromBITTextAlignment(label.textAlignment);
         CGFloat lineSpacing = label.lineSpacing;
@@ -232,7 +237,7 @@ static inline NSDictionary * NSAttributedStringAttributesFromLabel(BITAttributed
         
         CTParagraphStyleRef paragraphStyle = CTParagraphStyleCreate(paragraphStyles, 12);
         
-        [mutableAttributes setObject:(__bridge id)paragraphStyle forKey:(NSString *)kCTParagraphStyleAttributeName];
+        [mutableAttributes setObject:(__bridge id)paragraphStyle forKey:(const NSString *)kCTParagraphStyleAttributeName];
         
         CFRelease(paragraphStyle);
     }
@@ -275,7 +280,7 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
     [mutableAttributedString enumerateAttribute:(NSString *)kCTForegroundColorFromContextAttributeName inRange:NSMakeRange(0, [mutableAttributedString length]) options:0 usingBlock:^(id value, NSRange range, __unused BOOL *stop) {
         BOOL usesColorFromContext = (BOOL)value;
         if (usesColorFromContext) {
-            [mutableAttributedString setAttributes:[NSDictionary dictionaryWithObject:color forKey:(NSString *)kCTForegroundColorAttributeName] range:range];
+            [mutableAttributedString setAttributes:[NSDictionary dictionaryWithObject:color forKey:(const NSString *)kCTForegroundColorAttributeName] range:range];
             [mutableAttributedString removeAttribute:(NSString *)kCTForegroundColorFromContextAttributeName range:range];
         }
     }];
@@ -394,22 +399,22 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     self.linkBackgroundEdgeInset = UIEdgeInsetsMake(0.0, -1.0, 0.0, -1.0);
     
     NSMutableDictionary *mutableLinkAttributes = [NSMutableDictionary dictionary];
-    [mutableLinkAttributes setObject:[NSNumber numberWithBool:YES] forKey:(NSString *)kCTUnderlineStyleAttributeName];
+    [mutableLinkAttributes setObject:[NSNumber numberWithBool:YES] forKey:(const NSString *)kCTUnderlineStyleAttributeName];
     
     NSMutableDictionary *mutableActiveLinkAttributes = [NSMutableDictionary dictionary];
-    [mutableActiveLinkAttributes setObject:[NSNumber numberWithBool:NO] forKey:(NSString *)kCTUnderlineStyleAttributeName];
+    [mutableActiveLinkAttributes setObject:[NSNumber numberWithBool:NO] forKey:(const NSString *)kCTUnderlineStyleAttributeName];
     
     NSMutableDictionary *mutableInactiveLinkAttributes = [NSMutableDictionary dictionary];
-    [mutableInactiveLinkAttributes setObject:[NSNumber numberWithBool:NO] forKey:(NSString *)kCTUnderlineStyleAttributeName];
+    [mutableInactiveLinkAttributes setObject:[NSNumber numberWithBool:NO] forKey:(const NSString *)kCTUnderlineStyleAttributeName];
     
     if ([NSMutableParagraphStyle class]) {
-        [mutableLinkAttributes setObject:[UIColor blueColor] forKey:(NSString *)kCTForegroundColorAttributeName];
-        [mutableActiveLinkAttributes setObject:[UIColor redColor] forKey:(NSString *)kCTForegroundColorAttributeName];
-        [mutableInactiveLinkAttributes setObject:[UIColor grayColor] forKey:(NSString *)kCTForegroundColorAttributeName];
+        [mutableLinkAttributes setObject:[UIColor blueColor] forKey:(const NSString *)kCTForegroundColorAttributeName];
+        [mutableActiveLinkAttributes setObject:[UIColor redColor] forKey:(const NSString *)kCTForegroundColorAttributeName];
+        [mutableInactiveLinkAttributes setObject:[UIColor grayColor] forKey:(const NSString *)kCTForegroundColorAttributeName];
     } else {
-        [mutableLinkAttributes setObject:(__bridge id)[[UIColor blueColor] CGColor] forKey:(NSString *)kCTForegroundColorAttributeName];
-        [mutableActiveLinkAttributes setObject:(__bridge id)[[UIColor redColor] CGColor] forKey:(NSString *)kCTForegroundColorAttributeName];
-        [mutableInactiveLinkAttributes setObject:(__bridge id)[[UIColor grayColor] CGColor] forKey:(NSString *)kCTForegroundColorAttributeName];
+        [mutableLinkAttributes setObject:(__bridge id)[[UIColor blueColor] CGColor] forKey:(const NSString *)kCTForegroundColorAttributeName];
+        [mutableActiveLinkAttributes setObject:(__bridge id)[[UIColor redColor] CGColor] forKey:(const NSString *)kCTForegroundColorAttributeName];
+        [mutableInactiveLinkAttributes setObject:(__bridge id)[[UIColor grayColor] CGColor] forKey:(const NSString *)kCTForegroundColorAttributeName];
     }
     
     self.linkAttributes = [NSDictionary dictionaryWithDictionary:mutableLinkAttributes];
@@ -709,7 +714,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     
     BITAttributedLabelLink *link = nil;
     
-    for (NSInteger i = 0; i < count && link.result == nil; i ++) {
+    for (size_t i = 0; i < count && link.result == nil; i ++) {
         CGPoint currentPoint = CGPointMake(point.x + deltas[i].x, point.y + deltas[i].y);
         link = [self linkAtCharacterIndex:[self characterIndexAtPoint:currentPoint]];
     }

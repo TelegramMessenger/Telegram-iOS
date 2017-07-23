@@ -96,8 +96,8 @@
 
 #pragma mark - UIViewController Rotation
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation) __unused orientation {
-  return YES;
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations{
+  return UIInterfaceOrientationMaskAll;
 }
 
 #pragma mark - Private methods

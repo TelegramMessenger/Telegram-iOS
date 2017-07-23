@@ -817,8 +817,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     case BITUpdateCheckManually:
       checkForUpdate = NO;
       break;
-    default:
-      break;
   }
   
   return checkForUpdate;

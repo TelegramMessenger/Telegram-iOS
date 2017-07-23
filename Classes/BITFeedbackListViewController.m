@@ -426,10 +426,9 @@
   [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation) __unused orientation {
-  return YES;
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations{
+  return UIInterfaceOrientationMaskAll;
 }
-
 
 #pragma mark - Table view data source
 

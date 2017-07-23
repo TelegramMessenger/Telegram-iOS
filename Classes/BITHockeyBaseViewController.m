@@ -93,20 +93,13 @@
 
 #pragma mark - Rotation
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-  BOOL shouldAutorotate;
-  
+-(UIInterfaceOrientationMask)supportedInterfaceOrientations {
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
-    shouldAutorotate = (interfaceOrientation == UIInterfaceOrientationLandscapeLeft ||
-                        interfaceOrientation == UIInterfaceOrientationLandscapeRight ||
-                        interfaceOrientation == UIInterfaceOrientationPortrait);
+    return (UIInterfaceOrientationMaskPortrait | UIInterfaceOrientationMaskLandscape);
   } else {
-    shouldAutorotate = YES;
+    return UIInterfaceOrientationMaskAll;
   }
-  
-  return shouldAutorotate;
 }
-
 
 #pragma mark - Modal presentation
 

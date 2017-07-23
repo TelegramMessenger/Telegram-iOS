@@ -21,7 +21,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 
 -(instancetype)init {
   
-  if(self = [super init]) {
+  if((self = [super init])) {
     _operationsQueue = dispatch_queue_create(BITContextOperationsQueue, DISPATCH_QUEUE_CONCURRENT);
   }
   return self;

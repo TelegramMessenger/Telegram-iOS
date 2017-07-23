@@ -353,12 +353,13 @@
   
   int i = 0;
   BOOL breakAfterThisAppVersion = NO;
-  for (BITAppVersionMetaInfo *appVersion in self.updateManager.appVersions) {
+  BITUpdateManager *stronManager = self.updateManager;
+  for (BITAppVersionMetaInfo *appVersion in stronManager.appVersions) {
     i++;
     
     // only show the newer version of the app by default, if we don't show all versions
     if (!self.showAllVersions) {
-      if ([appVersion.version isEqualToString:[self.updateManager currentAppVersion]]) {
+      if ([appVersion.version isEqualToString:[stronManager currentAppVersion]]) {
         if (i == 1) {
           breakAfterThisAppVersion = YES;
         } else {
@@ -386,12 +387,12 @@
 - (void)showPreviousVersionAction {
   self.showAllVersions = YES;
   BOOL showAllPending = NO;
-  
-  for (BITAppVersionMetaInfo *appVersion in self.updateManager.appVersions) {
+  BITUpdateManager *strongManager = self.updateManager;
+  for (BITAppVersionMetaInfo *appVersion in strongManager.appVersions) {
     if (!showAllPending) {
-      if ([appVersion.version isEqualToString:[self.updateManager currentAppVersion]]) {            
+      if ([appVersion.version isEqualToString:[strongManager currentAppVersion]]) {
         showAllPending = YES;
-        if (appVersion == self.updateManager.newestAppVersion) {
+        if (appVersion == strongManager.newestAppVersion) {
           continue; // skip this version already if it the latest version is the installed one
         }
       } else {
@@ -513,12 +514,13 @@
 }
 
 - (void)storeButtonFired:(BITStoreButton *) __unused button {
+  BITUpdateManager *strongManager = self.updateManager;
   switch (self.appStoreButtonState) {
     case AppStoreButtonStateCheck:
-      [self.updateManager checkForUpdateShowFeedback:YES];
+      [strongManager checkForUpdateShowFeedback:YES];
       break;
     case AppStoreButtonStateUpdate:
-      if ([self.updateManager initiateAppDownload]) {
+      if ([strongManager initiateAppDownload]) {
         [self setAppStoreButtonState:AppStoreButtonStateInstalling animated:YES];
       };
       break;

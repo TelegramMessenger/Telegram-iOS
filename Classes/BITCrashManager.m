@@ -177,7 +177,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 
 
 // C++ Exception Handler
-static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInfo *info) {
+static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInfo *info)  {
   // This relies on a LOT of sneaky internal knowledge of how PLCR works and should not be considered a long-term solution.
   NSGetUncaughtExceptionHandler()([[BITCrashCXXExceptionWrapperException alloc] initWithCXXExceptionInfo:info]);
   abort();
