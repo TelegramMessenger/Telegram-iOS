@@ -91,12 +91,31 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
 
 // Redeclare BITHockeyManager properties with readwrite attribute.
 @property (nonatomic, readwrite) NSString *installString;
+
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
 @property (nonatomic, strong, readwrite) BITCrashManager *crashManager;
+#endif
+
+#if HOCKEYSDK_FEATURE_UPDATES
 @property (nonatomic, strong, readwrite) BITUpdateManager *updateManager;
+#endif
+
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
 @property (nonatomic, strong, readwrite) BITStoreUpdateManager *storeUpdateManager;
+#endif
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
 @property (nonatomic, strong, readwrite) BITFeedbackManager *feedbackManager;
+#endif
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
 @property (nonatomic, strong, readwrite) BITAuthenticator *authenticator;
+#endif
+
+#if HOCKEYSDK_FEATURE_METRICS
 @property (nonatomic, strong, readwrite) BITMetricsManager *metricsManager;
+#endif
+
 
 @end
 
