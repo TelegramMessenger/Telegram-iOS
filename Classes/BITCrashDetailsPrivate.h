@@ -26,7 +26,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-extern NSString *const __attribute__((unused)) kBITCrashKillSignal;
+extern NSString *const kBITCrashKillSignal;
 
 @interface BITCrashDetails () {
   

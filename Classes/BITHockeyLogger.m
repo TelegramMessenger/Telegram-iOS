@@ -1,4 +1,4 @@
-#import "BITHockeyLogger.h"
+#import "BITHockeyLoggerPrivate.h"
 #import "HockeySDK.h"
 
 @implementation BITHockeyLogger
@@ -6,12 +6,13 @@
 static BITLogLevel _currentLogLevel = BITLogLevelWarning;
 static BITLogHandler currentLogHandler;
 
-BITLogHandler defaultLogHandler = ^(BITLogMessageProvider messageProvider, BITLogLevel logLevel, const char *file, const char *function, uint line) {
+BITLogHandler const defaultLogHandler = ^(BITLogMessageProvider messageProvider, BITLogLevel logLevel, const char __unused *file, const char *function, uint line) {
   if (messageProvider) {
     if (_currentLogLevel < logLevel) {
       return;
     }
-    NSLog((@"[HockeySDK] %s/%d %@"), function, line, messageProvider());
+    NSString *functionString = [NSString stringWithUTF8String:function];
+    NSLog((@"[HockeySDK] %@/%d %@"), functionString, line, messageProvider());
   }
 };
 

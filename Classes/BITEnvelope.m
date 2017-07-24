@@ -7,7 +7,7 @@
 
 /// Initializes a new instance of the class.
 - (instancetype)init {
-  if(self = [super init]) {
+  if((self = [super init])) {
     _version = @1;
     _sampleRate = @100.0;
     _tags = [NSDictionary dictionary];

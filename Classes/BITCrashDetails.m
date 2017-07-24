@@ -70,7 +70,7 @@ NSString *const kBITCrashKillSignal = @"SIGKILL";
 - (BOOL)isAppKill {
   BOOL result = NO;
   
-  if (_signal && [[_signal uppercaseString] isEqualToString:kBITCrashKillSignal])
+  if (self.signal && [[self.signal uppercaseString] isEqualToString:kBITCrashKillSignal])
     result = YES;
   
   return result;

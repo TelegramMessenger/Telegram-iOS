@@ -54,18 +54,18 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
 #pragma mark - private
 
 - (void)addWebView {
-  if(_webViewContent) {
+  if(self.webViewContent) {
     CGRect webViewRect = CGRectMake(0, 0, self.frame.size.width, self.frame.size.height);
-    if(!_webView) {
-      _webView = [[UIWebView alloc] initWithFrame:webViewRect];
-      [self addSubview:_webView];
-      _webView.hidden = YES;
-      _webView.backgroundColor = self.cellBackgroundColor;
-      _webView.opaque = NO;
-      _webView.delegate = self;
-      _webView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    if(!self.webView) {
+      self.webView = [[UIWebView alloc] initWithFrame:webViewRect];
+      [self addSubview:self.webView];
+      self.webView.hidden = YES;
+      self.webView.backgroundColor = self.cellBackgroundColor;
+      self.webView.opaque = NO;
+      self.webView.delegate = self;
+      self.webView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
       
-      for(UIView* subView in _webView.subviews){
+      for(UIView* subView in self.webView.subviews){
         if([subView isKindOfClass:[UIScrollView class]]){
           // disable scrolling
           UIScrollView *sv = (UIScrollView *)subView;
@@ -82,30 +82,30 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
       }
     }
     else
-      _webView.frame = webViewRect;
+      self.webView.frame = webViewRect;
     
-    NSString *deviceWidth = [NSString stringWithFormat:@"%.0f", CGRectGetWidth(self.bounds)];
+    NSString *deviceWidth = [NSString stringWithFormat:@"%.0f", (double)CGRectGetWidth(self.bounds)];
     
     //HockeySDKLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
     NSString *contentHtml = [NSString stringWithFormat:BITWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent];
-    [_webView loadHTMLString:contentHtml baseURL:[NSURL URLWithString:@"about:blank"]];
+    [self.webView loadHTMLString:contentHtml baseURL:[NSURL URLWithString:@"about:blank"]];
   }
 }
 
 - (void)showWebView {
-  _webView.hidden = NO;
+  self.webView.hidden = NO;
   self.textLabel.text = @"";
   [self setNeedsDisplay];
 }
 
 
 - (void)removeWebView {
-  if(_webView) {
-    _webView.delegate = nil;
-    [_webView resignFirstResponder];
-    [_webView removeFromSuperview];
+  if(self.webView) {
+    self.webView.delegate = nil;
+    [self.webView resignFirstResponder];
+    [self.webView removeFromSuperview];
   }
-  _webView = nil;
+  self.webView = nil;
   [self setNeedsDisplay];
 }
 
@@ -157,37 +157,34 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
 
 #pragma mark - UIWebViewDelegate
 
-- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
+- (BOOL)webView:(UIWebView *) __unused webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
   switch (navigationType) {
     case UIWebViewNavigationTypeLinkClicked:
       [self openURL:request.URL];
       return NO;
-      break;
     case UIWebViewNavigationTypeOther:
       return YES;
-      break;
     case UIWebViewNavigationTypeBackForward:
     case UIWebViewNavigationTypeFormResubmitted:
     case UIWebViewNavigationTypeFormSubmitted:
     case UIWebViewNavigationTypeReload:
       return NO;
-      break;
   }
 }
 
-- (void)webViewDidFinishLoad:(UIWebView *)webView {
-  if(_webViewContent)
+- (void)webViewDidFinishLoad:(UIWebView *) __unused webView {
+  if(self.webViewContent)
     [self showWebView];
   
-  CGRect frame = _webView.frame;
+  CGRect frame = self.webView.frame;
   frame.size.height = 1;
-  _webView.frame = frame;
-  CGSize fittingSize = [_webView sizeThatFits:CGSizeZero];
+  self.webView.frame = frame;
+  CGSize fittingSize = [self.webView sizeThatFits:CGSizeZero];
   frame.size = fittingSize;
-  _webView.frame = frame;
+  self.webView.frame = frame;
   
   // sizeThatFits is not reliable - use javascript for optimal height
-  NSString *output = [_webView stringByEvaluatingJavaScriptFromString:@"document.body.scrollHeight;"];
+  NSString *output = [self.webView stringByEvaluatingJavaScriptFromString:@"document.body.scrollHeight;"];
   self.webViewSize = CGSizeMake(fittingSize.width, [output integerValue]);
 }
 

@@ -72,11 +72,11 @@ NSString * const kBITHockeyAppClientBoundary = @"----FOO";
       [request setValue:contentType forHTTPHeaderField:@"Content-type"];
       
       NSMutableData *postBody = [NSMutableData data];
-      [params enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, BOOL *stop) {
+      [params enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, BOOL __unused *stop) {
         [postBody appendData:[[self class] dataWithPostValue:value forKey:key boundary:kBITHockeyAppClientBoundary]];
       }];
       
-      [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", kBITHockeyAppClientBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+      [postBody appendData:(NSData *)[[NSString stringWithFormat:@"--%@--\r\n", kBITHockeyAppClientBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
       
       [request setHTTPBody:postBody];
     }
@@ -92,28 +92,28 @@ NSString * const kBITHockeyAppClientBoundary = @"----FOO";
 + (NSData *)dataWithPostValue:(NSData *)value forKey:(NSString *)key contentType:(NSString *)contentType boundary:(NSString *) boundary filename:(NSString *)filename {
   NSMutableData *postBody = [NSMutableData data];
   
-  [postBody appendData:[[NSString stringWithFormat:@"--%@\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+  [postBody appendData:(NSData *)[[NSString stringWithFormat:@"--%@\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
   
   // There's certainly a better way to check if we are supposed to send binary data here. 
   if (filename){
-    [postBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"%@\"\r\n", key, filename] dataUsingEncoding:NSUTF8StringEncoding]];
-    [postBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n", contentType] dataUsingEncoding:NSUTF8StringEncoding]];
-    [postBody appendData:[[NSString stringWithFormat:@"Content-Transfer-Encoding: binary\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+    [postBody appendData:(NSData *)[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"%@\"\r\n", key, filename] dataUsingEncoding:NSUTF8StringEncoding]];
+    [postBody appendData:(NSData *)[[NSString stringWithFormat:@"Content-Type: %@\r\n", contentType] dataUsingEncoding:NSUTF8StringEncoding]];
+    [postBody appendData:(NSData *)[[NSString stringWithFormat:@"Content-Transfer-Encoding: binary\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
   } else {
-    [postBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n", key] dataUsingEncoding:NSUTF8StringEncoding]];
-    [postBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", contentType] dataUsingEncoding:NSUTF8StringEncoding]];
+    [postBody appendData:(NSData *)[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n", key] dataUsingEncoding:NSUTF8StringEncoding]];
+    [postBody appendData:(NSData *)[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", contentType] dataUsingEncoding:NSUTF8StringEncoding]];
   }
   
   [postBody appendData:value];
-  [postBody appendData:[@"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  [postBody appendData:(NSData *)[@"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];
   
   return postBody;
 }
 
 
-+ (NSString *) queryStringFromParameters:(NSDictionary *) params withEncoding:(NSStringEncoding) encoding {
++ (NSString *) queryStringFromParameters:(NSDictionary *) params withEncoding:(NSStringEncoding) __unused encoding {
   NSMutableString *queryString = [NSMutableString new];
-  [params enumerateKeysAndObjectsUsingBlock:^(NSString* key, NSString* value, BOOL *stop) {
+  [params enumerateKeysAndObjectsUsingBlock:^(NSString* key, NSString* value, BOOL __unused *stop) {
     NSAssert([key isKindOfClass:[NSString class]], @"Query parameters can only be string-string pairs");
     NSAssert([value isKindOfClass:[NSString class]], @"Query parameters can only be string-string pairs");
     

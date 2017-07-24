@@ -39,11 +39,11 @@
 }
 
 - (void)setSelected:(BOOL)selected {
-  self->_selected = selected;
+  _selected = selected;
 }
 
 - (BOOL)isSelected {
-  return self->_selected;
+  return self.selected;
 }
 
 @end

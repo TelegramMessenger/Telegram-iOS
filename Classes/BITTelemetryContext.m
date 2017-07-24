@@ -8,7 +8,7 @@
 #import "BITPersistence.h"
 #import "BITPersistencePrivate.h"
 
-NSString *const kBITUserMetaData = @"BITUserMetaData";
+static NSString *const kBITUserMetaData = @"BITUserMetaData";
 
 static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQueue";
 
@@ -21,7 +21,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 
 -(instancetype)init {
   
-  if(self = [super init]) {
+  if((self = [super init])) {
     _operationsQueue = dispatch_queue_create(BITContextOperationsQueue, DISPATCH_QUEUE_CONCURRENT);
   }
   return self;
@@ -98,256 +98,256 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 
 - (NSString *)appIdentifier {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _appIdentifier;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self->_appIdentifier;
   });
   return tmp;
 }
 
 - (void)setAppIdentifier:(NSString *)appIdentifier {
   NSString* tmp = [appIdentifier copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _appIdentifier = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self->_appIdentifier = tmp;
   });
 }
 
 - (NSString *)screenResolution {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.screenResolution;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.screenResolution;
   });
   return tmp;
 }
 
 - (void)setScreenResolution:(NSString *)screenResolution {
   NSString* tmp = [screenResolution copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.screenResolution = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.screenResolution = tmp;
   });
 }
 
 - (NSString *)appVersion {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _application.version;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.application.version;
   });
   return tmp;
 }
 
 - (void)setAppVersion:(NSString *)appVersion {
   NSString* tmp = [appVersion copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _application.version = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.application.version = tmp;
   });
 }
 
 - (NSString *)anonymousUserId {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _user.userId;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.user.userId;
   });
   return tmp;
 }
 
 - (void)setAnonymousUserId:(NSString *)userId {
   NSString* tmp = [userId copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _user.userId = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.user.userId = tmp;
   });
 }
 
 - (NSString *)anonymousUserAquisitionDate {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _user.anonUserAcquisitionDate;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.user.anonUserAcquisitionDate;
   });
   return tmp;
 }
 
 - (void)setAnonymousUserAquisitionDate:(NSString *)anonymousUserAquisitionDate {
   NSString* tmp = [anonymousUserAquisitionDate copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _user.anonUserAcquisitionDate = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.user.anonUserAcquisitionDate = tmp;
   });
 }
 
 - (NSString *)sdkVersion {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _internal.sdkVersion;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.internal.sdkVersion;
   });
   return tmp;
 }
 
 - (void)setSdkVersion:(NSString *)sdkVersion {
   NSString* tmp = [sdkVersion copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _internal.sdkVersion = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.internal.sdkVersion = tmp;
   });
 }
 
 - (NSString *)sessionId {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _session.sessionId;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.session.sessionId;
   });
   return tmp;
 }
 
 - (void)setSessionId:(NSString *)sessionId {
   NSString* tmp = [sessionId copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _session.sessionId = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.session.sessionId = tmp;
   });
 }
 
 - (NSString *)isFirstSession {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _session.isFirst;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.session.isFirst;
   });
   return tmp;
 }
 
 - (void)setIsFirstSession:(NSString *)isFirstSession {
   NSString* tmp = [isFirstSession copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _session.isFirst = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.session.isFirst = tmp;
   });
 }
 
 - (NSString *)isNewSession {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _session.isNew;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.session.isNew;
   });
   return tmp;
 }
 
 - (void)setIsNewSession:(NSString *)isNewSession {
   NSString* tmp = [isNewSession copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _session.isNew = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.session.isNew = tmp;
   });
 }
 
 - (NSString *)osVersion {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.osVersion;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.osVersion;
   });
   return tmp;
 }
 
 - (void)setOsVersion:(NSString *)osVersion {
   NSString* tmp = [osVersion copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.osVersion = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.osVersion = tmp;
   });
 }
 
 - (NSString *)osName {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.os;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.os;
   });
   return tmp;
 }
 
 - (void)setOsName:(NSString *)osName {
   NSString* tmp = [osName copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.os = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.os = tmp;
   });
 }
 
 - (NSString *)deviceModel {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.model;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.model;
   });
   return tmp;
 }
 
 - (void)setDeviceModel:(NSString *)deviceModel {
   NSString* tmp = [deviceModel copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.model = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.model = tmp;
   });
 }
 
 - (NSString *)deviceOemName {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.oemName;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.oemName;
   });
   return tmp;
 }
 
 - (void)setDeviceOemName:(NSString *)oemName {
   NSString* tmp = [oemName copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.oemName = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.oemName = tmp;
   });
 }
 
 - (NSString *)osLocale {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.locale;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.locale;
   });
   return tmp;
 }
 
 - (void)setOsLocale:(NSString *)osLocale {
   NSString* tmp = [osLocale copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.locale = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.locale = tmp;
   });
 }
 
 - (NSString *)osLanguage {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.language;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.language;
   });
   return tmp;
 }
 
 - (void)setOsLanguage:(NSString *)osLanguage {
   NSString* tmp = [osLanguage copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.language = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.language = tmp;
   });
 }
 
 - (NSString *)deviceId {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.deviceId;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.deviceId;
   });
   return tmp;
 }
 
 - (void)setDeviceId:(NSString *)deviceId {
   NSString* tmp = [deviceId copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.deviceId = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.deviceId = tmp;
   });
 }
 
 - (NSString *)deviceType {
   __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.type;
+  dispatch_sync(self.operationsQueue, ^{
+    tmp = self.device.type;
   });
   return tmp;
 }
 
 - (void)setDeviceType:(NSString *)deviceType {
   NSString* tmp = [deviceType copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.type = tmp;
+  dispatch_barrier_async(self.operationsQueue, ^{
+    self.device.type = tmp;
   });
 }
 

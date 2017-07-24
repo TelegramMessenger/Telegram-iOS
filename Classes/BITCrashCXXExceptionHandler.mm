@@ -172,7 +172,7 @@ static void BITCrashUncaughtCXXTerminateHandler(void)
       } catch (const char *e) { // Plain string as exception.
         info.exception_message = e;
         BITCrashIterateExceptionHandlers_unlocked(info);
-      } catch (id e) { // Objective-C exception. Pass it on to Foundation.
+      } catch (id __unused e) { // Objective-C exception. Pass it on to Foundation.
         OSSpinLockUnlock(&_BITCrashCXXExceptionHandlingLock);
         if (_BITCrashOriginalTerminateHandler != nullptr) {
           _BITCrashOriginalTerminateHandler();

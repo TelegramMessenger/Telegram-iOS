@@ -98,9 +98,9 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
 NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle);
 
 /* UIImage helpers */
-UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInteger borderSize);
+UIImage *bit_roundedCornerImage(UIImage *inputImage, CGFloat cornerSize, NSInteger borderSize);
 UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScaleFactor);
-UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, float fromAlpha, float toAlpha);
+UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, CGFloat fromAlpha, CGFloat toAlpha);
 
 UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);

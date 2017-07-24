@@ -195,7 +195,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
  */
 @implementation BITCrashReportTextFormatter
 
-NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
+static NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
 
 /**
  * Formats the provided @a report as human-readable text in the given @a textFormat, and return
