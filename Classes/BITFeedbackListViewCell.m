@@ -37,7 +37,7 @@
 #import "BITActivityIndicatorButton.h"
 #import "BITFeedbackManagerPrivate.h"
 
-#import "tgmath.h"
+#import <tgmath.h>
 
 #define BACKGROUNDCOLOR_DEFAULT_OS7 BIT_RGBCOLOR(255, 255, 255)
 #define BACKGROUNDCOLOR_ALTERNATE_OS7 BIT_RGBCOLOR(255, 255, 255)

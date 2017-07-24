@@ -35,7 +35,7 @@
 #import <QuartzCore/QuartzCore.h>
 #endif
 
-#import "tgmath.h"
+#import <tgmath.h>
 #import <sys/sysctl.h>
 
 static NSString *const kBITUtcDateFormatter = @"utcDateFormatter";

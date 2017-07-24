@@ -35,7 +35,7 @@
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
-#import "tgmath.h"
+#import <tgmath.h>
 
 @interface BITAuthenticationViewController ()<UITextFieldDelegate>
 

@@ -25,7 +25,7 @@
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
 #import "BITAttributedLabel.h"
-#import "tgmath.h"
+#import <tgmath.h>
 
 #import <QuartzCore/QuartzCore.h>
 #import <Availability.h>

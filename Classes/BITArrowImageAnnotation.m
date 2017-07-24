@@ -31,7 +31,7 @@
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
 #import "BITArrowImageAnnotation.h"
-#import "tgmath.h"
+#import <tgmath.h>
 
 #define kArrowPointCount 7
 
