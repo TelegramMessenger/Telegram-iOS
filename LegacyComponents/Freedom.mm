@@ -615,6 +615,10 @@ IMP freedomImpl(id target, uint32_t name, SEL *selector)
         return NULL;
     
     Class targetClass = object_getClass(target);
+    return freedomImplInstancesOfClass(targetClass, name, selector);
+}
+
+IMP freedomImplInstancesOfClass(Class targetClass, uint32_t name, SEL *selector) {
     if (targetClass == NULL)
         return NULL;
     

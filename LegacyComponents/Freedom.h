@@ -43,6 +43,7 @@ void freedomDumpBitfields(Class targetClass, void *object, uint32_t fieldName);
 IMP freedomNativeImpl(Class targetClass, SEL selector);
 void freedomClassAutoDecorate(uint32_t name, FreedomDecoration *classDecorations, int numClassDecorations, FreedomDecoration *instanceDecorations, int numInstanceDecorations);
 IMP freedomImpl(id target, uint32_t name, SEL *selector);
+IMP freedomImplInstancesOfClass(Class targetClass, uint32_t name, SEL *selector);
 
 #ifdef __cplusplus
 }

@@ -409,6 +409,24 @@
 		D0177AF41F23DF6D0044446D /* TGImageManagerTask.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AEE1F23DF6D0044446D /* TGImageManagerTask.m */; };
 		D0177AF71F23DFC70044446D /* TGDataResource.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177AF51F23DFC70044446D /* TGDataResource.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0177AF81F23DFC70044446D /* TGDataResource.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177AF61F23DFC70044446D /* TGDataResource.m */; };
+		D0177B141F2641B10044446D /* PGCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B041F2641B10044446D /* PGCamera.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B151F2641B10044446D /* PGCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B051F2641B10044446D /* PGCamera.m */; };
+		D0177B161F2641B10044446D /* PGCameraCaptureSession.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B061F2641B10044446D /* PGCameraCaptureSession.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B171F2641B10044446D /* PGCameraCaptureSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B071F2641B10044446D /* PGCameraCaptureSession.m */; };
+		D0177B181F2641B10044446D /* PGCameraDeviceAngleSampler.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B081F2641B10044446D /* PGCameraDeviceAngleSampler.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B191F2641B10044446D /* PGCameraDeviceAngleSampler.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B091F2641B10044446D /* PGCameraDeviceAngleSampler.m */; };
+		D0177B1A1F2641B10044446D /* PGCameraMomentSegment.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B0A1F2641B10044446D /* PGCameraMomentSegment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B1B1F2641B10044446D /* PGCameraMomentSegment.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B0B1F2641B10044446D /* PGCameraMomentSegment.m */; };
+		D0177B1C1F2641B10044446D /* PGCameraMomentSession.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B0C1F2641B10044446D /* PGCameraMomentSession.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B1D1F2641B10044446D /* PGCameraMomentSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B0D1F2641B10044446D /* PGCameraMomentSession.m */; };
+		D0177B1E1F2641B10044446D /* PGCameraMovieWriter.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B0E1F2641B10044446D /* PGCameraMovieWriter.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B1F1F2641B10044446D /* PGCameraMovieWriter.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B0F1F2641B10044446D /* PGCameraMovieWriter.m */; };
+		D0177B201F2641B10044446D /* PGCameraShotMetadata.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B101F2641B10044446D /* PGCameraShotMetadata.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B211F2641B10044446D /* PGCameraShotMetadata.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B111F2641B10044446D /* PGCameraShotMetadata.m */; };
+		D0177B221F2641B10044446D /* PGCameraVolumeButtonHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B121F2641B10044446D /* PGCameraVolumeButtonHandler.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B231F2641B10044446D /* PGCameraVolumeButtonHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B131F2641B10044446D /* PGCameraVolumeButtonHandler.m */; };
+		D0177B2F1F26430D0044446D /* TGCameraPreviewView.h in Headers */ = {isa = PBXBuildFile; fileRef = D0177B2D1F26430D0044446D /* TGCameraPreviewView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0177B301F26430D0044446D /* TGCameraPreviewView.m in Sources */ = {isa = PBXBuildFile; fileRef = D0177B2E1F26430D0044446D /* TGCameraPreviewView.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -816,6 +834,24 @@
 		D0177AEE1F23DF6D0044446D /* TGImageManagerTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGImageManagerTask.m; sourceTree = "<group>"; };
 		D0177AF51F23DFC70044446D /* TGDataResource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDataResource.h; sourceTree = "<group>"; };
 		D0177AF61F23DFC70044446D /* TGDataResource.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDataResource.m; sourceTree = "<group>"; };
+		D0177B041F2641B10044446D /* PGCamera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGCamera.h; sourceTree = "<group>"; };
+		D0177B051F2641B10044446D /* PGCamera.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGCamera.m; sourceTree = "<group>"; };
+		D0177B061F2641B10044446D /* PGCameraCaptureSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGCameraCaptureSession.h; sourceTree = "<group>"; };
+		D0177B071F2641B10044446D /* PGCameraCaptureSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGCameraCaptureSession.m; sourceTree = "<group>"; };
+		D0177B081F2641B10044446D /* PGCameraDeviceAngleSampler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGCameraDeviceAngleSampler.h; sourceTree = "<group>"; };
+		D0177B091F2641B10044446D /* PGCameraDeviceAngleSampler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGCameraDeviceAngleSampler.m; sourceTree = "<group>"; };
+		D0177B0A1F2641B10044446D /* PGCameraMomentSegment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGCameraMomentSegment.h; sourceTree = "<group>"; };
+		D0177B0B1F2641B10044446D /* PGCameraMomentSegment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGCameraMomentSegment.m; sourceTree = "<group>"; };
+		D0177B0C1F2641B10044446D /* PGCameraMomentSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGCameraMomentSession.h; sourceTree = "<group>"; };
+		D0177B0D1F2641B10044446D /* PGCameraMomentSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGCameraMomentSession.m; sourceTree = "<group>"; };
+		D0177B0E1F2641B10044446D /* PGCameraMovieWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGCameraMovieWriter.h; sourceTree = "<group>"; };
+		D0177B0F1F2641B10044446D /* PGCameraMovieWriter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGCameraMovieWriter.m; sourceTree = "<group>"; };
+		D0177B101F2641B10044446D /* PGCameraShotMetadata.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGCameraShotMetadata.h; sourceTree = "<group>"; };
+		D0177B111F2641B10044446D /* PGCameraShotMetadata.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGCameraShotMetadata.m; sourceTree = "<group>"; };
+		D0177B121F2641B10044446D /* PGCameraVolumeButtonHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGCameraVolumeButtonHandler.h; sourceTree = "<group>"; };
+		D0177B131F2641B10044446D /* PGCameraVolumeButtonHandler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGCameraVolumeButtonHandler.m; sourceTree = "<group>"; };
+		D0177B2D1F26430D0044446D /* TGCameraPreviewView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGCameraPreviewView.h; sourceTree = "<group>"; };
+		D0177B2E1F26430D0044446D /* TGCameraPreviewView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGCameraPreviewView.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -865,6 +901,7 @@
 				D01779551F21030E0044446D /* Photo Editor Utils */,
 				D0177A251F2144540044446D /* Photo Editor */,
 				D01779661F2103C60044446D /* Photo Paint */,
+				D0177B031F26419E0044446D /* Camera */,
 				D017772A1F1F8F100044446D /* LegacyComponents.h */,
 				D017772B1F1F8F100044446D /* Info.plist */,
 			);
@@ -1385,6 +1422,31 @@
 			name = "Image Manager";
 			sourceTree = "<group>";
 		};
+		D0177B031F26419E0044446D /* Camera */ = {
+			isa = PBXGroup;
+			children = (
+				D0177B041F2641B10044446D /* PGCamera.h */,
+				D0177B051F2641B10044446D /* PGCamera.m */,
+				D0177B061F2641B10044446D /* PGCameraCaptureSession.h */,
+				D0177B071F2641B10044446D /* PGCameraCaptureSession.m */,
+				D0177B081F2641B10044446D /* PGCameraDeviceAngleSampler.h */,
+				D0177B091F2641B10044446D /* PGCameraDeviceAngleSampler.m */,
+				D0177B0A1F2641B10044446D /* PGCameraMomentSegment.h */,
+				D0177B0B1F2641B10044446D /* PGCameraMomentSegment.m */,
+				D0177B0C1F2641B10044446D /* PGCameraMomentSession.h */,
+				D0177B0D1F2641B10044446D /* PGCameraMomentSession.m */,
+				D0177B0E1F2641B10044446D /* PGCameraMovieWriter.h */,
+				D0177B0F1F2641B10044446D /* PGCameraMovieWriter.m */,
+				D0177B101F2641B10044446D /* PGCameraShotMetadata.h */,
+				D0177B111F2641B10044446D /* PGCameraShotMetadata.m */,
+				D0177B121F2641B10044446D /* PGCameraVolumeButtonHandler.h */,
+				D0177B131F2641B10044446D /* PGCameraVolumeButtonHandler.m */,
+				D0177B2D1F26430D0044446D /* TGCameraPreviewView.h */,
+				D0177B2E1F26430D0044446D /* TGCameraPreviewView.m */,
+			);
+			name = Camera;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1447,6 +1509,7 @@
 				D0177A661F21FB9B0044446D /* TGModernGalleryItem.h in Headers */,
 				D01779531F2100520044446D /* TGMediaEditingContext.h in Headers */,
 				D017772C1F1F8F100044446D /* LegacyComponents.h in Headers */,
+				D0177B181F2641B10044446D /* PGCameraDeviceAngleSampler.h in Headers */,
 				D0177A0A1F2139980044446D /* POPSpringSolver.h in Headers */,
 				D017794F1F2100280044446D /* TGMediaSelectionContext.h in Headers */,
 				D01778111F1F961D0044446D /* TGMessageEntityBold.h in Headers */,
@@ -1467,6 +1530,7 @@
 				D01777F41F1F961D0044446D /* TGTextCheckingResult.h in Headers */,
 				D01778231F1F961D0044446D /* TGMessageEntityTextUrl.h in Headers */,
 				D0177A9B1F22204A0044446D /* TGModernGalleryEmbeddedStickersHeaderView.h in Headers */,
+				D0177B1E1F2641B10044446D /* PGCameraMovieWriter.h in Headers */,
 				D01779641F2103910044446D /* TGPaintUtils.h in Headers */,
 				D0177AA11F2222990044446D /* TGKeyCommand.h in Headers */,
 				D01778391F1F961D0044446D /* TGAudioWaveform.h in Headers */,
@@ -1491,6 +1555,7 @@
 				D01779451F20FFF60044446D /* TGMediaAssetFetchResultChange.h in Headers */,
 				D01778A71F1FD0900044446D /* TGFont.h in Headers */,
 				D0177A2C1F2145B80044446D /* LegacyComponentsAccessChecker.h in Headers */,
+				D0177B221F2641B10044446D /* PGCameraVolumeButtonHandler.h in Headers */,
 				D01778CB1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.h in Headers */,
 				D01779921F2108130044446D /* PSLMDBKeyValueCursor.h in Headers */,
 				D01779F31F2139980044446D /* POPBasicAnimation.h in Headers */,
@@ -1505,6 +1570,7 @@
 				D017790E1F20F4370044446D /* UIImage+TG.h in Headers */,
 				D01778271F1F961D0044446D /* TGMessageEntitiesAttachment.h in Headers */,
 				D017775B1F1F8FE60044446D /* PSKeyValueReader.h in Headers */,
+				D0177B201F2641B10044446D /* PGCameraShotMetadata.h in Headers */,
 				D0177A111F213B440044446D /* JNWSpringAnimation.h in Headers */,
 				D01779871F2107D70044446D /* midl.h in Headers */,
 				D01778131F1F961D0044446D /* TGMessageEntityBotCommand.h in Headers */,
@@ -1514,6 +1580,7 @@
 				D01779EB1F2139980044446D /* POPAnimationRuntime.h in Headers */,
 				D017784D1F1F961D0044446D /* TGForwardedMessageMediaAttachment.h in Headers */,
 				D01777F71F1F961D0044446D /* TGChannelBannedRights.h in Headers */,
+				D0177B1C1F2641B10044446D /* PGCameraMomentSession.h in Headers */,
 				D01778C21F200AF70044446D /* TGAnimationBlockDelegate.h in Headers */,
 				D01779F61F2139980044446D /* POPCGUtils.h in Headers */,
 				D01778401F1F961D0044446D /* TGDocumentAttributeSticker.h in Headers */,
@@ -1531,6 +1598,7 @@
 				D01778531F1F961D0044446D /* TGVideoMediaAttachment.h in Headers */,
 				D01778EF1F20CAE60044446D /* TGOverlayControllerWindow.h in Headers */,
 				D017797B1F21075C0044446D /* TGModernCache.h in Headers */,
+				D0177B1A1F2641B10044446D /* PGCameraMomentSegment.h in Headers */,
 				D01777641F1F8FE60044446D /* TGPluralization.h in Headers */,
 				D01779471F20FFF60044446D /* TGMediaAssetGroup.h in Headers */,
 				D01779A61F210A120044446D /* TGMediaAssetModernImageSignals.h in Headers */,
@@ -1545,6 +1613,7 @@
 				D017796D1F2103DB0044446D /* TGPhotoPaintStickerEntity.h in Headers */,
 				D01777571F1F8FE60044446D /* PSKeyValueDecoder.h in Headers */,
 				D017780D1F1F961D0044446D /* TGBotContextResultAttachment.h in Headers */,
+				D0177B2F1F26430D0044446D /* TGCameraPreviewView.h in Headers */,
 				D01779E71F2139980044446D /* POPAnimationExtras.h in Headers */,
 				D01778071F1F961D0044446D /* TGInvoiceMediaAttachment.h in Headers */,
 				D01778421F1F961D0044446D /* TGDocumentAttributeVideo.h in Headers */,
@@ -1557,6 +1626,7 @@
 				D01777821F1F93250044446D /* TGImageInfo.h in Headers */,
 				D01779ED1F2139980044446D /* POPAnimationTracer.h in Headers */,
 				D0177A931F221BB10044446D /* TGModernGalleryView.h in Headers */,
+				D0177B141F2641B10044446D /* PGCamera.h in Headers */,
 				D017782D1F1F961D0044446D /* TGBotReplyMarkupRow.h in Headers */,
 				D017775E1F1F8FE60044446D /* TGBotComandInfo.h in Headers */,
 				D01777871F1F93550044446D /* TGMessage.h in Headers */,
@@ -1607,6 +1677,7 @@
 				D0177A791F2204360044446D /* TGModernToolbarButton.h in Headers */,
 				D01778FF1F20D0040044446D /* TGColor.h in Headers */,
 				D01778291F1F961D0044446D /* TGBotReplyMarkup.h in Headers */,
+				D0177B161F2641B10044446D /* PGCameraCaptureSession.h in Headers */,
 				D01777FB1F1F961D0044446D /* TGDatabaseMessageDraft.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1686,6 +1757,7 @@
 				D01778471F1F961D0044446D /* TGDocumentAttributeAudio.m in Sources */,
 				D01778181F1F961D0044446D /* TGMessageEntityEmail.m in Sources */,
 				D01779851F2107D70044446D /* mdb.c in Sources */,
+				D0177B171F2641B10044446D /* PGCameraCaptureSession.m in Sources */,
 				D017784A1F1F961D0044446D /* TGDocumentMediaAttachment.m in Sources */,
 				D0177A0C1F2139980044446D /* POPVector.mm in Sources */,
 				D0177ADA1F23D9B80044446D /* SGraphListNode.m in Sources */,
@@ -1694,6 +1766,7 @@
 				D01779271F20FE480044446D /* TGObserverProxy.m in Sources */,
 				D017795D1F2103440044446D /* PGPhotoEditorValues.m in Sources */,
 				D0177ADC1F23D9B80044446D /* SGraphNode.m in Sources */,
+				D0177B211F2641B10044446D /* PGCameraShotMetadata.m in Sources */,
 				D017794A1F20FFF60044446D /* TGMediaAssetMoment.m in Sources */,
 				D01778561F1F961D0044446D /* TGLocalMessageMetaMediaAttachment.m in Sources */,
 				D01778FC1F20CF6B0044446D /* TGBackdropView.m in Sources */,
@@ -1720,6 +1793,7 @@
 				D01777FA1F1F961D0044446D /* TGChannelAdminRights.m in Sources */,
 				D01778041F1F961D0044446D /* TGAuthorSignatureMediaAttachment.m in Sources */,
 				D0177A621F21FB250044446D /* TGModernGalleryScrollView.m in Sources */,
+				D0177B1F1F2641B10044446D /* PGCameraMovieWriter.m in Sources */,
 				D017794C1F20FFF60044446D /* TGMediaAssetMomentList.m in Sources */,
 				D01779421F20FFF60044446D /* TGMediaAsset.m in Sources */,
 				D0177AA41F2222990044446D /* TGKeyCommandController.m in Sources */,
@@ -1741,6 +1815,7 @@
 				D01779611F2103680044446D /* TGPaintingData.m in Sources */,
 				D017781A1F1F961D0044446D /* TGMessageEntityHashtag.m in Sources */,
 				D01779861F2107D70044446D /* midl.c in Sources */,
+				D0177B1B1F2641B10044446D /* PGCameraMomentSegment.m in Sources */,
 				D01779A71F210A120044446D /* TGMediaAssetModernImageSignals.m in Sources */,
 				D0177A531F21F7C90044446D /* TGModernGalleryZoomableScrollViewSwipeGestureRecognizer.m in Sources */,
 				D0177A191F213B9E0044446D /* TransformationMatrix.cpp in Sources */,
@@ -1768,6 +1843,9 @@
 				D01778501F1F961D0044446D /* TGContactMediaAttachment.m in Sources */,
 				D0177AF81F23DFC70044446D /* TGDataResource.m in Sources */,
 				D017786A1F1F99180044446D /* NSInputStream+TL.m in Sources */,
+				D0177B191F2641B10044446D /* PGCameraDeviceAngleSampler.m in Sources */,
+				D0177B1D1F2641B10044446D /* PGCameraMomentSession.m in Sources */,
+				D0177B301F26430D0044446D /* TGCameraPreviewView.m in Sources */,
 				D0177AF21F23DF6D0044446D /* TGImageManager.m in Sources */,
 				D0177A331F21F1980044446D /* AVURLAsset+TGMediaItem.m in Sources */,
 				D0177ADE1F23D9B80044446D /* SGraphObjectNode.m in Sources */,
@@ -1792,6 +1870,7 @@
 				D0177A051F2139980044446D /* POPPropertyAnimation.mm in Sources */,
 				D0177A011F2139980044446D /* POPLayerExtras.mm in Sources */,
 				D01777671F1F8FE60044446D /* TGStringUtils.mm in Sources */,
+				D0177B151F2641B10044446D /* PGCamera.m in Sources */,
 				D01779501F2100280044446D /* TGMediaSelectionContext.m in Sources */,
 				D0177A491F21F7010044446D /* TGModernGalleryVideoView.m in Sources */,
 				D017783C1F1F961D0044446D /* TGStickerPackReference.m in Sources */,
@@ -1836,6 +1915,7 @@
 				D01778431F1F961D0044446D /* TGDocumentAttributeVideo.m in Sources */,
 				D01778101F1F961D0044446D /* TGMessageEntity.m in Sources */,
 				D01779461F20FFF60044446D /* TGMediaAssetFetchResultChange.m in Sources */,
+				D0177B231F2641B10044446D /* PGCameraVolumeButtonHandler.m in Sources */,
 				D01778381F1F961D0044446D /* TGAudioMediaAttachment.m in Sources */,
 				D017775F1F1F8FE60044446D /* TGBotComandInfo.m in Sources */,
 				D01777FE1F1F961D0044446D /* TGMessageGroup.m in Sources */,

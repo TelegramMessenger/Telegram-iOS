@@ -203,3 +203,13 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGPhotoPaintEntity.h>
 #import <LegacyComponents/TGPhotoPaintStickerEntity.h>
 #import <LegacyComponents/TGPaintUndoManager.h>
+
+#import <LegacyComponents/PGCamera.h>
+#import <LegacyComponents/PGCameraCaptureSession.h>
+#import <LegacyComponents/PGCameraDeviceAngleSampler.h>
+#import <LegacyComponents/PGCameraMomentSegment.h>
+#import <LegacyComponents/PGCameraMomentSession.h>
+#import <LegacyComponents/PGCameraMovieWriter.h>
+#import <LegacyComponents/PGCameraShotMetadata.h>
+#import <LegacyComponents/PGCameraVolumeButtonHandler.h>
+#import <LegacyComponents/TGCameraPreviewView.h>

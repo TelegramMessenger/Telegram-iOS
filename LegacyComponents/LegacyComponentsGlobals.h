@@ -3,8 +3,20 @@
 #import <LegacyComponents/TGRootControllerProtocol.h>
 #import <LegacyComponents/LegacyComponentsAccessChecker.h>
 
+#import <SSignalKit/SSignalKit.h>
+
 @class TGLocalization;
 @class UIViewController;
+
+typedef enum {
+    TGAudioSessionTypePlayVoice,
+    TGAudioSessionTypePlayMusic,
+    TGAudioSessionTypePlayVideo,
+    TGAudioSessionTypePlayEmbedVideo,
+    TGAudioSessionTypePlayAndRecord,
+    TGAudioSessionTypePlayAndRecordHeadphones,
+    TGAudioSessionTypeCall
+} TGAudioSessionType;
 
 @protocol LegacyComponentsGlobalsProvider <NSObject>
 
@@ -14,6 +26,7 @@
 - (NSArray<UIWindow *> *)applicationWindows;
 - (UIWindow *)applicationStatusBarWindow;
 - (UIWindow *)applicationKeyboardWindow;
+- (UIApplication *)applicationInstance;
 
 - (CGRect)statusBarFrame;
 - (bool)isStatusBarHidden;
@@ -30,6 +43,8 @@
 - (NSString *)dataStoragePath;
 
 - (id<LegacyComponentsAccessChecker>)accessChecker;
+
+- (id<SDisposable>)requestAudioSession:(TGAudioSessionType)type interrupted:(void (^)())interrupted;
 
 @end
 
