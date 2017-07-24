@@ -349,6 +349,9 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 }
 
 - (void)tapped:(UIGestureRecognizer *) __unused tapRecognizer {
+  
+  // TODO: remove pre-iOS 8 code.
+  
   // This toggles the nav and status bar. Since iOS7 and pre-iOS7 behave weirdly different,
   // this might look rather hacky, but hiding the navbar under iOS6 leads to some ugly
   // animation effect which is avoided by simply hiding the navbar setting it's alpha to 0. // moritzh
