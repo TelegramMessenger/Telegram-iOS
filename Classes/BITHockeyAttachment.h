@@ -40,7 +40,7 @@
 /**
  The filename the attachment should get
  */
-@property (nonatomic, readonly, strong) NSString *filename;
+@property (nonatomic, readonly, copy) NSString *filename;
 
 /**
  The attachment data as NSData object
@@ -50,7 +50,7 @@
 /**
  The content type of your data as MIME type
  */
-@property (nonatomic, readonly, strong) NSString *contentType;
+@property (nonatomic, readonly, copy) NSString *contentType;
 
 /**
  Create an BITHockeyAttachment instance with a given filename and NSData object

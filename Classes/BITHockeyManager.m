@@ -81,8 +81,8 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
 
 - (BOOL)shouldUseLiveIdentifier;
 
-@property (nonatomic, strong) NSString *appIdentifier;
-@property (nonatomic, strong) NSString *liveIdentifier;
+@property (nonatomic, copy) NSString *appIdentifier;
+@property (nonatomic, copy) NSString *liveIdentifier;
 @property (nonatomic) BOOL validAppIdentifier;
 @property (nonatomic) BOOL startManagerIsInvoked;
 @property (nonatomic) BOOL startUpdateManagerIsInvoked;

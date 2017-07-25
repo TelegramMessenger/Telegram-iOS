@@ -43,8 +43,8 @@
 @property (nonatomic, strong) NSMutableDictionary *thumbnailRepresentations;
 @property (nonatomic, strong) NSData *internalData;
 @property (nonatomic, copy) NSString *filename;
-@property (nonatomic, strong) NSString *tempFilename;
-@property (nonatomic, strong) NSString *cachePath;
+@property (nonatomic, copy) NSString *tempFilename;
+@property (nonatomic, copy) NSString *cachePath;
 @property (nonatomic, strong) NSFileManager *fm;
 
 @end

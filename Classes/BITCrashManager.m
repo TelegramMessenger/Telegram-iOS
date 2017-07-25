@@ -187,8 +187,8 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
 
 @property (nonatomic, strong) NSMutableDictionary *approvedCrashReports;
 @property (nonatomic, strong) NSMutableArray *crashFiles;
-@property (nonatomic, strong) NSString *settingsFile;
-@property (nonatomic, strong) NSString *analyzerInProgressFile;
+@property (nonatomic, copy) NSString *settingsFile;
+@property (nonatomic, copy) NSString *analyzerInProgressFile;
 @property (nonatomic) BOOL crashIdenticalCurrentVersion;
 @property (nonatomic) BOOL sendingInProgress;
 @property (nonatomic) BOOL isSetup;

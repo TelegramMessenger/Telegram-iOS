@@ -57,7 +57,7 @@
 
 @property (nonatomic, strong) UIButton *addPhotoButton;
 
-@property (nonatomic, strong) NSString *text;
+@property (nonatomic, copy) NSString *text;
 
 @property (nonatomic, strong) NSMutableArray *attachments;
 @property (nonatomic, strong) NSMutableArray *imageAttachments;

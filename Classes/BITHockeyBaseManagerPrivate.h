@@ -35,7 +35,7 @@
 
 @interface BITHockeyBaseManager()
 
-@property (nonatomic, strong) NSString *appIdentifier;
+@property (nonatomic, copy) NSString *appIdentifier;
 
 @property (nonatomic, assign, readonly) BITEnvironment appEnvironment;
 

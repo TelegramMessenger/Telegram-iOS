@@ -40,9 +40,9 @@
 
 @interface BITStoreUpdateManager ()
 
-@property (nonatomic, strong) NSString *latestStoreVersion;
-@property (nonatomic, strong) NSString *appStoreURLString;
-@property (nonatomic, strong) NSString *currentUUID;
+@property (nonatomic, copy) NSString *latestStoreVersion;
+@property (nonatomic, copy) NSString *appStoreURLString;
+@property (nonatomic, copy) NSString *currentUUID;
 @property (nonatomic) BOOL updateAlertShowing;
 @property (nonatomic) BOOL lastCheckFailed;
 @property (nonatomic, weak) id appDidBecomeActiveObserver;

@@ -62,7 +62,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 @interface BITFeedbackManager () <UIGestureRecognizerDelegate>
 
 @property (nonatomic, strong) NSFileManager *fileManager;
-@property (nonatomic, strong) NSString *settingsFile;
+@property (nonatomic, copy) NSString *settingsFile;
 @property (nonatomic, weak) id appDidBecomeActiveObserver;
 @property (nonatomic, weak) id appDidEnterBackgroundObserver;
 @property (nonatomic, weak) id networkDidBecomeReachableObserver;
