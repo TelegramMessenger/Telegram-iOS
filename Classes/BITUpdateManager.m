@@ -54,14 +54,14 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 @interface BITUpdateManager ()
 
-@property (nonatomic, strong) NSString *currentAppVersion;
+@property (nonatomic, copy) NSString *currentAppVersion;
 @property (nonatomic) BOOL dataFound;
 @property (nonatomic) BOOL showFeedback;
 @property (nonatomic) BOOL updateAlertShowing;
 @property (nonatomic) BOOL lastCheckFailed;
 @property (nonatomic, strong) NSFileManager *fileManager;
-@property (nonatomic, strong) NSString *updateDir;
-@property (nonatomic, strong) NSString *usageDataFile;
+@property (nonatomic, copy) NSString *updateDir;
+@property (nonatomic, copy) NSString *usageDataFile;
 @property (nonatomic, weak) id appDidBecomeActiveObserver;
 @property (nonatomic, weak) id appDidEnterBackgroundObserver;
 @property (nonatomic, weak) id networkDidBecomeReachableObserver;
@@ -69,9 +69,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 @property (nonatomic) BOOL didEnterBackgroundState;
 @property (nonatomic) BOOL firstStartAfterInstall;
 @property (nonatomic, strong) NSNumber *versionID;
-@property (nonatomic, strong) NSString *versionUUID;
-@property (nonatomic, strong) NSString *uuid;
-@property (nonatomic, strong) NSString *blockingScreenMessage;
+@property (nonatomic, copy) NSString *versionUUID;
+@property (nonatomic, copy) NSString *uuid;
+@property (nonatomic, copy) NSString *blockingScreenMessage;
 @property (nonatomic, strong) NSDate *lastUpdateCheckFromBlockingScreen;
 
 @end

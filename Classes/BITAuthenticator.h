@@ -230,7 +230,7 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  * @see identificationType
  * @see handleOpenURL:sourceApplication:annotation:
  */
-@property (nonatomic, strong) NSString *urlScheme;
+@property (nonatomic, copy) NSString *urlScheme;
 
 /**
  Should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation: calls.

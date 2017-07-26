@@ -68,12 +68,12 @@
 
 @property (nonatomic, copy, setter = setAlertViewHandler:) BITCustomAlertViewHandler alertViewHandler;
 
-@property (nonatomic, strong) NSString *crashesDir;
+@property (nonatomic, copy) NSString *crashesDir;
 
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 
 // Only set via BITAuthenticator
-@property (nonatomic, strong) NSString *installationIdentification;
+@property (nonatomic, copy) NSString *installationIdentification;
 
 // Only set via BITAuthenticator
 @property (nonatomic) BITAuthenticatorIdentificationType installationIdentificationType;
