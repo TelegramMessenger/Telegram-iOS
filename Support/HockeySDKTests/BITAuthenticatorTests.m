@@ -166,7 +166,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void) testAnonymousValidation {
   self.sut.identificationType = BITAuthenticatorIdentificationTypeAnonymous;
   assertThatBool(self.sut.isValidated, isFalse());
-  [self.sut validateWithCompletion:^(BOOL validated, NSError *error) {
+  [self.sut validateWithCompletion:^(BOOL __unused validated, NSError *error) {
     assertThatBool(self.sut.validated, isFalse());
     assertThat(error, notNilValue());
   }];
