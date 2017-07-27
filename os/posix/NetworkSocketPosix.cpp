@@ -26,6 +26,7 @@ NetworkSocketPosix::NetworkSocketPosix(NetworkProtocol protocol) : NetworkSocket
 	nat64Present=false;
 	switchToV6at=0;
 	isV4Available=false;
+    fd=-1;
 	useTCP=false;
 	closing=false;
 
@@ -232,8 +233,11 @@ void NetworkSocketPosix::Open(){
 void NetworkSocketPosix::Close(){
 	closing=true;
 	failed=true;
-	shutdown(fd, SHUT_RDWR);
-	close(fd);
+	
+    if (fd>=0) {
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
+    }
 }
 
 void NetworkSocketPosix::Connect(NetworkAddress *address, uint16_t port){
@@ -263,7 +267,7 @@ void NetworkSocketPosix::Connect(NetworkAddress *address, uint16_t port){
 		return;
 	}
 	fd=socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
-	if(fd==0){
+	if(fd<0){
 		LOGE("Error creating TCP socket: %d / %s", errno, strerror(errno));
 		failed=true;
 		return;

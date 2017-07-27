@@ -24,6 +24,7 @@ NetworkSocketWinsock::NetworkSocketWinsock(NetworkProtocol protocol) : NetworkSo
 	switchToV6at=0;
 	isV4Available=false;
 	closing=false;
+	fd=INVALID_SOCKET;
 
 #ifdef TGVOIP_WINXP_COMPAT
 	DWORD version=GetVersion();
@@ -271,7 +272,8 @@ void NetworkSocketWinsock::Open(){
 void NetworkSocketWinsock::Close(){
 	closing=true;
 	failed=true;
-	closesocket(fd);
+	if(fd!=INVALID_SOCKET)
+		closesocket(fd);
 }
 
 void NetworkSocketWinsock::OnActiveInterfaceChanged(){
