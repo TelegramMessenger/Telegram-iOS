@@ -477,11 +477,13 @@
 
 #pragma mark - Rotation
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation) __unused interfaceOrientation duration:(NSTimeInterval) __unused duration {
   // update all cells
   [self.cells makeObjectsPerformSelector:@selector(addWebView)];
 }
-
+#pragma clang diagnostic pop
 
 #pragma mark - PSAppStoreHeaderDelegate
 
@@ -490,7 +492,11 @@
 }
 
 - (void)setAppStoreButtonState:(AppStoreButtonState)anAppStoreButtonState animated:(BOOL)animated {
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdirect-ivar-access"
   _appStoreButtonState = anAppStoreButtonState;
+#pragma clang diagnostic pop
   
   switch (anAppStoreButtonState) {
     case AppStoreButtonStateOffline:

@@ -441,12 +441,14 @@
   return UIInterfaceOrientationMaskAll;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation) __unused fromInterfaceOrientation {
   [self removeAttachmentScrollView];
   
   [self refreshAttachmentScrollview];
 }
-
+#pragma clang diagnostic pop
 
 #pragma mark - Private methods
 

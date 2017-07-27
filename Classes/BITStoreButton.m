@@ -252,7 +252,10 @@
 
 - (void)setButtonData:(BITStoreButtonData *)aButtonData animated:(BOOL)animated {
   if (self.buttonData != aButtonData) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdirect-ivar-access"
     _buttonData = aButtonData;
+#pragma clang diagnostic pop
   }
   
   [self updateButtonAnimated:animated];
