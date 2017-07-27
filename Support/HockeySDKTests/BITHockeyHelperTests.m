@@ -76,7 +76,7 @@
 - (void)testUUID {
   NSString *resultString = bit_UUID();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
+  assertThatInteger((NSInteger)[resultString length], equalToInteger(36));
 }
 
 - (void)testAppAnonID {
@@ -88,7 +88,7 @@
   
   NSString *resultString = bit_appAnonID(NO);
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
+  assertThatInteger((NSInteger)[resultString length], equalToInteger(36));
 }
 
 - (void)testValidAppIconFilename {
@@ -205,7 +205,7 @@
 - (void)testOsName {
   NSString *resultString = bit_osName();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], greaterThan(@(0)));
+  assertThatInteger((NSInteger)[resultString length], greaterThan(@(0)));
 }
 
 - (void)testDeviceType {
@@ -218,7 +218,7 @@
 - (void)testSdkVersion {
   NSString *resultString = bit_sdkVersion();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], greaterThan(@(0)));
+  assertThatInteger((NSInteger)[resultString length], greaterThan(@(0)));
 }
 
 - (void)testUtcDateString{
