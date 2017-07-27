@@ -347,10 +347,11 @@
   
   BITFeedbackComposeViewController *composeViewController = [self.sut feedbackComposeViewController];
   NSArray *attachments = [composeViewController performSelector:@selector(attachments)];
-  XCTAssertEqual(attachments.count, 2);
+  XCTAssertEqual(attachments.count, (NSUInteger)2);
   
   XCTAssertTrue(composeViewController.hideImageAttachmentButton);
-  XCTAssertEqual(composeViewController.delegate, mockDelegate);
+  id stronDelegate = composeViewController.delegate;
+  XCTAssertEqual(stronDelegate, mockDelegate);
 }
 
 @end

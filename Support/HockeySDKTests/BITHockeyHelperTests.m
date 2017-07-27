@@ -110,7 +110,7 @@
   // Regular icon names
   NSString *validIconPath = @"AppIcon";
   NSString *validIconPath2x = @"AppIcon@2x";
-  NSString *expected = ([UIScreen mainScreen].scale >= 2.0f) ? validIconPath2x : validIconPath;
+  NSString *expected = ([UIScreen mainScreen].scale >= 2.0) ? validIconPath2x : validIconPath;
 
   
   // No valid icons defined at all

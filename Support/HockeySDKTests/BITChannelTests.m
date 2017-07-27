@@ -19,7 +19,6 @@
 
 @end
 
-
 @implementation BITChannelTests
 
 - (void)setUp {
