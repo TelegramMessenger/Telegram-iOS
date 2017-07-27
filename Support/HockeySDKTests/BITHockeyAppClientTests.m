@@ -17,21 +17,22 @@
 #import "BITTestHelper.h"
 
 @interface BITHockeyAppClientTests : XCTestCase
+
+@property(nonatomic, strong) BITHockeyAppClient *sut;
+
 @end
 
-@implementation BITHockeyAppClientTests {
-  BITHockeyAppClient *_sut;
-}
+@implementation BITHockeyAppClientTests
 
 - (void)setUp {
   [super setUp];
   
-  _sut = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:@"http://bitbaseurl.com"]];
+  self.sut = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:@"http://bitbaseurl.com"]];
 }
 
 - (void)tearDown {
-  [_sut cancelOperationsWithPath:nil method:nil];
-  _sut = nil;
+  [self.sut cancelOperationsWithPath:nil method:nil];
+  self.sut = nil;
   
   [super tearDown];
 }
@@ -49,32 +50,32 @@
 
 #pragma mark - Setup Tests
 - (void) testThatItInstantiates {
-  XCTAssertNotNil(_sut, @"Should be there");
+  XCTAssertNotNil(self.sut, @"Should be there");
 }
 
 #pragma mark - Networking base tests
 - (void) testThatURLRequestHasBaseURLSet {
-  _sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:nil parameters:nil];
+  self.sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
+  NSMutableURLRequest *request = [self.sut requestWithMethod:@"GET" path:nil parameters:nil];
   assertThat(request.URL, equalTo([NSURL URLWithString:@"http://myserver.com/"]));
 }
 
 - (void) testThatURLRequestHasPathAppended {
-  _sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:@"projects" parameters:nil];
+  self.sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
+  NSMutableURLRequest *request = [self.sut requestWithMethod:@"GET" path:@"projects" parameters:nil];
   assertThat(request.URL, equalTo([NSURL URLWithString:@"http://myserver.com/projects"]));
 }
 
 - (void) testThatURLRequestHasMethodSet {
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
+  NSMutableURLRequest *request = [self.sut requestWithMethod:@"POST" path:nil parameters:nil];
   
   assertThat(request.HTTPMethod, equalTo(@"POST"));
 }
 
 - (void) testThatOperationHasURLRequestSet {
-  _sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
-  NSURLRequest *r = [_sut requestWithMethod:@"PUT" path:@"x" parameters:nil];
-  BITHTTPOperation *op = [_sut operationWithURLRequest:r
+  self.sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
+  NSURLRequest *r = [self.sut requestWithMethod:@"PUT" path:@"x" parameters:nil];
+  BITHTTPOperation *op = [self.sut operationWithURLRequest:r
                                             completion:nil];
   assertThat(op.URLRequest, equalTo(r));
 }
@@ -84,7 +85,7 @@
                                @"email" : @"peter@pan.de",
                                @"push" : @"pop",
                                };
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET"
+  NSMutableURLRequest *request = [self.sut requestWithMethod:@"GET"
                                                     path:@"something"
                                               parameters:parameters];
   NSURL *url = request.URL;
@@ -107,25 +108,25 @@
 
 #pragma mark - Convenience methods
 - (void) testThatGetPathCreatesAndEnquesAnOperation {
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(0));
-  [given([_sut operationWithURLRequest:(id)anything()
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(0));
+  [given([self.sut operationWithURLRequest:(id)anything()
                             completion:nil]) willReturn:[NSOperation new]];
   
-  [_sut getPath:@"endpoint"
+  [self.sut getPath:@"endpoint"
      parameters:nil
      completion:nil];
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(1));
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(1));
 }
 
 - (void) testThatPostPathCreatesAndEnquesAnOperation {
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(0));
-  [given([_sut operationWithURLRequest:nil
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(0));
+  [given([self.sut operationWithURLRequest:nil
                             completion:nil]) willReturn:[NSOperation new]];
   
-  [_sut postPath:@"endpoint"
+  [self.sut postPath:@"endpoint"
       parameters:nil
       completion:nil];
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(1));
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(1));
 }
 
 #pragma mark - Completion Tests
@@ -135,91 +136,91 @@
 
 #pragma mark - HTTPOperation enqueuing / cancellation
 - (void) testThatOperationIsQueued {
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(0));
-  [_sut.operationQueue setSuspended:YES];
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(0));
+  [self.sut.operationQueue setSuspended:YES];
   BITHTTPOperation *op = [BITHTTPOperation new];
-  [_sut enqeueHTTPOperation:op];
+  [self.sut enqeueHTTPOperation:op];
   
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(1));
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(1));
 }
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithNilMethod {
-  [_sut.operationQueue setSuspended:YES];
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:nil parameters:nil];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:nil parameters:nil];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+  [self.sut.operationQueue setSuspended:YES];
+  NSURLRequest *requestGet = [self.sut requestWithMethod:@"GET" path:nil parameters:nil];
+  NSURLRequest *requestPut = [self.sut requestWithMethod:@"PUT" path:nil parameters:nil];
+  NSURLRequest *requestPost = [self.sut requestWithMethod:@"POST" path:nil parameters:nil];
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestGet
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPut
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPost
                                                completion:nil]];
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(3));
-  NSUInteger numCancelled = [_sut cancelOperationsWithPath:nil method:nil];
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(3));
+  NSUInteger numCancelled = [self.sut cancelOperationsWithPath:nil method:nil];
   assertThatUnsignedLong(numCancelled, equalToUnsignedLong(3));
 }
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithNilPath {
-  [_sut.operationQueue setSuspended:YES];
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test" parameters:nil];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+  [self.sut.operationQueue setSuspended:YES];
+  NSURLRequest *requestGet = [self.sut requestWithMethod:@"GET" path:@"test" parameters:nil];
+  NSURLRequest *requestPut = [self.sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
+  NSURLRequest *requestPost = [self.sut requestWithMethod:@"POST" path:nil parameters:nil];
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestGet
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPut
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPost
                                                completion:nil]];
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(3));
-  NSUInteger numCancelled = [_sut cancelOperationsWithPath:nil method:nil];
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(3));
+  NSUInteger numCancelled = [self.sut cancelOperationsWithPath:nil method:nil];
   assertThatUnsignedLong(numCancelled, equalToUnsignedLong(3));
 }
 
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithSetPath {
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test" parameters:nil];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
-  [_sut.operationQueue setSuspended:YES];
+  NSURLRequest *requestGet = [self.sut requestWithMethod:@"GET" path:@"test" parameters:nil];
+  NSURLRequest *requestPut = [self.sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
+  NSURLRequest *requestPost = [self.sut requestWithMethod:@"POST" path:nil parameters:nil];
+  [self.sut.operationQueue setSuspended:YES];
   
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestGet
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPut
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPost
                                                completion:nil]];
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(3));
-  NSUInteger numCancelled = [_sut cancelOperationsWithPath:@"Another/acas" method:nil];
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(3));
+  NSUInteger numCancelled = [self.sut cancelOperationsWithPath:@"Another/acas" method:nil];
   assertThatUnsignedLong(numCancelled, equalToUnsignedLong(1));
 }
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithSetMethod {
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test" parameters:nil];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+  NSURLRequest *requestGet = [self.sut requestWithMethod:@"GET" path:@"test" parameters:nil];
+  NSURLRequest *requestPut = [self.sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
+  NSURLRequest *requestPost = [self.sut requestWithMethod:@"POST" path:nil parameters:nil];
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestGet
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPut
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPost
                                                completion:nil]];
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(3));
-  NSUInteger numCancelled = [_sut cancelOperationsWithPath:nil method:@"POST"];
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(3));
+  NSUInteger numCancelled = [self.sut cancelOperationsWithPath:nil method:@"POST"];
   assertThatUnsignedLong(numCancelled, equalToUnsignedLong(1));
 }
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithSetMethodAndPath {
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test" parameters:nil];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+  NSURLRequest *requestGet = [self.sut requestWithMethod:@"GET" path:@"test" parameters:nil];
+  NSURLRequest *requestPut = [self.sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
+  NSURLRequest *requestPost = [self.sut requestWithMethod:@"POST" path:nil parameters:nil];
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestGet
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPut
                                                completion:nil]];
-  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+  [self.sut enqeueHTTPOperation:[self.sut operationWithURLRequest:requestPost
                                                completion:nil]];
-  assertThatUnsignedLong(_sut.operationQueue.operationCount, equalToUnsignedLong(3));
-  NSUInteger numCancelled = [_sut cancelOperationsWithPath:@"Another/acas" method:@"PUT"];
+  assertThatUnsignedLong(self.sut.operationQueue.operationCount, equalToUnsignedLong(3));
+  NSUInteger numCancelled = [self.sut cancelOperationsWithPath:@"Another/acas" method:@"PUT"];
   assertThatUnsignedLong(numCancelled, equalToUnsignedLong(1));
 }
 

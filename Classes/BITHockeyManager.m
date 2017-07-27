@@ -558,9 +558,9 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
 
 - (BITHockeyAppClient *)hockeyAppClient {
   if (!_hockeyAppClient) {
-    self.hockeyAppClient = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:self.serverURL]];
+    _hockeyAppClient = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:self.serverURL]];
   }
-  return self.hockeyAppClient;
+  return _hockeyAppClient;
 }
 
 - (NSString *)integrationFlowTimeString {

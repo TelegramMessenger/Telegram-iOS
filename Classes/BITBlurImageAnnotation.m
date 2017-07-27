@@ -89,8 +89,10 @@
   [super layoutSubviews];
   
   [CATransaction begin];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
   [CATransaction setValue:(id)kCFBooleanTrue forKey:kCATransactionDisableActions];
-  
+#pragma clang diagnostic pop
   self.imageLayer.frame = self.imageFrame;
   self.imageLayer.masksToBounds = YES;
   
