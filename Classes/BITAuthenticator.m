@@ -34,7 +34,6 @@
 #import "HockeySDKPrivate.h"
 #import "BITAuthenticator_Private.h"
 #import "BITAuthenticationViewController.h"
-#import "BITHTTPOperation.h"
 #import "BITHockeyAppClient.h"
 #import "BITHockeyHelper.h"
 #import "BITHockeyBaseManagerPrivate.h"
@@ -322,29 +321,20 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSString *validationPath = [NSString stringWithFormat:@"api/3/apps/%@/identity/validate", self.encodedAppIdentifier];
   
   __weak typeof(self) weakSelf = self;
-  if ([BITHockeyHelper isURLSessionSupported]) {
-    NSURLRequest *request = [self.hockeyAppClient requestWithMethod:@"GET" path:validationPath parameters:[self validationParameters]];
-    
-    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-    
-    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler:^(NSData *data, NSURLResponse __unused *response, NSError *innerError) {
-                                              typeof(self) strongSelf = weakSelf;
-                                              
-                                              [session finishTasksAndInvalidate];
-                                              
-                                              [strongSelf handleValidationResponseWithData:data error:innerError completion:completion];
-                                            }];
-    [task resume];
-  } else {
-    [self.hockeyAppClient getPath:validationPath
-                       parameters:[self validationParameters]
-                       completion:^(BITHTTPOperation __unused *operation, NSData *responseData, NSError *innerError) {
-                         typeof(self) strongSelf = weakSelf;
-                         [strongSelf handleValidationResponseWithData:responseData error:innerError completion:completion];
-                       }];
-  }
+  NSURLRequest *request = [self.hockeyAppClient requestWithMethod:@"GET" path:validationPath parameters:[self validationParameters]];
+
+  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+  __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+
+  NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                          completionHandler:^(NSData *data, NSURLResponse __unused *response, NSError *innerError) {
+                                            typeof(self) strongSelf = weakSelf;
+
+                                            [session finishTasksAndInvalidate];
+
+                                            [strongSelf handleValidationResponseWithData:data error:innerError completion:completion];
+                                          }];
+  [task resume];
 }
 
 - (void)handleValidationResponseWithData:(NSData *)responseData error:(NSError *)error completion:(void (^)(BOOL validated, NSError *))completion {
@@ -481,32 +471,19 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
                           completion:(void (^)(BOOL, NSError *))completion {
   
   __weak typeof(self) weakSelf = self;
-  
-  if ([BITHockeyHelper isURLSessionSupported]) {
-    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-    
-    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler:^(NSData *data, NSURLResponse *response, NSError __unused *error) {
-                                              typeof(self) strongSelf = weakSelf;
-                                              NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-                                              
-                                              [session finishTasksAndInvalidate];
-                                              
-                                              [strongSelf handleAuthenticationWithResponse:httpResponse email:email data:data completion:completion];
-                                            }];
-    [task resume];
-  } else {
-    BITHTTPOperation *operation = [self.hockeyAppClient operationWithURLRequest:request
-                                                                     completion:^(BITHTTPOperation *innerOperation, NSData *responseData, NSError __unused *error) {
-                                                                       typeof(self) strongSelf = weakSelf;
-                                                                       [strongSelf handleAuthenticationWithResponse:innerOperation.response
-                                                                                                              email:email
-                                                                                                               data:responseData
-                                                                                                         completion:completion];
-                                                                     }];
-    [self.hockeyAppClient enqeueHTTPOperation:operation];
-  }
+  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+  __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+
+  NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                          completionHandler:^(NSData *data, NSURLResponse *response, NSError __unused *error) {
+                                            typeof(self) strongSelf = weakSelf;
+                                            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+
+                                            [session finishTasksAndInvalidate];
+
+                                            [strongSelf handleAuthenticationWithResponse:httpResponse email:email data:data completion:completion];
+                                          }];
+  [task resume];
 }
 
 - (void)authenticationViewControllerDidTapWebButton:(UIViewController *) __unused viewController {

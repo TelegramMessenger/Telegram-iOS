@@ -30,9 +30,6 @@
 NSString * const kBITHockeyAppClientBoundary = @"----FOO";
 
 @implementation BITHockeyAppClient
-- (void)dealloc {
-  [self cancelOperationsWithPath:nil method:nil];
-}
 
 - (instancetype)initWithBaseURL:(NSURL *)baseURL {
   self = [super init];
@@ -120,59 +117,6 @@ NSString * const kBITHockeyAppClientBoundary = @"----FOO";
     [queryString appendFormat:queryString.length ? @"&%@=%@" : @"%@=%@", key, value];
   }];
   return queryString;
-}
-
-- (BITHTTPOperation*) operationWithURLRequest:(NSURLRequest*) request
-                                   completion:(BITNetworkCompletionBlock) completion {
-  BITHTTPOperation *operation = [BITHTTPOperation operationWithRequest:request
-                                 ];
-  [operation setCompletion:completion];
-  
-  return operation;
-}
-
-- (void)getPath:(NSString *)path parameters:(NSDictionary *)params completion:(BITNetworkCompletionBlock)completion {
-  NSURLRequest *request = [self requestWithMethod:@"GET" path:path parameters:params];
-  BITHTTPOperation *op = [self operationWithURLRequest:request
-                                            completion:completion];
-  [self enqeueHTTPOperation:op];
-}
-
-- (void)postPath:(NSString *)path parameters:(NSDictionary *)params completion:(BITNetworkCompletionBlock)completion {
-  NSURLRequest *request = [self requestWithMethod:@"POST" path:path parameters:params];
-  BITHTTPOperation *op = [self operationWithURLRequest:request
-                                            completion:completion];
-  [self enqeueHTTPOperation:op];
-}
-
-- (void) enqeueHTTPOperation:(BITHTTPOperation *) operation {
-  [self.operationQueue addOperation:operation];
-}
-
-- (NSUInteger) cancelOperationsWithPath:(NSString*) path
-                                 method:(NSString*) method {
-  NSUInteger cancelledOperations = 0;
-  for(BITHTTPOperation *operation in self.operationQueue.operations) {
-    NSURLRequest *request = operation.URLRequest;
-    
-    BOOL matchedMethod = YES;
-    if(method && ![request.HTTPMethod isEqualToString:method]) {
-      matchedMethod = NO;
-    }
-    
-    BOOL matchedPath = YES;
-    if(path) {
-      //method is not interesting here, we' just creating it to get the URL
-      NSURL *url = [self requestWithMethod:@"GET" path:path parameters:nil].URL;
-      matchedPath = [request.URL isEqual:url];
-    }
-    
-    if(matchedPath && matchedMethod) {
-      ++cancelledOperations;
-      [operation cancel];
-    }
-  }
-  return cancelledOperations;
 }
 
 - (NSOperationQueue *)operationQueue {

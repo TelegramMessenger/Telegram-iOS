@@ -64,13 +64,6 @@
   [_sut sendRequest:testRequest filePath:testFilePath];
   
   OCMVerify([_sut sendUsingURLSessionWithRequest:testRequest filePath:testFilePath]);
-  
-  _sut = OCMPartialMock([self newSender]);
-  OCMStub([_sut isURLSessionSupported]).andReturn(NO);
-  
-  [_sut sendRequest:testRequest filePath:testFilePath];
-  
-  OCMVerify([_sut sendUsingURLConnectionWithRequest:testRequest filePath:testFilePath]);
 }
 
 - (void)testSendDataVerifyDataIsGzipped {
@@ -94,20 +87,6 @@
     }
     return NO;
   }] filePath:testFilePath]);
-}
-
-- (void)testSendUsingURLConnection {
-  
-  // setup
-  _sut = OCMPartialMock(_sut);
-  NSString *testFilePath = @"path/to/file";
-  NSURLRequest *testRequest = [NSURLRequest new];
-  
-  // test
-  [_sut sendUsingURLConnectionWithRequest:testRequest filePath:testFilePath];
-  
-  //verify
-  OCMVerify([_sut.operationQueue addOperation:(id)anything()]);
 }
 
 - (void)testSendUsingURLSession {

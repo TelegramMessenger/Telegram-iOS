@@ -602,26 +602,18 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
                            @"bundle_version": [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]
                            };
   
-  if ([BITHockeyHelper isURLSessionSupported]) {
-    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-    NSURLRequest *request = [[self hockeyAppClient] requestWithMethod:@"POST" path:integrationPath parameters:params];
-    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler: ^(NSData * __unused data, NSURLResponse *response, NSError * __unused error) {
-                                              [session finishTasksAndInvalidate];
-                                              
-                                              NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*) response;
-                                              [self logPingMessageForStatusCode:httpResponse.statusCode];
-                                            }];
-    [task resume];
-  }else{
-    [[self hockeyAppClient] postPath:integrationPath
-                          parameters:params
-                          completion:^(BITHTTPOperation *operation, NSData * __unused responseData, NSError * __unused error) {
-                            [self logPingMessageForStatusCode:operation.response.statusCode];
-                          }];
-  }
-  
+  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+  __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+  NSURLRequest *request = [[self hockeyAppClient] requestWithMethod:@"POST" path:integrationPath parameters:params];
+  NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                          completionHandler: ^(NSData * __unused data, NSURLResponse *response, NSError * __unused error) {
+                                            [session finishTasksAndInvalidate];
+
+                                            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*) response;
+                                            [self logPingMessageForStatusCode:httpResponse.statusCode];
+                                          }];
+  [task resume];
+
 }
 
 - (void)logPingMessageForStatusCode:(NSInteger)statusCode {

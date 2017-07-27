@@ -605,31 +605,21 @@
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:attachment.sourceURL]];
         __weak typeof (self) weakSelf = self;
-        if ([BITHockeyHelper isURLSessionSupported]) {
-          NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-          __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-          
-          NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                                  completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError *error) {
-                                                    typeof (self) strongSelf = weakSelf;
-                                                    
-                                                    [session finishTasksAndInvalidate];
-                                                    
-                                                    [strongSelf handleResponseForAttachment:attachment responseData:data error:error];
-                                                  }];
-          [task resume];
-        }else{
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-          [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse __unused *response, NSData *responseData, NSError *err) {
-#pragma clang diagnostic pop
-            typeof (self) strongSelf = weakSelf;
-            [strongSelf handleResponseForAttachment:attachment responseData:responseData error:err];
-          }];
-        }
+        NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+        __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+
+        NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                                completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError *error) {
+                                                  typeof (self) strongSelf = weakSelf;
+
+                                                  [session finishTasksAndInvalidate];
+
+                                                  [strongSelf handleResponseForAttachment:attachment responseData:data error:error];
+                                                }];
+        [task resume];
       }
     }
-    
+
     if (indexPath.row != 0) {
       UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
       lineView1.backgroundColor = BORDER_COLOR;
@@ -869,30 +859,20 @@
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:attachment.sourceURL]];
       
       __weak typeof (self) weakSelf = self;
-      if ([BITHockeyHelper isURLSessionSupported]) {
-        NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-        __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-        
-        NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                                completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError __unused *error) {
-                                                  dispatch_async(dispatch_get_main_queue(), ^{
-                                                    typeof (self) strongSelf = weakSelf;
-                                                    
-                                                    [session finishTasksAndInvalidate];
-                                                    
-                                                    [strongSelf previewController:blockController updateAttachment:attachment data:data];
-                                                  });
-                                                }];
-        [task resume];
-      }else{
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse __unused *response, NSData *responseData, NSError __unused *err) {
-#pragma clang diagnostic pop
-          typeof (self) strongSelf = weakSelf;
-          [strongSelf previewController:blockController updateAttachment:attachment data:responseData];
-        }];
-      }
+      NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+      __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+
+      NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                              completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError __unused *error) {
+                                                dispatch_async(dispatch_get_main_queue(), ^{
+                                                  typeof (self) strongSelf = weakSelf;
+
+                                                  [session finishTasksAndInvalidate];
+
+                                                  [strongSelf previewController:blockController updateAttachment:attachment data:data];
+                                                });
+                                              }];
+      [task resume];
       return attachment;
     } else {
       return self.cachedPreviewItems[index];
