@@ -1064,6 +1064,8 @@
 		D07BCBF81F2B72DC00ED97AA /* STKQueueEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCBEA1F2B72DC00ED97AA /* STKQueueEntry.m */; };
 		D07BCBFB1F2B757700ED97AA /* TGEmbedPIPScrubber.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCBF91F2B757700ED97AA /* TGEmbedPIPScrubber.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D07BCBFC1F2B757700ED97AA /* TGEmbedPIPScrubber.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCBFA1F2B757700ED97AA /* TGEmbedPIPScrubber.m */; };
+		D07BCC051F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCC031F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D07BCC061F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCC041F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -2126,6 +2128,8 @@
 		D07BCBEA1F2B72DC00ED97AA /* STKQueueEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STKQueueEntry.m; sourceTree = "<group>"; };
 		D07BCBF91F2B757700ED97AA /* TGEmbedPIPScrubber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGEmbedPIPScrubber.h; sourceTree = "<group>"; };
 		D07BCBFA1F2B757700ED97AA /* TGEmbedPIPScrubber.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGEmbedPIPScrubber.m; sourceTree = "<group>"; };
+		D07BCC031F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGModernConversationTitleActivityIndicator.h; sourceTree = "<group>"; };
+		D07BCC041F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGModernConversationTitleActivityIndicator.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2476,6 +2480,8 @@
 				D07BCA541F2A9E1600ED97AA /* TGDraggableCollectionViewFlowLayout.m */,
 				D07BCAA81F2B44C100ED97AA /* TGModernBarButton.h */,
 				D07BCAA91F2B44C100ED97AA /* TGModernBarButton.m */,
+				D07BCC031F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h */,
+				D07BCC041F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m */,
 			);
 			name = "Basic UI Components";
 			sourceTree = "<group>";
@@ -3634,6 +3640,7 @@
 				D07BCBB51F2B6F6300ED97AA /* CBCoubLoopCompositionMaker.h in Headers */,
 				D07BC9351F2A3BD100ED97AA /* TGPhotoTextEntityView.h in Headers */,
 				D07BCBAC1F2B6F6300ED97AA /* CBConstance.h in Headers */,
+				D07BCC051F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h in Headers */,
 				D01778391F1F961D0044446D /* TGAudioWaveform.h in Headers */,
 				D07BC7821F2A2B3700ED97AA /* TGPhotoEditorRadialBlurView.h in Headers */,
 				D07BC7A31F2A2B8900ED97AA /* GPUImage.h in Headers */,
@@ -4451,6 +4458,7 @@
 				D07BCBFC1F2B757700ED97AA /* TGEmbedPIPScrubber.m in Sources */,
 				D07BC8231F2A2C0B00ED97AA /* PGShadowsTool.m in Sources */,
 				D01779971F21082E0044446D /* PSLMDBTable.m in Sources */,
+				D07BCC061F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m in Sources */,
 				D07BCB361F2B65F100ED97AA /* TGBuiltinWallpaperInfo.m in Sources */,
 				D07BC90A1F2A380D00ED97AA /* TGPaintFaceDebugView.m in Sources */,
 				D017785A1F1F961D0044446D /* TGImageMediaAttachment.m in Sources */,
@@ -4902,6 +4910,148 @@
 			};
 			name = Hockeyapp;
 		};
+		D07BCBFF1F2B79AE00ED97AA /* Debug Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = "Debug Hockeyapp";
+		};
+		D07BCC001F2B79AE00ED97AA /* Debug Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "";
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = LegacyComponents/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.LegacyComponents;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+			};
+			name = "Debug Hockeyapp";
+		};
+		D07BCC011F2B79B900ED97AA /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = "Release AppStore";
+		};
+		D07BCC021F2B79B900ED97AA /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "";
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = LegacyComponents/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.LegacyComponents;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+			};
+			name = "Release AppStore";
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -4909,8 +5059,10 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D017772D1F1F8F100044446D /* Debug AppStore */,
+				D07BCBFF1F2B79AE00ED97AA /* Debug Hockeyapp */,
 				D01778931F1FA58C0044446D /* Debug */,
 				D017772E1F1F8F100044446D /* Release */,
+				D07BCC011F2B79B900ED97AA /* Release AppStore */,
 				D01778951F1FA5960044446D /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -4920,8 +5072,10 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D01777301F1F8F100044446D /* Debug AppStore */,
+				D07BCC001F2B79AE00ED97AA /* Debug Hockeyapp */,
 				D01778941F1FA58C0044446D /* Debug */,
 				D01777311F1F8F100044446D /* Release */,
+				D07BCC021F2B79B900ED97AA /* Release AppStore */,
 				D01778961F1FA5960044446D /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;

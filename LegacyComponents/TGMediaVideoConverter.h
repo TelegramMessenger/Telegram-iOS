@@ -23,6 +23,8 @@
 + (TGMediaVideoConversionPreset)bestAvailablePresetForDimensions:(CGSize)dimensions;
 + (CGSize)_renderSizeWithCropSize:(CGSize)cropSize;
 
++ (CGSize)dimensionsFor:(CGSize)dimensions adjustments:(TGMediaVideoEditAdjustments *)adjustments preset:(TGMediaVideoConversionPreset)preset;
+
 @end
 
 

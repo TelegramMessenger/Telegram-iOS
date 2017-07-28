@@ -266,3 +266,12 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGCameraTimeCodeView.h>
 #import <LegacyComponents/TGCameraZoomView.h>
 #import <LegacyComponents/TGCameraPhotoPreviewController.h>
+
+#import <LegacyComponents/TGModernConversationTitleActivityIndicator.h>
+#import <LegacyComponents/TGEmbedPIPButton.h>
+#import <LegacyComponents/TGEmbedPIPPullArrowView.h>
+#import <LegacyComponents/TGEmbedPlayerState.h>
+#import <LegacyComponents/TGAttachmentCameraView.h>
+#import <LegacyComponents/TGMediaAvatarMenuMixin.h>
+#import <LegacyComponents/TGPasscodeEntryController.h>
+#import <LegacyComponents/TGEmbedPlayerView.h>

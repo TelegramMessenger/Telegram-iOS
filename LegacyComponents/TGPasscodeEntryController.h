@@ -16,18 +16,26 @@ typedef enum {
     TGPasscodeEntryControllerStyleTranslucent
 } TGPasscodeEntryControllerStyle;
 
+@interface TGPasscodeEntryAttemptData : NSObject
+
+@property (nonatomic, readonly) NSInteger numberOfInvalidAttempts;
+@property (nonatomic, readonly) double dateOfLastInvalidAttempt;
+
+- (instancetype)initWithNumberOfInvalidAttempts:(NSInteger)numberOfInvalidAttempts dateOfLastInvalidAttempt:(double)dateOfLastInvalidAttempt;
+
+@end
+
 @interface TGPasscodeEntryController : TGViewController
 
 @property (nonatomic, copy) void (^completion)(NSString *);
 @property (nonatomic, copy) void (^touchIdCompletion)();
 @property (nonatomic, copy) bool (^checkCurrentPasscode)(NSString *);
+@property (nonatomic, copy) void (^updateAttemptData)(TGPasscodeEntryAttemptData *);
 @property (nonatomic) bool allowTouchId;
 
-- (instancetype)initWithStyle:(TGPasscodeEntryControllerStyle)style mode:(TGPasscodeEntryControllerMode)mode cancelEnabled:(bool)cancelEnabled allowTouchId:(bool)allowTouchId completion:(void (^)(NSString *))completion;
+- (instancetype)initWithStyle:(TGPasscodeEntryControllerStyle)style mode:(TGPasscodeEntryControllerMode)mode cancelEnabled:(bool)cancelEnabled allowTouchId:(bool)allowTouchId attemptData:(TGPasscodeEntryAttemptData *)attemptData completion:(void (^)(NSString *))completion;
 - (void)resetMode:(TGPasscodeEntryControllerMode)mode;
 - (void)refreshTouchId;
-- (void)resetInvalidPasscodeAttempts;
-- (void)addInvalidPasscodeAttempt;
 
 - (void)prepareForAppear;
 - (void)prepareForDisappear;

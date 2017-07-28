@@ -45,6 +45,8 @@
     bool _shouldResumePIPPlayback;
     
     id<SDisposable> _currentAudioSession;
+    
+    SVariable *_loadProgressValue;
 }
 @end
 
@@ -67,6 +69,7 @@
         self.clipsToBounds = true;
         
         _statePipe = [[SPipe alloc] init];
+        _loadProgressValue = [[SVariable alloc] init];
         
         _webPage = webPage;
         _state = [TGEmbedPlayerState stateWithPlaying:false duration:0.0 position:0.0 downloadProgress:0.0f];
@@ -244,12 +247,17 @@
     {
         _overlayView.hidden = false;
         [self setLoadProgress:0.01f duration:0.01];
+        [_loadProgressValue set:[SSignal single:@(0.01f)]];
     }
 }
 
 - (CGFloat)_compensationEdges
 {
     return 0.0f;
+}
+
+- (SSignal *)loadProgress {
+    return [_loadProgressValue signal];
 }
 
 - (void)hideControls
@@ -305,8 +313,10 @@
         if (dimmed)
         {
             _overlayView.hidden = false;
-            if (useFakeProgress)
+            if (useFakeProgress) {
                 [self setLoadProgress:0.88f duration:3.0];
+                [_loadProgressValue set:[SSignal single:@(0.88f)]];
+            }
             
             _dimWrapperView.hidden = false;
             _dimWrapperView.alpha = 1.0f;
@@ -314,6 +324,7 @@
         else
         {
             [self setLoadProgress:1.0f duration:0.2];
+            [_loadProgressValue set:[SSignal single:@(1.0f)]];
             
             NSTimeInterval delay = shouldDelay ? 0.4 : 0.0;
             [UIView animateWithDuration:0.2 delay:delay options:UIViewAnimationOptionAllowAnimatedContent | UIViewAnimationOptionCurveLinear animations:^
@@ -331,8 +342,10 @@
         _dimWrapperView.hidden = !dimmed;
         
         _overlayView.hidden = !dimmed;
-        if (dimmed && useFakeProgress)
+        if (dimmed && useFakeProgress) {
             [self setLoadProgress:0.88f duration:3.0];
+            [_loadProgressValue set:[SSignal single:@(0.88f)]];
+        }
         else
             [_overlayView setNone];
     }
@@ -341,6 +354,7 @@
 - (void)setLoadProgress:(CGFloat)value duration:(NSTimeInterval)duration
 {
     [_overlayView setProgressAnimated:value duration:duration cancelEnabled:false];
+    [_loadProgressValue set:[SSignal single:@(value)]];
 }
 
 - (bool)_useFakeLoadingProgress
@@ -861,6 +875,15 @@
     _overlayView.center = CGPointMake(CGRectGetMidX(_dimWrapperView.bounds), CGRectGetMidY(_dimWrapperView.bounds));
     _errorLabel.center = _overlayView.center;
     _controlsView.frame = self.bounds;
+}
+
++ (TGEmbedPlayerView *)makePlayerViewForWebPage:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)signal {
+    Class playerClass = [self playerViewClassForWebPage:webPage onlySpecial:false];
+    if (playerClass != nil) {
+        return [[playerClass alloc] initWithWebPageAttachment:webPage thumbnailSignal:signal];
+    } else {
+        return nil;
+    }
 }
 
 @end

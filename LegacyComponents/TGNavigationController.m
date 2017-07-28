@@ -70,6 +70,10 @@
     return navigationController;
 }
 
++ (TGNavigationController *)makeWithRootController:(UIViewController *)controller {
+    return [self navigationControllerWithControllers:[NSArray arrayWithObject:controller]];
+}
+
 - (instancetype)initWithNavigationBarClass:(Class)navigationBarClass toolbarClass:(Class)toolbarClass
 {
     self = [super initWithNavigationBarClass:navigationBarClass toolbarClass:toolbarClass];

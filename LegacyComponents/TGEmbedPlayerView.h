@@ -90,8 +90,11 @@
 
 - (void)_cleanWebView;
 
+- (SSignal *)loadProgress;
+
 + (bool)_supportsWebPage:(TGWebPageMediaAttachment *)webPage;
 
 + (Class)playerViewClassForWebPage:(TGWebPageMediaAttachment *)webPage onlySpecial:(bool)onlySpecial;
++ (TGEmbedPlayerView *)makePlayerViewForWebPage:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)signal;
 
 @end

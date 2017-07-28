@@ -201,6 +201,23 @@
             }];
 }
 
++ (CGSize)dimensionsFor:(CGSize)dimensions adjustments:(TGMediaVideoEditAdjustments *)adjustments preset:(TGMediaVideoConversionPreset)preset {
+    CGRect transformedRect = CGRectMake(0.0f, 0.0f, dimensions.width, dimensions.height);
+    
+    bool hasCropping = [adjustments cropAppliedForAvatar:false];
+    CGRect cropRect = hasCropping ? CGRectIntegral(adjustments.cropRect) : transformedRect;
+    
+    CGSize maxDimensions = [TGMediaVideoConversionPresetSettings maximumSizeForPreset:preset];
+    CGSize outputDimensions = TGFitSizeF(cropRect.size, maxDimensions);
+    outputDimensions = CGSizeMake(ceil(outputDimensions.width), ceil(outputDimensions.height));
+    outputDimensions = [self _renderSizeWithCropSize:outputDimensions];
+    
+    if (TGOrientationIsSideward(adjustments.cropOrientation, NULL))
+        outputDimensions = CGSizeMake(outputDimensions.height, outputDimensions.width);
+    
+    return outputDimensions;
+}
+
 + (AVAssetReaderVideoCompositionOutput *)setupVideoCompositionOutputWithAVAsset:(AVAsset *)avAsset composition:(AVMutableComposition *)composition videoTrack:(AVAssetTrack *)videoTrack preset:(TGMediaVideoConversionPreset)preset adjustments:(TGMediaVideoEditAdjustments *)adjustments timeRange:(CMTimeRange)timeRange outputSettings:(NSDictionary **)outputSettings dimensions:(CGSize *)dimensions conversionContext:(SAtomic *)conversionContext
 {
     CGSize transformedSize = CGRectApplyAffineTransform((CGRect){CGPointZero, videoTrack.naturalSize}, videoTrack.preferredTransform).size;;

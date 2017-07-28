@@ -1,20 +1,34 @@
-#import <LegacyComponents/TGPasscodeEntryController.h>
-
-#import "LegacyComponentsInternal.h"
-#import "TGStringUtils.h"
+#import "TGPasscodeEntryController.h"
 
 #import "TGPasswordEntryView.h"
 
-#import <LegacyComponents/TGTimerTarget.h>
+#import "TGStringUtils.h"
+
+#import "TGTimerTarget.h"
 
 #import <AudioToolbox/AudioToolbox.h>
 #import <LocalAuthentication/LocalAuthentication.h>
+
+#import "LegacyComponentsInternal.h"
 
 typedef enum {
     TGPasscodeEntryControllerSubmodeEnteringCurrent,
     TGPasscodeEntryControllerSubmodeEnteringNew,
     TGPasscodeEntryControllerSubmodeReenteringNew
 } TGPasscodeEntryControllerSubmode;
+
+@implementation TGPasscodeEntryAttemptData
+
+- (instancetype)initWithNumberOfInvalidAttempts:(NSInteger)numberOfInvalidAttempts dateOfLastInvalidAttempt:(double)dateOfLastInvalidAttempt {
+    self = [super init];
+    if (self != nil) {
+        _numberOfInvalidAttempts = numberOfInvalidAttempts;
+        _dateOfLastInvalidAttempt = dateOfLastInvalidAttempt;
+    }
+    return self;
+}
+
+@end
 
 @interface TGPasscodeEntryController ()
 {
@@ -33,13 +47,15 @@ typedef enum {
     
     NSTimer *_shouldWaitTimer;
     bool _keepStatusBarStyle;
+    
+    TGPasscodeEntryAttemptData *_attemptData;
 }
 
 @end
 
 @implementation TGPasscodeEntryController
 
-- (instancetype)initWithStyle:(TGPasscodeEntryControllerStyle)style mode:(TGPasscodeEntryControllerMode)mode cancelEnabled:(bool)cancelEnabled allowTouchId:(bool)allowTouchId completion:(void (^)(NSString *))completion
+- (instancetype)initWithStyle:(TGPasscodeEntryControllerStyle)style mode:(TGPasscodeEntryControllerMode)mode cancelEnabled:(bool)cancelEnabled allowTouchId:(bool)allowTouchId attemptData:(TGPasscodeEntryAttemptData *)attemptData completion:(void (^)(NSString *))completion
 {
     self = [super init];
     if (self != nil)
@@ -50,6 +66,7 @@ typedef enum {
         _allowTouchId = allowTouchId;
         _cancelEnabled = cancelEnabled;
         _keepStatusBarStyle = true;
+        _attemptData = attemptData;
         
         switch (_mode)
         {
@@ -285,41 +302,50 @@ typedef enum {
     }
 }
 
-- (NSInteger)invalidPasscodeAttempts
-{
-    return [[[NSUserDefaults standardUserDefaults] objectForKey:@"Passcode_invalidAttempts"] integerValue];
+- (NSInteger)invalidPasscodeAttempts {
+    return _attemptData.numberOfInvalidAttempts;
 }
 
-- (void)addInvalidPasscodeAttempt
-{
-    [[NSUserDefaults standardUserDefaults] setObject:@([self invalidPasscodeAttempts] + 1) forKey:@"Passcode_invalidAttempts"];
-    [[NSUserDefaults standardUserDefaults] setObject:@([[NSDate date] timeIntervalSince1970]) forKey:@"Passcode_invalidAttemptDate"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+- (void)addInvalidPasscodeAttempt {
+    if (_attemptData == nil) {
+        _attemptData = [[TGPasscodeEntryAttemptData alloc] initWithNumberOfInvalidAttempts:1 dateOfLastInvalidAttempt:CFAbsoluteTimeGetCurrent()];
+    } else {
+        _attemptData = [[TGPasscodeEntryAttemptData alloc] initWithNumberOfInvalidAttempts:_attemptData.numberOfInvalidAttempts + 1 dateOfLastInvalidAttempt:CFAbsoluteTimeGetCurrent()];
+    }
+    if (_updateAttemptData) {
+        _updateAttemptData(_attemptData);
+    }
 }
 
-- (void)resetInvalidPasscodeAttempts
-{
-    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"Passcode_invalidAttempts"];
-    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"Passcode_invalidAttemptDate"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+- (void)resetInvalidPasscodeAttempts {
+    _attemptData = nil;
+    if (_updateAttemptData) {
+        _updateAttemptData(_attemptData);
+    }
 }
 
 - (bool)shouldWaitBeforeAttempting
 {
-    if ([self invalidPasscodeAttempts] < 6)
+    if (_attemptData == nil || [self invalidPasscodeAttempts] < 6)
         return false;
-    NSTimeInterval invalidAttemptDate = [[[NSUserDefaults standardUserDefaults] objectForKey:@"Passcode_invalidAttemptDate"] doubleValue];
+    
+    NSTimeInterval invalidAttemptDate = _attemptData.dateOfLastInvalidAttempt;
     NSTimeInterval waitInterval = 60.0;
+    
 #ifdef DEBUG
     waitInterval = 5.0;
 #endif
-    return [[NSDate date] timeIntervalSince1970] - invalidAttemptDate < waitInterval;
+    
+    return CFAbsoluteTimeGetCurrent() - invalidAttemptDate < waitInterval;
 }
 
 - (NSTimeInterval)intervalSinceLastInvalidPasscodeAttempt
 {
-    NSTimeInterval invalidAttemptDate = [[[NSUserDefaults standardUserDefaults] objectForKey:@"Passcode_invalidAttemptDate"] doubleValue];
-    return [[NSDate date] timeIntervalSince1970] - invalidAttemptDate;
+    if (_attemptData == nil) {
+        return 9999999.0;
+    } else {
+        return CFAbsoluteTimeGetCurrent() - _attemptData.dateOfLastInvalidAttempt;
+    }
 }
 
 - (void)checkShouldWait
