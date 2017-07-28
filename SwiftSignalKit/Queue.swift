@@ -39,12 +39,16 @@ public final class Queue {
         self.specialIsMainQueue = specialIsMainQueue
     }
     
-    public init(name: String? = nil) {
-        self.nativeQueue = DispatchQueue(label: name ?? "", qos: .default)
+    public init(name: String? = nil, target: Queue? = nil, qos: DispatchQoS = .default) {
+        self.nativeQueue = DispatchQueue(label: name ?? "", qos: qos)
         
         self.specialIsMainQueue = false
         
         self.nativeQueue.setSpecific(key: QueueSpecificKey, value: self.specific)
+        
+        if let target = target {
+            //self.nativeQueue.setTarget(queue: target.nativeQueue)
+        }
     }
     
     public func isCurrent() -> Bool {

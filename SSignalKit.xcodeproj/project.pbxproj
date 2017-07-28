@@ -86,6 +86,8 @@
 		D02720B11CD0E005006F1506 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02720B01CD0E005006F1506 /* PerformanceTests.swift */; };
 		D0445DE41A7C2CA500267924 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0445DD81A7C2CA500267924 /* SSignalKit.framework */; };
 		D0445E571A7C3FB400267924 /* SDisposableTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E561A7C3FB400267924 /* SDisposableTests.m */; };
+		D053B4001F16881000E2D58A /* QueueLocalObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053B3FF1F16881000E2D58A /* QueueLocalObject.swift */; };
+		D053B4011F16881000E2D58A /* QueueLocalObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053B3FF1F16881000E2D58A /* QueueLocalObject.swift */; };
 		D05F09A81C9EF77100BB6F96 /* Multicast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05F09A71C9EF77100BB6F96 /* Multicast.swift */; };
 		D066BD0A1C7FE06700D7A576 /* Lock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D066BD091C7FE06700D7A576 /* Lock.swift */; };
 		D06F106C1A85561E00485185 /* SSignalBasicTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F106B1A85561E00485185 /* SSignalBasicTests.m */; };
@@ -227,6 +229,7 @@
 		D0445DE31A7C2CA500267924 /* SSignalKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSignalKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0445DE91A7C2CA500267924 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0445E561A7C3FB400267924 /* SDisposableTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SDisposableTests.m; sourceTree = "<group>"; };
+		D053B3FF1F16881000E2D58A /* QueueLocalObject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QueueLocalObject.swift; sourceTree = "<group>"; };
 		D05F09A71C9EF77100BB6F96 /* Multicast.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Multicast.swift; sourceTree = "<group>"; };
 		D066BD091C7FE06700D7A576 /* Lock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Lock.swift; sourceTree = "<group>"; };
 		D06F106B1A85561E00485185 /* SSignalBasicTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SSignalBasicTests.m; sourceTree = "<group>"; };
@@ -313,6 +316,7 @@
 				D07A5CFC1BBDE6E400451791 /* Promise.swift */,
 				D05F09A71C9EF77100BB6F96 /* Multicast.swift */,
 				D066BD091C7FE06700D7A576 /* Lock.swift */,
+				D053B3FF1F16881000E2D58A /* QueueLocalObject.swift */,
 				D0085B261B282B9800EAF753 /* SwiftSignalKit.h */,
 				D0085B241B282B9800EAF753 /* Supporting Files */,
 			);
@@ -734,6 +738,7 @@
 				D0085B5B1B282BEE00EAF753 /* Signal_Meta.swift in Sources */,
 				D0085B571B282BEE00EAF753 /* Bag.swift in Sources */,
 				D0085B5A1B282BEE00EAF753 /* Signal_Single.swift in Sources */,
+				D053B4001F16881000E2D58A /* QueueLocalObject.swift in Sources */,
 				D0085B611B282BEE00EAF753 /* Signal_Mapping.swift in Sources */,
 				D0085B5C1B282BEE00EAF753 /* Signal_Combine.swift in Sources */,
 				D0085B5D1B282BEE00EAF753 /* Atomic.swift in Sources */,
@@ -820,6 +825,7 @@
 				D0B418071D7DFAAB004562A4 /* Signal.swift in Sources */,
 				D0B418081D7DFAAB004562A4 /* Disposable.swift in Sources */,
 				D0B418091D7DFAAB004562A4 /* Signal_Mapping.swift in Sources */,
+				D053B4011F16881000E2D58A /* QueueLocalObject.swift in Sources */,
 				D0B4180A1D7DFAAB004562A4 /* Subscriber.swift in Sources */,
 				D0B4180B1D7DFAAB004562A4 /* Promise.swift in Sources */,
 				D0B4180C1D7DFAAB004562A4 /* Multicast.swift in Sources */,
@@ -843,7 +849,7 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		D0085B361B282B9800EAF753 /* Debug */ = {
+		D0085B361B282B9800EAF753 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -872,9 +878,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 3.0;
 			};
-			name = Debug;
+			name = "Debug Hockeyapp";
 		};
-		D0085B371B282B9800EAF753 /* Release */ = {
+		D0085B371B282B9800EAF753 /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -901,9 +907,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 3.0;
 			};
-			name = Release;
+			name = "Release Hockeyapp";
 		};
-		D0085B391B282B9800EAF753 /* Debug */ = {
+		D0085B391B282B9800EAF753 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -923,9 +929,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
-			name = Debug;
+			name = "Debug Hockeyapp";
 		};
-		D0085B3A1B282B9800EAF753 /* Release */ = {
+		D0085B3A1B282B9800EAF753 /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
@@ -943,9 +949,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 3.0;
 			};
-			name = Release;
+			name = "Release Hockeyapp";
 		};
-		D0445DEC1A7C2CA500267924 /* Debug */ = {
+		D0445DEC1A7C2CA500267924 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -991,9 +997,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = Debug;
+			name = "Debug Hockeyapp";
 		};
-		D0445DED1A7C2CA500267924 /* Release */ = {
+		D0445DED1A7C2CA500267924 /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1032,9 +1038,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = Release;
+			name = "Release Hockeyapp";
 		};
-		D0445DEF1A7C2CA500267924 /* Debug */ = {
+		D0445DEF1A7C2CA500267924 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1054,9 +1060,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = Debug;
+			name = "Debug Hockeyapp";
 		};
-		D0445DF01A7C2CA500267924 /* Release */ = {
+		D0445DF01A7C2CA500267924 /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1076,9 +1082,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = Release;
+			name = "Release Hockeyapp";
 		};
-		D0445DF21A7C2CA500267924 /* Debug */ = {
+		D0445DF21A7C2CA500267924 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1100,9 +1106,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = Debug;
+			name = "Debug Hockeyapp";
 		};
-		D0445DF31A7C2CA500267924 /* Release */ = {
+		D0445DF31A7C2CA500267924 /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1120,9 +1126,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = Release;
+			name = "Release Hockeyapp";
 		};
-		D086A5741CC0117500F08284 /* Hockeyapp */ = {
+		D086A5741CC0117500F08284 /* Release AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1161,9 +1167,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = Hockeyapp;
+			name = "Release AppStore";
 		};
-		D086A5751CC0117500F08284 /* Hockeyapp */ = {
+		D086A5751CC0117500F08284 /* Release AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1183,9 +1189,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = Hockeyapp;
+			name = "Release AppStore";
 		};
-		D086A5761CC0117500F08284 /* Hockeyapp */ = {
+		D086A5761CC0117500F08284 /* Release AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1203,9 +1209,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = Hockeyapp;
+			name = "Release AppStore";
 		};
-		D086A5771CC0117500F08284 /* Hockeyapp */ = {
+		D086A5771CC0117500F08284 /* Release AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1232,9 +1238,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 3.0;
 			};
-			name = Hockeyapp;
+			name = "Release AppStore";
 		};
-		D086A5781CC0117500F08284 /* Hockeyapp */ = {
+		D086A5781CC0117500F08284 /* Release AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
@@ -1251,9 +1257,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
-			name = Hockeyapp;
+			name = "Release AppStore";
 		};
-		D0B417F31D7DFA63004562A4 /* Debug */ = {
+		D0B417F31D7DFA63004562A4 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1282,9 +1288,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 3.0;
 			};
-			name = Debug;
+			name = "Debug Hockeyapp";
 		};
-		D0B417F41D7DFA63004562A4 /* Release */ = {
+		D0B417F41D7DFA63004562A4 /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1313,9 +1319,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 3.0;
 			};
-			name = Release;
+			name = "Release Hockeyapp";
 		};
-		D0B417F51D7DFA63004562A4 /* Hockeyapp */ = {
+		D0B417F51D7DFA63004562A4 /* Release AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1344,7 +1350,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 3.0;
 			};
-			name = Hockeyapp;
+			name = "Release AppStore";
 		};
 		D0DB57B61E5C4B7A0071854C /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
@@ -1530,68 +1536,68 @@
 		D0085B351B282B9800EAF753 /* Build configuration list for PBXNativeTarget "SwiftSignalKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0085B361B282B9800EAF753 /* Debug */,
+				D0085B361B282B9800EAF753 /* Debug Hockeyapp */,
 				D0DB57B91E5C4B7A0071854C /* Debug AppStore */,
-				D0085B371B282B9800EAF753 /* Release */,
-				D086A5771CC0117500F08284 /* Hockeyapp */,
+				D0085B371B282B9800EAF753 /* Release Hockeyapp */,
+				D086A5771CC0117500F08284 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = "Release Hockeyapp";
 		};
 		D0085B381B282B9800EAF753 /* Build configuration list for PBXNativeTarget "SwiftSignalKitTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0085B391B282B9800EAF753 /* Debug */,
+				D0085B391B282B9800EAF753 /* Debug Hockeyapp */,
 				D0DB57BA1E5C4B7A0071854C /* Debug AppStore */,
-				D0085B3A1B282B9800EAF753 /* Release */,
-				D086A5781CC0117500F08284 /* Hockeyapp */,
+				D0085B3A1B282B9800EAF753 /* Release Hockeyapp */,
+				D086A5781CC0117500F08284 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = "Release Hockeyapp";
 		};
 		D0445DD21A7C2CA500267924 /* Build configuration list for PBXProject "SSignalKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0445DEC1A7C2CA500267924 /* Debug */,
+				D0445DEC1A7C2CA500267924 /* Debug Hockeyapp */,
 				D0DB57B61E5C4B7A0071854C /* Debug AppStore */,
-				D0445DED1A7C2CA500267924 /* Release */,
-				D086A5741CC0117500F08284 /* Hockeyapp */,
+				D0445DED1A7C2CA500267924 /* Release Hockeyapp */,
+				D086A5741CC0117500F08284 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = "Release Hockeyapp";
 		};
 		D0445DEE1A7C2CA500267924 /* Build configuration list for PBXNativeTarget "SSignalKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0445DEF1A7C2CA500267924 /* Debug */,
+				D0445DEF1A7C2CA500267924 /* Debug Hockeyapp */,
 				D0DB57B71E5C4B7A0071854C /* Debug AppStore */,
-				D0445DF01A7C2CA500267924 /* Release */,
-				D086A5751CC0117500F08284 /* Hockeyapp */,
+				D0445DF01A7C2CA500267924 /* Release Hockeyapp */,
+				D086A5751CC0117500F08284 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = "Release Hockeyapp";
 		};
 		D0445DF11A7C2CA500267924 /* Build configuration list for PBXNativeTarget "SSignalKitTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0445DF21A7C2CA500267924 /* Debug */,
+				D0445DF21A7C2CA500267924 /* Debug Hockeyapp */,
 				D0DB57B81E5C4B7A0071854C /* Debug AppStore */,
-				D0445DF31A7C2CA500267924 /* Release */,
-				D086A5761CC0117500F08284 /* Hockeyapp */,
+				D0445DF31A7C2CA500267924 /* Release Hockeyapp */,
+				D086A5761CC0117500F08284 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = "Release Hockeyapp";
 		};
 		D0B417F21D7DFA63004562A4 /* Build configuration list for PBXNativeTarget "SwiftSignalKitMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0B417F31D7DFA63004562A4 /* Debug */,
+				D0B417F31D7DFA63004562A4 /* Debug Hockeyapp */,
 				D0DB57BB1E5C4B7A0071854C /* Debug AppStore */,
-				D0B417F41D7DFA63004562A4 /* Release */,
-				D0B417F51D7DFA63004562A4 /* Hockeyapp */,
+				D0B417F41D7DFA63004562A4 /* Release Hockeyapp */,
+				D0B417F51D7DFA63004562A4 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = "Release Hockeyapp";
 		};
 /* End XCConfigurationList section */
 	};
