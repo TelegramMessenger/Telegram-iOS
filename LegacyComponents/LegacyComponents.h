@@ -31,6 +31,8 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGTimerTarget.h>
 #import <LegacyComponents/TGKeyCommand.h>
 #import <LegacyComponents/TGKeyCommandController.h>
+#import <LegacyComponents/TGWeakDelegate.h>
+#import <LegacyComponents/TGCache.h>
 
 #import <LegacyComponents/JNWSpringAnimation.h>
 #import <LegacyComponents/POPAnimationEvent.h>
@@ -62,6 +64,11 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGBotInfo.h>
 #import <LegacyComponents/TGBotComandInfo.h>
 #import <LegacyComponents/TGConversation.h>
+
+#import <LegacyComponents/TGModernConversationAssociatedInputPanel.h>
+#import <LegacyComponents/TGModernConversationHashtagsAssociatedPanel.h>
+#import <LegacyComponents/TGModernConversationMentionsAssociatedPanel.h>
+#import <LegacyComponents/TGSuggestionContext.h>
 
 #import <LegacyComponents/TGTextCheckingResult.h>
 #import <LegacyComponents/TGChannelBannedRights.h>
@@ -116,6 +123,9 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGMediaAttachment.h>
 #import <LegacyComponents/TGImageInfo.h>
 #import <LegacyComponents/TGMessage.h>
+#import <LegacyComponents/TGStickerPack.h>
+#import <LegacyComponents/TGStickerAssociation.h>
+#import <LegacyComponents/TGPhotoMaskPosition.h>
 
 #import <LegacyComponents/ActionStage.h>
 #import <LegacyComponents/ASActor.h>
@@ -140,6 +150,35 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGModernButton.h>
 #import <LegacyComponents/TGModernToolbarButton.h>
 #import <LegacyComponents/TGModernBackToolbarButton.h>
+#import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
+#import <LegacyComponents/TGMenuView.h>
+#import <LegacyComponents/TGImageView.h>
+#import <LegacyComponents/UICollectionView+Utils.h>
+#import <LegacyComponents/TGActivityIndicatorView.h>
+#import <LegacyComponents/TGMessageImageViewOverlayView.h>
+#import <LegacyComponents/TGLetteredAvatarView.h>
+#import <LegacyComponents/TGGradientLabel.h>
+#import <LegacyComponents/TGRemoteImageView.h>
+
+#import <LegacyComponents/TGProgressSpinnerView.h>
+#import <LegacyComponents/TGProgressWindow.h>
+
+#import <LegacyComponents/TGMenuSheetController.h>
+#import <LegacyComponents/TGMenuSheetButtonItemView.h>
+#import <LegacyComponents/TGMenuSheetCollectionView.h>
+#import <LegacyComponents/TGMenuSheetItemView.h>
+#import <LegacyComponents/TGMenuSheetTitleItemView.h>
+#import <LegacyComponents/TGMenuSheetView.h>
+
+#import <LegacyComponents/HPGrowingTextView.h>
+#import <LegacyComponents/HPTextViewInternal.h>
+#import <LegacyComponents/TGInputTextTag.h>
+
+#import <LegacyComponents/TGStickerKeyboardTabPanel.h>
+
+#import <LegacyComponents/TGItemPreviewController.h>
+#import <LegacyComponents/TGItemPreviewView.h>
+#import <LegacyComponents/TGItemMenuSheetPreviewView.h>
 
 #import <LegacyComponents/TGImageManager.h>
 #import <LegacyComponents/TGDataResource.h>
@@ -197,6 +236,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGMediaVideoConverter.h>
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
+#import <LegacyComponents/TGPhotoToolbarView.h>
 
 #import <LegacyComponents/TGPaintingData.h>
 #import <LegacyComponents/TGPaintUtils.h>
@@ -213,3 +253,16 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/PGCameraShotMetadata.h>
 #import <LegacyComponents/PGCameraVolumeButtonHandler.h>
 #import <LegacyComponents/TGCameraPreviewView.h>
+#import <LegacyComponents/TGCameraMainPhoneView.h>
+#import <LegacyComponents/TGCameraMainTabletView.h>
+#import <LegacyComponents/TGCameraMainView.h>
+#import <LegacyComponents/TGCameraFlashActiveView.h>
+#import <LegacyComponents/TGCameraFlashControl.h>
+#import <LegacyComponents/TGCameraFlipButton.h>
+#import <LegacyComponents/TGCameraInterfaceAssets.h>
+#import <LegacyComponents/TGCameraModeControl.h>
+#import <LegacyComponents/TGCameraSegmentsView.h>
+#import <LegacyComponents/TGCameraShutterButton.h>
+#import <LegacyComponents/TGCameraTimeCodeView.h>
+#import <LegacyComponents/TGCameraZoomView.h>
+#import <LegacyComponents/TGCameraPhotoPreviewController.h>

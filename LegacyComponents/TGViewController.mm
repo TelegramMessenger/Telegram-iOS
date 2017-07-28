@@ -900,10 +900,12 @@ static std::set<int> autorotationLockIds;
     if (iosMajorVersion() < 8)
         return;
     
-    UIWindow *lastWindow = [[LegacyComponentsGlobals provider] applicationWindows].lastObject;
-    if (lastWindow != self.view.window && [lastWindow isKindOfClass:[TGOverlayControllerWindow class]])
-    {
-        [[LegacyComponentsGlobals provider] forceStatusBarAppearanceUpdate];
+    if (self.isViewLoaded) {
+        UIWindow *lastWindow = [[LegacyComponentsGlobals provider] applicationWindows].lastObject;
+        if (lastWindow != self.view.window && [lastWindow isKindOfClass:[TGOverlayControllerWindow class]])
+        {
+            [[LegacyComponentsGlobals provider] forceStatusBarAppearanceUpdate];
+        }
     }
 }
 
