@@ -131,21 +131,24 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     
     CGFloat backgroundOverflow = iosMajorVersion() >= 7 ? 20.0f : 0.0f;
     
-    _backgroundContainerView = [[UIView alloc] initWithFrame:CGRectMake(0, -backgroundOverflow, self.bounds.size.width, backgroundOverflow + self.bounds.size.height)];
-    _backgroundContainerView.userInteractionEnabled = false;
-    [super insertSubview:_backgroundContainerView atIndex:0];
-
-    _barBackgroundView = [TGBackdropView viewWithLightNavigationBarStyle];
-    if ([self isKindOfClass:[TGWhiteNavigationBar class]])
-        _barBackgroundView.backgroundColor = [UIColor whiteColor];
-    _barBackgroundView.frame = _backgroundContainerView.bounds;
-    [_backgroundContainerView addSubview:_barBackgroundView];
-    
-    if (barStyle == UIBarStyleDefault)
+    if (![self isKindOfClass:[TGTransparentNavigationBar class]])
     {
-        _stripeView = [[UIView alloc] init];
-        _stripeView.backgroundColor = UIColorRGB(0xb2b2b2);
-        [_backgroundContainerView addSubview:_stripeView];
+        _backgroundContainerView = [[UIView alloc] initWithFrame:CGRectMake(0, -backgroundOverflow, self.bounds.size.width, backgroundOverflow + self.bounds.size.height)];
+        _backgroundContainerView.userInteractionEnabled = false;
+        [super insertSubview:_backgroundContainerView atIndex:0];
+        
+        _barBackgroundView = [TGBackdropView viewWithLightNavigationBarStyle];
+        if ([self isKindOfClass:[TGWhiteNavigationBar class]])
+            _barBackgroundView.backgroundColor = [UIColor whiteColor];
+        _barBackgroundView.frame = _backgroundContainerView.bounds;
+        [_backgroundContainerView addSubview:_barBackgroundView];
+        
+        if (barStyle == UIBarStyleDefault)
+        {
+            _stripeView = [[UIView alloc] init];
+            _stripeView.backgroundColor = UIColorRGB(0xb2b2b2);
+            [_backgroundContainerView addSubview:_stripeView];
+        }
     }
     
     if (barStyle == UIBarStyleDefault)

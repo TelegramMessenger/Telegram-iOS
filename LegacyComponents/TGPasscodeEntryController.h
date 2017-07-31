@@ -37,6 +37,8 @@ typedef enum {
 - (void)resetMode:(TGPasscodeEntryControllerMode)mode;
 - (void)refreshTouchId;
 
+- (NSInteger)invalidPasscodeAttempts;
+
 - (void)prepareForAppear;
 - (void)prepareForDisappear;
 

@@ -1,14 +1,19 @@
 #import "TGModernConversationTitleActivityIndicator.h"
 
-#import <TelegramLegacyComponents/TelegramLegacyComponents.h>
+#import "LegacyComponentsInternal.h"
+#import "TGColor.h"
+#import "TGImageUtils.h"
+#import "POPBasicAnimation.h"
+
 #import <math.h>
 
 typedef enum {
     TGModernConversationTitleActivityIndicatorTypeNone = 0,
     TGModernConversationTitleActivityIndicatorTypeTyping = 1,
     TGModernConversationTitleActivityIndicatorTypeAudioRecording = 2,
-    TGModernConversationTitleActivityIndicatorTypeUploading = 3,
-    TGModernConversationTitleActivityIndicatorTypePlaying = 4
+    TGModernConversationTitleActivityIndicatorTypeVideoRecording = 3,
+    TGModernConversationTitleActivityIndicatorTypeUploading = 4,
+    TGModernConversationTitleActivityIndicatorTypePlaying = 5
 } TGModernConversationTitleActivityIndicatorType;
 
 @interface TGModernConversationTitleActivityIndicator ()
@@ -95,6 +100,16 @@ typedef enum {
         _type = TGModernConversationTitleActivityIndicatorTypeAudioRecording;
         [self setNeedsDisplay];
         [self _beginAnimationWithDuration:0.7 linear:true];
+    }
+}
+
+- (void)setVideoRecording
+{
+    if (_type != TGModernConversationTitleActivityIndicatorTypeVideoRecording)
+    {
+        _type = TGModernConversationTitleActivityIndicatorTypeVideoRecording;
+        [self setNeedsDisplay];
+        [self _beginAnimationWithDuration:0.9 linear:false];
     }
 }
 
@@ -245,6 +260,26 @@ const CGFloat maxDiameter = 4.5f;
             CGContextBeginPath(context);
             CGContextAddArc(context, x, y, radius, -angle, angle, 0);
             CGContextStrokePath(context);
+            
+            break;
+        }
+        case TGModernConversationTitleActivityIndicatorTypeVideoRecording:
+        {
+            UIColor *mainColor = [UIColor colorWithRed:0.0f green:123.0f / 255.0f blue:255.0f / 255.0f alpha:1.0f];
+            
+            CGContextSetFillColorWithColor(context, mainColor.CGColor);
+            
+            CGFloat animValue = _animationValue;
+            if (animValue < 0.5f)
+                animValue /= 0.5f;
+            else
+                animValue = (1 - animValue) / 0.5f;
+            
+            CGFloat alpha = 1.0f - animValue * 0.6;
+            CGFloat radius = 3.5f - animValue * 0.66f;
+            
+            CGContextSetAlpha(context, alpha);
+            CGContextFillEllipseInRect(context, CGRectMake(16.0f - radius, 9.0 - radius, radius * 2.0f, radius * 2.0f));
             
             break;
         }
