@@ -307,15 +307,23 @@
 }
 
 - (BOOL)excludeAttributeIsSetForURL:(NSURL *)directoryURL {
-  
-  NSError *getResourceError = nil;
-  NSNumber *appSupportDirExcludedValue;
-  if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
-    if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
-      return YES;
+  __block BOOL result = NO;
+  dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    NSError *getResourceError = nil;
+    NSNumber *appSupportDirExcludedValue;
+    if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+      if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
+        result = YES;
+      }
     }
+    dispatch_semaphore_signal(semaphore);
+  });
+  while (dispatch_semaphore_wait(semaphore, DISPATCH_TIME_NOW)){
+    [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
+                             beforeDate:[NSDate dateWithTimeIntervalSinceNow:10]];
   }
-  return NO;
+  return result;
 }
 
 @end
