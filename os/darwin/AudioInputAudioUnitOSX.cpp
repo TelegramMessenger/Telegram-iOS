@@ -20,13 +20,13 @@
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-AudioInputAudioUnit::AudioInputAudioUnit(std::string deviceID) : AudioInput(deviceID){
+AudioInputAudioUnitLegacy::AudioInputAudioUnitLegacy(std::string deviceID) : AudioInput(deviceID){
 	remainingDataSize=0;
 	isRecording=false;
 	
 	OSStatus status;
 	AudioComponentDescription inputDesc={
-		.componentType = kAudioUnitType_Output, .componentSubType = kAudioUnitSubType_HALOutput, .componentFlags = 0, .componentFlagsMask = 0,
+		.componentType = kAudioUnitType_Output, .componentSubType = /*kAudioUnitSubType_HALOutput*/kAudioUnitSubType_VoiceProcessingIO, .componentFlags = 0, .componentFlagsMask = 0,
 		.componentManufacturer = kAudioUnitManufacturer_Apple
 	};
 	AudioComponent component=AudioComponentFindNext(NULL, &inputDesc);
@@ -51,10 +51,10 @@ AudioInputAudioUnit::AudioInputAudioUnit(std::string deviceID) : AudioInput(devi
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
 	propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
 	propertyAddress.mElement = kAudioObjectPropertyElementMaster;
-	AudioObjectAddPropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioInputAudioUnit::DefaultDeviceChangedCallback, this);
+	AudioObjectAddPropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioInputAudioUnitLegacy::DefaultDeviceChangedCallback, this);
 	
 	AURenderCallbackStruct callbackStruct;
-	callbackStruct.inputProc = AudioInputAudioUnit::BufferCallback;
+	callbackStruct.inputProc = AudioInputAudioUnitLegacy::BufferCallback;
 	callbackStruct.inputProcRefCon=this;
 	status = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_SetInputCallback, kAudioUnitScope_Global, kInputBus, &callbackStruct, sizeof(callbackStruct));
 	CHECK_AU_ERROR(status, "Error setting input buffer callback");
@@ -66,42 +66,42 @@ AudioInputAudioUnit::AudioInputAudioUnit(std::string deviceID) : AudioInput(devi
 	inBufferList.mNumberBuffers=1;
 }
 
-AudioInputAudioUnit::~AudioInputAudioUnit(){
+AudioInputAudioUnitLegacy::~AudioInputAudioUnitLegacy(){
 	AudioObjectPropertyAddress propertyAddress;
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
 	propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
 	propertyAddress.mElement = kAudioObjectPropertyElementMaster;
-	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioInputAudioUnit::DefaultDeviceChangedCallback, this);
+	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioInputAudioUnitLegacy::DefaultDeviceChangedCallback, this);
 	
 	AudioUnitUninitialize(unit);
 	AudioComponentInstanceDispose(unit);
 	free(inBufferList.mBuffers[0].mData);
 }
 
-void AudioInputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
+void AudioInputAudioUnitLegacy::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
 }
 
-void AudioInputAudioUnit::Start(){
+void AudioInputAudioUnitLegacy::Start(){
 	isRecording=true;
 	OSStatus status=AudioOutputUnitStart(unit);
 	CHECK_AU_ERROR(status, "Error starting AudioUnit");
 }
 
-void AudioInputAudioUnit::Stop(){
+void AudioInputAudioUnitLegacy::Stop(){
 	isRecording=false;
 	OSStatus status=AudioOutputUnitStart(unit);
 	CHECK_AU_ERROR(status, "Error stopping AudioUnit");
 }
 
-OSStatus AudioInputAudioUnit::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData){
-	AudioInputAudioUnit* input=(AudioInputAudioUnit*) inRefCon;
+OSStatus AudioInputAudioUnitLegacy::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData){
+	AudioInputAudioUnitLegacy* input=(AudioInputAudioUnitLegacy*) inRefCon;
 	input->inBufferList.mBuffers[0].mDataByteSize=10240;
 	OSStatus res=AudioUnitRender(input->unit, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, &input->inBufferList);
 	input->HandleBufferCallback(&input->inBufferList);
 	return noErr;
 }
 
-void AudioInputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
+void AudioInputAudioUnitLegacy::HandleBufferCallback(AudioBufferList *ioData){
 	int i;
 	for(i=0;i<ioData->mNumberBuffers;i++){
 		AudioBuffer buf=ioData->mBuffers[i];
@@ -124,7 +124,7 @@ void AudioInputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 }
 
 
-void AudioInputAudioUnit::EnumerateDevices(std::vector<AudioInputDevice>& devs){
+void AudioInputAudioUnitLegacy::EnumerateDevices(std::vector<AudioInputDevice>& devs){
 	AudioObjectPropertyAddress propertyAddress = {
 		kAudioHardwarePropertyDevices,
 		kAudioObjectPropertyScopeGlobal,
@@ -211,7 +211,7 @@ void AudioInputAudioUnit::EnumerateDevices(std::vector<AudioInputDevice>& devs){
 	audioDevices = NULL;
 }
 
-void AudioInputAudioUnit::SetCurrentDevice(std::string deviceID){
+void AudioInputAudioUnitLegacy::SetCurrentDevice(std::string deviceID){
 	UInt32 size=sizeof(AudioDeviceID);
 	AudioDeviceID inputDevice=NULL;
 	OSStatus status;
@@ -299,9 +299,9 @@ void AudioInputAudioUnit::SetCurrentDevice(std::string deviceID){
 	}
 }
 
-OSStatus AudioInputAudioUnit::DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData){
+OSStatus AudioInputAudioUnitLegacy::DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData){
 	LOGV("System default input device changed");
-	AudioInputAudioUnit* self=(AudioInputAudioUnit*)inClientData;
+	AudioInputAudioUnitLegacy* self=(AudioInputAudioUnitLegacy*)inClientData;
 	if(self->currentDevice=="default"){
 		self->SetCurrentDevice(self->currentDevice);
 	}

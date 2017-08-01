@@ -75,10 +75,16 @@
           '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.h',
 
           # macOS
+          '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnit.cpp',
+          '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnit.h',
+          '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnit.cpp',
+          '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnit.h',
           '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnitOSX.cpp',
           '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnitOSX.h',
           '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnitOSX.cpp',
           '<(tgvoip_src_loc)/os/darwin/AudioOutputAudioUnitOSX.h',
+          '<(tgvoip_src_loc)/os/darwin/AudioUnitIO.cpp',
+          '<(tgvoip_src_loc)/os/darwin/AudioUnitIO.h',
           '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.mm',
           '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.h',
 

@@ -77,6 +77,7 @@ private:
 	bool isDefaultDevice;
 	ULONG refCount;
 	std::string streamChangeToDevice;
+	bool started;
 
 #ifdef TGVOIP_WINDOWS_DESKTOP
 	STDMETHOD(OnDisplayNameChanged) (LPCWSTR /*NewDisplayName*/, LPCGUID /*EventContext*/) { return S_OK; };

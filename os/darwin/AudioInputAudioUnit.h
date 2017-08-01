@@ -16,12 +16,15 @@ class AudioUnitIO;
 class AudioInputAudioUnit : public AudioInput{
 
 public:
-	AudioInputAudioUnit();
+	AudioInputAudioUnit(std::string deviceID);
 	virtual ~AudioInputAudioUnit();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	void HandleBufferCallback(AudioBufferList* ioData);
+#if TARGET_OS_OSX
+	virtual void SetCurrentDevice(std::string deviceID);
+#endif
 
 private:
 	unsigned char remainingData[10240];

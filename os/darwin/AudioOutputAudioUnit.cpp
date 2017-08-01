@@ -17,12 +17,16 @@ const int8_t permutation[33]={0,1,2,3,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7,8,8,8,9,9,9,
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-AudioOutputAudioUnit::AudioOutputAudioUnit(){
+AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
 	isPlaying=false;
 	remainingDataSize=0;
     level=0.0;
 	this->io=AudioUnitIO::Get();
+#if TARGET_OS_OSX
+	io->SetCurrentDevice(false, deviceID);
+#endif
 	io->AttachOutput(this);
+	failed=io->IsFailed();
 }
 
 AudioOutputAudioUnit::~AudioOutputAudioUnit(){
@@ -45,6 +49,7 @@ void AudioOutputAudioUnit::EnableLoudspeaker(bool enabled){
 void AudioOutputAudioUnit::Start(){
 	isPlaying=true;
 	io->EnableOutput(true);
+	failed=io->IsFailed();
 }
 
 void AudioOutputAudioUnit::Stop(){
@@ -75,11 +80,21 @@ void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 			InvokeCallback(remainingData+remainingDataSize, BUFFER_SIZE*2);
 			remainingDataSize+=BUFFER_SIZE*2;
 		}
+#if TARGET_OS_OSX
+		float* dst=reinterpret_cast<float*>(buf.mData);
+		int16_t* src=reinterpret_cast<int16_t*>(remainingData);
+		for(k=0;k<buf.mDataByteSize/4;k++){
+			dst[k]=src[k]/(float)INT16_MAX;
+		}
+		remainingDataSize-=buf.mDataByteSize/2;
+		memmove(remainingData, remainingData+buf.mDataByteSize/2, remainingDataSize);
+#else
 		memcpy(buf.mData, remainingData, buf.mDataByteSize);
 		remainingDataSize-=buf.mDataByteSize;
 		memmove(remainingData, remainingData+buf.mDataByteSize, remainingDataSize);
-        
-        unsigned int samples=buf.mDataByteSize/sizeof(int16_t);
+#endif
+		
+        /*unsigned int samples=buf.mDataByteSize/sizeof(int16_t);
         for (k=0;k<samples;k++){
             int16_t absolute=(int16_t)abs(*((int16_t *)buf.mData+k));
             if (absolute>absVal)
@@ -99,7 +114,12 @@ void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
             }
             level=permutation[position];
             absMax>>=2;
-        }
+        }*/
 	}
 }
 
+#if TARGET_OS_OSX
+void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
+	io->SetCurrentDevice(false, deviceID);
+}
+#endif

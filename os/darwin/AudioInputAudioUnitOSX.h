@@ -4,8 +4,8 @@
 // you should have received with this source code distribution.
 //
 
-#ifndef LIBTGVOIP_AUDIOINPUTAUDIOUNIT_H
-#define LIBTGVOIP_AUDIOINPUTAUDIOUNIT_H
+#ifndef LIBTGVOIP_AUDIOINPUTAUDIOUNIT_OSX_H
+#define LIBTGVOIP_AUDIOINPUTAUDIOUNIT_OSX_H
 
 #include <AudioUnit/AudioUnit.h>
 #import <AudioToolbox/AudioToolbox.h>
@@ -13,11 +13,11 @@
 #include "../../audio/AudioInput.h"
 
 namespace tgvoip{ namespace audio{
-class AudioInputAudioUnit : public AudioInput{
+class AudioInputAudioUnitLegacy : public AudioInput{
 
 public:
-	AudioInputAudioUnit(std::string deviceID);
-	virtual ~AudioInputAudioUnit();
+	AudioInputAudioUnitLegacy(std::string deviceID);
+	virtual ~AudioInputAudioUnitLegacy();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
@@ -37,4 +37,4 @@ private:
 };
 }}
 
-#endif //LIBTGVOIP_AUDIOINPUTAUDIOUNIT_H
+#endif //LIBTGVOIP_AUDIOINPUTAUDIOUNIT_OSX_H

@@ -61,12 +61,13 @@ AudioInputWASAPI::AudioInputWASAPI(std::string deviceID){
 	audioClient=NULL;
 	captureClient=NULL;
 	thread=NULL;
+	started=false;
 
 	SetCurrentDevice(deviceID);
 }
 
 AudioInputWASAPI::~AudioInputWASAPI(){
-	if(audioClient && isRecording){
+	if(audioClient && started){
 		audioClient->Stop();
 	}
 
@@ -109,15 +110,14 @@ void AudioInputWASAPI::Start(){
 		thread=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AudioInputWASAPI::StartThread, this, 0, NULL);
 	}
 	
-	if(audioClient)
+	started=true;
+	if(audioClient){
 		audioClient->Start();
+	}
 }
 
 void AudioInputWASAPI::Stop(){
 	isRecording=false;
-
-	if(audioClient)
-		audioClient->Stop();
 }
 
 bool AudioInputWASAPI::IsRecording(){
@@ -368,7 +368,8 @@ void AudioInputWASAPI::RunThread() {
 			memcpy(remainingData+remainingDataLen, data, dataLen);
 			remainingDataLen+=dataLen;
 			while(remainingDataLen>960*2){
-				InvokeCallback(remainingData, 960*2);
+				if(isRecording)
+					InvokeCallback(remainingData, 960*2);
 				memmove(remainingData, remainingData+(960*2), remainingDataLen-960*2);
 				remainingDataLen-=960*2;
 			}

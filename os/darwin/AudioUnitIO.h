@@ -8,7 +8,9 @@
 #define LIBTGVOIP_AUDIOUNITIO_H
 
 #include <AudioUnit/AudioUnit.h>
+#include <AudioToolbox/AudioToolbox.h>
 #include "../../threading.h"
+#include <string>
 
 namespace tgvoip{ namespace audio{
 class AudioInputAudioUnit;
@@ -25,33 +27,32 @@ public:
 	void DetachOutput();
 	void EnableInput(bool enabled);
 	void EnableOutput(bool enabled);
+	bool IsFailed();
 	static AudioUnitIO* Get();
 	static void Release();
-	static void* StartFakeIOThread(void* arg);
-	static void AudioSessionAcquired();
+#if TARGET_OS_OSX
+	void SetCurrentDevice(bool input, std::string deviceID);
+#endif
 	
 private:
 	static OSStatus BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData);
 	void BufferCallback(AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 bus, UInt32 numFrames, AudioBufferList* ioData);
-	void RunFakeIOThread();
-	void Init();
-	void ActuallyConfigure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
-	void ProcessAudioSessionAcquired();
+	void StartIfNeeded();
+#if TARGET_OS_OSX
+	static OSStatus DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData);
+	std::string currentInputDevice;
+	std::string currentOutputDevice;
+#endif
 	AudioComponentInstance unit;
 	AudioInputAudioUnit* input;
 	AudioOutputAudioUnit* output;
 	AudioBufferList inBufferList;
-	bool configured;
 	bool inputEnabled;
 	bool outputEnabled;
-	bool runFakeIO;
-	uint32_t cfgSampleRate;
-	uint32_t cfgBitsPerSample;
-	uint32_t cfgChannels;
-	tgvoip_thread_t fakeIOThread;
+	bool failed;
+	bool started;
 	static int refCount;
 	static AudioUnitIO* sharedInstance;
-	static bool haveAudioSession;
 };
 }}
 

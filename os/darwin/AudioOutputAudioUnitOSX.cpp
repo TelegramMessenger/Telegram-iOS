@@ -20,7 +20,7 @@
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
+AudioOutputAudioUnitLegacy::AudioOutputAudioUnitLegacy(std::string deviceID){
 	remainingDataSize=0;
 	isPlaying=false;
 	sysDevID=NULL;
@@ -61,7 +61,7 @@ AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
 	propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
 	propertyAddress.mElement = kAudioObjectPropertyElementMaster;
-	AudioObjectAddPropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+	AudioObjectAddPropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioOutputAudioUnitLegacy::DefaultDeviceChangedCallback, this);
 	
 	AudioStreamBasicDescription desiredFormat={
 		.mSampleRate=/*hardwareFormat.mSampleRate*/48000, .mFormatID=kAudioFormatLinearPCM, .mFormatFlags=kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked | kAudioFormatFlagsNativeEndian,
@@ -72,7 +72,7 @@ AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
 	CHECK_AU_ERROR(status, "Error setting format");
 	
 	AURenderCallbackStruct callbackStruct;
-	callbackStruct.inputProc = AudioOutputAudioUnit::BufferCallback;
+	callbackStruct.inputProc = AudioOutputAudioUnitLegacy::BufferCallback;
 	callbackStruct.inputProcRefCon=this;
 	status = AudioUnitSetProperty(unit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Global, kOutputBus, &callbackStruct, sizeof(callbackStruct));
 	CHECK_AU_ERROR(status, "Error setting input buffer callback");
@@ -80,12 +80,12 @@ AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
 	CHECK_AU_ERROR(status, "Error initializing unit");
 }
 
-AudioOutputAudioUnit::~AudioOutputAudioUnit(){
+AudioOutputAudioUnitLegacy::~AudioOutputAudioUnitLegacy(){
 	AudioObjectPropertyAddress propertyAddress;
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
 	propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
 	propertyAddress.mElement = kAudioObjectPropertyElementMaster;
-	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioOutputAudioUnitLegacy::DefaultDeviceChangedCallback, this);
 	
 	AudioObjectPropertyAddress dataSourceProp={
 		kAudioDevicePropertyDataSource,
@@ -93,39 +93,39 @@ AudioOutputAudioUnit::~AudioOutputAudioUnit(){
 		kAudioObjectPropertyElementMaster
 	};
 	if(isMacBookPro && sysDevID && AudioObjectHasProperty(sysDevID, &dataSourceProp)){
-		AudioObjectRemovePropertyListener(sysDevID, &dataSourceProp, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+		AudioObjectRemovePropertyListener(sysDevID, &dataSourceProp, AudioOutputAudioUnitLegacy::DefaultDeviceChangedCallback, this);
 	}
 	
 	AudioUnitUninitialize(unit);
 	AudioComponentInstanceDispose(unit);
 }
 
-void AudioOutputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
+void AudioOutputAudioUnitLegacy::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
 }
 
-void AudioOutputAudioUnit::Start(){
+void AudioOutputAudioUnitLegacy::Start(){
 	isPlaying=true;
 	OSStatus status=AudioOutputUnitStart(unit);
 	CHECK_AU_ERROR(status, "Error starting AudioUnit");
 }
 
-void AudioOutputAudioUnit::Stop(){
+void AudioOutputAudioUnitLegacy::Stop(){
 	isPlaying=false;
 	OSStatus status=AudioOutputUnitStart(unit);
 	CHECK_AU_ERROR(status, "Error stopping AudioUnit");
 }
 
-OSStatus AudioOutputAudioUnit::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData){
-	AudioOutputAudioUnit* input=(AudioOutputAudioUnit*) inRefCon;
+OSStatus AudioOutputAudioUnitLegacy::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData){
+	AudioOutputAudioUnitLegacy* input=(AudioOutputAudioUnitLegacy*) inRefCon;
 	input->HandleBufferCallback(ioData);
 	return noErr;
 }
 
-bool AudioOutputAudioUnit::IsPlaying(){
+bool AudioOutputAudioUnitLegacy::IsPlaying(){
 	return isPlaying;
 }
 
-void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
+void AudioOutputAudioUnitLegacy::HandleBufferCallback(AudioBufferList *ioData){
 	int i;
 	unsigned int k;
 	int16_t absVal=0;
@@ -147,7 +147,7 @@ void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 }
 
 
-void AudioOutputAudioUnit::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
+void AudioOutputAudioUnitLegacy::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 	AudioObjectPropertyAddress propertyAddress = {
 		kAudioHardwarePropertyDevices,
 		kAudioObjectPropertyScopeGlobal,
@@ -234,7 +234,7 @@ void AudioOutputAudioUnit::EnumerateDevices(std::vector<AudioOutputDevice>& devs
 	audioDevices = NULL;
 }
 
-void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
+void AudioOutputAudioUnitLegacy::SetCurrentDevice(std::string deviceID){
 	UInt32 size=sizeof(AudioDeviceID);
 	AudioDeviceID outputDevice=NULL;
 	OSStatus status;
@@ -245,7 +245,7 @@ void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
 	};
 	
 	if(isMacBookPro && sysDevID && AudioObjectHasProperty(sysDevID, &dataSourceProp)){
-		AudioObjectRemovePropertyListener(sysDevID, &dataSourceProp, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+		AudioObjectRemovePropertyListener(sysDevID, &dataSourceProp, AudioOutputAudioUnitLegacy::DefaultDeviceChangedCallback, this);
 	}
 	
 	if(deviceID=="default"){
@@ -337,22 +337,22 @@ void AudioOutputAudioUnit::SetCurrentDevice(std::string deviceID){
 			size=4;
 			AudioObjectGetPropertyData(outputDevice, &dataSourceProp, 0, NULL, &size, &dataSource);
 			SetPanRight(dataSource=='ispk');
-			AudioObjectAddPropertyListener(outputDevice, &dataSourceProp, AudioOutputAudioUnit::DefaultDeviceChangedCallback, this);
+			AudioObjectAddPropertyListener(outputDevice, &dataSourceProp, AudioOutputAudioUnitLegacy::DefaultDeviceChangedCallback, this);
 		}else{
 			SetPanRight(false);
 		}
 	}
 }
 
-void AudioOutputAudioUnit::SetPanRight(bool panRight){
+void AudioOutputAudioUnitLegacy::SetPanRight(bool panRight){
 	LOGI("%sabling pan right on macbook pro", panRight ? "En" : "Dis");
 	int32_t channelMap[]={panRight ? -1 : 0, 0};
 	OSStatus status=AudioUnitSetProperty(unit, kAudioOutputUnitProperty_ChannelMap, kAudioUnitScope_Global, kOutputBus, channelMap, sizeof(channelMap));
 	CHECK_AU_ERROR(status, "Error setting channel map");
 }
 
-OSStatus AudioOutputAudioUnit::DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData){
-	AudioOutputAudioUnit* self=(AudioOutputAudioUnit*)inClientData;
+OSStatus AudioOutputAudioUnitLegacy::DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData){
+	AudioOutputAudioUnitLegacy* self=(AudioOutputAudioUnitLegacy*)inClientData;
 	if(inAddresses[0].mSelector==kAudioHardwarePropertyDefaultOutputDevice){
 		LOGV("System default input device changed");
 		if(self->currentDevice=="default"){

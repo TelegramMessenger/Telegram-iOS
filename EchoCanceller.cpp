@@ -86,7 +86,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 //#ifndef TGVOIP_USE_DESKTOP_DSP
 		ns=WebRtcNsx_Create();
 		WebRtcNsx_Init((NsxHandle*)ns, 48000);
-		WebRtcNsx_set_policy((NsxHandle*)ns, 2);
+		WebRtcNsx_set_policy((NsxHandle*)ns, 1);
 /*#else
 		ns=WebRtcNs_Create();
 		WebRtcNs_Init((NsHandle*)ns, 48000);
@@ -99,19 +99,11 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		WebRtcAgcConfig agcConfig;
 		agcConfig.compressionGaindB = 9;
 		agcConfig.limiterEnable = 1;
-#ifndef TGVOIP_USE_DESKTOP_DSP
 		agcConfig.targetLevelDbfs = 3;
-#else
-		agcConfig.targetLevelDbfs = 9;
-#endif
 		WebRtcAgc_Init(agc, 0, 255, kAgcModeAdaptiveAnalog, 48000);
 		WebRtcAgc_set_config(agc, agcConfig);
 		agcMicLevel=128;
 	}
-
-	/*state=webrtc::WebRtcAec_Create();
-	webrtc::WebRtcAec_Init(state, 16000, 16000);
-	webrtc::WebRtcAec_enable_delay_agnostic(webrtc::WebRtcAec_aec_core(state), 1);*/
 #endif
 }
 
@@ -224,29 +216,6 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 	memcpy(bufIn->ibuf()->bands(0)[0], samplesIn, 960*2);
 
 	((webrtc::SplittingFilter*)splittingFilter)->Analysis(bufIn, bufOut);
-	
-	if(enableAGC){
-		int16_t _agcOut[3][320];
-		int16_t* agcIn[3];
-		int16_t* agcOut[3];
-		for(i=0;i<3;i++){
-			agcIn[i]=(int16_t*)bufOut->ibuf_const()->bands(0)[i];
-			agcOut[i]=_agcOut[i];
-		}
-		uint8_t saturation;
-		WebRtcAgc_AddMic(agc, agcIn, 3, 160);
-		WebRtcAgc_Process(agc, (const int16_t *const *) agcIn, 3, 160, agcOut, agcMicLevel, &agcMicLevel, 0, &saturation);
-		for(i=0;i<3;i++){
-			agcOut[i]+=160;
-			agcIn[i]+=160;
-		}
-		WebRtcAgc_AddMic(agc, agcIn, 3, 160);
-		WebRtcAgc_Process(agc, (const int16_t *const *) agcIn, 3, 160, agcOut, agcMicLevel, &agcMicLevel, 0, &saturation);
-		//LOGV("AGC mic level %d", agcMicLevel);
-		memcpy(bufOut->ibuf()->bands(0)[0], _agcOut[0], 320*2);
-		memcpy(bufOut->ibuf()->bands(0)[1], _agcOut[1], 320*2);
-		memcpy(bufOut->ibuf()->bands(0)[2], _agcOut[2], 320*2);
-	}
 
 #ifndef TGVOIP_USE_DESKTOP_DSP
 	if(enableAEC && enableNS){
@@ -356,6 +325,29 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 		memcpy(bufOut->fbuf()->bands(0)[2], _aecOut[2], 320*4);
 	}
 #endif
+	
+	if(enableAGC){
+		int16_t _agcOut[3][320];
+		int16_t* agcIn[3];
+		int16_t* agcOut[3];
+		for(i=0;i<3;i++){
+			agcIn[i]=(int16_t*)bufOut->ibuf_const()->bands(0)[i];
+			agcOut[i]=_agcOut[i];
+		}
+		uint8_t saturation;
+		WebRtcAgc_AddMic(agc, agcIn, 3, 160);
+		WebRtcAgc_Process(agc, (const int16_t *const *) agcIn, 3, 160, agcOut, agcMicLevel, &agcMicLevel, 0, &saturation);
+		for(i=0;i<3;i++){
+			agcOut[i]+=160;
+			agcIn[i]+=160;
+		}
+		WebRtcAgc_AddMic(agc, agcIn, 3, 160);
+		WebRtcAgc_Process(agc, (const int16_t *const *) agcIn, 3, 160, agcOut, agcMicLevel, &agcMicLevel, 0, &saturation);
+		//LOGV("AGC mic level %d", agcMicLevel);
+		memcpy(bufOut->ibuf()->bands(0)[0], _agcOut[0], 320*2);
+		memcpy(bufOut->ibuf()->bands(0)[1], _agcOut[1], 320*2);
+		memcpy(bufOut->ibuf()->bands(0)[2], _agcOut[2], 320*2);
+	}
 
 	((webrtc::SplittingFilter*)splittingFilter)->Synthesis(bufOut, bufIn);
 	
