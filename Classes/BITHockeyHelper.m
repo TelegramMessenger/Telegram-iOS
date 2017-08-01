@@ -159,13 +159,14 @@ void bit_fixBackupAttributeForURL(NSURL *directoryURL) {
   }
   
   if (directoryURL) {
-    NSError *getResourceError = nil;
-    NSNumber *appSupportDirExcludedValue;
-    
-    if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
-      NSError *setResourceError = nil;
-      [directoryURL setResourceValue:@NO forKey:NSURLIsExcludedFromBackupKey error:&setResourceError];
-    }
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+      NSError *getResourceError = nil;
+      NSNumber *appSupportDirExcludedValue;
+      if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+        NSError *setResourceError = nil;
+        [directoryURL setResourceValue:@NO forKey:NSURLIsExcludedFromBackupKey error:&setResourceError];
+      }
+    });
   }
 }
 
