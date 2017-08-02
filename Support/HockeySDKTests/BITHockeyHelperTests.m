@@ -308,7 +308,7 @@
 
 - (BOOL)excludeAttributeIsSetForURL:(NSURL *)directoryURL {
   __block BOOL result = NO;
-  dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+  XCTestExpectation *expectation = [self expectationWithDescription:@"wait"];
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     NSError *getResourceError = nil;
     NSNumber *appSupportDirExcludedValue;
@@ -317,12 +317,9 @@
         result = YES;
       }
     }
-    dispatch_semaphore_signal(semaphore);
+    [expectation fulfill];
   });
-  while (dispatch_semaphore_wait(semaphore, DISPATCH_TIME_NOW)){
-    [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                             beforeDate:[NSDate dateWithTimeIntervalSinceNow:10]];
-  }
+  [self waitForExpectationsWithTimeout:5 handler:nil];
   return result;
 }
 
