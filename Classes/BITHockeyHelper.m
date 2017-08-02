@@ -165,6 +165,8 @@ void bit_fixBackupAttributeForURL(NSURL *directoryURL) {
       if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
         NSError *setResourceError = nil;
         [directoryURL setResourceValue:@NO forKey:NSURLIsExcludedFromBackupKey error:&setResourceError];
+      } else {
+        BITHockeyLogError(@"ERROR: Error while retrieving resource value: %@", getResourceError.localizedDescription);
       }
     });
   }
