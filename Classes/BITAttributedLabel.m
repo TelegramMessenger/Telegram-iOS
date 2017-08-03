@@ -53,8 +53,12 @@ static const NSTextAlignment BITTextAlignmentJustified = NSTextAlignmentJustifie
 static const NSTextAlignment BITTextAlignmentNatural = NSTextAlignmentNatural;
 
 static const NSLineBreakMode BITLineBreakByWordWrapping = NSLineBreakByWordWrapping;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
 static const NSLineBreakMode BITLineBreakByCharWrapping = NSLineBreakByCharWrapping;
 static const NSLineBreakMode BITLineBreakByClipping = NSLineBreakByClipping;
+#pragma clang diagnostic pop
 static const NSLineBreakMode BITLineBreakByTruncatingHead = NSLineBreakByTruncatingHead;
 static const NSLineBreakMode BITLineBreakByTruncatingMiddle = NSLineBreakByTruncatingMiddle;
 static const NSLineBreakMode BITLineBreakByTruncatingTail = NSLineBreakByTruncatingTail;

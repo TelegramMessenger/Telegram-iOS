@@ -31,7 +31,6 @@
 
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
-#import <AssetsLibrary/AssetsLibrary.h>
 #import <Photos/Photos.h>
 
 #import "HockeySDKPrivate.h"
@@ -1262,37 +1261,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
   if (![self isiOS10PhotoPolicySet]) {return;}
 
-  // Only available from iOS 8 up
-  id phImageManagerClass = NSClassFromString(@"PHImageManager");
-  if (phImageManagerClass) {
-    [self fetchLatestImageUsingPhotoLibraryWithCompletionHandler:completionHandler];
-  } else {
-    [self fetchLatestImageUsingAssetsLibraryWithCompletionHandler:completionHandler];
-  }
-}
-
-- (void)fetchLatestImageUsingAssetsLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
-  [library enumerateGroupsWithTypes:ALAssetsGroupSavedPhotos usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
-
-      [group setAssetsFilter:[ALAssetsFilter allPhotos]];
-
-      [group enumerateAssetsWithOptions:NSEnumerationReverse usingBlock:^(ALAsset *alAsset, NSUInteger __unused index, BOOL *innerStop) {
-
-          if (alAsset) {
-            ALAssetRepresentation *representation = [alAsset defaultRepresentation];
-            UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
-
-            completionHandler(latestPhoto);
-
-            *stop = YES;
-            *innerStop = YES;
-          }
-      }];
-  }                    failureBlock:nil];
-#pragma clang diagnostic pop
+  [self fetchLatestImageUsingPhotoLibraryWithCompletionHandler:completionHandler];
 }
 
 - (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0) {
