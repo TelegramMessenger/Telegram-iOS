@@ -84,7 +84,7 @@ Please see the "[How to create a new app](http://support.hockeyapp.net/kb/about-
 
 From our experience, 3rd-party libraries usually reside inside a subdirectory (let's call our subdirectory `Vendor`), so if you don't have your project organized with a subdirectory for libraries, now would be a great start for it. To continue our example,  create a folder called `Vendor` inside your project directory and move the unzipped `HockeySDK-iOS`-folder into it. 
 
-The SDK comes in four flavours:
+The SDK comes in four flavors:
 
   * Default SDK without Feedback: `HockeySDK.embeddedframework`
   * Full featured SDK with Feedback: `HockeySDK.embeddedframework` in the subfolder `HockeySDKAllFeatures`. 
@@ -97,7 +97,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
 
 ### 2.4 Add the SDK to the project in Xcode
 
-> We recommend to use Xcode's group-feature to create a group for 3rd-party-libraries similar to the structure of our files on disk. For example, similar to the file structure in 2.3 above, our projects have a group called `Vendor`.
+> We recommend using Xcode's group-feature to create a group for 3rd-party-libraries similar to the structure of our files on disk. For example, similar to the file structure in 2.3 above, our projects have a group called `Vendor`.
 	
 1. Make sure the `Project Navigator` is visible (⌘+1).
 2. Drag & drop `HockeySDK.embeddedframework` from your `Finder` to the `Vendor` group in `Xcode` using the `Project Navigator` on the left side.
@@ -173,7 +173,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   ```
 
 
-*Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
+*Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on start-up can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the start-up sequence resulting in a possible kill by the watchdog process.
 
 
 **Congratulation, now you're all set to use HockeySDK!**
@@ -274,7 +274,7 @@ pod "HockeySDK", :subspecs => ['CrashOnlyExtensionsLib']
 
 #### 3.2.2 Source Integration Options
 
-Alternatively you can integrate the SDK by source if you want to do modifications or want a different feature set. The following entry will integrate the SDK:
+Alternatively, you can integrate the SDK by source if you want to do modifications or want a different feature set. The following entry will integrate the SDK:
 
 ```ruby
 pod "HockeySDK-Source"
@@ -402,7 +402,7 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
 <a name="crashreporting"></a>
 ### 3.6 Crash Reporting
 
-The following options only show some of possibilities to interact and fine-tune the crash reporting feature. For more please check the full documentation of the `BITCrashManager` class in our [documentation](#documentation).
+The following options only show some of the possibilities to interact and fine-tune the crash reporting feature. For more please check the full documentation of the `BITCrashManager` class in our [documentation](#documentation).
 
 #### 3.6.1 Disable Crash Reporting
 The HockeySDK enables crash reporting **per default**. Crashes will be immediately sent to the server the next time the app is launched.
@@ -433,15 +433,15 @@ Crashes are send the next time the app starts. If `crashManagerStatus` is set to
 
 The SDK is not sending the reports right when the crash happens deliberately, because if is not safe to implement such a mechanism while being async-safe (any Objective-C code is _NOT_ async-safe!) and not causing more danger like a deadlock of the device, than helping. We found that users do start the app again because most don't know what happened, and you will get by far most of the reports.
 
-Sending the reports on startup is done asynchronously (non-blocking). This is the only safe way to ensure that the app won't be possibly killed by the iOS watchdog process, because startup could take too long and the app could not react to any user input when network conditions are bad or connectivity might be very slow.
+Sending the reports on start-up is done asynchronously (non-blocking). This is the only safe way to ensure that the app won't be possibly killed by the iOS watchdog process, because start-up could take too long and the app could not react to any user input when network conditions are bad or connectivity might be very slow.
 
 #### 3.6.3 Mach Exception Handling
 
 By default the SDK is using the safe and proven in-process BSD Signals for catching crashes. This option provides an option to enable catching fatal signals via a Mach exception server instead.
 
-We strongly advice _NOT_ to enable Mach exception handler in release versions of your apps!
+We strongly advise _NOT_ to enable Mach exception handler in release versions of your apps!
 
-*Warning:* The Mach exception handler executes in-process, and will interfere with debuggers when they attempt to suspend all active threads (which will include the Mach exception handler). Mach-based handling should _NOT_ be used when a debugger is attached. The SDK will not enabled catching exceptions if the app is started with the debugger running. If you attach the debugger during runtime, this may cause issues the Mach exception handler is enabled!
+*Warning:* The Mach exception handler executes in-process, and will interfere with debuggers when they attempt to suspend all active threads (which will include the Mach exception handler). Mach-based handling should _NOT_ be used when a debugger is attached. The SDK will not enable catching exceptions if the app is started with the debugger running. If you attach the debugger during runtime, this may cause issues the Mach exception handler is enabled!
  
 ```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
@@ -531,7 +531,7 @@ metricsManager.trackEventWithName(eventName)
 
 #### 3.7.2 Attaching custom properties and measurements to a custom event
 
-It's possible to attach properties and/or measurements to a custom event. There is one limitation to attaching properties and measurements. They currently don't show up in the HockeyApp dashboard but you have to link your app to Application Insights to be able to query them. Please have a look at [our blogpost](https://www.hockeyapp.net/blog/2016/08/30/custom-events-public-preview.html) to find out how to do that. 
+It's possible to attach properties and/or measurements to a custom event. There is one limitation to attaching properties and measurements. They currently don't show up in the HockeyApp dashboard but you have to link your app to Application Insights to be able to query them. Please have a look at [our blog post](https://www.hockeyapp.net/blog/2016/08/30/custom-events-public-preview.html) to find out how to do that. 
 
 - Properties have to be a string.
 - Measurements have to be of a numeric type.
@@ -576,7 +576,7 @@ pod "HockeySDK", :subspecs => ['AllFeaturesLib']
 
 in your podfile.
 
-`BITFeedbackManager` lets your users communicate directly with you via the app and an integrated user interface. It provides a single threaded discussion with a user running your app. This feature is only enabled, if you integrate the actual view controllers into your app.
+`BITFeedbackManager` lets your users communicate directly with you via the app and an integrated user interface. It provides a single threaded discussion with a user running your app. This feature is only enabled if you integrate the actual view controllers into your app.
  
 You should never create your own instance of `BITFeedbackManager` but use the one provided by the `[BITHockeyManager sharedHockeyManager]`:
  
@@ -598,7 +598,7 @@ If the value is missing from your `Info.plist`, the SDK will disable attaching p
 
 This is the HockeySDK module for handling app updates when having your app released in the App Store.
 
-When an update is detected, this module will show an alert asking the user if he/she wants to update or ignore this version. If update was chosen, it will open the apps page in the app store app.
+When an update is detected, this module will show an alert asking the user if he/she wants to update or ignore this version. If the update was chosen, it will open the apps page in the app store app.
 
 By default this module is **NOT** enabled! To enable it use the following code:
 
@@ -617,9 +617,9 @@ Please check the [documentation](#documentation) of the `BITStoreUpdateManager` 
 <a name="betaupdates"></a>
 ### 3.10 In-App-Updates (Beta & Enterprise only)
 
-The following options only show some of possibilities to interact and fine-tune the update feature when using Ad-Hoc or Enterprise provisioning profiles. For more please check the full documentation of the `BITUpdateManager` class in our [documentation](#documentation).
+The following options only show some of the possibilities to interact and fine-tune the update feature when using Ad-Hoc or Enterprise provisioning profiles. For more please check the full documentation of the `BITUpdateManager` class in our [documentation](#documentation).
 
-The feature handles version updates, presents update and version information in a App Store like user interface, collects usage information and provides additional authorization options when using Ad-Hoc provisioning profiles.
+The feature handles version updates, presents the update and version information in a App Store like user interface, collects usage information and provides additional authorization options when using Ad-Hoc provisioning profiles.
 
 This module automatically disables itself when running in an App Store build by default!
 
