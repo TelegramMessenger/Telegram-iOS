@@ -307,15 +307,20 @@
 }
 
 - (BOOL)excludeAttributeIsSetForURL:(NSURL *)directoryURL {
-  
-  NSError *getResourceError = nil;
-  NSNumber *appSupportDirExcludedValue;
-  if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
-    if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
-      return YES;
+  __block BOOL result = NO;
+  XCTestExpectation *expectation = [self expectationWithDescription:@"wait"];
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    NSError *getResourceError = nil;
+    NSNumber *appSupportDirExcludedValue;
+    if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+      if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
+        result = YES;
+      }
     }
-  }
-  return NO;
+    [expectation fulfill];
+  });
+  [self waitForExpectationsWithTimeout:5 handler:nil];
+  return result;
 }
 
 @end
