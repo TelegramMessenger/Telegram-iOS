@@ -40,7 +40,7 @@ We're looking forward to your contributions via pull requests.
 * A Mac running the latest version of OS X.
 * Get the latest Xcode from the Mac App Store.
 * [Jazzy](https://github.com/realm/jazzy) to generate documentation.
-* [Cocoapods](https://cocoapods.org/) to test integration with Cocoapods.
+* [CocoaPods](https://cocoapods.org/) to test integration with CocoaPods.
 * [Carthage](https://github.com/Carthage/Carthage) to test integration with Carthage.
 
 ### 3.2 Code of Conduct

@@ -568,7 +568,7 @@ As of HockeySDK 4.1.1, Feedback is no longer part of the default SDK. To use fee
 
 #### 3.8.1 Integrate the full-featured SDK.
 
-If you're integrating the binary yourself, use the `HockeySDK.embeddedframework` in the subfolder `HockeySDKAllFeatures`. If you're using Cocoapods, use
+If you're integrating the binary yourself, use the `HockeySDK.embeddedframework` in the subfolder `HockeySDKAllFeatures`. If you're using CocoaPods, use
 
 ```ruby
 pod "HockeySDK", :subspecs => ['AllFeaturesLib']
@@ -696,7 +696,7 @@ We're looking forward to your contributions via pull requests on our [GitHub rep
 * A Mac running the latest version of OS X
 * Get the latest Xcode from the Mac App Store
 * [Jazzy](https://github.com/realm/jazzy) to generate documentation
-* [Cocoapods](https://cocoapods.org/) to test integration with Cocoapods.
+* [CocoaPods](https://cocoapods.org/) to test integration with CocoaPods.
 * [Carthage](https://github.com/Carthage/Carthage) to test integration with Carthage.
 
 <a id="codeofconduct"></a>
