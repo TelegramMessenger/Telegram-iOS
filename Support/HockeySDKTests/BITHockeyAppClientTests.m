@@ -16,21 +16,21 @@
 #import "BITTestHelper.h"
 
 @interface BITHockeyAppClientTests : XCTestCase
+
+@property(nonatomic, strong) BITHockeyAppClient *sut;
+
 @end
 
-@implementation BITHockeyAppClientTests {
-  BITHockeyAppClient *_sut;
-}
+@implementation BITHockeyAppClientTests
 
 - (void)setUp {
   [super setUp];
   
-  _sut = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:@"http://bitbaseurl.com"]];
+  self.sut = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:@"http://bitbaseurl.com"]];
 }
 
 - (void)tearDown {
-  _sut = nil;
-  
+  self.sut = nil;
   [super tearDown];
 }
 
@@ -47,24 +47,24 @@
 
 #pragma mark - Setup Tests
 - (void) testThatItInstantiates {
-  XCTAssertNotNil(_sut, @"Should be there");
+  XCTAssertNotNil(self.sut, @"Should be there");
 }
 
 #pragma mark - Networking base tests
 - (void) testThatURLRequestHasBaseURLSet {
-  _sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:nil parameters:nil];
+  self.sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
+  NSMutableURLRequest *request = [self.sut requestWithMethod:@"GET" path:nil parameters:nil];
   assertThat(request.URL, equalTo([NSURL URLWithString:@"http://myserver.com/"]));
 }
 
 - (void) testThatURLRequestHasPathAppended {
-  _sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:@"projects" parameters:nil];
+  self.sut.baseURL = [NSURL URLWithString:@"http://myserver.com"];
+  NSMutableURLRequest *request = [self.sut requestWithMethod:@"GET" path:@"projects" parameters:nil];
   assertThat(request.URL, equalTo([NSURL URLWithString:@"http://myserver.com/projects"]));
 }
 
 - (void) testThatURLRequestHasMethodSet {
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
+  NSMutableURLRequest *request = [self.sut requestWithMethod:@"POST" path:nil parameters:nil];
   
   assertThat(request.HTTPMethod, equalTo(@"POST"));
 }
@@ -74,7 +74,7 @@
                                @"email" : @"peter@pan.de",
                                @"push" : @"pop",
                                };
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET"
+  NSMutableURLRequest *request = [self.sut requestWithMethod:@"GET"
                                                     path:@"something"
                                               parameters:parameters];
   NSURL *url = request.URL;

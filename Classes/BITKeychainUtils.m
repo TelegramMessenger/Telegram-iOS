@@ -58,7 +58,10 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 	// version of this code (which set the password as a generic attribute instead of password data).
 	
 	NSMutableDictionary *attributeQuery = [query mutableCopy];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 	[attributeQuery setObject: (id) kCFBooleanTrue forKey:(__bridge_transfer id) kSecReturnAttributes];
+#pragma clang diagnostic pop
   CFTypeRef attrResult = NULL;
 	OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef) attributeQuery, &attrResult);
 //  NSDictionary *attributeResult = (__bridge_transfer NSDictionary *)attrResult;
@@ -78,7 +81,10 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 	// We have an existing item, now query for the password data associated with it.
 	
 	NSMutableDictionary *passwordQuery = [query mutableCopy];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 	[passwordQuery setObject: (id) kCFBooleanTrue forKey: (__bridge_transfer id) kSecReturnData];
+#pragma clang diagnostic pop
   CFTypeRef resData = NULL;
 	status = SecItemCopyMatching((__bridge CFDictionaryRef) passwordQuery, (CFTypeRef *) &resData);
 	NSData *resultData = (__bridge_transfer NSData *)resData;

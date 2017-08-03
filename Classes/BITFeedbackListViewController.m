@@ -412,6 +412,8 @@
 
 #pragma mark - UIViewController Rotation
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
   self.numberOfSectionsBeforeRotation = [self numberOfSectionsInTableView:self.tableView];
   self.numberOfMessagesBeforeRotation = [self.manager numberOfMessages];
@@ -425,6 +427,7 @@
   
   [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
 }
+#pragma clang diagnostic pop
 
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations{
   return UIInterfaceOrientationMaskAll;

@@ -51,6 +51,8 @@
 
 @implementation BITFeedbackActivity
 
+@synthesize activityViewController = _activityViewController;
+
 #pragma mark - NSObject
 
 - (instancetype)init {
@@ -123,7 +125,7 @@
 }
 
 - (UIViewController *)activityViewController {
-  if (!self.activityViewController) {
+  if (!_activityViewController) {
     // TODO: return compose controller with activity content added
     BITFeedbackManager *manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
     
@@ -131,11 +133,11 @@
     composeViewController.delegate = self;
     [composeViewController prepareWithItems:self.items];
     
-    self.activityViewController = [manager customNavigationControllerWithRootViewController:composeViewController
+    _activityViewController = [manager customNavigationControllerWithRootViewController:composeViewController
                                                                       presentationStyle:UIModalPresentationFormSheet];
-    self.activityViewController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    _activityViewController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
   }
-  return self.activityViewController;
+  return _activityViewController;
 }
 
 - (void)feedbackComposeViewController:(BITFeedbackComposeViewController *) __unused composeViewController didFinishWithResult:(BITFeedbackComposeResult)composeResult {
