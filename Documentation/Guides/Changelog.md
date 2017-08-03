@@ -1,3 +1,11 @@
+## 5.0.0-beta.1
+
+This version drops support for iOS 7. There is not other breaking change at this point.
+
+- [IMPROVEMENT] The code has been cleaned up as we have decided to drop support for iOS 7.
+- [IMPROVEMENT] `properties` of type `NSString` now use the `copy` attribute.
+- [BUGFIX] The logic that makes sure that the for HockeySDK-iOS is excluded from backups was changed to make sure it doesn't block app launch [#443](https://github.com/bitstadium/HockeySDK-iOS/pull/443).  
+
 ## 4.1.6
 
 - [BUGFIX] Fixed a string in the Italian translation [#430](https://github.com/bitstadium/HockeySDK-iOS/pull/430).

@@ -3,9 +3,9 @@
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
  [![Slack Status](https://slack.hockeyapp.net/badge.svg)](https://slack.hockeyapp.net)
  
-## Version 4.1.6
+## Version 5.0.0-beta.1
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.6/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/5.0.0-beta.1/docs/docs/Changelog.html)
 
 **NOTE** If your are using the binary integration of our SDK, make sure that the `HockeySDKResources.bundle` inside the `HockeySDK.embeddedframework`-folder has been added to your application.
 
@@ -192,7 +192,6 @@ If you are working with an older project which doesn't support clang modules yet
 4. Expand `Link Binary With Libraries`.
 5. Add the following system frameworks, if they are missing:
   1. Default SDK: 
-    + `AssetsLibrary`
     + `CoreText`
     + `CoreGraphics`
     + `Foundation`
@@ -205,7 +204,6 @@ If you are working with an older project which doesn't support clang modules yet
     + `libc++`
     + `libz`
   2. SDK with all features:
-    + `AssetsLibrary`
     + `CoreText`
     + `CoreGraphics`
     + `Foundation`
@@ -230,7 +228,7 @@ If you are working with an older project which doesn't support clang modules yet
     + `SystemConfiguration`
     + `libc++`
 
-Note that this also means that you can't use the `@import` syntax mentioned in the [Modify Code](#modify) section but have to stick to the old `#import <HockeySDK/HockeySDK.h>`.
+Note that not using clang modules also means that you can't use the `@import` syntax mentioned in the [Modify Code](#modify) section but have to stick to the old `#import <HockeySDK/HockeySDK.h>` imports.
 
 <a id="cocoapods"></a>
 ### 3.2 CocoaPods
@@ -655,7 +653,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.6/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/5.0.0-beta.1/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -669,7 +667,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-4.1.6.docset`
+  - `de.bitstadium.HockeySDK-iOS-5.0.0-beta.1.docset`
 
 ### Features are not working as expected
 
@@ -697,9 +695,9 @@ We're looking forward to your contributions via pull requests on our [GitHub rep
 
 * A Mac running the latest version of OS X
 * Get the latest Xcode from the Mac App Store
-* [AppleDoc](https://github.com/tomaz/appledoc) 
-* [CocoaPods](https://cocoapods.org/)
-* [Carthage](https://github.com/Carthage/Carthage)
+* [Jazzy](https://github.com/realm/jazzy) to generate documentation
+* [Cocoapods](https://cocoapods.org/) to test integration with Cocoapods.
+* [Carthage](https://github.com/Carthage/Carthage) to test integration with Carthage.
 
 <a id="codeofconduct"></a>
 ### 6.2 Code of Conduct
