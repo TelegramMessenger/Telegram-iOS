@@ -6,7 +6,6 @@
 #import "BITChannelPrivate.h"
 #import "BITGZIP.h"
 #import "HockeySDKPrivate.h"
-#import "BITHTTPOperation.h"
 #import "BITHockeyHelper.h"
 
 static char const *kBITSenderTasksQueueString = "net.hockeyapp.sender.tasksQueue";
@@ -100,28 +99,13 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)sendRequest:(nonnull NSURLRequest *) request filePath:(nonnull NSString *) path {
   if (!path || !request) {return;}
-  
-  if ([self isURLSessionSupported]) {
-    [self sendUsingURLSessionWithRequest:request filePath:path];
-  } else {
-    [self sendUsingURLConnectionWithRequest:request filePath:path];
-  }
+  [self sendUsingURLSessionWithRequest:request filePath:path];
 }
 
 - (BOOL)isURLSessionSupported {
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
   BOOL isUrlSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
   return isUrlSessionSupported;
-}
-
-- (void)sendUsingURLConnectionWithRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)filePath {
-  BITHTTPOperation *operation = [BITHTTPOperation operationWithRequest:request];
-  [operation setCompletion:^(BITHTTPOperation *innerOperation, NSData *responseData, NSError *error) {
-    NSInteger statusCode = [innerOperation.response statusCode];
-    [self handleResponseWithStatusCode:statusCode responseData:responseData filePath:filePath error:error];
-  }];
-
-  [self.operationQueue addOperation:operation];
 }
 
 - (void)sendUsingURLSessionWithRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)filePath {

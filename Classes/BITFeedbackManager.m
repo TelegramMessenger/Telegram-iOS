@@ -979,29 +979,18 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     [request setHTTPBody:postBody];
   }
   __weak typeof(self) weakSelf = self;
-  if ([BITHockeyHelper isURLSessionSupported]) {
-    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+  __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
 
-    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-                                                typeof(self) strongSelf = weakSelf;
+  NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                          completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                                            typeof(self) strongSelf = weakSelf;
 
-                                                [session finishTasksAndInvalidate];
+                                            [session finishTasksAndInvalidate];
 
-                                                [strongSelf handleFeedbackMessageResponse:response data:data error:error completion:completionHandler];
-                                            }];
-    [task resume];
-
-  } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error) {
-#pragma clang diagnostic pop
-        typeof(self) strongSelf = weakSelf;
-        [strongSelf handleFeedbackMessageResponse:response data:responseData error:error completion:completionHandler];
-    }];
-  }
+                                            [strongSelf handleFeedbackMessageResponse:response data:data error:error completion:completionHandler];
+                                          }];
+  [task resume];
 
 }
 

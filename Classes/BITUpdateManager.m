@@ -506,8 +506,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [self unregisterObservers];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillTerminateNotification object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
-  
-  [_urlConnection cancel];
 }
 
 
@@ -850,31 +848,17 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
   
   NSURLRequest *request = [self requestForUpdateCheck];
-  
-  if ([BITHockeyHelper isURLSessionSupported]) {
-    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:(id<NSURLSessionDelegate>)self delegateQueue:nil];
-    
-    NSURLSessionDataTask *sessionTask = [session dataTaskWithRequest:request];
-    if (!sessionTask) {
-      self.checkInProgress = NO;
-      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                            code:BITUpdateAPIClientCannotCreateConnection
-                                        userInfo:@{NSLocalizedDescriptionKey : @"Url Connection could not be created."}]];
-    } else {
-      [sessionTask resume];
-    }
+  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+  NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:(id<NSURLSessionDelegate>)self delegateQueue:nil];
+
+  NSURLSessionDataTask *sessionTask = [session dataTaskWithRequest:request];
+  if (!sessionTask) {
+    self.checkInProgress = NO;
+    [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
+                                          code:BITUpdateAPIClientCannotCreateConnection
+                                      userInfo:@{NSLocalizedDescriptionKey : @"Url Connection could not be created."}]];
   } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
-#pragma clang diagnostic pop
-    if (!self.urlConnection) {
-      self.checkInProgress = NO;
-      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                            code:BITUpdateAPIClientCannotCreateConnection
-                                        userInfo:@{NSLocalizedDescriptionKey : @"Url Connection could not be created."}]];
-    }
+    [sessionTask resume];
   }
 }
 
@@ -1017,7 +1001,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (void)handleError:(NSError *)error {
   self.receivedData = nil;
-  self.urlConnection = nil;
   self.checkInProgress = NO;
   if ([self expiryDateReached]) {
     if (!self.blockingView) {
@@ -1038,7 +1021,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       
       if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
         self.receivedData = nil;
-        self.urlConnection = nil;
         return;
       }
       
@@ -1057,7 +1039,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
         if (![feedArray count]) {
           BITHockeyLogDebug(@"WARNING: No versions available for download on HockeyApp.");
           self.receivedData = nil;
-          self.urlConnection = nil;
           return;
         } else {
           self.lastCheckFailed = NO;
@@ -1161,49 +1142,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     }
     
     self.receivedData = nil;
-    self.urlConnection = nil;
   }
-}
-
-#pragma mark - NSURLRequest
-
-- (NSURLRequest *)connection:(NSURLConnection *) __unused connection willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)redirectResponse {
-  NSURLRequest *newRequest = request;
-  if (redirectResponse) {
-    newRequest = nil;
-  }
-  return newRequest;
-}
-
-
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
-  if ([response respondsToSelector:@selector(statusCode)]) {
-    NSInteger statusCode = [((NSHTTPURLResponse *)response) statusCode];
-    if (statusCode == 404) {
-      [connection cancel];  // stop connecting; no more delegate messages
-      NSString *errorStr = [NSString stringWithFormat:@"Hockey API received HTTP Status Code %ld", (long)statusCode];
-      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                            code:BITUpdateAPIServerReturnedInvalidStatus
-                                        userInfo:[NSDictionary dictionaryWithObjectsAndKeys:errorStr, NSLocalizedDescriptionKey, nil]]];
-      return;
-    }
-  }
-  
-  self.receivedData = [NSMutableData data];
-  [self.receivedData setLength:0];
-}
-
-- (void)connection:(NSURLConnection *) __unused connection didReceiveData:(NSData *)data {
-  [self.receivedData appendData:data];
-}
-
-- (void)connection:(NSURLConnection *) __unused connection didFailWithError:(NSError *)error {
-  [self handleError:error];
-}
-
-// api call returned, parsing
-- (void)connectionDidFinishLoading:(NSURLConnection *) __unused connection {
-  [self finishLoading];
 }
 
 #pragma mark - NSURLSession

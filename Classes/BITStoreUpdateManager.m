@@ -364,28 +364,18 @@
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
   __weak typeof (self) weakSelf = self;
-  if ([BITHockeyHelper isURLSessionSupported]) {
-    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-    
-    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError *error) {
-                                              typeof (self) strongSelf = weakSelf;
-                                              
-                                              [session finishTasksAndInvalidate];
-                                              
-                                              [strongSelf handleResponeWithData:data error:error];
-                                            }];
-    [task resume];
-  }else{
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse __unused *response, NSData *responseData, NSError *error){
-#pragma clang diagnostic pop
-      typeof (self) strongSelf = weakSelf;
-      [strongSelf handleResponeWithData:responseData error:error];
-    }];
-  }
+  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+  __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+
+  NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                          completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError *error) {
+                                            typeof (self) strongSelf = weakSelf;
+
+                                            [session finishTasksAndInvalidate];
+
+                                            [strongSelf handleResponeWithData:data error:error];
+                                          }];
+  [task resume];
 }
 
 - (void)handleResponeWithData:(NSData *)responseData error:(NSError *)error{

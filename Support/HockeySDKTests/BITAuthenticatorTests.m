@@ -17,7 +17,6 @@
 #import "BITHockeyHelper.h"
 #import "BITAuthenticator_Private.h"
 #import "BITHockeyBaseManagerPrivate.h"
-#import "BITHTTPOperation.h"
 #import "BITTestHelper.h"
 #import "BITHockeyAppClient.h"
 
@@ -222,21 +221,6 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   }];
 }
 
-- (void) testThatEmailIdentificationQueuesAnOperation {
-  id helperMock = OCMClassMock([BITHockeyHelper class]);
-  OCMStub([helperMock isURLSessionSupported]).andReturn(NO);
-  
-  id httpClientMock = mock(BITHockeyAppClient.class);
-  self.sut.hockeyAppClient = httpClientMock;
-  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [self.sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  self.sut.authenticationSecret = @"double";
-  
-  [self.sut authenticationViewController:nil handleAuthenticationWithEmail:@"stephan@dd.de" request:[NSURLRequest new] completion:nil];
-  
-  [verify(httpClientMock) enqeueHTTPOperation:anything()];
-}
-
 #pragma mark - User identification type
 - (void) testUserIdentificationShowsViewController {
   self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
@@ -259,20 +243,6 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   }];
 }
 
-- (void) testThatValidationCreatesAGETRequest {
-  id helperMock = OCMClassMock([BITHockeyHelper class]);
-  OCMStub([helperMock isURLSessionSupported]).andReturn(NO);
-  id httpClientMock = mock(BITHockeyAppClient.class);
-  self.sut.hockeyAppClient = httpClientMock;
-  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [self.sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  self.sut.authenticationSecret = @"double";
-  [self.sut validateWithCompletion:nil];
-  [verify(httpClientMock) getPath:(id)anything()
-                       parameters:(id)anything()
-                       completion:(id)anything()];
-}
-
 #pragma mark - Authentication
 - (void) testThatEnabledRestrictionTriggersValidation {
   id mockAuthenticator = OCMPartialMock(self.sut);
@@ -285,18 +255,6 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   OCMExpect([mockAuthenticator validateWithCompletion:(id)anything()]);
   [self.sut authenticate];
   OCMVerifyAll(mockAuthenticator);
-}
-
-- (void) testThatDisabledRestrictionDoesntTriggerValidation {
-  id clientMock = mock(BITHockeyAppClient.class);
-  self.sut.hockeyAppClient = clientMock;
-  self.sut.authenticationSecret = @"sekret";
-  self.sut.restrictApplicationUsage = NO;
-  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [self.sut storeInstallationIdentifier:@"asd" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  [self.sut authenticate];
-  
-  [verifyCount(clientMock, never()) getPath:(id)anything() parameters:(id)anything() completion:(id)anything()];
 }
 
 #pragma mark - Lifetime checks
