@@ -630,7 +630,7 @@
 		1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashManagerTests.m; sourceTree = "<group>"; };
 		628B7B9B7E7741C3D85B1159 /* BITHockeyLoggerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyLoggerTests.m; sourceTree = "<group>"; };
 		6EA5DEA41CC05E7600D44206 /* live_report_xamarin.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_xamarin.plcrash; sourceTree = "<group>"; };
-		6EA5DEAD1CC0670000D44206 /* log_report_xamarin */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = log_report_xamarin; sourceTree = "<group>"; };
+		6EA5DEAD1CC0670000D44206 /* log_report_xamarin */ = {isa = PBXFileReference; fileEncoding = 1; lastKnownFileType = text; path = log_report_xamarin; sourceTree = "<group>"; };
 		8007E2A41F29FCAB001649AE /* HockeySDKTest.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = HockeySDKTest.xcconfig; sourceTree = "<group>"; };
 		8034E61E1BA31AD500D83A30 /* BITTelemetryContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITTelemetryContext.h; sourceTree = "<group>"; };
 		8034E61F1BA31AD500D83A30 /* BITTelemetryContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITTelemetryContext.m; sourceTree = "<group>"; };
@@ -732,7 +732,6 @@
 		973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITArrowImageAnnotation.m; sourceTree = "<group>"; };
 		973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITBlurImageAnnotation.h; sourceTree = "<group>"; };
 		973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITBlurImageAnnotation.m; sourceTree = "<group>"; };
-		9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		9760F6CD18BB685600959B93 /* BITImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITImageAnnotation.h; sourceTree = "<group>"; };
 		9760F6CE18BB685600959B93 /* BITImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotation.m; sourceTree = "<group>"; };
 		9774BCFD192CB20A00085EB5 /* BITActivityIndicatorButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITActivityIndicatorButton.h; sourceTree = "<group>"; };
@@ -1268,7 +1267,6 @@
 		E400561C148D79B500EB22B9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */,
 				1EB617BD1B0A32D00035A986 /* CoreGraphics.framework */,
 				1EB617BB1B0A32C90035A986 /* CoreText.framework */,
 				E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */,
@@ -2176,8 +2174,6 @@
 					"-framework",
 					Security,
 					"-framework",
-					AssetsLibrary,
-					"-framework",
 					MobileCoreServices,
 					"-framework",
 					QuickLook,
@@ -2305,8 +2301,6 @@
 					UIKit,
 					"-framework",
 					Security,
-					"-framework",
-					AssetsLibrary,
 					"-framework",
 					MobileCoreServices,
 					"-framework",
@@ -2484,8 +2478,6 @@
 					"-framework",
 					Security,
 					"-framework",
-					AssetsLibrary,
-					"-framework",
 					MobileCoreServices,
 					"-framework",
 					QuickLook,
@@ -2542,8 +2534,6 @@
 					UIKit,
 					"-framework",
 					Security,
-					"-framework",
-					AssetsLibrary,
 					"-framework",
 					MobileCoreServices,
 					"-framework",
@@ -2703,8 +2693,6 @@
 					UIKit,
 					"-framework",
 					Security,
-					"-framework",
-					AssetsLibrary,
 					"-framework",
 					MobileCoreServices,
 					"-framework",
@@ -2941,8 +2929,6 @@
 					"-framework",
 					Security,
 					"-framework",
-					AssetsLibrary,
-					"-framework",
 					MobileCoreServices,
 					"-framework",
 					QuickLook,
@@ -3006,8 +2992,6 @@
 					UIKit,
 					"-framework",
 					Security,
-					"-framework",
-					AssetsLibrary,
 					"-framework",
 					MobileCoreServices,
 					"-framework",
@@ -3073,8 +3057,6 @@
 					UIKit,
 					"-framework",
 					Security,
-					"-framework",
-					AssetsLibrary,
 					"-framework",
 					MobileCoreServices,
 					"-framework",
@@ -3206,8 +3188,6 @@
 					"-framework",
 					Security,
 					"-framework",
-					AssetsLibrary,
-					"-framework",
 					MobileCoreServices,
 					"-framework",
 					QuickLook,
@@ -3334,8 +3314,6 @@
 					UIKit,
 					"-framework",
 					Security,
-					"-framework",
-					AssetsLibrary,
 					"-framework",
 					MobileCoreServices,
 					"-framework",
