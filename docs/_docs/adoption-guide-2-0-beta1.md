@@ -96,7 +96,7 @@ Texture's collection and table APIs have been moved from the view space (`collec
 
 - Search your project for `tableView` and `collectionView`. Most, if not all, of the data source / delegate methods have new node versions. 
 
-It is important that developers using Texture understand that an ASCollectionNode is backed by an ASCollectionView (a subclass of UICollectionView). ASCollectionNode runs asynchronously, so calling number -numberOfRowsInSection on the collectionNode is different than calling it on the collectionView. 
+It is important that developers using Texture understand that an ASCollectionNode is backed by an ASCollectionView (a subclass of UICollectionView). ASCollectionNode runs asynchronously, so calling -numberOfRowsInSection on the collectionNode is different than calling it on the collectionView. 
 
 For example, let's say you have an empty table. You insert `100` rows and then immediately call -tableView:numberOfRowsInSection. This will return `0` rows. If you call -waitUntilAllUpdatesAreCommitted after insertion (waits until the collectionNode synchronizes with the collectionView), you will get 100, _but_ you might block the main thread. A good developer should rarely (or never) need to use -waitUntilAllUpdatesAreCommitted. If you update the collectionNode and then need to read back immediately, you should use the collectionNode API. You shouldn't need to talk to the collectionView.  
 
@@ -122,7 +122,7 @@ Other updates include:
 
 - Renamed `pagerNode:constrainedSizeForNodeAtIndexPath:` to `pagerNode:constrainedSizeForNodeAtIndex:`
 
-- collection view update validation assertions are now enabled. If you see something like `"Invalid number of items in section 2. The number of items after the update (7) must be equal to the number of items before the update (4) plus or minus the number of items inserted or removed from the section (4 inserted, 0 removed)”`, please check the data source logic. If you have any questions, reach out to us on GitHub. 
+- collection view update validation assertions are now enabled. If you see something like `"Invalid number of items in section 2. The number of items after the update (7) must be equal to the number of items before the update (4) plus or minus the number of items inserted or removed from the section (4 inserted, 0 removed)"`, please check the data source logic. If you have any questions, reach out to us on GitHub. 
 
 Best Practices:
 

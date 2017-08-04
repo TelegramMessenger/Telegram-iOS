@@ -589,6 +589,11 @@ extern NSInteger const ASDefaultDrawingPriority;
  */
 - (NSString *)displayNodeRecursiveDescription AS_WARN_UNUSED_RESULT;
 
+/**
+ * A detailed description of this node's layout state. This is useful when debugging.
+ */
+@property (atomic, copy, readonly) NSString *detailedLayoutDescription;
+
 @end
 
 /**

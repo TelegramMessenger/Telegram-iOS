@@ -24,6 +24,7 @@ typedef struct {
   ASStackLayoutAlignItems alignItems;
   ASStackLayoutFlexWrap flexWrap;
   ASStackLayoutAlignContent alignContent;
+  CGFloat lineSpacing;
 } ASStackLayoutSpecStyle;
 
 inline CGFloat stackDimension(const ASStackLayoutDirection direction, const CGSize size)

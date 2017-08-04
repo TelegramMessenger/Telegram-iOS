@@ -1,9 +1,16 @@
 ## master
 
 * Add your own contributions to the next release on the line below this with your name.
+- [ASStackLayoutSpec] Add lineSpacing property working with flex wrap. [Flo Vouin](https://github.com/flovouin)
+- [ASStackLayoutSpec] Fix flex wrap overflow in some cases using item spacing. [Flo Vouin](https://github.com/flovouin)
+- [ASNodeController] Add -nodeDidLayout callback. Allow switching retain behavior at runtime. [Scott Goodson](https://github.com/appleguy)
+- [ASCollectionView] Add delegate bridging and index space translation for missing UICollectionViewLayout properties. [Scott Goodson](https://github.com/appleguy)
 - [ASTextNode2] Add initial implementation for link handling. [Scott Goodson](https://github.com/appleguy) [#396](https://github.com/TextureGroup/Texture/pull/396)
 - [ASTextNode2] Provide compile flag to globally enable new implementation of ASTextNode: ASTEXTNODE_EXPERIMENT_GLOBAL_ENABLE. [Scott Goodson](https://github.com/appleguy) [#396](https://github.com/TextureGroup/Texture/pull/410)
- - Add ASCollectionGalleryLayoutDelegate - an async collection layout that makes same-size collections (e.g photo galleries, pagers, etc) fast and lightweight! [Huy Nguyen](https://github.com/nguyenhuy/) [#76](https://github.com/TextureGroup/Texture/pull/76)
+- Add ASCollectionGalleryLayoutDelegate - an async collection layout that makes same-size collections (e.g photo galleries, pagers, etc) fast and lightweight! [Huy Nguyen](https://github.com/nguyenhuy/) [#76](https://github.com/TextureGroup/Texture/pull/76) [#451](https://github.com/TextureGroup/Texture/pull/451)
+- Fix an issue that causes infinite layout loop in ASDisplayNode after [#428](https://github.com/TextureGroup/Texture/pull/428) [Huy Nguyen](https://github.com/nguyenhuy) [#455](https://github.com/TextureGroup/Texture/pull/455) 
+- Fix an issue in layout transition that causes it to unexpectedly use the old layout [Huy Nguyen](https://github.com/nguyenhuy) [#464](https://github.com/TextureGroup/Texture/pull/464)
+- Add -[ASDisplayNode detailedLayoutDescription] property to aid debugging. [Adlai Holler](https://github.com/Adlai-Holler) [#476](https://github.com/TextureGroup/Texture/pull/476)
 
 ##2.3.5
 - Fix an issue where inserting/deleting sections could lead to inconsistent supplementary element behavior. [Adlai Holler](https://github.com/Adlai-Holler)
@@ -11,6 +18,7 @@
 - Fix a crash where scrolling a table view after entering editing mode could lead to bad internal states in the table. [Huy Nguyen](https://github.com/nguyenhuy) [#416](https://github.com/TextureGroup/Texture/pull/416/)
 - Fix a crash in collection view that occurs if batch updates are performed while scrolling [Huy Nguyen](https://github.com/nguyenhuy) [#378](https://github.com/TextureGroup/Texture/issues/378)
 - Some improvements in ASCollectionView [Huy Nguyen](https://github.com/nguyenhuy) [#407](https://github.com/TextureGroup/Texture/pull/407)
+- Small refactors in ASDataController [Huy Nguyen](https://github.com/TextureGroup/Texture/pull/443) [#443](https://github.com/TextureGroup/Texture/pull/443)
 
 ##2.3.4
 - [Yoga] Rewrite YOGA_TREE_CONTIGUOUS mode with improved behavior and cleaner integration [Scott Goodson](https://github.com/appleguy)

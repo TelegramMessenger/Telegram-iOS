@@ -110,13 +110,6 @@ extern NSString * const ASCollectionInvalidUpdateException;
 @protocol ASDataControllerDelegate <NSObject>
 
 /**
- * Called before updating with given change set.
- *
- * @param changeSet The change set that includes all updates
- */
-- (void)dataController:(ASDataController *)dataController willUpdateWithChangeSet:(_ASHierarchyChangeSet *)changeSet;
-
-/**
  * Called for change set updates.
  *
  * @param changeSet The change set that includes all updates
@@ -127,7 +120,7 @@ extern NSString * const ASCollectionInvalidUpdateException;
  * It should be called at the time the backing view is ready to process the updates,
  * i.e inside the updates block of `-[UICollectionView performBatchUpdates:completion:] or after calling `-[UITableView beginUpdates]`.
  */
-- (void)dataController:(ASDataController *)dataController didUpdateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates;
+- (void)dataController:(ASDataController *)dataController updateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates;
 
 @end
 

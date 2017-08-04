@@ -218,7 +218,9 @@
   // Intentionally allocate the view here and trigger a layout pass on it, which in turn will trigger the intial data load.
   // We can get rid of this call later when ASDataController, ASRangeController and ASCollectionLayout can operate without the view.
   // TODO (ASCL) If this node supports async layout, kick off the initial data load without allocating the view
-  [[self view] layoutIfNeeded];
+  if (CGRectEqualToRect(self.bounds, CGRectZero) == NO) {
+    [[self view] layoutIfNeeded];
+  }
 }
 
 #if ASRangeControllerLoggingEnabled

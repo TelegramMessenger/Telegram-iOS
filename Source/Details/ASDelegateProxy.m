@@ -76,6 +76,9 @@
           // handled by ASCollectionView node<->cell machinery
           selector == @selector(collectionView:cellForItemAtIndexPath:) ||
           selector == @selector(collectionView:layout:sizeForItemAtIndexPath:) ||
+          selector == @selector(collectionView:layout:insetForSectionAtIndex:) ||
+          selector == @selector(collectionView:layout:minimumLineSpacingForSectionAtIndex:) ||
+          selector == @selector(collectionView:layout:minimumInteritemSpacingForSectionAtIndex:) ||
           selector == @selector(collectionView:layout:referenceSizeForHeaderInSection:) ||
           selector == @selector(collectionView:layout:referenceSizeForFooterInSection:) ||
           selector == @selector(collectionView:viewForSupplementaryElementOfKind:atIndexPath:) ||

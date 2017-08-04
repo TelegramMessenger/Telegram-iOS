@@ -48,11 +48,13 @@
 
 - (ASScrollDirection)scrollableDirections
 {
+  ASDisplayNodeAssertMainThread();
   return _scrollableDirections;
 }
 
 - (id)additionalInfoForLayoutWithElements:(ASElementMap *)elements
 {
+  ASDisplayNodeAssertMainThread();
   return nil;
 }
 
@@ -61,9 +63,7 @@
   ASElementMap *elements = context.elements;
   NSMutableArray<ASCellNode *> *children = ASArrayByFlatMapping(elements.itemElements, ASCollectionElement *element, element.node);
   if (children.count == 0) {
-    return [[ASCollectionLayoutState alloc] initWithContext:context
-                                                contentSize:CGSizeZero
-                             elementToLayoutAttributesTable:[NSMapTable elementToLayoutAttributesTable]];
+    return [[ASCollectionLayoutState alloc] initWithContext:context];
   }
   
   ASStackLayoutSpec *stackSpec = [ASStackLayoutSpec stackLayoutSpecWithDirection:ASStackLayoutDirectionHorizontal

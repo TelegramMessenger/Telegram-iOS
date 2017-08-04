@@ -160,6 +160,7 @@ ASStackPositionedLayout ASStackPositionedLayout::compute(const ASStackUnposition
   const auto numOfLines = lines.size();
   const auto direction = style.direction;
   const auto alignContent = style.alignContent;
+  const auto lineSpacing = style.lineSpacing;
   const auto justifyContent = style.justifyContent;
   const auto crossViolation = ASStackUnpositionedLayout::computeCrossViolation(layout.crossDimensionSum, style, sizeRange);
   CGFloat crossOffset;
@@ -171,7 +172,7 @@ ASStackPositionedLayout ASStackPositionedLayout::compute(const ASStackUnposition
   BOOL first = YES;
   for (const auto &line : lines) {
     if (!first) {
-      p = p + directionPoint(direction, 0, crossSpacing);
+      p = p + directionPoint(direction, 0, crossSpacing + lineSpacing);
     }
     first = NO;
     

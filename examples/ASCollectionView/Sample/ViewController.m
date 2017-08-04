@@ -23,7 +23,7 @@
 
 #define ASYNC_COLLECTION_LAYOUT 0
 
-@interface ViewController () <ASCollectionDataSource, ASCollectionDelegateFlowLayout>
+@interface ViewController () <ASCollectionDataSource, ASCollectionDelegateFlowLayout, ASCollectionGalleryLayoutSizeProviding>
 
 @property (nonatomic, strong) ASCollectionNode *collectionNode;
 @property (nonatomic, strong) NSArray *data;
@@ -47,8 +47,8 @@
   [super viewDidLoad];
 
 #if ASYNC_COLLECTION_LAYOUT
-  id<ASCollectionLayoutDelegate> layoutDelegate = [[ASCollectionGalleryLayoutDelegate alloc] initWithScrollableDirections:ASScrollDirectionVerticalDirections
-                                                                                                                 itemSize:CGSizeMake(180, 90)];
+  ASCollectionGalleryLayoutDelegate *layoutDelegate = [[ASCollectionGalleryLayoutDelegate alloc] initWithScrollableDirections:ASScrollDirectionVerticalDirections];
+  layoutDelegate.sizeProvider = self;
   self.collectionNode = [[ASCollectionNode alloc] initWithLayoutDelegate:layoutDelegate layoutFacilitator:nil];
 #else
   UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
@@ -106,6 +106,14 @@
   // This method is deprecated because we reccommend using ASCollectionNode instead of ASCollectionView.
   // This functionality & example project remains for users who insist on using ASCollectionView.
   [self.collectionNode reloadData];
+}
+
+#pragma mark - ASCollectionGalleryLayoutSizeProviding
+
+- (CGSize)sizeForElements:(ASElementMap *)elements
+{
+  ASDisplayNodeAssertMainThread();
+  return CGSizeMake(180, 90);
 }
 
 #pragma mark - ASCollectionView Data Source

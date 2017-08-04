@@ -70,6 +70,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) ASStackLayoutFlexWrap flexWrap;
 /** Orientation of lines along cross axis if there are multiple lines. Defaults to ASStackLayoutAlignContentStart */
 @property (nonatomic, assign) ASStackLayoutAlignContent alignContent;
+/** If the stack spreads on multiple lines using flexWrap, the amount of space between lines. */
+@property (nonatomic, assign) CGFloat lineSpacing;
 /** Whether this stack can dispatch to other threads, regardless of which thread it's running on */
 @property (nonatomic, assign, getter=isConcurrent) BOOL concurrent;
 
@@ -103,6 +105,25 @@ NS_ASSUME_NONNULL_BEGIN
                                   alignItems:(ASStackLayoutAlignItems)alignItems
                                     flexWrap:(ASStackLayoutFlexWrap)flexWrap
                                 alignContent:(ASStackLayoutAlignContent)alignContent
+                                    children:(NSArray<id<ASLayoutElement>> *)children AS_WARN_UNUSED_RESULT;
+
+/**
+ @param direction The direction of the stack view (horizontal or vertical)
+ @param spacing The spacing between the children
+ @param justifyContent If no children are flexible, this describes how to fill any extra space
+ @param alignItems Orientation of the children along the cross axis
+ @param flexWrap Whether children are stacked into a single or multiple lines
+ @param alignContent Orientation of lines along cross axis if there are multiple lines
+ @param lineSpacing The spacing between lines
+ @param children ASLayoutElement children to be positioned.
+ */
++ (instancetype)stackLayoutSpecWithDirection:(ASStackLayoutDirection)direction
+                                     spacing:(CGFloat)spacing
+                              justifyContent:(ASStackLayoutJustifyContent)justifyContent
+                                  alignItems:(ASStackLayoutAlignItems)alignItems
+                                    flexWrap:(ASStackLayoutFlexWrap)flexWrap
+                                alignContent:(ASStackLayoutAlignContent)alignContent
+                                 lineSpacing:(CGFloat)lineSpacing
                                     children:(NSArray<id<ASLayoutElement>> *)children AS_WARN_UNUSED_RESULT;
 
 /**

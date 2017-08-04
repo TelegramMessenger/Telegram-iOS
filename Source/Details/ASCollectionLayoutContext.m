@@ -39,7 +39,6 @@
 {
   self = [super init];
   if (self) {
-    ASDisplayNodeAssertTrue([layoutDelegateClass conformsToProtocol:@protocol(ASCollectionLayoutDelegate)]);
     _viewportSize = viewportSize;
     _scrollableDirections = scrollableDirections;
     _elements = elements;

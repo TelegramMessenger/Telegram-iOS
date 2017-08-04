@@ -148,14 +148,7 @@ AS_SUBCLASSING_RESTRICTED
 @protocol ASRangeControllerDelegate <NSObject>
 
 /**
- * Called before updating with given change set.
- *
- * @param changeSet The change set that includes all updates
- */
-- (void)rangeController:(ASRangeController *)rangeController willUpdateWithChangeSet:(_ASHierarchyChangeSet *)changeSet;
-
-/**
- * Called after updating with given change set.
+ * Called to update with given change set.
  *
  * @param changeSet The change set that includes all updates
  *
@@ -165,7 +158,7 @@ AS_SUBCLASSING_RESTRICTED
  * It should be called at the time the backing view is ready to process the updates,
  * i.e inside the updates block of `-[UICollectionView performBatchUpdates:completion:] or after calling `-[UITableView beginUpdates]`.
  */
-- (void)rangeController:(ASRangeController *)rangeController didUpdateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates;
+- (void)rangeController:(ASRangeController *)rangeController updateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates;
 
 @end
 

@@ -32,6 +32,8 @@ NS_ASSUME_NONNULL_BEGIN
  * It will be available in the context parameter in +calculateLayoutWithContext:
  *
  * @return The scrollable directions.
+ *
+ * @discusstion This method will be called on main thread.
  */
 - (ASScrollDirection)scrollableDirections;
 

@@ -33,40 +33,47 @@
   CGSize _itemSize;
 }
 
-- (instancetype)initWithScrollableDirections:(ASScrollDirection)scrollableDirections itemSize:(CGSize)itemSize
+- (instancetype)initWithScrollableDirections:(ASScrollDirection)scrollableDirections
 {
   self = [super init];
   if (self) {
-    ASDisplayNodeAssertFalse(CGSizeEqualToSize(CGSizeZero, itemSize));
     _scrollableDirections = scrollableDirections;
-    _itemSize = itemSize;
   }
   return self;
 }
 
 - (ASScrollDirection)scrollableDirections
 {
+  ASDisplayNodeAssertMainThread();
   return _scrollableDirections;
 }
 
 - (id)additionalInfoForLayoutWithElements:(ASElementMap *)elements
 {
-  return [NSValue valueWithCGSize:_itemSize];
+  ASDisplayNodeAssertMainThread();
+  if (_sizeProvider == nil) {
+    return nil;
+  }
+
+  return [NSValue valueWithCGSize:[_sizeProvider sizeForElements:elements]];
 }
 
 + (ASCollectionLayoutState *)calculateLayoutWithContext:(ASCollectionLayoutContext *)context
 {
   ASElementMap *elements = context.elements;
   CGSize pageSize = context.viewportSize;
-  CGSize itemSize = ((NSValue *)context.additionalInfo).CGSizeValue;
   ASScrollDirection scrollableDirections = context.scrollableDirections;
+
+  CGSize itemSize = context.additionalInfo ? ((NSValue *)context.additionalInfo).CGSizeValue : CGSizeZero;
+  if (CGSizeEqualToSize(CGSizeZero, itemSize)) {
+    return [[ASCollectionLayoutState alloc] initWithContext:context];
+  }
+
   NSMutableArray<_ASGalleryLayoutItem *> *children = ASArrayByFlatMapping(elements.itemElements,
-                                                                         ASCollectionElement *element,
-                                                                         [[_ASGalleryLayoutItem alloc] initWithItemSize:itemSize collectionElement:element]);
+                                                                          ASCollectionElement *element,
+                                                                          [[_ASGalleryLayoutItem alloc] initWithItemSize:itemSize collectionElement:element]);
   if (children.count == 0) {
-    return [[ASCollectionLayoutState alloc] initWithContext:context
-                                                contentSize:CGSizeZero
-                             elementToLayoutAttributesTable:[NSMapTable weakToStrongObjectsMapTable]];
+    return [[ASCollectionLayoutState alloc] initWithContext:context];
   }
   
   // Use a stack spec to calculate layout content size and frames of all elements without actually measuring each element

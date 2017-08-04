@@ -59,6 +59,13 @@ AS_SUBCLASSING_RESTRICTED
  elementToLayoutAttributesTable:(NSMapTable<ASCollectionElement *, UICollectionViewLayoutAttributes *> *)table NS_DESIGNATED_INITIALIZER;
 
 /**
+ * Convenience initializer. Returns an object with zero content size and an empty table.
+ *
+ * @param context The context used to calculate this object
+ */
+- (instancetype)initWithContext:(ASCollectionLayoutContext *)context;
+
+/**
  * Convenience initializer.
  *
  * @param context The context used to calculate this object

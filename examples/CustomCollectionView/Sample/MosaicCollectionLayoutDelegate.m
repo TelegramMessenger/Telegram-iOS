@@ -36,11 +36,13 @@
 
 - (ASScrollDirection)scrollableDirections
 {
+  ASDisplayNodeAssertMainThread();
   return ASScrollDirectionVerticalDirections;
 }
 
 - (id)additionalInfoForLayoutWithElements:(ASElementMap *)elements
 {
+  ASDisplayNodeAssertMainThread();
   return _info;
 }
 

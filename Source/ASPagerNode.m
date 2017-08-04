@@ -17,6 +17,10 @@
 
 #ifndef MINIMAL_ASDK
 #import <AsyncDisplayKit/ASPagerNode.h>
+#import <AsyncDisplayKit/ASPagerNode+Beta.h>
+
+#import <AsyncDisplayKit/ASCollectionGalleryLayoutDelegate.h>
+#import <AsyncDisplayKit/ASCollectionNode+Beta.h>
 #import <AsyncDisplayKit/ASDelegateProxy.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
@@ -26,10 +30,8 @@
 #import <AsyncDisplayKit/ASCollectionView+Undeprecated.h>
 #import <AsyncDisplayKit/UIResponder+AsyncDisplayKit.h>
 
-@interface ASPagerNode () <ASCollectionDataSource, ASCollectionDelegate, ASCollectionDelegateFlowLayout, ASDelegateProxyInterceptor>
+@interface ASPagerNode () <ASCollectionDataSource, ASCollectionDelegate, ASCollectionDelegateFlowLayout, ASDelegateProxyInterceptor, ASCollectionGalleryLayoutSizeProviding>
 {
-  ASPagerFlowLayout *_flowLayout;
-
   __weak id <ASPagerDataSource> _pagerDataSource;
   ASPagerNodeProxy *_proxyDataSource;
   struct {
@@ -66,8 +68,15 @@
 {
   ASDisplayNodeAssert([flowLayout isKindOfClass:[ASPagerFlowLayout class]], @"ASPagerNode requires a flow layout.");
   self = [super initWithCollectionViewLayout:flowLayout];
-  if (self != nil) {
-    _flowLayout = flowLayout;
+  return self;
+}
+
+- (instancetype)initUsingAsyncCollectionLayout
+{
+  ASCollectionGalleryLayoutDelegate *layoutDelegate = [[ASCollectionGalleryLayoutDelegate alloc] initWithScrollableDirections:ASScrollDirectionHorizontalDirections];
+  self = [super initWithLayoutDelegate:layoutDelegate layoutFacilitator:nil];
+  if (self) {
+    layoutDelegate.sizeProvider = self;
   }
   return self;
 }
@@ -127,6 +136,14 @@
     return NSNotFound;
   }
   return indexPath.row;
+}
+
+#pragma mark - ASCollectionGalleryLayoutSizeProviding
+
+- (CGSize)sizeForElements:(ASElementMap *)elements
+{
+  ASDisplayNodeAssertMainThread();
+  return self.bounds.size;
 }
 
 #pragma mark - ASCollectionDataSource

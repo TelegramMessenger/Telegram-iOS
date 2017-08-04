@@ -18,18 +18,15 @@
 #import <AsyncDisplayKit/ASDisplayNode.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h> // for ASInterfaceState protocol
 
-// Until an ASNodeController can be provided in place of an ASCellNode, some apps may prefer to have
-// nodes keep their controllers alive (and a weak reference from controller to node)
-#define INVERT_NODE_CONTROLLER_OWNERSHIP 0
-
 /* ASNodeController is currently beta and open to change in the future */
 @interface ASNodeController<__covariant DisplayNodeType : ASDisplayNode *> : NSObject <ASInterfaceStateDelegate>
 
-#if INVERT_NODE_CONTROLLER_OWNERSHIP
-@property (nonatomic, weak) DisplayNodeType node;
-#else
-@property (nonatomic, strong) DisplayNodeType node;
-#endif
+@property (nonatomic, strong /* may be weak! */) DisplayNodeType node;
+
+// Until an ASNodeController can be provided in place of an ASCellNode, some apps may prefer to have
+// nodes keep their controllers alive (and a weak reference from controller to node)
+
+@property (nonatomic, assign) BOOL shouldInvertStrongReference;
 
 - (void)loadNode;
 
@@ -45,5 +42,11 @@
 
 - (void)interfaceStateDidChange:(ASInterfaceState)newState
                       fromState:(ASInterfaceState)oldState ASDISPLAYNODE_REQUIRES_SUPER;
+
+@end
+
+@interface ASDisplayNode (ASNodeController)
+
+@property(nonatomic, readonly) ASNodeController *nodeController;
 
 @end

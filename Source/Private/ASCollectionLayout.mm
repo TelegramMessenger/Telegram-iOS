@@ -87,12 +87,9 @@ static const ASScrollDirection kASStaticScrollDirection = (ASScrollDirectionRigh
 + (ASCollectionLayoutState *)calculateLayoutWithContext:(ASCollectionLayoutContext *)context
 {
   if (context.elements == nil) {
-    return [[ASCollectionLayoutState alloc] initWithContext:context
-                                                contentSize:CGSizeZero
-                             elementToLayoutAttributesTable:[NSMapTable elementToLayoutAttributesTable]];
+    return [[ASCollectionLayoutState alloc] initWithContext:context];
   }
 
-  ASDisplayNodeAssertTrue([context.layoutDelegateClass conformsToProtocol:@protocol(ASCollectionLayoutDelegate)]);
   ASCollectionLayoutState *layout = [context.layoutDelegateClass calculateLayoutWithContext:context];
   [context.layoutCache setLayout:layout forContext:context];
 

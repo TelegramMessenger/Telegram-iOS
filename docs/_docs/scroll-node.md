@@ -76,6 +76,3 @@ scrollNode.layoutSpecBlock = { node, constrainedSize in
 </pre>
 </div>
 </div>
-
-As you can see, the `scrollNode`'s underlying view is a `ASScrollNode`.
-

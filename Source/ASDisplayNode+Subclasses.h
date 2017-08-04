@@ -96,6 +96,13 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)didExitPreloadState;
 
+/**
+ * @abstract Called when the node has completed applying the layout.
+ * @discussion Can be used for operations that are performed after layout has completed.
+ * @note This method is guaranteed to be called on main.
+ */
+- (void)nodeDidLayout;
+
 @end
 
 @interface ASDisplayNode (Subclassing) <ASInterfaceStateDelegate>

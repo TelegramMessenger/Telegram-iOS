@@ -494,20 +494,14 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
 
 #pragma mark - ASDataControllerDelegete
 
-- (void)dataController:(ASDataController *)dataController willUpdateWithChangeSet:(_ASHierarchyChangeSet *)changeSet
+- (void)dataController:(ASDataController *)dataController updateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates
 {
   ASDisplayNodeAssertMainThread();
   if (changeSet.includesReloadData) {
     [self _setVisibleNodes:nil];
   }
-  [_delegate rangeController:self willUpdateWithChangeSet:changeSet];
-}
-
-- (void)dataController:(ASDataController *)dataController didUpdateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates
-{
-  ASDisplayNodeAssertMainThread();
   _rangeIsValid = NO;
-  [_delegate rangeController:self didUpdateWithChangeSet:changeSet updates:updates];
+  [_delegate rangeController:self updateWithChangeSet:changeSet updates:updates];
 }
 
 #pragma mark - Memory Management

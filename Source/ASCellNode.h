@@ -89,7 +89,6 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
  *
  * @return The supplementary element kind, or @c nil if this node does not represent a supplementary element.
  */
-//TODO change this to be a generic "kind" or "elementKind" that exposes `nil` for row kind
 @property (atomic, copy, readonly, nullable) NSString *supplementaryElementKind;
 
 /*

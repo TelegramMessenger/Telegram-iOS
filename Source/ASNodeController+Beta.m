@@ -15,34 +15,28 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import "ASNodeController+Beta.h"
-#import "ASDisplayNode+FrameworkPrivate.h"
+#import <AsyncDisplayKit/ASWeakProxy.h>
+#import <AsyncDisplayKit/ASNodeController+Beta.h>
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 
-#if INVERT_NODE_CONTROLLER_OWNERSHIP
+#define _node (_shouldInvertStrongReference ? _weakNode : _strongNode)
 
-@interface ASDisplayNode (ASNodeController)
-@property (nonatomic, strong) ASNodeController *asdkNodeController;
-@end
+@interface ASDisplayNode (ASNodeControllerOwnership)
 
-@implementation ASDisplayNode (ASNodeController)
+// This property exists for debugging purposes. Don't use __nodeController in production code.
+@property (nonatomic, readonly) ASNodeController *__nodeController;
 
-- (ASNodeController *)asdkNodeController
-{
-  return objc_getAssociatedObject(self, @selector(asdkNodeController));
-}
-
-- (void)setAsdkNodeController:(ASNodeController *)asdkNodeController
-{
-  objc_setAssociatedObject(self, @selector(asdkNodeController), asdkNodeController, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
+// These setters are mutually exclusive. Setting one will clear the relationship of the other.
+- (void)__setNodeControllerStrong:(ASNodeController *)nodeController;
+- (void)__setNodeControllerWeak:(ASNodeController *)nodeController;
 
 @end
-
-#endif
 
 @implementation ASNodeController
-
-@synthesize node = _node;
+{
+  ASDisplayNode *_strongNode;
+  __weak ASDisplayNode *_weakNode;
+}
 
 - (instancetype)init
 {
@@ -66,16 +60,41 @@
   return _node;
 }
 
--(void)setNode:(ASDisplayNode *)node
+- (void)setupReferencesWithNode:(ASDisplayNode *)node
 {
-  _node = node;
-  _node.interfaceStateDelegate = self;
-#if INVERT_NODE_CONTROLLER_OWNERSHIP
-  _node.asdkNodeController = self;
-#endif
+  if (_shouldInvertStrongReference) {
+    // The node should own the controller; weak reference from controller to node.
+    _weakNode = node;
+    [node __setNodeControllerStrong:self];
+    _strongNode = nil;
+  } else {
+    // The controller should own the node; weak reference from node to controller.
+    _strongNode = node;
+    [node __setNodeControllerWeak:self];
+    _weakNode = nil;
+  }
+
+  node.interfaceStateDelegate = self;
+}
+
+- (void)setNode:(ASDisplayNode *)node
+{
+  [self setupReferencesWithNode:node];
+}
+
+- (void)setShouldInvertStrongReference:(BOOL)shouldInvertStrongReference
+{
+  if (_shouldInvertStrongReference != shouldInvertStrongReference) {
+    // Because the BOOL controls which ivar we access, get the node before toggling.
+    ASDisplayNode *node = _node;
+    _shouldInvertStrongReference = shouldInvertStrongReference;
+    [self setupReferencesWithNode:node];
+  }
 }
 
 // subclass overrides
+- (void)nodeDidLayout {}
+
 - (void)didEnterVisibleState {}
 - (void)didExitVisibleState  {}
 
@@ -87,5 +106,43 @@
 
 - (void)interfaceStateDidChange:(ASInterfaceState)newState
                       fromState:(ASInterfaceState)oldState {}
+
+@end
+
+@implementation ASDisplayNode (ASNodeControllerOwnership)
+
+- (ASNodeController *)__nodeController
+{
+  ASNodeController *nodeController = nil;
+  id object = objc_getAssociatedObject(self, @selector(__nodeController));
+
+  if ([object isKindOfClass:[ASWeakProxy class]]) {
+    nodeController = (ASNodeController *)[(ASWeakProxy *)object target];
+  } else {
+    nodeController = (ASNodeController *)object;
+  }
+
+  return nodeController;
+}
+
+- (void)__setNodeControllerStrong:(ASNodeController *)nodeController
+{
+  objc_setAssociatedObject(self, @selector(__nodeController), nodeController, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (void)__setNodeControllerWeak:(ASNodeController *)nodeController
+{
+  // Associated objects don't support weak references. Since assign can become a dangling pointer, use ASWeakProxy.
+  ASWeakProxy *nodeControllerProxy = [ASWeakProxy weakProxyWithTarget:nodeController];
+  objc_setAssociatedObject(self, @selector(__nodeController), nodeControllerProxy, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+@end
+
+@implementation ASDisplayNode (ASNodeController)
+
+- (ASNodeController *)nodeController {
+  return self.__nodeController;
+}
 
 @end
