@@ -33,11 +33,6 @@
     return TGLocalized(@"PhotoEditor.ExposureTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorExposureTool"];
-}
-
 - (bool)shouldBeSkipped
 {
     return (ABS(((NSNumber *)self.displayValue).floatValue - (float)self.defaultValue) < FLT_EPSILON);

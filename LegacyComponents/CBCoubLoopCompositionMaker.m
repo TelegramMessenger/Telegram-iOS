@@ -149,13 +149,6 @@ static AVURLAsset *gDigitalSilenceAsset = nil;
 
 	AVAssetTrack *silence = nil;
 	CMTimeRange silenceTimeRange = kCMTimeRangeZero;
-	//	if(originalAudioTrack && CMTIME_COMPARE_INLINE(audioTrackTimeRange.duration, <, videoTrackTimeRange.duration))
-	//	{
-	//		if(!gDigitalSilenceAsset)
-	//			gDigitalSilenceAsset = [[AVURLAsset alloc] initWithURL:[[NSBundle mainBundle] URLForResource:@"silence2" withExtension:@"caf"] options:@{AVURLAssetPreferPreciseDurationAndTimingKey : @YES}];
-	//		silence = gDigitalSilenceAsset.anyAudioTrack;
-	//		silenceTimeRange.duration = CMTimeSubtract(videoTrackTimeRange.duration, audioTrackTimeRange.duration);
-	//	}
 
 	if([self isCancelled])
 		return nil;

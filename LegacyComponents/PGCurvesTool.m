@@ -195,11 +195,6 @@ const NSUInteger PGCurveDataStep = 2;
     return TGLocalized(@"PhotoEditor.CurvesTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorCurvesTool"];
-}
-
 - (UIView <TGPhotoEditorToolView> *)itemAreaViewWithChangeBlock:(void (^)(id))changeBlock explicit:(bool)explicit
 {
     __weak PGCurvesTool *weakSelf = self;

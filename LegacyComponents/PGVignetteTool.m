@@ -33,11 +33,6 @@
     return TGLocalized(@"PhotoEditor.VignetteTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorVignetteTool"];
-}
-
 - (bool)shouldBeSkipped
 {
     return (ABS(((NSNumber *)self.displayValue).floatValue - (float)self.defaultValue) < FLT_EPSILON);

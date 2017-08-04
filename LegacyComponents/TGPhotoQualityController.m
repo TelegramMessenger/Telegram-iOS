@@ -68,9 +68,9 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
 
 @implementation TGPhotoQualityController
 
-- (instancetype)initWithPhotoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;

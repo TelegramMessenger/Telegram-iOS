@@ -116,6 +116,8 @@ static std::set<int> autorotationLockIds;
 
 @interface TGViewController () <UIPopoverControllerDelegate, UIPopoverPresentationControllerDelegate>
 {
+    id<LegacyComponentsContext> _context;
+    
     bool _hatTargetNavigationItem;
     
     id<SDisposable> _sizeClassDisposable;
@@ -138,6 +140,12 @@ static std::set<int> autorotationLockIds;
 @end
 
 @implementation TGViewController
+
+static id<LegacyComponentsContext> _defaultContext = nil;
+
++ (void)setDefaultContext:(id<LegacyComponentsContext>)defaultContext {
+    _defaultContext = defaultContext;
+}
 
 + (UIFont *)titleFontForStyle:(TGViewControllerStyle)__unused style landscape:(bool)landscape
 {
@@ -338,28 +346,27 @@ static std::set<int> autorotationLockIds;
     autorotationEnableTimer = nil;
 }
 
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
-{
-    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-    if (self)
-    {
-        [self _commonViewControllerInit];
+- (id)initWithNibName:(NSString *)__unused nibNameOrNil bundle:(NSBundle *)__unused nibBundleOrNil {
+    return [self initWithContext:_defaultContext];
+}
+
+- (id)init {
+    return [self initWithContext:_defaultContext];
+}
+
+- (id)initWithContext:(id<LegacyComponentsContext>)context {
+    self = [super initWithNibName:nil bundle:nil];
+    if (self != nil) {
+        [self _commonViewControllerInit:context];
     }
     return self;
 }
 
-- (id)init
+- (void)_commonViewControllerInit:(id<LegacyComponentsContext>)context
 {
-    self = [super init];
-    if (self != nil)
-    {
-        [self _commonViewControllerInit];
-    }
-    return self;
-}
-
-- (void)_commonViewControllerInit
-{
+    assert(context != nil);
+    _context = context;
+    
     self.wantsFullScreenLayout = true;
     self.automaticallyManageScrollViewInsets = true;
     self.autoManageStatusBarBackground = true;
@@ -367,8 +374,7 @@ static std::set<int> autorotationLockIds;
     _currentSizeClass = UIUserInterfaceSizeClassCompact;
     
     __weak TGViewController *weakSelf = self;
-    UIViewController<TGRootControllerProtocol> *rootController = [[LegacyComponentsGlobals provider] rootController];
-    _sizeClassDisposable = [[rootController sizeClass] startWithNext:^(NSNumber *next) {
+    _sizeClassDisposable = [[_context sizeClassSignal] startWithNext:^(NSNumber *next) {
         __strong TGViewController *strongSelf = weakSelf;
         if (strongSelf != nil) {
             if (strongSelf->_currentSizeClass != [next integerValue]) {
@@ -626,6 +632,12 @@ static std::set<int> autorotationLockIds;
     [self adjustToInterfaceOrientation:self.interfaceOrientation];
     
     [super viewWillAppear:animated];
+    
+    if (self.customAppearanceMethodsForwarding) {
+        for (UIViewController *controller in self.childViewControllers) {
+            [controller viewWillAppear:animated];
+        }
+    }
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -635,6 +647,12 @@ static std::set<int> autorotationLockIds;
     _viewControllerHasEverAppeared = true;
     
     [super viewDidAppear:animated];
+    
+    if (self.customAppearanceMethodsForwarding) {
+        for (UIViewController *controller in self.childViewControllers) {
+            [controller viewDidAppear:animated];
+        }
+    }
 }
 
 - (void)viewWillDisappear:(BOOL)animated
@@ -643,6 +661,12 @@ static std::set<int> autorotationLockIds;
     _viewControllerIsAnimatingAppearanceTransition = true;
     
     [super viewWillDisappear:animated];
+    
+    if (self.customAppearanceMethodsForwarding) {
+        for (UIViewController *controller in self.childViewControllers) {
+            [controller viewWillDisappear:animated];
+        }
+    }
 }
 
 - (void)viewDidDisappear:(BOOL)animated
@@ -651,6 +675,12 @@ static std::set<int> autorotationLockIds;
     _viewControllerIsAnimatingAppearanceTransition = false;
     
     [super viewDidDisappear:animated];
+    
+    if (self.customAppearanceMethodsForwarding) {
+        for (UIViewController *controller in self.childViewControllers) {
+            [controller viewDidDisappear:animated];
+        }
+    }
 }
 
 - (void)_adjustControllerInsetForRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
@@ -883,8 +913,7 @@ static std::set<int> autorotationLockIds;
 
 - (UIStatusBarStyle)preferredStatusBarStyle
 {
-    UIViewController<TGRootControllerProtocol> *rootController = [[LegacyComponentsGlobals provider] rootController];
-    if (![rootController callStatusBarHidden])
+    if (![_context rootCallStatusBarHidden])
         return UIStatusBarStyleLightContent;
     else
         return UIStatusBarStyleDefault;
@@ -1340,6 +1369,17 @@ static std::set<int> autorotationLockIds;
         return self.externalPreviewActionItems();
     
     return [super previewActionItems];
+}
+
+- (BOOL)shouldAutomaticallyForwardAppearanceMethods {
+    return !self.customAppearanceMethodsForwarding;
+}
+
+- (void)removeFromParentViewController {
+    if (_customRemoveFromParentViewController) {
+        _customRemoveFromParentViewController();
+    }
+    [super removeFromParentViewController];
 }
 
 @end

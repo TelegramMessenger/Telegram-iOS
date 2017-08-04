@@ -43,87 +43,87 @@
 
 + (UIImage *)captionIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorCaption.png"];
+    return TGComponentsImageNamed(@"PhotoEditorCaption.png");
 }
 
 + (UIImage *)cropIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorCrop.png"];
+    return TGComponentsImageNamed(@"PhotoEditorCrop.png");
 }
 
 + (UIImage *)toolsIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorTools.png"];
+    return TGComponentsImageNamed(@"PhotoEditorTools.png");
 }
 
 + (UIImage *)rotateIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorRotateIcon.png"];
+    return TGComponentsImageNamed(@"PhotoEditorRotateIcon.png");
 }
 
 + (UIImage *)paintIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorPaint.png"];
+    return TGComponentsImageNamed(@"PhotoEditorPaint.png");
 }
 
 + (UIImage *)stickerIcon
 {
-    return [UIImage imageNamed:@"PaintStickersIcon.png"];
+    return TGComponentsImageNamed(@"PaintStickersIcon.png");
 }
 
 + (UIImage *)textIcon
 {
-    return [UIImage imageNamed:@"PaintTextIcon.png"];
+    return TGComponentsImageNamed(@"PaintTextIcon.png");
 }
 
 + (UIImage *)eraserIcon
 {
-    return [UIImage imageNamed:@"PaintEraserIcon.png"];
+    return TGComponentsImageNamed(@"PaintEraserIcon.png");
 }
 
 + (UIImage *)mirrorIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorMirrorIcon.png"];
+    return TGComponentsImageNamed(@"PhotoEditorMirrorIcon.png");
 }
 
 + (UIImage *)aspectRatioIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorAspectRatioIcon.png"];
+    return TGComponentsImageNamed(@"PhotoEditorAspectRatioIcon.png");
 }
 
 + (UIImage *)aspectRatioActiveIcon
 {
-    return TGTintedImage([UIImage imageNamed:@"PhotoEditorAspectRatioIcon.png"], [self accentColor]);
+    return TGTintedImage(TGComponentsImageNamed(@"PhotoEditorAspectRatioIcon.png"), [self accentColor]);
 }
 
 + (UIImage *)tintIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorTintIcon.png"];
+    return TGComponentsImageNamed(@"PhotoEditorTintIcon.png");
 }
 
 + (UIImage *)blurIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorBlurIcon.png"];
+    return TGComponentsImageNamed(@"PhotoEditorBlurIcon.png");
 }
 
 + (UIImage *)curvesIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorCurvesIcon.png"];
+    return TGComponentsImageNamed(@"PhotoEditorCurvesIcon.png");
 }
 
 + (UIImage *)gifIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorMute.png"];
+    return TGComponentsImageNamed(@"PhotoEditorMute.png");
 }
 
 + (UIImage *)gifActiveIcon
 {
-    return [UIImage imageNamed:@"PhotoEditorMuteActive.png"];
+    return TGComponentsImageNamed(@"PhotoEditorMuteActive.png");
 }
 
 + (UIImage *)qualityIconForPreset:(TGMediaVideoConversionPreset)preset
 {
-    UIImage *background = [UIImage imageNamed:@"PhotoEditorQuality"];
+    UIImage *background = TGComponentsImageNamed(@"PhotoEditorQuality");
     
     UIGraphicsBeginImageContextWithOptions(background.size, false, 0.0f);
     
@@ -172,11 +172,11 @@
 {
     if (value < FLT_EPSILON)
     {
-        return [UIImage imageNamed:@"PhotoEditorTimer0"];
+        return TGComponentsImageNamed(@"PhotoEditorTimer0");
     }
     else
     {
-        UIImage *background = [UIImage imageNamed:@"PhotoEditorTimer"];
+        UIImage *background = TGComponentsImageNamed(@"PhotoEditorTimer");
         
         UIGraphicsBeginImageContextWithOptions(background.size, false, 0.0f);
         CGContextRef context = UIGraphicsGetCurrentContext();

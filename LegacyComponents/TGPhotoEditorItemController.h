@@ -1,4 +1,4 @@
-#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGViewController.h>
 
 #import "PGPhotoEditorItem.h"
 
@@ -16,7 +16,7 @@
 @property (nonatomic, assign) bool initialAppearance;
 @property (nonatomic, assign) bool skipProcessingOnCompletion;
 
-- (instancetype)initWithEditorItem:(id<PGPhotoEditorItem>)editorItem photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context editorItem:(id<PGPhotoEditorItem>)editorItem photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
 
 - (void)attachPreviewView:(TGPhotoEditorPreviewView *)previewView;
 

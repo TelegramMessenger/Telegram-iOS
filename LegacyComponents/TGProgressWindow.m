@@ -2,7 +2,6 @@
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGActivityIndicatorView.h"
 #import "TGProgressSpinnerView.h"
 
 @interface TGProgressWindowController ()

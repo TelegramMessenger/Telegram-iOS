@@ -29,7 +29,7 @@
 
 @property (nonatomic, copy) void (^catchToolbarView)(bool enabled);
 
-- (instancetype)initWithSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext;
 - (NSArray *)resultSignals:(id (^)(id, NSString *, NSString *))descriptionGenerator;
 
 - (NSUInteger)_numberOfItems;

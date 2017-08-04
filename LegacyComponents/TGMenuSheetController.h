@@ -23,6 +23,7 @@
 @property (nonatomic, copy) void (^willPresent)(CGFloat offset);
 @property (nonatomic, copy) void (^willDismiss)(bool manual);
 @property (nonatomic, copy) void (^didDismiss)(bool manual);
+@property (nonatomic, copy) void (^customRemoveFromParentViewController)();
 
 @property (nonatomic, assign) UIPopoverArrowDirection permittedArrowDirections;
 @property (nonatomic, copy) CGRect (^sourceRect)(void);

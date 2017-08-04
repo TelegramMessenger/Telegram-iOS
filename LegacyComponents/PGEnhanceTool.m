@@ -31,11 +31,6 @@
     return TGLocalized(@"PhotoEditor.EnhanceTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorEnhanceTool"];
-}
-
 - (PGPhotoProcessPass *)pass
 {
     [self updatePassParameters];

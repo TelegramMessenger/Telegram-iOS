@@ -68,7 +68,7 @@
             }
         }
         
-        self.controlsView.watermarkImage = [UIImage imageNamed:@"CoubWatermark"];
+        self.controlsView.watermarkImage = TGComponentsImageNamed(@"CoubWatermark");
         self.controlsView.watermarkOffset = CGPointMake(12.0f, 12.0f);
     }
     return self;
@@ -156,7 +156,7 @@
 - (NSString *)_embedHTML
 {
     NSError *error = nil;
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"DefaultPlayer" ofType:@"html"];
+    NSString *path = TGComponentsPathForResource(@"DefaultPlayer", @"html");
     
     NSString *embedHTMLTemplate = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)

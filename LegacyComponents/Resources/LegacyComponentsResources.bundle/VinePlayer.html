@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+    body { margin: 0; width:100%%; height:100%%;  background-color:transparent; }
+    html { width:100%%; height:100%%; background-color:transparent; }
+
+    .embed-container iframe,
+    .embed-container object,
+    .embed-container embed {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%% !important;
+        height: 100%% !important;
+    }
+    </style>
+</head>
+<body>
+    <div class="embed-container">
+        <iframe id="player" src="https://vine.co/v/%@/card" width="100%" height="100%" frameborder="0"></iframe>
+    </div>
+    <script>
+    
+    var iframe;
+    var player;
+    
+    function injectCmd(cmd) {
+        var cmdStr = JSON.stringify({ "event": "inject", "cmd": cmd, "id": 1 });
+        iframe.contentWindow.postMessage(cmdStr, "*");
+    }
+    
+    function receiveMessage(evt) {
+        if ((typeof evt.data) != 'string')
+        return;
+        
+        try {
+            var obj = JSON.parse(evt.data);
+            if (obj.event == 'src')
+                window.location.href = 'vineplayer://onSrc?data=' + obj.data;
+        } catch(ex) { }
+        
+        if (evt.data == 'playbackStarted')
+            window.location.href = 'vineplayer://onPlayback?data=';
+    }
+    
+    window.addEventListener('message', receiveMessage, false);
+    
+    </script>
+</body>
+</html>

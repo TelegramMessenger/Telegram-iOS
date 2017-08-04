@@ -18,13 +18,13 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController previewView:(TGItemPreviewView *)previewView
 {
-    self = [self init];
+    self = [self initWithContext:context];
     if (self != nil)
     {
         _context = context;
         _previewView = previewView;
         
-        TGOverlayControllerWindow *window = [[TGOverlayControllerWindow alloc] initWithParentController:parentController contentController:self keepKeyboard:true];
+        TGOverlayControllerWindow *window = [[TGOverlayControllerWindow alloc] initWithManager:[context makeOverlayWindowManager] parentController:parentController contentController:self keepKeyboard:true];
         window.windowLevel = 100000000.0f;
         window.tag = 0xbeef;
         window.userInteractionEnabled = previewView.userInteractionEnabled;

@@ -18,14 +18,14 @@
         
         _program = glCreateProgram();
         
-        NSString *vShaderFilename = [[NSBundle mainBundle] pathForResource:vertexShader ofType:@"vsh"];
+        NSString *vShaderFilename = TGComponentsPathForResource(vertexShader, @"vsh");
         if (![self _compileShader:&vShader type:GL_VERTEX_SHADER fileName:vShaderFilename])
         {
             [self _destroyVertexShader:vShader fragmentShader:fShader program:_program];
             return nil;
         }
         
-        NSString *fShaderFilename = [[NSBundle mainBundle] pathForResource:fragmentShader ofType:@"fsh"];
+        NSString *fShaderFilename = TGComponentsPathForResource(fragmentShader, @"fsh");
         if (![self _compileShader:&fShader type:GL_FRAGMENT_SHADER fileName:fShaderFilename])
         {
             [self _destroyVertexShader:vShader fragmentShader:fShader program:_program];

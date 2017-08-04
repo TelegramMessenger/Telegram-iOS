@@ -76,7 +76,7 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
         _crossIconView.alpha = 0.0f;
         _crossIconView.contentMode = UIViewContentModeCenter;
         _crossIconView.hidden = true;
-        _crossIconView.image = [UIImage imageNamed:@"ImagePickerPhotoCounter_Close"];
+        _crossIconView.image = TGComponentsImageNamed(@"ImagePickerPhotoCounter_Close");
         [_wrapperView addSubview:_crossIconView];
         
         CGFloat maskWidth = 50.0f;

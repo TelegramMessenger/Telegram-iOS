@@ -96,11 +96,6 @@
     return TGLocalized(@"PhotoEditor.TintTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorTintTool"];
-}
-
 - (UIView <TGPhotoEditorToolView> *)itemControlViewWithChangeBlock:(void (^)(id, bool))changeBlock explicit:(bool)explicit nameWidth:(CGFloat)__unused nameWidth
 {
     __weak PGTintTool *weakSelf = self;

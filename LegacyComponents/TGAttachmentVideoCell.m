@@ -1,6 +1,7 @@
 #import "TGAttachmentVideoCell.h"
 
-#import <LegacyComponents/LegacyComponents.h>
+#import "LegacyComponentsInternal.h"
+#import "TGFont.h"
 
 #import <LegacyComponents/TGModernGalleryTransitionView.h>
 
@@ -61,11 +62,11 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
     _durationLabel.frame = durationFrame;
     
     if (asset.subtypes & TGMediaAssetSubtypeVideoTimelapse)
-        _iconView.image = [UIImage imageNamed:@"ModernMediaItemTimelapseIcon"];
+        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemTimelapseIcon");
     else if (asset.subtypes & TGMediaAssetSubtypeVideoHighFrameRate)
-        _iconView.image = [UIImage imageNamed:@"ModernMediaItemSloMoIcon"];
+        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemSloMoIcon");
     else
-        _iconView.image = [UIImage imageNamed:@"ModernMediaItemVideoIcon"];
+        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemVideoIcon");
     
     SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:self.asset];
     

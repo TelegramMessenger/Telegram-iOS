@@ -188,7 +188,6 @@
 		D01778EE1F20CAE60044446D /* TGOverlayController.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778E21F20CAE60044446D /* TGOverlayController.m */; };
 		D01778EF1F20CAE60044446D /* TGOverlayControllerWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778E31F20CAE60044446D /* TGOverlayControllerWindow.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D01778F01F20CAE60044446D /* TGOverlayControllerWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778E41F20CAE60044446D /* TGOverlayControllerWindow.m */; };
-		D01778F31F20CC7A0044446D /* TGRootControllerProtocol.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778F11F20CC7A0044446D /* TGRootControllerProtocol.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D01778F71F20CDAC0044446D /* TGHacks.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778F51F20CDAC0044446D /* TGHacks.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D01778F81F20CDAC0044446D /* TGHacks.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778F61F20CDAC0044446D /* TGHacks.m */; };
 		D01778FB1F20CF6B0044446D /* TGBackdropView.h in Headers */ = {isa = PBXBuildFile; fileRef = D01778F91F20CF6B0044446D /* TGBackdropView.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -638,8 +637,6 @@
 		D07BC87E1F2A365000ED97AA /* TGProgressSpinnerView.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BC87A1F2A365000ED97AA /* TGProgressSpinnerView.m */; };
 		D07BC87F1F2A365000ED97AA /* TGProgressWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BC87B1F2A365000ED97AA /* TGProgressWindow.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D07BC8801F2A365000ED97AA /* TGProgressWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BC87C1F2A365000ED97AA /* TGProgressWindow.m */; };
-		D07BC8831F2A367500ED97AA /* TGActivityIndicatorView.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BC8811F2A367500ED97AA /* TGActivityIndicatorView.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D07BC8841F2A367500ED97AA /* TGActivityIndicatorView.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BC8821F2A367500ED97AA /* TGActivityIndicatorView.m */; };
 		D07BC8931F2A375800ED97AA /* TGPhotoCropAreaView.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BC8851F2A375800ED97AA /* TGPhotoCropAreaView.h */; };
 		D07BC8941F2A375800ED97AA /* TGPhotoCropAreaView.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BC8861F2A375800ED97AA /* TGPhotoCropAreaView.m */; };
 		D07BC8951F2A375800ED97AA /* TGPhotoCropControl.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BC8871F2A375800ED97AA /* TGPhotoCropControl.h */; };
@@ -1252,7 +1249,6 @@
 		D01778E21F20CAE60044446D /* TGOverlayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGOverlayController.m; path = LegacyComponents/TGOverlayController.m; sourceTree = "<group>"; };
 		D01778E31F20CAE60044446D /* TGOverlayControllerWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGOverlayControllerWindow.h; path = LegacyComponents/TGOverlayControllerWindow.h; sourceTree = "<group>"; };
 		D01778E41F20CAE60044446D /* TGOverlayControllerWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGOverlayControllerWindow.m; path = LegacyComponents/TGOverlayControllerWindow.m; sourceTree = "<group>"; };
-		D01778F11F20CC7A0044446D /* TGRootControllerProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGRootControllerProtocol.h; sourceTree = "<group>"; };
 		D01778F51F20CDAC0044446D /* TGHacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGHacks.h; sourceTree = "<group>"; };
 		D01778F61F20CDAC0044446D /* TGHacks.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGHacks.m; sourceTree = "<group>"; };
 		D01778F91F20CF6B0044446D /* TGBackdropView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBackdropView.h; sourceTree = "<group>"; };
@@ -2130,6 +2126,7 @@
 		D07BCBFA1F2B757700ED97AA /* TGEmbedPIPScrubber.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGEmbedPIPScrubber.m; sourceTree = "<group>"; };
 		D07BCC031F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGModernConversationTitleActivityIndicator.h; sourceTree = "<group>"; };
 		D07BCC041F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGModernConversationTitleActivityIndicator.m; sourceTree = "<group>"; };
+		D0EB42021F3142F400838FE6 /* LegacyComponentsResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = LegacyComponentsResources.bundle; path = Resources/LegacyComponentsResources.bundle; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2164,6 +2161,7 @@
 		D01777291F1F8F100044446D /* LegacyComponents */ = {
 			isa = PBXGroup;
 			children = (
+				D0EB409E1F2FC0AA00838FE6 /* Resources */,
 				D017776F1F1F91B00044446D /* Utils */,
 				D01779B01F2139720044446D /* POP */,
 				D017797F1F2107B80044446D /* LMDB */,
@@ -2505,7 +2503,6 @@
 				D01778E21F20CAE60044446D /* TGOverlayController.m */,
 				D01778E31F20CAE60044446D /* TGOverlayControllerWindow.h */,
 				D01778E41F20CAE60044446D /* TGOverlayControllerWindow.m */,
-				D01778F11F20CC7A0044446D /* TGRootControllerProtocol.h */,
 				D07BCAD51F2B4F2800ED97AA /* TGOverlayFormsheetController.h */,
 				D07BCAD61F2B4F2800ED97AA /* TGOverlayFormsheetController.m */,
 				D07BCAD71F2B4F2800ED97AA /* TGOverlayFormsheetWindow.h */,
@@ -3484,6 +3481,14 @@
 			name = Coub;
 			sourceTree = "<group>";
 		};
+		D0EB409E1F2FC0AA00838FE6 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				D0EB42021F3142F400838FE6 /* LegacyComponentsResources.bundle */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -3845,7 +3850,6 @@
 				D07BC90B1F2A380D00ED97AA /* TGPaintFaceDetector.h in Headers */,
 				D07BCA481F2A9CE300ED97AA /* TGModernMediaListSelectableItem.h in Headers */,
 				D07BC9F31F2A9A2B00ED97AA /* TGMediaPickerController.h in Headers */,
-				D01778F31F20CC7A0044446D /* TGRootControllerProtocol.h in Headers */,
 				D07BC8161F2A2C0B00ED97AA /* PGPhotoGaussianBlurFilter.h in Headers */,
 				D017783B1F1F961D0044446D /* TGStickerPackReference.h in Headers */,
 				D01779DF1F2139980044446D /* POPAction.h in Headers */,
@@ -3998,7 +4002,6 @@
 				D07BC8CF1F2A37EC00ED97AA /* TGPhotoPaintSettingsWrapperView.h in Headers */,
 				D01778491F1F961D0044446D /* TGDocumentMediaAttachment.h in Headers */,
 				D0177AD21F23D9810044446D /* ASWatcher.h in Headers */,
-				D07BC8831F2A367500ED97AA /* TGActivityIndicatorView.h in Headers */,
 				D07BC80E1F2A2C0B00ED97AA /* PGPhotoEnhancePass.h in Headers */,
 				D07BC9051F2A380D00ED97AA /* TGPaintCanvas.h in Headers */,
 				D07BC7411F2A2AC500ED97AA /* TGPhotoEditorButton.h in Headers */,
@@ -4146,7 +4149,6 @@
 				D0177ADA1F23D9B80044446D /* SGraphListNode.m in Sources */,
 				D01778B31F1FFF810044446D /* TGLabel.m in Sources */,
 				D07BCA6C1F2B3CE700ED97AA /* TGCameraController.m in Sources */,
-				D07BC8841F2A367500ED97AA /* TGActivityIndicatorView.m in Sources */,
 				D07BC94F1F2A3EA900ED97AA /* TGHashtagPanelCell.m in Sources */,
 				D017782E1F1F961D0044446D /* TGBotReplyMarkupRow.m in Sources */,
 				D01779271F20FE480044446D /* TGObserverProxy.m in Sources */,

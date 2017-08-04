@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <LegacyComponents/LegacyComponentsContext.h>
 
 @class TGViewController;
 @class TGOverlayController;
@@ -16,8 +17,8 @@
 @property (nonatomic) bool dismissByMenuSheet;
 
 
-- (instancetype)initWithParentController:(TGViewController *)parentController contentController:(TGOverlayController *)contentController;
-- (instancetype)initWithParentController:(TGViewController *)parentController contentController:(TGOverlayController *)contentController keepKeyboard:(bool)keepKeyboard;
+- (instancetype)initWithManager:(id<LegacyComponentsOverlayWindowManager>)manager parentController:(TGViewController *)parentController contentController:(TGOverlayController *)contentController;
+- (instancetype)initWithManager:(id<LegacyComponentsOverlayWindowManager>)manager parentController:(TGViewController *)parentController contentController:(TGOverlayController *)contentController keepKeyboard:(bool)keepKeyboard;
 
 - (void)dismiss;
 

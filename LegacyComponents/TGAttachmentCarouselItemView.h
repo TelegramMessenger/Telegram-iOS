@@ -1,13 +1,13 @@
+#import <LegacyComponents/TGModernGalleryController.h>
 #import <LegacyComponents/TGMenuSheetItemView.h>
 #import <LegacyComponents/TGMediaAsset.h>
-
-#import <LegacyComponents/TGModernGalleryController.h>
 
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
 @class TGSuggestionContext;
 @class TGViewController;
 @class TGAttachmentCameraView;
+@protocol TGModernGalleryTransitionHostScrollView;
 
 @interface TGAttachmentCarouselCollectionView : UICollectionView
 

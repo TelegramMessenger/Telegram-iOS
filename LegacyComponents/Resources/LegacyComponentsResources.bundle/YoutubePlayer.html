@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+    body { margin: 0; width:100%%; height:100%%;  background-color:#000; }
+    html { width:100%%; height:100%%; background-color:#000; }
+
+    .embed-container iframe,
+    .embed-container object,
+    .embed-container embed {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%% !important;
+        height: 100%% !important;
+    }
+    </style>
+</head>
+<body>
+    <div class="embed-container">
+        <div id="player"></div>
+    </div>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+    var player;
+    var iframe;
+    var error = false;
+    
+    function injectCmd(cmd) {
+        var cmdStr = JSON.stringify({ "event": "inject", "cmd": cmd, "id": 1 });
+        iframe.contentWindow.postMessage(cmdStr, "*");
+    }
+    
+    var playbackState = 0;
+    var duration = 0.0;
+    var position = 0.0;
+    var downloadProgress = 0.0;
+    var failed = false;
+
+    YT.ready(function() {
+        player = new YT.Player('player', %@);
+        player.setSize(window.innerWidth, window.innerHeight);
+             
+        function getCurrentTime() {
+             downloadProgress = player.getVideoLoadedFraction();
+             position = player.getCurrentTime()
+             
+             updateState();
+             injectCmd('fixChrome');
+        }
+        
+        window.setInterval(getCurrentTime, 500);
+             
+        injectCmd('initial');
+    });
+    
+    function updateState() {
+        window.location.href = 'ytplayer://onState?failed= ' + failed + '&playback=' + playbackState + '&position=' + position + '&duration=' + duration + '&download=' + downloadProgress;
+    }
+
+    function onReady(event) {
+        window.location.href = 'ytplayer://onReady?data=' + event.data;
+        iframe = document.getElementById('player');
+        duration = player.getDuration();
+        if (%@) {
+            player.playVideo();
+        }
+        injectCmd('fixChrome');
+    }
+    
+    function onStateChange(event) {
+        if (!error) {
+            playbackState = event.data;
+            updateState();
+        }
+        else {
+            error = false;
+        }
+    }
+
+    function onPlaybackQualityChange(event) {
+        window.location.href = 'ytplayer://onPlaybackQualityChange?data=' + event.data;
+    }
+
+    function onPlayerError(event) {
+        if (event.data == 100) {
+            error = true;
+        }
+        else if (event.data == 150) {
+            failed = true;
+        }
+        updateState();
+    }
+
+    window.onresize = function() {
+        player.setSize(window.innerWidth, window.innerHeight);
+    }
+    </script>
+</body>
+</html>

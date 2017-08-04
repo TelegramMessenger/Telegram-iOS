@@ -87,11 +87,11 @@
         {
             [UIView animateWithDuration:0.3 animations:^
             {
-                [TGHacks setApplicationStatusBarAlpha:0.0f];
+                [_context setApplicationStatusBarAlpha:0.0f];
             }];
         }
         else
-            [TGHacks setApplicationStatusBarAlpha:0.0f];
+            [_context setApplicationStatusBarAlpha:0.0f];
     }
     
     [super viewWillAppear:animated];
@@ -105,11 +105,11 @@
         {
             [UIView animateWithDuration:0.3 animations:^
             {
-                [TGHacks setApplicationStatusBarAlpha:1.0f];
+                [_context setApplicationStatusBarAlpha:1.0f];
             }];
         }
         else
-            [TGHacks setApplicationStatusBarAlpha:1.0f];
+            [_context setApplicationStatusBarAlpha:1.0f];
     }
     
     [super viewWillDisappear:animated];

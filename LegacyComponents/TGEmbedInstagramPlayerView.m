@@ -86,7 +86,7 @@ NSString *const TGInstagramPlayerCallbackOnPlayback = @"onPlayback";
 - (NSString *)_embedHTML
 {
     NSError *error = nil;
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"InstagramPlayer" ofType:@"html"];
+    NSString *path = TGComponentsPathForResource(@"InstagramPlayer", @"html");
     
     NSString *embedHTMLTemplate = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)

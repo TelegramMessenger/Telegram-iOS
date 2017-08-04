@@ -54,7 +54,7 @@ static void setViewFrame(UIView *view, CGRect frame)
 
 - (void)_updateRecentIcon
 {
-    UIImage *recentTabImage = [UIImage imageNamed:@"StickerKeyboardRecentTab.png"];
+    UIImage *recentTabImage = TGComponentsImageNamed(@"StickerKeyboardRecentTab.png");
     if (_style == TGStickerKeyboardViewPaintDarkStyle)
     {
         UIColor *color = self.selected ? [UIColor blackColor] : UIColorRGB(0xb4b5b5);

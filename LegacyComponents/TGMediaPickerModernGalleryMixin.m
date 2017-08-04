@@ -30,6 +30,8 @@
     NSUInteger _itemsLimit;
     
     id<LegacyComponentsContext> _context;
+    
+    id<LegacyComponentsOverlayWindowManager> _windowManager;
 }
 @end
 
@@ -58,7 +60,9 @@
         
         __weak TGMediaPickerModernGalleryMixin *weakSelf = self;
         
-        TGModernGalleryController *modernGallery = [[TGModernGalleryController alloc] initWithContext:_context];
+        _windowManager = [_context makeOverlayWindowManager];
+        
+        TGModernGalleryController *modernGallery = [[TGModernGalleryController alloc] initWithContext:[_windowManager context]];
         _galleryController = modernGallery;
         _strongGalleryController = modernGallery;
         modernGallery.isImportant = true;
@@ -75,7 +79,7 @@
         
         NSArray *galleryItems = fetchResult != nil ? [self prepareGalleryItemsForFetchResult:fetchResult selectionContext:selectionContext editingContext:editingContext asFile:asFile enumerationBlock:enumerationBlock] : [self prepareGalleryItemsForMomentList:momentList selectionContext:selectionContext editingContext:editingContext asFile:asFile enumerationBlock:enumerationBlock];
         
-        TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:_context items:galleryItems focusItem:focusItem selectionContext:selectionContext editingContext:editingContext hasCaptions:hasCaptions hasTimer:hasTimer inhibitDocumentCaptions:inhibitDocumentCaptions hasSelectionPanel:true recipientName:recipientName];
+        TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:[_windowManager context] items:galleryItems focusItem:focusItem selectionContext:selectionContext editingContext:editingContext hasCaptions:hasCaptions hasTimer:hasTimer inhibitDocumentCaptions:inhibitDocumentCaptions hasSelectionPanel:true recipientName:recipientName];
         _galleryModel = model;
         model.controller = modernGallery;
         model.suggestionContext = suggestionContext;
@@ -207,7 +211,7 @@
     
     [_galleryController setPreviewMode:false];
     
-    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithParentController:_parentController contentController:_galleryController];
+    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:_windowManager parentController:_parentController contentController:_galleryController];
     controllerWindow.hidden = false;
     _galleryController.view.clipsToBounds = true;
     

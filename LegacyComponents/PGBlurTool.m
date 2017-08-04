@@ -95,11 +95,6 @@
     return TGLocalized(@"PhotoEditor.BlurToolRadius");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorBlurTool"];
-}
-
 - (UIView <TGPhotoEditorToolView> *)itemControlViewWithChangeBlock:(void (^)(id newValue, bool animated))changeBlock
 {
     return [self itemControlViewWithChangeBlock:changeBlock explicit:false nameWidth:0.0f];

@@ -10,7 +10,7 @@
 
 - (UIViewController *)statusBarAppearanceSourceController
 {
-    UIViewController *rootController = [[LegacyComponentsGlobals provider] rootController];
+    UIViewController *rootController = [[LegacyComponentsGlobals provider] applicationWindows].firstObject.rootViewController;
     UIViewController *topViewController = nil;
     if ([rootController respondsToSelector:@selector(viewControllers)]) {
         topViewController = [(UINavigationController *)rootController viewControllers].lastObject;
@@ -43,7 +43,7 @@
 
 - (UIViewController *)autorotationSourceController
 {
-    UIViewController *rootController = [[LegacyComponentsGlobals provider] rootController];
+    UIViewController *rootController = [[LegacyComponentsGlobals provider] applicationWindows].firstObject.rootViewController;
     UIViewController *topViewController = nil;
     if ([rootController respondsToSelector:@selector(viewControllers)]) {
         topViewController = [(UINavigationController *)rootController viewControllers].lastObject;
@@ -90,7 +90,7 @@
         }
     }
     
-    UIViewController *rootController = [[LegacyComponentsGlobals provider] rootController];
+    UIViewController *rootController = [[LegacyComponentsGlobals provider] applicationWindows].firstObject.rootViewController;
     
     if (rootController.presentedViewController != nil)
         return [rootController.presentedViewController shouldAutorotate];
@@ -136,23 +136,30 @@
 @interface TGOverlayControllerWindow ()
 {
     __weak TGViewController *_parentController;
+    id<LegacyComponentsOverlayWindowManager> _manager;
+    bool _managedIsHidden;
+    TGOverlayController *_contentController;
 }
 
 @end
 
 @implementation TGOverlayControllerWindow
 
-- (instancetype)initWithParentController:(TGViewController *)parentController contentController:(TGOverlayController *)contentController
+- (instancetype)initWithManager:(id<LegacyComponentsOverlayWindowManager>)manager parentController:(TGViewController *)parentController contentController:(TGOverlayController *)contentController
 {
-    return [self initWithParentController:parentController contentController:contentController keepKeyboard:false];
+    return [self initWithManager:manager parentController:parentController contentController:contentController keepKeyboard:false];
 }
 
-- (instancetype)initWithParentController:(TGViewController *)parentController contentController:(TGOverlayController *)contentController keepKeyboard:(bool)keepKeyboard
+- (instancetype)initWithManager:(id<LegacyComponentsOverlayWindowManager>)manager parentController:(TGViewController *)parentController contentController:(TGOverlayController *)contentController keepKeyboard:(bool)keepKeyboard
 {
-    _keepKeyboard = keepKeyboard;
+    assert(manager != nil);
     
-    UIViewController<TGRootControllerProtocol> *rootController = [[LegacyComponentsGlobals provider] rootController];
-    self = [super initWithFrame:[rootController applicationBounds]];
+    if (self != nil) {
+        _keepKeyboard = keepKeyboard;
+        _manager = manager;
+    }
+    
+    self = [super initWithFrame:[[_manager context] fullscreenBounds]];
     if (self != nil)
     {
         self.windowLevel = UIWindowLevelStatusBar - 0.001f;
@@ -160,8 +167,18 @@
         _parentController = parentController;
         [parentController.associatedWindowStack addObject:self];
         
-        contentController.overlayWindow = self;
-        self.rootViewController = contentController;
+        if ([_manager managesWindow]) {
+            _contentController = contentController;
+            __weak TGOverlayControllerWindow *weakSelf = self;
+            contentController.customDismissBlock = ^{
+                __strong TGOverlayControllerWindow *strongSelf = weakSelf;
+                [manager setHidden:true window:strongSelf];
+            };
+            [_manager bindController:contentController];
+        } else {
+            contentController.overlayWindow = self;
+            self.rootViewController = contentController;
+        }
     }
     return self;
 }
@@ -194,12 +211,28 @@
     self.rootViewController = nil;
 }
 
+- (BOOL)isHidden {
+    if ([_manager managesWindow]) {
+        return _managedIsHidden;
+    } else {
+        return [super isHidden];
+    }
+}
+
 - (void)setHidden:(BOOL)hidden {
-    [super setHidden:hidden];
-    
-    if (!hidden && !_keepKeyboard) {
-        UIViewController *rootController = [[LegacyComponentsGlobals provider] rootController];
-        [rootController.view.window endEditing:true];
+    if ([_manager managesWindow]) {
+        if (![super isHidden]) {
+            [super setHidden:true];
+        }
+        
+        _managedIsHidden = hidden;
+        [_manager setHidden:hidden window:self];
+    } else {
+        [super setHidden:hidden];
+        
+        if (!hidden && !_keepKeyboard) {
+            [[[LegacyComponentsGlobals provider] applicationWindows].firstObject endEditing:true];
+        }
     }
 }
 

@@ -58,6 +58,7 @@
         [uri appendFormat:@"&legacyThumbnailUri=%@", [TGStringUtils stringByEscapingForURL:legacyThumbnailUri]];
     
     [uri appendFormat:@"&width=124&height=124"];
+    [uri appendFormat:@"&dimwidth=%d&dimheight=%d", (int)[documentMedia pictureSize].width, (int)[documentMedia pictureSize].height];
     [uri appendFormat:@"&highQuality=1"];
     
     [_imageView loadUri:uri withOptions:nil];

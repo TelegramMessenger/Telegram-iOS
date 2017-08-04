@@ -64,12 +64,12 @@
         
         _leftHandleView = [[UIImageView alloc] initWithFrame:_leftSegmentView.bounds];
         _leftHandleView.contentMode = UIViewContentModeCenter;
-        _leftHandleView.image = [UIImage imageNamed:@"VideoScrubberLeftArrow"];
+        _leftHandleView.image = TGComponentsImageNamed(@"VideoScrubberLeftArrow");
         [_leftSegmentView addSubview:_leftHandleView];
         
         _rightHandleView = [[UIImageView alloc] initWithFrame:_rightSegmentView.bounds];
         _rightHandleView.contentMode = UIViewContentModeCenter;
-        _rightHandleView.image = [UIImage imageNamed:@"VideoScrubberRightArrow"];
+        _rightHandleView.image = TGComponentsImageNamed(@"VideoScrubberRightArrow");
         [_rightSegmentView addSubview:_rightHandleView];
         
         _startHandlePressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleHandlePress:)];

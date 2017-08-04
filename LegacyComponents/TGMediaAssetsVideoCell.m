@@ -106,11 +106,11 @@ NSString *const TGMediaAssetsVideoCellKind = @"TGMediaAssetsVideoCellKind";
     _durationLabel.text = durationString;
     
     if (asset.subtypes & TGMediaAssetSubtypeVideoTimelapse)
-        _iconView.image = [UIImage imageNamed:@"ModernMediaItemTimelapseIcon"];
+        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemTimelapseIcon");
     else if (asset.subtypes & TGMediaAssetSubtypeVideoHighFrameRate)
-        _iconView.image = [UIImage imageNamed:@"ModernMediaItemSloMoIcon"];
+        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemSloMoIcon");
     else
-        _iconView.image = [UIImage imageNamed:@"ModernMediaItemVideoIcon"];
+        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemVideoIcon");
     
     SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:(id<TGMediaEditableItem>)self.item];
     

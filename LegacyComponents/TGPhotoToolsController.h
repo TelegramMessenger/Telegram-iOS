@@ -6,7 +6,7 @@
 
 @interface TGPhotoToolsController : TGPhotoEditorTabController
 
-- (instancetype)initWithPhotoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
 
 - (void)updateValues;
 

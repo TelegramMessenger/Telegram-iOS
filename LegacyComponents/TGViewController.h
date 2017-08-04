@@ -1,6 +1,8 @@
 #import <UIKit/UIKit.h>
 #import <SSignalKit/SSignalKit.h>
 
+#import <LegacyComponents/LegacyComponentsContext.h>
+
 typedef enum {
     TGViewControllerStyleDefault = 0,
     TGViewControllerStyleBlack = 1
@@ -36,6 +38,8 @@ typedef enum {
 @end
 
 @interface TGViewController : UIViewController <TGViewControllerNavigationBarAppearance>
+
++ (void)setDefaultContext:(id<LegacyComponentsContext>)defaultContext;
 
 + (UIFont *)titleFontForStyle:(TGViewControllerStyle)style landscape:(bool)landscape;
 + (UIFont *)titleTitleFontForStyle:(TGViewControllerStyle)style landscape:(bool)landscape;
@@ -88,6 +92,8 @@ typedef enum {
 @property (nonatomic) bool automaticallyManageScrollViewInsets;
 @property (nonatomic) bool ignoreKeyboardWhenAdjustingScrollViewInsets;
 
+@property (nonatomic) bool customAppearanceMethodsForwarding;
+
 @property (nonatomic, strong) NSArray *scrollViewsForAutomaticInsetsAdjustment;
 
 @property (nonatomic, weak) UIViewController *customParentViewController;
@@ -99,6 +105,9 @@ typedef enum {
 @property (nonatomic, readonly) UIUserInterfaceSizeClass currentSizeClass;
 
 @property (nonatomic, copy) NSArray<id<UIPreviewActionItem>> *(^externalPreviewActionItems)(void);
+@property (nonatomic, copy) void (^customRemoveFromParentViewController)();
+
+- (id)initWithContext:(id<LegacyComponentsContext>)context NS_DESIGNATED_INITIALIZER;
 
 - (void)setExplicitTableInset:(UIEdgeInsets)explicitTableInset scrollIndicatorInset:(UIEdgeInsets)scrollIndicatorInset;
 

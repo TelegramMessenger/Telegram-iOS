@@ -368,7 +368,7 @@ typedef enum
         _panGestureRecognizer.delegate = self;
         [_scrubberHandle addGestureRecognizer:_panGestureRecognizer];
         
-        _arrowView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"PhotoPickerArrow"]];
+        _arrowView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PhotoPickerArrow")];
         _arrowView.alpha = 0.45f;
         _arrowView.hidden = true;
         [self addSubview:_arrowView];

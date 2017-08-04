@@ -33,11 +33,6 @@
     return TGLocalized(@"PhotoEditor.FadeTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorFadeTool"];
-}
-
 - (bool)shouldBeSkipped
 {
     return (ABS(((NSNumber *)self.displayValue).floatValue - self.defaultValue) < FLT_EPSILON);

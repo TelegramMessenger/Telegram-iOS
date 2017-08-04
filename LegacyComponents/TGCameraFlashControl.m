@@ -35,7 +35,7 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
         _flashIconView.exclusiveTouch = true;
         _flashIconView.hitTestEdgeInsets = UIEdgeInsetsMake(0, -10, 0, -10);
         _flashIconView.tag = -1;
-        [_flashIconView setImage:[UIImage imageNamed:@"CameraFlashButton"] forState:UIControlStateNormal];
+        [_flashIconView setImage:TGComponentsImageNamed(@"CameraFlashButton") forState:UIControlStateNormal];
         [_flashIconView addTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:_flashIconView];
         
@@ -43,7 +43,7 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^
         {
-            UIImage *image = [UIImage imageNamed:@"CameraFlashButton"];
+            UIImage *image = TGComponentsImageNamed(@"CameraFlashButton");
             UIGraphicsBeginImageContextWithOptions(image.size, false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
             [image drawInRect:CGRectMake(0, 0, image.size.width, image.size.height)];

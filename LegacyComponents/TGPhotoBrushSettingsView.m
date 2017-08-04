@@ -74,7 +74,7 @@ const CGFloat TGPhotoBrushSettingsItemHeight = 44.0f;
         _brushViews = brushViews;
         _brushSeparatorViews = separatorViews;
         
-        _selectedCheckView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"PaintCheck"]];
+        _selectedCheckView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PaintCheck")];
         _selectedCheckView.frame = CGRectMake(15.0f, 16.0f, _selectedCheckView.frame.size.width, _selectedCheckView.frame.size.height);
     }
     return self;

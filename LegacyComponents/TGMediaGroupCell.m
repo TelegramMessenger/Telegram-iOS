@@ -147,7 +147,7 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         _countLabel.textColor = [UIColor blackColor];
         [self.contentView addSubview:_countLabel];
         
-        UIImageView *disclosureIndicator = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"ModernListsDisclosureIndicator"]];
+        UIImageView *disclosureIndicator = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"ModernListsDisclosureIndicator")];
         disclosureIndicator.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
         disclosureIndicator.frame = CGRectOffset(disclosureIndicator.frame, self.contentView.frame.size.width - disclosureIndicator.frame.size.width - 15, 37);
         [self addSubview:disclosureIndicator];
@@ -228,7 +228,7 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
             [imageView reset];
         }
         
-        [(TGImageView *)_imageViews.firstObject setImage:[UIImage imageNamed:@"ModernMediaEmptyAlbumIcon"]];
+        [(TGImageView *)_imageViews.firstObject setImage:TGComponentsImageNamed(@"ModernMediaEmptyAlbumIcon")];
     }
 }
 
@@ -249,35 +249,35 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
     switch (assetGroup.subtype)
     {
         case TGMediaAssetGroupSubtypeFavorites:
-            iconImage = [UIImage imageNamed:@"MediaGroupFavorites"];
+            iconImage = TGComponentsImageNamed(@"MediaGroupFavorites");
             break;
             
         case TGMediaAssetGroupSubtypePanoramas:
-            iconImage = [UIImage imageNamed:@"MediaGroupPanoramas"];
+            iconImage = TGComponentsImageNamed(@"MediaGroupPanoramas");
             break;
             
         case TGMediaAssetGroupSubtypeVideos:
-            iconImage = [UIImage imageNamed:@"MediaGroupVideo"];
+            iconImage = TGComponentsImageNamed(@"MediaGroupVideo");
             break;
             
         case TGMediaAssetGroupSubtypeBursts:
-            iconImage = [UIImage imageNamed:@"MediaGroupBurst"];
+            iconImage = TGComponentsImageNamed(@"MediaGroupBurst");
             break;
             
         case TGMediaAssetGroupSubtypeSlomo:
-            iconImage = [UIImage imageNamed:@"MediaGroupSlomo"];
+            iconImage = TGComponentsImageNamed(@"MediaGroupSlomo");
             break;
             
         case TGMediaAssetGroupSubtypeTimelapses:
-            iconImage = [UIImage imageNamed:@"MediaGroupTimelapse"];
+            iconImage = TGComponentsImageNamed(@"MediaGroupTimelapse");
             break;
             
         case TGMediaAssetGroupSubtypeScreenshots:
-            iconImage = [UIImage imageNamed:@"MediaGroupScreenshots"];
+            iconImage = TGComponentsImageNamed(@"MediaGroupScreenshots");
             break;
             
         case TGMediaAssetGroupSubtypeSelfPortraits:
-            iconImage = [UIImage imageNamed:@"MediaGroupSelfPortraits"];
+            iconImage = TGComponentsImageNamed(@"MediaGroupSelfPortraits");
             break;
             
         default:

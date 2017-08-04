@@ -21,6 +21,10 @@
 {
     TGOverlayControllerWindow *overlayWindow = _overlayWindow;
     [overlayWindow dismiss];
+    
+    if (_customDismissBlock) {
+        _customDismissBlock();
+    }
 }
 
 @end

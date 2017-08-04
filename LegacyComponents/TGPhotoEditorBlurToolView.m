@@ -63,21 +63,21 @@
         _offButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _offButton.tag = PGBlurToolTypeNone;
         [_offButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_offButton setImage:[UIImage imageNamed:@"PhotoEditorBlurOff"]];
+        [_offButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurOff")];
         [_offButton setTitle:TGLocalized(@"PhotoEditor.BlurToolOff")];
         [_buttonsWrapper addSubview:_offButton];
         
         _radialButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _radialButton.tag = PGBlurToolTypeRadial;
         [_radialButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_radialButton setImage:[UIImage imageNamed:@"PhotoEditorBlurRadial"]];
+        [_radialButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurRadial")];
         [_radialButton setTitle:TGLocalized(@"PhotoEditor.BlurToolRadial")];
         [_buttonsWrapper addSubview:_radialButton];
 
         _linearButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _linearButton.tag = PGBlurToolTypeLinear;
         [_linearButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_linearButton setImage:[UIImage imageNamed:@"PhotoEditorBlurLinear"]];
+        [_linearButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurLinear")];
         [_linearButton setTitle:TGLocalized(@"PhotoEditor.BlurToolLinear")];
         [_buttonsWrapper addSubview:_linearButton];
         

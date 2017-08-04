@@ -31,11 +31,6 @@
     return TGLocalized(@"PhotoEditor.SharpenTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorSharpenTool"];
-}
-
 - (PGPhotoProcessPass *)pass
 {
     [self updatePassParameters];

@@ -99,7 +99,7 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _context = context;
@@ -133,6 +133,8 @@
             _photoEditor.trimStartValue = videoAdjustments.trimStartValue;
             _photoEditor.trimEndValue = videoAdjustments.trimEndValue;
         }
+        
+        self.customAppearanceMethodsForwarding = true;
     }
     return self;
 }
@@ -410,12 +412,12 @@
         {
             [UIView animateWithDuration:0.3 animations:^
             {
-                [TGHacks setApplicationStatusBarAlpha:0.0f];
+                [_context setApplicationStatusBarAlpha:0.0f];
             }];
         }
         else
         {
-            [TGHacks setApplicationStatusBarAlpha:0.0f];
+            [_context setApplicationStatusBarAlpha:0.0f];
         }
     }
     else if (!self.dontHideStatusBar)
@@ -460,12 +462,12 @@
         {
             [UIView animateWithDuration:0.3 animations:^
             {
-                [TGHacks setApplicationStatusBarAlpha:1.0f];
+                [_context setApplicationStatusBarAlpha:1.0f];
             }];
         }
         else
         {
-            [TGHacks setApplicationStatusBarAlpha:1.0f];
+            [_context setApplicationStatusBarAlpha:1.0f];
         }
     }
     
@@ -849,7 +851,7 @@
             
             if ([self presentedForAvatarCreation])
             {
-                TGPhotoAvatarCropController *cropController = [[TGPhotoAvatarCropController alloc] initWithPhotoEditor:_photoEditor previewView:_previewView];
+                TGPhotoAvatarCropController *cropController = [[TGPhotoAvatarCropController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
                 
                 bool skipInitialTransition = (![self presentedFromCamera] && self.navigationController != nil) || self.skipInitialTransition;
                 cropController.fromCamera = [self presentedFromCamera];
@@ -1066,7 +1068,7 @@
             
         case TGPhotoEditorToolsTab:
         {
-            TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithPhotoEditor:_photoEditor previewView:_previewView];
+            TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
             toolsController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             toolsController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
             {
@@ -1096,7 +1098,7 @@
         {
             _ignoreDefaultPreviewViewTransitionIn = true;
             
-            TGPhotoQualityController *qualityController = [[TGPhotoQualityController alloc] initWithPhotoEditor:_photoEditor previewView:_previewView];
+            TGPhotoQualityController *qualityController = [[TGPhotoQualityController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
             qualityController.item = _item;
             qualityController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             qualityController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)

@@ -13,7 +13,7 @@
 
 @property (nonatomic, copy) void (^finishedPhotoProcessing)(void);
 
-- (instancetype)initWithPhotoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
 
 - (void)setImage:(UIImage *)image;
 - (void)setSnapshotImage:(UIImage *)snapshotImage;

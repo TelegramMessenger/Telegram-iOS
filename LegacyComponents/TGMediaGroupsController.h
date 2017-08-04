@@ -1,4 +1,4 @@
-#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGViewController.h>
 
 #import <LegacyComponents/TGMediaAssetsController.h>
 
@@ -11,6 +11,6 @@
 
 @property (nonatomic, copy) void (^openAssetGroup)(TGMediaAssetGroup *);
 
-- (instancetype)initWithAssetsLibrary:(TGMediaAssetsLibrary *)assetsLibrary intent:(TGMediaAssetsControllerIntent)intent;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assetsLibrary:(TGMediaAssetsLibrary *)assetsLibrary intent:(TGMediaAssetsControllerIntent)intent;
 
 @end

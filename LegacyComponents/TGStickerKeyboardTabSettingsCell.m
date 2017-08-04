@@ -45,7 +45,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         [self.contentView addSubview:_wrapperView];
         
         _imageView = [[UIImageView alloc] init];
-        _imageView.image = [UIImage imageNamed:@"StickerKeyboardSettingsIcon.png"];
+        _imageView.image = TGComponentsImageNamed(@"StickerKeyboardSettingsIcon.png");
         _imageView.userInteractionEnabled = false;
         _imageView.contentMode = UIViewContentModeCenter;
         [_wrapperView addSubview:_imageView];
@@ -60,11 +60,11 @@ static void setViewFrame(UIView *view, CGRect frame)
     _mode = mode;
     
     if (mode == TGStickerKeyboardTabSettingsCellSettings) {
-        _imageView.image = [UIImage imageNamed:@"StickerKeyboardSettingsIcon.png"];
+        _imageView.image = TGComponentsImageNamed(@"StickerKeyboardSettingsIcon.png");
     } else if (mode == TGStickerKeyboardTabSettingsCellGifs) {
-        _imageView.image = [UIImage imageNamed:@"StickerKeyboardGifIcon.png"];
+        _imageView.image = TGComponentsImageNamed(@"StickerKeyboardGifIcon.png");
     } else {
-        _imageView.image = [UIImage imageNamed:@"StickerKeyboardTrendingIcon.png"];
+        _imageView.image = TGComponentsImageNamed(@"StickerKeyboardTrendingIcon.png");
     }
     _button.hidden = mode != TGStickerKeyboardTabSettingsCellSettings;
 }

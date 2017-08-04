@@ -2,6 +2,7 @@
 //  A description of this can be found at his page on the topic:
 //  http://iphonedevelopment.blogspot.com/2010/11/opengl-es-20-for-ios-chapter-4.html
 
+#import "LegacyComponentsInternal.h"
 
 #import "GLProgram.h"
 // START:typedefs
@@ -66,7 +67,7 @@ typedef void (*GLLogFunction) (GLuint program,
 - (id)initWithVertexShaderString:(NSString *)vShaderString 
           fragmentShaderFilename:(NSString *)fShaderFilename
 {
-    NSString *fragShaderPathname = [[NSBundle mainBundle] pathForResource:fShaderFilename ofType:@"fsh"];
+    NSString *fragShaderPathname = TGComponentsPathForResource(fShaderFilename, @"fsh");
     NSString *fragmentShaderString = [NSString stringWithContentsOfFile:fragShaderPathname encoding:NSUTF8StringEncoding error:nil];
     
     if ((self = [self initWithVertexShaderString:vShaderString fragmentShaderString:fragmentShaderString])) 
@@ -79,10 +80,10 @@ typedef void (*GLLogFunction) (GLuint program,
 - (id)initWithVertexShaderFilename:(NSString *)vShaderFilename 
             fragmentShaderFilename:(NSString *)fShaderFilename
 {
-    NSString *vertShaderPathname = [[NSBundle mainBundle] pathForResource:vShaderFilename ofType:@"vsh"];
+    NSString *vertShaderPathname = TGComponentsPathForResource(vShaderFilename, @"vsh");
     NSString *vertexShaderString = [NSString stringWithContentsOfFile:vertShaderPathname encoding:NSUTF8StringEncoding error:nil];
 
-    NSString *fragShaderPathname = [[NSBundle mainBundle] pathForResource:fShaderFilename ofType:@"fsh"];
+    NSString *fragShaderPathname = TGComponentsPathForResource(fShaderFilename, @"fsh");
     NSString *fragmentShaderString = [NSString stringWithContentsOfFile:fragShaderPathname encoding:NSUTF8StringEncoding error:nil];
     
     if ((self = [self initWithVertexShaderString:vertexShaderString fragmentShaderString:fragmentShaderString])) 

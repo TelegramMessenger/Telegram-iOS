@@ -118,7 +118,7 @@ typedef enum
     if (requiresShadow && _shadowView == nil)
     {
         _shadowView = [[UIImageView alloc] init];
-        _shadowView.image = [[UIImage imageNamed:@"PreviewSheetShadow"] resizableImageWithCapInsets:UIEdgeInsetsMake(42.0f, 42.0f, 42.0f, 42.0f)];
+        _shadowView.image = [TGComponentsImageNamed(@"PreviewSheetShadow") resizableImageWithCapInsets:UIEdgeInsetsMake(42.0f, 42.0f, 42.0f, 42.0f)];
         [_containerView addSubview:_shadowView];
     }
     
@@ -144,7 +144,7 @@ typedef enum
     
     
     [_arrowView removeFromSuperview];
-    _arrowView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"PreviewUpArrow"]];
+    _arrowView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PreviewUpArrow")];
     _arrowView.alpha = 0.0f;
     [_mainSheetView addSubview:_arrowView];
     
@@ -238,7 +238,7 @@ typedef enum
     
     if (!self.dontBlurOnPresentation || self.presentActionsImmediately)
     {
-        [TGHacks setApplicationStatusBarAlpha:0.0f];
+        [_context setApplicationStatusBarAlpha:0.0f];
         [self performAppearBackgroundTransition:completionBlock];
     }
     
@@ -287,7 +287,7 @@ typedef enum
     {
         [UIView animateWithDuration:0.22 delay:0.0 options:UIViewAnimationOptionCurveEaseOut animations:^
         {
-            [TGHacks setApplicationStatusBarAlpha:1.0f];
+            [_context setApplicationStatusBarAlpha:1.0f];
             
             _blurView.alpha = 0.0f;
         } completion:^(__unused BOOL finished)
@@ -297,7 +297,7 @@ typedef enum
     }
     else
     {
-        [TGHacks setApplicationStatusBarAlpha:1.0f];
+        [_context setApplicationStatusBarAlpha:1.0f];
         completionBlock();
     }
 }

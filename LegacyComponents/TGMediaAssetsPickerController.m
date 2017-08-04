@@ -72,7 +72,7 @@
             break;
     }
     
-    self = [super initWithSelectionContext:hasSelection ? selectionContext : nil editingContext:hasEditing ? editingContext : nil];
+    self = [super initWithContext:context selectionContext:hasSelection ? selectionContext : nil editingContext:hasEditing ? editingContext : nil];
     if (self != nil)
     {
         _context = context;
