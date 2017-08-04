@@ -1,11 +1,18 @@
 //
 //  ASDisplayNode+Subclasses.h
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <pthread.h>
@@ -115,7 +122,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @warning Subclasses must not override this; it returns the last cached layout and is never expensive.
  */
-@property (nullable, nonatomic, readonly, assign) ASLayout *calculatedLayout;
+@property (nullable, nonatomic, readonly, strong) ASLayout *calculatedLayout;
 
 #pragma mark - View Lifecycle
 /** @name View Lifecycle */
@@ -272,9 +279,9 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @note Called on the display queue and/or main queue (MUST BE THREAD SAFE)
  */
-+ (void)drawRect:(CGRect)bounds withParameters:(nullable id <NSObject>)parameters
+/*+ (void)drawRect:(CGRect)bounds withParameters:(nullable id)parameters
                                    isCancelled:(AS_NOESCAPE asdisplaynode_iscancelled_block_t)isCancelledBlock
-                                 isRasterizing:(BOOL)isRasterizing;
+                                 isRasterizing:(BOOL)isRasterizing;*/
 
 /**
  * @summary Delegate override to provide new layer contents as a UIImage.
@@ -289,7 +296,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @note Called on the display queue and/or main queue (MUST BE THREAD SAFE)
  */
-+ (nullable UIImage *)displayWithParameters:(nullable id<NSObject>)parameters
++ (nullable UIImage *)displayWithParameters:(nullable id)parameters
                                 isCancelled:(AS_NOESCAPE asdisplaynode_iscancelled_block_t)isCancelledBlock;
 
 /**
@@ -507,7 +514,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-#define ASDisplayNodeAssertThreadAffinity(viewNode)   ASDisplayNodeAssert(!viewNode || ASDisplayNodeThreadIsMain() || !(viewNode).nodeLoaded, @"Incorrect display node thread affinity - this method should not be called off the main thread after the ASDisplayNode's view or layer have been created")
-#define ASDisplayNodeCAssertThreadAffinity(viewNode) ASDisplayNodeCAssert(!viewNode || ASDisplayNodeThreadIsMain() || !(viewNode).nodeLoaded, @"Incorrect display node thread affinity - this method should not be called off the main thread after the ASDisplayNode's view or layer have been created")
+#define ASDisplayNodeAssertThreadAffinity(viewNode)   ASDisplayNodeAssert(!viewNode || ASMainThreadAssertionsAreDisabled() || ASDisplayNodeThreadIsMain() || !(viewNode).nodeLoaded, @"Incorrect display node thread affinity - this method should not be called off the main thread after the ASDisplayNode's view or layer have been created")
+#define ASDisplayNodeCAssertThreadAffinity(viewNode) ASDisplayNodeCAssert(!viewNode || ASMainThreadAssertionsAreDisabled() || ASDisplayNodeThreadIsMain() || !(viewNode).nodeLoaded, @"Incorrect display node thread affinity - this method should not be called off the main thread after the ASDisplayNode's view or layer have been created")
 
 NS_ASSUME_NONNULL_END

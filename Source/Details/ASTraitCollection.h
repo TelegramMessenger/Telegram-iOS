@@ -1,22 +1,27 @@
 //
 //  ASTraitCollection.h
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <AsyncDisplayKit/ASAvailability.h>
-
-#if AS_TARGET_OS_IOS
 
 #import <UIKit/UIKit.h>
 #import <AsyncDisplayKit/ASBaseDefines.h>
 
 @class ASTraitCollection;
 @protocol ASLayoutElement;
+@protocol ASTraitEnvironment;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -59,7 +64,7 @@ extern NSString *NSStringFromASPrimitiveTraitCollection(ASPrimitiveTraitCollecti
  * This function will walk the layout element hierarchy and updates the layout element trait collection for every
  * layout element within the hierarchy.
  */
-extern void ASTraitCollectionPropagateDown(id<ASLayoutElement> root, ASPrimitiveTraitCollection traitCollection);
+extern void ASTraitCollectionPropagateDown(id<ASLayoutElement> element, ASPrimitiveTraitCollection traitCollection);
 
 /// For backward compatibility reasons we redefine the old layout element trait collection struct name
 #define ASEnvironmentTraitCollection ASPrimitiveTraitCollection
@@ -84,7 +89,6 @@ ASDISPLAYNODE_EXTERN_C_END
 - (void)setPrimitiveTraitCollection:(ASPrimitiveTraitCollection)traitCollection;
 
 /**
- * Returns an NSObject-representation of the environment's ASEnvironmentDisplayTraits
  */
 - (ASTraitCollection *)asyncTraitCollection;
 
@@ -96,6 +100,16 @@ ASDISPLAYNODE_EXTERN_C_END
 
 
 @end
+
+#define ASPrimitiveTraitCollectionDefaults \
+- (ASPrimitiveTraitCollection)primitiveTraitCollection\
+{\
+  return _primitiveTraitCollection.load();\
+}\
+- (void)setPrimitiveTraitCollection:(ASPrimitiveTraitCollection)traitCollection\
+{\
+  _primitiveTraitCollection = traitCollection;\
+}\
 
 #define ASPrimitiveTraitCollectionDeprecatedImplementation \
 - (ASEnvironmentTraitCollection)environmentTraitCollection\
@@ -158,9 +172,3 @@ AS_SUBCLASSING_RESTRICTED
 @end
 
 NS_ASSUME_NONNULL_END
-
-#else
-
-// Non iOS
-
-#endif

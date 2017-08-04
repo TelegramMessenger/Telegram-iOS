@@ -98,7 +98,20 @@ static const CGFloat kInnerPadding = 10.0f;
   [self addSubnode:_imageNode];
   
   // lorem ipsum text, plus some nice styling
+
   _textNode = [[ASTextNode alloc] init];
+  _textNode.shadowColor = [UIColor blackColor].CGColor;
+  _textNode.shadowRadius = 3;
+  _textNode.shadowOffset = CGSizeMake(-2, -2);
+  _textNode.shadowOpacity = 0.3;
+  if (_textNode.usingExperiment) {
+    _textNode.backgroundColor = [UIColor colorWithRed:0.9 green:0.9 blue:1 alpha:1];
+  } else {
+    _textNode.backgroundColor = [UIColor colorWithRed:1 green:0.9 blue:0.9 alpha:1];
+  }
+  _textNode.maximumNumberOfLines = 2;
+  _textNode.truncationAttributedText = [[NSAttributedString alloc] initWithString:@"…"];
+  _textNode.additionalTruncationMessage = [[NSAttributedString alloc] initWithString:@"More"];
   _textNode.attributedText = [[NSAttributedString alloc] initWithString:[self kittyIpsum] attributes:[self textStyle]];
   [self addSubnode:_textNode];
   

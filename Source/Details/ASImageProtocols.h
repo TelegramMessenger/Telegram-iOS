@@ -1,11 +1,18 @@
 //
 //  ASImageProtocols.h
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <UIKit/UIKit.h>
@@ -110,6 +117,17 @@ typedef NS_ENUM(NSUInteger, ASImageDownloaderPriority) {
 @optional
 
 /**
+ @abstract Cancels an image download, however indicating resume data should be stored in case of redownload.
+ @param downloadIdentifier The opaque download identifier object returned from
+ `downloadImageWithURL:callbackQueue:downloadProgressBlock:completion:`.
+ @discussion This method has no effect if `downloadIdentifier` is nil. If implemented, this method
+ may be called instead of `cancelImageDownloadForIdentifier:` in cases where ASDK believes there's a chance
+ the image download will be resumed (currently when an image exits preload range). You can use this to store
+ any data that has already been downloaded for use in resuming the download later.
+ */
+- (void)cancelImageDownloadWithResumePossibilityForIdentifier:(id)downloadIdentifier;
+
+/**
  @abstract Return an object that conforms to ASAnimatedImageProtocol
  @param animatedImageData Data that represents an animated image.
  */
@@ -145,7 +163,7 @@ withDownloadIdentifier:(id)downloadIdentifier;
 /**
  @abstract A block which receives the cover image. Should be called when the objects cover image is ready.
  */
-@property (nonatomic, strong, readwrite) void (^coverImageReadyCallback)(UIImage *coverImage);
+@property (nonatomic, readwrite) void (^coverImageReadyCallback)(UIImage *coverImage);
 
 /**
  @abstract Returns whether the supplied data contains a supported animated image format.
@@ -191,7 +209,7 @@ withDownloadIdentifier:(id)downloadIdentifier;
 /**
  @abstract Should be called when playback is ready.
  */
-@property (nonatomic, strong, readwrite) dispatch_block_t playbackReadyCallback;
+@property (nonatomic, readwrite) dispatch_block_t playbackReadyCallback;
 
 /**
  @abstract Return the image at a given index.

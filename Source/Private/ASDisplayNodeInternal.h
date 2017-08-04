@@ -1,11 +1,18 @@
 //
 //  ASDisplayNodeInternal.h
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 //
@@ -27,11 +34,10 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol _ASDisplayLayerDelegate;
 @class _ASDisplayLayer;
 @class _ASPendingState;
-@class ASSentinel;
 struct ASDisplayNodeFlags;
 
 BOOL ASDisplayNodeSubclassOverridesSelector(Class subclass, SEL selector);
-BOOL ASDisplayNodeNeedsSpecialPropertiesHandlingForFlags(ASDisplayNodeFlags flags);
+BOOL ASDisplayNodeNeedsSpecialPropertiesHandling(BOOL isSynchronous, BOOL isLayerBacked);
 
 /// Get the pending view state for the node, creating one if needed.
 _ASPendingState * ASDisplayNodeGetPendingState(ASDisplayNode * node);
@@ -44,9 +50,22 @@ typedef NS_OPTIONS(NSUInteger, ASDisplayNodeMethodOverrides)
   ASDisplayNodeMethodOverrideTouchesEnded       = 1 << 2,
   ASDisplayNodeMethodOverrideTouchesMoved       = 1 << 3,
   ASDisplayNodeMethodOverrideLayoutSpecThatFits = 1 << 4,
-  ASDisplayNodeMethodOverrideFetchData          = 1 << 5,
-  ASDisplayNodeMethodOverrideClearFetchedData   = 1 << 6
+  ASDisplayNodeMethodOverrideCalcLayoutThatFits = 1 << 5,
+  ASDisplayNodeMethodOverrideCalcSizeThatFits   = 1 << 6,
+  ASDisplayNodeMethodOverrideFetchData          = 1 << 7,
+  ASDisplayNodeMethodOverrideClearFetchedData   = 1 << 8
 };
+
+typedef NS_OPTIONS(uint_least32_t, ASDisplayNodeAtomicFlags)
+{
+  Synchronous = 1 << 0,
+  YogaLayoutInProgress = 1 << 1,
+};
+
+#define checkFlag(flag) ((_atomicFlags.load() & flag) != 0)
+// Returns the old value of the flag as a BOOL.
+#define setFlag(flag, x) (((x ? _atomicFlags.fetch_or(flag) \
+                              : _atomicFlags.fetch_and(~flag)) & flag) != 0)
 
 FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayScheduledNodesNotification;
 FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimestamp;
@@ -56,7 +75,7 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 
 #define TIME_DISPLAYNODE_OPS 0 // If you're using this information frequently, try: (DEBUG || PROFILE)
 
-@interface ASDisplayNode ()
+@interface ASDisplayNode () <_ASTransitionContextCompletionDelegate>
 {
 @package
   _ASPendingState *_pendingViewState;
@@ -64,16 +83,17 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   UIView *_view;
   CALayer *_layer;
 
+  std::atomic<ASDisplayNodeAtomicFlags> _atomicFlags;
+
   struct ASDisplayNodeFlags {
     // public properties
-    unsigned synchronous:1;
+    unsigned viewEverHadAGestureRecognizerAttached:1;
     unsigned layerBacked:1;
     unsigned displaysAsynchronously:1;
-    unsigned shouldRasterizeDescendants:1;
+    unsigned rasterizesSubtree:1;
     unsigned shouldBypassEnsureDisplay:1;
     unsigned displaySuspended:1;
     unsigned shouldAnimateSizeChanges:1;
-    unsigned hasCustomDrawingPriority:1;
     
     // Wrapped view handling
     
@@ -89,10 +109,7 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
     // methods at all instead it throws away the contents of the layer and nothing will show up.
     unsigned canCallSetNeedsDisplayOfLayer:1;
 
-    // whether custom drawing is enabled
-    unsigned implementsInstanceDrawRect:1;
     unsigned implementsDrawRect:1;
-    unsigned implementsInstanceImageDisplay:1;
     unsigned implementsImageDisplay:1;
     unsigned implementsDrawParameters:1;
 
@@ -108,13 +125,17 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   ASDisplayNode * __weak _supernode;
   NSMutableArray<ASDisplayNode *> *_subnodes;
 
+  // Set this to nil whenever you modify _subnodes
+  NSArray<ASDisplayNode *> *_cachedSubnodes;
+
   ASLayoutElementStyle *_style;
-  ASPrimitiveTraitCollection _primitiveTraitCollection;
+  std::atomic<ASPrimitiveTraitCollection> _primitiveTraitCollection;
 
   std::atomic_uint _displaySentinel;
 
   // This is the desired contentsScale, not the scale at which the layer's contents should be displayed
   CGFloat _contentsScaleForDisplay;
+  ASDisplayNodeMethodOverrides _methodOverrides;
 
   UIEdgeInsets _hitTestSlop;
   
@@ -128,22 +149,28 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   NSTimeInterval _defaultLayoutTransitionDuration;
   NSTimeInterval _defaultLayoutTransitionDelay;
   UIViewAnimationOptions _defaultLayoutTransitionOptions;
-
-  int32_t _transitionID;
-  BOOL _transitionInProgress;
   
-  int32_t _pendingTransitionID;
+  ASLayoutSpecBlock _layoutSpecBlock;
+
+  std::atomic<int32_t> _transitionID;
+  
+  std::atomic<int32_t> _pendingTransitionID;
   ASLayoutTransition *_pendingLayoutTransition;
   std::shared_ptr<ASDisplayNodeLayout> _calculatedDisplayNodeLayout;
   std::shared_ptr<ASDisplayNodeLayout> _pendingDisplayNodeLayout;
   
+  /// Sentinel for layout data. Incremented when we get -setNeedsLayout / -invalidateCalculatedLayout.
+  /// Starts at 1.
+  std::atomic<NSUInteger> _layoutVersion;
+  
   ASDisplayNodeViewBlock _viewBlock;
   ASDisplayNodeLayerBlock _layerBlock;
   NSMutableArray<ASDisplayNodeDidLoadBlock> *_onDidLoadBlocks;
-  Class _viewClass;
-  Class _layerClass;
+  Class _viewClass; // nil -> _ASDisplayView
+  Class _layerClass; // nil -> _ASDisplayLayer
   
   UIImage *_placeholderImage;
+  BOOL _placeholderEnabled;
   CALayer *_placeholderLayer;
 
   // keeps track of nodes/subnodes that have not finished display, used with placeholders
@@ -177,11 +204,18 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   NSInteger _layoutComputationNumberOfPasses;
 
 #if YOGA
-  YGNodeRef _yogaNode;
-  ASDisplayNode *_yogaParent;
+  // Only ASDisplayNodes are supported in _yogaChildren currently. This means that it is necessary to
+  // create ASDisplayNodes to make a stack layout when using Yoga.
+  // However, the implementation is mostly ready for id <ASLayoutElement>, with a few areas requiring updates.
   NSMutableArray<ASDisplayNode *> *_yogaChildren;
+  __weak ASDisplayNode *_yogaParent;
   ASLayout *_yogaCalculatedLayout;
 #endif
+  
+  NSString *_debugName;
+
+#pragma mark - ASDisplayNode (Debugging)
+  ASLayout *_unflattenedLayout;
 
 #if TIME_DISPLAYNODE_OPS
 @public
@@ -211,7 +245,9 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 - (void)__setNeedsDisplay;
 
 /**
- * Called from [CALayer layoutSublayers:]. Executes the layout pass for the node
+ * Called whenever the node needs to layout its subnodes and, if it's already loaded, its subviews. Executes the layout pass for the node
+ *
+ * This method is thread-safe but asserts thread affinity.
  */
 - (void)__layout;
 
@@ -272,16 +308,14 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 - (nullable ASDisplayNode *)_supernodeWithClass:(Class)supernodeClass checkViewHierarchy:(BOOL)checkViewHierarchy;
 
 /**
- *  Convenience method to access this node's trait collection struct. Externally, users should interact
- *  with the trait collection via ASTraitCollection
+ * Whether this node rasterizes its descendants. See -enableSubtreeRasterization.
  */
-- (ASPrimitiveTraitCollection)primitiveTraitCollection;
+@property (atomic, readonly) BOOL rasterizesSubtree;
 
 /**
- * This is a non-deprecated internal declaration of the property. Public declaration
- * is in ASDisplayNode+Beta.h
+ * Called if a gesture recognizer was attached to an _ASDisplayView
  */
-@property (nonatomic, assign) BOOL shouldRasterizeDescendants;
+- (void)nodeViewDidAddGestureRecognizer;
 
 @end
 

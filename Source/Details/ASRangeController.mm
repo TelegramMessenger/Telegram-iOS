@@ -1,11 +1,18 @@
 //
 //  ASRangeController.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
@@ -19,6 +26,7 @@
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h> // Required for interfaceState and hierarchyState setter methods.
 #import <AsyncDisplayKit/ASElementMap.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
+#import <AsyncDisplayKit/ASSignpost.h>
 #import <AsyncDisplayKit/ASTwoDimensionalArrayUtils.h>
 #import <AsyncDisplayKit/ASWeakSet.h>
 
@@ -36,7 +44,7 @@
   BOOL _rangeIsValid;
   BOOL _needsRangeUpdate;
   NSSet<NSIndexPath *> *_allPreviousIndexPaths;
-  ASWeakSet<ASCellNode *> *_visibleNodes;
+  NSHashTable<ASCellNode *> *_visibleNodes;
   ASLayoutRangeMode _currentRangeMode;
   BOOL _preserveCurrentRangeMode;
   BOOL _didRegisterForNodeDisplayNotifications;
@@ -185,7 +193,7 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
 // NOTE: There is a minor risk here, if a node is transferred from one range controller
 // to another before the first rc updates and clears the node out of this set. It's a pretty
 // wild scenario that I doubt happens in practice.
-- (void)_setVisibleNodes:(ASWeakSet *)newVisibleNodes
+- (void)_setVisibleNodes:(NSHashTable *)newVisibleNodes
 {
   for (ASCellNode *node in _visibleNodes) {
     if (![newVisibleNodes containsObject:node] && node.isVisible) {
@@ -197,6 +205,8 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
 
 - (void)_updateVisibleNodeIndexPaths
 {
+  as_activity_scope_verbose(as_activity_create("Update range controller", AS_ACTIVITY_CURRENT, OS_ACTIVITY_FLAG_DEFAULT));
+  as_log_verbose(ASCollectionLog(), "Updating ranges for %@", ASViewToDisplayNode(ASDynamicCast(self.delegate, UIView)));
   ASDisplayNodeAssert(_layoutController, @"An ASLayoutController is required by ASRangeController");
   if (!_layoutController || !_dataSource) {
     return;
@@ -210,14 +220,14 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
 
   // TODO: Consider if we need to use this codepath, or can rely on something more similar to the data & display ranges
   // Example: ... = [_layoutController indexPathsForScrolling:scrollDirection rangeType:ASLayoutRangeTypeVisible];
-  NSSet<ASCollectionElement *> *visibleElements = [NSSet setWithArray:[_dataSource visibleElementsForRangeController:self]];
-  ASWeakSet *newVisibleNodes = [[ASWeakSet alloc] init];
+  auto visibleElements = [_dataSource visibleElementsForRangeController:self];
+  NSHashTable *newVisibleNodes = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
 
   if (visibleElements.count == 0) { // if we don't have any visibleNodes currently (scrolled before or after content)...
     [self _setVisibleNodes:newVisibleNodes];
     return; // don't do anything for this update, but leave _rangeIsValid == NO to make sure we update it later
   }
-  ASProfilingSignpostStart(1, self);
+  ASSignpostStart(ASSignpostRangeControllerUpdate);
 
   // Get the scroll direction. Default to using the previous one, if they're not scrolling.
   ASScrollDirection scrollDirection = [_dataSource scrollDirectionForRangeController:self];
@@ -249,14 +259,14 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
   // Check if both Display and Preload are unique. If they are, we load them with a single fetch from the layout controller for performance.
   BOOL optimizedLoadingOfBothRanges = (equalDisplayPreload == NO && equalDisplayVisible == NO && emptyDisplayRange == NO);
 
-  NSSet<ASCollectionElement *> *displayElements = nil;
-  NSSet<ASCollectionElement *> *preloadElements = nil;
+  NSHashTable<ASCollectionElement *> *displayElements = nil;
+  NSHashTable<ASCollectionElement *> *preloadElements = nil;
   
   if (optimizedLoadingOfBothRanges) {
     [_layoutController allElementsForScrolling:scrollDirection rangeMode:rangeMode displaySet:&displayElements preloadSet:&preloadElements map:map];
   } else {
     if (emptyDisplayRange == YES) {
-      displayElements = [NSSet set];
+      displayElements = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
     } if (equalDisplayVisible == YES) {
       displayElements = visibleElements;
     } else {
@@ -406,7 +416,7 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
   NSLog(@"Range update complete; modifiedIndexPaths: %@", [self descriptionWithIndexPaths:modifiedIndexPaths]);
 #endif
   
-  ASProfilingSignpostEnd(1, self);
+  ASSignpostEnd(ASSignpostRangeControllerUpdate);
 }
 
 #pragma mark - Notification observers
@@ -493,11 +503,11 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
   [_delegate rangeController:self willUpdateWithChangeSet:changeSet];
 }
 
-- (void)dataController:(ASDataController *)dataController didUpdateWithChangeSet:(_ASHierarchyChangeSet *)changeSet
+- (void)dataController:(ASDataController *)dataController didUpdateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates
 {
   ASDisplayNodeAssertMainThread();
   _rangeIsValid = NO;
-  [_delegate rangeController:self didUpdateWithChangeSet:changeSet];
+  [_delegate rangeController:self didUpdateWithChangeSet:changeSet updates:updates];
 }
 
 #pragma mark - Memory Management

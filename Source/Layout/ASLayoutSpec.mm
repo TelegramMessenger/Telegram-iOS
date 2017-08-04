@@ -1,11 +1,18 @@
 //
 //  ASLayoutSpec.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASLayoutSpec.h>
@@ -16,7 +23,6 @@
 #import <AsyncDisplayKit/ASLayoutElementStylePrivate.h>
 #import <AsyncDisplayKit/ASTraitCollection.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
-#import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 
 #import <objc/runtime.h>
@@ -49,9 +55,7 @@
   }
   
   _isMutable = YES;
-#if AS_TARGET_OS_IOS
   _primitiveTraitCollection = ASPrimitiveTraitCollectionMakeDefault();
-#endif
   _childrenArray = [[NSMutableArray alloc] init];
   
   return self;
@@ -67,9 +71,10 @@
   return YES;
 }
 
-#pragma mark - Final LayoutElement
-
-ASLayoutElementFinalLayoutElementDefault
+- (BOOL)implementsLayoutMethod
+{
+  return YES;
+}
 
 #pragma mark - Style
 
@@ -90,23 +95,7 @@ ASLayoutElementFinalLayoutElementDefault
 
 #pragma mark - Layout
 
-- (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize
-{
-  return [self layoutThatFits:constrainedSize parentSize:constrainedSize.max];
-}
-
-- (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize parentSize:(CGSize)parentSize
-{
-  return [self calculateLayoutThatFits:constrainedSize restrictedToSize:self.style.size relativeToParentSize:parentSize];
-}
-
-- (ASLayout *)calculateLayoutThatFits:(ASSizeRange)constrainedSize
-                     restrictedToSize:(ASLayoutElementSize)size
-                 relativeToParentSize:(CGSize)parentSize
-{
-  const ASSizeRange resolvedRange = ASSizeRangeIntersect(constrainedSize, ASLayoutElementSizeResolve(self.style.size, parentSize));
-  return [self calculateLayoutThatFits:resolvedRange];
-}
+ASLayoutElementLayoutCalculationDefaults
 
 - (ASLayout *)calculateLayoutThatFits:(ASSizeRange)constrainedSize
 {
@@ -121,10 +110,7 @@ ASLayoutElementFinalLayoutElementDefault
   ASDisplayNodeAssert(_childrenArray.count < 2, @"This layout spec does not support more than one child. Use the setChildren: or the setChild:AtIndex: API");
  
   if (child) {
-    id<ASLayoutElement> finalLayoutElement = [self layoutElementToAddFromLayoutElement:child];
-    if (finalLayoutElement) {
-      _childrenArray[0] = finalLayoutElement;
-    }
+    _childrenArray[0] = child;
   } else {
     if (_childrenArray.count) {
       [_childrenArray removeObjectAtIndex:0];
@@ -150,7 +136,7 @@ ASLayoutElementFinalLayoutElementDefault
   NSUInteger i = 0;
   for (id<ASLayoutElement> child in children) {
     ASDisplayNodeAssert([child conformsToProtocol:NSProtocolFromString(@"ASLayoutElement")], @"Child %@ of spec %@ is not an ASLayoutElement!", child, self);
-    _childrenArray[i] = [self layoutElementToAddFromLayoutElement:child];
+    _childrenArray[i] = child;
     i += 1;
   }
 }
@@ -174,41 +160,45 @@ ASLayoutElementFinalLayoutElementDefault
 
 #pragma mark - ASTraitEnvironment
 
-#if AS_TARGET_OS_IOS
-
-- (ASPrimitiveTraitCollection)primitiveTraitCollection
-{
-  return _primitiveTraitCollection;
-}
-
-- (void)setPrimitiveTraitCollection:(ASPrimitiveTraitCollection)traitCollection
-{
-  _primitiveTraitCollection = traitCollection;
-}
-
 - (ASTraitCollection *)asyncTraitCollection
 {
   ASDN::MutexLocker l(__instanceLock__);
   return [ASTraitCollection traitCollectionWithASPrimitiveTraitCollection:self.primitiveTraitCollection];
 }
 
-#endif
-
-#if AS_TARGET_OS_IOS
+ASPrimitiveTraitCollectionDefaults
 ASPrimitiveTraitCollectionDeprecatedImplementation
-#endif
 
 #pragma mark - ASLayoutElementStyleExtensibility
 
 ASLayoutElementStyleExtensibilityForwarding
 
+#pragma mark - ASDescriptionProvider
+
+- (NSMutableArray<NSDictionary *> *)propertiesForDescription
+{
+  auto result = [NSMutableArray<NSDictionary *> array];
+  if (NSArray *children = self.children) {
+    // Use tiny descriptions because these trees can get nested very deep.
+    auto tinyDescriptions = ASArrayByFlatMapping(children, id object, ASObjectDescriptionMakeTiny(object));
+    [result addObject:@{ @"children": tinyDescriptions }];
+  }
+  return result;
+}
+
+- (NSString *)description
+{
+  return ASObjectDescriptionMake(self, [self propertiesForDescription]);
+}
+
 #pragma mark - Framework Private
 
-- (nullable NSSet<id<ASLayoutElement>> *)findDuplicatedElementsInSubtree
+#if AS_DEDUPE_LAYOUT_SPEC_TREE
+- (nullable NSHashTable<id<ASLayoutElement>> *)findDuplicatedElementsInSubtree
 {
-  NSMutableSet *result = nil;
+  NSHashTable *result = nil;
   NSUInteger count = 0;
-  [self _findDuplicatedElementsInSubtreeWithWorkingSet:[[NSMutableSet alloc] init] workingCount:&count result:&result];
+  [self _findDuplicatedElementsInSubtreeWithWorkingSet:[NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality] workingCount:&count result:&result];
   return result;
 }
 
@@ -219,7 +209,7 @@ ASLayoutElementStyleExtensibilityForwarding
  * @param workingCount The current count of the set for use in the recursion.
  * @param result The set into which to put the result. This initially points to @c nil to save time if no duplicates exist.
  */
-- (void)_findDuplicatedElementsInSubtreeWithWorkingSet:(NSMutableSet<id<ASLayoutElement>> *)workingSet workingCount:(NSUInteger *)workingCount result:(NSMutableSet<id<ASLayoutElement>>  * _Nullable *)result
+- (void)_findDuplicatedElementsInSubtreeWithWorkingSet:(NSHashTable<id<ASLayoutElement>> *)workingSet workingCount:(NSUInteger *)workingCount result:(NSHashTable<id<ASLayoutElement>>  * _Nullable *)result
 {
   Class layoutSpecClass = [ASLayoutSpec class];
 
@@ -234,7 +224,7 @@ ASLayoutElementStyleExtensibilityForwarding
     BOOL objectAlreadyExisted = (newCount != oldCount + 1);
     if (objectAlreadyExisted) {
       if (*result == nil) {
-        *result = [[NSMutableSet alloc] init];
+        *result = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
       }
       [*result addObject:child];
     } else {
@@ -246,6 +236,7 @@ ASLayoutElementStyleExtensibilityForwarding
     }
   }
 }
+#endif
 
 #pragma mark - Debugging
 
@@ -263,11 +254,21 @@ ASLayoutElementStyleExtensibilityForwarding
   }
 }
 
-#pragma mark - Deprecated
+#pragma mark - ASLayoutElementAsciiArtProtocol
 
-- (ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize
+- (NSString *)asciiArtString
 {
-  return [self layoutThatFits:constrainedSize];
+  NSArray *children = self.children.count < 2 && self.child ? @[self.child] : self.children;
+  return [ASLayoutSpec asciiArtStringForChildren:children parentName:[self asciiArtName]];
+}
+
+- (NSString *)asciiArtName
+{
+  NSMutableString *result = [NSMutableString stringWithCString:object_getClassName(self) encoding:NSASCIIStringEncoding];
+  if (_debugName) {
+    [result appendFormat:@" (%@)", _debugName];
+  }
+  return result;
 }
 
 @end
@@ -329,7 +330,7 @@ ASLayoutElementStyleExtensibilityForwarding
 
 @implementation ASLayoutSpec (Debugging)
 
-#pragma mark - ASLayoutElementAsciiArtProtocol
+#pragma mark - ASCII Art Helpers
 
 + (NSString *)asciiArtStringForChildren:(NSArray *)children parentName:(NSString *)parentName direction:(ASStackLayoutDirection)direction
 {
@@ -349,21 +350,6 @@ ASLayoutElementStyleExtensibilityForwarding
 + (NSString *)asciiArtStringForChildren:(NSArray *)children parentName:(NSString *)parentName
 {
   return [self asciiArtStringForChildren:children parentName:parentName direction:ASStackLayoutDirectionHorizontal];
-}
-
-- (NSString *)asciiArtString
-{
-  NSArray *children = self.children.count < 2 && self.child ? @[self.child] : self.children;
-  return [ASLayoutSpec asciiArtStringForChildren:children parentName:[self asciiArtName]];
-}
-
-- (NSString *)asciiArtName
-{
-  NSString *string = NSStringFromClass([self class]);
-  if (_debugName) {
-    string = [string stringByAppendingString:[NSString stringWithFormat:@" (debugName = %@)",_debugName]];
-  }
-  return string;
 }
 
 @end

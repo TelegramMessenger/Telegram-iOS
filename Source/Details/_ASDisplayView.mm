@@ -1,11 +1,18 @@
 //
 //  _ASDisplayView.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/_ASDisplayView.h>
@@ -51,7 +58,7 @@
   ASDisplayNode *node = _asyncdisplaykit_node;
 
   if (node != nil) {
-    NSString *classString = [NSString stringWithFormat:@"%@-", [node class]];
+    NSString *classString = [NSString stringWithFormat:@"%s-", object_getClassName(node)];
     [description replaceOccurrencesOfString:@"_ASDisplay" withString:classString options:kNilOptions range:NSMakeRange(0, description.length)];
     NSUInteger semicolon = [description rangeOfString:@";"].location;
     if (semicolon != NSNotFound) {
@@ -237,6 +244,12 @@
   node.threadSafeBounds = bounds;
 }
 
+- (void)addGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
+{
+  [super addGestureRecognizer:gestureRecognizer];
+  [_asyncdisplaykit_node nodeViewDidAddGestureRecognizer];
+}
+
 #pragma mark - Event Handling + UIResponder Overrides
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
@@ -342,20 +355,20 @@
 
 - (void)tintColorDidChange
 {
-    ASDisplayNode *node = _asyncdisplaykit_node; // Create strong reference to weak ivar.
-    [super tintColorDidChange];
-    
-    [node tintColorDidChange];
+  ASDisplayNode *node = _asyncdisplaykit_node; // Create strong reference to weak ivar.
+  [super tintColorDidChange];
+  
+  [node tintColorDidChange];
 }
 
 - (BOOL)canBecomeFirstResponder {
-    ASDisplayNode *node = _asyncdisplaykit_node; // Create strong reference to weak ivar.
-    return [node canBecomeFirstResponder];
+  ASDisplayNode *node = _asyncdisplaykit_node; // Create strong reference to weak ivar.
+  return [node canBecomeFirstResponder];
 }
 
 - (BOOL)canResignFirstResponder {
-    ASDisplayNode *node = _asyncdisplaykit_node; // Create strong reference to weak ivar.
-    return [node canResignFirstResponder];
+  ASDisplayNode *node = _asyncdisplaykit_node; // Create strong reference to weak ivar.
+  return [node canResignFirstResponder];
 }
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender

@@ -1,9 +1,18 @@
 //
 //  ASRectTable.m
-//  AsyncDisplayKit
+//  Texture
 //
-//  Created by Adlai Holler on 2/24/17.
-//  Copyright © 2017 Facebook. All rights reserved.
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ASRectTable.h"
@@ -16,7 +25,7 @@ static NSUInteger ASRectSize(const void *ptr)
 
 @implementation NSMapTable (ASRectTableMethods)
 
-+ (instancetype)rectTableWithKeyPointerFunctions:(NSPointerFunctions *)keyFuncs
++ (NSMapTable *)rectTableWithKeyPointerFunctions:(NSPointerFunctions *)keyFuncs
 {
   static NSPointerFunctions *cgRectFuncs;
   static dispatch_once_t onceToken;
@@ -28,7 +37,7 @@ static NSUInteger ASRectSize(const void *ptr)
   return [[NSMapTable alloc] initWithKeyPointerFunctions:keyFuncs valuePointerFunctions:cgRectFuncs capacity:0];
 }
 
-+ (instancetype)rectTableForStrongObjectPointers
++ (NSMapTable *)rectTableForStrongObjectPointers
 {
   static NSPointerFunctions *strongObjectPointerFuncs;
   static dispatch_once_t onceToken;
@@ -38,7 +47,7 @@ static NSUInteger ASRectSize(const void *ptr)
   return [self rectTableWithKeyPointerFunctions:strongObjectPointerFuncs];
 }
 
-+ (instancetype)rectTableForWeakObjectPointers
++ (NSMapTable *)rectTableForWeakObjectPointers
 {
   static NSPointerFunctions *weakObjectPointerFuncs;
   static dispatch_once_t onceToken;

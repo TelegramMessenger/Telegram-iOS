@@ -1,11 +1,18 @@
 //
 //  ASDisplayNode+UIViewBridge.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
@@ -40,7 +47,6 @@
 #if DISPLAYNODE_USE_LOCKS
 #define _bridge_prologue_read ASDN::MutexLocker l(__instanceLock__); ASDisplayNodeAssertThreadAffinity(self)
 #define _bridge_prologue_write ASDN::MutexLocker l(__instanceLock__)
-#define _bridge_prologue_write_unlock ASDN::MutexUnlocker u(__instanceLock__)
 #else
 #define _bridge_prologue_read ASDisplayNodeAssertThreadAffinity(self)
 #define _bridge_prologue_write
@@ -50,6 +56,9 @@
 /// Side Effect: Registers the node with the shared ASPendingStateController if
 /// the property cannot be immediately applied and the node does not already have pending changes.
 /// This function must be called with the node's lock already held (after _bridge_prologue_write).
+/// *warning* the lock should *not* be released until the pending state is updated if this method
+/// returns NO. Otherwise, the pending state can be scheduled and flushed *before* you get a chance
+/// to apply it.
 ASDISPLAYNODE_INLINE BOOL ASDisplayNodeShouldApplyBridgedWriteToView(ASDisplayNode *node) {
   BOOL loaded = __loaded(node);
   if (ASDisplayNodeThreadIsMain()) {
@@ -78,8 +87,6 @@ if (shouldApply) { _view.viewAndPendingViewStateProperty = (viewAndPendingViewSt
 
 #define _setToLayer(layerProperty, layerValueExpr) BOOL shouldApply = ASDisplayNodeShouldApplyBridgedWriteToView(self); \
 if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNodeGetPendingState(self).layerProperty = (layerValueExpr); }
-
-#define _messageToViewOrLayer(viewAndLayerSelector) (_view ? [_view viewAndLayerSelector] : [_layer viewAndLayerSelector])
 
 /**
  * This category implements certain frequently-used properties and methods of UIView and CALayer so that ASDisplayNode clients can just call the view/layer methods on the node,
@@ -188,6 +195,42 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
   _setToLayer(cornerRadius, newCornerRadius);
 }
 
+- (NSString *)contentsGravity
+{
+  _bridge_prologue_read;
+  return _getFromLayer(contentsGravity);
+}
+
+- (void)setContentsGravity:(NSString *)newContentsGravity
+{
+  _bridge_prologue_write;
+  _setToLayer(contentsGravity, newContentsGravity);
+}
+
+- (CGRect)contentsRect
+{
+  _bridge_prologue_read;
+  return _getFromLayer(contentsRect);
+}
+
+- (void)setContentsRect:(CGRect)newContentsRect
+{
+  _bridge_prologue_write;
+  _setToLayer(contentsRect, newContentsRect);
+}
+
+- (CGRect)contentsCenter
+{
+  _bridge_prologue_read;
+  return _getFromLayer(contentsCenter);
+}
+
+- (void)setContentsCenter:(CGRect)newContentsCenter
+{
+  _bridge_prologue_write;
+  _setToLayer(contentsCenter, newContentsCenter);
+}
+
 - (CGFloat)contentsScale
 {
   _bridge_prologue_read;
@@ -198,6 +241,18 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 {
   _bridge_prologue_write;
   _setToLayer(contentsScale, newContentsScale);
+}
+
+- (CGFloat)rasterizationScale
+{
+  _bridge_prologue_read;
+  return _getFromLayer(rasterizationScale);
+}
+
+- (void)setRasterizationScale:(CGFloat)newRasterizationScale
+{
+  _bridge_prologue_write;
+  _setToLayer(rasterizationScale, newRasterizationScale);
 }
 
 - (CGRect)bounds
@@ -237,7 +292,7 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 
   // For classes like ASTableNode, ASCollectionNode, ASScrollNode and similar - make sure UIView gets setFrame:
   struct ASDisplayNodeFlags flags = _flags;
-  BOOL specialPropertiesHandling = ASDisplayNodeNeedsSpecialPropertiesHandlingForFlags(flags);
+  BOOL specialPropertiesHandling = ASDisplayNodeNeedsSpecialPropertiesHandling(checkFlag(Synchronous), flags.layerBacked);
 
   BOOL nodeLoaded = __loaded(self);
   BOOL isMainThread = ASDisplayNodeThreadIsMain();
@@ -301,17 +356,31 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 
 - (void)setNeedsDisplay
 {
-  _bridge_prologue_write;
-  if (_hierarchyState & ASHierarchyStateRasterized) {
+  BOOL isRasterized = NO;
+  BOOL shouldApply = NO;
+  id viewOrLayer = nil;
+  {
+    _bridge_prologue_write;
+    isRasterized = _hierarchyState & ASHierarchyStateRasterized;
+    shouldApply = ASDisplayNodeShouldApplyBridgedWriteToView(self);
+    viewOrLayer = _view ?: _layer;
+    
+    if (isRasterized == NO && shouldApply == NO) {
+      // We can't release the lock before applying to pending state, or it may be flushed before it can be applied.
+      [ASDisplayNodeGetPendingState(self) setNeedsDisplay];
+    }
+  }
+  
+  if (isRasterized) {
     ASPerformBlockOnMainThread(^{
       // The below operation must be performed on the main thread to ensure against an extremely rare deadlock, where a parent node
       // begins materializing the view / layer hierarchy (locking itself or a descendant) while this node walks up
-      // the tree and requires locking that node to access .shouldRasterizeDescendants.
+      // the tree and requires locking that node to access .rasterizesSubtree.
       // For this reason, this method should be avoided when possible.  Use _hierarchyState & ASHierarchyStateRasterized.
       ASDisplayNodeAssertMainThread();
       ASDisplayNode *rasterizedContainerNode = self.supernode;
       while (rasterizedContainerNode) {
-        if (rasterizedContainerNode.shouldRasterizeDescendants) {
+        if (rasterizedContainerNode.rasterizesSubtree) {
           break;
         }
         rasterizedContainerNode = rasterizedContainerNode.supernode;
@@ -319,14 +388,11 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
       [rasterizedContainerNode setNeedsDisplay];
     });
   } else {
-    BOOL shouldApply = ASDisplayNodeShouldApplyBridgedWriteToView(self);
     if (shouldApply) {
       // If not rasterized, and the node is loaded (meaning we certainly have a view or layer), send a
       // message to the view/layer first. This is because __setNeedsDisplay calls as scheduleNodeForDisplay,
       // which may call -displayIfNeeded. We want to ensure the needsDisplay flag is set now, and then cleared.
-      _messageToViewOrLayer(setNeedsDisplay);
-    } else {
-      [ASDisplayNodeGetPendingState(self) setNeedsDisplay];
+      [viewOrLayer setNeedsDisplay];
     }
     [self __setNeedsDisplay];
   }
@@ -334,29 +400,61 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 
 - (void)setNeedsLayout
 {
-  _bridge_prologue_write;
-  BOOL shouldApply = ASDisplayNodeShouldApplyBridgedWriteToView(self);
+  BOOL shouldApply = NO;
+  BOOL loaded = NO;
+  id viewOrLayer = nil;
+  {
+    _bridge_prologue_write;
+    shouldApply = ASDisplayNodeShouldApplyBridgedWriteToView(self);
+    loaded = __loaded(self);
+    viewOrLayer = _view ?: _layer;
+    if (shouldApply == NO && loaded) {
+      // The node is loaded but we're not on main.
+      // We will call [self __setNeedsLayout] when we apply the pending state.
+      // We need to call it on main if the node is loaded to support automatic subnode management.
+      // We can't release the lock before applying to pending state, or it may be flushed before it can be applied.
+      [ASDisplayNodeGetPendingState(self) setNeedsLayout];
+    }
+  }
+  
   if (shouldApply) {
     // The node is loaded and we're on main.
     // Quite the opposite of setNeedsDisplay, we must call __setNeedsLayout before messaging
     // the view or layer to ensure that measurement and implicitly added subnodes have been handled.
-    
-    // Calling __setNeedsLayout while holding the property lock can cause deadlocks
-    _bridge_prologue_write_unlock;
     [self __setNeedsLayout];
-    _bridge_prologue_write;
-    _messageToViewOrLayer(setNeedsLayout);
-  } else if (__loaded(self)) {
-    // The node is loaded but we're not on main.
-    // We will call [self __setNeedsLayout] when we apply
-    // the pending state. We need to call it on main if the node is loaded
-    // to support automatic subnode management.
-    [ASDisplayNodeGetPendingState(self) setNeedsLayout];
-  } else {
+    [viewOrLayer setNeedsLayout];
+  } else if (loaded == NO) {
     // The node is not loaded and we're not on main.
-    _bridge_prologue_write_unlock;
     [self __setNeedsLayout];
+  }
+}
+
+- (void)layoutIfNeeded
+{
+  BOOL shouldApply = NO;
+  BOOL loaded = NO;
+  id viewOrLayer = nil;
+  {
     _bridge_prologue_write;
+    shouldApply = ASDisplayNodeShouldApplyBridgedWriteToView(self);
+    loaded = __loaded(self);
+    viewOrLayer = _view ?: _layer;
+    if (shouldApply == NO && loaded) {
+      // The node is loaded but we're not on main.
+      // We will call layoutIfNeeded on the view or layer when we apply the pending state. __layout will in turn be called on us (see -[_ASDisplayLayer layoutSublayers]).
+      // We need to call it on main if the node is loaded to support automatic subnode management.
+      // We can't release the lock before applying to pending state, or it may be flushed before it can be applied.
+      [ASDisplayNodeGetPendingState(self) layoutIfNeeded];
+    }
+  }
+  
+  if (shouldApply) {
+    // The node is loaded and we're on main.
+    // Message the view or layer which in turn will call __layout on us (see -[_ASDisplayLayer layoutSublayers]).
+    [viewOrLayer layoutIfNeeded];
+  } else if (loaded == NO) {
+    // The node is not loaded and we're not on main.
+    [self __layout];
   }
 }
 
@@ -592,7 +690,7 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
   if (shouldApply) {
     CGColorRef oldBackgroundCGColor = CGColorRetain(_layer.backgroundColor);
     
-    BOOL specialPropertiesHandling = ASDisplayNodeNeedsSpecialPropertiesHandlingForFlags(_flags);
+    BOOL specialPropertiesHandling = ASDisplayNodeNeedsSpecialPropertiesHandling(checkFlag(Synchronous), _flags.layerBacked);
     if (specialPropertiesHandling) {
         _view.backgroundColor = newBackgroundColor;
     } else {
@@ -738,6 +836,26 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 {
   _bridge_prologue_write;
   _setToLayer(edgeAntialiasingMask, edgeAntialiasingMask);
+}
+
+- (UISemanticContentAttribute)semanticContentAttribute
+{
+  _bridge_prologue_read;
+  if (AS_AT_LEAST_IOS9) {
+    return _getFromViewOnly(semanticContentAttribute);
+  }
+  return UISemanticContentAttributeUnspecified;
+}
+
+- (void)setSemanticContentAttribute:(UISemanticContentAttribute)semanticContentAttribute
+{
+  _bridge_prologue_write;
+  if (AS_AT_LEAST_IOS9) {
+    _setToViewOnly(semanticContentAttribute, semanticContentAttribute);
+#if YOGA
+    [self semanticContentAttributeDidChange:semanticContentAttribute];
+#endif
+  }
 }
 
 @end

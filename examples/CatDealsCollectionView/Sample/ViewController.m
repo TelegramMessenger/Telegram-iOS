@@ -1,18 +1,18 @@
 //
 //  ViewController.m
-//  Sample
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ViewController.h"
@@ -56,6 +56,7 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
     _collectionNode.dataSource = self;
     _collectionNode.delegate = self;
     _collectionNode.backgroundColor = [UIColor grayColor];
+    _collectionNode.accessibilityIdentifier = @"Cat deals list";
     
     ASRangeTuningParameters preloadTuning;
     preloadTuning.leadingBufferScreenfuls = 2;
@@ -84,7 +85,7 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
   [super viewDidLoad];
   
   // set any collectionView properties here (once the node's backing view is loaded)
-  _collectionNode.view.leadingScreensForBatching = 2;
+  _collectionNode.leadingScreensForBatching = 2;
   [self fetchMoreCatsWithCompletion:nil];
 }
 
@@ -96,12 +97,10 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
       ViewController *strongSelf = weakSelf;
       if (strongSelf != nil)
       {
-        NSLog(@"ViewController is not nil");
         [strongSelf appendMoreItems:kBatchSize completion:completion];
-        NSLog(@"ViewController finished updating collectionView");
       }
       else {
-        NSLog(@"ViewController is nil - won't update collectionView");
+        NSLog(@"ViewController is nil - won't update collection");
       }
     };
     
@@ -113,13 +112,11 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
 
 - (void)appendMoreItems:(NSInteger)numberOfNewItems completion:(void (^)(BOOL))completion {
   NSArray *newData = [self getMoreData:numberOfNewItems];
-  dispatch_async(dispatch_get_main_queue(), ^{
-    [_collectionNode performBatchAnimated:YES updates:^{
-      [_data addObjectsFromArray:newData];
-      NSArray *addedIndexPaths = [self indexPathsForObjects:newData];
-      [_collectionNode insertItemsAtIndexPaths:addedIndexPaths];
-    } completion:completion];
-  });
+  [_collectionNode performBatchAnimated:YES updates:^{
+    [_data addObjectsFromArray:newData];
+    NSArray *addedIndexPaths = [self indexPathsForObjects:newData];
+    [_collectionNode insertItemsAtIndexPaths:addedIndexPaths];
+  } completion:completion];
 }
 
 - (NSArray *)getMoreData:(NSInteger)count {
@@ -196,7 +193,6 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
 
 - (void)collectionNode:(ASCollectionNode *)collectionNode willBeginBatchFetchWithContext:(ASBatchContext *)context
 {
-  NSLog(@"fetch additional content");
   [self fetchMoreCatsWithCompletion:^(BOOL finished){
     [context completeBatchFetching:YES];
   }];

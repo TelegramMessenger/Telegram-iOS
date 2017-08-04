@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		25A1FA851C02F7AC00193875 /* MosaicCollectionViewLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = 25A1FA841C02F7AC00193875 /* MosaicCollectionViewLayout.m */; };
+		25A1FA851C02F7AC00193875 /* MosaicCollectionLayoutDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 25A1FA841C02F7AC00193875 /* MosaicCollectionLayoutDelegate.m */; };
 		25A1FA881C02FCB000193875 /* ImageCellNode.m in Sources */ = {isa = PBXBuildFile; fileRef = 25A1FA871C02FCB000193875 /* ImageCellNode.m */; };
 		576F970133B34DFD583D5CE4 /* libPods-Sample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CC0FB9EE0030992E8FBC0A0 /* libPods-Sample.a */; };
 		80364CCA1E3D95A90094400C /* ImageCollectionViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 80364CC91E3D95A90094400C /* ImageCollectionViewCell.m */; };
@@ -16,11 +16,11 @@
 		AC3C4A671A11F47200143C57 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = AC3C4A661A11F47200143C57 /* AppDelegate.m */; };
 		AC3C4A6A1A11F47200143C57 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC3C4A691A11F47200143C57 /* ViewController.m */; };
 		AC3C4A8E1A11F80C00143C57 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AC3C4A8D1A11F80C00143C57 /* Images.xcassets */; };
+		E5B2252C1F1791EA001E1431 /* MosaicCollectionLayoutInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E5B2252B1F1791EA001E1431 /* MosaicCollectionLayoutInfo.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		25A1FA831C02F7AC00193875 /* MosaicCollectionViewLayout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MosaicCollectionViewLayout.h; sourceTree = "<group>"; };
-		25A1FA841C02F7AC00193875 /* MosaicCollectionViewLayout.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MosaicCollectionViewLayout.m; sourceTree = "<group>"; };
+		25A1FA841C02F7AC00193875 /* MosaicCollectionLayoutDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MosaicCollectionLayoutDelegate.m; sourceTree = "<group>"; };
 		25A1FA861C02FCB000193875 /* ImageCellNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageCellNode.h; sourceTree = "<group>"; };
 		25A1FA871C02FCB000193875 /* ImageCellNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ImageCellNode.m; sourceTree = "<group>"; };
 		4CC0FB9EE0030992E8FBC0A0 /* libPods-Sample.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Sample.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -36,6 +36,9 @@
 		AC3C4A691A11F47200143C57 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		AC3C4A8D1A11F80C00143C57 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		E2F287D91FFDEA2A747630CE /* Pods-Sample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Sample.release.xcconfig"; path = "Pods/Target Support Files/Pods-Sample/Pods-Sample.release.xcconfig"; sourceTree = "<group>"; };
+		E5B2252A1F1791DE001E1431 /* MosaicCollectionLayoutInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MosaicCollectionLayoutInfo.h; sourceTree = "<group>"; };
+		E5B2252B1F1791EA001E1431 /* MosaicCollectionLayoutInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MosaicCollectionLayoutInfo.m; sourceTree = "<group>"; };
+		E5D73A3A1EA6766B006418A8 /* MosaicCollectionLayoutDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MosaicCollectionLayoutDelegate.h; sourceTree = "<group>"; };
 		F36BCD8EBAF79797AB5C6708 /* Pods-Sample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Sample.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Sample/Pods-Sample.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -81,8 +84,10 @@
 		AC3C4A601A11F47200143C57 /* Sample */ = {
 			isa = PBXGroup;
 			children = (
-				25A1FA831C02F7AC00193875 /* MosaicCollectionViewLayout.h */,
-				25A1FA841C02F7AC00193875 /* MosaicCollectionViewLayout.m */,
+				E5D73A3A1EA6766B006418A8 /* MosaicCollectionLayoutDelegate.h */,
+				25A1FA841C02F7AC00193875 /* MosaicCollectionLayoutDelegate.m */,
+				E5B2252A1F1791DE001E1431 /* MosaicCollectionLayoutInfo.h */,
+				E5B2252B1F1791EA001E1431 /* MosaicCollectionLayoutInfo.m */,
 				AC3C4A651A11F47200143C57 /* AppDelegate.h */,
 				AC3C4A661A11F47200143C57 /* AppDelegate.m */,
 				AC3C4A681A11F47200143C57 /* ViewController.h */,
@@ -152,6 +157,7 @@
 				TargetAttributes = {
 					AC3C4A5D1A11F47200143C57 = {
 						CreatedOnToolsVersion = 6.1;
+						DevelopmentTeam = XSR3D45JSF;
 					};
 				};
 			};
@@ -238,12 +244,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				25A1FA851C02F7AC00193875 /* MosaicCollectionViewLayout.m in Sources */,
+				25A1FA851C02F7AC00193875 /* MosaicCollectionLayoutDelegate.m in Sources */,
 				AC3C4A6A1A11F47200143C57 /* ViewController.m in Sources */,
 				AC3C4A671A11F47200143C57 /* AppDelegate.m in Sources */,
 				AC3C4A641A11F47200143C57 /* main.m in Sources */,
 				80364CCA1E3D95A90094400C /* ImageCollectionViewCell.m in Sources */,
 				25A1FA881C02FCB000193875 /* ImageCellNode.m in Sources */,
+				E5B2252C1F1791EA001E1431 /* MosaicCollectionLayoutInfo.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -333,9 +340,11 @@
 			baseConfigurationReference = F36BCD8EBAF79797AB5C6708 /* Pods-Sample.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				DEVELOPMENT_TEAM = XSR3D45JSF;
 				INFOPLIST_FILE = Sample/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.facebook.AsyncDisplayKit.Sample.CustomCollectionView;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -346,9 +355,11 @@
 			baseConfigurationReference = E2F287D91FFDEA2A747630CE /* Pods-Sample.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				DEVELOPMENT_TEAM = XSR3D45JSF;
 				INFOPLIST_FILE = Sample/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.facebook.AsyncDisplayKit.Sample.CustomCollectionView;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = 1;
 			};

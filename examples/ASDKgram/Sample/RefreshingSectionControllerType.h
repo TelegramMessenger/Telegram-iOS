@@ -10,7 +10,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@protocol RefreshingSectionControllerType <IGListSectionType>
+@protocol RefreshingSectionControllerType
 
 - (void)refreshContentWithCompletion:(nullable void(^)())completion;
 

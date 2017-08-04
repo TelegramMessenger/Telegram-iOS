@@ -1,11 +1,18 @@
 //
 //  ASCollectionView.h
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
@@ -31,13 +38,6 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Asynchronous UICollectionView with Intelligent Preloading capabilities.
  *
- * @discussion ASCollectionView is a true subclass of UICollectionView, meaning it is pointer-compatible
- * with code that currently uses UICollectionView.
- *
- * The main difference is that asyncDataSource expects -nodeForItemAtIndexPath, an ASCellNode, and
- * the sizeForItemAtIndexPath: method is eliminated (as are the performance problems caused by it).
- * This is made possible because ASCellNodes can calculate their own size, and preload ahead of time.
- *
  * @note ASCollectionNode is strongly recommended over ASCollectionView.  This class exists for adoption convenience.
  */
 @interface ASCollectionView : UICollectionView
@@ -48,25 +48,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @return collectionNode The corresponding ASCollectionNode, if one exists.
  */
 @property (nonatomic, weak, readonly) ASCollectionNode *collectionNode;
-
-/**
- * The number of screens left to scroll before the delegate -collectionView:beginBatchFetchingWithContext: is called.
- *
- * Defaults to two screenfuls.
- */
-@property (nonatomic, assign) CGFloat leadingScreensForBatching;
-
-/**
- * Optional introspection object for the collection view's layout.
- *
- * @discussion Since supplementary and decoration views are controlled by the collection view's layout, this object
- * is used as a bridge to provide information to the internal data controller about the existence of these views and
- * their associated index paths. For collection views using `UICollectionViewFlowLayout`, a default inspector
- * implementation `ASCollectionViewFlowLayoutInspector` is created and set on this property by default. Custom
- * collection view layout subclasses will need to provide their own implementation of an inspector object for their
- * supplementary views to be compatible with `ASCollectionView`'s supplementary node support.
- */
-@property (nonatomic, weak) id<ASCollectionViewLayoutInspecting> layoutInspector;
 
 /**
  * Retrieves the node for the item at the given index path.
@@ -110,28 +91,47 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (nullable id<ASSectionContext>)contextForSection:(NSInteger)section AS_WARN_UNUSED_RESULT;
 
+@end
+
+@interface ASCollectionView (Deprecated)
+
+/*
+ * A Boolean value that determines whether the nodes that the data source renders will be flipped.
+ */
+@property (nonatomic, assign) BOOL inverted ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode property instead.");
+
+/**
+ * The number of screens left to scroll before the delegate -collectionView:beginBatchFetchingWithContext: is called.
+ *
+ * Defaults to two screenfuls.
+ */
+@property (nonatomic, assign) CGFloat leadingScreensForBatching ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode property instead.");
+
+/**
+ * Optional introspection object for the collection view's layout.
+ *
+ * @discussion Since supplementary and decoration views are controlled by the collection view's layout, this object
+ * is used as a bridge to provide information to the internal data controller about the existence of these views and
+ * their associated index paths. For collection views using `UICollectionViewFlowLayout`, a default inspector
+ * implementation `ASCollectionViewFlowLayoutInspector` is created and set on this property by default. Custom
+ * collection view layout subclasses will need to provide their own implementation of an inspector object for their
+ * supplementary views to be compatible with `ASCollectionView`'s supplementary node support.
+ */
+@property (nonatomic, weak) id<ASCollectionViewLayoutInspecting> layoutInspector ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode property instead.");
+
 /**
  * Determines collection view's current scroll direction. Supports 2-axis collection views.
  *
  * @return a bitmask of ASScrollDirection values.
  */
-@property (nonatomic, readonly) ASScrollDirection scrollDirection;
+@property (nonatomic, readonly) ASScrollDirection scrollDirection ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode property instead.");
 
 /**
  * Determines collection view's scrollable directions.
  *
  * @return a bitmask of ASScrollDirection values.
  */
-@property (nonatomic, readonly) ASScrollDirection scrollableDirections;
-
-/*
- * A Boolean value that determines whether the nodes that the data source renders will be flipped.
- */
-@property (nonatomic, assign) BOOL inverted;
-
-@end
-
-@interface ASCollectionView (Deprecated)
+@property (nonatomic, readonly) ASScrollDirection scrollableDirections ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode property instead.");
 
 /**
  * Forces the .contentInset to be UIEdgeInsetsZero.
@@ -268,14 +268,14 @@ NS_ASSUME_NONNULL_BEGIN
  * the main thread.
  * @warning This method is substantially more expensive than UICollectionView's version.
  */
-- (void)reloadDataWithCompletion:(nullable void (^)())completion ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode method instead.");
+- (void)reloadDataWithCompletion:(nullable void (^)())completion AS_UNAVAILABLE("Use ASCollectionNode method instead.");
 
 /**
  * Reload everything from scratch, destroying the working range and all cached nodes.
  *
  * @warning This method is substantially more expensive than UICollectionView's version.
  */
-- (void)reloadData ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode method instead.");
+- (void)reloadData AS_UNAVAILABLE("Use ASCollectionNode method instead.");
 
 /**
  * Reload everything from scratch entirely on the main thread, destroying the working range and all cached nodes.
@@ -283,7 +283,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @warning This method is substantially more expensive than UICollectionView's version and will block the main thread
  * while all the cells load.
  */
-- (void)reloadDataImmediately ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode's -reloadDataWithCompletion: followed by -waitUntilAllUpdatesAreCommitted instead.");
+- (void)reloadDataImmediately AS_UNAVAILABLE("Use ASCollectionNode method instead.");
 
 /**
  * Triggers a relayout of all nodes.

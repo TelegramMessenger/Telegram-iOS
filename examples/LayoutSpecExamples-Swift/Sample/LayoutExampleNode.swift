@@ -73,8 +73,8 @@ class PhotoWithInsetTextOverlay : LayoutExampleNode {
 
     backgroundColor = .clear
 
-    photoNode.url = URL(string: "http://asyncdisplaykit.org/static/images/layout-examples-photo-with-inset-text-overlay-photo.png")
-    photoNode.willDisplayNodeContentWithRenderingContext = { context in
+    photoNode.url = URL(string: "http://texturegroup.org/static/images/layout-examples-photo-with-inset-text-overlay-photo.png")
+    photoNode.willDisplayNodeContentWithRenderingContext = { context, drawParameters in
       let bounds = context.boundingBoxOfClipPath
       UIBezierPath(roundedRect: bounds, cornerRadius: 10).addClip()
     }
@@ -101,9 +101,9 @@ class PhotoWithOutsetIconOverlay : LayoutExampleNode {
   required init() {
     super.init()
 
-    photoNode.url = URL(string: "http://asyncdisplaykit.org/static/images/layout-examples-photo-with-outset-icon-overlay-photo.png")
+    photoNode.url = URL(string: "http://texturegroup.org/static/images/layout-examples-photo-with-outset-icon-overlay-photo.png")
 
-    iconNode.url = URL(string: "http://asyncdisplaykit.org/static/images/layout-examples-photo-with-outset-icon-overlay-icon.png")
+    iconNode.url = URL(string: "http://texturegroup.org/static/images/layout-examples-photo-with-outset-icon-overlay-icon.png")
 
     iconNode.imageModificationBlock = { image in
       let profileImageSize = CGSize(width: 60, height: 60)

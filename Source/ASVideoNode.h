@@ -1,11 +1,18 @@
 //
 //  ASVideoNode.h
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
@@ -104,7 +111,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @param videoNode The video node.
  * @param state player state that is going to be set.
  * @discussion Delegate method invoked when player changes it's state to
- * ASVideoNodePlayerStatePlaying or ASVideoNodePlayerStatePaused 
+ * ASVideoNodePlayerStatePlaying or ASVideoNodePlayerStatePaused
  * and asks delegate if state change is valid
  */
 - (BOOL)videoNode:(ASVideoNode*)videoNode shouldChangePlayerStateTo:(ASVideoNodePlayerState)state;
@@ -141,6 +148,14 @@ NS_ASSUME_NONNULL_BEGIN
  * @param videoNode The videoNode
  */
 - (void)videoNodeDidRecoverFromStall:(ASVideoNode *)videoNode;
+/**
+ * @abstract Delegate method invoked when an error occurs while trying trying to load an asset
+ * @param videoNode The videoNode.
+ * @param key The key of value that failed to load.
+ * @param asset The asset.
+ * @param error The error that occurs.
+ */
+- (void)videoNode:(ASVideoNode *)videoNode didFailToLoadValueForKey:(NSString *)key asset:(AVAsset *)asset error:(NSError *)error;
 
 @end
 

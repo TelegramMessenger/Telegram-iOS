@@ -1,13 +1,18 @@
 //
 //  ASImageNode+AnimatedImage.mm
-//  AsyncDisplayKit
-//
-//  Created by Garrett Moon on 3/22/16.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASImageNode.h>
@@ -24,6 +29,7 @@
 #import <AsyncDisplayKit/ASNetworkImageNode.h>
 #import <AsyncDisplayKit/ASWeakProxy.h>
 
+#define ASAnimatedImageDebug  0
 
 #ifndef MINIMAL_ASDK
 @interface ASNetworkImageNode (Private)
@@ -49,6 +55,7 @@ NSString *const ASAnimatedImageDefaultRunLoopMode = NSRunLoopCommonModes;
     return;
   }
   
+  id <ASAnimatedImageProtocol> previousAnimatedImage = _animatedImage;
   _animatedImage = animatedImage;
   
   if (animatedImage != nil) {
@@ -69,6 +76,13 @@ NSString *const ASAnimatedImageDefaultRunLoopMode = NSRunLoopCommonModes;
       };
     }
   }
+  
+  [self animatedImageSet:_animatedImage previousAnimatedImage:previousAnimatedImage];
+}
+
+- (void)animatedImageSet:(id <ASAnimatedImageProtocol>)newAnimatedImage previousAnimatedImage:(id <ASAnimatedImageProtocol>)previousAnimatedImage
+{
+  //Subclasses may override
 }
 
 - (id <ASAnimatedImageProtocol>)animatedImage
@@ -301,6 +315,7 @@ NSString *const ASAnimatedImageDefaultRunLoopMode = NSRunLoopCommonModes;
     self.lastDisplayLinkFire = 0;
   } else {
     self.contents = (__bridge id)frameImage;
+    [self displayDidFinish];
   }
 }
 

@@ -1,11 +1,18 @@
 //
 //  ASDisplayNodeExtras.h
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <QuartzCore/QuartzCore.h>
@@ -20,13 +27,21 @@
  * for the nodes will be set to `MYButtonNode.titleNode` and `MYButtonNode.countNode`.
  */
 #if DEBUG
+  #define ASSetDebugName(node, format, ...) node.debugName = [NSString stringWithFormat:format, __VA_ARGS__]
   #define ASSetDebugNames(...) _ASSetDebugNames(self.class, @"" # __VA_ARGS__, __VA_ARGS__, nil)
 #else
+  #define ASSetDebugName(node, name)
   #define ASSetDebugNames(...)
 #endif
 
 /// For deallocation of objects on the main thread across multiple run loops.
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern void ASPerformMainThreadDeallocation(_Nullable id object);
+#ifdef __cplusplus
+}
+#endif
 
 // Because inline methods can't be extern'd and need to be part of the translation unit of code
 // that compiles with them to actually inline, we both declare and define these in the header.
@@ -71,6 +86,30 @@ __unused static NSString * _Nonnull NSStringFromASInterfaceState(ASInterfaceStat
   return [NSString stringWithFormat:@"{ %@ }", [states componentsJoinedByString:@" | "]];
 }
 
+#define INTERFACE_STATE_DELTA(Name) ({ \
+  if ((oldState & ASInterfaceState##Name) != (newState & ASInterfaceState##Name)) { \
+    [changes appendFormat:@"%c%s ", (newState & ASInterfaceState##Name ? '+' : '-'), #Name]; \
+  } \
+})
+
+/// e.g. { +Visible, -Preload } (although that should never actually happen.)
+/// NOTE: Changes to MeasureLayout state don't really mean anything so we omit them for now.
+__unused static NSString * _Nonnull NSStringFromASInterfaceStateChange(ASInterfaceState oldState, ASInterfaceState newState)
+{
+  if (oldState == newState) {
+    return @"{ }";
+  }
+
+  NSMutableString *changes = [NSMutableString stringWithString:@"{ "];
+  INTERFACE_STATE_DELTA(Preload);
+  INTERFACE_STATE_DELTA(Display);
+  INTERFACE_STATE_DELTA(Visible);
+  [changes appendString:@"}"];
+  return changes;
+}
+
+#undef INTERFACE_STATE_DELTA
+
 NS_ASSUME_NONNULL_BEGIN
 
 ASDISPLAYNODE_EXTERN_C_BEGIN
@@ -91,7 +130,7 @@ extern ASDisplayNode * _Nullable ASLayerToDisplayNode(CALayer * _Nullable layer)
 extern ASDisplayNode * _Nullable ASViewToDisplayNode(UIView * _Nullable view) AS_WARN_UNUSED_RESULT;
 
 /**
- Given a node, returns the root of the node heirarchy (where supernode == nil)
+ Given a node, returns the root of the node hierarchy (where supernode == nil)
  */
 extern ASDisplayNode *ASDisplayNodeUltimateParentOfNode(ASDisplayNode *node) AS_WARN_UNUSED_RESULT;
 
@@ -118,12 +157,12 @@ extern void ASDisplayNodePerformBlockOnEverySubnode(ASDisplayNode *node, BOOL tr
 /**
  Given a display node, traverses up the layer tree hierarchy, returning the first display node that passes block.
  */
-extern ASDisplayNode * _Nullable ASDisplayNodeFindFirstSupernode(ASDisplayNode * _Nullable node, BOOL (^block)(ASDisplayNode *node)) AS_WARN_UNUSED_RESULT;
+extern ASDisplayNode * _Nullable ASDisplayNodeFindFirstSupernode(ASDisplayNode * _Nullable node, BOOL (^block)(ASDisplayNode *node)) AS_WARN_UNUSED_RESULT ASDISPLAYNODE_DEPRECATED_MSG("Use the `supernodes` property instead.");
 
 /**
  Given a display node, traverses up the layer tree hierarchy, returning the first display node of kind class.
  */
-extern __kindof ASDisplayNode * _Nullable ASDisplayNodeFindFirstSupernodeOfClass(ASDisplayNode *start, Class c) AS_WARN_UNUSED_RESULT;
+extern __kindof ASDisplayNode * _Nullable ASDisplayNodeFindFirstSupernodeOfClass(ASDisplayNode *start, Class c) AS_WARN_UNUSED_RESULT  ASDISPLAYNODE_DEPRECATED_MSG("Use the `supernodeOfClass:includingSelf:` method instead.");
 
 /**
  * Given a layer, find the window it lives in, if any.

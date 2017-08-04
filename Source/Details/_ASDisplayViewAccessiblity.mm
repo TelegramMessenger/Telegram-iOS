@@ -1,11 +1,18 @@
 //
 //  _ASDisplayViewAccessiblity.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef ASDK_ACCESSIBILITY_DISABLE
@@ -84,7 +91,7 @@ static void CollectUIAccessibilityElementsForNode(ASDisplayNode *node, ASDisplay
   ASDisplayNodeCAssertNotNil(elements, @"Should pass in a NSMutableArray");
   
   ASDisplayNodePerformBlockOnEveryNodeBFS(node, ^(ASDisplayNode * _Nonnull currentNode) {
-    // For every subnode that is layer backed or it's supernode has shouldRasterizeDescendants enabled
+    // For every subnode that is layer backed or it's supernode has subtree rasterization enabled
     // we have to create a UIAccessibilityElement as no view for this node exists
     if (currentNode != containerNode && currentNode.isAccessibilityElement) {
       UIAccessibilityElement *accessibilityElement = [ASAccessibilityElement accessibilityElementWithContainer:container node:currentNode containerNode:containerNode];
@@ -101,7 +108,7 @@ static void CollectAccessibilityElementsForView(_ASDisplayView *view, NSMutableA
   ASDisplayNode *node = view.asyncdisplaykit_node;
   
   // Handle rasterize case
-  if (node.shouldRasterizeDescendants) {
+  if (node.rasterizesSubtree) {
     CollectUIAccessibilityElementsForNode(node, node, view, elements);
     return;
   }

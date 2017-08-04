@@ -1,38 +1,44 @@
 //
 //  ASMultiplexImageNodeTests.m
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <OCMock/OCMock.h>
-#import <OCMock/NSInvocation+OCMAdditions.h>
+#import "NSInvocation+ASTestHelpers.h"
 
 #import <AsyncDisplayKit/ASImageProtocols.h>
 #import <AsyncDisplayKit/ASMultiplexImageNode.h>
 #import <AsyncDisplayKit/ASImageContainerProtocolCategories.h>
-
-#import <libkern/OSAtomic.h>
 
 #import <XCTest/XCTest.h>
 
 @interface ASMultiplexImageNodeTests : XCTestCase
 {
 @private
-  id _mockCache;
-  id _mockDownloader;
+  id mockCache;
+  id mockDownloader;
+  id mockDataSource;
+  id mockDelegate;
+  ASMultiplexImageNode *imageNode;
 }
 
 @end
 
-
 @implementation ASMultiplexImageNodeTests
 
-#pragma mark -
-#pragma mark Helpers.
+#pragma mark - Helpers.
 
 - (NSURL *)_testImageURL
 {
@@ -46,8 +52,7 @@
   return [UIImage imageWithContentsOfFile:[self _testImageURL].path];
 }
 
-#pragma mark -
-#pragma mark Unit tests.
+#pragma mark - Unit tests.
 
 // TODO:  add tests for delegate display notifications
 
@@ -55,83 +60,73 @@
 {
   [super setUp];
 
-  _mockCache = [OCMockObject mockForProtocol:@protocol(ASImageCacheProtocol)];
-  _mockDownloader = [OCMockObject mockForProtocol:@protocol(ASImageDownloaderProtocol)];
+  mockCache = OCMStrictProtocolMock(@protocol(ASImageCacheProtocol));
+  [mockCache setExpectationOrderMatters:YES];
+  mockDownloader = OCMStrictProtocolMock(@protocol(ASImageDownloaderProtocol));
+  [mockDownloader setExpectationOrderMatters:YES];
+  imageNode = [[ASMultiplexImageNode alloc] initWithCache:mockCache downloader:mockDownloader];
+
+  mockDataSource = OCMStrictProtocolMock(@protocol(ASMultiplexImageNodeDataSource));
+  [mockDataSource setExpectationOrderMatters:YES];
+  imageNode.dataSource = mockDataSource;
+
+  mockDelegate = OCMProtocolMock(@protocol(ASMultiplexImageNodeDelegate));
+  [mockDelegate setExpectationOrderMatters:YES];
+  imageNode.delegate = mockDelegate;
 }
 
 - (void)tearDown
 {
-  _mockCache = nil;
-  _mockDownloader = nil;
+  OCMVerifyAll(mockDelegate);
+  OCMVerifyAll(mockDataSource);
+  OCMVerifyAll(mockDownloader);
+  OCMVerifyAll(mockCache);
   [super tearDown];
 }
 
 - (void)testDataSourceImageMethod
 {
-  ASMultiplexImageNode *imageNode = [[ASMultiplexImageNode alloc] initWithCache:_mockCache downloader:_mockDownloader];
-
-  // Mock the data source.
-  // Note that we're not using a niceMock because we want to assert if the URL data-source method gets hit, as the image
-  // method should be hit first and exclusively if it successfully returns an image.
-  id mockDataSource = [OCMockObject mockForProtocol:@protocol(ASMultiplexImageNodeDataSource)];
-  imageNode.dataSource = mockDataSource;
-
   NSNumber *imageIdentifier = @1;
 
-  // Expect the image method to be hit, and have it return our test image.
-  UIImage *testImage = [self _testImage];
-  [[[mockDataSource expect] andReturn:testImage] multiplexImageNode:imageNode imageForImageIdentifier:imageIdentifier];
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:imageIdentifier])
+  .andReturn([self _testImage]);
 
   imageNode.imageIdentifiers = @[imageIdentifier];
   [imageNode reloadImageIdentifierSources];
-
-  [mockDataSource verify];
 
   // Also expect it to be loaded immediately.
   XCTAssertEqualObjects(imageNode.loadedImageIdentifier, imageIdentifier, @"imageIdentifier was not loaded");
   // And for the image to be equivalent to the image we provided.
   XCTAssertEqualObjects(UIImagePNGRepresentation(imageNode.image),
-                        UIImagePNGRepresentation(testImage),
+                        UIImagePNGRepresentation([self _testImage]),
                         @"Loaded image isn't the one we provided");
-
-  imageNode.delegate = nil;
-  imageNode.dataSource = nil;
 }
 
 - (void)testDataSourceURLMethod
 {
-  ASMultiplexImageNode *imageNode = [[ASMultiplexImageNode alloc] initWithCache:_mockCache downloader:_mockDownloader];
-
   NSNumber *imageIdentifier = @1;
 
-  // Mock the data source such that we...
-  id mockDataSource = [OCMockObject niceMockForProtocol:@protocol(ASMultiplexImageNodeDataSource)];
-  imageNode.dataSource = mockDataSource;
-  // (a) first expect to be hit for the image directly, and fail to return it.
-  [mockDataSource setExpectationOrderMatters:YES];
-  [[[mockDataSource expect] andReturn:nil] multiplexImageNode:imageNode imageForImageIdentifier:imageIdentifier];
-  // (b) and then expect to be hit for the URL, which we'll return.
-  [[[mockDataSource expect] andReturn:[self _testImageURL]] multiplexImageNode:imageNode URLForImageIdentifier:imageIdentifier];
+  // First expect to be hit for the image directly, and fail to return it.
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:imageIdentifier])
+  .andReturn(nil);
+  // BUG: -imageForImageIdentifier is called twice in this case (where we return nil).
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:imageIdentifier])
+  .andReturn(nil);
+  // Then expect to be hit for the URL, which we'll return.
+  OCMExpect([mockDataSource multiplexImageNode:imageNode URLForImageIdentifier:imageIdentifier])
+  .andReturn([self _testImageURL]);
 
   // Mock the cache to do a cache-hit for the test image URL.
-  [[[_mockCache stub] andDo:^(NSInvocation *inv) {
-    // Params are URL, callbackQueue, completion
-    NSArray *URL = [inv getArgumentAtIndexAsObject:2];
-
-    ASImageCacherCompletion completionBlock = [inv getArgumentAtIndexAsObject:4];
-
-    // Call the completion block with our test image and URL.
-    NSURL *testImageURL = [self _testImageURL];
-    XCTAssertEqualObjects(URL, testImageURL, @"Fetching URL other than test image");
+  OCMExpect([mockCache cachedImageWithURL:[self _testImageURL] callbackQueue:OCMOCK_ANY completion:[OCMArg isNotNil]])
+  .andDo(^(NSInvocation *inv) {
+    ASImageCacherCompletion completionBlock = [inv as_argumentAtIndexAsObject:4];
     completionBlock([self _testImage]);
-  }] cachedImageWithURL:[OCMArg any] callbackQueue:[OCMArg any] completion:[OCMArg any]];
+  });
 
   imageNode.imageIdentifiers = @[imageIdentifier];
   // Kick off loading.
   [imageNode reloadImageIdentifierSources];
 
-  // Verify the data source.
-  [mockDataSource verify];
   // Also expect it to be loaded immediately.
   XCTAssertEqualObjects(imageNode.loadedImageIdentifier, imageIdentifier, @"imageIdentifier was not loaded");
   // And for the image to be equivalent to the image we provided.
@@ -143,152 +138,123 @@
 - (void)testAddLowerQualityImageIdentifier
 {
   // Adding a lower quality image identifier should not cause any loading.
-  ASMultiplexImageNode *imageNode = [[ASMultiplexImageNode alloc] initWithCache:_mockCache downloader:_mockDownloader];
+  NSNumber *highResIdentifier = @2, *lowResIdentifier = @1;
 
-  NSNumber *highResIdentifier = @2;
-
-  // Mock the data source such that we: (a) return the test image, and log whether we get hit for the lower-quality image.
-  id mockDataSource = [OCMockObject mockForProtocol:@protocol(ASMultiplexImageNodeDataSource)];
-  imageNode.dataSource = mockDataSource;
-  __block int dataSourceHits = 0;
-  [[[mockDataSource stub] andDo:^(NSInvocation *inv) {
-    dataSourceHits++;
-
-    // Return the test image.
-    [inv setReturnValue:(void *)[self _testImage]];
-  }] multiplexImageNode:[OCMArg any] imageForImageIdentifier:[OCMArg any]];
-
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:highResIdentifier])
+  .andReturn([self _testImage]);
   imageNode.imageIdentifiers = @[highResIdentifier];
   [imageNode reloadImageIdentifierSources];
 
   // At this point, we should have the high-res identifier loaded and the DS should have been hit once.
   XCTAssertEqualObjects(imageNode.loadedImageIdentifier, highResIdentifier, @"High res identifier should be loaded.");
-  XCTAssertTrue(dataSourceHits == 1, @"Unexpected DS hit count");
 
-  // Add the low res identifier.
-  NSNumber *lowResIdentifier = @1;
+  // BUG: We should not get another -imageForImageIdentifier:highResIdentifier.
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:highResIdentifier])
+  .andReturn([self _testImage]);
+
   imageNode.imageIdentifiers = @[highResIdentifier, lowResIdentifier];
   [imageNode reloadImageIdentifierSources];
 
-  // At this point the high-res should still be loaded, and the data source should have been hit again
+  // At this point the high-res should still be loaded, and the data source should not have been hit again (see BUG above).
   XCTAssertEqualObjects(imageNode.loadedImageIdentifier, highResIdentifier, @"High res identifier should be loaded.");
-  XCTAssertTrue(dataSourceHits == 2, @"Unexpected DS hit count");
 }
 
 - (void)testAddHigherQualityImageIdentifier
 {
-  // Adding a higher quality image identifier should cause loading.
-  ASMultiplexImageNode *imageNode = [[ASMultiplexImageNode alloc] initWithCache:_mockCache downloader:_mockDownloader];
+  NSNumber *lowResIdentifier = @1, *highResIdentifier = @2;
 
-  NSNumber *lowResIdentifier = @1;
-
-  // Mock the data source such that we: (a) return the test image, and log how many times the DS gets hit.
-  id mockDataSource = [OCMockObject mockForProtocol:@protocol(ASMultiplexImageNodeDataSource)];
-  imageNode.dataSource = mockDataSource;
-  __block int dataSourceHits = 0;
-  [[[mockDataSource stub] andDo:^(NSInvocation *inv) {
-    dataSourceHits++;
-
-    // Return the test image.
-    [inv setReturnValue:(void *)[self _testImage]];
-  }] multiplexImageNode:[OCMArg any] imageForImageIdentifier:[OCMArg any]];
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:lowResIdentifier])
+  .andReturn([self _testImage]);
 
   imageNode.imageIdentifiers = @[lowResIdentifier];
   [imageNode reloadImageIdentifierSources];
 
   // At this point, we should have the low-res identifier loaded and the DS should have been hit once.
   XCTAssertEqualObjects(imageNode.loadedImageIdentifier, lowResIdentifier, @"Low res identifier should be loaded.");
-  XCTAssertTrue(dataSourceHits == 1, @"Unexpected DS hit count");
 
-  // Add the low res identifier.
-  NSNumber *highResIdentifier = @2;
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:highResIdentifier])
+  .andReturn([self _testImage]);
+
   imageNode.imageIdentifiers = @[highResIdentifier, lowResIdentifier];
   [imageNode reloadImageIdentifierSources];
 
   // At this point the high-res should be loaded, and the data source should been hit twice.
   XCTAssertEqualObjects(imageNode.loadedImageIdentifier, highResIdentifier, @"High res identifier should be loaded.");
-  XCTAssertTrue(dataSourceHits == 2, @"Unexpected DS hit count");
 }
 
-- (void)testProgressiveDownloading
+- (void)testIntermediateImageDownloading
 {
-  ASMultiplexImageNode *imageNode = [[ASMultiplexImageNode alloc] initWithCache:_mockCache downloader:_mockDownloader];
   imageNode.downloadsIntermediateImages = YES;
+
+  // Let them call URLForImageIdentifier all they want.
+  OCMStub([mockDataSource multiplexImageNode:imageNode URLForImageIdentifier:[OCMArg isNotNil]]);
 
   // Set up a few identifiers to load.
   NSInteger identifierCount = 5;
   NSMutableArray *imageIdentifiers = [NSMutableArray array];
-  for (NSInteger identifierIndex = 0; identifierIndex < identifierCount; identifierIndex++)
-    [imageIdentifiers insertObject:@(identifierIndex + 1) atIndex:0];
+  for (NSInteger identifier = identifierCount; identifier > 0; identifier--) {
+    [imageIdentifiers addObject:@(identifier)];
+  }
 
-  // Mock the data source to only make the images available progressively.
-  // This is necessary because ASMultiplexImageNode will try to grab the best image immediately, regardless of
-  // `downloadsIntermediateImages`.
-  id mockDataSource = [OCMockObject niceMockForProtocol:@protocol(ASMultiplexImageNodeDataSource)];
-  imageNode.dataSource = mockDataSource;
-  __block NSUInteger loadedImageCount = 0;
-  [[[mockDataSource stub] andDo:^(NSInvocation *inv) {
-    id requestedIdentifier = [inv getArgumentAtIndexAsObject:3];
+  // Create the array of IDs in the order we expect them to get -imageForImageIdentifier:
+  // BUG: The second to last ID (the last one that returns nil) will get -imageForImageIdentifier: called
+  // again after the last ID (the one that returns non-nil).
+  id secondToLastID = imageIdentifiers[identifierCount - 2];
+  NSArray *imageIdentifiersThatWillBeCalled = [imageIdentifiers arrayByAddingObject:secondToLastID];
 
-    NSInteger requestedIdentifierValue = [requestedIdentifier intValue];
-
-    // If no images are loaded, bail on trying to load anything but the worst image.
-    if (!imageNode.loadedImageIdentifier && requestedIdentifierValue != [[imageIdentifiers lastObject] integerValue])
-      return;
-
-    // Bail if it's trying to load an identifier that's more than one step than what's loaded.
-    NSInteger nextImageIdentifier = [(NSNumber *)imageNode.loadedImageIdentifier integerValue] + 1;
-    if (requestedIdentifierValue != nextImageIdentifier)
-      return;
-
-    // Return the test image.
-    loadedImageCount++;
-    [inv setReturnValue:(void *)[self _testImage]];
-  }] multiplexImageNode:[OCMArg any] imageForImageIdentifier:[OCMArg any]];
+  for (id imageID in imageIdentifiersThatWillBeCalled) {
+    // Return nil for everything except the worst ID.
+    OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:imageID])
+    .andDo(^(NSInvocation *inv){
+      id imageID = [inv as_argumentAtIndexAsObject:3];
+      if ([imageID isEqual:imageIdentifiers.lastObject]) {
+        [inv as_setReturnValueWithObject:[self _testImage]];
+      } else {
+        [inv as_setReturnValueWithObject:nil];
+      }
+    });
+  }
 
   imageNode.imageIdentifiers = imageIdentifiers;
   [imageNode reloadImageIdentifierSources];
-
-  XCTAssertTrue(loadedImageCount == identifierCount, @"Expected to load the same number of identifiers we supplied");
 }
 
 - (void)testUncachedDownload
 {
   // Mock a cache miss.
-  id mockCache = [OCMockObject mockForProtocol:@protocol(ASImageCacheProtocol)];
-  [[[mockCache stub] andDo:^(NSInvocation *inv) {
-    ASImageCacherCompletion completion = [inv getArgumentAtIndexAsObject:4];
+  OCMExpect([mockCache cachedImageWithURL:[self _testImageURL] callbackQueue:OCMOCK_ANY completion:[OCMArg isNotNil]])
+  .andDo(^(NSInvocation *inv){
+    ASImageCacherCompletion completion = [inv as_argumentAtIndexAsObject:4];
     completion(nil);
-  }] cachedImageWithURL:[OCMArg any] callbackQueue:[OCMArg any] completion:[OCMArg any]];
+  });
 
   // Mock a 50%-progress URL download.
-  id mockDownloader = [OCMockObject mockForProtocol:@protocol(ASImageDownloaderProtocol)];
   const CGFloat mockedProgress = 0.5;
-  [[[mockDownloader stub] andDo:^(NSInvocation *inv) {
+  OCMExpect([mockDownloader downloadImageWithURL:[self _testImageURL] callbackQueue:OCMOCK_ANY downloadProgress:[OCMArg isNotNil] completion:[OCMArg isNotNil]])
+  .andDo(^(NSInvocation *inv){
     // Simulate progress.
-    ASImageDownloaderProgress progressBlock = [inv getArgumentAtIndexAsObject:4];
+    ASImageDownloaderProgress progressBlock = [inv as_argumentAtIndexAsObject:4];
     progressBlock(mockedProgress);
 
     // Simulate completion.
-    ASImageDownloaderCompletion completionBlock = [inv getArgumentAtIndexAsObject:5];
+    ASImageDownloaderCompletion completionBlock = [inv as_argumentAtIndexAsObject:5];
     completionBlock([self _testImage], nil, nil);
-  }] downloadImageWithURL:[OCMArg any] callbackQueue:[OCMArg any] downloadProgress:[OCMArg any] completion:[OCMArg any]];
+  });
 
-  ASMultiplexImageNode *imageNode = [[ASMultiplexImageNode alloc] initWithCache:mockCache downloader:mockDownloader];
   NSNumber *imageIdentifier = @1;
 
-  // Mock the data source to return our test URL.
-  id mockDataSource = [OCMockObject niceMockForProtocol:@protocol(ASMultiplexImageNodeDataSource)];
-  [[[mockDataSource stub] andReturn:[self _testImageURL]] multiplexImageNode:imageNode URLForImageIdentifier:imageIdentifier];
-  imageNode.dataSource = mockDataSource;
+  // Mock the data source to return nil image, and our test URL.
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:imageIdentifier]);
+  // BUG: Multiplex image node will call imageForImageIdentifier twice if we return nil.
+  OCMExpect([mockDataSource multiplexImageNode:imageNode imageForImageIdentifier:imageIdentifier]);
+  OCMExpect([mockDataSource multiplexImageNode:imageNode URLForImageIdentifier:imageIdentifier])
+  .andReturn([self _testImageURL]);
 
   // Mock the delegate to expect start, 50% progress, and completion invocations.
-  id mockDelegate = [OCMockObject mockForProtocol:@protocol(ASMultiplexImageNodeDelegate)];
-  [[mockDelegate expect] multiplexImageNode:imageNode didStartDownloadOfImageWithIdentifier:imageIdentifier];
-  [[mockDelegate expect] multiplexImageNode:imageNode didUpdateDownloadProgress:mockedProgress forImageWithIdentifier:imageIdentifier];
-  [[mockDelegate expect] multiplexImageNode:imageNode didFinishDownloadingImageWithIdentifier:imageIdentifier error:nil];
-  [[mockDelegate expect] multiplexImageNode:imageNode didUpdateImage:[OCMArg any] withIdentifier:imageIdentifier fromImage:nil withIdentifier:nil];
-  imageNode.delegate = mockDelegate;
+  OCMExpect([mockDelegate multiplexImageNode:imageNode didStartDownloadOfImageWithIdentifier:imageIdentifier]);
+  OCMExpect([mockDelegate multiplexImageNode:imageNode didUpdateDownloadProgress:mockedProgress forImageWithIdentifier:imageIdentifier]);
+  OCMExpect([mockDelegate multiplexImageNode:imageNode didUpdateImage:[OCMArg isNotNil] withIdentifier:imageIdentifier fromImage:[OCMArg isNil] withIdentifier:[OCMArg isNil]]);
+  OCMExpect([mockDelegate multiplexImageNode:imageNode didFinishDownloadingImageWithIdentifier:imageIdentifier error:[OCMArg isNil]]);
 
   imageNode.imageIdentifiers = @[imageIdentifier];
   // Kick off loading.
@@ -297,15 +263,11 @@
   // Wait until the image is loaded.
   [self expectationForPredicate:[NSPredicate predicateWithFormat:@"loadedImageIdentifier = %@", imageIdentifier] evaluatedWithObject:imageNode handler:nil];
   [self waitForExpectationsWithTimeout:30 handler:nil];
-
-  // Verify the delegation.
-  [mockDelegate verify];
 }
 
 - (void)testThatSettingAnImageExternallyWillThrow
 {
-  ASMultiplexImageNode *multiplexImageNode = [[ASMultiplexImageNode alloc] init];
-  XCTAssertThrows(multiplexImageNode.image = [UIImage imageNamed:@""]);
+  XCTAssertThrows(imageNode.image = [UIImage imageNamed:@""]);
 }
 
 @end

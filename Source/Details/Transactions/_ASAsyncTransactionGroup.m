@@ -1,11 +1,18 @@
 //
 //  _ASAsyncTransactionGroup.m
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASAssert.h>
@@ -14,8 +21,6 @@
 #import <AsyncDisplayKit/_ASAsyncTransactionGroup.h>
 #import <AsyncDisplayKit/_ASAsyncTransactionContainer.h>
 #import <AsyncDisplayKit/_ASAsyncTransactionContainer+Private.h>
-
-static void _transactionGroupRunLoopObserverCallback(CFRunLoopObserverRef observer, CFRunLoopActivity activity, void *info);
 
 @interface _ASAsyncTransactionGroup ()
 + (void)registerTransactionGroupAsMainRunloopObserver:(_ASAsyncTransactionGroup *)transactionGroup;
@@ -47,20 +52,15 @@ static void _transactionGroupRunLoopObserverCallback(CFRunLoopObserverRef observ
   CFRunLoopRef runLoop = CFRunLoopGetCurrent();
   CFOptionFlags activities = (kCFRunLoopBeforeWaiting | // before the run loop starts sleeping
                               kCFRunLoopExit);          // before exiting a runloop run
-  CFRunLoopObserverContext context = {
-    0,           // version
-    (__bridge void *)transactionGroup,  // info
-    &CFRetain,   // retain
-    &CFRelease,  // release
-    NULL         // copyDescription
-  };
 
-  observer = CFRunLoopObserverCreate(NULL,        // allocator
-                                     activities,  // activities
-                                     YES,         // repeats
-                                     INT_MAX,     // order after CA transaction commits
-                                     &_transactionGroupRunLoopObserverCallback,  // callback
-                                     &context);   // context
+  observer = CFRunLoopObserverCreateWithHandler(NULL,        // allocator
+                                                activities,  // activities
+                                                YES,         // repeats
+                                                INT_MAX,     // order after CA transaction commits
+                                                ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
+                                                  ASDisplayNodeCAssertMainThread();
+                                                  [transactionGroup commit];
+                                                });
   CFRunLoopAddObserver(runLoop, observer, kCFRunLoopCommonModes);
   CFRelease(observer);
 }
@@ -104,10 +104,3 @@ static void _transactionGroupRunLoopObserverCallback(CFRunLoopObserverRef observ
 }
 
 @end
-
-static void _transactionGroupRunLoopObserverCallback(CFRunLoopObserverRef observer, CFRunLoopActivity activity, void *info)
-{
-  ASDisplayNodeCAssertMainThread();
-  _ASAsyncTransactionGroup *group = (__bridge _ASAsyncTransactionGroup *)info;
-  [group commit];
-}

@@ -1,20 +1,21 @@
 //
 //  ASDimension.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASDimension.h>
-
-#if AS_TARGET_OS_IOS
-#import <UIKit/UIGeometry.h>
-#else
-#import <Foundation/NSGeometry.h>
-#endif
 
 #import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
 
@@ -44,7 +45,6 @@ ASOVERLOADABLE ASDimension ASDimensionMake(NSString *dimension)
     }
   }
   
-  ASDisplayNodeCAssert(NO, @"Parsing dimension failed for: %@", dimension);
   return ASDimensionAuto;
 }
 
@@ -63,10 +63,6 @@ NSString *NSStringFromASDimension(ASDimension dimension)
 #pragma mark - ASLayoutSize
 
 ASLayoutSize const ASLayoutSizeAuto = {ASDimensionAuto, ASDimensionAuto};
-
-#pragma mark - ASEdgeInsets
-
-ASEdgeInsets const ASEdgeInsetsZero = {};
 
 #pragma mark - ASSizeRange
 
@@ -108,13 +104,30 @@ ASSizeRange ASSizeRangeIntersect(ASSizeRange sizeRange, ASSizeRange otherSizeRan
 
 NSString *NSStringFromASSizeRange(ASSizeRange sizeRange)
 {
-#if AS_TARGET_OS_IOS
-  return [NSString stringWithFormat:@"<ASSizeRange: min=%@, max=%@>",
-          NSStringFromCGSize(sizeRange.min),
-          NSStringFromCGSize(sizeRange.max)];
-#else
-  return [NSString stringWithFormat:@"<ASSizeRange: min=%@, max=%@>",
-          NSStringFromRect(NSRectFromCGRect(sizeRange.min)),
-          NSStringFromRect(NSRectFromCGRect(sizeRange.max))];
-#endif
+  // 17 field length copied from iOS 10.3 impl of NSStringFromCGSize.
+  if (CGSizeEqualToSize(sizeRange.min, sizeRange.max)) {
+    return [NSString stringWithFormat:@"{{%.*g, %.*g}}",
+            17, sizeRange.min.width,
+            17, sizeRange.min.height];
+  }
+  return [NSString stringWithFormat:@"{{%.*g, %.*g}, {%.*g, %.*g}}",
+          17, sizeRange.min.width,
+          17, sizeRange.min.height,
+          17, sizeRange.max.width,
+          17, sizeRange.max.height];
 }
+
+#if YOGA
+#pragma mark - Yoga - ASEdgeInsets
+ASEdgeInsets const ASEdgeInsetsZero = {};
+
+extern ASEdgeInsets ASEdgeInsetsMake(UIEdgeInsets edgeInsets)
+{
+  ASEdgeInsets asEdgeInsets = ASEdgeInsetsZero;
+  asEdgeInsets.top = ASDimensionMake(edgeInsets.top);
+  asEdgeInsets.left = ASDimensionMake(edgeInsets.left);
+  asEdgeInsets.bottom = ASDimensionMake(edgeInsets.bottom);
+  asEdgeInsets.right = ASDimensionMake(edgeInsets.right);
+  return asEdgeInsets;
+}
+#endif

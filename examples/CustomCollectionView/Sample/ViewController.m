@@ -1,24 +1,25 @@
 //
 //  ViewController.m
-//  Sample
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ViewController.h"
 
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
-#import "MosaicCollectionViewLayout.h"
+#import <AsyncDisplayKit/ASCollectionNode+Beta.h>
+#import "MosaicCollectionLayoutDelegate.h"
 #import "ImageCellNode.h"
 #import "ImageCollectionViewCell.h"
 
@@ -42,14 +43,11 @@ static NSUInteger kNumberOfImages = 14;
 
 - (instancetype)init
 {
-  MosaicCollectionViewLayout *layout = [[MosaicCollectionViewLayout alloc] init];
-  layout.numberOfColumns = 2;
-  layout.headerHeight = 44.0;
-  
-  _collectionNode = [[ASCollectionNode alloc] initWithCollectionViewLayout:layout];
+  MosaicCollectionLayoutDelegate *layoutDelegate = [[MosaicCollectionLayoutDelegate alloc] initWithNumberOfColumns:2 headerHeight:44.0];
+  _collectionNode = [[ASCollectionNode alloc] initWithLayoutDelegate:layoutDelegate layoutFacilitator:nil];
   _collectionNode.dataSource = self;
   _collectionNode.delegate = self;
-  _collectionNode.backgroundColor = [UIColor whiteColor];
+  _collectionNode.layoutInspector = self;
   
   if (!(self = [super initWithNode:_collectionNode]))
     return nil;
@@ -74,7 +72,6 @@ static NSUInteger kNumberOfImages = 14;
 {
   [super viewDidLoad];
   
-  _collectionNode.view.layoutInspector = self;
   [_collectionNode.view registerClass:[ImageCollectionViewCell class] forCellWithReuseIdentifier:kReuseIdentifier];
 }
 
@@ -98,17 +95,11 @@ static NSUInteger kNumberOfImages = 14;
   };
 }
 
-
+// The below 2 methods are required by ASCollectionViewLayoutInspecting, but ASCollectionLayout and its layout delegate are the ones that really determine the size ranges and directions
+// TODO Remove these methods once a layout inspector is no longer required under ASCollectionLayout mode
 - (ASSizeRange)collectionView:(ASCollectionView *)collectionView constrainedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath
 {
-  MosaicCollectionViewLayout *layout = (MosaicCollectionViewLayout *)[collectionView collectionViewLayout];
-  return ASSizeRangeMake(CGSizeZero, [layout itemSizeAtIndexPath:indexPath]);
-}
-
-- (ASSizeRange)collectionView:(ASCollectionView *)collectionView constrainedSizeForSupplementaryNodeOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
-{
-  MosaicCollectionViewLayout *layout = (MosaicCollectionViewLayout *)[collectionView collectionViewLayout];
-  return ASSizeRangeMake(CGSizeZero, [layout headerSizeForSection:indexPath.section]);
+  return ASSizeRangeZero;
 }
 
 - (ASScrollDirection)scrollableDirections
@@ -144,16 +135,6 @@ static NSUInteger kNumberOfImages = 14;
 - (NSInteger)collectionNode:(ASCollectionNode *)collectionNode numberOfItemsInSection:(NSInteger)section
 {
   return [_sections[section] count];
-}
-
-- (CGSize)collectionView:(ASCollectionNode *)collectionNode layout:(UICollectionViewLayout *)collectionViewLayout originalItemSizeAtIndexPath:(NSIndexPath *)indexPath
-{
-  ASCellNode *cellNode = [collectionNode nodeForItemAtIndexPath:indexPath];
-  if ([cellNode isKindOfClass:[ImageCellNode class]]) {
-    return [[(ImageCellNode *)cellNode image] size];
-  } else {
-    return CGSizeMake(100, 100);  // In kShowUICollectionViewCells = YES mode, make those cells 100x100.
-  }
 }
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath

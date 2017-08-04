@@ -1,26 +1,29 @@
 //
 //  ASViewController.mm
-//  AsyncDisplayKit
-//
-//  Created by Huy Nguyen on 16/09/15.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
 #import <AsyncDisplayKit/ASViewController.h>
 #import <AsyncDisplayKit/ASAssert.h>
-#import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASLayout.h>
+#import <AsyncDisplayKit/ASLog.h>
 #import <AsyncDisplayKit/ASTraitCollection.h>
 #import <AsyncDisplayKit/ASRangeControllerUpdateRangeProtocol+Beta.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
-
-#define AS_LOG_VISIBILITY_CHANGES 0
 
 @implementation ASViewController
 {
@@ -166,7 +169,11 @@ ASVisibilityDidMoveToParentViewController;
 
 - (void)viewWillAppear:(BOOL)animated
 {
+  as_activity_create_for_scope("ASViewController will appear");
+  as_log_debug(ASNodeLog(), "View controller %@ will appear", self);
+
   [super viewWillAppear:animated];
+
   _ensureDisplayed = YES;
 
   // A layout pass is forced this early to get nodes like ASCollectionNode, ASTableNode etc.
@@ -188,7 +195,7 @@ ASVisibilityDepthImplementation;
 - (void)visibilityDepthDidChange
 {
   ASLayoutRangeMode rangeMode = ASLayoutRangeModeForVisibilityDepth(self.visibilityDepth);
-#if AS_LOG_VISIBILITY_CHANGES
+#if ASEnableVerboseLogging
   NSString *rangeModeString;
   switch (rangeMode) {
     case ASLayoutRangeModeMinimum:
@@ -210,7 +217,7 @@ ASVisibilityDepthImplementation;
     default:
       break;
   }
-  NSLog(@"Updating visibility of:%@ to: %@ (visibility depth: %d)", self, rangeModeString, self.visibilityDepth);
+  as_log_verbose(ASNodeLog(), "Updating visibility of %@ to: %@ (visibility depth: %zd)", self, rangeModeString, self.visibilityDepth);
 #endif
   [self updateCurrentRangeModeWithModeIfPossible:rangeMode];
 }
@@ -281,6 +288,8 @@ ASVisibilityDepthImplementation;
   ASPrimitiveTraitCollection oldTraitCollection = self.node.primitiveTraitCollection;
   
   if (ASPrimitiveTraitCollectionIsEqualToASPrimitiveTraitCollection(traitCollection, oldTraitCollection) == NO) {
+    as_activity_scope_verbose(as_activity_create("Propagate ASViewController trait collection", AS_ACTIVITY_CURRENT, OS_ACTIVITY_FLAG_DEFAULT));
+    as_log_debug(ASNodeLog(), "Propagating new traits for %@: %@", self, NSStringFromASPrimitiveTraitCollection(traitCollection));
     self.node.primitiveTraitCollection = traitCollection;
     
     NSArray<id<ASLayoutElement>> *children = [self.node sublayoutElements];
@@ -292,6 +301,7 @@ ASVisibilityDepthImplementation;
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     // Once we've propagated all the traits, layout this node.
     // Remeasure the node with the latest constrained size – old constrained size may be incorrect.
+    as_activity_scope_verbose(as_activity_create("Layout ASViewController node with new traits", AS_ACTIVITY_CURRENT, OS_ACTIVITY_FLAG_DEFAULT));
     [_node layoutThatFits:[self nodeConstrainedSize]];
 #pragma clang diagnostic pop
   }

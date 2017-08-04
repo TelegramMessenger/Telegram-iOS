@@ -1,23 +1,22 @@
 //
 //  ItemViewModel.m
-//  Sample
-//
-//  Created by Samuel Stow on 12/29/15.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ItemViewModel.h"
+#import <stdatomic.h>
 
 NSArray *titles;
 NSArray *firstInfos;
@@ -32,28 +31,29 @@ NSArray *badges;
 
 @implementation ItemViewModel
 
-+ (instancetype)randomItem {
++ (ItemViewModel *)randomItem {
   return [[ItemViewModel alloc] init];
 }
 
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _titleText = [self randomObjectFromArray:titles];
-        _firstInfoText = [self randomObjectFromArray:firstInfos];
-        _secondInfoText = [NSString stringWithFormat:@"%zd+ bought", [self randomNumberInRange:5 to:6000]];
-        _originalPriceText = [NSString stringWithFormat:@"$%zd", [self randomNumberInRange:40 to:90]];
-        _finalPriceText = [NSString stringWithFormat:@"$%zd", [self randomNumberInRange:5 to:30]];
-        BOOL isSoldOut = arc4random() % 5 == 0;
-        _soldOutText = isSoldOut ? @"SOLD OUT" : nil;
-        _distanceLabelText = [NSString stringWithFormat:@"%zd mi", [self randomNumberInRange:1 to:20]];
-        BOOL isBadged = arc4random() % 2 == 0;
-        if (isBadged) {
-            _badgeText = [self randomObjectFromArray:badges];
-        }
-        _catNumber = [self randomNumberInRange:1 to:10];
-        _labelNumber = [self randomNumberInRange:1 to:10000];
-        
+      static _Atomic(NSInteger) nextID = ATOMIC_VAR_INIT(1);
+      _identifier = atomic_fetch_add(&nextID, 1);
+      _titleText = [self randomObjectFromArray:titles];
+      _firstInfoText = [self randomObjectFromArray:firstInfos];
+      _secondInfoText = [NSString stringWithFormat:@"%zd+ bought", [self randomNumberInRange:5 to:6000]];
+      _originalPriceText = [NSString stringWithFormat:@"$%zd", [self randomNumberInRange:40 to:90]];
+      _finalPriceText = [NSString stringWithFormat:@"$%zd", [self randomNumberInRange:5 to:30]];
+      BOOL isSoldOut = arc4random() % 5 == 0;
+      _soldOutText = isSoldOut ? @"SOLD OUT" : nil;
+      _distanceLabelText = [NSString stringWithFormat:@"%zd mi", [self randomNumberInRange:1 to:20]];
+      BOOL isBadged = arc4random() % 2 == 0;
+      if (isBadged) {
+        _badgeText = [self randomObjectFromArray:badges];
+      }
+      _catNumber = [self randomNumberInRange:1 to:10];
+      _labelNumber = [self randomNumberInRange:1 to:10000];
     }
     return self;
 }

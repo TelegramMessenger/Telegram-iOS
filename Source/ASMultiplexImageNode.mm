@@ -1,11 +1,18 @@
 //
 //  ASMultiplexImageNode.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 #ifndef MINIMAL_ASDK
 #import <AsyncDisplayKit/ASMultiplexImageNode.h>
@@ -17,8 +24,9 @@
 #import <AsyncDisplayKit/ASPhotosFrameworkImageRequest.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
+#import <AsyncDisplayKit/ASLog.h>
 
-#if PIN_REMOTE_IMAGE
+#if AS_PIN_REMOTE_IMAGE
 #import <AsyncDisplayKit/ASPINRemoteImageDownloader.h>
 #else
 #import <AsyncDisplayKit/ASBasicImageDownloader.h>
@@ -172,7 +180,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
 
 - (instancetype)init
 {
-#if PIN_REMOTE_IMAGE
+#if AS_PIN_REMOTE_IMAGE
   return [self initWithCache:[ASPINRemoteImageDownloader sharedDownloader] downloader:[ASPINRemoteImageDownloader sharedDownloader]];
 #else
   return [self initWithCache:nil downloader:[ASBasicImageDownloader sharedImageDownloader]];
@@ -250,7 +258,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
 
 - (BOOL)placeholderShouldPersist
 {
-  return (self.image == nil && self.imageIdentifiers.count > 0);
+  return (self.image == nil && self.animatedImage == nil && self.imageIdentifiers.count > 0);
 }
 
 /* displayWillStart in ASNetworkImageNode has a very similar implementation. Changes here are likely necessary
@@ -443,7 +451,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
   // Grab the best possible image we can load right now.
   id bestImmediatelyAvailableImageIdentifier = nil;
   UIImage *bestImmediatelyAvailableImage = [self _bestImmediatelyAvailableImageFromDataSource:&bestImmediatelyAvailableImageIdentifier];
-  ASMultiplexImageNodeLogDebug(@"[%p] Best immediately available image identifier is %@", self, bestImmediatelyAvailableImageIdentifier);
+  as_log_verbose(ASImageLoadingLog(), "%@ Best immediately available image identifier is %@", self, bestImmediatelyAvailableImageIdentifier);
 
   // Load it. This kicks off cache fetching/downloading, as appropriate.
   [self _finishedLoadingImage:bestImmediatelyAvailableImage forIdentifier:bestImmediatelyAvailableImageIdentifier error:nil];
@@ -573,6 +581,8 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
     return;
   }
 
+  as_activity_create_for_scope("Load next image for multiplex image node");
+  as_log_verbose(ASImageLoadingLog(), "Loading image for %@ ident: %@", self, nextImageIdentifier);
   self.loadingImageIdentifier = nextImageIdentifier;
 
   __weak __typeof__(self) weakSelf = self;
@@ -588,13 +598,11 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
     [strongSelf _finishedLoadingImage:image forIdentifier:imageIdentifier error:error];
   };
 
-  ASMultiplexImageNodeLogDebug(@"[%p] Loading next image, ident: %@", self, nextImageIdentifier);
-
   // Ask our data-source if it's got this image.
   if (_dataSourceFlags.image) {
     UIImage *image = [_dataSource multiplexImageNode:self imageForImageIdentifier:nextImageIdentifier];
     if (image) {
-      ASMultiplexImageNodeLogDebug(@"[%p] Acquired next image (%@) from data-source", self, nextImageIdentifier);
+      as_log_verbose(ASImageLoadingLog(), "Acquired image from data source for %@ ident: %@", self, nextImageIdentifier);
       finishedLoadingBlock(image, nextImageIdentifier, nil);
       return;
     }
@@ -603,7 +611,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
   NSURL *nextImageURL = (_dataSourceFlags.URL) ? [_dataSource multiplexImageNode:self URLForImageIdentifier:nextImageIdentifier] : nil;
   // If we fail to get a URL for the image, we have no source and can't proceed.
   if (!nextImageURL) {
-    ASMultiplexImageNodeLogError(@"[%p] Could not acquire URL for next image (%@). Bailing.", self, nextImageIdentifier);
+    as_log_error(ASImageLoadingLog(), "Could not acquire URL %@ ident: (%@)", self, nextImageIdentifier);
     finishedLoadingBlock(nil, nil, [NSError errorWithDomain:ASMultiplexImageNodeErrorDomain code:ASMultiplexImageNodeErrorCodeNoSourceForImage userInfo:nil]);
     return;
   }
@@ -613,14 +621,14 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
   if ([[nextImageURL scheme] isEqualToString:kAssetsLibraryURLScheme]) {
     // Load the asset.
     [self _loadALAssetWithIdentifier:nextImageIdentifier URL:nextImageURL completion:^(UIImage *downloadedImage, NSError *error) {
-      ASMultiplexImageNodeCLogDebug(@"[%p] Acquired next image (%@) from asset library", weakSelf, nextImageIdentifier);
+      as_log_verbose(ASImageLoadingLog(), "Acquired image from assets library for %@ %@", weakSelf, nextImageIdentifier);
       finishedLoadingBlock(downloadedImage, nextImageIdentifier, error);
     }];
   }
   // Likewise, if it's a iOS 8 Photo asset, we need to fetch it accordingly.
   else if (ASPhotosFrameworkImageRequest *request = [ASPhotosFrameworkImageRequest requestWithURL:nextImageURL]) {
     [self _loadPHAssetWithRequest:request identifier:nextImageIdentifier completion:^(UIImage *image, NSError *error) {
-      ASMultiplexImageNodeCLogDebug(@"[%p] Acquired next image (%@) from Photos Framework", weakSelf, nextImageIdentifier);
+      as_log_verbose(ASImageLoadingLog(), "Acquired image from Photos for %@ %@", weakSelf, nextImageIdentifier);
       finishedLoadingBlock(image, nextImageIdentifier, error);
     }];
   }
@@ -635,7 +643,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
 
       // If we had a cache-hit, we're done.
       if (imageFromCache) {
-        ASMultiplexImageNodeCLogDebug(@"[%p] Acquired next image (%@) from cache", strongSelf, nextImageIdentifier);
+        as_log_verbose(ASImageLoadingLog(), "Acquired image from cache for %@ id: %@ img: %@", strongSelf, nextImageIdentifier, imageFromCache);
         finishedLoadingBlock(imageFromCache, nextImageIdentifier, nil);
         return;
       }
@@ -648,7 +656,12 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
 
       // Otherwise, we've got to download it.
       [strongSelf _downloadImageWithIdentifier:nextImageIdentifier URL:nextImageURL completion:^(UIImage *downloadedImage, NSError *error) {
-        ASMultiplexImageNodeCLogDebug(@"[%p] Acquired next image (%@) from download", strongSelf, nextImageIdentifier);
+        __typeof__(self) strongSelf = weakSelf;
+        if (downloadedImage) {
+          as_log_verbose(ASImageLoadingLog(), "Acquired image from download for %@ id: %@ img: %@", strongSelf, nextImageIdentifier, downloadedImage);
+        } else {
+          as_log_error(ASImageLoadingLog(), "Error downloading image for %@ id: %@ err: %@", strongSelf, nextImageIdentifier, error);
+        }
         finishedLoadingBlock(downloadedImage, nextImageIdentifier, error);
       }];
     }];
@@ -844,7 +857,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
   // We explicitly perform this check because our datasource often doesn't give back immediately available images, even though we might have downloaded one already.
   // Because we seed this call with bestImmediatelyAvailableImageFromDataSource, we must be careful not to trample an existing image.
   if (image || imageIdentifierCount == 0) {
-    ASMultiplexImageNodeLogDebug(@"[%p] loaded -> displaying (%@, %@)", self, imageIdentifier, image);
+    as_log_verbose(ASImageLoadingLog(), "[%p] loaded -> displaying (%@, %@)", self, imageIdentifier, image);
     id previousIdentifier = self.loadedImageIdentifier;
     UIImage *previousImage = self.image;
 

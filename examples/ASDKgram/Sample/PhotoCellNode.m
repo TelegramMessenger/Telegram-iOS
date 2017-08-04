@@ -18,15 +18,18 @@
 //
 
 #import "PhotoCellNode.h"
+
+#import <AsyncDisplayKit/AsyncDisplayKit.h>
+#import <AsyncDisplayKit/ASDisplayNode+Beta.h>
+
 #import "Utilities.h"
-#import "AsyncDisplayKit.h"
-#import "ASDisplayNode+Beta.h"
 #import "CommentsNode.h"
 #import "PINImageView+PINRemoteImage.h"
 #import "PINButton+PINRemoteImage.h"
 
 // There are many ways to format ASLayoutSpec code.  In this example, we offer two different formats:
 // A flatter, more ordinary Objective-C style; or a more structured, "visually" declarative style.
+#define YOGA_LAYOUT 0
 #define FLAT_LAYOUT 0
 
 #define DEBUG_PHOTOCELL_LAYOUT  0
@@ -104,6 +107,8 @@
     
     // instead of adding everything addSubnode:
     self.automaticallyManagesSubnodes = YES;
+
+    [self setupYogaLayoutIfNeeded];
     
 #if DEBUG_PHOTOCELL_LAYOUT
     _userAvatarImageNode.backgroundColor              = [UIColor greenColor];
@@ -119,6 +124,7 @@
   return self;
 }
 
+#if !YOGA_LAYOUT
 - (ASLayoutSpec *)layoutSpecThatFits:(ASSizeRange)constrainedSize
 {
   // There are many ways to format ASLayoutSpec code.  In this example, we offer two different formats:
@@ -265,6 +271,7 @@
             ]];
   }
 }
+#endif
 
 #pragma mark - Instance Methods
 
@@ -294,6 +301,68 @@
     
     [self setNeedsLayout];
   }
+}
+
+- (void)setupYogaLayoutIfNeeded
+{
+#if YOGA_LAYOUT
+  [self.style yogaNodeCreateIfNeeded];
+  [_userAvatarImageNode.style yogaNodeCreateIfNeeded];
+  [_userNameLabel.style yogaNodeCreateIfNeeded];
+  [_photoImageNode.style yogaNodeCreateIfNeeded];
+  [_photoCommentsNode.style yogaNodeCreateIfNeeded];
+  [_photoLikesLabel.style yogaNodeCreateIfNeeded];
+  [_photoDescriptionLabel.style yogaNodeCreateIfNeeded];
+  [_photoLocationLabel.style yogaNodeCreateIfNeeded];
+  [_photoTimeIntervalSincePostLabel.style yogaNodeCreateIfNeeded];
+
+  ASDisplayNode *headerStack = [ASDisplayNode yogaHorizontalStack];
+  headerStack.style.margin = ASEdgeInsetsMake(InsetForHeader);
+  headerStack.style.alignItems = ASStackLayoutAlignItemsCenter;
+  headerStack.style.flexGrow = 1.0;
+
+  // Avatar Image, with inset - first thing in the header stack.
+  _userAvatarImageNode.style.preferredSize = CGSizeMake(USER_IMAGE_HEIGHT, USER_IMAGE_HEIGHT);
+  _userAvatarImageNode.style.margin = ASEdgeInsetsMake(InsetForAvatar);
+  [headerStack addYogaChild:_userAvatarImageNode];
+
+  // User Name and Photo Location stack is next
+  ASDisplayNode *userPhotoLocationStack = [ASDisplayNode yogaVerticalStack];
+  userPhotoLocationStack.style.flexShrink = 1.0;
+  [headerStack addYogaChild:userPhotoLocationStack];
+
+  // Setup the inside of the User Name and Photo Location stack.
+  _userNameLabel.style.flexShrink = 1.0;
+  [userPhotoLocationStack addYogaChild:_userNameLabel];
+
+  if (_photoLocationLabel.attributedText) {
+    _photoLocationLabel.style.flexShrink = 1.0;
+    [userPhotoLocationStack addYogaChild:_photoLocationLabel];
+  }
+
+  // Add a spacer to allow a flexible space between the User Name / Location stack, and the Timestamp.
+  [headerStack addYogaChild:[ASDisplayNode yogaSpacerNode]];
+
+  // Photo Timestamp Label.
+  _photoTimeIntervalSincePostLabel.style.spacingBefore = HORIZONTAL_BUFFER;
+  [headerStack addYogaChild:_photoTimeIntervalSincePostLabel];
+
+  // Create the last stack before assembling everything: the Footer Stack contains the description and comments.
+  ASDisplayNode *footerStack = [ASDisplayNode yogaVerticalStack];
+  footerStack.style.margin = ASEdgeInsetsMake(InsetForFooter);
+  footerStack.style.padding = ASEdgeInsetsMake(UIEdgeInsetsMake(0.0, 0.0, VERTICAL_BUFFER, 0.0));
+  footerStack.yogaChildren = @[_photoLikesLabel, _photoDescriptionLabel, _photoCommentsNode];
+
+  // Main Vertical Stack: contains header, large main photo with fixed aspect ratio, and footer.
+  _photoImageNode.style.aspectRatio = 1.0;
+
+  ASDisplayNode *verticalStack = self;
+  self.style.flexDirection = ASStackLayoutDirectionVertical;
+
+  [verticalStack addYogaChild:headerStack];
+  [verticalStack addYogaChild:_photoImageNode];
+  [verticalStack addYogaChild:footerStack];
+#endif
 }
 
 @end

@@ -1,11 +1,18 @@
 //
 //  _ASCoreAnimationExtras.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
@@ -14,16 +21,20 @@
 
 extern void ASDisplayNodeSetupLayerContentsWithResizableImage(CALayer *layer, UIImage *image)
 {
+  ASDisplayNodeSetResizableContents(layer, image);
+}
+
+extern void ASDisplayNodeSetResizableContents(id<ASResizableContents> obj, UIImage *image)
+{
   // FIXME: This method does not currently handle UIImageResizingModeTile, which is the default on iOS 6.
   // I'm not sure of a way to use CALayer directly to perform such tiling on the GPU, though the stretch is handled by the GPU,
   // and CALayer.h documents the fact that contentsCenter is used to stretch the pixels.
 
   if (image) {
-
     // Image may not actually be stretchable in one or both dimensions; this is handled
-    layer.contents = (id)[image CGImage];
-    layer.contentsScale = [image scale];
-    layer.rasterizationScale = [image scale];
+    obj.contents = (id)[image CGImage];
+    obj.contentsScale = [image scale];
+    obj.rasterizationScale = [image scale];
     CGSize imageSize = [image size];
 
     ASDisplayNodeCAssert(image.resizingMode == UIImageResizingModeStretch || UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero),
@@ -44,11 +55,11 @@ extern void ASDisplayNodeSetupLayerContentsWithResizableImage(CALayer *layer, UI
       contentsCenter.origin.y = ((insets.top + halfPixelFudge) / imageSize.height);
       contentsCenter.size.height = (imageSize.height - (insets.top + insets.bottom + 1.f) + otherPixelFudge) / imageSize.height;
     }
-    layer.contentsGravity = kCAGravityResize;
-    layer.contentsCenter = contentsCenter;
+    obj.contentsGravity = kCAGravityResize;
+    obj.contentsCenter = contentsCenter;
 
   } else {
-    layer.contents = nil;
+    obj.contents = nil;
   }
 }
 

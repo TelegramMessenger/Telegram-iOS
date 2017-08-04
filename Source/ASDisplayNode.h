@@ -1,11 +1,18 @@
 //
 //  ASDisplayNode.h
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #pragma once
@@ -18,6 +25,7 @@
 #import <AsyncDisplayKit/ASAsciiArtBoxCreator.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 #import <AsyncDisplayKit/ASLayoutElement.h>
+#import <AsyncDisplayKit/ASBlockTypes.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -49,7 +57,7 @@ typedef void (^ASDisplayNodeDidLoadBlock)(__kindof ASDisplayNode * node);
 /**
  * ASDisplayNode will / did render node content in context.
  */
-typedef void (^ASDisplayNodeContextModifier)(CGContextRef context);
+typedef void (^ASDisplayNodeContextModifier)(CGContextRef context, id _Nullable drawParameters);
 
 /**
  * ASDisplayNode layout spec block. This block can be used instead of implementing layoutSpecThatFits: in subclass
@@ -114,12 +122,16 @@ extern NSInteger const ASDefaultDrawingPriority;
  *
  */
 
-@interface ASDisplayNode : NSObject <ASLayoutElement, ASLayoutElementStylability, NSFastEnumeration>
+@interface ASDisplayNode : NSObject
+
++ (void)drawRect:(CGRect)bounds withParameters:(nullable id)parameters
+     isCancelled:(AS_NOESCAPE asdisplaynode_iscancelled_block_t)isCancelledBlock
+   isRasterizing:(BOOL)isRasterizing;
 
 /** @name Initializing a node object */
 
 
-/** 
+/**
  * @abstract Designated initializer.
  *
  * @return An ASDisplayNode instance whose view will be a subclass that enables asynchronous rendering, and passes 
@@ -178,8 +190,6 @@ extern NSInteger const ASDefaultDrawingPriority;
  * @param body The work to be performed when the node is loaded.
  *
  * @precondition The node is not already loaded.
- * @note This will only be called the next time the node is loaded. If the node is later added to a subtree of a node
- *    that has `shouldRasterizeDescendants=YES`, and is unloaded, this block will not be called if it is loaded again.
  */
 - (void)onDidLoad:(ASDisplayNodeDidLoadBlock)body;
 
@@ -197,7 +207,7 @@ extern NSInteger const ASDefaultDrawingPriority;
 /**
  * Set the block that should be used to load this node's layer.
  *
- * @param viewBlock The block that creates a layer for this node.
+ * @param layerBlock The block that creates a layer for this node.
  *
  * @precondition The node is not yet loaded.
  *
@@ -210,8 +220,7 @@ extern NSInteger const ASDefaultDrawingPriority;
  *
  * @return NO if the node wraps a _ASDisplayView, YES otherwise.
  */
-@property (nonatomic, readonly, assign, getter=isSynchronous) BOOL synchronous;
-
+@property (atomic, readonly, assign, getter=isSynchronous) BOOL synchronous;
 
 /** @name Getting view and layer */
 
@@ -290,61 +299,6 @@ extern NSInteger const ASDefaultDrawingPriority;
  * @warning This method is not thread-safe.
  */
 @property (nonatomic, class, copy) ASDisplayNodeNonFatalErrorBlock nonFatalErrorBlock;
-
-
-/** @name Managing dimensions */
-
-/**
- * @abstract Asks the node to return a layout based on given size range.
- *
- * @param constrainedSize The minimum and maximum sizes the receiver should fit in.
- *
- * @return An ASLayout instance defining the layout of the receiver (and its children, if the box layout model is used).
- *
- * @discussion Though this method does not set the bounds of the view, it does have side effects--caching both the
- * constraint and the result.
- *
- * @warning Subclasses must not override this; it caches results from -calculateLayoutThatFits:.  Calling this method may
- * be expensive if result is not cached.
- *
- * @see [ASDisplayNode(Subclassing) calculateLayoutThatFits:]
- */
-- (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize;
-
-/**
- * @abstract Provides a way to declare a block to provide an ASLayoutSpec without having to subclass ASDisplayNode and
- * implement layoutSpecThatFits:
- *
- * @return A block that takes a constrainedSize ASSizeRange argument, and must return an ASLayoutSpec that includes all
- * of the subnodes to position in the layout. This input-output relationship is identical to the subclass override
- * method -layoutSpecThatFits:
- *
- * @warning Subclasses that implement -layoutSpecThatFits: must not also use .layoutSpecBlock. Doing so will trigger
- * an exception. A future version of the framework may support using both, calling them serially, with the
- * .layoutSpecBlock superseding any values set by the method override.
- *
- * @code ^ASLayoutSpec *(__kindof ASDisplayNode * _Nonnull node, ASSizeRange constrainedSize) {};
- */
-@property (nonatomic, readwrite, copy, nullable) ASLayoutSpecBlock layoutSpecBlock;
-
-/** 
- * @abstract Return the calculated size.
- *
- * @discussion Ideal for use by subclasses in -layout, having already prompted their subnodes to calculate their size by
- * calling -measure: on them in -calculateLayoutThatFits.
- *
- * @return Size already calculated by -calculateLayoutThatFits:.
- *
- * @warning Subclasses must not override this; it returns the last cached measurement and is never expensive.
- */
-@property (nonatomic, readonly, assign) CGSize calculatedSize;
-
-/** 
- * @abstract Return the constrained size range used for calculating layout.
- *
- * @return The minimum and maximum constrained sizes used by calculateLayoutThatFits:.
- */
-@property (nonatomic, readonly, assign) ASSizeRange constrainedSizeForCalculatedLayout;
 
 /** @name Managing the nodes hierarchy */
 
@@ -518,7 +472,7 @@ extern NSInteger const ASDefaultDrawingPriority;
  * @discussion Defaults to ASDefaultDrawingPriority. There may be multiple drawing threads, and some of them may
  * decide to perform operations in queued order (regardless of drawingPriority)
  */
-@property (nonatomic, assign) NSInteger drawingPriority;
+@property (atomic, assign) NSInteger drawingPriority;
 
 /** @name Hit Testing */
 
@@ -592,12 +546,41 @@ extern NSInteger const ASDefaultDrawingPriority;
  */
 - (CGRect)convertRect:(CGRect)rect fromNode:(nullable ASDisplayNode *)node AS_WARN_UNUSED_RESULT;
 
+/**
+ * Whether or not the node would support having .layerBacked = YES.
+ */
+@property (nonatomic, readonly) BOOL supportsLayerBacking;
+
 @end
 
 /**
  * Convenience methods for debugging.
  */
-@interface ASDisplayNode (Debugging) <ASLayoutElementAsciiArtProtocol, ASDebugNameProvider>
+@interface ASDisplayNode (Debugging) <ASDebugNameProvider>
+
+/**
+ * Set to YES to tell all ASDisplayNode instances to store their unflattened layouts.
+ *
+ * The layout can be accessed via `-unflattenedCalculatedLayout`.
+ *
+ * Flattened layouts use less memory and are faster to lookup. On the other hand, unflattened layouts are useful for debugging
+ * because they preserve original information.
+ */
++ (void)setShouldStoreUnflattenedLayouts:(BOOL)shouldStore;
+
+/**
+ * Whether or not ASDisplayNode instances should store their unflattened layouts. 
+ *
+ * The layout can be accessed via `-unflattenedCalculatedLayout`.
+ * 
+ * Flattened layouts use less memory and are faster to lookup. On the other hand, unflattened layouts are useful for debugging
+ * because they preserve original information.
+ *
+ * Defaults to NO.
+ */
++ (BOOL)shouldStoreUnflattenedLayouts;
+
+@property (nonatomic, strong, readonly, nullable) ASLayout *unflattenedCalculatedLayout;
 
 /**
  * @abstract Return a description of the node hierarchy.
@@ -607,7 +590,6 @@ extern NSInteger const ASDefaultDrawingPriority;
 - (NSString *)displayNodeRecursiveDescription AS_WARN_UNUSED_RESULT;
 
 @end
-
 
 /**
  * ## UIView bridge
@@ -639,28 +621,36 @@ extern NSInteger const ASDefaultDrawingPriority;
  */
 - (void)setNeedsLayout;
 
-@property (nonatomic, strong, nullable) id contents;                           // default=nil
+/**
+ * Performs a layout pass on the node. Convenience for use whether the view / layer is loaded or not. Safe to call from a background thread.
+ */
+- (void)layoutIfNeeded;
+
+@property (nonatomic, assign)           CGRect frame;                          // default=CGRectZero
+@property (nonatomic, assign)           CGRect bounds;                         // default=CGRectZero
+@property (nonatomic, assign)           CGPoint position;                      // default=CGPointZero
+@property (nonatomic, assign)           CGFloat alpha;                         // default=1.0f
+
 @property (nonatomic, assign)           BOOL clipsToBounds;                    // default==NO
+@property (nonatomic, getter=isHidden)  BOOL hidden;                           // default==NO
 @property (nonatomic, getter=isOpaque)  BOOL opaque;                           // default==YES
 
-@property (nonatomic, assign)           BOOL allowsGroupOpacity;
-@property (nonatomic, assign)           BOOL allowsEdgeAntialiasing;
-@property (nonatomic, assign)           unsigned int edgeAntialiasingMask;     // default==all values from CAEdgeAntialiasingMask
+@property (nonatomic, strong, nullable) id contents;                           // default=nil
+@property (nonatomic, assign)           CGRect contentsRect;                   // default={0,0,1,1}. @see CALayer.h for details.
+@property (nonatomic, assign)           CGRect contentsCenter;                 // default={0,0,1,1}. @see CALayer.h for details.
+@property (nonatomic, assign)           CGFloat contentsScale;                 // default=1.0f. See @contentsScaleForDisplay for details.
+@property (nonatomic, assign)           CGFloat rasterizationScale;            // default=1.0f.
 
-@property (nonatomic, getter=isHidden)  BOOL hidden;                           // default==NO
-@property (nonatomic, assign)           BOOL needsDisplayOnBoundsChange;       // default==NO
-@property (nonatomic, assign)           BOOL autoresizesSubviews;              // default==YES (undefined for layer-backed nodes)
-@property (nonatomic, assign)           UIViewAutoresizing autoresizingMask;   // default==UIViewAutoresizingNone  (undefined for layer-backed nodes)
-@property (nonatomic, assign)           CGFloat alpha;                         // default=1.0f
-@property (nonatomic, assign)           CGRect bounds;                         // default=CGRectZero
-@property (nonatomic, assign)           CGRect frame;                          // default=CGRectZero
 @property (nonatomic, assign)           CGPoint anchorPoint;                   // default={0.5, 0.5}
 @property (nonatomic, assign)           CGFloat zPosition;                     // default=0.0
-@property (nonatomic, assign)           CGPoint position;                      // default=CGPointZero
 @property (nonatomic, assign)           CGFloat cornerRadius;                  // default=0.0
-@property (nonatomic, assign)           CGFloat contentsScale;                 // default=1.0f. See @contentsScaleForDisplay for more info
 @property (nonatomic, assign)           CATransform3D transform;               // default=CATransform3DIdentity
 @property (nonatomic, assign)           CATransform3D subnodeTransform;        // default=CATransform3DIdentity
+
+@property (nonatomic, assign, getter=isUserInteractionEnabled) BOOL userInteractionEnabled; // default=YES (NO for layer-backed nodes)
+#if TARGET_OS_IOS
+@property (nonatomic, assign, getter=isExclusiveTouch) BOOL exclusiveTouch;    // default=NO
+#endif
 
 /**
  * @abstract The node view's background color.
@@ -670,8 +660,8 @@ extern NSInteger const ASDefaultDrawingPriority;
 */
 @property (nonatomic, strong, nullable) UIColor *backgroundColor;              // default=nil
 
-@property (nonatomic, strong, null_resettable)    UIColor *tintColor;          // default=Blue
-- (void)tintColorDidChange;     // Notifies the node when the tintColor has changed.
+@property (nonatomic, strong, null_resettable) UIColor *tintColor;             // default=Blue
+- (void)tintColorDidChange;                                                    // Notifies the node when the tintColor has changed.
 
 /**
  * @abstract A flag used to determine how a node lays out its content when its bounds change.
@@ -682,17 +672,23 @@ extern NSInteger const ASDefaultDrawingPriority;
  * contentMode for your content while it's being re-rendered.
  */
 @property (nonatomic, assign)           UIViewContentMode contentMode;         // default=UIViewContentModeScaleToFill
+@property (nonatomic, copy)             NSString *contentsGravity;             // Use .contentMode in preference when possible.
+@property (nonatomic, assign)           UISemanticContentAttribute semanticContentAttribute; // default=Unspecified
 
-@property (nonatomic, assign, getter=isUserInteractionEnabled) BOOL userInteractionEnabled; // default=YES (NO for layer-backed nodes)
-#if TARGET_OS_IOS
-@property (nonatomic, assign, getter=isExclusiveTouch) BOOL exclusiveTouch;    // default=NO
-#endif
-@property (nonatomic, assign, nullable) CGColorRef shadowColor;                // default=opaque rgb black
+@property (nonatomic, nullable)         CGColorRef shadowColor;                // default=opaque rgb black
 @property (nonatomic, assign)           CGFloat shadowOpacity;                 // default=0.0
 @property (nonatomic, assign)           CGSize shadowOffset;                   // default=(0, -3)
 @property (nonatomic, assign)           CGFloat shadowRadius;                  // default=3
 @property (nonatomic, assign)           CGFloat borderWidth;                   // default=0
-@property (nonatomic, assign, nullable) CGColorRef borderColor;                // default=opaque rgb black
+@property (nonatomic, nullable)         CGColorRef borderColor;                // default=opaque rgb black
+
+@property (nonatomic, assign)           BOOL allowsGroupOpacity;
+@property (nonatomic, assign)           BOOL allowsEdgeAntialiasing;
+@property (nonatomic, assign)           unsigned int edgeAntialiasingMask;     // default==all values from CAEdgeAntialiasingMask
+
+@property (nonatomic, assign)           BOOL needsDisplayOnBoundsChange;       // default==NO
+@property (nonatomic, assign)           BOOL autoresizesSubviews;              // default==YES (undefined for layer-backed nodes)
+@property (nonatomic, assign)           UIViewAutoresizing autoresizingMask;   // default==UIViewAutoresizingNone (undefined for layer-backed nodes)
 
 // UIResponder methods
 // By default these fall through to the underlying view, but can be overridden.
@@ -740,7 +736,74 @@ extern NSInteger const ASDefaultDrawingPriority;
 
 @end
 
-@interface ASDisplayNode (LayoutTransitioning)
+@interface ASDisplayNode (ASLayoutElement) <ASLayoutElement>
+
+/**
+ * @abstract Asks the node to return a layout based on given size range.
+ *
+ * @param constrainedSize The minimum and maximum sizes the receiver should fit in.
+ *
+ * @return An ASLayout instance defining the layout of the receiver (and its children, if the box layout model is used).
+ *
+ * @discussion Though this method does not set the bounds of the view, it does have side effects--caching both the
+ * constraint and the result.
+ *
+ * @warning Subclasses must not override this; it caches results from -calculateLayoutThatFits:.  Calling this method may
+ * be expensive if result is not cached.
+ *
+ * @see [ASDisplayNode(Subclassing) calculateLayoutThatFits:]
+ */
+- (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize;
+
+@end
+
+@interface ASDisplayNode (ASLayoutElementStylability) <ASLayoutElementStylability>
+
+@end
+
+@interface ASDisplayNode (ASLayout)
+
+/** @name Managing dimensions */
+
+/**
+ * @abstract Provides a way to declare a block to provide an ASLayoutSpec without having to subclass ASDisplayNode and
+ * implement layoutSpecThatFits:
+ *
+ * @return A block that takes a constrainedSize ASSizeRange argument, and must return an ASLayoutSpec that includes all
+ * of the subnodes to position in the layout. This input-output relationship is identical to the subclass override
+ * method -layoutSpecThatFits:
+ *
+ * @warning Subclasses that implement -layoutSpecThatFits: must not also use .layoutSpecBlock. Doing so will trigger
+ * an exception. A future version of the framework may support using both, calling them serially, with the
+ * .layoutSpecBlock superseding any values set by the method override.
+ *
+ * @code ^ASLayoutSpec *(__kindof ASDisplayNode * _Nonnull node, ASSizeRange constrainedSize) {};
+ */
+@property (nonatomic, readwrite, copy, nullable) ASLayoutSpecBlock layoutSpecBlock;
+
+/** 
+ * @abstract Return the calculated size.
+ *
+ * @discussion Ideal for use by subclasses in -layout, having already prompted their subnodes to calculate their size by
+ * calling -measure: on them in -calculateLayoutThatFits.
+ *
+ * @return Size already calculated by -calculateLayoutThatFits:.
+ *
+ * @warning Subclasses must not override this; it returns the last cached measurement and is never expensive.
+ */
+@property (nonatomic, readonly, assign) CGSize calculatedSize;
+
+/** 
+ * @abstract Return the constrained size range used for calculating layout.
+ *
+ * @return The minimum and maximum constrained sizes used by calculateLayoutThatFits:.
+ */
+@property (nonatomic, readonly, assign) ASSizeRange constrainedSizeForCalculatedLayout;
+
+
+@end
+
+@interface ASDisplayNode (ASLayoutTransitioning)
 
 /**
  * @abstract The amount of time it takes to complete the default transition animation. Default is 0.2.
@@ -814,7 +877,7 @@ extern NSInteger const ASDefaultDrawingPriority;
 /*
  * ASDisplayNode support for automatic subnode management.
  */
-@interface ASDisplayNode (AutomaticSubnodeManagement)
+@interface ASDisplayNode (ASAutomaticSubnodeManagement)
 
 /**
  * @abstract A boolean that shows whether the node automatically inserts and removes nodes based on the presence or

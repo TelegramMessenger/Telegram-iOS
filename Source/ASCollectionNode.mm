@@ -1,27 +1,35 @@
 //
 //  ASCollectionNode.mm
-//  AsyncDisplayKit
-//
-//  Created by Scott Goodson on 9/5/15.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
 #import <AsyncDisplayKit/ASCollectionNode.h>
+#import <AsyncDisplayKit/ASCollectionNode+Beta.h>
 
 #import <AsyncDisplayKit/ASCollectionElement.h>
 #import <AsyncDisplayKit/ASElementMap.h>
 #import <AsyncDisplayKit/ASCollectionInternal.h>
+#import <AsyncDisplayKit/ASCollectionLayout.h>
 #import <AsyncDisplayKit/ASCollectionViewLayoutFacilitatorProtocol.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASCellNode+Internal.h>
+#import <AsyncDisplayKit/_ASHierarchyChangeSet.h>
 #import <AsyncDisplayKit/AsyncDisplayKit+Debug.h>
 #import <AsyncDisplayKit/ASSectionContext.h>
 #import <AsyncDisplayKit/ASDataController.h>
@@ -34,10 +42,14 @@
 @interface _ASCollectionPendingState : NSObject
 @property (weak, nonatomic) id <ASCollectionDelegate>   delegate;
 @property (weak, nonatomic) id <ASCollectionDataSource> dataSource;
+@property (strong, nonatomic) UICollectionViewLayout *collectionViewLayout;
 @property (nonatomic, assign) ASLayoutRangeMode rangeMode;
 @property (nonatomic, assign) BOOL allowsSelection; // default is YES
 @property (nonatomic, assign) BOOL allowsMultipleSelection; // default is NO
 @property (nonatomic, assign) BOOL inverted; //default is NO
+@property (nonatomic, assign) BOOL usesSynchronousDataLoading;
+@property (nonatomic, assign) CGFloat leadingScreensForBatching;
+@property (weak, nonatomic) id <ASCollectionViewLayoutInspecting> layoutInspector;
 @end
 
 @implementation _ASCollectionPendingState
@@ -102,6 +114,7 @@
 {
   ASDN::RecursiveMutex _environmentStateLock;
   Class _collectionViewClass;
+  id<ASBatchFetchingDelegate> _batchFetchingDelegate;
 }
 @property (nonatomic) _ASCollectionPendingState *pendingState;
 @end
@@ -134,13 +147,21 @@
   return [self initWithFrame:frame collectionViewLayout:layout layoutFacilitator:nil];
 }
 
+- (instancetype)initWithLayoutDelegate:(id<ASCollectionLayoutDelegate>)layoutDelegate layoutFacilitator:(id<ASCollectionViewLayoutFacilitatorProtocol>)layoutFacilitator
+{
+  return [self initWithFrame:CGRectZero collectionViewLayout:[[ASCollectionLayout alloc] initWithLayoutDelegate:layoutDelegate] layoutFacilitator:layoutFacilitator];
+}
+
 - (instancetype)initWithFrame:(CGRect)frame collectionViewLayout:(UICollectionViewLayout *)layout layoutFacilitator:(id<ASCollectionViewLayoutFacilitatorProtocol>)layoutFacilitator
 {
   if (self = [super init]) {
+    // Must call the setter here to make sure pendingState is created and the layout is configured.
+    [self setCollectionViewLayout:layout];
+    
     __weak __typeof__(self) weakSelf = self;
     [self setViewBlock:^{
       __typeof__(self) strongSelf = weakSelf;
-      return [[[strongSelf collectionViewClass] alloc] _initWithFrame:frame collectionViewLayout:layout layoutFacilitator:layoutFacilitator eventLog:ASDisplayNodeGetEventLog(strongSelf)];
+      return [[[strongSelf collectionViewClass] alloc] _initWithFrame:frame collectionViewLayout:strongSelf->_pendingState.collectionViewLayout layoutFacilitator:layoutFacilitator owningNode:strongSelf eventLog:ASDisplayNodeGetEventLog(strongSelf)];
     }];
   }
   return self;
@@ -157,16 +178,20 @@
   
   if (_pendingState) {
     _ASCollectionPendingState *pendingState = _pendingState;
-    self.pendingState            = nil;
-    view.asyncDelegate           = pendingState.delegate;
-    view.asyncDataSource         = pendingState.dataSource;
-    view.inverted                = pendingState.inverted;
-    view.allowsSelection         = pendingState.allowsSelection;
-    view.allowsMultipleSelection = pendingState.allowsMultipleSelection;
-
+    view.asyncDelegate              = pendingState.delegate;
+    view.asyncDataSource            = pendingState.dataSource;
+    view.inverted                   = pendingState.inverted;
+    view.allowsSelection            = pendingState.allowsSelection;
+    view.allowsMultipleSelection    = pendingState.allowsMultipleSelection;
+    view.usesSynchronousDataLoading = pendingState.usesSynchronousDataLoading;
+    view.layoutInspector            = pendingState.layoutInspector;
+    self.pendingState               = nil;
+    
     if (pendingState.rangeMode != ASLayoutRangeModeUnspecified) {
       [view.rangeController updateCurrentRangeWithMode:pendingState.rangeMode];
     }
+    
+    // Don't need to set collectionViewLayout to the view as the layout was already used to init the view in view block.
   }
 }
 
@@ -181,16 +206,19 @@
   [self.rangeController clearContents];
 }
 
-- (void)didExitPreloadState
-{
-  [super didExitPreloadState];
-  [self.rangeController clearPreloadedData];
-}
-
 - (void)interfaceStateDidChange:(ASInterfaceState)newState fromState:(ASInterfaceState)oldState
 {
   [super interfaceStateDidChange:newState fromState:oldState];
   [ASRangeController layoutDebugOverlayIfNeeded];
+}
+
+- (void)didEnterPreloadState
+{
+  [super didEnterPreloadState];
+  // Intentionally allocate the view here and trigger a layout pass on it, which in turn will trigger the intial data load.
+  // We can get rid of this call later when ASDataController, ASRangeController and ASCollectionLayout can operate without the view.
+  // TODO (ASCL) If this node supports async layout, kick off the initial data load without allocating the view
+  [[self view] layoutIfNeeded];
 }
 
 #if ASRangeControllerLoggingEnabled
@@ -206,6 +234,12 @@
   NSLog(@"%@ - visible: NO", self);
 }
 #endif
+
+- (void)didExitPreloadState
+{
+  [super didExitPreloadState];
+  [self.rangeController clearPreloadedData];
+}
 
 #pragma mark Setter / Getter
 
@@ -247,6 +281,44 @@
     return _pendingState.inverted;
   } else {
     return self.view.inverted;
+  }
+}
+
+- (void)setLayoutInspector:(id<ASCollectionViewLayoutInspecting>)layoutInspector
+{
+  if ([self pendingState]) {
+    _pendingState.layoutInspector = layoutInspector;
+  } else {
+    ASDisplayNodeAssert([self isNodeLoaded], @"ASCollectionNode should be loaded if pendingState doesn't exist");
+    self.view.layoutInspector = layoutInspector;
+  }
+}
+
+- (id<ASCollectionViewLayoutInspecting>)layoutInspector
+{
+  if ([self pendingState]) {
+    return _pendingState.layoutInspector;
+  } else {
+    return self.view.layoutInspector;
+  }
+}
+
+- (void)setLeadingScreensForBatching:(CGFloat)leadingScreensForBatching
+{
+  if ([self pendingState]) {
+    _pendingState.leadingScreensForBatching = leadingScreensForBatching;
+  } else {
+    ASDisplayNodeAssert([self isNodeLoaded], @"ASCollectionNode should be loaded if pendingState doesn't exist");
+    self.view.leadingScreensForBatching = leadingScreensForBatching;
+  }
+}
+
+- (CGFloat)leadingScreensForBatching
+{
+  if ([self pendingState]) {
+    return _pendingState.leadingScreensForBatching;
+  } else {
+    return self.view.leadingScreensForBatching;
   }
 }
 
@@ -338,6 +410,80 @@
     return _pendingState.allowsMultipleSelection;
   } else {
     return self.view.allowsMultipleSelection;
+  }
+}
+
+- (void)setCollectionViewLayout:(UICollectionViewLayout *)layout
+{
+  if ([self pendingState]) {
+    [self _configureCollectionViewLayout:layout];
+    _pendingState.collectionViewLayout = layout;
+  } else {
+    [self _configureCollectionViewLayout:layout];
+    self.view.collectionViewLayout = layout;
+  }
+}
+
+- (UICollectionViewLayout *)collectionViewLayout
+{
+  if ([self pendingState]) {
+    return _pendingState.collectionViewLayout;
+  } else {
+    return self.view.collectionViewLayout;
+  }
+}
+
+- (ASScrollDirection)scrollDirection
+{
+  return [self isNodeLoaded] ? self.view.scrollDirection : ASScrollDirectionNone;
+}
+
+- (ASScrollDirection)scrollableDirections
+{
+  return [self isNodeLoaded] ? self.view.scrollableDirections : ASScrollDirectionNone;
+}
+
+- (ASElementMap *)visibleElements
+{
+  ASDisplayNodeAssertMainThread();
+  // TODO Own the data controller when view is not yet loaded
+  return self.dataController.visibleMap;
+}
+
+- (id<ASCollectionLayoutDelegate>)layoutDelegate
+{
+  UICollectionViewLayout *layout = self.collectionViewLayout;
+  if ([layout isKindOfClass:[ASCollectionLayout class]]) {
+    return ((ASCollectionLayout *)layout).layoutDelegate;
+  }
+  return nil;
+}
+
+- (void)setBatchFetchingDelegate:(id<ASBatchFetchingDelegate>)batchFetchingDelegate
+{
+  _batchFetchingDelegate = batchFetchingDelegate;
+}
+
+- (id<ASBatchFetchingDelegate>)batchFetchingDelegate
+{
+  return _batchFetchingDelegate;
+}
+
+- (BOOL)usesSynchronousDataLoading
+{
+  if ([self pendingState]) {
+    return _pendingState.usesSynchronousDataLoading; 
+  } else {
+    return self.view.usesSynchronousDataLoading;
+  }
+}
+
+- (void)setUsesSynchronousDataLoading:(BOOL)usesSynchronousDataLoading
+{
+  if ([self pendingState]) {
+    _pendingState.usesSynchronousDataLoading = usesSynchronousDataLoading; 
+  } else {
+    self.view.usesSynchronousDataLoading = usesSynchronousDataLoading;
   }
 }
 
@@ -447,6 +593,12 @@
   return [self.dataController.pendingMap elementForItemAtIndexPath:indexPath].node;
 }
 
+- (id)viewModelForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+  [self reloadDataInitiallyIfNeeded];
+  return [self.dataController.pendingMap elementForItemAtIndexPath:indexPath].viewModel;
+}
+
 - (NSIndexPath *)indexPathForNode:(ASCellNode *)cellNode
 {
   return [self.dataController.pendingMap indexPathForElement:cellNode.collectionElement];
@@ -533,9 +685,17 @@
 - (void)reloadDataWithCompletion:(void (^)())completion
 {
   ASDisplayNodeAssertMainThread();
-  if (self.nodeLoaded) {
-    [self.view reloadDataWithCompletion:completion];
+  if (!self.nodeLoaded) {
+    return;
   }
+  
+  [self performBatchUpdates:^{
+    [self.view.changeSet reloadData];
+  } completion:^(BOOL finished){
+    if (completion) {
+      completion();
+    }
+  }];
 }
 
 - (void)reloadData
@@ -543,14 +703,19 @@
   [self reloadDataWithCompletion:nil];
 }
 
-- (void)relayoutItems
-{
-  [self.view relayoutItems];
-}
-
 - (void)reloadDataImmediately
 {
-  [self.view reloadDataImmediately];
+  ASDisplayNodeAssertMainThread();
+  [self reloadData];
+  [self waitUntilAllUpdatesAreCommitted];
+}
+
+- (void)relayoutItems
+{
+  ASDisplayNodeAssertMainThread();
+  if (self.nodeLoaded) {
+  	[self.view relayoutItems];
+  }
 }
 
 - (void)beginUpdates
@@ -661,6 +826,16 @@ ASLayoutElementCollectionTableSetTraitCollection(_environmentStateLock)
   [result addObject:@{ @"dataSource" : ASObjectDescriptionMakeTiny(self.dataSource) }];
   [result addObject:@{ @"delegate" : ASObjectDescriptionMakeTiny(self.delegate) }];
   return result;
+}
+
+#pragma mark - Private methods
+
+- (void)_configureCollectionViewLayout:(UICollectionViewLayout *)layout
+{
+  if ([layout isKindOfClass:[ASCollectionLayout class]]) {
+    ASCollectionLayout *collectionLayout = (ASCollectionLayout *)layout;
+    collectionLayout.collectionNode = self;
+  }
 }
 
 @end

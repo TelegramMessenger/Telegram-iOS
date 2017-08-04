@@ -1,16 +1,24 @@
 //
 //  ASDisplayNodeExtras.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
+#import <AsyncDisplayKit/ASDisplayNode+Ancestry.h>
 
 #import <queue>
 #import <AsyncDisplayKit/ASRunLoopQueue.h>
@@ -90,7 +98,7 @@ extern void ASDisplayNodePerformBlockOnEveryNode(CALayer * _Nullable layer, ASDi
     layer = node.layer;
   }
   
-  if (traverseSublayers && layer && node.shouldRasterizeDescendants == NO) {
+  if (traverseSublayers && layer && node.rasterizesSubtree == NO) {
     /// NOTE: The docs say `sublayers` returns a copy, but it does not.
     /// See: http://stackoverflow.com/questions/14854480/collection-calayerarray-0x1ed8faa0-was-mutated-while-being-enumerated
     for (CALayer *sublayer in [[layer sublayers] copy]) {
@@ -131,24 +139,21 @@ extern void ASDisplayNodePerformBlockOnEverySubnode(ASDisplayNode *node, BOOL tr
 
 ASDisplayNode *ASDisplayNodeFindFirstSupernode(ASDisplayNode *node, BOOL (^block)(ASDisplayNode *node))
 {
-  CALayer *layer = node.layer;
-
-  while (layer) {
-    node = ASLayerToDisplayNode(layer);
-    if (block(node)) {
-      return node;
+  // This function has historically started with `self` but the name suggests
+  // that it wouldn't. Perhaps we should change the behavior.
+  for (ASDisplayNode *ancestor in node.supernodesIncludingSelf) {
+    if (block(ancestor)) {
+      return ancestor;
     }
-    layer = layer.superlayer;
   }
-
   return nil;
 }
 
 __kindof ASDisplayNode *ASDisplayNodeFindFirstSupernodeOfClass(ASDisplayNode *start, Class c)
 {
-  return ASDisplayNodeFindFirstSupernode(start, ^(ASDisplayNode *n) {
-    return [n isKindOfClass:c];
-  });
+  // This function has historically started with `self` but the name suggests
+  // that it wouldn't. Perhaps we should change the behavior.
+  return [start supernodeOfClass:c includingSelf:YES];
 }
 
 static void _ASCollectDisplayNodes(NSMutableArray *array, CALayer *layer)

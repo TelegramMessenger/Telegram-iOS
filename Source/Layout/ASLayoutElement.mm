@@ -1,40 +1,48 @@
 //
 //  ASLayoutElement.mm
-//  AsyncDisplayKit
-//
-//  Created by Huy Nguyen on 3/27/16.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import "ASDisplayNode+FrameworkPrivate.h"
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
+#import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASLayoutElement.h>
 #import <AsyncDisplayKit/ASThread.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
+#import <AsyncDisplayKit/ASInternalHelpers.h>
 
-#import <map>
 #import <atomic>
 
 #if YOGA
   #import YOGA_HEADER_PATH
+  #import <AsyncDisplayKit/ASYogaUtilities.h>
 #endif
 
-extern void ASLayoutElementPerformBlockOnEveryElement(id<ASLayoutElement> element, void(^block)(id<ASLayoutElement> element))
-{
-  if (element) {
-    block(element);
-  }
+#pragma mark - ASLayoutElementContext
 
-  for (id<ASLayoutElement> subelement in element.sublayoutElements) {
-    ASLayoutElementPerformBlockOnEveryElement(subelement, block);
+@implementation ASLayoutElementContext
+
+- (instancetype)init
+{
+  if (self = [super init]) {
+    _transitionID = ASLayoutElementContextDefaultTransitionID;
   }
+  return self;
 }
 
-#pragma mark - ASLayoutElementContext
+@end
 
 CGFloat const ASLayoutElementParentDimensionUndefined = NAN;
 CGSize const ASLayoutElementParentSizeUndefined = {ASLayoutElementParentDimensionUndefined, ASLayoutElementParentDimensionUndefined};
@@ -42,64 +50,38 @@ CGSize const ASLayoutElementParentSizeUndefined = {ASLayoutElementParentDimensio
 int32_t const ASLayoutElementContextInvalidTransitionID = 0;
 int32_t const ASLayoutElementContextDefaultTransitionID = ASLayoutElementContextInvalidTransitionID + 1;
 
-static inline ASLayoutElementContext _ASLayoutElementContextMake(int32_t transitionID)
-{
-  struct ASLayoutElementContext context;
-  context.transitionID = transitionID;
-  return context;
-}
-
-static inline BOOL _IsValidTransitionID(int32_t transitionID)
-{
-  return transitionID > ASLayoutElementContextInvalidTransitionID;
-}
-
-struct ASLayoutElementContext const ASLayoutElementContextNull = _ASLayoutElementContextMake(ASLayoutElementContextInvalidTransitionID);
-
-BOOL ASLayoutElementContextIsNull(struct ASLayoutElementContext context)
-{
-  return !_IsValidTransitionID(context.transitionID);
-}
-
-ASLayoutElementContext ASLayoutElementContextMake(int32_t transitionID)
-{
-  NSCAssert(_IsValidTransitionID(transitionID), @"Invalid transition ID");
-  return _ASLayoutElementContextMake(transitionID);
-}
-
-// Note: This is a non-recursive static lock. If it needs to be recursive, use ASDISPLAYNODE_MUTEX_RECURSIVE_INITIALIZER
-static ASDN::StaticMutex _layoutElementContextLock = ASDISPLAYNODE_MUTEX_INITIALIZER;
-static std::map<mach_port_t, ASLayoutElementContext> layoutElementContextMap;
-
-static inline mach_port_t ASLayoutElementGetCurrentContextKey()
-{
-  return pthread_mach_thread_np(pthread_self());
-}
-
-void ASLayoutElementSetCurrentContext(struct ASLayoutElementContext context)
-{
-  const mach_port_t key = ASLayoutElementGetCurrentContextKey();
-  ASDN::StaticMutexLocker l(_layoutElementContextLock);
-  layoutElementContextMap[key] = context;
-}
-
-struct ASLayoutElementContext ASLayoutElementGetCurrentContext()
-{
-  const mach_port_t key = ASLayoutElementGetCurrentContextKey();
-  ASDN::StaticMutexLocker l(_layoutElementContextLock);
-  const auto it = layoutElementContextMap.find(key);
-  if (it != layoutElementContextMap.end()) {
-    // Found an interator with above key. "it->first" is the key itself, "it->second" is the context value.
-    return it->second;
+static void ASLayoutElementDestructor(void *p) {
+  if (p != NULL) {
+    ASDisplayNodeCFailAssert(@"Thread exited without clearing layout element context!");
+    CFBridgingRelease(p);
   }
-  return ASLayoutElementContextNull;
+};
+
+pthread_key_t ASLayoutElementContextKey()
+{
+  return ASPthreadStaticKey(ASLayoutElementDestructor);
 }
 
-void ASLayoutElementClearCurrentContext()
+void ASLayoutElementPushContext(ASLayoutElementContext *context)
 {
-  const mach_port_t key = ASLayoutElementGetCurrentContextKey();
-  ASDN::StaticMutexLocker l(_layoutElementContextLock);
-  layoutElementContextMap.erase(key);
+  // NOTE: It would be easy to support nested contexts – just use an NSMutableArray here.
+  ASDisplayNodeCAssertNil(ASLayoutElementGetCurrentContext(), @"Nested ASLayoutElementContexts aren't supported.");
+  pthread_setspecific(ASLayoutElementContextKey(), CFBridgingRetain(context));
+}
+
+ASLayoutElementContext *ASLayoutElementGetCurrentContext()
+{
+  // Don't retain here. Caller will retain if it wants to!
+  return (__bridge __unsafe_unretained ASLayoutElementContext *)pthread_getspecific(ASLayoutElementContextKey());
+}
+
+void ASLayoutElementPopContext()
+{
+  ASLayoutElementContextKey();
+  ASDisplayNodeCAssertNotNil(ASLayoutElementGetCurrentContext(), @"Attempt to pop context when there wasn't a context!");
+  auto key = ASLayoutElementContextKey();
+  CFBridgingRelease(pthread_getspecific(key));
+  pthread_setspecific(key, NULL);
 }
 
 #pragma mark - ASLayoutElementStyle
@@ -123,16 +105,39 @@ NSString * const ASLayoutElementStyleDescenderProperty = @"ASLayoutElementStyleD
 
 NSString * const ASLayoutElementStyleLayoutPositionProperty = @"ASLayoutElementStyleLayoutPositionProperty";
 
+#if YOGA
+NSString * const ASYogaFlexWrapProperty = @"ASLayoutElementStyleLayoutFlexWrapProperty";
+NSString * const ASYogaFlexDirectionProperty = @"ASYogaFlexDirectionProperty";
+NSString * const ASYogaDirectionProperty = @"ASYogaDirectionProperty";
+NSString * const ASYogaSpacingProperty = @"ASYogaSpacingProperty";
+NSString * const ASYogaJustifyContentProperty = @"ASYogaJustifyContentProperty";
+NSString * const ASYogaAlignItemsProperty = @"ASYogaAlignItemsProperty";
+NSString * const ASYogaPositionTypeProperty = @"ASYogaPositionTypeProperty";
+NSString * const ASYogaPositionProperty = @"ASYogaPositionProperty";
+NSString * const ASYogaMarginProperty = @"ASYogaMarginProperty";
+NSString * const ASYogaPaddingProperty = @"ASYogaPaddingProperty";
+NSString * const ASYogaBorderProperty = @"ASYogaBorderProperty";
+NSString * const ASYogaAspectRatioProperty = @"ASYogaAspectRatioProperty";
+#endif
+
+#define ASLayoutElementStyleSetSizeWithScope(x) \
+  __instanceLock__.lock(); \
+  ASLayoutElementSize newSize = _size.load(); \
+  { x } \
+  _size.store(newSize); \
+  __instanceLock__.unlock();
+
 #define ASLayoutElementStyleCallDelegate(propertyName)\
 do {\
+  [self propertyDidChange:propertyName];\
   [_delegate style:self propertyDidChange:propertyName];\
 } while(0)
 
 @implementation ASLayoutElementStyle {
   ASDN::RecursiveMutex __instanceLock__;
-  ASLayoutElementSize _size;
   ASLayoutElementStyleExtensions _extensions;
   
+  std::atomic<ASLayoutElementSize> _size;
   std::atomic<CGFloat> _spacingBefore;
   std::atomic<CGFloat> _spacingAfter;
   std::atomic<CGFloat> _flexGrow;
@@ -144,8 +149,10 @@ do {\
   std::atomic<CGPoint> _layoutPosition;
 
 #if YOGA
-  std::atomic<ASStackLayoutDirection> _direction;
-  std::atomic<CGFloat> _spacing;
+  YGNodeRef _yogaNode;
+  std::atomic<YGWrap> _flexWrap;
+  std::atomic<ASStackLayoutDirection> _flexDirection;
+  std::atomic<YGDirection> _direction;
   std::atomic<ASStackLayoutJustifyContent> _justifyContent;
   std::atomic<ASStackLayoutAlignItems> _alignItems;
   std::atomic<YGPositionType> _positionType;
@@ -154,7 +161,6 @@ do {\
   std::atomic<ASEdgeInsets> _padding;
   std::atomic<ASEdgeInsets> _border;
   std::atomic<CGFloat> _aspectRatio;
-  std::atomic<YGWrap> _flexWrap;
 #endif
 }
 
@@ -185,185 +191,190 @@ do {\
 
 - (ASLayoutElementSize)size
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _size;
+  return _size.load();
 }
 
 - (void)setSize:(ASLayoutElementSize)size
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size = size;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize = size;
+  });
+  // No CallDelegate method as ASLayoutElementSize is currently internal.
 }
 
 #pragma mark - ASLayoutElementStyleSizeForwarding
 
 - (ASDimension)width
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _size.width;
+  return _size.load().width;
 }
 
 - (void)setWidth:(ASDimension)width
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.width = width;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.width = width;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleWidthProperty);
 }
 
 - (ASDimension)height
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _size.height;
+  return _size.load().height;
 }
 
 - (void)setHeight:(ASDimension)height
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.height = height;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.height = height;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleHeightProperty);
 }
 
 - (ASDimension)minWidth
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _size.minWidth;
+  return _size.load().minWidth;
 }
 
 - (void)setMinWidth:(ASDimension)minWidth
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.minWidth = minWidth;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.minWidth = minWidth;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMinWidthProperty);
 }
 
 - (ASDimension)maxWidth
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _size.maxWidth;
+  return _size.load().maxWidth;
 }
 
 - (void)setMaxWidth:(ASDimension)maxWidth
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.maxWidth = maxWidth;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.maxWidth = maxWidth;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMaxWidthProperty);
 }
 
 - (ASDimension)minHeight
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _size.minHeight;
+  return _size.load().minHeight;
 }
 
 - (void)setMinHeight:(ASDimension)minHeight
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.minHeight = minHeight;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.minHeight = minHeight;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMinHeightProperty);
 }
 
 - (ASDimension)maxHeight
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _size.maxHeight;
+  return _size.load().maxHeight;
 }
 
 - (void)setMaxHeight:(ASDimension)maxHeight
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.maxHeight = maxHeight;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.maxHeight = maxHeight;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMaxHeightProperty);
 }
 
 
 #pragma mark - ASLayoutElementStyleSizeHelpers
 
-// We explicitly not call the setter for (max/min) width and height to avoid locking overhead
-
 - (void)setPreferredSize:(CGSize)preferredSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.width = ASDimensionMakeWithPoints(preferredSize.width);
-  _size.height = ASDimensionMakeWithPoints(preferredSize.height);
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.width = ASDimensionMakeWithPoints(preferredSize.width);
+    newSize.height = ASDimensionMakeWithPoints(preferredSize.height);
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleWidthProperty);
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleHeightProperty);
 }
 
 - (CGSize)preferredSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  if (_size.width.unit == ASDimensionUnitFraction) {
-    NSCAssert(NO, @"Cannot get preferredSize of element with fractional width. Width: %@.", NSStringFromASDimension(_size.width));
+  ASLayoutElementSize size = _size.load();
+  if (size.width.unit == ASDimensionUnitFraction) {
+    NSCAssert(NO, @"Cannot get preferredSize of element with fractional width. Width: %@.", NSStringFromASDimension(size.width));
     return CGSizeZero;
   }
   
-  if (_size.height.unit == ASDimensionUnitFraction) {
-    NSCAssert(NO, @"Cannot get preferredSize of element with fractional height. Height: %@.", NSStringFromASDimension(_size.height));
+  if (size.height.unit == ASDimensionUnitFraction) {
+    NSCAssert(NO, @"Cannot get preferredSize of element with fractional height. Height: %@.", NSStringFromASDimension(size.height));
     return CGSizeZero;
   }
   
-  return CGSizeMake(_size.width.value, _size.height.value);
+  return CGSizeMake(size.width.value, size.height.value);
 }
 
 - (void)setMinSize:(CGSize)minSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.minWidth = ASDimensionMakeWithPoints(minSize.width);
-  _size.minHeight = ASDimensionMakeWithPoints(minSize.height);
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.minWidth = ASDimensionMakeWithPoints(minSize.width);
+    newSize.minHeight = ASDimensionMakeWithPoints(minSize.height);
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMinWidthProperty);
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMinHeightProperty);
 }
 
 - (void)setMaxSize:(CGSize)maxSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.maxWidth = ASDimensionMakeWithPoints(maxSize.width);
-  _size.maxHeight = ASDimensionMakeWithPoints(maxSize.height);
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.maxWidth = ASDimensionMakeWithPoints(maxSize.width);
+    newSize.maxHeight = ASDimensionMakeWithPoints(maxSize.height);
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMaxWidthProperty);
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMaxHeightProperty);
 }
 
 - (ASLayoutSize)preferredLayoutSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return ASLayoutSizeMake(_size.width, _size.height);
+  ASLayoutElementSize size = _size.load();
+  return ASLayoutSizeMake(size.width, size.height);
 }
 
 - (void)setPreferredLayoutSize:(ASLayoutSize)preferredLayoutSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.width = preferredLayoutSize.width;
-  _size.height = preferredLayoutSize.height;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.width = preferredLayoutSize.width;
+    newSize.height = preferredLayoutSize.height;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleWidthProperty);
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleHeightProperty);
 }
 
 - (ASLayoutSize)minLayoutSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return ASLayoutSizeMake(_size.minWidth, _size.minHeight);
+  ASLayoutElementSize size = _size.load();
+  return ASLayoutSizeMake(size.minWidth, size.minHeight);
 }
 
 - (void)setMinLayoutSize:(ASLayoutSize)minLayoutSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.minWidth = minLayoutSize.width;
-  _size.minHeight = minLayoutSize.height;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.minWidth = minLayoutSize.width;
+    newSize.minHeight = minLayoutSize.height;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMinWidthProperty);
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMinHeightProperty);
 }
 
 - (ASLayoutSize)maxLayoutSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return ASLayoutSizeMake(_size.maxWidth, _size.maxHeight);
+  ASLayoutElementSize size = _size.load();
+  return ASLayoutSizeMake(size.maxWidth, size.maxHeight);
 }
 
 - (void)setMaxLayoutSize:(ASLayoutSize)maxLayoutSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _size.maxWidth = maxLayoutSize.width;
-  _size.maxHeight = maxLayoutSize.height;
+  ASLayoutElementStyleSetSizeWithScope({
+    newSize.maxWidth = maxLayoutSize.width;
+    newSize.maxHeight = maxLayoutSize.height;
+  });
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMaxWidthProperty);
   ASLayoutElementStyleCallDelegate(ASLayoutElementStyleMaxHeightProperty);
 }
@@ -590,12 +601,153 @@ do {\
   return result;
 }
 
+- (void)propertyDidChange:(NSString *)propertyName
+{
+#if YOGA
+  /* TODO(appleguy): STYLE SETTER METHODS LEFT TO IMPLEMENT
+   void YGNodeStyleSetOverflow(YGNodeRef node, YGOverflow overflow);
+   void YGNodeStyleSetFlex(YGNodeRef node, float flex);
+   */
+
+  if (_yogaNode == NULL) {
+    return;
+  }
+  // Because the NSStrings used to identify each property are const, use efficient pointer comparison.
+  if (propertyName == ASLayoutElementStyleWidthProperty) {
+    YGNODE_STYLE_SET_DIMENSION(_yogaNode, Width, self.width);
+  }
+  else if (propertyName == ASLayoutElementStyleMinWidthProperty) {
+    YGNODE_STYLE_SET_DIMENSION(_yogaNode, MinWidth, self.minWidth);
+  }
+  else if (propertyName == ASLayoutElementStyleMaxWidthProperty) {
+    YGNODE_STYLE_SET_DIMENSION(_yogaNode, MaxWidth, self.maxWidth);
+  }
+  else if (propertyName == ASLayoutElementStyleHeightProperty) {
+    YGNODE_STYLE_SET_DIMENSION(_yogaNode, Height, self.height);
+  }
+  else if (propertyName == ASLayoutElementStyleMinHeightProperty) {
+    YGNODE_STYLE_SET_DIMENSION(_yogaNode, MinHeight, self.minHeight);
+  }
+  else if (propertyName == ASLayoutElementStyleMaxHeightProperty) {
+    YGNODE_STYLE_SET_DIMENSION(_yogaNode, MaxHeight, self.maxHeight);
+  }
+  else if (propertyName == ASLayoutElementStyleFlexGrowProperty) {
+    YGNodeStyleSetFlexGrow(_yogaNode, self.flexGrow);
+  }
+  else if (propertyName == ASLayoutElementStyleFlexShrinkProperty) {
+    YGNodeStyleSetFlexShrink(_yogaNode, self.flexShrink);
+  }
+  else if (propertyName == ASLayoutElementStyleFlexBasisProperty) {
+    YGNODE_STYLE_SET_DIMENSION(_yogaNode, FlexBasis, self.flexBasis);
+  }
+  else if (propertyName == ASLayoutElementStyleAlignSelfProperty) {
+    YGNodeStyleSetAlignSelf(_yogaNode, yogaAlignSelf(self.alignSelf));
+  }
+  else if (propertyName == ASYogaFlexWrapProperty) {
+    YGNodeStyleSetFlexWrap(_yogaNode, self.flexWrap);
+  }
+  else if (propertyName == ASYogaFlexDirectionProperty) {
+    YGNodeStyleSetFlexDirection(_yogaNode, yogaFlexDirection(self.flexDirection));
+  }
+  else if (propertyName == ASYogaDirectionProperty) {
+    YGNodeStyleSetDirection(_yogaNode, self.direction);
+  }
+  else if (propertyName == ASYogaJustifyContentProperty) {
+    YGNodeStyleSetJustifyContent(_yogaNode, yogaJustifyContent(self.justifyContent));
+  }
+  else if (propertyName == ASYogaAlignItemsProperty) {
+    ASStackLayoutAlignItems alignItems = self.alignItems;
+    if (alignItems != ASStackLayoutAlignItemsNotSet) {
+      YGNodeStyleSetAlignItems(_yogaNode, yogaAlignItems(alignItems));
+    }
+  }
+  else if (propertyName == ASYogaPositionTypeProperty) {
+    YGNodeStyleSetPositionType(_yogaNode, self.positionType);
+  }
+  else if (propertyName == ASYogaPositionProperty) {
+    ASEdgeInsets position = self.position;
+    YGEdge edge = YGEdgeLeft;
+    for (int i = 0; i < YGEdgeAll + 1; ++i) {
+      YGNODE_STYLE_SET_DIMENSION_WITH_EDGE(_yogaNode, Position, dimensionForEdgeWithEdgeInsets(edge, position), edge);
+      edge = (YGEdge)(edge + 1);
+    }
+  }
+  else if (propertyName == ASYogaMarginProperty) {
+    ASEdgeInsets margin   = self.margin;
+    YGEdge edge = YGEdgeLeft;
+    for (int i = 0; i < YGEdgeAll + 1; ++i) {
+      YGNODE_STYLE_SET_DIMENSION_WITH_EDGE(_yogaNode, Margin, dimensionForEdgeWithEdgeInsets(edge, margin), edge);
+      edge = (YGEdge)(edge + 1);
+    }
+  }
+  else if (propertyName == ASYogaPaddingProperty) {
+    ASEdgeInsets padding  = self.padding;
+    YGEdge edge = YGEdgeLeft;
+    for (int i = 0; i < YGEdgeAll + 1; ++i) {
+      YGNODE_STYLE_SET_DIMENSION_WITH_EDGE(_yogaNode, Padding, dimensionForEdgeWithEdgeInsets(edge, padding), edge);
+      edge = (YGEdge)(edge + 1);
+    }
+  }
+  else if (propertyName == ASYogaBorderProperty) {
+    ASEdgeInsets border   = self.border;
+    YGEdge edge = YGEdgeLeft;
+    for (int i = 0; i < YGEdgeAll + 1; ++i) {
+      YGNODE_STYLE_SET_FLOAT_WITH_EDGE(_yogaNode, Border, dimensionForEdgeWithEdgeInsets(edge, border), edge);
+      edge = (YGEdge)(edge + 1);
+    }
+  }
+  else if (propertyName == ASYogaAspectRatioProperty) {
+    CGFloat aspectRatio = self.aspectRatio;
+    if (aspectRatio > FLT_EPSILON && aspectRatio < CGFLOAT_MAX / 2.0) {
+      YGNodeStyleSetAspectRatio(_yogaNode, aspectRatio);
+    }
+  }
+#endif
+}
+
 #pragma mark - Yoga Flexbox Properties
 
 #if YOGA
 
-- (ASStackLayoutDirection)direction           { return _direction.load(); }
-- (CGFloat)spacing                            { return _spacing.load(); }
++ (void)initialize
+{
+  [super initialize];
+  YGConfigSetPointScaleFactor(YGConfigGetDefault(), ASScreenScale());
+  // Yoga recommends using Web Defaults for all new projects. This will be enabled for Texture very soon.
+  //YGConfigSetUseWebDefaults(YGConfigGetDefault(), true);
+}
+
+- (YGNodeRef)yogaNode
+{
+  return _yogaNode;
+}
+
+- (YGNodeRef)yogaNodeCreateIfNeeded
+{
+  if (_yogaNode == NULL) {
+    _yogaNode = YGNodeNew();
+  }
+  return _yogaNode;
+}
+
+- (void)destroyYogaNode
+{
+  if (_yogaNode != NULL) {
+    // Release the __bridge_retained Context object.
+    ASLayoutElementYogaUpdateMeasureFunc(_yogaNode, nil);
+    YGNodeFree(_yogaNode);
+    _yogaNode = NULL;
+  }
+}
+
+- (void)dealloc
+{
+  [self destroyYogaNode];
+}
+
+- (YGWrap)flexWrap                            { return _flexWrap.load(); }
+- (ASStackLayoutDirection)flexDirection       { return _flexDirection.load(); }
+- (YGDirection)direction                      { return _direction.load(); }
 - (ASStackLayoutJustifyContent)justifyContent { return _justifyContent.load(); }
 - (ASStackLayoutAlignItems)alignItems         { return _alignItems.load(); }
 - (YGPositionType)positionType                { return _positionType.load(); }
@@ -604,21 +756,53 @@ do {\
 - (ASEdgeInsets)padding                       { return _padding.load(); }
 - (ASEdgeInsets)border                        { return _border.load(); }
 - (CGFloat)aspectRatio                        { return _aspectRatio.load(); }
-- (YGWrap)flexWrap                            { return _flexWrap.load(); }
 
-- (void)setDirection:(ASStackLayoutDirection)direction         { _direction.store(direction); }
-- (void)setSpacing:(CGFloat)spacing                            { _spacing.store(spacing); }
-- (void)setJustifyContent:(ASStackLayoutJustifyContent)justify { _justifyContent.store(justify); }
-- (void)setAlignItems:(ASStackLayoutAlignItems)alignItems      { _alignItems.store(alignItems); }
-- (void)setPositionType:(YGPositionType)positionType           { _positionType.store(positionType); }
-- (void)setPosition:(ASEdgeInsets)position                     { _position.store(position); }
-- (void)setMargin:(ASEdgeInsets)margin                         { _margin.store(margin); }
-- (void)setPadding:(ASEdgeInsets)padding                       { _padding.store(padding); }
-- (void)setBorder:(ASEdgeInsets)border                         { _border.store(border); }
-- (void)setAspectRatio:(CGFloat)aspectRatio                    { _aspectRatio.store(aspectRatio); }
-- (void)setFlexWrap:(YGWrap)flexWrap                           { _flexWrap.store(flexWrap); }
+- (void)setFlexWrap:(YGWrap)flexWrap {
+  _flexWrap.store(flexWrap);
+  ASLayoutElementStyleCallDelegate(ASYogaFlexWrapProperty);
+}
+- (void)setFlexDirection:(ASStackLayoutDirection)flexDirection {
+  _flexDirection.store(flexDirection);
+  ASLayoutElementStyleCallDelegate(ASYogaFlexDirectionProperty);
+}
+- (void)setDirection:(YGDirection)direction {
+  _direction.store(direction);
+  ASLayoutElementStyleCallDelegate(ASYogaDirectionProperty);
+}
+- (void)setJustifyContent:(ASStackLayoutJustifyContent)justify {
+  _justifyContent.store(justify);
+  ASLayoutElementStyleCallDelegate(ASYogaJustifyContentProperty);
+}
+- (void)setAlignItems:(ASStackLayoutAlignItems)alignItems {
+  _alignItems.store(alignItems);
+  ASLayoutElementStyleCallDelegate(ASYogaAlignItemsProperty);
+}
+- (void)setPositionType:(YGPositionType)positionType {
+  _positionType.store(positionType);
+  ASLayoutElementStyleCallDelegate(ASYogaPositionTypeProperty);
+}
+- (void)setPosition:(ASEdgeInsets)position {
+  _position.store(position);
+  ASLayoutElementStyleCallDelegate(ASYogaPositionProperty);
+}
+- (void)setMargin:(ASEdgeInsets)margin {
+  _margin.store(margin);
+  ASLayoutElementStyleCallDelegate(ASYogaMarginProperty);
+}
+- (void)setPadding:(ASEdgeInsets)padding {
+  _padding.store(padding);
+  ASLayoutElementStyleCallDelegate(ASYogaPaddingProperty);
+}
+- (void)setBorder:(ASEdgeInsets)border {
+  _border.store(border);
+  ASLayoutElementStyleCallDelegate(ASYogaBorderProperty);
+}
+- (void)setAspectRatio:(CGFloat)aspectRatio {
+  _aspectRatio.store(aspectRatio);
+  ASLayoutElementStyleCallDelegate(ASYogaAspectRatioProperty);
+}
 
-#endif
+#endif /* YOGA */
 
 #pragma mark Deprecated
 

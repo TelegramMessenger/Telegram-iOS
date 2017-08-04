@@ -1,9 +1,18 @@
 //
-//  ASLayoutSpec+Subclasses.m
-//  AsyncDisplayKit
+//  ASLayoutSpec+Subclasses.mm
+//  Texture
 //
-//  Created by Michael Schneider on 9/15/16.
-//  Copyright © 2016 Facebook. All rights reserved.
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
@@ -47,29 +56,13 @@
 
 @implementation ASLayoutSpec (Subclassing)
 
-#pragma mark - Final layoutElement
-
-- (id<ASLayoutElement>)layoutElementToAddFromLayoutElement:(id<ASLayoutElement>)child
-{
-  if (self.isFinalLayoutElement == NO) {
-    id<ASLayoutElement> finalLayoutElement = [child finalLayoutElement];
-    if (finalLayoutElement != child) {
-#if AS_TARGET_OS_IOS
-      finalLayoutElement.primitiveTraitCollection = child.primitiveTraitCollection;
-#endif
-      return finalLayoutElement;
-    }
-  }
-  return child;
-}
-
 #pragma mark - Child with index
 
 - (void)setChild:(id<ASLayoutElement>)child atIndex:(NSUInteger)index
 {
   ASDisplayNodeAssert(self.isMutable, @"Cannot set properties when layout spec is not mutable");
   
-  id<ASLayoutElement> layoutElement = child ? [self layoutElementToAddFromLayoutElement:child] : [ASNullLayoutSpec null];
+  id<ASLayoutElement> layoutElement = child ?: [ASNullLayoutSpec null];
   
   if (child) {
     if (_childrenArray.count < index) {

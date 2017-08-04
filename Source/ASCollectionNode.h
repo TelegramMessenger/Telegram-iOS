@@ -1,13 +1,18 @@
 //
 //  ASCollectionNode.h
-//  AsyncDisplayKit
-//
-//  Created by Scott Goodson on 9/5/15.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
@@ -17,6 +22,7 @@
 #import <AsyncDisplayKit/ASRangeControllerUpdateRangeProtocol+Beta.h>
 #import <AsyncDisplayKit/ASCollectionView.h>
 #import <AsyncDisplayKit/ASBlockTypes.h>
+#import <AsyncDisplayKit/ASRangeManagingNode.h>
 
 @protocol ASCollectionViewLayoutFacilitatorProtocol;
 @protocol ASCollectionDelegate;
@@ -29,7 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
  * ASCollectionNode is a node based class that wraps an ASCollectionView. It can be used
  * as a subnode of another node, and provide room for many (great) features and improvements later on.
  */
-@interface ASCollectionNode : ASDisplayNode <ASRangeControllerUpdateRangeProtocol>
+@interface ASCollectionNode : ASDisplayNode <ASRangeControllerUpdateRangeProtocol, ASRangeManagingNode>
 
 - (instancetype)init NS_UNAVAILABLE;
 
@@ -79,6 +85,13 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (weak, nonatomic) id <ASCollectionDataSource> dataSource;
 
+/**
+ * The number of screens left to scroll before the delegate -collectionNode:beginBatchFetchingWithContext: is called.
+ *
+ * Defaults to two screenfuls.
+ */
+@property (nonatomic, assign) CGFloat leadingScreensForBatching;
+
 /*
  * A Boolean value that determines whether the collection node will be flipped.
  * If the value of this property is YES, the first cell node will be at the bottom of the collection node (as opposed to the top by default). This is useful for chat/messaging apps. The default value is NO.
@@ -98,6 +111,24 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, assign) BOOL allowsMultipleSelection;
 
+/**
+ * The layout used to organize the node's items.
+ *
+ * @discussion Assigning a new layout object to this property causes the new layout to be applied (without animations) to the node’s items.
+ */
+@property (nonatomic, strong) UICollectionViewLayout *collectionViewLayout;
+
+/**
+ * Optional introspection object for the collection node's layout.
+ *
+ * @discussion Since supplementary and decoration nodes are controlled by the layout, this object
+ * is used as a bridge to provide information to the internal data controller about the existence of these views and
+ * their associated index paths. For collections using `UICollectionViewFlowLayout`, a default inspector
+ * implementation `ASCollectionViewFlowLayoutInspector` is created and set on this property by default. Custom
+ * collection layout subclasses will need to provide their own implementation of an inspector object for their
+ * supplementary elements to be compatible with `ASCollectionNode`'s supplementary node support.
+ */
+@property (nonatomic, weak) id<ASCollectionViewLayoutInspecting> layoutInspector;
 
 /**
  * Tuning parameters for a range type in full mode.
@@ -157,6 +188,20 @@ NS_ASSUME_NONNULL_BEGIN
  * This method must be called on the main thread.
  */
 - (void)scrollToItemAtIndexPath:(NSIndexPath *)indexPath atScrollPosition:(UICollectionViewScrollPosition)scrollPosition animated:(BOOL)animated;
+
+/**
+ * Determines collection node's current scroll direction. Supports 2-axis collection nodes.
+ *
+ * @return a bitmask of ASScrollDirection values.
+ */
+@property (nonatomic, readonly) ASScrollDirection scrollDirection;
+
+/**
+ * Determines collection node's scrollable directions.
+ *
+ * @return a bitmask of ASScrollDirection values.
+ */
+@property (nonatomic, readonly) ASScrollDirection scrollableDirections;
 
 #pragma mark - Editing
 
@@ -376,6 +421,17 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable __kindof ASCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
 
 /**
+ * Retrieves the view-model for the item at the given index path, if any.
+ *
+ * @param indexPath The index path of the requested item.
+ *
+ * @return The view-model for the given item, or @c nil if no item exists at the specified path or no view-model was provided.
+ *
+ * @warning This API is beta and subject to change. We'll try to provide an easy migration path.
+ */
+- (nullable id)viewModelForItemAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
+
+/**
  * Retrieve the index path for the item with the given node.
  *
  * @param cellNode A node for an item in the collection node.
@@ -459,6 +515,17 @@ NS_ASSUME_NONNULL_BEGIN
  * @see @c numberOfSectionsInCollectionView:
  */
 - (NSInteger)numberOfSectionsInCollectionNode:(ASCollectionNode *)collectionNode;
+
+/**
+ * --BETA--
+ * Asks the data source for a view-model for the item at the given index path.
+ *
+ * @param collectionNode The sender.
+ * @param indexPath The index path of the item.
+ *
+ * @return An object that contains all the data for this item.
+ */
+- (nullable id)collectionNode:(ASCollectionNode *)collectionNode viewModelForItemAtIndexPath:(NSIndexPath *)indexPath;
 
 /**
  * Similar to -collectionNode:nodeForItemAtIndexPath:
@@ -735,7 +802,7 @@ NS_ASSUME_NONNULL_BEGIN
  * 4. Lastly, you must implement a method to provide the size for the cell. There are two ways this is done:
  * 4a. UICollectionViewFlowLayout (incl. ASPagerNode). Implement
  collectionNode:constrainedSizeForItemAtIndexPath:.
- * 4b. Custom collection layouts. Set .view.layoutInspector and have it implement
+ * 4b. Custom collection layouts. Set .layoutInspector and have it implement
  collectionView:constrainedSizeForNodeAtIndexPath:.
  *
  * For an example of using this method with all steps above (including a custom layout, 4b.),

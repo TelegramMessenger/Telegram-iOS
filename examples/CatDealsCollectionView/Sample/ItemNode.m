@@ -1,23 +1,24 @@
 //
 //  ItemNode.m
-//  Sample
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ItemNode.h"
 #import "ItemStyles.h"
 #import "PlaceholderNetworkImageNode.h"
+#import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 
 const CGFloat kFixedLabelsAreaHeight = 96.0;
 const CGFloat kDesignWidth = 320.0;
@@ -45,16 +46,19 @@ const CGFloat kSoldOutGBHeight = 50.0;
 @end
 
 @implementation ItemNode
+@dynamic viewModel;
 
 - (instancetype)initWithViewModel:(ItemViewModel *)viewModel
 {
   self = [super init];
   if (self != nil) {
-    _viewModel = viewModel;
+    self.viewModel = viewModel;
     [self setup];
     [self updateLabels];
     [self updateBackgroundColor];
     
+    ASSetDebugName(self, @"Item #%zd", viewModel.identifier);
+    self.accessibilityIdentifier = viewModel.titleText;
   }
   return self;
 }

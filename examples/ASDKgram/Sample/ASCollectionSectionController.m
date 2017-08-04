@@ -52,24 +52,18 @@
     return;
   }
 
-  BOOL wasEmpty = (self.items.count == 0);
-
   dispatch_async(self.diffingQueue, ^{
     IGListIndexSetResult *result = IGListDiff(self.pendingItems, newItems, IGListDiffPointerPersonality);
     self.pendingItems = newItems;
     dispatch_async(dispatch_get_main_queue(), ^{
       id<IGListCollectionContext> ctx = self.collectionContext;
-      [ctx performBatchAnimated:animated updates:^{
-        [ctx insertInSectionController:(id)self atIndexes:result.inserts];
-        [ctx deleteInSectionController:(id)self atIndexes:result.deletes];
+      [ctx performBatchAnimated:animated updates:^(id<IGListBatchContext>  _Nonnull batchContext) {
+        [batchContext insertInSectionController:(id)self atIndexes:result.inserts];
+        [batchContext deleteInSectionController:(id)self atIndexes:result.deletes];
         _items = newItems;
       } completion:^(BOOL finished) {
         if (completion) {
           completion();
-        }
-        // WORKAROUND for https://github.com/Instagram/IGListKit/issues/378
-        if (wasEmpty) {
-          [(IGListAdapter *)ctx performUpdatesAnimated:NO completion:nil];
         }
       }];
     });

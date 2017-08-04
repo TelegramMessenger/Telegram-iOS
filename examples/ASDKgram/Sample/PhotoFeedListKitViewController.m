@@ -65,7 +65,7 @@
 {
   // Ask the first section controller to do the refreshing.
   id<RefreshingSectionControllerType> secCtrl = [self.listAdapter sectionControllerForObject:self.photoFeed];
-  if ([secCtrl conformsToProtocol:@protocol(RefreshingSectionControllerType)]) {
+  if ([(NSObject*)secCtrl conformsToProtocol:@protocol(RefreshingSectionControllerType)]) {
     [secCtrl refreshContentWithCompletion:^{
       [self.refreshCtrl endRefreshing];
     }];
@@ -93,7 +93,7 @@
   return self.spinner;
 }
 
-- (IGListSectionController <IGListSectionType> *)listAdapter:(IGListAdapter *)listAdapter sectionControllerForObject:(id)object
+- (IGListSectionController *)listAdapter:(IGListAdapter *)listAdapter sectionControllerForObject:(id)object
 {
   if ([object isKindOfClass:[PhotoFeedModel class]]) {
     return [[PhotoFeedSectionController alloc] init];

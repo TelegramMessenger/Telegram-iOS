@@ -1,20 +1,25 @@
 //
 //  ASTableNode.h
-//  AsyncDisplayKit
-//
-//  Created by Steven Ramkumar on 11/4/15.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 #ifndef MINIMAL_ASDK
 #import <AsyncDisplayKit/ASBlockTypes.h>
 #import <AsyncDisplayKit/ASDisplayNode.h>
 #import <AsyncDisplayKit/ASRangeControllerUpdateRangeProtocol+Beta.h>
 #import <AsyncDisplayKit/ASTableView.h>
-
+#import <AsyncDisplayKit/ASRangeManagingNode.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -26,7 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
  * ASTableNode is a node based class that wraps an ASTableView. It can be used
  * as a subnode of another node, and provide room for many (great) features and improvements later on.
  */
-@interface ASTableNode : ASDisplayNode <ASRangeControllerUpdateRangeProtocol>
+@interface ASTableNode : ASDisplayNode <ASRangeControllerUpdateRangeProtocol, ASRangeManagingNode>
 
 - (instancetype)init; // UITableViewStylePlain
 - (instancetype)initWithStyle:(UITableViewStyle)style NS_DESIGNATED_INITIALIZER;
@@ -37,11 +42,30 @@ NS_ASSUME_NONNULL_BEGIN
 @property (weak, nonatomic) id <ASTableDelegate>   delegate;
 @property (weak, nonatomic) id <ASTableDataSource> dataSource;
 
+/**
+ * The number of screens left to scroll before the delegate -tableNode:beginBatchFetchingWithContext: is called.
+ *
+ * Defaults to two screenfuls.
+ */
+@property (nonatomic, assign) CGFloat leadingScreensForBatching;
+
 /*
  * A Boolean value that determines whether the table will be flipped.
  * If the value of this property is YES, the first cell node will be at the bottom of the table (as opposed to the top by default). This is useful for chat/messaging apps. The default value is NO.
  */
 @property (nonatomic, assign) BOOL inverted;
+
+/**
+ * YES to automatically adjust the contentOffset when cells are inserted or deleted above
+ * visible cells, maintaining the users' visible scroll position.
+ *
+ * @note This is only applied to non-animated updates. For animated updates, there is no way to
+ * synchronize or "cancel out" the appearance of a scroll due to UITableView API limitations.
+ *
+ * default is NO.
+ */
+@property (nonatomic, assign) BOOL automaticallyAdjustsContentOffset;
+
 /*
  * A Boolean value that determines whether users can select a row.
  * If the value of this property is YES (the default), users can select rows. If you set it to NO, they cannot select rows. Setting this property affects cell selection only when the table view is not in editing mode. If you want to restrict selection of cells in editing mode, use `allowsSelectionDuringEditing`.
@@ -158,7 +182,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)performBatchAnimated:(BOOL)animated updates:(nullable AS_NOESCAPE void (^)())updates completion:(nullable void (^)(BOOL finished))completion;
 
 /**
- *  Perform a batch of updates asynchronously, optionally disabling all animations in the batch. This method must be called from the main thread.
+ *  Perform a batch of updates asynchronously with animations in the batch. This method must be called from the main thread.
  *  The data source must be updated to reflect the changes before the update block completes.
  *
  *  @param updates    The block that performs the relevant insert, delete, reload, or move operations.

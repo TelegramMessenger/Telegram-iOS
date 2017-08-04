@@ -1,18 +1,18 @@
 //
 //  NicCageNode.mm
-//  Sample
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "NicCageNode.h"
@@ -28,6 +28,9 @@
 static const CGFloat kImageSize = 80.0f;
 static const CGFloat kOuterPadding = 16.0f;
 static const CGFloat kInnerPadding = 10.0f;
+
+#define kVideoURL @"https://www.w3schools.com/html/mov_bbb.mp4"
+#define kVideoStreamURL @"http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8"
 
 @interface NicCageNode ()
 {
@@ -96,20 +99,20 @@ static const CGFloat kInnerPadding = 10.0f;
     case 0:
       // Construct an AVAsset from a URL
       _videoNode = [[ASVideoNode alloc] init];
-      _videoNode.asset = [AVAsset assetWithURL:[NSURL URLWithString:@"https://files.parsetfss.com/8a8a3b0c-619e-4e4d-b1d5-1b5ba9bf2b42/tfss-753fe655-86bb-46da-89b7-aa59c60e49c0-niccage.mp4"]];
+      _videoNode.asset = [AVAsset assetWithURL:[NSURL URLWithString:kVideoURL]];
       break;
       
     case 1:
       // Construct the video node directly from the .mp4 URL
       _videoNode = [[ASVideoNode alloc] init];
-      _videoNode.asset = [AVAsset assetWithURL:[NSURL URLWithString:@"https://files.parsetfss.com/8a8a3b0c-619e-4e4d-b1d5-1b5ba9bf2b42/tfss-753fe655-86bb-46da-89b7-aa59c60e49c0-niccage.mp4"]];
+      _videoNode.asset = [AVAsset assetWithURL:[NSURL URLWithString:kVideoURL]];
       break;
       
     case 2:
       // Construct the video node from an HTTP Live Streaming URL
       // URL from https://developer.apple.com/library/ios/documentation/AudioVideo/Conceptual/AVFoundationPG/Articles/02_Playback.html
       _videoNode = [[ASVideoNode alloc] init];
-      _videoNode.asset = [AVAsset assetWithURL:[NSURL URLWithString:@"http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8"]];
+      _videoNode.asset = [AVAsset assetWithURL:[NSURL URLWithString:kVideoStreamURL]];
       break;
   }
   
@@ -167,8 +170,10 @@ static const CGFloat kInnerPadding = 10.0f;
 {
   CGSize videoNodeSize = _isImageEnlarged ? CGSizeMake(2.0 * kImageSize, 2.0 * kImageSize)
                                           : CGSizeMake(kImageSize, kImageSize);
-  _videoNode.size = ASRelativeSizeRangeMakeWithExactCGSize(videoNodeSize);
-  _textNode.flexShrink = 1.0;
+  
+  [_videoNode.style setPreferredSize:videoNodeSize];
+  
+  _textNode.style.flexShrink = 1.0;
   
   ASStackLayoutSpec *stackSpec = [[ASStackLayoutSpec alloc] init];
   stackSpec.direction = ASStackLayoutDirectionHorizontal;

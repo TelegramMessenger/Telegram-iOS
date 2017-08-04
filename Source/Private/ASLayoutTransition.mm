@@ -1,13 +1,18 @@
 //
 //  ASLayoutTransition.mm
-//  AsyncDisplayKit
-//
-//  Created by Huy Nguyen on 3/8/16.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASLayoutTransition.h>
@@ -17,6 +22,7 @@
 
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h> // Required for _insertSubnode... / _removeFromSupernode.
+#import <AsyncDisplayKit/ASLog.h>
 
 #import <queue>
 #import <memory>
@@ -101,6 +107,8 @@ static inline BOOL ASLayoutCanTransitionAsynchronous(ASLayout *layout) {
   ASDN::MutexSharedLocker l(__instanceLock__);
   [self calculateSubnodeOperationsIfNeeded];
   
+  // Create an activity even if no subnodes affected.
+  as_activity_create_for_scope("Apply subnode insertions");
   if (_insertedSubnodes.count == 0) {
     return;
   }
@@ -116,6 +124,7 @@ static inline BOOL ASLayoutCanTransitionAsynchronous(ASLayout *layout) {
 
 - (void)applySubnodeRemovals
 {
+  as_activity_scope(as_activity_create("Apply subnode removals", AS_ACTIVITY_CURRENT, OS_ACTIVITY_FLAG_DEFAULT));
   ASDN::MutexSharedLocker l(__instanceLock__);
   [self calculateSubnodeOperationsIfNeeded];
 
@@ -139,6 +148,8 @@ static inline BOOL ASLayoutCanTransitionAsynchronous(ASLayout *layout) {
     return;
   }
   
+  // Create an activity even if no subnodes affected.
+  as_activity_create_for_scope("Calculate subnode operations");
   ASLayout *previousLayout = _previousLayout->layout;
   ASLayout *pendingLayout = _pendingLayout->layout;
 

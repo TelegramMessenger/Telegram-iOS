@@ -1,15 +1,25 @@
 //
 //  ASTableViewThrashTests.m
-//  AsyncDisplayKit
+//  Texture
 //
-//  Created by Adlai Holler on 6/21/16.
-//  Copyright © 2016 Facebook. All rights reserved.
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <XCTest/XCTest.h>
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
 #import <AsyncDisplayKit/ASTableViewInternal.h>
 #import <AsyncDisplayKit/ASTableView+Undeprecated.h>
+#import <stdatomic.h>
 
 
 // Set to 1 to use UITableView and see if the issue still exists.
@@ -40,7 +50,7 @@ static NSString *ASThrashArrayDescription(NSArray *array) {
   return str;
 }
 
-static volatile int32_t ASThrashTestItemNextID = 1;
+static atomic_uint ASThrashTestItemNextID;
 @interface ASThrashTestItem: NSObject <NSSecureCoding>
 @property (nonatomic, readonly) NSInteger itemID;
 
@@ -56,7 +66,7 @@ static volatile int32_t ASThrashTestItemNextID = 1;
 - (instancetype)init {
   self = [super init];
   if (self != nil) {
-    _itemID = OSAtomicIncrement32(&ASThrashTestItemNextID);
+    _itemID = atomic_fetch_add(&ASThrashTestItemNextID, 1);
   }
   return self;
 }
@@ -99,7 +109,7 @@ static volatile int32_t ASThrashTestItemNextID = 1;
 - (CGFloat)headerHeight;
 @end
 
-static volatile int32_t ASThrashTestSectionNextID = 1;
+static atomic_uint ASThrashTestSectionNextID = 1;
 @implementation ASThrashTestSection
 
 /// Create an array of sections with the given count
@@ -114,7 +124,7 @@ static volatile int32_t ASThrashTestSectionNextID = 1;
 - (instancetype)initWithCount:(NSInteger)count {
   self = [super init];
   if (self != nil) {
-    _sectionID = OSAtomicIncrement32(&ASThrashTestSectionNextID);
+    _sectionID = atomic_fetch_add(&ASThrashTestSectionNextID, 1);
     _items = [ASThrashTestItem itemsWithCount:count];
   }
   return self;

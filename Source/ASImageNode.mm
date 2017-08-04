@@ -1,11 +1,18 @@
 //
 //  ASImageNode.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASImageNode.h>
@@ -25,7 +32,7 @@
 #import <AsyncDisplayKit/AsyncDisplayKit+Debug.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
-#import <AsyncDisplayKit/ASEqualityHashHelpers.h>
+#import <AsyncDisplayKit/ASHashing.h>
 #import <AsyncDisplayKit/ASWeakMap.h>
 #import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
 #import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
@@ -35,32 +42,45 @@
 
 #include <functional>
 
-struct ASImageNodeDrawParameters {
-  BOOL opaque;
-  CGRect bounds;
-  CGFloat contentsScale;
-  UIColor *backgroundColor;
-  UIViewContentMode contentMode;
-  BOOL cropEnabled;
-  BOOL forceUpscaling;
-  CGSize forcedSize;
-  CGRect cropRect;
-  CGRect cropDisplayBounds;
-  asimagenode_modification_block_t imageModificationBlock;
-};
+typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
+
+@interface ASImageNodeDrawParameters : NSObject {
+@package
+  UIImage *_image;
+  BOOL _opaque;
+  CGRect _bounds;
+  CGFloat _contentsScale;
+  UIColor *_backgroundColor;
+  UIViewContentMode _contentMode;
+  BOOL _cropEnabled;
+  BOOL _forceUpscaling;
+  CGSize _forcedSize;
+  CGRect _cropRect;
+  CGRect _cropDisplayBounds;
+  asimagenode_modification_block_t _imageModificationBlock;
+  ASDisplayNodeContextModifier _willDisplayNodeContentWithRenderingContext;
+  ASDisplayNodeContextModifier _didDisplayNodeContentWithRenderingContext;
+  ASImageNodeDrawParametersBlock _didDrawBlock;
+}
+
+@end
+
+@implementation ASImageNodeDrawParameters
+
+@end
 
 /**
  * Contains all data that is needed to generate the content bitmap.
  */
-@interface ASImageNodeContentsKey : NSObject {}
+@interface ASImageNodeContentsKey : NSObject
 
 @property (nonatomic, strong) UIImage *image;
 @property CGSize backingSize;
 @property CGRect imageDrawRect;
 @property BOOL isOpaque;
 @property (nonatomic, strong) UIColor *backgroundColor;
-@property (nonatomic, copy) ASDisplayNodeContextModifier preContextBlock;
-@property (nonatomic, copy) ASDisplayNodeContextModifier postContextBlock;
+@property (nonatomic, copy) ASDisplayNodeContextModifier willDisplayNodeContentWithRenderingContext;
+@property (nonatomic, copy) ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext;
 @property (nonatomic, copy) asimagenode_modification_block_t imageModificationBlock;
 
 @end
@@ -84,8 +104,8 @@ struct ASImageNodeDrawParameters {
       && CGRectEqualToRect(_imageDrawRect, other.imageDrawRect)
       && _isOpaque == other.isOpaque
       && [_backgroundColor isEqual:other.backgroundColor]
-      && _preContextBlock == other.preContextBlock
-      && _postContextBlock == other.postContextBlock
+      && _willDisplayNodeContentWithRenderingContext == other.willDisplayNodeContentWithRenderingContext
+      && _didDisplayNodeContentWithRenderingContext == other.didDisplayNodeContentWithRenderingContext
       && _imageModificationBlock == other.imageModificationBlock;
   } else {
     return NO;
@@ -94,25 +114,29 @@ struct ASImageNodeDrawParameters {
 
 - (NSUInteger)hash
 {
-  NSUInteger subhashes[] = {
-    // Profiling shows that the work done in UIImage's `hash` is on the order of 0.005ms on an A5 processor
-    // and isn't proportional to the size of the image.
-    [_image hash],
-    
-    // TODO: Hashing the floats in a CGRect or CGSize is tricky.  Equality of floats is
-    // fuzzy, but it's a 100% requirement that two equal values must produce an identical hash value.
-    // Until there's a robust solution for hashing floats, leave all float values out of the hash.
-    // This may lead to a greater number of isEqual comparisons but does not comprimise correctness.
-    //AS::hash<CGRect>()(_backingSize),
-    //AS::hash<CGRect>()(_imageDrawRect),
-
-    AS::hash<BOOL>()(_isOpaque),
-    [_backgroundColor hash],
-    AS::hash<void *>()((void*)_preContextBlock),
-    AS::hash<void *>()((void*)_postContextBlock),
-    AS::hash<void *>()((void*)_imageModificationBlock),
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wpadded"
+  struct {
+    NSUInteger imageHash;
+    CGSize backingSize;
+    CGRect imageDrawRect;
+    NSInteger isOpaque;
+    NSUInteger backgroundColorHash;
+    void *willDisplayNodeContentWithRenderingContext;
+    void *didDisplayNodeContentWithRenderingContext;
+    void *imageModificationBlock;
+#pragma clang diagnostic pop
+  } data = {
+    _image.hash,
+    _backingSize,
+    _imageDrawRect,
+    _isOpaque,
+    _backgroundColor.hash,
+    (void *)_willDisplayNodeContentWithRenderingContext,
+    (void *)_didDisplayNodeContentWithRenderingContext,
+    (void *)_imageModificationBlock
   };
-  return ASIntegerArrayHash(subhashes, sizeof(subhashes) / sizeof(subhashes[0]));
+  return ASHashBytes(&data, sizeof(data));
 }
 
 @end
@@ -128,7 +152,6 @@ struct ASImageNodeDrawParameters {
   void (^_displayCompletionBlock)(BOOL canceled);
   
   // Drawing
-  ASImageNodeDrawParameters _drawParameter;
   ASTextNode *_debugLabelNode;
   
   // Cropping.
@@ -142,17 +165,7 @@ struct ASImageNodeDrawParameters {
 @synthesize image = _image;
 @synthesize imageModificationBlock = _imageModificationBlock;
 
-#pragma mark - NSObject
-
-+ (void)initialize
-{
-  [super initialize];
-  
-  if (self != [ASImageNode class]) {
-    // Prevent custom drawing in subclasses
-    ASDisplayNodeAssert(!ASSubclassOverridesClassSelector([ASImageNode class], self, @selector(displayWithParameters:isCancelled:)), @"Subclass %@ must not override displayWithParameters:isCancelled: method. Custom drawing in %@ subclass is not supported.", NSStringFromClass(self), NSStringFromClass([ASImageNode class]));
-  }
-}
+#pragma mark - Lifecycle
 
 - (instancetype)init
 {
@@ -184,6 +197,8 @@ struct ASImageNodeDrawParameters {
   // Invalidate all components around animated images
   [self invalidateAnimatedImage];
 }
+
+#pragma mark - Placeholder
 
 - (UIImage *)placeholderImage
 {
@@ -251,7 +266,7 @@ struct ASImageNodeDrawParameters {
       }
       return;
     }
-    
+
   } else {
     self.contents = nil;
   }
@@ -282,63 +297,61 @@ struct ASImageNodeDrawParameters {
 {
   ASDN::MutexLocker l(__instanceLock__);
   
-  _drawParameter = {
-    .bounds = self.bounds,
-    .opaque = self.opaque,
-    .contentsScale = self.contentsScaleForDisplay,
-    .backgroundColor = self.backgroundColor,
-    .contentMode = self.contentMode,
-    .cropEnabled = _cropEnabled,
-    .forceUpscaling = _forceUpscaling,
-    .forcedSize = _forcedSize,
-    .cropRect = _cropRect,
-    .cropDisplayBounds = _cropDisplayBounds,
-    .imageModificationBlock = _imageModificationBlock
+  ASImageNodeDrawParameters *drawParameters = [[ASImageNodeDrawParameters alloc] init];
+  drawParameters->_image = [self _locked_Image];
+  drawParameters->_bounds = [self threadSafeBounds];
+  drawParameters->_opaque = self.opaque;
+  drawParameters->_contentsScale = _contentsScaleForDisplay;
+  drawParameters->_backgroundColor = self.backgroundColor;
+  drawParameters->_contentMode = self.contentMode;
+  drawParameters->_cropEnabled = _cropEnabled;
+  drawParameters->_forceUpscaling = _forceUpscaling;
+  drawParameters->_forcedSize = _forcedSize;
+  drawParameters->_cropRect = _cropRect;
+  drawParameters->_cropDisplayBounds = _cropDisplayBounds;
+  drawParameters->_imageModificationBlock = _imageModificationBlock;
+  drawParameters->_willDisplayNodeContentWithRenderingContext = _willDisplayNodeContentWithRenderingContext;
+  drawParameters->_didDisplayNodeContentWithRenderingContext = _didDisplayNodeContentWithRenderingContext;
+
+  // Hack for now to retain the weak entry that was created while this drawing happened
+  drawParameters->_didDrawBlock = ^(ASWeakMapEntry *entry){
+    ASDN::MutexLocker l(__instanceLock__);
+    _weakCacheEntry = entry;
   };
   
-  return nil;
+  return drawParameters;
 }
 
-- (NSDictionary *)debugLabelAttributes
++ (UIImage *)displayWithParameters:(id<NSObject>)parameter isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
 {
-  return @{
-    NSFontAttributeName: [UIFont systemFontOfSize:15.0],
-    NSForegroundColorAttributeName: [UIColor redColor]
-  };
-}
+  ASImageNodeDrawParameters *drawParameter = (ASImageNodeDrawParameters *)parameter;
 
-- (UIImage *)displayWithParameters:(id<NSObject> *)parameter isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
-{
-  UIImage *image = self.image;
+  UIImage *image = drawParameter->_image;
   if (image == nil) {
     return nil;
   }
 
-  if (_displayWithoutProcessing) {
+  if (true) {
     return image;
   }
   
-  __instanceLock__.lock();
-  ASImageNodeDrawParameters drawParameter = _drawParameter;
-  __instanceLock__.unlock();
-  
-  CGRect drawParameterBounds       = drawParameter.bounds;
-  BOOL forceUpscaling              = drawParameter.forceUpscaling;
-  CGSize forcedSize                = drawParameter.forcedSize;
-  BOOL cropEnabled                 = drawParameter.cropEnabled;
-  BOOL isOpaque                    = drawParameter.opaque;
-  UIColor *backgroundColor         = drawParameter.backgroundColor;
-  UIViewContentMode contentMode    = drawParameter.contentMode;
-  CGFloat contentsScale            = drawParameter.contentsScale;
-  CGRect cropDisplayBounds         = drawParameter.cropDisplayBounds;
-  CGRect cropRect                  = drawParameter.cropRect;
-  asimagenode_modification_block_t imageModificationBlock    = drawParameter.imageModificationBlock;
+  CGRect drawParameterBounds       = drawParameter->_bounds;
+  BOOL forceUpscaling              = drawParameter->_forceUpscaling;
+  CGSize forcedSize                = drawParameter->_forcedSize;
+  BOOL cropEnabled                 = drawParameter->_cropEnabled;
+  BOOL isOpaque                    = drawParameter->_opaque;
+  UIColor *backgroundColor         = drawParameter->_backgroundColor;
+  UIViewContentMode contentMode    = drawParameter->_contentMode;
+  CGFloat contentsScale            = drawParameter->_contentsScale;
+  CGRect cropDisplayBounds         = drawParameter->_cropDisplayBounds;
+  CGRect cropRect                  = drawParameter->_cropRect;
+  asimagenode_modification_block_t imageModificationBlock                 = drawParameter->_imageModificationBlock;
+  ASDisplayNodeContextModifier willDisplayNodeContentWithRenderingContext = drawParameter->_willDisplayNodeContentWithRenderingContext;
+  ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext  = drawParameter->_didDisplayNodeContentWithRenderingContext;
   
   BOOL hasValidCropBounds = cropEnabled && !CGRectIsEmpty(cropDisplayBounds);
   CGRect bounds = (hasValidCropBounds ? cropDisplayBounds : drawParameterBounds);
   
-  ASDisplayNodeContextModifier preContextBlock = self.willDisplayNodeContentWithRenderingContext;
-  ASDisplayNodeContextModifier postContextBlock = self.didDisplayNodeContentWithRenderingContext;
   
   ASDisplayNodeAssert(contentsScale > 0, @"invalid contentsScale at display time");
   
@@ -354,19 +367,6 @@ struct ASImageNodeDrawParameters {
   CGSize imageSize = image.size;
   CGSize imageSizeInPixels = CGSizeMake(imageSize.width * image.scale, imageSize.height * image.scale);
   CGSize boundsSizeInPixels = CGSizeMake(std::floor(bounds.size.width * contentsScale), std::floor(bounds.size.height * contentsScale));
-  
-  if (_debugLabelNode) {
-    CGFloat pixelCountRatio            = (imageSizeInPixels.width * imageSizeInPixels.height) / (boundsSizeInPixels.width * boundsSizeInPixels.height);
-    if (pixelCountRatio != 1.0) {
-      NSString *scaleString            = [NSString stringWithFormat:@"%.2fx", pixelCountRatio];
-      _debugLabelNode.attributedText   = [[NSAttributedString alloc] initWithString:scaleString attributes:[self debugLabelAttributes]];
-      _debugLabelNode.hidden           = NO;
-      [self setNeedsLayout];
-    } else {
-      _debugLabelNode.hidden           = YES;
-      _debugLabelNode.attributedText   = nil;
-    }
-  }
   
   BOOL contentModeSupported = contentMode == UIViewContentModeScaleAspectFill ||
                               contentMode == UIViewContentModeScaleAspectFit ||
@@ -412,22 +412,25 @@ struct ASImageNodeDrawParameters {
   contentsKey.imageDrawRect = imageDrawRect;
   contentsKey.isOpaque = isOpaque;
   contentsKey.backgroundColor = backgroundColor;
-  contentsKey.preContextBlock = preContextBlock;
-  contentsKey.postContextBlock = postContextBlock;
+  contentsKey.willDisplayNodeContentWithRenderingContext = willDisplayNodeContentWithRenderingContext;
+  contentsKey.didDisplayNodeContentWithRenderingContext = didDisplayNodeContentWithRenderingContext;
   contentsKey.imageModificationBlock = imageModificationBlock;
 
   if (isCancelled()) {
     return nil;
   }
 
-  ASWeakMapEntry<UIImage *> *entry = [self.class contentsForkey:contentsKey isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled];
-  if (entry == nil) {  // If nil, we were cancelled.
+  ASWeakMapEntry<UIImage *> *entry = [self.class contentsForkey:contentsKey
+                                                 drawParameters:parameter
+                                                    isCancelled:isCancelled];
+  // If nil, we were cancelled.
+  if (entry == nil) {
     return nil;
   }
   
-  __instanceLock__.lock();
-    _weakCacheEntry = entry; // Retain so that the entry remains in the weak cache
-  __instanceLock__.unlock();
+  if (drawParameter->_didDrawBlock) {
+    drawParameter->_didDrawBlock(entry);
+  }
 
   return entry.value;
 }
@@ -435,7 +438,7 @@ struct ASImageNodeDrawParameters {
 static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
 static ASDN::Mutex cacheLock;
 
-+ (ASWeakMapEntry *)contentsForkey:(ASImageNodeContentsKey *)key isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
++ (ASWeakMapEntry *)contentsForkey:(ASImageNodeContentsKey *)key drawParameters:(id)drawParameters isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
 {
   {
     ASDN::MutexLocker l(cacheLock);
@@ -444,13 +447,12 @@ static ASDN::Mutex cacheLock;
     }
     ASWeakMapEntry *entry = [cache entryForKey:key];
     if (entry != nil) {
-      // cache hit
       return entry;
     }
   }
 
   // cache miss
-  UIImage *contents = [self createContentsForkey:key isCancelled:isCancelled];
+  UIImage *contents = [self createContentsForkey:key drawParameters:drawParameters isCancelled:isCancelled];
   if (contents == nil) { // If nil, we were cancelled
     return nil;
   }
@@ -461,7 +463,7 @@ static ASDN::Mutex cacheLock;
   }
 }
 
-+ (UIImage *)createContentsForkey:(ASImageNodeContentsKey *)key isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
++ (UIImage *)createContentsForkey:(ASImageNodeContentsKey *)key drawParameters:(id)drawParameters isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
 {
   // The following `UIGraphicsBeginImageContextWithOptions` call will sometimes take take longer than 5ms on an
   // A5 processor for a 400x800 backingSize.
@@ -477,8 +479,8 @@ static ASDN::Mutex cacheLock;
   BOOL contextIsClean = YES;
   
   CGContextRef context = UIGraphicsGetCurrentContext();
-  if (context && key.preContextBlock) {
-    key.preContextBlock(context);
+  if (context && key.willDisplayNodeContentWithRenderingContext) {
+    key.willDisplayNodeContentWithRenderingContext(context, drawParameters);
     contextIsClean = NO;
   }
   
@@ -509,8 +511,8 @@ static ASDN::Mutex cacheLock;
     [image drawInRect:key.imageDrawRect blendMode:blendMode alpha:1];
   }
   
-  if (context && key.postContextBlock) {
-    key.postContextBlock(context);
+  if (context && key.didDisplayNodeContentWithRenderingContext) {
+    key.didDisplayNodeContentWithRenderingContext(context, drawParameters);
   }
 
   // The following `UIGraphicsGetImageFromCurrentImageContext` call will commonly take more than 20ms on an
@@ -524,7 +526,7 @@ static ASDN::Mutex cacheLock;
   
   UIGraphicsEndImageContext();
   
-  if (key.imageModificationBlock != NULL) {
+  if (key.imageModificationBlock) {
     result = key.imageModificationBlock(result);
   }
   
@@ -538,7 +540,25 @@ static ASDN::Mutex cacheLock;
   __instanceLock__.lock();
     void (^displayCompletionBlock)(BOOL canceled) = _displayCompletionBlock;
     UIImage *image = _image;
+    BOOL hasDebugLabel = (_debugLabelNode != nil);
   __instanceLock__.unlock();
+
+  // Update the debug label if necessary
+  if (hasDebugLabel) {
+    // For debugging purposes we don't care about locking for now
+    CGSize imageSize = image.size;
+    CGSize imageSizeInPixels = CGSizeMake(imageSize.width * image.scale, imageSize.height * image.scale);
+    CGSize boundsSizeInPixels = CGSizeMake(std::floor(self.bounds.size.width * self.contentsScale), std::floor(self.bounds.size.height * self.contentsScale));
+    CGFloat pixelCountRatio            = (imageSizeInPixels.width * imageSizeInPixels.height) / (boundsSizeInPixels.width * boundsSizeInPixels.height);
+    if (pixelCountRatio != 1.0) {
+      NSString *scaleString            = [NSString stringWithFormat:@"%.2fx", pixelCountRatio];
+      _debugLabelNode.attributedText   = [[NSAttributedString alloc] initWithString:scaleString attributes:[self debugLabelAttributes]];
+      _debugLabelNode.hidden           = NO;
+    } else {
+      _debugLabelNode.hidden           = YES;
+      _debugLabelNode.attributedText   = nil;
+    }
+  }
   
   // If we've got a block to perform after displaying, do it.
   if (image && displayCompletionBlock) {
@@ -699,6 +719,15 @@ static ASDN::Mutex cacheLock;
     _debugLabelNode.frame    = (CGRect) {debugLabelOrigin, debugLabelSize};
   }
 }
+
+- (NSDictionary *)debugLabelAttributes
+{
+  return @{
+    NSFontAttributeName: [UIFont systemFontOfSize:15.0],
+    NSForegroundColorAttributeName: [UIColor redColor]
+  };
+}
+
 @end
 
 #pragma mark - Extras

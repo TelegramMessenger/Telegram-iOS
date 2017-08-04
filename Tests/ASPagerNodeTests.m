@@ -1,6 +1,6 @@
 //
 //  ASPagerNodeTests.m
-//  AsyncDisplayKit
+//  Texture
 //
 //  Created by Luke Parham on 11/6/16.
 //  Copyright © 2016 Facebook. All rights reserved.

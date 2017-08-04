@@ -1,6 +1,6 @@
 //
 //  ASNetworkImageNodeTests.m
-//  AsyncDisplayKit
+//  Texture
 //
 //  Created by Adlai Holler on 10/14/16.
 //  Copyright © 2016 Facebook. All rights reserved.

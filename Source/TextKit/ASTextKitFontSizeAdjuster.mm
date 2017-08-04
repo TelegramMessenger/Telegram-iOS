@@ -1,11 +1,18 @@
 //
 //  ASTextKitFontSizeAdjuster.mm
-//  AsyncDisplayKit
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 
@@ -14,22 +21,29 @@
 #import <tgmath.h>
 #import <mutex>
 
-#import <AsyncDisplayKit/ASTextKitContext.h>
 #import <AsyncDisplayKit/ASLayoutManager.h>
+#import <AsyncDisplayKit/ASTextKitContext.h>
+#import <AsyncDisplayKit/ASThread.h>
 
 //#define LOG(...) NSLog(__VA_ARGS__)
 #define LOG(...)
+
+@interface ASTextKitFontSizeAdjuster()
+@property (nonatomic, strong, readonly) NSLayoutManager *sizingLayoutManager;
+@property (nonatomic, strong, readonly) NSTextContainer *sizingTextContainer;
+@end
 
 @implementation ASTextKitFontSizeAdjuster
 {
   __weak ASTextKitContext *_context;
   ASTextKitAttributes _attributes;
-  std::mutex _textKitMutex;
   BOOL _measured;
   CGFloat _scaleFactor;
-  NSLayoutManager *_sizingLayoutManager;
-  NSTextContainer *_sizingTextContainer;
+  ASDN::Mutex __instanceLock__;
 }
+
+@synthesize sizingLayoutManager = _sizingLayoutManager;
+@synthesize sizingTextContainer = _sizingTextContainer;
 
 - (instancetype)initWithContext:(ASTextKitContext *)context
                 constrainedSize:(CGSize)constrainedSize
@@ -87,38 +101,61 @@
 
 - (NSUInteger)lineCountForString:(NSAttributedString *)attributedString
 {
-    NSUInteger lineCount = 0;
+  NSUInteger lineCount = 0;
+  
+  NSLayoutManager *sizingLayoutManager = [self sizingLayoutManager];
+  NSTextContainer *sizingTextContainer = [self sizingTextContainer];
+  
+  NSTextStorage *textStorage = [[NSTextStorage alloc] initWithAttributedString:attributedString];
+  [textStorage addLayoutManager:sizingLayoutManager];
+  
+  [sizingLayoutManager ensureLayoutForTextContainer:sizingTextContainer];
+  for (NSRange lineRange = { 0, 0 }; NSMaxRange(lineRange) < [sizingLayoutManager numberOfGlyphs] && lineCount <= _attributes.maximumNumberOfLines; lineCount++) {
+    [sizingLayoutManager lineFragmentRectForGlyphAtIndex:NSMaxRange(lineRange) effectiveRange:&lineRange];
+  }
+  
+  [textStorage removeLayoutManager:sizingLayoutManager];
+  return lineCount;
+}
+
+- (CGSize)boundingBoxForString:(NSAttributedString *)attributedString
+{
+  NSLayoutManager *sizingLayoutManager = [self sizingLayoutManager];
+  NSTextContainer *sizingTextContainer = [self sizingTextContainer];
+  
+  NSTextStorage *textStorage = [[NSTextStorage alloc] initWithAttributedString:attributedString];
+  [textStorage addLayoutManager:sizingLayoutManager];
+  
+  [sizingLayoutManager ensureLayoutForTextContainer:sizingTextContainer];
+  CGRect textRect = [sizingLayoutManager boundingRectForGlyphRange:NSMakeRange(0, [textStorage length])
+                                                   inTextContainer:sizingTextContainer];
+  [textStorage removeLayoutManager:sizingLayoutManager];
+  return textRect.size;
+}
+
+- (NSLayoutManager *)sizingLayoutManager
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  if (_sizingLayoutManager == nil) {
+    _sizingLayoutManager = [[ASLayoutManager alloc] init];
+    _sizingLayoutManager.usesFontLeading = NO;
     
-    static std::mutex __static_mutex;
-    std::lock_guard<std::mutex> l(__static_mutex);
-    
-    NSTextStorage *textStorage = [[NSTextStorage alloc] initWithAttributedString:attributedString];
-    if (_sizingLayoutManager == nil) {
-        _sizingLayoutManager = [[ASLayoutManager alloc] init]; 
-        _sizingLayoutManager.usesFontLeading = NO;
-    }
-    [textStorage addLayoutManager:_sizingLayoutManager];
     if (_sizingTextContainer == nil) {
-        // make this text container unbounded in height so that the layout manager will compute the total
-        // number of lines and not stop counting when height runs out.
-        _sizingTextContainer = [[NSTextContainer alloc] initWithSize:CGSizeMake(_constrainedSize.width, CGFLOAT_MAX)];
-        _sizingTextContainer.lineFragmentPadding = 0;
-        
-        // use 0 regardless of what is in the attributes so that we get an accurate line count
-        _sizingTextContainer.maximumNumberOfLines = 0;
-        [_sizingLayoutManager addTextContainer:_sizingTextContainer];
+      // make this text container unbounded in height so that the layout manager will compute the total
+      // number of lines and not stop counting when height runs out.
+      _sizingTextContainer = [[NSTextContainer alloc] initWithSize:CGSizeMake(_constrainedSize.width, CGFLOAT_MAX)];
+      _sizingTextContainer.lineFragmentPadding = 0;
+      
+      // use 0 regardless of what is in the attributes so that we get an accurate line count
+      _sizingTextContainer.maximumNumberOfLines = 0;
+      
+      _sizingTextContainer.lineBreakMode = _attributes.lineBreakMode;
+      _sizingTextContainer.exclusionPaths = _attributes.exclusionPaths;
     }
-    
-    _sizingTextContainer.lineBreakMode = _attributes.lineBreakMode;
-    _sizingTextContainer.exclusionPaths = _attributes.exclusionPaths;
-    
-    
-    for (NSRange lineRange = { 0, 0 }; NSMaxRange(lineRange) < [_sizingLayoutManager numberOfGlyphs] && lineCount <= _attributes.maximumNumberOfLines; lineCount++) {
-        [_sizingLayoutManager lineFragmentRectForGlyphAtIndex:NSMaxRange(lineRange) effectiveRange:&lineRange];
-    }
-    
-    [textStorage removeLayoutManager:_sizingLayoutManager];
-    return lineCount;
+    [_sizingLayoutManager addTextContainer:_sizingTextContainer];
+  }
+  
+  return _sizingLayoutManager;
 }
 
 - (CGFloat)scaleFactor
@@ -195,7 +232,7 @@
         // if max lines still doesn't fit, continue without checking that we fit in the constrained height
         if (maxLinesFits == YES && heightFits == NO) {
           // max lines fit so make sure that we fit in the constrained height.
-          CGSize stringSize = [scaledString boundingRectWithSize:CGSizeMake(_constrainedSize.width, CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin context:nil].size;
+          CGSize stringSize = [self boundingBoxForString:scaledString];
           heightFits = (stringSize.height <= _constrainedSize.height);
         }
       }

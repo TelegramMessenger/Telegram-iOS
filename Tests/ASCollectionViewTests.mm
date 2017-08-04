@@ -1,11 +1,18 @@
 //
-//  ASCollectionViewTests.m
-//  AsyncDisplayKit
+//  ASCollectionViewTests.mm
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <XCTest/XCTest.h>
@@ -114,7 +121,7 @@
 
 - (ASCellNode *)collectionView:(ASCollectionView *)collectionView nodeForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
 {
-  return [[ASCellNode alloc] init];
+  return [[ASTextCellNodeWithSetSelectedCounter alloc] init];
 }
 
 - (void)collectionNode:(ASCollectionNode *)collectionNode willBeginBatchFetchWithContext:(ASBatchContext *)context
@@ -252,7 +259,8 @@
   [window setRootViewController:testController];
   [window makeKeyAndVisible];
   
-  [testController.collectionView reloadDataImmediately];
+  [testController.collectionNode reloadData];
+  [testController.collectionNode waitUntilAllUpdatesAreCommitted];
   [testController.collectionView layoutIfNeeded];
   
   NSIndexPath *indexPath = [NSIndexPath indexPathForItem:0 inSection:0];
@@ -383,12 +391,13 @@
   ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];\
   __unused ASCollectionViewTestDelegate *del = testController.asyncDelegate;\
   __unused ASCollectionView *cv = testController.collectionView;\
-  __unused ASCollectionNode *cn = testController.collectionNode;\
+  ASCollectionNode *cn = testController.collectionNode;\
   UIWindow *window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];\
   [window makeKeyAndVisible]; \
   window.rootViewController = testController;\
   \
-  [testController.collectionView reloadDataImmediately];\
+  [cn reloadData];\
+  [cn waitUntilAllUpdatesAreCommitted]; \
   [testController.collectionView layoutIfNeeded];
 
 - (void)testThatSubmittingAValidInsertDoesNotThrowAnException
@@ -487,11 +496,23 @@
   updateValidationTestPrologue
   NSSet *nodeBatch1 = [NSSet setWithArray:[cn visibleNodes]];
   XCTAssertGreaterThan(nodeBatch1.count, 0);
+  
+  NSArray<UICollectionViewLayoutAttributes *> *visibleLayoutAttributesBatch1 = [cv.collectionViewLayout layoutAttributesForElementsInRect:cv.bounds];
+  XCTAssertGreaterThan(visibleLayoutAttributesBatch1.count, 0);
 
   // Expect all visible nodes get 1 applyLayoutAttributes and have a non-nil value.
   for (ASTextCellNodeWithSetSelectedCounter *node in nodeBatch1) {
     XCTAssertEqual(node.applyLayoutAttributesCount, 1, @"Expected applyLayoutAttributes to be called exactly once for visible nodes.");
     XCTAssertNotNil(node.layoutAttributes, @"Expected layoutAttributes to be non-nil for visible cell node.");
+  }
+  
+  for (UICollectionViewLayoutAttributes *layoutAttributes in visibleLayoutAttributesBatch1) {
+    if (layoutAttributes.representedElementCategory != UICollectionElementCategorySupplementaryView) {
+      continue;
+    }
+    ASTextCellNodeWithSetSelectedCounter *node = (ASTextCellNodeWithSetSelectedCounter *)[cv supplementaryNodeForElementKind:layoutAttributes.representedElementKind atIndexPath:layoutAttributes.indexPath];
+    XCTAssertEqual(node.applyLayoutAttributesCount, 1, @"Expected applyLayoutAttributes to be called exactly once for visible supplementary nodes.");
+    XCTAssertNotNil(node.layoutAttributes, @"Expected layoutAttributes to be non-nil for visible supplementary node.");
   }
 
   // Scroll to next batch of items.
@@ -507,6 +528,15 @@
   for (ASTextCellNodeWithSetSelectedCounter *node in nodeBatch1) {
     XCTAssertEqual(node.applyLayoutAttributesCount, 1, @"Expected applyLayoutAttributes to be called exactly once for visible nodes, even after node is removed.");
     XCTAssertNil(node.layoutAttributes, @"Expected layoutAttributes to be nil for removed cell node.");
+  }
+  
+  for (UICollectionViewLayoutAttributes *layoutAttributes in visibleLayoutAttributesBatch1) {
+    if (layoutAttributes.representedElementCategory != UICollectionElementCategorySupplementaryView) {
+      continue;
+    }
+    ASTextCellNodeWithSetSelectedCounter *node = (ASTextCellNodeWithSetSelectedCounter *)[cv supplementaryNodeForElementKind:layoutAttributes.representedElementKind atIndexPath:layoutAttributes.indexPath];
+    XCTAssertEqual(node.applyLayoutAttributesCount, 1, @"Expected applyLayoutAttributes to be called exactly once for visible supplementary nodes, even after node is removed.");
+    XCTAssertNil(node.layoutAttributes, @"Expected layoutAttributes to be nil for removed supplementary node.");
   }
 }
 
@@ -592,7 +622,7 @@
   for (NSInteger i = 0; i < 2; i++) {
     // NOTE: waitUntilAllUpdatesAreCommitted or reloadDataImmediately is not sufficient here!!
     XCTestExpectation *done = [self expectationWithDescription:[NSString stringWithFormat:@"Reload #%td complete", i]];
-    [cv reloadDataWithCompletion:^{
+    [cn reloadDataWithCompletion:^{
       [done fulfill];
     }];
     [self waitForExpectationsWithTimeout:1 handler:nil];
@@ -724,7 +754,8 @@
   updateValidationTestPrologue
   
   del.sectionGeneration++;
-  [cv reloadDataImmediately];
+  [cn reloadData];
+  [cn waitUntilAllUpdatesAreCommitted];
   
   NSInteger sectionCount = del->_itemCounts.size();
   for (NSInteger section = 0; section < sectionCount; section++) {

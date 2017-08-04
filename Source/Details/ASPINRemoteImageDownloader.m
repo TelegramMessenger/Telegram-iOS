@@ -1,18 +1,25 @@
 //
 //  ASPINRemoteImageDownloader.m
-//  AsyncDisplayKit
-//
-//  Created by Garrett Moon on 2/5/16.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
 
-#if PIN_REMOTE_IMAGE
+#import <AsyncDisplayKit/ASAvailability.h>
+
+#if AS_PIN_REMOTE_IMAGE
 #import <AsyncDisplayKit/ASPINRemoteImageDownloader.h>
 
 #import <AsyncDisplayKit/ASAssert.h>
@@ -247,7 +254,13 @@ static ASPINRemoteImageDownloader *sharedDownloader = nil;
 - (void)cancelImageDownloadForIdentifier:(id)downloadIdentifier
 {
   ASDisplayNodeAssert([downloadIdentifier isKindOfClass:[NSUUID class]], @"downloadIdentifier must be NSUUID");
-  [[self sharedPINRemoteImageManager] cancelTaskWithUUID:downloadIdentifier];
+  [[self sharedPINRemoteImageManager] cancelTaskWithUUID:downloadIdentifier storeResumeData:NO];
+}
+
+- (void)cancelImageDownloadWithResumePossibilityForIdentifier:(id)downloadIdentifier
+{
+  ASDisplayNodeAssert([downloadIdentifier isKindOfClass:[NSUUID class]], @"downloadIdentifier must be NSUUID");
+  [[self sharedPINRemoteImageManager] cancelTaskWithUUID:downloadIdentifier storeResumeData:YES];
 }
 
 - (void)setProgressImageBlock:(ASImageDownloaderProgressImage)progressBlock callbackQueue:(dispatch_queue_t)callbackQueue withDownloadIdentifier:(id)downloadIdentifier
@@ -269,18 +282,18 @@ static ASPINRemoteImageDownloader *sharedDownloader = nil;
 {
   ASDisplayNodeAssert([downloadIdentifier isKindOfClass:[NSUUID class]], @"downloadIdentifier must be NSUUID");
 
-  PINRemoteImageManagerPriority pi_priority = PINRemoteImageManagerPriorityMedium;
+  PINRemoteImageManagerPriority pi_priority = PINRemoteImageManagerPriorityDefault;
   switch (priority) {
     case ASImageDownloaderPriorityPreload:
-      pi_priority = PINRemoteImageManagerPriorityMedium;
+      pi_priority = PINRemoteImageManagerPriorityLow;
       break;
 
     case ASImageDownloaderPriorityImminent:
-      pi_priority = PINRemoteImageManagerPriorityHigh;
+      pi_priority = PINRemoteImageManagerPriorityDefault;
       break;
 
     case ASImageDownloaderPriorityVisible:
-      pi_priority = PINRemoteImageManagerPriorityVeryHigh;
+      pi_priority = PINRemoteImageManagerPriorityHigh;
       break;
   }
   [[self sharedPINRemoteImageManager] setPriority:pi_priority ofTaskWithUUID:downloadIdentifier];

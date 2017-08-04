@@ -4,21 +4,21 @@
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 import UIKit
 import AsyncDisplayKit
 
-final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate {
+final class ViewController: ASViewController<ASDisplayNode>, ASTableDataSource, ASTableDelegate {
 
   struct State {
     var itemCount: Int
@@ -27,15 +27,15 @@ final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate
   }
 
   enum Action {
-    case BeginBatchFetch
-    case EndBatchFetch(resultCount: Int)
+    case beginBatchFetch
+    case endBatchFetch(resultCount: Int)
   }
 
   var tableNode: ASTableNode {
     return node as! ASTableNode
   }
 
-  private(set) var state: State = .empty
+  fileprivate(set) var state: State = .empty
 
   init() {
     super.init(node: ASTableNode())
@@ -49,7 +49,7 @@ final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate
 
   // MARK: ASTableNode data source and delegate.
 
-  func tableNode(tableNode: ASTableNode, nodeForRowAtIndexPath indexPath: NSIndexPath) -> ASCellNode {
+  func tableNode(_ tableNode: ASTableNode, nodeForRowAt indexPath: IndexPath) -> ASCellNode {
     // Should read the row count directly from table view but
     // https://github.com/facebook/AsyncDisplayKit/issues/1159
     let rowCount = self.tableNode(tableNode, numberOfRowsInSection: 0)
@@ -66,11 +66,11 @@ final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate
     return node
   }
 
-  func numberOfSectionsInTableNode(tableNode: ASTableNode) -> Int {
+  func numberOfSections(in tableNode: ASTableNode) -> Int {
     return 1
   }
 
-  func tableNode(tableNode: ASTableNode, numberOfRowsInSection section: Int) -> Int {
+  func tableNode(_ tableNode: ASTableNode, numberOfRowsInSection section: Int) -> Int {
     var count = state.itemCount
     if state.fetchingMore {
       count += 1
@@ -78,17 +78,17 @@ final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate
     return count
   }
 
-  func tableNode(tableNode: ASTableNode, willBeginBatchFetchWithContext context: ASBatchContext) {
+  func tableNode(_ tableNode: ASTableNode, willBeginBatchFetchWith context: ASBatchContext) {
     /// This call will come in on a background thread. Switch to main
     /// to add our spinner, then fire off our fetch.
-    dispatch_async(dispatch_get_main_queue()) {
+    DispatchQueue.main.async {
       let oldState = self.state
-      self.state = ViewController.handleAction(.BeginBatchFetch, fromState: oldState)
+      self.state = ViewController.handleAction(.beginBatchFetch, fromState: oldState)
       self.renderDiff(oldState)
     }
 
     ViewController.fetchDataWithCompletion { resultCount in
-      let action = Action.EndBatchFetch(resultCount: resultCount)
+      let action = Action.endBatchFetch(resultCount: resultCount)
       let oldState = self.state
       self.state = ViewController.handleAction(action, fromState: oldState)
       self.renderDiff(oldState)
@@ -96,7 +96,7 @@ final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate
     }
   }
 
-  private func renderDiff(oldState: State) {
+  fileprivate func renderDiff(_ oldState: State) {
     
     self.tableNode.performBatchUpdates({
       
@@ -104,9 +104,9 @@ final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate
       let rowCountChange = state.itemCount - oldState.itemCount
       if rowCountChange > 0 {
         let indexPaths = (oldState.itemCount..<state.itemCount).map { index in
-          NSIndexPath(forRow: index, inSection: 0)
+          IndexPath(row: index, section: 0)
         }
-        tableNode.insertRowsAtIndexPaths(indexPaths, withRowAnimation: .None)
+        tableNode.insertRows(at: indexPaths, with: .none)
       } else if rowCountChange < 0 {
         assertionFailure("Deleting rows is not implemented. YAGNI.")
       }
@@ -115,12 +115,12 @@ final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate
       if state.fetchingMore != oldState.fetchingMore {
         if state.fetchingMore {
           // Add spinner.
-          let spinnerIndexPath = NSIndexPath(forRow: state.itemCount, inSection: 0)
-          tableNode.insertRowsAtIndexPaths([ spinnerIndexPath ], withRowAnimation: .None)
+          let spinnerIndexPath = IndexPath(row: state.itemCount, section: 0)
+          tableNode.insertRows(at: [ spinnerIndexPath ], with: .none)
         } else {
           // Remove spinner.
-          let spinnerIndexPath = NSIndexPath(forRow: oldState.itemCount, inSection: 0)
-          tableNode.deleteRowsAtIndexPaths([ spinnerIndexPath ], withRowAnimation: .None)
+          let spinnerIndexPath = IndexPath(row: oldState.itemCount, section: 0)
+          tableNode.deleteRows(at: [ spinnerIndexPath ], with: .none)
         }
       }
     }, completion:nil)
@@ -128,20 +128,20 @@ final class ViewController: ASViewController, ASTableDataSource, ASTableDelegate
 
   /// (Pretend) fetches some new items and calls the
   /// completion handler on the main thread.
-  private static func fetchDataWithCompletion(completion: (Int) -> Void) {
-    let time = dispatch_time(DISPATCH_TIME_NOW, Int64(NSTimeInterval(NSEC_PER_SEC) * 1.0))
-    dispatch_after(time, dispatch_get_main_queue()) {
+  fileprivate static func fetchDataWithCompletion(_ completion: @escaping (Int) -> Void) {
+    let time = DispatchTime.now() + Double(Int64(TimeInterval(NSEC_PER_SEC) * 1.0)) / Double(NSEC_PER_SEC)
+    DispatchQueue.main.asyncAfter(deadline: time) {
       let resultCount = Int(arc4random_uniform(20))
       completion(resultCount)
     }
   }
 
-  private static func handleAction(action: Action, fromState state: State) -> State {
+  fileprivate static func handleAction(_ action: Action, fromState state: State) -> State {
     var state = state
     switch action {
-    case .BeginBatchFetch:
+    case .beginBatchFetch:
       state.fetchingMore = true
-    case let .EndBatchFetch(resultCount):
+    case let .endBatchFetch(resultCount):
       state.itemCount += resultCount
       state.fetchingMore = false
     }
