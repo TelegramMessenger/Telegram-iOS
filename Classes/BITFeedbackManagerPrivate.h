@@ -36,7 +36,7 @@ extern NSString *const kBITFeedbackUpdateAttachmentThumbnail;
 
 @class UITapGestureRecognizer;
 
-@interface BITFeedbackManager () <UIAlertViewDelegate> {
+@interface BITFeedbackManager () {
 }
 
 

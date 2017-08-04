@@ -88,7 +88,7 @@
 
 - (NSURLRequest *)requestForUpdateCheck;
 
-// initiates app-download call. displays an system UIAlertView
+// initiates app-download call. displays an system UIAlertController
 - (BOOL)initiateAppDownload;
 
 // get/set current active hockey view controller
