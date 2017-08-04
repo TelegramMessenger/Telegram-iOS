@@ -281,3 +281,8 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 
 #import <LegacyComponents/TGAttachmentCarouselItemView.h>
 #import <LegacyComponents/TGMediaAssetsController.h>
+
+#import <LegacyComponents/TGLocationPickerController.h>
+#import <LegacyComponents/TGListsTableView.h>
+#import <LegacyComponents/TGSearchBar.h>
+#import <LegacyComponents/TGSearchDisplayMixin.h>

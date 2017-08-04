@@ -78,7 +78,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)dealloc
 {
-    TGLog(@"Camera: dealloc");
+    TGLegacyLog(@"Camera: dealloc");
     [_deviceAngleSampler stopMeasuring];
     [self _unsubscribeFromCameraChanges];
     
@@ -109,7 +109,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)handleRuntimeError:(NSNotification *)notification
 {
-    TGLog(@"ERROR: Camera runtime error: %@", notification.userInfo[AVCaptureSessionErrorKey]);
+    TGLegacyLog(@"ERROR: Camera runtime error: %@", notification.userInfo[AVCaptureSessionErrorKey]);
 
     __weak PGCamera *weakSelf = self;
     TGDispatchAfter(1.5f, [PGCamera cameraQueue]._dispatch_queue, ^
@@ -140,7 +140,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
         return;
     
     AVCaptureSessionInterruptionReason reason = [notification.userInfo[AVCaptureSessionInterruptionReasonKey] integerValue];
-    TGLog(@"WARNING: Camera was interrupted with reason %d", reason);
+    TGLegacyLog(@"WARNING: Camera was interrupted with reason %d", reason);
     if (self.captureInterrupted != nil)
         self.captureInterrupted(reason);
 }
@@ -221,7 +221,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
         
         _capturing = true;
         
-        TGLog(@"Camera: start capture");
+        TGLegacyLog(@"Camera: start capture");
 #if !TARGET_IPHONE_SIMULATOR
         [self.captureSession startRunning];
 #endif
@@ -248,7 +248,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     if (!pause)
         _invalidated = true;
     
-    TGLog(@"Camera: stop capture");
+    TGLegacyLog(@"Camera: stop capture");
     
     [[PGCamera cameraQueue] dispatch:^
     {
@@ -258,7 +258,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
             
             [self.captureSession resetFlashMode];
             
-            TGLog(@"Camera: stop capture invalidated");
+            TGLegacyLog(@"Camera: stop capture invalidated");
             TGCameraPreviewView *previewView = _previewView;
             if (previewView != nil)
                 [previewView invalidate];
@@ -273,7 +273,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 #endif
         }
         
-        TGLog(@"Camera: stop running");
+        TGLegacyLog(@"Camera: stop running");
 #if !TARGET_IPHONE_SIMULATOR
         [self.captureSession stopRunning];
 #endif

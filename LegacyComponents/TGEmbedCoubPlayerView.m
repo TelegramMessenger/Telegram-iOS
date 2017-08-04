@@ -161,7 +161,7 @@
     NSString *embedHTMLTemplate = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)
     {
-        TGLog(@"[CoubEmbedPlayer]: Received error rendering template: %@", error);
+        TGLegacyLog(@"[CoubEmbedPlayer]: Received error rendering template: %@", error);
         return nil;
     }
     
@@ -289,7 +289,7 @@
 
 - (void)playerDidFail:(CBCoubPlayer *)__unused player error:(NSError *)error
 {
-    TGLog(@"[CoubPlayer] ERROR: %@", error.localizedDescription);
+    TGLegacyLog(@"[CoubPlayer] ERROR: %@", error.localizedDescription);
 }
 
 - (void)playerDidStop:(CBCoubPlayer *)__unused player

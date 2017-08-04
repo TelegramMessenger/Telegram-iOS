@@ -224,7 +224,7 @@ UIImage *TGScaleAndBlurImage(NSData *data, __unused CGSize size, __autoreleasing
     if (blurredData != NULL)
         *blurredData = UIImageJPEGRepresentation(returnImage, 0.6f);
     
-    TGLog(@"Blur time: %f ms", (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0);
+    TGLegacyLog(@"Blur time: %f ms", (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0);
     
     return returnImage;
 }

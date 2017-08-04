@@ -37,7 +37,7 @@ void TGPaintHasGLError_(const char* file, int line) {
                 break;
         }
         
-        TGLog(@"PAINT ERROR: glGetError %@ at %s:%d", message, file, line);
+        TGLegacyLog(@"PAINT ERROR: glGetError %@ at %s:%d", message, file, line);
     }
 }
 

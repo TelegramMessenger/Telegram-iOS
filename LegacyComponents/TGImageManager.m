@@ -248,7 +248,7 @@ static UIImage *forceImageDecoding(UIImage *image)
     }
     else
     {
-        TGLog(@"[TGImageManager#%p Data source not found for URI: %@]", self, uri);
+        TGLegacyLog(@"[TGImageManager#%p Data source not found for URI: %@]", self, uri);
         
         if (completion)
             completion(nil);

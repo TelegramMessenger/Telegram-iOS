@@ -728,7 +728,7 @@ static CGRect adjustFrameForOriginalSubframe(CGRect originalFrame, CGRect origin
             frame = CGRectApplyAffineTransform(frame, transform);
         }
         
-        //TGLog(@"%f: %@", rotation, currentView);
+        //TGLegacyLog(@"%f: %@", rotation, currentView);
         
         if ([currentView.superview isKindOfClass:[UIWindow class]])
             sourceWindowRotation = rotation;

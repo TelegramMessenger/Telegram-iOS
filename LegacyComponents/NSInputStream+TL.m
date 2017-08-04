@@ -28,7 +28,7 @@ static inline int roundUpInput(int numToRound, int multiple)
     
     if ([self read:(uint8_t *)&value maxLength:4] != 4)
     {
-        TGLog(@"***** Couldn't read int32");
+        TGLegacyLog(@"***** Couldn't read int32");
         
         @throw [[NSException alloc] initWithName:@"NSInputStream+TLException" reason:@"readInt32 end of stream" userInfo:@{}];
     }
@@ -69,7 +69,7 @@ static inline int roundUpInput(int numToRound, int multiple)
     
     if ([self read:(uint8_t *)&value maxLength:8] != 8)
     {
-        TGLog(@"***** Couldn't read int64");
+        TGLegacyLog(@"***** Couldn't read int64");
     }
     
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -108,7 +108,7 @@ static inline int roundUpInput(int numToRound, int multiple)
     
     if ([self read:(uint8_t *)&value maxLength:8] != 8)
     {
-        TGLog(@"***** Couldn't read double");
+        TGLegacyLog(@"***** Couldn't read double");
     }
     
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -147,7 +147,7 @@ static inline int roundUpInput(int numToRound, int multiple)
     int readLen = (int)[self read:bytes maxLength:length];
     if (readLen != length)
     {
-        TGLog(@"***** Couldn't read %d bytes", length);
+        TGLegacyLog(@"***** Couldn't read %d bytes", length);
     }
     NSData *data = [[NSData alloc] initWithBytesNoCopy:bytes length:length freeWhenDone:true];
     return data;
@@ -173,7 +173,7 @@ static inline int roundUpInput(int numToRound, int multiple)
     int readLen = (int)[self read:bytes maxLength:length];
     if (readLen != length)
     {
-        TGLog(@"***** Couldn't read %d bytes", length);
+        TGLegacyLog(@"***** Couldn't read %d bytes", length);
     }
     NSMutableData *data = [[NSMutableData alloc] initWithBytesNoCopy:bytes length:length freeWhenDone:true];
     return data;
@@ -229,7 +229,7 @@ static inline int roundUpInput(int numToRound, int multiple)
         int readLen = (int)[self read:bytes maxLength:length];
         if (readLen != length)
         {
-            TGLog(@"***** Couldn't read %d bytes", length);
+            TGLegacyLog(@"***** Couldn't read %d bytes", length);
         }
         
         string = [[NSString alloc] initWithBytesNoCopy:bytes length:length encoding:NSUTF8StringEncoding freeWhenDone:true];
@@ -331,7 +331,7 @@ static inline int roundUpInput(int numToRound, int multiple)
     int readLen = (int)[self read:bytes maxLength:length];
     if (readLen != length)
     {
-        TGLog(@"***** Couldn't read %d bytes", length);
+        TGLegacyLog(@"***** Couldn't read %d bytes", length);
     }
     
     NSData *result = [NSData dataWithBytesNoCopy:bytes length:length freeWhenDone:true];

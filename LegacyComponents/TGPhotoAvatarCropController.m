@@ -280,7 +280,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         {
             if (dispatch_semaphore_wait(_waitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC))))
             {
-                TGLog(@"Photo crop on switching failed");
+                TGLegacyLog(@"Photo crop on switching failed");
                 return;
             }
             

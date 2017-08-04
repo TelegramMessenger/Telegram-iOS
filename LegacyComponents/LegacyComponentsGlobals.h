@@ -88,3 +88,12 @@ typedef enum {
 
 @end
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+UIImage *TGComponentsImageNamed(NSString *name);
+NSString *TGComponentsPathForResource(NSString *name, NSString *type);
+#ifdef __cplusplus
+}
+#endif
+

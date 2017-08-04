@@ -133,14 +133,14 @@
     {
         GLchar *log = (GLchar *)malloc(logLength);
         glGetProgramInfoLog(program, logLength, &logLength, log);
-        TGLog(@"Program link log:\n%s", log);
+        TGLegacyLog(@"Program link log:\n%s", log);
         free(log);
     }
 #endif
     
     glGetProgramiv(program, GL_LINK_STATUS, &status);
     if (status == GL_FALSE)
-        TGLog(@"Failed to link program %d", program);
+        TGLegacyLog(@"Failed to link program %d", program);
     
     return status;
 }

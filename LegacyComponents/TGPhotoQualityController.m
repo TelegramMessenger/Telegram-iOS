@@ -751,7 +751,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
             [strongSelf->_overlayView setProgress:progress cancelEnabled:false animated:true];
         }
     } error:^(id error) {
-        TGLog(@"Video Quality Preview Error: %@", error);
+        TGLegacyLog(@"Video Quality Preview Error: %@", error);
     } completed:nil]];
 }
 

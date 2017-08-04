@@ -249,7 +249,7 @@ void freedomUIKit_decorated4_1(id self, SEL _cmd, id arg1)
     if (nativeImpl != NULL)
         nativeImpl(self, _cmd, arg1);
     
-    TGLog(@"invoke %@", NSStringFromSelector(_cmd));
+    TGLegacyLog(@"invoke %@", NSStringFromSelector(_cmd));
 }
 
 
@@ -265,7 +265,7 @@ void freedomUIKit_decorated4_2(id self, SEL _cmd)
     if (nativeImpl != NULL)
         nativeImpl(self, _cmd);
     
-    TGLog(@"invoke %@", NSStringFromSelector(_cmd));
+    TGLegacyLog(@"invoke %@", NSStringFromSelector(_cmd));
 }
 
 void freedomUIKitInit4()

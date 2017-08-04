@@ -517,11 +517,11 @@ static inline NSString *dialogTimeFormat()
                 return TGLocalized(@"LastSeen.JustNow");
             else if (minutesDiff < 60)
             {
-                return [effectiveLocalization() getPluralized:@"LastSeen.MinutesAgo" count:(int32_t)minutesDiff];
+                return [legacyEffectiveLocalization() getPluralized:@"LastSeen.MinutesAgo" count:(int32_t)minutesDiff];
             }
             else
             {
-                return [effectiveLocalization() getPluralized:@"LastSeen.HoursAgo" count:(int32_t)hoursDiff];
+                return [legacyEffectiveLocalization() getPluralized:@"LastSeen.HoursAgo" count:(int32_t)hoursDiff];
             }
         }
         else if (dayDiff == 0 || dayDiff == -1)

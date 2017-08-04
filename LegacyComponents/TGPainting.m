@@ -429,7 +429,7 @@
     
     if (status != GL_FRAMEBUFFER_COMPLETE)
     {
-        TGLog(@"ERROR: imageAndData: - Incomplete Framebuffer!");
+        TGLegacyLog(@"ERROR: imageAndData: - Incomplete Framebuffer!");
         TGPaintHasGLError();
         return nil;
     }
@@ -477,7 +477,7 @@
     
     if (status != GL_FRAMEBUFFER_COMPLETE)
     {
-        TGLog(@"ERROR: imageAndData: - Incomplete Framebuffer!");
+        TGLegacyLog(@"ERROR: imageAndData: - Incomplete Framebuffer!");
         TGPaintHasGLError();
         return nil;
     }

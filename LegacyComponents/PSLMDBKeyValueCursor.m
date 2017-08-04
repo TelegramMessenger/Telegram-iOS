@@ -58,7 +58,7 @@
     }
     else
     {
-        TGLog(@"[PSLMDBKeyValueReader mdb_cursor_get error %d]", rc);
+        TGLegacyLog(@"[PSLMDBKeyValueReader mdb_cursor_get error %d]", rc);
         
         return false;
     }
@@ -93,7 +93,7 @@
     else
     {
         if (rc != MDB_NOTFOUND)
-            TGLog(@"[PSLMDBKeyValueReader mdb_cursor_get error %d]", rc);
+            TGLegacyLog(@"[PSLMDBKeyValueReader mdb_cursor_get error %d]", rc);
         
         return false;
     }
@@ -128,7 +128,7 @@
     else
     {
         if (rc != MDB_NOTFOUND)
-            TGLog(@"[PSLMDBKeyValueReader mdb_cursor_get error %d]", rc);
+            TGLegacyLog(@"[PSLMDBKeyValueReader mdb_cursor_get error %d]", rc);
         
         return false;
     }

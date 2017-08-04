@@ -6,12 +6,12 @@
 
 #import <sys/sysctl.h>
 
-TGLocalization *effectiveLocalization() {
+TGLocalization *legacyEffectiveLocalization() {
     return [[LegacyComponentsGlobals provider] effectiveLocalization];
 }
 
 NSString *TGLocalized(NSString *s) {
-    return [effectiveLocalization() get:s];
+    return [legacyEffectiveLocalization() get:s];
 }
 
 bool TGObjectCompare(id obj1, id obj2) {
@@ -31,7 +31,7 @@ bool TGStringCompare(NSString *s1, NSString *s2) {
     return s1 == nil || [s1 isEqualToString:s2];
 }
 
-void TGLog(NSString *format, ...)
+void TGLegacyLog(NSString *format, ...)
 {
     va_list L;
     va_start(L, format);

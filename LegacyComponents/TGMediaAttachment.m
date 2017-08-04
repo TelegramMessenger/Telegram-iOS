@@ -9,7 +9,7 @@
 
 - (void)serialize:(NSMutableData *)__unused data
 {
-    TGLog(@"***** TGMediaAttachment: default implementation not provided");
+    TGLegacyLog(@"***** TGMediaAttachment: default implementation not provided");
 }
 
 @end

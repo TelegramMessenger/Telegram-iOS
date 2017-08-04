@@ -6,11 +6,11 @@
 extern "C" {
 #endif
     
-TGLocalization *effectiveLocalization();
+TGLocalization *legacyEffectiveLocalization();
 NSString *TGLocalized(NSString *s);
 bool TGObjectCompare(id obj1, id obj2);
 bool TGStringCompare(NSString *s1, NSString *s2);
-void TGLog(NSString *format, ...);
+void TGLegacyLog(NSString *format, ...);
 int iosMajorVersion();
 int iosMinorVersion();
     
@@ -22,16 +22,13 @@ void TGDispatchAfter(double delay, dispatch_queue_t queue, dispatch_block_t bloc
 int deviceMemorySize();
 int cpuCoreCount();
     
-UIImage *TGComponentsImageNamed(NSString *name);
-NSString *TGComponentsPathForResource(NSString *name, NSString *type);
-    
 #define UIColorRGB(rgb) ([[UIColor alloc] initWithRed:(((rgb >> 16) & 0xff) / 255.0f) green:(((rgb >> 8) & 0xff) / 255.0f) blue:(((rgb) & 0xff) / 255.0f) alpha:1.0f])
 #define UIColorRGBA(rgb,a) ([[UIColor alloc] initWithRed:(((rgb >> 16) & 0xff) / 255.0f) green:(((rgb >> 8) & 0xff) / 255.0f) blue:(((rgb) & 0xff) / 255.0f) alpha:a])
     
-#define TGRestrictedToMainThread {if(![[NSThread currentThread] isMainThread]) TGLog(@"***** Warning: main thread-bound operation is running in background! *****");}
+#define TGRestrictedToMainThread {if(![[NSThread currentThread] isMainThread]) TGLegacyLog(@"***** Warning: main thread-bound operation is running in background! *****");}
     
 #define TG_TIMESTAMP_DEFINE(s) CFAbsoluteTime tg_timestamp_##s = CFAbsoluteTimeGetCurrent(); int tg_timestamp_line_##s = __LINE__;
-#define TG_TIMESTAMP_MEASURE(s) { CFAbsoluteTime tg_timestamp_current_time = CFAbsoluteTimeGetCurrent(); TGLog(@"%s %d-%d: %f ms", #s, tg_timestamp_line_##s, __LINE__, (tg_timestamp_current_time - tg_timestamp_##s) * 1000.0); tg_timestamp_##s = tg_timestamp_current_time; tg_timestamp_line_##s = __LINE__; }
+#define TG_TIMESTAMP_MEASURE(s) { CFAbsoluteTime tg_timestamp_current_time = CFAbsoluteTimeGetCurrent(); TGLegacyLog(@"%s %d-%d: %f ms", #s, tg_timestamp_line_##s, __LINE__, (tg_timestamp_current_time - tg_timestamp_##s) * 1000.0); tg_timestamp_##s = tg_timestamp_current_time; tg_timestamp_line_##s = __LINE__; }
     
 #ifdef __LP64__
 #   define CGFloor floor

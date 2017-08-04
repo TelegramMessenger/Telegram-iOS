@@ -123,7 +123,7 @@ ActionStage *ActionStageInstance()
 #ifdef DEBUG
         CFAbsoluteTime executionTime = (CFAbsoluteTimeGetCurrent() - startTime);
         if (executionTime > 0.1)
-            TGLog(@"***** Dispatch from %s:%d took %f s", function, line, executionTime);
+            TGLegacyLog(@"***** Dispatch from %s:%d took %f s", function, line, executionTime);
 #endif
     }
     else
@@ -137,7 +137,7 @@ ActionStage *ActionStageInstance()
             
             CFAbsoluteTime executionTime = (CFAbsoluteTimeGetCurrent() - startTime);
             if (executionTime > 0.1)
-                TGLog(@"***** Dispatch from %s:%d took %f s", function, line, executionTime);
+                TGLegacyLog(@"***** Dispatch from %s:%d took %f s", function, line, executionTime);
         });
 #else
         dispatch_async([self globalStageDispatchQueue], block);
@@ -162,25 +162,25 @@ ActionStage *ActionStageInstance()
 {
     [self dispatchOnStageQueue:^
     {
-        TGLog(@"===== SGraph State =====");
-        TGLog(@"%d live node watchers", _liveNodeWatchers.count);
+        TGLegacyLog(@"===== SGraph State =====");
+        TGLegacyLog(@"%d live node watchers", _liveNodeWatchers.count);
         [_liveNodeWatchers enumerateKeysAndObjectsUsingBlock:^(NSString *path, NSArray *watchers, __unused BOOL *stop)
         {
-            TGLog(@"    %@", path);
+            TGLegacyLog(@"    %@", path);
             for (ASHandle *handle in watchers)
             {
                 id<ASWatcher> watcher = handle.delegate;
                 if (watcher != nil)
                 {
-                    TGLog(@"        %@", [watcher description]);
+                    TGLegacyLog(@"        %@", [watcher description]);
                 }
             }
         }];
-        TGLog(@"%d requests", _activeRequests.count);
+        TGLegacyLog(@"%d requests", _activeRequests.count);
         [_activeRequests enumerateKeysAndObjectsUsingBlock:^(NSString *path, __unused id obj, __unused BOOL *stop) {
-            TGLog(@"        %@", path);
+            TGLegacyLog(@"        %@", path);
         }];
-        TGLog(@"========================");
+        TGLegacyLog(@"========================");
     }];
 }
 
@@ -220,7 +220,7 @@ ActionStage *ActionStageInstance()
     {
         if (![key isKindOfClass:StringClass])
         {
-            TGLog(@"Warning: optionsHash: key is not a string");
+            TGLegacyLog(@"Warning: optionsHash: key is not a string");
             continue;
         }
         
@@ -286,7 +286,7 @@ ActionStage *ActionStageInstance()
     {
         if (![actionHandle hasDelegate])
         {
-            TGLog(@"Error: %s:%d: actionHandle.delegate is nil", __PRETTY_FUNCTION__, __LINE__); 
+            TGLegacyLog(@"Error: %s:%d: actionHandle.delegate is nil", __PRETTY_FUNCTION__, __LINE__); 
             return;
         }
         
@@ -306,7 +306,7 @@ ActionStage *ActionStageInstance()
             requestInfo = [cancelRequestInfo objectForKey:@"requestInfo"];
             [activeRequests setObject:requestInfo forKey:path];
             [cancelTimers removeObjectForKey:path];
-            TGLog(@"Resuming request to \"%@\"", path);
+            TGLegacyLog(@"Resuming request to \"%@\"", path);
         }
 
         if (requestInfo == nil)
@@ -346,7 +346,7 @@ ActionStage *ActionStageInstance()
                         if ([requestQueue count] > 1)
                         {
                             executeNow = false;
-                            TGLog(@"Adding request %@ to request queue \"%@\"", requestBuilder, requestBuilder.requestQueueName);
+                            TGLegacyLog(@"Adding request %@ to request queue \"%@\"", requestBuilder, requestBuilder.requestQueueName);
                             
                             if (flags & TGActorRequestChangePriority)
                             {
@@ -355,7 +355,7 @@ ActionStage *ActionStageInstance()
                                     [requestQueue removeLastObject];
                                     [requestQueue insertObject:requestBuilder atIndex:1];
                                     
-                                    TGLog(@"(Inserted actor with high priority (next in queue)");
+                                    TGLegacyLog(@"(Inserted actor with high priority (next in queue)");
                                 }
                             }
                         }
@@ -369,7 +369,7 @@ ActionStage *ActionStageInstance()
             }
             else
             {
-                TGLog(@"Error: request builder not found for \"%@\"", path);
+                TGLegacyLog(@"Error: request builder not found for \"%@\"", path);
             }
         }
         else
@@ -377,12 +377,12 @@ ActionStage *ActionStageInstance()
             NSMutableArray *watchers = [requestInfo objectForKey:@"watchers"];
             if (![watchers containsObject:actionHandle])
             {
-                TGLog(@"Joining watcher to the watchers of \"%@\"", path);
+                TGLegacyLog(@"Joining watcher to the watchers of \"%@\"", path);
                 [watchers addObject:actionHandle];
             }
             else
             {
-                TGLog(@"Continue to watch for actor \"%@\"", path);
+                TGLegacyLog(@"Continue to watch for actor \"%@\"", path);
             }
             
             ASActor *actor = [requestInfo objectForKey:@"requestBuilder"];
@@ -431,7 +431,7 @@ ActionStage *ActionStageInstance()
                         [requestQueue removeObjectAtIndex:index];
                         [requestQueue insertObject:actor atIndex:1];
                         
-                        TGLog(@"Changed actor %@ priority (next in %@)", path, actor.requestQueueName);
+                        TGLegacyLog(@"Changed actor %@ priority (next in %@)", path, actor.requestQueueName);
                     }
                 }
             }
@@ -474,7 +474,7 @@ ActionStage *ActionStageInstance()
 {
     if (![self isCurrentQueueStageQueue])
     {
-        TGLog(@"%s should be called from graph queue", __PRETTY_FUNCTION__);
+        TGLegacyLog(@"%s should be called from graph queue", __PRETTY_FUNCTION__);
         
         return nil;
     }
@@ -515,7 +515,7 @@ ActionStage *ActionStageInstance()
 {
     if (![self isCurrentQueueStageQueue])
     {
-        TGLog(@"%s should be called from graph queue", __PRETTY_FUNCTION__);
+        TGLegacyLog(@"%s should be called from graph queue", __PRETTY_FUNCTION__);
         
         return nil;
     }
@@ -552,7 +552,7 @@ ActionStage *ActionStageInstance()
 {
     if (![self isCurrentQueueStageQueue])
     {
-        TGLog(@"%s should be called from graph queue", __PRETTY_FUNCTION__);
+        TGLegacyLog(@"%s should be called from graph queue", __PRETTY_FUNCTION__);
         
         return nil;
     }
@@ -586,7 +586,7 @@ ActionStage *ActionStageInstance()
 {
     if (![self isCurrentQueueStageQueue])
     {
-        TGLog(@"%s should be called from graph queue", __PRETTY_FUNCTION__);
+        TGLegacyLog(@"%s should be called from graph queue", __PRETTY_FUNCTION__);
         
         return nil;
     }
@@ -636,7 +636,7 @@ ActionStage *ActionStageInstance()
     ASHandle *actionHandle = watcher.actionHandle;
     if (actionHandle == nil)
     {
-        TGLog(@"***** Warning: actionHandle is nil in %s:%d", __PRETTY_FUNCTION__, __LINE__);
+        TGLegacyLog(@"***** Warning: actionHandle is nil in %s:%d", __PRETTY_FUNCTION__, __LINE__);
         return;
     }
     
@@ -659,7 +659,7 @@ ActionStage *ActionStageInstance()
     ASHandle *actionHandle = watcher.actionHandle;
     if (actionHandle == nil)
     {
-        TGLog(@"***** Warning: actionHandle is nil in %s:%d", __PRETTY_FUNCTION__, __LINE__);
+        TGLegacyLog(@"***** Warning: actionHandle is nil in %s:%d", __PRETTY_FUNCTION__, __LINE__);
         return;
     }
     
@@ -685,7 +685,7 @@ ActionStage *ActionStageInstance()
     ASHandle *actionHandle = watcher.actionHandle;
     if (actionHandle == nil)
     {
-        TGLog(@"***** Warning: actionHandle is nil in %s:%d", __PRETTY_FUNCTION__, __LINE__);
+        TGLegacyLog(@"***** Warning: actionHandle is nil in %s:%d", __PRETTY_FUNCTION__, __LINE__);
         return;
     }
     
@@ -708,7 +708,7 @@ ActionStage *ActionStageInstance()
     ASHandle *actionHandle = watcher.actionHandle;
     if (actionHandle == nil)
     {
-        TGLog(@"***** Warning: actionHandle is nil in %s:%d", __PRETTY_FUNCTION__, __LINE__);
+        TGLegacyLog(@"***** Warning: actionHandle is nil in %s:%d", __PRETTY_FUNCTION__, __LINE__);
         return;
     }
     
@@ -729,12 +729,12 @@ ActionStage *ActionStageInstance()
 {
     NSMutableArray *requestQueue = [_requestQueues objectForKey:requestBuilder.requestQueueName == nil ? name : requestBuilder.requestQueueName];
     if (requestQueue == nil)
-        TGLog(@"Warning: requestQueue is nil");
+        TGLegacyLog(@"Warning: requestQueue is nil");
     else
     {
         if (requestQueue.count == 0)
         {
-            TGLog(@"***** Warning ***** request queue \"%@\" is empty.", requestBuilder.requestQueueName);
+            TGLegacyLog(@"***** Warning ***** request queue \"%@\" is empty.", requestBuilder.requestQueueName);
         }
         else
         {   
@@ -756,7 +756,7 @@ ActionStage *ActionStageInstance()
                 }
                 else
                 {
-                    //TGLog(@"Request queue %@ finished", requestBuilder.requestQueueName);
+                    //TGLegacyLog(@"Request queue %@ finished", requestBuilder.requestQueueName);
                     [_requestQueues removeObjectForKey:requestBuilder.requestQueueName];
                 }
             }
@@ -768,7 +768,7 @@ ActionStage *ActionStageInstance()
                 }
                 else
                 {
-                    TGLog(@"***** Warning ***** request queue \"%@\" doesn't contain request to %@", requestBuilder.requestQueueName, requestBuilder.path);
+                    TGLegacyLog(@"***** Warning ***** request queue \"%@\" doesn't contain request to %@", requestBuilder.requestQueueName, requestBuilder.path);
                 }
             }
         }
@@ -785,7 +785,7 @@ ActionStage *ActionStageInstance()
     ASHandle *watcherGraphHandle = actionHandle;
     if (watcherGraphHandle == nil)
     {
-        TGLog(@"***** Warning: graph handle is nil in removeWatcher");
+        TGLegacyLog(@"***** Warning: graph handle is nil in removeWatcher");
         return;
     }
     
@@ -889,7 +889,7 @@ ActionStage *ActionStageInstance()
 {
     if (watcherGraphHandle == nil)
     {
-        TGLog(@"***** Warning: graph handle is nil in removeWatcher:fromPath");
+        TGLegacyLog(@"***** Warning: graph handle is nil in removeWatcher:fromPath");
         return;
     }
     
@@ -914,7 +914,7 @@ ActionStage *ActionStageInstance()
         
         if (removeWatchersFromPath.size() > 1)
         {
-            TGLog(@"Cancelled %ld requests at once", removeWatchersFromPath.size());
+            TGLegacyLog(@"Cancelled %ld requests at once", removeWatchersFromPath.size());
         }
         
         for (std::vector<std::pair<ASHandle *, NSString *> >::iterator it = removeWatchersFromPath.begin(); it != removeWatchersFromPath.end(); it++)
@@ -1051,7 +1051,7 @@ ActionStage *ActionStageInstance()
             [actionWatchers removeAllObjects];
             
             if (requestBuilder == nil)
-                TGLog(@"***** Warning ***** requestBuilder is nil");
+                TGLegacyLog(@"***** Warning ***** requestBuilder is nil");
             else if (requestBuilder.requestQueueName != nil)
             {
                 [self removeRequestFromQueueAndProceedIfFirst:requestBuilder.requestQueueName fromRequestBuilder:requestBuilder];
@@ -1117,7 +1117,7 @@ ActionStage *ActionStageInstance()
             [actionWatchers removeAllObjects];
             
             if (requestBuilder == nil)
-                TGLog(@"***** Warning ***** requestBuilder is nil");
+                TGLegacyLog(@"***** Warning ***** requestBuilder is nil");
             else if (requestBuilder.requestQueueName != nil)
             {
                 [self removeRequestFromQueueAndProceedIfFirst:requestBuilder.requestQueueName fromRequestBuilder:requestBuilder];
@@ -1181,13 +1181,13 @@ ActionStage *ActionStageInstance()
             [activeRequests removeObjectForKey:path];
             
             [requestBuilder cancel];
-            TGLog(@"Cancelled request to \"%@\"", path);
+            TGLegacyLog(@"Cancelled request to \"%@\"", path);
             if (requestBuilder.requestQueueName != nil)
                 [self removeRequestFromQueueAndProceedIfFirst:requestBuilder.requestQueueName fromRequestBuilder:requestBuilder];
         }
         else
         {
-            TGLog(@"Will cancel request to \"%@\" in %f s", path, cancelTimeout);
+            TGLegacyLog(@"Will cancel request to \"%@\" in %f s", path, cancelTimeout);
             NSDictionary *cancelDict = [NSDictionary dictionaryWithObjectsAndKeys:path, @"path", [NSNumber numberWithInt:0], @"type", nil];
             STimer *timer = [[STimer alloc] initWithTimeout:cancelTimeout repeat:false completion:^
             {
@@ -1204,7 +1204,7 @@ ActionStage *ActionStageInstance()
     }
     else if (cancelRequestInfo == nil)
     {
-        TGLog(@"Warning: cannot cancel request to \"%@\": no active request found", path);
+        TGLegacyLog(@"Warning: cannot cancel request to \"%@\": no active request found", path);
     }
 }
          
@@ -1219,19 +1219,19 @@ ActionStage *ActionStageInstance()
         NSMutableDictionary *cancelRequestInfo = [cancelTimers objectForKey:path];
         if (cancelRequestInfo == nil)
         {
-            TGLog(@"Warning: cancelNodeRequestTimerEvent: \"%@\": no cancel info found", path);
+            TGLegacyLog(@"Warning: cancelNodeRequestTimerEvent: \"%@\": no cancel info found", path);
             return;
         }
         NSDictionary *requestInfo = [cancelRequestInfo objectForKey:@"requestInfo"];
         ASActor *requestBuilder = [requestInfo objectForKey:@"requestBuilder"];
         if (requestBuilder == nil)
         {
-            TGLog(@"Warning: active request builder for \"%@\" not fond, cannot cancel request", path);
+            TGLegacyLog(@"Warning: active request builder for \"%@\" not fond, cannot cancel request", path);
         }
         else
         {
             [requestBuilder cancel];
-            TGLog(@"Cancelled request to \"%@\"", path);
+            TGLegacyLog(@"Cancelled request to \"%@\"", path);
             if (requestBuilder.requestQueueName != nil)
                 [self removeRequestFromQueueAndProceedIfFirst:requestBuilder.requestQueueName fromRequestBuilder:requestBuilder];
         }

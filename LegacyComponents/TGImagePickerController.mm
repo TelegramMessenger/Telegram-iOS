@@ -49,7 +49,7 @@ void sharedAssetsLibraryRetain()
         
         if (sharedLibrary == nil)
         {
-            TGLog(@"Preloading shared assets library");
+            TGLegacyLog(@"Preloading shared assets library");
             sharedLibraryRetainCount = 1;
             sharedLibrary = [[ALAssetsLibrary alloc] init];
             
@@ -68,7 +68,7 @@ void sharedAssetsLibraryRetain()
                 }
             } failureBlock:^(__unused NSError *error)
             {
-                TGLog(@"assets access error");
+                TGLegacyLog(@"assets access error");
             }];
         }
         else
@@ -95,7 +95,7 @@ void sharedAssetsLibraryRelease()
             {
                 sharedLibraryReleaseTimer = nil;
                 
-                TGLog(@"Destroyed shared assets library");
+                TGLegacyLog(@"Destroyed shared assets library");
                 sharedLibrary = nil;
             } nativeQueue:assetsProcessingQueue()];
             [sharedLibraryReleaseTimer start];

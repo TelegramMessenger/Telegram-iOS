@@ -741,7 +741,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
-    //TGLog(@"Did rotate");
+    //TGLegacyLog(@"Did rotate");
     _viewControllerIsChangingInterfaceOrientation = false;
     _currentSizeChangeDuration = 0.0;
     

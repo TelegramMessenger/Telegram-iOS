@@ -335,7 +335,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
             {
                 if (dispatch_semaphore_wait(_waitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC))))
                 {
-                    TGLog(@"Photo crop on switching failed");
+                    TGLegacyLog(@"Photo crop on switching failed");
                     return;
                 }
                 

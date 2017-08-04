@@ -22,7 +22,7 @@ static NSMutableDictionary *registeredRequestBuilders()
     NSString *genericPath = [requestBuilderClass genericPath];
     if (genericPath == nil || genericPath.length == 0)
     {
-        TGLog(@"Error: ASActor::registerActorClass: genericPath is nil");
+        TGLegacyLog(@"Error: ASActor::registerActorClass: genericPath is nil");
         return;
     }
     
@@ -42,7 +42,7 @@ static NSMutableDictionary *registeredRequestBuilders()
 
 + (NSString *)genericPath
 {
-    TGLog(@"Error: ASActor::genericPath: no default implementation provided");
+    TGLegacyLog(@"Error: ASActor::genericPath: no default implementation provided");
     
     return nil;
 }
@@ -73,7 +73,7 @@ static int instanceCount = 0;
 /*#if TARGET_IPHONE_SIMULATOR
         instanceCount++;
         
-        TGLog(@"%d actors (++)", instanceCount);
+        TGLegacyLog(@"%d actors (++)", instanceCount);
 #endif*/
     }
     return self;
@@ -84,7 +84,7 @@ static int instanceCount = 0;
 /*#if TARGET_IPHONE_SIMULATOR
     instanceCount--;
     
-    TGLog(@"%d actors (--)", instanceCount);
+    TGLegacyLog(@"%d actors (--)", instanceCount);
 #endif*/
 }
 
@@ -94,7 +94,7 @@ static int instanceCount = 0;
 
 - (void)execute:(NSDictionary *)__unused options
 {
-    TGLog(@"Error: ASActor::execute: no default implementation provided");
+    TGLegacyLog(@"Error: ASActor::execute: no default implementation provided");
 }
 
 - (void)cancel

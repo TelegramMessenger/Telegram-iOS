@@ -352,7 +352,7 @@
     {
         __strong TGMediaPickerGalleryModel *strongSelf = weakSelf;
         if (strongSelf == nil) {
-            TGLog(@"controller.didFinishEditing strongSelf == nil");
+            TGLegacyLog(@"controller.didFinishEditing strongSelf == nil");
         }
         
 #ifdef DEBUG

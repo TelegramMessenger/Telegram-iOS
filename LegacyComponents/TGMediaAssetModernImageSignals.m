@@ -128,7 +128,7 @@
                     bool degraded = [info[PHImageResultIsDegradedKey] boolValue];
                     if (result == nil && !networkAccessAllowed)
                     {
-                        TGLog(@"requestImageForAsset: error -1");
+                        TGLegacyLog(@"requestImageForAsset: error -1");
                         
                         [subscriber putError:@true];
                         return;

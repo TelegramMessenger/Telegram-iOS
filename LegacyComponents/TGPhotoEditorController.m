@@ -666,7 +666,7 @@
                 self.didFinishEditing(editorValues, image, thumbnailImage, true);
         } error:^(__unused id error)
         {
-            TGLog(@"renderedImageSignal error");
+            TGLegacyLog(@"renderedImageSignal error");
         } completed:nil];
     }
 }

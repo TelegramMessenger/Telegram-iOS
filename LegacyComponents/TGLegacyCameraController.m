@@ -301,7 +301,7 @@
                 if (_storeCapturedAssets && [referenceUrl absoluteString].length != 0)
                 {
                     assetHash = [[NSString alloc] initWithFormat:@"%@", [referenceUrl absoluteString]];
-                    TGLog(@"Video hash: %@", assetHash);
+                    TGLegacyLog(@"Video hash: %@", assetHash);
                 }
                 
                 bool deleteFile = true;
@@ -363,7 +363,7 @@
                                     break;
                                 case AVAssetExportSessionStatusCompleted:
                                 {
-                                    TGLog(@"Export mp4 completed");
+                                    TGLegacyLog(@"Export mp4 completed");
                                     endProcessing = true;
                                     success = true;
                                     
@@ -466,7 +466,7 @@
 {
     [[NSFileManager defaultManager] removeItemAtPath:videoPath error:nil];
     if (error != nil)
-        TGLog(@"Video saving error: %@", error);
+        TGLegacyLog(@"Video saving error: %@", error);
 }
 
 - (void)actionStageActionRequested:(NSString *)action options:(id)options

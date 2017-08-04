@@ -91,7 +91,7 @@ NSString *const TGInstagramPlayerCallbackOnPlayback = @"onPlayback";
     NSString *embedHTMLTemplate = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)
     {
-        TGLog(@"[InstagramEmbedPlayer]: Received error rendering template: %@", error);
+        TGLegacyLog(@"[InstagramEmbedPlayer]: Received error rendering template: %@", error);
         return nil;
     }
     
