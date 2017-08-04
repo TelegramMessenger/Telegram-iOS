@@ -23,7 +23,7 @@ The following features are currently supported:
 
 ## 1. Setup
 
-It is super easy to use HockeyApp in your iOS app. Have a look at our [documentation](https://www.hockeyapp.net/help/sdk/ios/5.0.0-beta.1/docs/docs/Guide-Installation-Setup.html) and onboard your app within minutes.
+It is super easy to use HockeyApp in your iOS app. Have a look at our [documentation](https://www.hockeyapp.net/help/sdk/ios/5.0.0-beta.1/index.html) and onboard your app within minutes.
 
 ## 2. Documentation
 
