@@ -10,6 +10,7 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#ifndef MINIMAL_ASDK
 #import <AsyncDisplayKit/ASPagerNode.h>
 
 @interface ASPagerNode (Beta)
@@ -17,3 +18,4 @@
 - (instancetype)initUsingAsyncCollectionLayout;
 
 @end
+#endif
