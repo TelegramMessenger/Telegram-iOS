@@ -7,6 +7,7 @@
 - (void)setNone;
 - (void)setTyping;
 - (void)setAudioRecording;
+- (void)setVideoRecording;
 - (void)setUploading;
 - (void)setPlaying;
 
