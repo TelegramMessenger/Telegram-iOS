@@ -69,7 +69,7 @@ const CGFloat TGLocationVenueCellHeight = 48.5f;
     }
     else
     {
-        [_iconView loadUri:@"embedded://" withOptions:@{ TGImageViewOptionEmbeddedImage:TGComponentsImageNamed(@"LocationGenericIcon.png)] }];
+        [_iconView loadUri:@"embedded://" withOptions:@{ TGImageViewOptionEmbeddedImage:TGComponentsImageNamed(@"LocationGenericIcon.png") }];
     }
 }
 
