@@ -1,5 +1,7 @@
 #import "TGCameraFlashActiveView.h"
 
+#import "LegacyComponentsInternal.h"
+
 #import "TGCameraInterfaceAssets.h"
 
 @interface TGCameraFlashActiveView ()
@@ -25,7 +27,7 @@
         
         _iconView = [[UIImageView alloc] initWithFrame:CGRectMake((frame.size.width - 8) / 2, (frame.size.height - 13) / 2, 8, 13)];
         _iconView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin;
-        _iconView.image = [UIImage imageNamed:@"CameraFlashActive"];
+        _iconView.image = TGComponentsImageNamed(@"CameraFlashActive");
         [_backgroundView addSubview:_iconView];
         
         [self setActive:false animated:false];

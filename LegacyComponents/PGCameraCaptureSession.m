@@ -99,12 +99,12 @@ const NSInteger PGCameraFrameRate = 30;
         if (_videoInput != nil && [self canAddInput:_videoInput])
             [self addInput:_videoInput];
         else
-            TGLog(@"ERROR: camera can't add video input");
+            TGLegacyLog(@"ERROR: camera can't add video input");
     }
     else
     {
         _videoInput = nil;
-        TGLog(@"ERROR: camera can't create video device");
+        TGLegacyLog(@"ERROR: camera can't create video device");
     }
     
     if (_currentMode == PGCameraModePhoto || _currentMode == PGCameraModeSquare)
@@ -132,7 +132,7 @@ const NSInteger PGCameraFrameRate = 30;
     else
     {
         _imageOutput = nil;
-        TGLog(@"ERROR: camera can't add still image output");
+        TGLegacyLog(@"ERROR: camera can't add still image output");
     }
     
     AVCaptureVideoDataOutput *videoOutput = [[AVCaptureVideoDataOutput alloc] init];
@@ -149,7 +149,7 @@ const NSInteger PGCameraFrameRate = 30;
     else
     {
         _videoOutput = nil;
-        TGLog(@"ERROR: camera can't add video output");
+        TGLegacyLog(@"ERROR: camera can't add video output");
     }
     
     self.currentFlashMode = PGCameraFlashModeOff;
@@ -712,7 +712,7 @@ const NSInteger PGCameraFrameRate = 30;
     [device unlockForConfiguration];
     
     if (error != nil)
-        TGLog(@"ERROR: failed to reconfigure camera: %@", error);
+        TGLegacyLog(@"ERROR: failed to reconfigure camera: %@", error);
 }
 
 - (void)setFrameRate:(NSInteger)frameRate forDevice:(AVCaptureDevice *)videoDevice
@@ -881,7 +881,7 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
     
     if (!CMSampleBufferDataIsReady(sampleBuffer))
     {
-        TGLog(@"WARNING: camera sample buffer data is not ready, skipping");
+        TGLegacyLog(@"WARNING: camera sample buffer data is not ready, skipping");
         return;
     }
     

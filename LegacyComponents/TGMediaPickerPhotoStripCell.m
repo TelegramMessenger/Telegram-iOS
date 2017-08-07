@@ -162,11 +162,11 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
             _label.text = [NSString stringWithFormat:@"%d:%02d", (int)ceil(asset.videoDuration) / 60, (int)ceil(asset.videoDuration) % 60];
             
             if (asset.subtypes & TGMediaAssetSubtypeVideoTimelapse)
-                _iconView.image = [UIImage imageNamed:@"ModernMediaItemTimelapseIcon"];
+                _iconView.image = TGComponentsImageNamed(@"ModernMediaItemTimelapseIcon");
             else if (asset.subtypes & TGMediaAssetSubtypeVideoHighFrameRate)
-                _iconView.image = [UIImage imageNamed:@"ModernMediaItemSloMoIcon"];
+                _iconView.image = TGComponentsImageNamed(@"ModernMediaItemSloMoIcon");
             else
-                _iconView.image = [UIImage imageNamed:@"ModernMediaItemVideoIcon"];
+                _iconView.image = TGComponentsImageNamed(@"ModernMediaItemVideoIcon");
             
             if (self.editingContext != nil)
             {

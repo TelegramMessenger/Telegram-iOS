@@ -44,9 +44,9 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 
 @implementation TGPhotoAvatarCropController
 
-- (instancetype)initWithPhotoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;
@@ -112,7 +112,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     _rotateButton.exclusiveTouch = true;
     _rotateButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
     [_rotateButton addTarget:self action:@selector(rotate) forControlEvents:UIControlEventTouchUpInside];
-    [_rotateButton setImage:[UIImage imageNamed:@"PhotoEditorRotateIcon"] forState:UIControlStateNormal];
+    [_rotateButton setImage:TGComponentsImageNamed(@"PhotoEditorRotateIcon") forState:UIControlStateNormal];
     [_buttonsWrapperView addSubview:_rotateButton];
     
     _mirrorButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 36, 36)];
@@ -120,7 +120,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     _mirrorButton.imageEdgeInsets = UIEdgeInsetsMake(4.0f, 0.0f, 0.0f, 0.0f);
     _mirrorButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
     [_mirrorButton addTarget:self action:@selector(mirror) forControlEvents:UIControlEventTouchUpInside];
-    [_mirrorButton setImage:[UIImage imageNamed:@"PhotoEditorMirrorIcon"] forState:UIControlStateNormal];
+    [_mirrorButton setImage:TGComponentsImageNamed(@"PhotoEditorMirrorIcon") forState:UIControlStateNormal];
     [_buttonsWrapperView addSubview:_mirrorButton];
     
     _resetButton = [[TGModernButton alloc] init];
@@ -280,7 +280,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         {
             if (dispatch_semaphore_wait(_waitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC))))
             {
-                TGLog(@"Photo crop on switching failed");
+                TGLegacyLog(@"Photo crop on switching failed");
                 return;
             }
             

@@ -1,6 +1,7 @@
 #import "TGEmbedPlayerScrubber.h"
 
-#import <LegacyComponents/LegacyComponents.h>
+#import "LegacyComponentsInternal.h"
+#import "TGImageUtils.h"
 
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 
@@ -33,7 +34,7 @@ const CGFloat TGEmbedPlayerKnobMargin = 8.0f;
     {
         self.hitTestEdgeInsets = UIEdgeInsetsMake(-20, -20, -20, -20);
         
-        UIImage *hollowTrackImage = [[UIImage imageNamed:@"EmbedVideoTrackHollow"] resizableImageWithCapInsets:UIEdgeInsetsMake(0, 2, 0, 2)];
+        UIImage *hollowTrackImage = [TGComponentsImageNamed(@"EmbedVideoTrackHollow") resizableImageWithCapInsets:UIEdgeInsetsMake(0, 2, 0, 2)];
         _backgroundView = [[UIImageView alloc] initWithImage:hollowTrackImage];
         [self addSubview:_backgroundView];
         
@@ -142,7 +143,7 @@ const CGFloat TGEmbedPlayerKnobMargin = 8.0f;
 
 - (void)setTintColor:(UIColor *)tintColor
 {
-    UIImage *tintedImage = [TGTintedImage([UIImage imageNamed:@"EmbedVideoTrackHollow"], tintColor) resizableImageWithCapInsets:UIEdgeInsetsMake(0, 2, 0, 2)];
+    UIImage *tintedImage = [TGTintedImage(TGComponentsImageNamed(@"EmbedVideoTrackHollow"), tintColor) resizableImageWithCapInsets:UIEdgeInsetsMake(0, 2, 0, 2)];
     _backgroundView.image = tintedImage;
     _downloadProgressView.backgroundColor = tintColor;
 }

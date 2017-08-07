@@ -1,5 +1,7 @@
 #import "TGCameraFlipButton.h"
 
+#import "LegacyComponentsInternal.h"
+
 @implementation TGCameraFlipButton
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -8,7 +10,7 @@
     if (self != nil)
     {
         self.exclusiveTouch = true;
-        [self setImage:[UIImage imageNamed:@"CameraLargeFlipButton"] forState:UIControlStateNormal];
+        [self setImage:TGComponentsImageNamed(@"CameraLargeFlipButton") forState:UIControlStateNormal];
     }
     return self;
 }

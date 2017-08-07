@@ -33,11 +33,6 @@
     return TGLocalized(@"PhotoEditor.HighlightsTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorHighlightsTool"];
-}
-
 - (bool)shouldBeSkipped
 {
     return (ABS(((NSNumber *)self.displayValue).floatValue - self.defaultValue) < FLT_EPSILON);

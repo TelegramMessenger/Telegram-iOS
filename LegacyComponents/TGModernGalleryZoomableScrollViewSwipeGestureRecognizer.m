@@ -87,7 +87,7 @@
 
 - (void)touchesEnded:(NSSet *)__unused touches withEvent:(UIEvent *)__unused event
 {
-    //TGLog(@"touches ended");
+    //TGLegacyLog(@"touches ended");
     
     _swipeVelocity = [self velocityInView:self.view].y;
     

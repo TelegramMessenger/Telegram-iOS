@@ -6,12 +6,12 @@
 
 #import <sys/sysctl.h>
 
-TGLocalization *effectiveLocalization() {
+TGLocalization *legacyEffectiveLocalization() {
     return [[LegacyComponentsGlobals provider] effectiveLocalization];
 }
 
 NSString *TGLocalized(NSString *s) {
-    return [effectiveLocalization() get:s];
+    return [legacyEffectiveLocalization() get:s];
 }
 
 bool TGObjectCompare(id obj1, id obj2) {
@@ -31,12 +31,13 @@ bool TGStringCompare(NSString *s1, NSString *s2) {
     return s1 == nil || [s1 isEqualToString:s2];
 }
 
-void TGLog(NSString *format, ...)
+void TGLegacyLog(NSString *format, ...)
 {
     va_list L;
     va_start(L, format);
-    [[LegacyComponentsGlobals provider] log:format :L];
+    NSString *string = [[NSString alloc] initWithFormat:format arguments:L];
     va_end(L);
+    [[LegacyComponentsGlobals provider] log:string];
 }
 
 int iosMajorVersion()
@@ -154,4 +155,27 @@ void TGDispatchOnMainThread(dispatch_block_t block)
 void TGDispatchAfter(double delay, dispatch_queue_t queue, dispatch_block_t block)
 {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((delay) * NSEC_PER_SEC)), queue, block);
+}
+
+static NSBundle *frameworkBundle() {
+    static NSBundle *currentBundle = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        currentBundle = [NSBundle bundleForClass:[LegacyComponentsGlobals class]];
+        NSString *updatedPath = [[currentBundle bundlePath] stringByAppendingPathComponent:@"LegacyComponentsResources.bundle"];
+        currentBundle = [NSBundle bundleWithPath:updatedPath];
+    });
+    return currentBundle;
+}
+
+UIImage *TGComponentsImageNamed(NSString *name) {
+    UIImage *image = [UIImage imageNamed:name inBundle:frameworkBundle() compatibleWithTraitCollection:nil];
+    if (image == nil) {
+        assert(true);
+    }
+    return image;
+}
+
+NSString *TGComponentsPathForResource(NSString *name, NSString *type) {
+    return [frameworkBundle() pathForResource:name ofType:type];
 }

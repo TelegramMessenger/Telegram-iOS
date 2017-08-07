@@ -170,7 +170,7 @@ const CGFloat TGGifConverterMaximumSide = 720.0f;
                                 
                                 if (![adaptor appendPixelBuffer:pxBuffer withPresentationTime:time])
                                 {
-                                    TGLog(@"Could not save pixel buffer!: %@", videoWriter.error);
+                                    TGLegacyLog(@"Could not save pixel buffer!: %@", videoWriter.error);
                                     CFRelease(properties);
                                     CGImageRelease(imgRef);
                                     CVBufferRelease(pxBuffer);

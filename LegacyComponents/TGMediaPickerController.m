@@ -26,9 +26,9 @@
 
 @implementation TGMediaPickerController
 
-- (instancetype)initWithSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _selectionContext = selectionContext;

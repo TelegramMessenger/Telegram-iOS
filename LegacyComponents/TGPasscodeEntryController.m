@@ -55,9 +55,9 @@ typedef enum {
 
 @implementation TGPasscodeEntryController
 
-- (instancetype)initWithStyle:(TGPasscodeEntryControllerStyle)style mode:(TGPasscodeEntryControllerMode)mode cancelEnabled:(bool)cancelEnabled allowTouchId:(bool)allowTouchId attemptData:(TGPasscodeEntryAttemptData *)attemptData completion:(void (^)(NSString *))completion
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context style:(TGPasscodeEntryControllerStyle)style mode:(TGPasscodeEntryControllerMode)mode cancelEnabled:(bool)cancelEnabled allowTouchId:(bool)allowTouchId attemptData:(TGPasscodeEntryAttemptData *)attemptData completion:(void (^)(NSString *))completion
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _style = style;

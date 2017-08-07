@@ -1,5 +1,7 @@
 #import "TGPhotoCropAreaView.h"
 
+#import "LegacyComponentsInternal.h"
+
 #import "TGPhotoCropGridView.h"
 
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
@@ -126,7 +128,7 @@ const CGFloat TGPhotoCropEdgeControlSize = 44;
         
         _cornersView = [[UIImageView alloc] initWithFrame:CGRectInset(self.bounds, -2, -2)];
         _cornersView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        _cornersView.image = [[UIImage imageNamed:@"PhotoEditorCropCorners"] resizableImageWithCapInsets:UIEdgeInsetsMake(20, 20, 20, 20)];
+        _cornersView.image = [TGComponentsImageNamed(@"PhotoEditorCropCorners") resizableImageWithCapInsets:UIEdgeInsetsMake(20, 20, 20, 20)];
         [self addSubview:_cornersView];
         
         _topEdgeHighlight = [[UIView alloc] initWithFrame:CGRectMake(0, -1, frame.size.width, 2)];

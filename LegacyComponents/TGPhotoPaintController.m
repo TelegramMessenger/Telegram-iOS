@@ -136,7 +136,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _context = context;

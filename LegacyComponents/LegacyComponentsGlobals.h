@@ -1,11 +1,12 @@
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
-#import <LegacyComponents/TGRootControllerProtocol.h>
 #import <LegacyComponents/LegacyComponentsAccessChecker.h>
 #import <LegacyComponents/LegacyHTTPRequestOperation.h>
 
-#import <SSignalKit/SSignalKit.h>
-
+@class SSignal;
+@class SThreadPool;
+@protocol SDisposable;
 @class TGLocalization;
 @class UIViewController;
 @class TGWallpaperInfo;
@@ -25,8 +26,7 @@ typedef enum {
 @protocol LegacyComponentsGlobalsProvider <NSObject>
 
 - (TGLocalization *)effectiveLocalization;
-- (void)log:(NSString *)format :(va_list)args;
-- (UIViewController<TGRootControllerProtocol> *)rootController;
+- (void)log:(NSString *)string;
 - (NSArray<UIWindow *> *)applicationWindows;
 - (UIWindow *)applicationStatusBarWindow;
 - (UIWindow *)applicationKeyboardWindow;
@@ -87,4 +87,13 @@ typedef enum {
 + (id<LegacyComponentsGlobalsProvider>)provider;
 
 @end
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+UIImage *TGComponentsImageNamed(NSString *name);
+NSString *TGComponentsPathForResource(NSString *name, NSString *type);
+#ifdef __cplusplus
+}
+#endif
 

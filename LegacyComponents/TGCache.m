@@ -236,7 +236,7 @@ static NSFileManager *cacheFileManager = nil;
                 if (self.memoryCacheSize < 0)
                     self.memoryCacheSize = 0;
                 [_memoryCache removeObjectForKey:key];
-                //TGLog(@"evict %@", key);
+                //TGLegacyLog(@"evict %@", key);
             }
             
             __block int currentCacheSize = 0;
@@ -247,7 +247,7 @@ static NSFileManager *cacheFileManager = nil;
             
             self.memoryCacheSize = currentCacheSize;
             
-            //TGLog(@"TGCache: freed %d kbytes (cache size: %d kbytes)", (int)((sizeBefore - self.memoryCacheSize) / 1024), (int)(self.memoryCacheSize / 1024));
+            //TGLegacyLog(@"TGCache: freed %d kbytes (cache size: %d kbytes)", (int)((sizeBefore - self.memoryCacheSize) / 1024), (int)(self.memoryCacheSize / 1024));
         }
     };
     if ([NSThread isMainThread])
@@ -305,7 +305,7 @@ static NSFileManager *cacheFileManager = nil;
                     _dataMemoryCacheSize = 0;
                 [_dataMemoryCache removeObjectForKey:key];
             }
-            //TGLog(@"TGCache (compressed): freed %d kbytes (cache size: %d kbytes)", (int)((sizeBefore - _dataMemoryCacheSize) / 1024), (int)(_dataMemoryCacheSize / 1024));
+            //TGLegacyLog(@"TGCache (compressed): freed %d kbytes (cache size: %d kbytes)", (int)((sizeBefore - _dataMemoryCacheSize) / 1024), (int)(_dataMemoryCacheSize / 1024));
         }
     }
     if (!reentrant)
@@ -348,7 +348,7 @@ static NSFileManager *cacheFileManager = nil;
 {
 #ifdef DEBUG
     if (data != nil)
-        TGLog(@"cache image %d bytes with url %@", (int)data.length, url);
+        TGLegacyLog(@"cache image %d bytes with url %@", (int)data.length, url);
 #endif
     
     if (image != nil && (availability & TGCacheMemory))
@@ -417,7 +417,7 @@ static NSFileManager *cacheFileManager = nil;
                 for (NSDictionary *dict in _temporaryCachedImagesSources)
                 {
                     UIImage *image = [dict objectForKey:url];
-                    //TGLog(@"From temp cache %@", url);
+                    //TGLegacyLog(@"From temp cache %@", url);
                     if (image != nil)
                     {
                         blockImage = image;
@@ -600,9 +600,9 @@ static NSFileManager *cacheFileManager = nil;
                 _thumbnailCacheSize += size;
             }
             
-            //TGLog(@"Cache thumbnail: %@", url);
+            //TGLegacyLog(@"Cache thumbnail: %@", url);
             
-            //TGLog(@"_thumbnailCacheSize = %d", _thumbnailCacheSize);
+            //TGLegacyLog(@"_thumbnailCacheSize = %d", _thumbnailCacheSize);
             
             if (_thumbnailCacheSize >= _thumbnailMemoryLimit + _thumbnailEvictionInterval)
                 [self freeThumbnailCache:_thumbnailMemoryLimit];
@@ -628,7 +628,7 @@ static NSFileManager *cacheFileManager = nil;
         }
         else
         {
-            //TGLog(@"Thumbnail not found: %@", url);
+            //TGLegacyLog(@"Thumbnail not found: %@", url);
         }
     };
     if ([NSThread isMainThread])
@@ -693,7 +693,7 @@ static NSFileManager *cacheFileManager = nil;
 
 - (void)changeCacheItemUrl:(NSString *)oldUrl newUrl:(NSString *)newUrl
 {
-    //TGLog(@"TGCache: rename \"%@\" -> \"%@\"", oldUrl, newUrl);
+    //TGLegacyLog(@"TGCache: rename \"%@\" -> \"%@\"", oldUrl, newUrl);
     dispatch_block_t block = ^
     {
         TGCacheRecord *record = [_memoryCache objectForKey:oldUrl];
@@ -713,13 +713,13 @@ static NSFileManager *cacheFileManager = nil;
         NSError *error = nil;
         [cacheFileManager moveItemAtPath:[_diskCachePath stringByAppendingPathComponent:md5String(oldUrl)] toPath:[_diskCachePath stringByAppendingPathComponent:md5String(newUrl)] error:&error];
         if (error != nil)
-            TGLog(@"Failed to move: %@", error);
+            TGLegacyLog(@"Failed to move: %@", error);
     });
 }
 
 - (void)moveToCache:(NSString *)fileUrl cacheUrl:(NSString *)cacheUrl
 {
-    TGLog(@"TGCache: move \"%@\" -> \"%@\"", fileUrl, cacheUrl);
+    TGLegacyLog(@"TGCache: move \"%@\" -> \"%@\"", fileUrl, cacheUrl);
     dispatch_block_t block = ^
     {
         TGCacheRecord *record = [_memoryCache objectForKey:fileUrl];
@@ -739,7 +739,7 @@ static NSFileManager *cacheFileManager = nil;
         NSError *error = nil;
         [cacheFileManager moveItemAtPath:fileUrl toPath:[_diskCachePath stringByAppendingPathComponent:md5String(cacheUrl)] error:&error];
         if (error != nil)
-            TGLog(@"Failed to move: %@", error);
+            TGLegacyLog(@"Failed to move: %@", error);
     });
 }
 
@@ -781,7 +781,7 @@ static NSFileManager *cacheFileManager = nil;
                     failedCount++;
             }
             
-            TGLog(@"TGCache: removed %d files (%d failed)", removedCount, failedCount);
+            TGLegacyLog(@"TGCache: removed %d files (%d failed)", removedCount, failedCount);
         });
     }
 }
@@ -812,7 +812,7 @@ static NSFileManager *cacheFileManager = nil;
     {
         [self cachedImage:url availability:TGCacheDisk];
     }
-    TGLog(@"Cache restored in %f ms", (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0);
+    TGLegacyLog(@"Cache restored in %f ms", (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0);
 }
 
 @end

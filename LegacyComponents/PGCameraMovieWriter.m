@@ -72,7 +72,7 @@
 
         if (_assetWriter == nil && error != nil)
         {
-            TGLog(@"ERROR: camera movie writer failed to initialize: %@", error);
+            TGLegacyLog(@"ERROR: camera movie writer failed to initialize: %@", error);
             return;
         }
         
@@ -86,7 +86,7 @@
         }
         else
         {
-            TGLog(@"ERROR: camera movie writer failed to add video input");
+            TGLegacyLog(@"ERROR: camera movie writer failed to add video input");
             return;
         }
         
@@ -100,7 +100,7 @@
             }
             else
             {
-                TGLog(@"ERROR: camera movie writer failed to add audio input");
+                TGLegacyLog(@"ERROR: camera movie writer failed to add audio input");
                 return;
             }
         }
@@ -126,7 +126,7 @@
             {
                 if (self.finishedWithMovieAtURL != nil)
                     self.finishedWithMovieAtURL(nil, CGAffineTransformIdentity, CGSizeZero, 0.0, false);
-                TGLog(@"ERROR: camera movie writer failed to write movie: %@", _assetWriter.error);
+                TGLegacyLog(@"ERROR: camera movie writer failed to write movie: %@", _assetWriter.error);
                 
                 _assetWriter = nil;
             });
@@ -168,7 +168,7 @@
             {
                 if (strongSelf.finishedWithMovieAtURL != nil)
                     strongSelf.finishedWithMovieAtURL(strongSelf->_assetWriter.outputURL, CGAffineTransformIdentity, CGSizeZero, 0.0, false);
-                TGLog(@"ERROR: camera movie writer failed to write movie: %@", strongSelf->_assetWriter.error);
+                TGLegacyLog(@"ERROR: camera movie writer failed to write movie: %@", strongSelf->_assetWriter.error);
             }
             
             strongSelf->_assetWriter = nil;
@@ -191,10 +191,10 @@
         
         if (_assetWriter.status > AVAssetWriterStatusCompleted)
         {
-            TGLog(@"WARNING: camera movie writer status is %d", _assetWriter.status);
+            TGLegacyLog(@"WARNING: camera movie writer status is %d", _assetWriter.status);
             if (_assetWriter.status == AVAssetWriterStatusFailed)
             {
-                TGLog(@"ERROR: camera movie writer error: %@", _assetWriter.error);
+                TGLegacyLog(@"ERROR: camera movie writer error: %@", _assetWriter.error);
                 _isRecording = false;
                 
                 if (self.finishedWithMovieAtURL != nil)
@@ -224,7 +224,7 @@
             if (success)
                 _lastVideoTimeStamp = timestamp;
             else
-                TGLog(@"ERROR: camera movie writer failed to append pixel buffer");
+                TGLegacyLog(@"ERROR: camera movie writer failed to append pixel buffer");
             
             if (_audioOutputSettings != nil && _stopIminent && CMTimeCompare(_lastVideoTimeStamp, _lastAudioTimeStamp) != -1) {
                 [self _finishWithCompletion];
@@ -261,7 +261,7 @@
                 if (success)
                     _lastAudioTimeStamp = timestamp;
                 else
-                    TGLog(@"ERROR: camera movie writer failed to append audio buffer");
+                    TGLegacyLog(@"ERROR: camera movie writer failed to append audio buffer");
             }
         }
         

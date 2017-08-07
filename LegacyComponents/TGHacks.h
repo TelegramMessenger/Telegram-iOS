@@ -30,13 +30,8 @@ typedef enum {
 + (void)setSecondaryAnimationDurationFactor:(float)factor;
 + (void)setForceSystemCurve:(bool)forceSystemCurve;
 
-+ (CGFloat)applicationStatusBarAlpha;
-+ (void)setApplicationStatusBarAlpha:(CGFloat)alpha;
-
 + (CGFloat)applicationStatusBarOffset;
 + (void)setApplicationStatusBarOffset:(CGFloat)offset;
-+ (void)animateApplicationStatusBarAppearance:(int)statusBarAnimation delay:(NSTimeInterval)delay duration:(NSTimeInterval)duration completion:(void (^)())completion;
-+ (void)animateApplicationStatusBarAppearance:(int)statusBarAnimation duration:(NSTimeInterval)duration completion:(void (^)())completion;
 + (void)animateApplicationStatusBarStyleTransitionWithDuration:(NSTimeInterval)duration;
 + (CGFloat)statusBarHeightForOrientation:(UIInterfaceOrientation)orientation;
 

@@ -330,7 +330,7 @@ static void computeImageVariance(uint8_t *memory, int width, int height, int str
             n1 += floatHistogram[i];
     }
     
-    //TGLog(@"histogram: [%f %f %f %f %f %f %f %f %f %f]", floatHistogram[0], floatHistogram[1], floatHistogram[2], floatHistogram[3], floatHistogram[4], floatHistogram[5], floatHistogram[6], floatHistogram[7], floatHistogram[8], floatHistogram[9]);
+    //TGLegacyLog(@"histogram: [%f %f %f %f %f %f %f %f %f %f]", floatHistogram[0], floatHistogram[1], floatHistogram[2], floatHistogram[3], floatHistogram[4], floatHistogram[5], floatHistogram[6], floatHistogram[7], floatHistogram[8], floatHistogram[9]);
     
     if (outLuminance != NULL)
         *outLuminance = n0 < n1 ? 0.95f : 0.5f;

@@ -33,11 +33,6 @@
     return TGLocalized(@"PhotoEditor.WarmthTool");
 }
 
-- (UIImage *)image
-{
-    return [UIImage imageNamed:@"PhotoEditorWarmthTool"];
-}
-
 - (bool)shouldBeSkipped
 {
     return (ABS(((NSNumber *)self.displayValue).floatValue - self.defaultValue) < FLT_EPSILON);

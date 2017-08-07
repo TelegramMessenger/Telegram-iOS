@@ -108,7 +108,7 @@ typedef enum {
             
             _backgroundView = [[UIImageView alloc] init];
             _backgroundView.alpha = 0.98f;
-            _backgroundView.image = [TGTintedImage([UIImage imageNamed:@"PaintPopupCenterBackground"], UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
+            _backgroundView.image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupCenterBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
             [self addSubview:_backgroundView];
         }
         
@@ -135,21 +135,21 @@ typedef enum {
             [_cancelButton sizeToFit];
             [_wrapperView addSubview:_cancelButton];
             
-            [_segmentedControl setBackgroundImage:TGTintedImage([UIImage imageNamed:@"ModernSegmentedControlBackground.png"], UIColorRGB(0xafb2b1)) forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
-            [_segmentedControl setBackgroundImage:TGTintedImage([UIImage imageNamed:@"ModernSegmentedControlSelected.png"], UIColorRGB(0xafb2b1)) forState:UIControlStateSelected barMetrics:UIBarMetricsDefault];
-            [_segmentedControl setBackgroundImage:TGTintedImage([UIImage imageNamed:@"ModernSegmentedControlSelected.png"], UIColorRGB(0xafb2b1)) forState:UIControlStateSelected | UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
-            [_segmentedControl setBackgroundImage:[UIImage imageNamed:@"PaintSegmentedControlHighlighted.png"] forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
-            [_segmentedControl setDividerImage:TGTintedImage([UIImage imageNamed:@"ModernSegmentedControlDivider.png"], UIColorRGB(0xafb2b1)) forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setBackgroundImage:TGTintedImage(TGComponentsImageNamed(@"ModernSegmentedControlBackground.png"), UIColorRGB(0xafb2b1)) forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setBackgroundImage:TGTintedImage(TGComponentsImageNamed(@"ModernSegmentedControlSelected.png"), UIColorRGB(0xafb2b1)) forState:UIControlStateSelected barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setBackgroundImage:TGTintedImage(TGComponentsImageNamed(@"ModernSegmentedControlSelected.png"), UIColorRGB(0xafb2b1)) forState:UIControlStateSelected | UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setBackgroundImage:TGComponentsImageNamed(@"PaintSegmentedControlHighlighted.png") forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setDividerImage:TGTintedImage(TGComponentsImageNamed(@"ModernSegmentedControlDivider.png"), UIColorRGB(0xafb2b1)) forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
             [_segmentedControl setTitleTextAttributes:@{UITextAttributeTextColor: UIColorRGB(0xafb2b1), UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateNormal];
             [_segmentedControl setTitleTextAttributes:@{UITextAttributeTextColor: [UIColor blackColor], UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateSelected];
         }
         else
         {
-            [_segmentedControl setBackgroundImage:[UIImage imageNamed:@"ModernSegmentedControlBackground.png"] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
-            [_segmentedControl setBackgroundImage:[UIImage imageNamed:@"ModernSegmentedControlSelected.png"] forState:UIControlStateSelected barMetrics:UIBarMetricsDefault];
-            [_segmentedControl setBackgroundImage:[UIImage imageNamed:@"ModernSegmentedControlSelected.png"] forState:UIControlStateSelected | UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
-            [_segmentedControl setBackgroundImage:[UIImage imageNamed:@"ModernSegmentedControlHighlighted.png"] forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
-            [_segmentedControl setDividerImage:[UIImage imageNamed:@"ModernSegmentedControlDivider.png"] forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setBackgroundImage:TGComponentsImageNamed(@"ModernSegmentedControlBackground.png") forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setBackgroundImage:TGComponentsImageNamed(@"ModernSegmentedControlSelected.png") forState:UIControlStateSelected barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setBackgroundImage:TGComponentsImageNamed(@"ModernSegmentedControlSelected.png") forState:UIControlStateSelected | UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setBackgroundImage:TGComponentsImageNamed(@"ModernSegmentedControlHighlighted.png") forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+            [_segmentedControl setDividerImage:TGComponentsImageNamed(@"ModernSegmentedControlDivider.png") forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
             [_segmentedControl setTitleTextAttributes:@{UITextAttributeTextColor: TGAccentColor(), UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateNormal];
             [_segmentedControl setTitleTextAttributes:@{UITextAttributeTextColor: [UIColor whiteColor], UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateSelected];
         }
@@ -250,11 +250,15 @@ typedef enum {
                     [strongSelf setStickerPacks:reversed maskStickerPacks:reversedMasks recentDocuments:recentStickers];
                 }
                 
-                [self updateCurrentSection];
+                [strongSelf updateCurrentSection];
             }
         }];
     }
     return self;
+}
+
+- (void)dealloc {
+    [_stickerPacksDisposable dispose];
 }
 
 - (CGSize)sizeThatFits:(CGSize)__unused size

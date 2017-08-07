@@ -307,7 +307,7 @@ static size_t TGGetAssetBytesCallback(void *info, void *buffer, off_t position, 
     size_t countRead = [rep getBytes:(uint8_t *)buffer fromOffset:position length:count error:&error];
     
     if (countRead == 0 && error)
-        TGLog(@"error occured while reading an asset: %@", error);
+        TGLegacyLog(@"error occured while reading an asset: %@", error);
     
     return countRead;
 }

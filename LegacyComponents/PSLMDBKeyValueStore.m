@@ -91,7 +91,7 @@
     rc = mdb_reader_check(_env, &removedReaders);
     
     if (removedReaders != 0)
-        TGLog(@"[PSLMDBKeyValueStore removed %d stale readers]", removedReaders);
+        TGLegacyLog(@"[PSLMDBKeyValueStore removed %d stale readers]", removedReaders);
     
     _table = [self _createTableWithName:@"main"];
     
@@ -113,7 +113,7 @@
     rc = mdb_env_sync(_env, 1);
     
     if (rc != MDB_SUCCESS)
-        TGLog(@"[PSLMDBKeyValueStore sync: mdb_env_sync error %d]", rc);
+        TGLegacyLog(@"[PSLMDBKeyValueStore sync: mdb_env_sync error %d]", rc);
 }
 
 - (void)panic
@@ -133,11 +133,11 @@
         rc = mdb_txn_begin(_env, NULL, 0, &txn);
         if (rc != MDB_SUCCESS)
         {
-            TGLog(@"[PSLMDBKeyValueStore transaction begin failed %d]", rc);
+            TGLegacyLog(@"[PSLMDBKeyValueStore transaction begin failed %d]", rc);
             
             if (rc == MDB_PANIC)
             {
-                TGLog(@"[PSLMDBKeyValueStore critical error received]");
+                TGLegacyLog(@"[PSLMDBKeyValueStore critical error received]");
                 
                 [self panic];
             }
@@ -150,7 +150,7 @@
         {
             mdb_txn_abort(txn);
             
-            TGLog(@"[PSLMDBKeyValueStore mdb_dbi_open failed %d]", rc);
+            TGLegacyLog(@"[PSLMDBKeyValueStore mdb_dbi_open failed %d]", rc);
         }
         else
         {
@@ -178,11 +178,11 @@
         rc = mdb_txn_begin(_env, NULL, MDB_RDONLY, &txn);
         if (rc != MDB_SUCCESS)
         {
-            TGLog(@"[PSLMDBKeyValueStore mdb_txn_begin failed %d", rc);
+            TGLegacyLog(@"[PSLMDBKeyValueStore mdb_txn_begin failed %d", rc);
             
             if (rc == MDB_PANIC)
             {
-                TGLog(@"[PSLMDBKeyValueStore critical error received]");
+                TGLegacyLog(@"[PSLMDBKeyValueStore critical error received]");
                 
                 [self panic];
             }
@@ -194,7 +194,7 @@
             rc = mdb_txn_commit(txn);
             
             if (rc != MDB_SUCCESS)
-                TGLog(@"[PSLMDBKeyValueStore mdb_txn_commit error %d]", rc);
+                TGLegacyLog(@"[PSLMDBKeyValueStore mdb_txn_commit error %d]", rc);
         }
     }
 }
@@ -213,11 +213,11 @@
         rc = mdb_txn_begin(_env, NULL, 0, &txn);
         if (rc != MDB_SUCCESS)
         {
-            TGLog(@"[PSLMDBKeyValueStore mdb_txn_begin failed %d", rc);
+            TGLegacyLog(@"[PSLMDBKeyValueStore mdb_txn_begin failed %d", rc);
             
             if (rc == MDB_PANIC)
             {
-                TGLog(@"[PSLMDBKeyValueStore critical error received]");
+                TGLegacyLog(@"[PSLMDBKeyValueStore critical error received]");
                 
                 [self panic];
             }
@@ -229,7 +229,7 @@
             rc = mdb_txn_commit(txn);
             
             if (rc != MDB_SUCCESS)
-                TGLog(@"[PSLMDBKeyValueStore mdb_txn_commit error %d]", rc);
+                TGLegacyLog(@"[PSLMDBKeyValueStore mdb_txn_commit error %d]", rc);
         }
     }
 }

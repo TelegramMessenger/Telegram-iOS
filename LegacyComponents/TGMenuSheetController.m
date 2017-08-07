@@ -170,7 +170,7 @@ typedef enum
         if (strongSelf == nil)
             return;
         
-        [strongSelf repositionMenuWithReferenceSize:[_context fullscreenBounds].size];
+        [strongSelf repositionMenuWithReferenceSize:[strongSelf->_context fullscreenBounds].size];
     };
     
     if (animated && compact)
@@ -938,6 +938,9 @@ typedef enum
         if (window.dismissByMenuSheet) {
             [window dismiss];
         }
+    }
+    if (_customRemoveFromParentViewController) {
+        _customRemoveFromParentViewController();
     }
     [super removeFromParentViewController];
 }

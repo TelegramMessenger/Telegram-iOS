@@ -55,7 +55,7 @@
     else
     {
         if (rc != MDB_NOTFOUND)
-            TGLog(@"[PSLMDBKeyValueReader mdb_get error %d]", rc);
+            TGLegacyLog(@"[PSLMDBKeyValueReader mdb_get error %d]", rc);
         
         return false;
     }
@@ -79,7 +79,7 @@
     rc = mdb_put(_txn, _dbi, &mdbKey, &mdbData, 0);
     
     if (rc != MDB_SUCCESS)
-        TGLog(@"[PSLMDBKeyValueWriter mdb_put error %d]", rc);
+        TGLegacyLog(@"[PSLMDBKeyValueWriter mdb_put error %d]", rc);
 }
 
 - (void)readWithCursor:(void (^)(PSLMDBKeyValueCursor *))readWithCursorBlock
@@ -97,7 +97,7 @@
         mdb_cursor_close(cursor);
     }
     else
-        TGLog(@"[PSLMDBKeyValueWriter mdb_cursor_open error %d]", rc);
+        TGLegacyLog(@"[PSLMDBKeyValueWriter mdb_cursor_open error %d]", rc);
 }
 
 - (bool)readValueBetweenLowerBoundKey:(PSConstData *)lowerBoundKey upperBoundKey:(PSConstData *)upperBoundKey selectKey:(PSKeyValueReaderSelectKey)selectKey selectedKey:(PSConstData *)selectedKey selectedValue:(PSConstData *)selectedValue
@@ -245,7 +245,7 @@
     rc = mdb_del(_txn, _dbi, &mdbKey, NULL);
     
     if (rc != MDB_SUCCESS && rc != MDB_NOTFOUND)
-        TGLog(@"[PSLMDBKeyValueWriter mdb_del error %d]", rc);
+        TGLegacyLog(@"[PSLMDBKeyValueWriter mdb_del error %d]", rc);
     
     return rc == MDB_SUCCESS;
 }

@@ -27,6 +27,7 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
     CGFloat _scrollViewVerticalOffset;
     
     UIView *_instantDismissView;
+    id<LegacyComponentsContext> _context;
 }
 @end
 
@@ -38,7 +39,7 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
     return nil;
 }
 
-- (instancetype)initWithFrame:(CGRect)frame itemPadding:(CGFloat)itemPadding interfaceView:(UIView<TGModernGalleryInterfaceView> *)interfaceView previewMode:(bool)previewMode previewSize:(CGSize)previewSize
+- (instancetype)initWithFrame:(CGRect)frame context:(id<LegacyComponentsContext>)context itemPadding:(CGFloat)itemPadding interfaceView:(UIView<TGModernGalleryInterfaceView> *)interfaceView previewMode:(bool)previewMode previewSize:(CGSize)previewSize
 {
     _previewMode = previewMode;
     _previewSize = previewSize;
@@ -46,6 +47,7 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        _context = context;
         _itemPadding = itemPadding;
         
         self.opaque = false;
@@ -149,7 +151,7 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
             [UIView animateWithDuration:0.2 delay:0 options:UIViewAnimationOptionBeginFromCurrentState animations:^
             {
                 _interfaceView.alpha = 0.0f;
-                [TGHacks setApplicationStatusBarAlpha:0.0f];
+                [_context setApplicationStatusBarAlpha:0.0f];
             } completion:nil];
         }
         else
@@ -158,7 +160,7 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
             {
                 _interfaceView.alpha = 1.0f;
                 if (![_interfaceView prefersStatusBarHidden])
-                    [TGHacks setApplicationStatusBarAlpha:1.0f];
+                    [_context setApplicationStatusBarAlpha:1.0f];
             } completion:nil];
         }
     }
@@ -172,7 +174,7 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
         {
             _interfaceView.alpha = 1.0f;
             if (![_interfaceView prefersStatusBarHidden])
-                [TGHacks setApplicationStatusBarAlpha:1.0f];
+                [_context setApplicationStatusBarAlpha:1.0f];
         } completion:nil];
     }
 }
@@ -186,7 +188,7 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
             [UIView animateWithDuration:0.2 delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState animations:^
             {
                 _interfaceView.alpha = 0.0f;
-                [TGHacks setApplicationStatusBarAlpha:0.0f];
+                [_context setApplicationStatusBarAlpha:0.0f];
             } completion:nil];
         }
     }

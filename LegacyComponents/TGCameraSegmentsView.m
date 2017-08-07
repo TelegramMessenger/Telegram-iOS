@@ -1,6 +1,7 @@
 #import "TGCameraSegmentsView.h"
 
-#import <LegacyComponents/LegacyComponents.h>
+#import "LegacyComponentsInternal.h"
+#import "TGImageUtils.h"
 
 #import "TGCameraInterfaceAssets.h"
 
@@ -51,7 +52,7 @@ const CGFloat TGCameraSegmentsMinimumWidth = 4.0f;
             UIGraphicsEndImageContext();
         });
         
-        _backgroundView = [[UIImageView alloc] initWithImage:[[UIImage imageNamed:@"CameraSegmentsBack"] resizableImageWithCapInsets:UIEdgeInsetsMake(4, 4, 4, 4)]];
+        _backgroundView = [[UIImageView alloc] initWithImage:[TGComponentsImageNamed(@"CameraSegmentsBack") resizableImageWithCapInsets:UIEdgeInsetsMake(4, 4, 4, 4)]];
         [self addSubview:_backgroundView];
         
         _segmentWrapper = [[UIView alloc] init];
@@ -62,7 +63,7 @@ const CGFloat TGCameraSegmentsMinimumWidth = 4.0f;
         
         _deleteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 32, 32)];
         _deleteButton.exclusiveTouch = true;
-        [_deleteButton setImage:[UIImage imageNamed:@"CameraDeleteIcon"] forState:UIControlStateNormal];
+        [_deleteButton setImage:TGComponentsImageNamed(@"CameraDeleteIcon") forState:UIControlStateNormal];
         [_deleteButton addTarget:self action:@selector(deleteButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:_deleteButton];
         

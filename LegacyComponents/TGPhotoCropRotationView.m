@@ -1,6 +1,7 @@
 #import "TGPhotoCropRotationView.h"
 
-#import <LegacyComponents/LegacyComponents.h>
+#import "LegacyComponentsInternal.h"
+#import "POPSpringAnimation.h"
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 
@@ -33,13 +34,13 @@ const CGFloat TGPhotoCropRotationViewMaximumAngle = 45;
 
         _wheelView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 400, 400)];
         _wheelView.alpha = 0.9f;
-        _wheelView.image = [UIImage imageNamed:@"PhotoEditorRotationWheel"];
+        _wheelView.image = TGComponentsImageNamed(@"PhotoEditorRotationWheel");
         [self addSubview:_wheelView];
         
         _needleView = [[UIImageView alloc] initWithFrame:CGRectZero];
         _needleView.alpha = 0.9f;
         _needleView.contentMode = UIViewContentModeCenter;
-        _needleView.image = [UIImage imageNamed:@"PhotoEditorRotationNeedle"];
+        _needleView.image = TGComponentsImageNamed(@"PhotoEditorRotationNeedle");
         [self addSubview:_needleView];
         
         _pressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handlePress:)];
@@ -287,7 +288,7 @@ const CGFloat TGPhotoCropRotationViewMaximumAngle = 45;
         {
             case UIInterfaceOrientationLandscapeLeft:
             {
-                _wheelView.image = [UIImage imageNamed:@"PhotoEditorRotationWheelLeft"];
+                _wheelView.image = TGComponentsImageNamed(@"PhotoEditorRotationWheelLeft");
                 _wheelView.center = CGPointMake(52 + 200, self.frame.size.height / 2);
 
                 _needleView.frame = CGRectMake(43, (self.frame.size.height - 10) / 2, 10, 10);
@@ -297,7 +298,7 @@ const CGFloat TGPhotoCropRotationViewMaximumAngle = 45;
                 
             case UIInterfaceOrientationLandscapeRight:
             {
-                _wheelView.image = [UIImage imageNamed:@"PhotoEditorRotationWheelRight"];
+                _wheelView.image = TGComponentsImageNamed(@"PhotoEditorRotationWheelRight");
                 _wheelView.center = CGPointMake(-152, self.frame.size.height / 2);
                 
                 _needleView.frame = CGRectMake(self.frame.size.width - 53, (self.frame.size.height - 10) / 2, 10, 10);
@@ -307,7 +308,7 @@ const CGFloat TGPhotoCropRotationViewMaximumAngle = 45;
                 
             default:
             {
-                _wheelView.image = [UIImage imageNamed:@"PhotoEditorRotationWheel"];
+                _wheelView.image = TGComponentsImageNamed(@"PhotoEditorRotationWheel");
                 _wheelView.center = CGPointMake(self.frame.size.width / 2, -152);
                 
                 _needleView.frame = CGRectMake((self.frame.size.width - 10) / 2, 47, 10, 10);

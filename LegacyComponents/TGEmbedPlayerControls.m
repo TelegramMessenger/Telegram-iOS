@@ -91,13 +91,13 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
             
             _pauseButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 38, TGEmbedPlayerControlsPanelHeight)];
             _pauseButton.exclusiveTouch = true;
-            [_pauseButton setImage:[UIImage imageNamed:@"EmbedVideoPauseIcon"] forState:UIControlStateNormal];
+            [_pauseButton setImage:TGComponentsImageNamed(@"EmbedVideoPauseIcon") forState:UIControlStateNormal];
             [_pauseButton addTarget:self action:@selector(pauseButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [_backgroundView addSubview:_pauseButton];
             
             _playButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 38, TGEmbedPlayerControlsPanelHeight)];
             _playButton.exclusiveTouch = true;
-            [_playButton setImage:[UIImage imageNamed:@"EmbedVideoPlayIcon"] forState:UIControlStateNormal];
+            [_playButton setImage:TGComponentsImageNamed(@"EmbedVideoPlayIcon") forState:UIControlStateNormal];
             [_playButton addTarget:self action:@selector(playButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [_backgroundView addSubview:_playButton];
             
@@ -121,7 +121,7 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
             
             _pictureInPictureButton = [[TGModernButton alloc] initWithFrame:CGRectMake(frame.size.width - 45.0f, 0, 45.0f, TGEmbedPlayerControlsPanelHeight)];
             _pictureInPictureButton.exclusiveTouch = true;
-            [_pictureInPictureButton setImage:[UIImage imageNamed:@"EmbedVideoPIPIcon"] forState:UIControlStateNormal];
+            [_pictureInPictureButton setImage:TGComponentsImageNamed(@"EmbedVideoPIPIcon") forState:UIControlStateNormal];
             [_pictureInPictureButton addTarget:self action:@selector(pictureInPictureButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [_backgroundView addSubview:_pictureInPictureButton];
             
@@ -193,7 +193,7 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
             
             _fullscreenButton = [[TGModernButton alloc] initWithFrame:_fullscreenButtonWrapper.bounds];
             _fullscreenButton.exclusiveTouch = true;
-            [_fullscreenButton setImage:[UIImage imageNamed:@"EmbedVideoFullScreenIcon"] forState:UIControlStateNormal];
+            [_fullscreenButton setImage:TGComponentsImageNamed(@"EmbedVideoFullScreenIcon") forState:UIControlStateNormal];
             [_fullscreenButton addTarget:self action:@selector(fullscreenButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [_fullscreenButtonWrapper addSubview:_fullscreenButton];
         }

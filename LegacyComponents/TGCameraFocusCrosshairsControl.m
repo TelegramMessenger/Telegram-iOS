@@ -61,14 +61,14 @@
         [_wrapperView addSubview:_focusIndicatorView];
         
         _focusIndicatorImageView = [[UIImageView alloc] initWithFrame:CGRectMake(45, 45, 75, 75)];
-        _focusIndicatorImageView.image = [UIImage imageNamed:@"CameraFocusCrosshairs"];
+        _focusIndicatorImageView.image = TGComponentsImageNamed(@"CameraFocusCrosshairs");
         _focusIndicatorImageView.alpha = 0.0;
         [_focusIndicatorView addSubview:_focusIndicatorImageView];
         
         _autoFocusIndicator = [[UIImageView alloc] initWithFrame:CGRectMake(CGFloor((self.bounds.size.width - 125) / 2), CGFloor((self.bounds.size.height - 125) / 2), 125, 125)];
         _autoFocusIndicator.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin;
         _autoFocusIndicator.backgroundColor = [UIColor clearColor];
-        _autoFocusIndicator.image = [UIImage imageNamed:@"CameraAutoFocusCrosshairs"];
+        _autoFocusIndicator.image = TGComponentsImageNamed(@"CameraAutoFocusCrosshairs");
         _autoFocusIndicator.alpha = 0.0f;
         [_wrapperView addSubview:_autoFocusIndicator];
         
@@ -85,7 +85,7 @@
             [_exposureClipView addSubview:_exposureIndicatorView];
             
             _exposureIconView = [[UIImageView alloc] initWithFrame:CGRectMake(-1, 59.5f, 25, 25)];
-            _exposureIconView.image = [UIImage imageNamed:@"CameraExposureIcon"];
+            _exposureIconView.image = TGComponentsImageNamed(@"CameraExposureIcon");
             [_exposureIndicatorView addSubview:_exposureIconView];
             
             _exposureTopLine = [[UIView alloc] initWithFrame:CGRectMake(11, _exposureIconView.frame.origin.y - 3 - _exposureIndicatorView.frame.size.height, 1, _exposureIndicatorView.frame.size.height)];

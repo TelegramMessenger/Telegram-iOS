@@ -615,43 +615,43 @@ static bool isEmojiCharacter(NSString *singleChar)
     {
         int number = (int)seconds;
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.Seconds" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Seconds" count:(int32_t)number];
     }
     else if (seconds < 60 * 60)
     {
         int number = (int)seconds / 60;
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.Minutes" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Minutes" count:(int32_t)number];
     }
     else if (seconds < 60 * 60 * 24)
     {
         int number = (int)seconds / (60 * 60);
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.Hours" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Hours" count:(int32_t)number];
     }
     else if (seconds < 60 * 60 * 24 * 7)
     {
         int number = (int)seconds / (60 * 60 * 24);
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.Days" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Days" count:(int32_t)number];
     }
     else if (seconds < 60 * 60 * 24 * 7 * 4)
     {
         int number = (int)seconds / (60 * 60 * 24 * 7);
 
-        return [effectiveLocalization() getPluralized:@"MessageTimer.Weeks" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Weeks" count:(int32_t)number];
     }
     else if (seconds < 60 * 60 * 24 * 365)
     {
         int number = MAX(1, (int)ceilf((int)(seconds / (60 * 60 * 24 * 29))));
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.Months" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Months" count:(int32_t)number];
     }
     else
     {
         int number = (int)seconds / (60 * 60 * 24 * 365);
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.Years" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Years" count:(int32_t)number];
     }
     
     return @"";
@@ -663,31 +663,31 @@ static bool isEmojiCharacter(NSString *singleChar)
     {
         int number = (int)seconds;
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.ShortSeconds" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.ShortSeconds" count:(int32_t)number];
     }
     else if (seconds < 60 * 60)
     {
         int number = (int)seconds / 60;
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.ShortMinutes" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.ShortMinutes" count:(int32_t)number];
     }
     else if (seconds < 60 * 60 * 24)
     {
         int number = (int)seconds / (60 * 60);
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.ShortHours" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.ShortHours" count:(int32_t)number];
     }
     else if (seconds < 60 * 60 * 24 * 7)
     {
         int number = (int)seconds / (60 * 60 * 24);
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.ShortDays" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.ShortDays" count:(int32_t)number];
     }
     else
     {
         int number = (int)seconds / (60 * 60 * 24 * 7);
         
-        return [effectiveLocalization() getPluralized:@"MessageTimer.ShortWeeks" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.ShortWeeks" count:(int32_t)number];
     }
     
     return @"";
@@ -813,13 +813,13 @@ static bool isEmojiCharacter(NSString *singleChar)
     {
         int number = (int)seconds;
         
-        return [effectiveLocalization() getPluralized:@"Call.Seconds" count:number];
+        return [legacyEffectiveLocalization() getPluralized:@"Call.Seconds" count:number];
     }
     else
     {
         int number = (int)seconds / 60;
         
-        return [effectiveLocalization() getPluralized:@"Call.Minutes" count:number];
+        return [legacyEffectiveLocalization() getPluralized:@"Call.Minutes" count:number];
     }
 }
 
@@ -829,13 +829,13 @@ static bool isEmojiCharacter(NSString *singleChar)
     {
         int number = (int)seconds;
         
-        return [effectiveLocalization() getPluralized:@"Call.ShortSeconds" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"Call.ShortSeconds" count:(int32_t)number];
     }
     else
     {
         int number = (int)seconds / 60;
         
-        return [effectiveLocalization() getPluralized:@"Call.ShortMinutes" count:(int32_t)number];
+        return [legacyEffectiveLocalization() getPluralized:@"Call.ShortMinutes" count:(int32_t)number];
     }
 }
 
@@ -843,7 +843,7 @@ static bool isEmojiCharacter(NSString *singleChar)
 {
     NSUInteger number = userCount;
     
-    return [effectiveLocalization() getPluralized:@"UserCount" count:(int32_t)number];
+    return [legacyEffectiveLocalization() getPluralized:@"UserCount" count:(int32_t)number];
 }
 
 + (NSString *)stringForFileSize:(int64_t)size
@@ -897,7 +897,7 @@ static bool isEmojiCharacter(NSString *singleChar)
 
 + (NSString *)integerValueFormat:(NSString *)prefix value:(NSInteger)value
 {
-    TGLocalization *localization = effectiveLocalization();
+    TGLocalization *localization = legacyEffectiveLocalization();
     NSString *form = @"any";
     switch (TGPluralForm(localization.languageCodeHash, (int)value)) {
         case TGPluralFormZero:
@@ -1239,9 +1239,9 @@ bool TGIsLocaleArabic()
     {
         if (substring.length != 0)
             length++;
-        //TGLog(@"substringRange %@, enclosingRange %@, length %d", NSStringFromRange(substringRange), NSStringFromRange(enclosingRange), length);
+        //TGLegacyLog(@"substringRange %@, enclosingRange %@, length %d", NSStringFromRange(substringRange), NSStringFromRange(enclosingRange), length);
     }];
-    //TGLog(@"length %d", length);
+    //TGLegacyLog(@"length %d", length);
     
     return (int)length;
 }

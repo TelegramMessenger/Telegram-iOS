@@ -64,7 +64,7 @@
     
     if (version != 1 && version != 2 && version != 3)
     {
-        TGLog(@"***** Invalid encrypted data version");
+        TGLegacyLog(@"***** Invalid encrypted data version");
         return nil;
     }
     
@@ -265,7 +265,7 @@
     {
         if (ptr + 4 > length)
         {
-            TGLog(@"***** Invalid participants data");
+            TGLegacyLog(@"***** Invalid participants data");
             return nil;
         }
         
@@ -275,7 +275,7 @@
         
         if (ptr + 4 > length)
         {
-            TGLog(@"***** Invalid participants data");
+            TGLegacyLog(@"***** Invalid participants data");
             return nil;
         }
         int inviter = 0;
@@ -284,7 +284,7 @@
         
         if (ptr + 4 > length)
         {
-            TGLog(@"***** Invalid participants data");
+            TGLegacyLog(@"***** Invalid participants data");
             return nil;
         }
         int date = 0;
@@ -310,7 +310,7 @@
         {
             if (ptr + 8 > length)
             {
-                TGLog(@"***** Invalid participants data");
+                TGLegacyLog(@"***** Invalid participants data");
                 return nil;
             }
             
@@ -334,7 +334,7 @@
         {
             if (ptr + 8 > length)
             {
-                TGLog(@"***** Invalid participants data");
+                TGLegacyLog(@"***** Invalid participants data");
                 return nil;
             }
             

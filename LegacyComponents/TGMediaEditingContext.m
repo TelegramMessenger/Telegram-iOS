@@ -358,9 +358,10 @@
 
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item
 {
+    NSString *uniqueIdentifier = item.uniqueIdentifier;
     SSignal *updateSignal = [[_captionPipe.signalProducer() filter:^bool(TGMediaCaptionUpdate *update)
     {
-        return [update.item.uniqueIdentifier isEqualToString:item.uniqueIdentifier];
+        return [update.item.uniqueIdentifier isEqualToString:uniqueIdentifier];
     }] map:^NSString *(TGMediaCaptionUpdate *update)
     {
         return update.caption;

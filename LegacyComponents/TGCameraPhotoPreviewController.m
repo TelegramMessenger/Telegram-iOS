@@ -94,7 +94,7 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName backButtonTitle:(NSString *)backButtonTitle doneButtonTitle:(NSString *)doneButtonTitle saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _context = context;
@@ -381,7 +381,7 @@
     
     if (_recipientName.length > 0)
     {
-        _arrowView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"PhotoPickerArrow"]];
+        _arrowView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PhotoPickerArrow")];
         _arrowView.alpha = 0.45f;
         [_wrapperView addSubview:_arrowView];
         
@@ -565,7 +565,7 @@
 
 - (void)transitionIn
 {
-    [TGHacks setApplicationStatusBarAlpha:0.0f];
+    [_context setApplicationStatusBarAlpha:0.0f];
     
     if (_appeared)
         return;

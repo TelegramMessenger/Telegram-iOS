@@ -142,7 +142,7 @@
         
         if (recipientName.length > 0)
         {
-            _arrowView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"PhotoPickerArrow"]];
+            _arrowView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PhotoPickerArrow")];
             _arrowView.alpha = 0.45f;
             [_wrapperView addSubview:_arrowView];
             
@@ -504,15 +504,21 @@
         id<TGMediaEditableItem> editableMediaItem = [galleryEditableItem editableMediaItem];
         
         __weak TGMediaPickerGalleryInterfaceView *weakSelf = self;
+        __weak id<TGModernGalleryEditableItem> weakGalleryEditableItem = galleryEditableItem;
         [_adjustmentsDisposable setDisposable:[[[[galleryEditableItem.editingContext adjustmentsSignalForItem:editableMediaItem] mapToSignal:^SSignal *(id<TGMediaEditAdjustments> adjustments) {
-            return [[galleryEditableItem.editingContext timerSignalForItem:editableMediaItem] map:^id(id timer) {
-                NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                if (adjustments != nil)
-                    dict[@"adjustments"] = adjustments;
-                if (timer != nil)
-                    dict[@"timer"] = timer;
-                return dict;
-            }];
+            __strong id<TGModernGalleryEditableItem> strongGalleryEditableItem = weakGalleryEditableItem;
+            if (strongGalleryEditableItem != nil) {
+                return [[strongGalleryEditableItem.editingContext timerSignalForItem:editableMediaItem] map:^id(id timer) {
+                    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                    if (adjustments != nil)
+                        dict[@"adjustments"] = adjustments;
+                    if (timer != nil)
+                        dict[@"timer"] = timer;
+                    return dict;
+                }];
+            } else {
+                return [SSignal never];
+            }
         }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSDictionary *dict)
         {
             __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;

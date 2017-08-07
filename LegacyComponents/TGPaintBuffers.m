@@ -85,7 +85,7 @@
     
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
-        TGLog(@"Failed to create complete framebuffer %x", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+        TGLegacyLog(@"Failed to create complete framebuffer %x", glCheckFramebufferStatus(GL_FRAMEBUFFER));
         return false;
     }
     

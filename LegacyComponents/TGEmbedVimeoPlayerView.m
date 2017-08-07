@@ -148,12 +148,12 @@ NSString *const TGVimeoPlayerCallbackOnState = @"onState";
 - (NSString *)_embedHTML
 {
     NSError *error = nil;
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"VimeoPlayer" ofType:@"html"];
+    NSString *path = TGComponentsPathForResource(@"VimeoPlayer", @"html");
     
     NSString *embedHTMLTemplate = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)
     {
-        TGLog(@"[VimeoEmbedPlayer]: Received error rendering template: %@", error);
+        TGLegacyLog(@"[VimeoEmbedPlayer]: Received error rendering template: %@", error);
         return nil;
     }
     
@@ -170,10 +170,10 @@ NSString *const TGVimeoPlayerCallbackOnState = @"onState";
 - (void)_setupUserScripts:(WKUserContentController *)contentController
 {
     NSError *error = nil;
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"VimeoPlayerInject" ofType:@"js"];
+    NSString *path = TGComponentsPathForResource(@"VimeoPlayerInject", @"js");
     NSString *scriptText = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)
-        TGLog(@"[VimeoEmbedPlayer]: Received error loading inject script: %@", error);
+        TGLegacyLog(@"[VimeoEmbedPlayer]: Received error loading inject script: %@", error);
     
     WKUserScript *script = [[WKUserScript alloc] initWithSource:scriptText injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:false];
     [contentController addUserScript:script];

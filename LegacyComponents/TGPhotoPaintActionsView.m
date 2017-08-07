@@ -24,7 +24,7 @@
         _undoButton.adjustsImageWhenDisabled = false;
         _undoButton.enabled = false;
         _undoButton.exclusiveTouch = true;
-        [_undoButton setImage:[UIImage imageNamed:@"PaintUndoIcon"] forState:UIControlStateNormal];
+        [_undoButton setImage:TGComponentsImageNamed(@"PaintUndoIcon") forState:UIControlStateNormal];
         [_undoButton addTarget:self action:@selector(undoButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:_undoButton];
         
@@ -32,7 +32,7 @@
         _redoButton.adjustsImageWhenDisabled = false;
         _redoButton.enabled = false;
         _redoButton.exclusiveTouch = true;
-        [_redoButton setImage:[UIImage imageNamed:@"PaintRedoIcon"] forState:UIControlStateNormal];
+        [_redoButton setImage:TGComponentsImageNamed(@"PaintRedoIcon") forState:UIControlStateNormal];
         [_redoButton addTarget:self action:@selector(redoButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         //[self addSubview:_redoButton];
         

@@ -140,7 +140,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia camera:(PGCamera *)camera previewView:(TGCameraPreviewView *)previewView intent:(TGCameraControllerIntent)intent
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _context = context;
@@ -701,7 +701,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     [UIView animateWithDuration:0.3f animations:^
     {
-        [TGHacks setApplicationStatusBarAlpha:0.0f];
+        [_context setApplicationStatusBarAlpha:0.0f];
     }];
     
     [[[LegacyComponentsGlobals provider] applicationInstance] setIdleTimerDisabled:true];
@@ -716,7 +716,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     [UIView animateWithDuration:0.3f animations:^
     {
-        [TGHacks setApplicationStatusBarAlpha:1.0f];
+        [_context setApplicationStatusBarAlpha:1.0f];
     }];
 }
 
@@ -986,6 +986,15 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         return;
     }
     
+    id<LegacyComponentsOverlayWindowManager> windowManager = nil;
+    id<LegacyComponentsContext> windowContext = nil;
+    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
+        windowManager = [_context makeOverlayWindowManager];
+        windowContext = [windowManager context];
+    } else {
+        windowContext = _context;
+    }
+    
     __weak TGCameraController *weakSelf = self;
     TGOverlayController *overlayController = nil;
     
@@ -995,7 +1004,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     {
         case TGCameraControllerAvatarIntent:
         {
-            TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:image intent:(TGPhotoEditorControllerFromCameraIntent | TGPhotoEditorControllerAvatarIntent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+            TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:windowContext item:image intent:(TGPhotoEditorControllerFromCameraIntent | TGPhotoEditorControllerAvatarIntent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
             __weak TGPhotoEditorController *weakController = controller;
             controller.beginTransitionIn = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
             {
@@ -1079,7 +1088,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             
         default:
         {
-            TGCameraPhotoPreviewController *controller = _shortcut ? [[TGCameraPhotoPreviewController alloc] initWithContext:_context image:image metadata:metadata recipientName:self.recipientName backButtonTitle:TGLocalized(@"Camera.Retake") doneButtonTitle:TGLocalized(@"Common.Next") saveCapturedMedia:_saveCapturedMedia saveEditedPhotos:_saveEditedPhotos] : [[TGCameraPhotoPreviewController alloc] initWithContext:_context image:image metadata:metadata recipientName:self.recipientName saveCapturedMedia:_saveCapturedMedia saveEditedPhotos:_saveEditedPhotos];
+            TGCameraPhotoPreviewController *controller = _shortcut ? [[TGCameraPhotoPreviewController alloc] initWithContext:windowContext image:image metadata:metadata recipientName:self.recipientName backButtonTitle:TGLocalized(@"Camera.Retake") doneButtonTitle:TGLocalized(@"Common.Next") saveCapturedMedia:_saveCapturedMedia saveEditedPhotos:_saveEditedPhotos] : [[TGCameraPhotoPreviewController alloc] initWithContext:windowContext image:image metadata:metadata recipientName:self.recipientName saveCapturedMedia:_saveCapturedMedia saveEditedPhotos:_saveEditedPhotos];
             controller.allowCaptions = self.allowCaptions;
             controller.shouldStoreAssets = self.shouldStoreCapturedAssets;
             controller.suggestionContext = self.suggestionContext;
@@ -1146,7 +1155,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             break;
     }
     
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
+    if (windowManager != nil)
     {
         TGOverlayController *contentController = overlayController;
         if (_shortcut)
@@ -1159,7 +1168,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             [contentController.view addSubview:navigationController.view];
         }
         
-        TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithParentController:self contentController:contentController];
+        TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:self contentController:contentController];
         controllerWindow.windowLevel = self.view.window.windowLevel + 0.0001f;
         controllerWindow.hidden = false;
     }
@@ -1240,6 +1249,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     [[[LegacyComponentsGlobals provider] applicationInstance] setIdleTimerDisabled:false];
     
+    id<LegacyComponentsOverlayWindowManager> windowManager = nil;
+    id<LegacyComponentsContext> windowContext = nil;
+    windowManager = [_context makeOverlayWindowManager];
+    windowContext = [windowManager context];
+    
     AVURLAsset *asset = [AVURLAsset assetWithURL:url];
     AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
     generator.appliesPreferredTrackTransform = true;
@@ -1254,11 +1268,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     videoItem.editingContext = _editingContext;
     videoItem.immediateThumbnailImage = thumbnailImage;
     
-    TGModernGalleryController *galleryController = [[TGModernGalleryController alloc] initWithContext:_context];
+    TGModernGalleryController *galleryController = [[TGModernGalleryController alloc] initWithContext:windowContext];
     galleryController.adjustsStatusBarVisibility = false;
     galleryController.hasFadeOutTransition = true;
     
-    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:_context items:@[ videoItem ] focusItem:videoItem selectionContext:nil editingContext:_editingContext hasCaptions:self.allowCaptions hasTimer:self.hasTimer inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:false recipientName:self.recipientName];
+    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:@[ videoItem ] focusItem:videoItem selectionContext:nil editingContext:_editingContext hasCaptions:self.allowCaptions hasTimer:self.hasTimer inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:false recipientName:self.recipientName];
     model.controller = galleryController;
     model.suggestionContext = self.suggestionContext;
     
@@ -1439,7 +1453,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         [contentController.view addSubview:navigationController.view];
     }
     
-    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithParentController:self contentController:contentController];
+    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:self contentController:contentController];
     controllerWindow.hidden = false;
     controllerWindow.windowLevel = self.view.window.windowLevel + 0.0001f;
     galleryController.view.clipsToBounds = true;
@@ -1492,7 +1506,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     [UIView animateWithDuration:0.3f animations:^
     {
-        [TGHacks setApplicationStatusBarAlpha:1.0f];
+        [_context setApplicationStatusBarAlpha:1.0f];
     }];
     
     [self setInterfaceHidden:true animated:true];
@@ -1568,7 +1582,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 {
     _finishedWithResult = true;
     
-    [TGHacks setApplicationStatusBarAlpha:1.0f];
+    [_context setApplicationStatusBarAlpha:1.0f];
     
     self.view.hidden = true;
     

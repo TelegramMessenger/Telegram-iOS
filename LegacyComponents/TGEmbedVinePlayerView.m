@@ -34,7 +34,7 @@ NSString *const TGVinePlayerCallbackOnPlayback = @"onPlayback";
     {
         _videoId = [TGEmbedVinePlayerView _vineVideoIdFromText:webPage.embedUrl];
         
-        self.controlsView.watermarkImage = [UIImage imageNamed:@"VineWatermark"];
+        self.controlsView.watermarkImage = TGComponentsImageNamed(@"VineWatermark");
         self.controlsView.watermarkPrerenderedOpacity = true;
         self.controlsView.watermarkOffset = CGPointMake(12.0f, 12.0f);
     }
@@ -175,12 +175,12 @@ NSString *const TGVinePlayerCallbackOnPlayback = @"onPlayback";
 - (NSString *)_embedHTML
 {
     NSError *error = nil;
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"VinePlayer" ofType:@"html"];
+    NSString *path = TGComponentsPathForResource(@"VinePlayer", @"html");
     
     NSString *embedHTMLTemplate = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)
     {
-        TGLog(@"[VineEmbedPlayer]: Received error rendering template: %@", error);
+        TGLegacyLog(@"[VineEmbedPlayer]: Received error rendering template: %@", error);
         return nil;
     }
     
@@ -196,10 +196,10 @@ NSString *const TGVinePlayerCallbackOnPlayback = @"onPlayback";
 - (void)_setupUserScripts:(WKUserContentController *)contentController
 {
     NSError *error = nil;
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"VinePlayerInject" ofType:@"js"];
+    NSString *path = TGComponentsPathForResource(@"VinePlayerInject", @"js");
     NSString *scriptText = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)
-        TGLog(@"[VineEmbedPlayer]: Received error loading inject script: %@", error);
+        TGLegacyLog(@"[VineEmbedPlayer]: Received error loading inject script: %@", error);
     
     WKUserScript *script = [[WKUserScript alloc] initWithSource:scriptText injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:false];
     [contentController addUserScript:script];

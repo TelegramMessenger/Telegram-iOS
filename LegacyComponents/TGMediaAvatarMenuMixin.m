@@ -49,17 +49,17 @@
     return self;
 }
 
-- (void)present
+- (TGMenuSheetController *)present
 {
     [_parentController.view endEditing:true];
     
     if (iosMajorVersion() >= 7 && [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
-        [self _presentAvatarMenu];
+        return [self _presentAvatarMenu];
     else
-        [self _presentLegacyAvatarMenu];
+        return [self _presentLegacyAvatarMenu];
 }
 
-- (void)_presentAvatarMenu
+- (TGMenuSheetController *)_presentAvatarMenu
 {
     __weak TGMediaAvatarMenuMixin *weakSelf = self;
     TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
@@ -164,9 +164,10 @@
     [controller setItemViews:itemViews];
     
     [controller presentInViewController:_parentController sourceView:nil animated:true];
+    return controller;
 }
 
-- (void)_presentLegacyAvatarMenu
+- (TGMenuSheetController *)_presentLegacyAvatarMenu
 {
     NSMutableArray *actions = [[NSMutableArray alloc] init];
     
@@ -200,6 +201,7 @@
                 controller.didDismiss();
         }
     }];
+    return nil;
 }
 
 - (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController
@@ -220,14 +222,16 @@
     TGCameraController *controller = nil;
     CGSize screenSize = TGScreenSize();
     
+    id<LegacyComponentsOverlayWindowManager> windowManager = [_context makeOverlayWindowManager];
+    
     if (cameraView.previewView != nil)
-        controller = [[TGCameraController alloc] initWithContext:_context saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia camera:cameraView.previewView.camera previewView:cameraView.previewView intent:TGCameraControllerAvatarIntent];
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia camera:cameraView.previewView.camera previewView:cameraView.previewView intent:TGCameraControllerAvatarIntent];
     else
-        controller = [[TGCameraController alloc] initWithContext:_context saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia intent:TGCameraControllerAvatarIntent];
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia intent:TGCameraControllerAvatarIntent];
     
     controller.shouldStoreCapturedAssets = true;
     
-    TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithParentController:_parentController contentController:controller];
+    TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
     controllerWindow.hidden = false;
     controllerWindow.clipsToBounds = true;
     

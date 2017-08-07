@@ -1009,7 +1009,7 @@ typedef enum {
         std::unordered_map<int, id<TGMediaAttachmentParser> >::iterator it = mediaAttachmentParsers.find(type);
         if (it == mediaAttachmentParsers.end())
         {
-            TGLog(@"***** Unknown media attachment type %d", type);
+            TGLegacyLog(@"***** Unknown media attachment type %d", type);
             return [NSArray array];
         }
         

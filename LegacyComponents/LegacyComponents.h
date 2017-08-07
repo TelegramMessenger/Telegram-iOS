@@ -154,7 +154,6 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGMenuView.h>
 #import <LegacyComponents/TGImageView.h>
 #import <LegacyComponents/UICollectionView+Utils.h>
-#import <LegacyComponents/TGActivityIndicatorView.h>
 #import <LegacyComponents/TGMessageImageViewOverlayView.h>
 #import <LegacyComponents/TGLetteredAvatarView.h>
 #import <LegacyComponents/TGGradientLabel.h>
@@ -193,7 +192,6 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGViewController+TGRecursiveEnumeration.h>
 #import <LegacyComponents/TGOverlayController.h>
 #import <LegacyComponents/TGOverlayControllerWindow.h>
-#import <LegacyComponents/TGRootControllerProtocol.h>
 
 #import <LegacyComponents/TGMediaAssetsLibrary.h>
 #import <LegacyComponents/TGMediaAssetsModernLibrary.h>
@@ -266,6 +264,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGCameraTimeCodeView.h>
 #import <LegacyComponents/TGCameraZoomView.h>
 #import <LegacyComponents/TGCameraPhotoPreviewController.h>
+#import <LegacyComponents/TGCameraController.h>
 
 #import <LegacyComponents/TGModernConversationTitleActivityIndicator.h>
 #import <LegacyComponents/TGEmbedPIPButton.h>
@@ -275,6 +274,18 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGMediaAvatarMenuMixin.h>
 #import <LegacyComponents/TGPasscodeEntryController.h>
 #import <LegacyComponents/TGEmbedPlayerView.h>
+#import <LegacyComponents/TGWallpaperInfo.h>
+#import <LegacyComponents/TGMemoryImageCache.h>
+#import <LegacyComponents/LegacyHTTPRequestOperation.h>
+#import <LegacyComponents/LegacyComponentsAccessChecker.h>
+
+#import <LegacyComponents/TGAttachmentCarouselItemView.h>
+#import <LegacyComponents/TGMediaAssetsController.h>
+
+#import <LegacyComponents/TGLocationPickerController.h>
+#import <LegacyComponents/TGListsTableView.h>
+#import <LegacyComponents/TGSearchBar.h>
+#import <LegacyComponents/TGSearchDisplayMixin.h>
 
 #import <LegacyComponents/TGClipboardGalleryMixin.h>
 #import <LegacyComponents/TGClipboardGalleryPhotoItem.h>

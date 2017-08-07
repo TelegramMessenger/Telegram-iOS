@@ -175,7 +175,7 @@
     [is read:&version maxLength:sizeof(version)];
     if (version != 1 && version != 2 && version != 3 && version != 4 && version != 5 && version != 6)
     {
-        TGLog(@"***** Document serialized version mismatch");
+        TGLegacyLog(@"***** Document serialized version mismatch");
         return nil;
     }
     

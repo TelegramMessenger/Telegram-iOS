@@ -226,12 +226,10 @@ static UIImage *pagerLeftButtonHighlightedImage() {
         
         _maxWidth = 310.0f;
         
-        //_arrowTopView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"MenuArrowTop.png"] highlightedImage:[UIImage imageNamed:@"MenuArrowTop_Highlighted.png"]];
         _arrowTopView = [[UIImageView alloc] init];
         _arrowTopView.frame = CGRectMake(0.0f, 0.0f, 20.0f, 12.0f);
         [self addSubview:_arrowTopView];
         
-        //_arrowBottomView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"MenuArrowBottom.png"] highlightedImage:[UIImage imageNamed:@"MenuArrowBottom_Highlighted.png"]];
         _arrowBottomView = [[UIImageView alloc] init];
         _arrowBottomView.frame = CGRectMake(0.0f, 0.0f, 20.0f, 14.5f);
         [self addSubview:_arrowBottomView];

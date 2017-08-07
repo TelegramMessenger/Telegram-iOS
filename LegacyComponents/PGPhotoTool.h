@@ -33,7 +33,6 @@ typedef enum
 
 @property (nonatomic, readonly) PGPhotoToolType type;
 @property (nonatomic, readonly) NSInteger order;
-@property (nonatomic, readonly) UIImage *image;
 
 @property (nonatomic, readonly) bool isHidden;
 

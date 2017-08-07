@@ -44,11 +44,11 @@
         switch (backButton)
         {
             case TGPhotoEditorBackButtonCancel:
-                cancelImage = [UIImage imageNamed:@"PhotoPickerCancelIcon"];
+                cancelImage = TGComponentsImageNamed(@"PhotoPickerCancelIcon");
                 break;
                 
             default:
-                cancelImage = [UIImage imageNamed:@"PhotoPickerBackIcon"];
+                cancelImage = TGComponentsImageNamed(@"PhotoPickerBackIcon");
                 break;
         }
         [_cancelButton setImage:cancelImage forState:UIControlStateNormal];
@@ -60,11 +60,11 @@
         switch (doneButton)
         {
             case TGPhotoEditorDoneButtonCheck:
-                doneImage = [UIImage imageNamed:@"PhotoPickerDoneIcon"];
+                doneImage = TGComponentsImageNamed(@"PhotoPickerDoneIcon");
                 break;
                 
             default:
-                doneImage = [UIImage imageNamed:@"PhotoPickerSendIcon"];
+                doneImage = TGComponentsImageNamed(@"PhotoPickerSendIcon");
                 //buttonSize = CGSizeMake(52.0f, 52.0f);
                 break;
         }

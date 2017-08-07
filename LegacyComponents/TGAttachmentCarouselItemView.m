@@ -48,7 +48,15 @@ const CGFloat TGAttachmentZoomedPhotoAspectRatio = 1.2626f;
 
 const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 
+@interface TGAttachmentCarouselCollectionView () <TGModernGalleryTransitionHostScrollView>
+
+@end
+
 @implementation TGAttachmentCarouselCollectionView
+
+- (bool)disableGalleryTransitionOffsetFix {
+    return true;
+}
 
 @end
 
@@ -193,12 +201,12 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
                 if (strongSelf == nil)
-                return;
+                    return;
                 
                 [strongSelf.superview bringSubviewToFront:strongSelf];
                 
                 if (strongSelf.cameraPressed != nil)
-                strongSelf.cameraPressed(strongSelf->_cameraView);
+                    strongSelf.cameraPressed(strongSelf->_cameraView);
             };
         }
         
@@ -778,7 +786,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     
     if (self.openEditor)
     {
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:asset intent:TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        id<LegacyComponentsOverlayWindowManager> windowManager = [_context makeOverlayWindowManager];
+        
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:asset intent:TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.editingContext = _editingContext;
         controller.dontHideStatusBar = true;
         
@@ -828,7 +838,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             return [editableItem originalImageSignal:position];
         };
         
-        TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithParentController:_parentController contentController:controller];
+        TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
         controllerWindow.hidden = false;
         controller.view.clipsToBounds = true;
         

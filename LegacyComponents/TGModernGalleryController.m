@@ -55,7 +55,7 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _context = context;
@@ -244,7 +244,7 @@
                         {
                             [UIView animateWithDuration:0.2 animations:^
                             {
-                                [TGHacks setApplicationStatusBarAlpha:1.0f];
+                                [strongSelf->_context setApplicationStatusBarAlpha:1.0f];
                             }];
                         }
                         
@@ -421,7 +421,7 @@
         previewSize = self.preferredContentSize;
     
     __weak TGModernGalleryController *weakSelf = self;
-    _view = [[TGModernGalleryView alloc] initWithFrame:self.view.bounds itemPadding:TGModernGalleryItemPadding interfaceView:interfaceView previewMode:_previewMode previewSize:previewSize];
+    _view = [[TGModernGalleryView alloc] initWithFrame:self.view.bounds context:_context itemPadding:TGModernGalleryItemPadding interfaceView:interfaceView previewMode:_previewMode previewSize:previewSize];
     _view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.view addSubview:_view];
     
@@ -502,7 +502,7 @@
                     {
                         [UIView animateWithDuration:0.2 animations:^
                         {
-                            [TGHacks setApplicationStatusBarAlpha:1.0f];
+                            [strongSelf->_context setApplicationStatusBarAlpha:1.0f];
                         }];
                     }
                     
@@ -728,7 +728,7 @@ static CGRect adjustFrameForOriginalSubframe(CGRect originalFrame, CGRect origin
             frame = CGRectApplyAffineTransform(frame, transform);
         }
         
-        //TGLog(@"%f: %@", rotation, currentView);
+        //TGLegacyLog(@"%f: %@", rotation, currentView);
         
         if ([currentView.superview isKindOfClass:[UIWindow class]])
             sourceWindowRotation = rotation;
@@ -944,22 +944,14 @@ static CGFloat transformRotation(CGAffineTransform transform)
 
 - (void)animateTransitionOutFromView:(UIView *)fromView fromViewContentRect:(CGRect)fromViewContentRect toView:(UIView *)toView velocity:(CGPoint)velocity
 {
-    TGLog(@"begin calc");
-    
-    TG_TIMESTAMP_DEFINE(out)
-    
     UIView *toScrollView = [self findScrollView:toView];
     UIView *toContainerView = toScrollView.superview;
-    
-    TG_TIMESTAMP_MEASURE(out)
     
     CGRect toContainerFrame = [toContainerView convertRect:toView.bounds fromView:toView];
     CGRect toContainerFromFrame = [toContainerView convertRect:[fromView convertRect:fromViewContentRect toView:nil] fromView:nil];
     
     UIView *toViewCopy = nil;
     TGModernGalleryComplexTransitionDescription *transitionDesc = nil;
-    
-    TG_TIMESTAMP_MEASURE(out)
     
     if ([toView conformsToProtocol:@protocol(TGModernGalleryTransitionView)])
     {
@@ -1024,8 +1016,6 @@ static CGFloat transformRotation(CGAffineTransform transform)
     CGRect toFrame = [fromView.superview convertRect:[toView convertRect:CGRectInset(toView.bounds, toFrameInsets.left, toFrameInsets.top) toView:nil] fromView:nil];
     toFrame = adjustFrameForOriginalSubframe(fromView.frame, fromViewContentRect, toFrame);
     
-    TG_TIMESTAMP_MEASURE(out)
-    
     if (transitionDesc == nil && toViewCopy == nil)
     {
         CGFloat toViewAlpha = toView.alpha;
@@ -1044,8 +1034,6 @@ static CGFloat transformRotation(CGAffineTransform transform)
     if (toViewCopy != nil)
         [toContainerView insertSubview:toViewCopy aboveSubview:toScrollView];
     
-    TG_TIMESTAMP_MEASURE(out)
-    
     __weak TGModernGalleryController *weakSelf = self;
     self.view.userInteractionEnabled = false;
     [self animateView:fromView frameFrom:fromView.frame to:toFrame velocity:velocity rotationFrom:0.0f to:0.0f animatingIn:false completion:^(__unused bool finished)
@@ -1060,8 +1048,6 @@ static CGFloat transformRotation(CGAffineTransform transform)
         }
     }];
     
-    TG_TIMESTAMP_MEASURE(out)
-    
     if (toViewCopy != nil)
     {
         __weak UIView *weakToViewCopy = toViewCopy;
@@ -1072,8 +1058,6 @@ static CGFloat transformRotation(CGAffineTransform transform)
         }];
     }
     
-    TG_TIMESTAMP_MEASURE(out)
-    
     if (iosMajorVersion() >= 7 && self.shouldAnimateStatusBarStyleTransition)
     {
         [self animateStatusBarTransition:0.2];
@@ -1081,17 +1065,13 @@ static CGFloat transformRotation(CGAffineTransform transform)
         [self setNeedsStatusBarAppearanceUpdate];
     }
     
-    TG_TIMESTAMP_MEASURE(out)
-    
     if (self.adjustsStatusBarVisibility)
     {
         [UIView animateWithDuration:0.2 animations:^
         {
-            [TGHacks setApplicationStatusBarAlpha:1.0f];
+            [_context setApplicationStatusBarAlpha:1.0f];
         }];
     }
-    
-    TGLog(@"started animation");
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -1137,12 +1117,12 @@ static CGFloat transformRotation(CGAffineTransform transform)
         _view.interfaceView.alpha = 0.0f;
         
         if (self.adjustsStatusBarVisibility)
-            [TGHacks setApplicationStatusBarAlpha:0.0f];
+            [_context setApplicationStatusBarAlpha:0.0f];
     }
     else if ([_view.interfaceView prefersStatusBarHidden])
     {
         if (self.adjustsStatusBarVisibility)
-            [TGHacks setApplicationStatusBarAlpha:0.0f];
+            [_context setApplicationStatusBarAlpha:0.0f];
     }
 }
 
@@ -1162,12 +1142,7 @@ static CGFloat transformRotation(CGAffineTransform transform)
 
     if (self.adjustsStatusBarVisibility)
     {
-        [TGHacks setApplicationStatusBarAlpha:1.0f];
-        
-//        dispatch_async(dispatch_get_main_queue(), ^
-//        {
-//            [TGHacks setApplicationStatusBarAlpha:1.0f];
-//        });
+        [_context setApplicationStatusBarAlpha:1.0f];
     }
 }
 
@@ -1631,7 +1606,7 @@ static CGFloat transformRotation(CGAffineTransform transform)
 {
     if (iosMajorVersion() >= 7 && self.shouldAnimateStatusBarStyleTransition)
     {
-        [TGHacks animateApplicationStatusBarStyleTransitionWithDuration:duration];
+        [_context animateApplicationStatusBarStyleTransitionWithDuration:duration];
     }
 }
 

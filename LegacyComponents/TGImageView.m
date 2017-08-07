@@ -99,7 +99,7 @@ NSString *TGImageViewOptionSynchronous = @"TGImageViewOptionSynchronous";
                 if (strongSelf != nil && strongSelf->_version == version)
                     [strongSelf _commitImage:partialImage partial:true loadTime:(NSTimeInterval)(CACurrentMediaTime() - loadStartTime)];
                 else
-                    TGLog(@"[TGImageView _commitImage version mismatch]");
+                    TGLegacyLog(@"[TGImageView _commitImage version mismatch]");
             });
         } completion:^(UIImage *image)
         {
@@ -113,7 +113,7 @@ NSString *TGImageViewOptionSynchronous = @"TGImageViewOptionSynchronous";
                     [strongSelf _commitImage:image partial:false loadTime:(NSTimeInterval)(CACurrentMediaTime() - loadStartTime)];
                 }
                 else
-                    TGLog(@"[TGImageView _commitImage version mismatch]");
+                    TGLegacyLog(@"[TGImageView _commitImage version mismatch]");
             });
         }];
         
@@ -161,7 +161,7 @@ NSString *TGImageViewOptionSynchronous = @"TGImageViewOptionSynchronous";
                 if (strongSelf != nil && strongSelf->_version == version)
                     [strongSelf _commitImage:partialImage partial:true loadTime:(NSTimeInterval)(CACurrentMediaTime() - loadStartTime)];
                 else
-                    TGLog(@"[TGImageView _commitImage version mismatch]");
+                    TGLegacyLog(@"[TGImageView _commitImage version mismatch]");
             });
         } completion:^(UIImage *image)
         {
@@ -175,7 +175,7 @@ NSString *TGImageViewOptionSynchronous = @"TGImageViewOptionSynchronous";
                     [strongSelf _commitImage:image partial:false loadTime:(NSTimeInterval)(CACurrentMediaTime() - loadStartTime)];
                 }
                 else
-                    TGLog(@"[TGImageView _commitImage version mismatch]");
+                    TGLegacyLog(@"[TGImageView _commitImage version mismatch]");
             });
         }];
     }
@@ -319,7 +319,7 @@ NSString *TGImageViewOptionSynchronous = @"TGImageViewOptionSynchronous";
         });
     } error:^(id error)
     {
-        TGLog(@"TGImageView signal error: %@", error);
+        TGLegacyLog(@"TGImageView signal error: %@", error);
     } completed:^
     {
     }]];

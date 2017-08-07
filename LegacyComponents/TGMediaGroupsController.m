@@ -24,9 +24,9 @@
 
 @implementation TGMediaGroupsController
 
-- (instancetype)initWithAssetsLibrary:(TGMediaAssetsLibrary *)assetsLibrary intent:(TGMediaAssetsControllerIntent)intent
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assetsLibrary:(TGMediaAssetsLibrary *)assetsLibrary intent:(TGMediaAssetsControllerIntent)intent
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _assetsLibrary = assetsLibrary;

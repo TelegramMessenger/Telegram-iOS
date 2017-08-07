@@ -92,7 +92,7 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
         _fontViews = fontViews;
         _fontSeparatorViews = separatorViews;
         
-        _selectedCheckView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"PaintCheck"]];
+        _selectedCheckView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PaintCheck")];
         _selectedCheckView.frame = CGRectMake(15.0f, 16.0f, _selectedCheckView.frame.size.width, _selectedCheckView.frame.size.height);
         
         [self setStroke:selectedStroke];
@@ -204,21 +204,21 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
     {
         case UIInterfaceOrientationLandscapeLeft:
         {
-            _backgroundView.image = [TGTintedImage([UIImage imageNamed:@"PaintPopupLandscapeLeftBackground"], UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
+            _backgroundView.image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupLandscapeLeftBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
             _backgroundView.frame = CGRectMake(TGPhotoTextSettingsViewMargin - 13.0f, TGPhotoTextSettingsViewMargin, self.frame.size.width - TGPhotoTextSettingsViewMargin * 2 + 13.0f, self.frame.size.height - TGPhotoTextSettingsViewMargin * 2);
         }
             break;
             
         case UIInterfaceOrientationLandscapeRight:
         {
-            _backgroundView.image = [TGTintedImage([UIImage imageNamed:@"PaintPopupLandscapeRightBackground"], UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
+            _backgroundView.image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupLandscapeRightBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
             _backgroundView.frame = CGRectMake(TGPhotoTextSettingsViewMargin, TGPhotoTextSettingsViewMargin, self.frame.size.width - TGPhotoTextSettingsViewMargin * 2 + 13.0f, self.frame.size.height - TGPhotoTextSettingsViewMargin * 2);
         }
             break;
             
         default:
         {
-            _backgroundView.image = [TGTintedImage([UIImage imageNamed:@"PaintPopupPortraitBackground"], UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
+            _backgroundView.image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupPortraitBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
             _backgroundView.frame = CGRectMake(TGPhotoTextSettingsViewMargin, TGPhotoTextSettingsViewMargin, self.frame.size.width - TGPhotoTextSettingsViewMargin * 2, self.frame.size.height - TGPhotoTextSettingsViewMargin * 2 + 13.0f);
         }
             break;

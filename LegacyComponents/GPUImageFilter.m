@@ -1,6 +1,8 @@
 #import "GPUImageFilter.h"
 #import <AVFoundation/AVFoundation.h>
 
+#import "LegacyComponentsInternal.h"
+
 // Hardcode the vertex shader for standard filters, but this can be overridden
 NSString *const kGPUImageVertexShaderString = SHADER_STRING
 (
@@ -119,7 +121,7 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
 
 - (id)initWithFragmentShaderFromFile:(NSString *)fragmentShaderFilename
 {
-    NSString *fragmentShaderPathname = [[NSBundle mainBundle] pathForResource:fragmentShaderFilename ofType:@"fsh"];
+    NSString *fragmentShaderPathname = TGComponentsPathForResource(fragmentShaderFilename, @"fsh");
     NSString *fragmentShaderString = [NSString stringWithContentsOfFile:fragmentShaderPathname encoding:NSUTF8StringEncoding error:nil];
 
     if (!(self = [self initWithFragmentShaderFromString:fragmentShaderString]))

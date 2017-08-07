@@ -105,7 +105,7 @@ typedef enum {
     
     if (currentSize != [self _getCurrentSize:readerWriter])
     {
-        TGLog(@"current size mismatch");
+        TGLegacyLog(@"current size mismatch");
     }
 }
 
@@ -163,14 +163,14 @@ typedef enum {
     [upperBound appendBytes:&afterKeyspace length:1];
     PSData upperBoundKey = {.data = (void *)upperBound.bytes, .length = upperBound.length};
     
-    TGLog(@"-----------------------------");
+    TGLegacyLog(@"-----------------------------");
     [readerWriter enumerateKeysAndValuesBetweenLowerBoundKey:&lowerBoundKey upperBoundKey:&upperBoundKey options:PSKeyValueReaderEnumerationUpperBoundExclusive withBlock:^(__unused PSConstData *key, PSConstData *value, __unused bool *stop)
     {
         NSData *originalKey = [[NSData alloc] initWithBytes:value->data + 4 length:value->length - 4];
         NSString *filePath = [self _filePathForKey:originalKey];
-        TGLog(@"%@", filePath);
+        TGLegacyLog(@"%@", filePath);
     }];
-    TGLog(@"-----------------------------");
+    TGLegacyLog(@"-----------------------------");
 }
 
 - (void)_evictValuesOfTotalSize:(NSUInteger)totalSize removedSize:(NSUInteger *)removedSize readerWriter:(id<PSKeyValueReader,PSKeyValueWriter>)readerWriter
@@ -197,7 +197,7 @@ typedef enum {
         {
             int32_t sortingValue = 0;
             memcpy(&sortingValue, key->data + 1 + 4, 4);
-            //TGLog(@"removing %d", sortingValue);
+            //TGLegacyLog(@"removing %d", sortingValue);
         }
         
         [keysToRemove addObject:[[NSData alloc] initWithBytes:key->data length:key->length]];
@@ -211,7 +211,7 @@ typedef enum {
         NSData *originalKey = [[NSData alloc] initWithBytes:value->data + 4 length:value->length - 4];
         NSString *filePath = [self _filePathForKey:originalKey];
         
-        //TGLog(@"remove %d %@", (int)size, filePath);
+        //TGLegacyLog(@"remove %d %@", (int)size, filePath);
         
         NSMutableData *primaryKeyData = [[NSMutableData alloc] init];
         int8_t keyspace = TGModernCacheKeyspaceLastUsageByPath;
@@ -303,7 +303,7 @@ typedef enum {
 {
     [_queue dispatch:^
     {
-        //TGLog(@"store %d %@", (int)value.length, [self _filePathForKey:key]);
+        //TGLegacyLog(@"store %d %@", (int)value.length, [self _filePathForKey:key]);
         
         [_keyValueStore readWriteInTransaction:^(id<PSKeyValueReader,PSKeyValueWriter> readerWriter)
         {
@@ -354,7 +354,7 @@ typedef enum {
         }
         else
         {
-            //TGLog(@"no data for %@", [self _filePathForKey:key]);
+            //TGLegacyLog(@"no data for %@", [self _filePathForKey:key]);
         }
         
         if (completion)

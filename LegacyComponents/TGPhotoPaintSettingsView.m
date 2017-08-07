@@ -147,15 +147,15 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
     switch (icon)
     {
         case TGPhotoPaintSettingsViewIconBrush:
-            iconImage = [UIImage imageNamed:@"PaintBrushIcon"];
+            iconImage = TGComponentsImageNamed(@"PaintBrushIcon");
             break;
             
         case TGPhotoPaintSettingsViewIconText:
-            iconImage = [UIImage imageNamed:@"PaintTextSettingsIcon"];
+            iconImage = TGComponentsImageNamed(@"PaintTextSettingsIcon");
             break;
             
         case TGPhotoPaintSettingsViewIconMirror:
-            iconImage = [UIImage imageNamed:@"PaintMirrorIcon"];
+            iconImage = TGComponentsImageNamed(@"PaintMirrorIcon");
             break;
     }
     
@@ -214,7 +214,7 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
     static UIImage *image;
     dispatch_once(&onceToken, ^
     {
-        image = [TGTintedImage([UIImage imageNamed:@"PaintPopupLandscapeLeftBackground"], UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
+        image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupLandscapeLeftBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
     });
     return image;
 }
@@ -225,7 +225,7 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
     static UIImage *image;
     dispatch_once(&onceToken, ^
     {
-        image = [TGTintedImage([UIImage imageNamed:@"PaintPopupLandscapeRightBackground"], UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
+        image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupLandscapeRightBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
     });
     return image;
 }
@@ -236,7 +236,7 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
     static UIImage *image;
     dispatch_once(&onceToken, ^
     {
-        image = [TGTintedImage([UIImage imageNamed:@"PaintPopupPortraitBackground"], UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
+        image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupPortraitBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
     });
     return image;
 }

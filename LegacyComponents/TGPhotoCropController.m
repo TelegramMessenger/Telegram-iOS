@@ -71,7 +71,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView metadata:(PGCameraShotMetadata *)metadata forVideo:(bool)forVideo
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _context = context;
@@ -157,7 +157,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     _rotateButton.exclusiveTouch = true;
     _rotateButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
     [_rotateButton addTarget:self action:@selector(rotate) forControlEvents:UIControlEventTouchUpInside];
-    [_rotateButton setImage:[UIImage imageNamed:@"PhotoEditorRotateIcon"] forState:UIControlStateNormal];
+    [_rotateButton setImage:TGComponentsImageNamed(@"PhotoEditorRotateIcon") forState:UIControlStateNormal];
     //[_buttonsWrapperView addSubview:_rotateButton];
     
     _mirrorButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 36, 36)];
@@ -165,15 +165,15 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     _mirrorButton.imageEdgeInsets = UIEdgeInsetsMake(4.0f, 0.0f, 0.0f, 0.0f);
     _mirrorButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
     [_mirrorButton addTarget:self action:@selector(mirror) forControlEvents:UIControlEventTouchUpInside];
-    [_mirrorButton setImage:[UIImage imageNamed:@"PhotoEditorMirrorIcon"] forState:UIControlStateNormal];
+    [_mirrorButton setImage:TGComponentsImageNamed(@"PhotoEditorMirrorIcon") forState:UIControlStateNormal];
     //[_buttonsWrapperView addSubview:_mirrorButton];
     
     _aspectRatioButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 36, 36)];
     _aspectRatioButton.exclusiveTouch = true;
     _aspectRatioButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
     [_aspectRatioButton addTarget:self action:@selector(aspectRatioButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-    UIImage *aspectRatioHighlightedImage = TGTintedImage([UIImage imageNamed:@"PhotoEditorAspectRatioIcon"], [TGPhotoEditorInterfaceAssets accentColor]);
-    [_aspectRatioButton setImage:[UIImage imageNamed:@"PhotoEditorAspectRatioIcon"] forState:UIControlStateNormal];
+    UIImage *aspectRatioHighlightedImage = TGTintedImage(TGComponentsImageNamed(@"PhotoEditorAspectRatioIcon"), [TGPhotoEditorInterfaceAssets accentColor]);
+    [_aspectRatioButton setImage:TGComponentsImageNamed(@"PhotoEditorAspectRatioIcon") forState:UIControlStateNormal];
     [_aspectRatioButton setImage:aspectRatioHighlightedImage forState:UIControlStateSelected];
     [_aspectRatioButton setImage:aspectRatioHighlightedImage forState:UIControlStateSelected | UIControlStateHighlighted];
     //[_buttonsWrapperView addSubview:_aspectRatioButton];
@@ -335,7 +335,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
             {
                 if (dispatch_semaphore_wait(_waitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC))))
                 {
-                    TGLog(@"Photo crop on switching failed");
+                    TGLegacyLog(@"Photo crop on switching failed");
                     return;
                 }
                 

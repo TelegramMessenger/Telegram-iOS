@@ -503,7 +503,7 @@ static TGCache *sharedCache = nil;
         }
         /*else if (self.path != nil && ![path isEqualToString:self.path])
         {
-            TGLog(@"Received wrong path: <<<%@>>> vs <<<%@>>>", self.path, path);
+            TGLegacyLog(@"Received wrong path: <<<%@>>> vs <<<%@>>>", self.path, path);
         }*/
     });
 }

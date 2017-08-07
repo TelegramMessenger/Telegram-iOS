@@ -54,7 +54,7 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
             }
         };
         
-        self.controlsView.watermarkImage = [UIImage imageNamed:@"YoutubeWatermark"];
+        self.controlsView.watermarkImage = TGComponentsImageNamed(@"YoutubeWatermark");
         self.controlsView.watermarkPosition = TGEmbedPlayerWatermarkPositionBottomRight;
         self.controlsView.watermarkOffset = CGPointMake(-12.0f, -12.0f);
     }
@@ -251,12 +251,12 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
     }
     
     NSError *error = nil;
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"YoutubePlayer" ofType:@"html"];
+    NSString *path = TGComponentsPathForResource(@"YoutubePlayer", @"html");
     
     NSString *embedHTMLTemplate = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)
     {
-        TGLog(@"[YTEmbedPlayer]: Received error rendering template: %@", error);
+        TGLegacyLog(@"[YTEmbedPlayer]: Received error rendering template: %@", error);
         return nil;
     }
     
@@ -283,10 +283,10 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
 - (void)_setupUserScripts:(WKUserContentController *)contentController
 {
     NSError *error = nil;
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"YoutubePlayerInject" ofType:@"js"];
+    NSString *path = TGComponentsPathForResource(@"YoutubePlayerInject", @"js");
     NSString *scriptText = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (error != nil)
-        TGLog(@"[YTEmbedPlayer]: Received error loading inject script: %@", error);
+        TGLegacyLog(@"[YTEmbedPlayer]: Received error loading inject script: %@", error);
     
     WKUserScript *script = [[WKUserScript alloc] initWithSource:scriptText injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:false];
     [contentController addUserScript:script];

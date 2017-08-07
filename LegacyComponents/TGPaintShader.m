@@ -18,14 +18,14 @@
         
         _program = glCreateProgram();
         
-        NSString *vShaderFilename = [[NSBundle mainBundle] pathForResource:vertexShader ofType:@"vsh"];
+        NSString *vShaderFilename = TGComponentsPathForResource(vertexShader, @"vsh");
         if (![self _compileShader:&vShader type:GL_VERTEX_SHADER fileName:vShaderFilename])
         {
             [self _destroyVertexShader:vShader fragmentShader:fShader program:_program];
             return nil;
         }
         
-        NSString *fShaderFilename = [[NSBundle mainBundle] pathForResource:fragmentShader ofType:@"fsh"];
+        NSString *fShaderFilename = TGComponentsPathForResource(fragmentShader, @"fsh");
         if (![self _compileShader:&fShader type:GL_FRAGMENT_SHADER fileName:fShaderFilename])
         {
             [self _destroyVertexShader:vShader fragmentShader:fShader program:_program];
@@ -133,14 +133,14 @@
     {
         GLchar *log = (GLchar *)malloc(logLength);
         glGetProgramInfoLog(program, logLength, &logLength, log);
-        TGLog(@"Program link log:\n%s", log);
+        TGLegacyLog(@"Program link log:\n%s", log);
         free(log);
     }
 #endif
     
     glGetProgramiv(program, GL_LINK_STATUS, &status);
     if (status == GL_FALSE)
-        TGLog(@"Failed to link program %d", program);
+        TGLegacyLog(@"Failed to link program %d", program);
     
     return status;
 }

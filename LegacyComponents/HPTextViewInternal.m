@@ -229,7 +229,7 @@
         return false;
     }
     
-    //TGLog(@"canPerformAction %@", NSStringFromSelector(action));
+    //TGLegacyLog(@"canPerformAction %@", NSStringFromSelector(action));
     
     return [super canPerformAction:action withSender:sender];
 }

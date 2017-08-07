@@ -78,7 +78,7 @@
         }
     };
     
-    TGMediaGroupsController *groupsController = [[TGMediaGroupsController alloc] initWithAssetsLibrary:assetsController.assetsLibrary intent:intent];
+    TGMediaGroupsController *groupsController = [[TGMediaGroupsController alloc] initWithContext:context assetsLibrary:assetsController.assetsLibrary intent:intent];
     groupsController.openAssetGroup = ^(id group)
     {
         __strong TGMediaAssetsController *strongController = weakController;
@@ -683,7 +683,7 @@
     
     if (iosMajorVersion() < 7)
     {
-        TGModernBarButton *searchButton = [[TGModernBarButton alloc] initWithImage:[UIImage imageNamed:@"NavigationSearchIcon.png"]];
+        TGModernBarButton *searchButton = [[TGModernBarButton alloc] initWithImage:TGComponentsImageNamed(@"NavigationSearchIcon.png")];
         searchButton.portraitAdjustment = CGPointMake(-7, -5);
         [searchButton addTarget:self action:@selector(searchButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         return [[UIBarButtonItem alloc] initWithCustomView:searchButton];

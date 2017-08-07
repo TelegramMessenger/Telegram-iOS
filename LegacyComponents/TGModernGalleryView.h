@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 
+#import <LegacyComponents/LegacyComponentsContext.h>
 #import <LegacyComponents/TGModernGalleryInterfaceView.h>
 
 @class TGModernGalleryScrollView;
@@ -14,7 +15,7 @@
 @property (nonatomic, strong, readonly) UIView<TGModernGalleryInterfaceView> *interfaceView;
 @property (nonatomic, strong, readonly) TGModernGalleryScrollView *scrollView;
 
-- (instancetype)initWithFrame:(CGRect)frame itemPadding:(CGFloat)itemPadding interfaceView:(UIView<TGModernGalleryInterfaceView> *)interfaceView previewMode:(bool)previewMode previewSize:(CGSize)previewSize;
+- (instancetype)initWithFrame:(CGRect)frame context:(id<LegacyComponentsContext>)context itemPadding:(CGFloat)itemPadding interfaceView:(UIView<TGModernGalleryInterfaceView> *)interfaceView previewMode:(bool)previewMode previewSize:(CGSize)previewSize;
 
 - (bool)shouldAutorotate;
 

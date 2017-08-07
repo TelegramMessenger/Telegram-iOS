@@ -3,6 +3,7 @@
 
 @class TGKeyCommandController;
 @class SSignal;
+@class TGOverlayControllerWindow;
 
 typedef enum {
     LegacyComponentsActionSheetActionTypeGeneric,
@@ -21,6 +22,18 @@ typedef enum {
 
 @end
 
+
+@protocol LegacyComponentsContext;
+
+@protocol LegacyComponentsOverlayWindowManager <NSObject>
+
+- (id<LegacyComponentsContext>)context;
+- (void)bindController:(UIViewController *)controller;
+- (bool)managesWindow;
+- (void)setHidden:(bool)hidden window:(UIWindow *)window;
+
+@end
+
 @protocol LegacyComponentsContext <NSObject>
 
 - (CGRect)fullscreenBounds;
@@ -32,6 +45,16 @@ typedef enum {
 - (UIStatusBarStyle)statusBarStyle;
 - (void)setStatusBarStyle:(UIStatusBarStyle)statusBarStyle animated:(BOOL)animated;
 - (void)forceStatusBarAppearanceUpdate;
+
+- (CGFloat)applicationStatusBarAlpha;
+- (void)setApplicationStatusBarAlpha:(CGFloat)alpha;
+
+- (void)animateApplicationStatusBarAppearance:(int)statusBarAnimation delay:(NSTimeInterval)delay duration:(NSTimeInterval)duration completion:(void (^)())completion;
+- (void)animateApplicationStatusBarAppearance:(int)statusBarAnimation duration:(NSTimeInterval)duration completion:(void (^)())completion;
+
+- (void)animateApplicationStatusBarStyleTransitionWithDuration:(NSTimeInterval)duration;
+
+- (bool)rootCallStatusBarHidden;
 
 - (bool)currentlyInSplitView;
 
@@ -46,5 +69,7 @@ typedef enum {
 - (NSDictionary *)serverMediaDataForAssetUrl:(NSString *)url;
 
 - (void)presentActionSheet:(NSArray<LegacyComponentsActionSheetAction *> *)actions view:(UIView *)view completion:(void (^)(LegacyComponentsActionSheetAction *))completion;
+
+- (id<LegacyComponentsOverlayWindowManager>)makeOverlayWindowManager;
 
 @end

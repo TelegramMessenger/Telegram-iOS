@@ -2,6 +2,8 @@
 
 #import "PGPhotoEditorPicture.h"
 
+#import "LegacyComponentsInternal.h"
+
 NSString *const PGPhotoFilterDefinitionsShaderString = PGShaderString
 (
  precision highp float;
@@ -367,7 +369,7 @@ NSString *const PGPhotoFilterMainShaderString = PGShaderString
 
 - (instancetype)initWithShaderFile:(NSString *)shaderFile textureFiles:(NSArray *)textureFiles optimized:(bool)optimized
 {
-    NSString *fragmentShaderPathname = [[NSBundle mainBundle] pathForResource:shaderFile ofType:@"fsh"];
+    NSString *fragmentShaderPathname = TGComponentsPathForResource(shaderFile, @"fsh");
     NSString *fragmentShaderString = [NSString stringWithContentsOfFile:fragmentShaderPathname encoding:NSUTF8StringEncoding error:nil];
     
     NSMutableArray *textureImages = [[NSMutableArray alloc] init];
@@ -387,7 +389,7 @@ NSString *const PGPhotoFilterMainShaderString = PGShaderString
         NSString *name = [[textureFile lastPathComponent] stringByDeletingPathExtension];
         NSString *extension = [textureFile pathExtension];
         
-        NSString *texturePathname = [[NSBundle mainBundle] pathForResource:name ofType:extension];
+        NSString *texturePathname = TGComponentsPathForResource(name, extension);
         UIImage *textureImage = [UIImage imageWithContentsOfFile:texturePathname];
         
         [textureImages addObject:textureImage];

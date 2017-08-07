@@ -31,7 +31,7 @@
         _wrapperView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
         [self addSubview:_wrapperView];
         
-        _imageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"AttachmentTipIcons"]];
+        _imageView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"AttachmentTipIcons")];
         [self addSubview:_imageView];
         
         _titleLabel = [[UILabel alloc] init];

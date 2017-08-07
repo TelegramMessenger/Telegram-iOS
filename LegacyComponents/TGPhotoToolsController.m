@@ -68,9 +68,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 @implementation TGPhotoToolsController
 
-- (instancetype)initWithPhotoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;

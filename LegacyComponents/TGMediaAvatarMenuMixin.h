@@ -2,6 +2,7 @@
 #import <LegacyComponents/LegacyComponentsContext.h>
 
 @class TGViewController;
+@class TGMenuSheetController;
 
 @interface TGMediaAvatarMenuMixin : NSObject
 
@@ -11,6 +12,6 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia;
-- (void)present;
+- (TGMenuSheetController *)present;
 
 @end

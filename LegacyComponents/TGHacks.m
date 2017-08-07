@@ -381,7 +381,7 @@ static UIView *findStatusBarView()
             NSMethodSignature *signature = [statusBarClass instanceMethodSignatureForSelector:selector];
             if (signature == nil)
             {
-                TGLog(@"***** Method not found");
+                TGLegacyLog(@"***** Method not found");
                 return 20.0f;
             }
             
@@ -397,7 +397,7 @@ static UIView *findStatusBarView()
             NSMethodSignature *signature2 = [statusBarClass methodSignatureForSelector:selector2];
             if (signature2 == nil)
             {
-                TGLog(@"***** Method not found");
+                TGLegacyLog(@"***** Method not found");
                 return 20.0f;
             }
             NSInvocation *inv2 = [NSInvocation invocationWithMethodSignature:signature2];
@@ -458,7 +458,7 @@ static bool keyboardHidden = true;
         SEL selector = NSSelectorFromString(TGEncodeText(@"tj{fGpsJoufsgbdfPsjfoubujpo;", -1));
         NSMethodSignature *signature = [keyboardClass methodSignatureForSelector:selector];
         if (signature == nil)
-            TGLog(@"***** Method not found");
+            TGLegacyLog(@"***** Method not found");
         else
         {
             invocation = [NSInvocation invocationWithMethodSignature:signature];

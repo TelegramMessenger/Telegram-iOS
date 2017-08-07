@@ -47,9 +47,9 @@
 
 @implementation TGPhotoEditorItemController
 
-- (instancetype)initWithEditorItem:(id<PGPhotoEditorItem>)editorItem photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context editorItem:(id<PGPhotoEditorItem>)editorItem photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _editorItem = editorItem;
