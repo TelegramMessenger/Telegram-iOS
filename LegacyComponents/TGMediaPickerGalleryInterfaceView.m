@@ -338,7 +338,7 @@
     _selectedPhotosView.selectedItemsModel = selectedItemsModel;
     [_selectedPhotosView reloadData];
     
-    if (selectedItemsModel != nil)
+    if (selectedItemsModel != nil && _selectedPhotosView != nil)
         _photoCounterButton.userInteractionEnabled = true;
 }
 

@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09750F761F2FA816001B9886 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09750F741F2FA5E8001B9886 /* SSignalKit.framework */; };
+		09750FB71F30DB0E001B9886 /* TGClipboardGalleryModel.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09750FB81F30DB0E001B9886 /* TGClipboardGalleryModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */; };
+		09750FC11F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FBF1F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.h */; };
+		09750FC21F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FC01F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.m */; };
+		09750FC51F30DD52001B9886 /* TGClipboardGalleryPhotoItem.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FC31F30DD52001B9886 /* TGClipboardGalleryPhotoItem.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09750FC61F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */; };
+		09750FCD1F30E53A001B9886 /* TGClipboardGalleryMixin.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09750FCE1F30E53A001B9886 /* TGClipboardGalleryMixin.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */; };
 		D017772C1F1F8F100044446D /* LegacyComponents.h in Headers */ = {isa = PBXBuildFile; fileRef = D017772A1F1F8F100044446D /* LegacyComponents.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D01777511F1F8FE60044446D /* LegacyComponentsGlobals.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777381F1F8FE60044446D /* LegacyComponentsGlobals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D01777531F1F8FE60044446D /* PSCoding.h in Headers */ = {isa = PBXBuildFile; fileRef = D017773A1F1F8FE60044446D /* PSCoding.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -197,7 +206,6 @@
 		D01779001F20D0040044446D /* TGColor.m in Sources */ = {isa = PBXBuildFile; fileRef = D01778FE1F20D0040044446D /* TGColor.m */; };
 		D01779031F20D16B0044446D /* FreedomUIKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D01779011F20D16B0044446D /* FreedomUIKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D01779041F20D16B0044446D /* FreedomUIKit.m in Sources */ = {isa = PBXBuildFile; fileRef = D01779021F20D16B0044446D /* FreedomUIKit.m */; };
-		D01779071F20E0DF0044446D /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01779061F20E0DF0044446D /* SSignalKit.framework */; };
 		D017790A1F20F3F90044446D /* TGImageBlur.h in Headers */ = {isa = PBXBuildFile; fileRef = D01779081F20F3F90044446D /* TGImageBlur.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D017790B1F20F3F90044446D /* TGImageBlur.m in Sources */ = {isa = PBXBuildFile; fileRef = D01779091F20F3F90044446D /* TGImageBlur.m */; };
 		D017790E1F20F4370044446D /* UIImage+TG.h in Headers */ = {isa = PBXBuildFile; fileRef = D017790C1F20F4370044446D /* UIImage+TG.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1069,6 +1077,15 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		09750F741F2FA5E8001B9886 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegraph-grvwvmixbmcefwboxkzfazvpcrxb/Build/Products/Release Hockeyapp-iphonesimulator/SSignalKit.framework"; sourceTree = "<group>"; };
+		09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryModel.h; sourceTree = "<group>"; };
+		09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryModel.m; sourceTree = "<group>"; };
+		09750FBF1F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryPhotoItemView.h; sourceTree = "<group>"; };
+		09750FC01F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryPhotoItemView.m; sourceTree = "<group>"; };
+		09750FC31F30DD52001B9886 /* TGClipboardGalleryPhotoItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryPhotoItem.h; sourceTree = "<group>"; };
+		09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryPhotoItem.m; sourceTree = "<group>"; };
+		09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryMixin.h; sourceTree = "<group>"; };
+		09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryMixin.m; sourceTree = "<group>"; };
 		D01777271F1F8F100044446D /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D017772A1F1F8F100044446D /* LegacyComponents.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LegacyComponents.h; sourceTree = "<group>"; };
 		D017772B1F1F8F100044446D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1261,7 +1278,6 @@
 		D01778FE1F20D0040044446D /* TGColor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGColor.m; sourceTree = "<group>"; };
 		D01779011F20D16B0044446D /* FreedomUIKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FreedomUIKit.h; sourceTree = "<group>"; };
 		D01779021F20D16B0044446D /* FreedomUIKit.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FreedomUIKit.m; sourceTree = "<group>"; };
-		D01779061F20E0DF0044446D /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegraph-abpnqywbgzpiroddlkjvwntprzrz/Build/Products/Debug-iphonesimulator/SSignalKit.framework"; sourceTree = "<group>"; };
 		D01779081F20F3F90044446D /* TGImageBlur.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGImageBlur.h; sourceTree = "<group>"; };
 		D01779091F20F3F90044446D /* TGImageBlur.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGImageBlur.m; sourceTree = "<group>"; };
 		D017790C1F20F4370044446D /* UIImage+TG.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+TG.h"; sourceTree = "<group>"; };
@@ -2137,13 +2153,28 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D01779071F20E0DF0044446D /* SSignalKit.framework in Frameworks */,
+				09750F761F2FA816001B9886 /* SSignalKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		09750FAE1F30DAE1001B9886 /* Clipboard Menu */ = {
+			isa = PBXGroup;
+			children = (
+				09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */,
+				09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */,
+				09750FBF1F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.h */,
+				09750FC01F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.m */,
+				09750FC31F30DD52001B9886 /* TGClipboardGalleryPhotoItem.h */,
+				09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */,
+				09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */,
+				09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */,
+			);
+			name = "Clipboard Menu";
+			sourceTree = "<group>";
+		};
 		D017771D1F1F8F100044446D = {
 			isa = PBXGroup;
 			children = (
@@ -2194,6 +2225,7 @@
 				D07BCB031F2B63D700ED97AA /* Passcode */,
 				D07BCB2A1F2B65C400ED97AA /* Wallpapers */,
 				D07BCB3F1F2B69D400ED97AA /* Embed Video */,
+				09750FAE1F30DAE1001B9886 /* Clipboard Menu */,
 				D017772A1F1F8F100044446D /* LegacyComponents.h */,
 				D017772B1F1F8F100044446D /* Info.plist */,
 			);
@@ -2518,7 +2550,7 @@
 		D01779051F20E0DE0044446D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D01779061F20E0DF0044446D /* SSignalKit.framework */,
+				09750F741F2FA5E8001B9886 /* SSignalKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -3491,6 +3523,8 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				09750FCD1F30E53A001B9886 /* TGClipboardGalleryMixin.h in Headers */,
+				09750FB71F30DB0E001B9886 /* TGClipboardGalleryModel.h in Headers */,
 				D07BC9A61F2A49E300ED97AA /* TGItemPreviewView.h in Headers */,
 				D07BC8A51F2A37A500ED97AA /* TGPhotoAvatarCropController.h in Headers */,
 				D0177A001F2139980044446D /* POPLayerExtras.h in Headers */,
@@ -3801,6 +3835,7 @@
 				D017783E1F1F961D0044446D /* TGDocumentAttributeImageSize.h in Headers */,
 				D07BC8181F2A2C0B00ED97AA /* PGPhotoHistogram.h in Headers */,
 				D07BC92F1F2A3BA600ED97AA /* TGPhotoEntitiesContainerView.h in Headers */,
+				09750FC51F30DD52001B9886 /* TGClipboardGalleryPhotoItem.h in Headers */,
 				D017780F1F1F961D0044446D /* TGMessageEntity.h in Headers */,
 				D07BC9581F2A3EBF00ED97AA /* TGModernConversationAssociatedInputPanel.h in Headers */,
 				D017795C1F2103440044446D /* PGPhotoEditorValues.h in Headers */,
@@ -3959,6 +3994,7 @@
 				D07BC9011F2A380D00ED97AA /* TGPaintBrushPreview.h in Headers */,
 				D0177AA71F22239A0044446D /* TGModernGalleryController.h in Headers */,
 				D07BC99D1F2A494000ED97AA /* TGStickerCollectionViewCell.h in Headers */,
+				09750FC11F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.h in Headers */,
 				D07BC7BE1F2A2BDD00ED97AA /* PGPhotoToolComposer.h in Headers */,
 				D07BC8141F2A2C0B00ED97AA /* PGPhotoFilterThumbnailManager.h in Headers */,
 				D07BCB6A1F2B6A5600ED97AA /* TGEmbedSoundCloudPlayerView.h in Headers */,
@@ -4223,6 +4259,7 @@
 				D07BCA061F2A9A2B00ED97AA /* TGMediaPickerGalleryVideoItem.m in Sources */,
 				D07BCB1C1F2B646A00ED97AA /* TGPasscodePinDotView.m in Sources */,
 				D01778411F1F961D0044446D /* TGDocumentAttributeSticker.m in Sources */,
+				09750FCE1F30E53A001B9886 /* TGClipboardGalleryMixin.m in Sources */,
 				D07BC6F81F2A19A700ED97AA /* TGCameraShutterButton.m in Sources */,
 				D01779481F20FFF60044446D /* TGMediaAssetGroup.m in Sources */,
 				D01779171F20F4500044446D /* TGStaticBackdropImageData.m in Sources */,
@@ -4394,6 +4431,7 @@
 				D07BC6EE1F2A19A700ED97AA /* TGCameraFlashControl.m in Sources */,
 				D017797C1F21075C0044446D /* TGModernCache.m in Sources */,
 				D07BCBF21F2B72DC00ED97AA /* STKDataSourceWrapper.m in Sources */,
+				09750FC61F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m in Sources */,
 				D017783D1F1F961D0044446D /* TGDocumentAttributeFilename.m in Sources */,
 				D017796C1F2103DB0044446D /* TGPhotoPaintEntity.m in Sources */,
 				D07BCBF41F2B72DC00ED97AA /* STKHTTPDataSource.m in Sources */,
@@ -4509,6 +4547,7 @@
 				D0177AC61F23D92C0044446D /* ActionStage.mm in Sources */,
 				D07BC78B1F2A2B3700ED97AA /* TGPhotoEditorTintToolView.m in Sources */,
 				D07BC6FA1F2A19A700ED97AA /* TGCameraTimeCodeView.m in Sources */,
+				09750FB81F30DB0E001B9886 /* TGClipboardGalleryModel.m in Sources */,
 				D07BC8C41F2A37EC00ED97AA /* TGPhotoPaintController.m in Sources */,
 				D07BC7A51F2A2B8900ED97AA /* GPUImageContext.m in Sources */,
 				D07BC9081F2A380D00ED97AA /* TGPaintEllipticalBrush.m in Sources */,
@@ -4554,6 +4593,7 @@
 				D017775F1F1F8FE60044446D /* TGBotComandInfo.m in Sources */,
 				D01777FE1F1F961D0044446D /* TGMessageGroup.m in Sources */,
 				D01778121F1F961D0044446D /* TGMessageEntityBold.m in Sources */,
+				09750FC21F30DCDC001B9886 /* TGClipboardGalleryPhotoItemView.m in Sources */,
 				D01779001F20D0040044446D /* TGColor.m in Sources */,
 				D01778201F1F961D0044446D /* TGMessageEntityMentionName.m in Sources */,
 				D07BCAAF1F2B45DA00ED97AA /* TGFileUtils.m in Sources */,
@@ -4734,6 +4774,11 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(inherited)",
+				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -4756,6 +4801,11 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(inherited)",
+				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -4830,6 +4880,11 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(inherited)",
+				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -4898,6 +4953,11 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(inherited)",
+				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -4972,6 +5032,11 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(inherited)",
+				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -5040,6 +5105,11 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(inherited)",
+				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
