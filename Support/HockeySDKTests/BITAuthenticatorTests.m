@@ -90,11 +90,15 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 
 - (void) testThatCleanupWorks {
   self.sut.lastAuthenticatedVersion = @"1.2";
+  self.sut.identified = YES;
+  self.sut.validated = YES;
   
   [self.sut cleanupInternalStorage];
   
   assertThat(self.sut.lastAuthenticatedVersion, equalTo(nil));
   assertThat(self.sut.installationIdentifier, equalTo(nil));
+  assertThatBool(self.sut.isIdentified, isFalse());
+  assertThatBool(self.sut.isValidated, isFalse());
 }
 
 #pragma mark - Initial defaults
