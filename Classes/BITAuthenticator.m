@@ -776,6 +776,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   [self removeKeyFromKeychain:kBITAuthenticatorUUIDKey];
   [self removeKeyFromKeychain:kBITAuthenticatorUserEmailKey];
   [self setLastAuthenticatedVersion:nil];
+  self.identified = NO;
+  self.validated = NO;
   
   //cleanup values stored from 3.5 Beta1..Beta3
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
