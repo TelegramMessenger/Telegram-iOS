@@ -296,35 +296,14 @@
                                        //controller should dismiss us shortly..
                                      } else {
                                        dispatch_async(dispatch_get_main_queue(), ^{
-                                         
-                                         /* We won't use this for now until we have a more robust solution for displaying UIAlertController
-                                          // requires iOS 8
-                                          id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
-                                          if (uialertcontrollerClass) {
-                                          UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
-                                          message:error.localizedDescription
-                                          preferredStyle:UIAlertControllerStyleAlert];
-                                          
-                                          
-                                          UIAlertAction *okAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"OK")
-                                          style:UIAlertActionStyleCancel
-                                          handler:^(UIAlertAction * action) {}];
-                                          
-                                          [alertController addAction:okAction];
-                                          
-                                          [self presentViewController:alertController animated:YES completion:nil];
-                                          } else {
-                                          */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-                                         UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                                                             message:error.localizedDescription
-                                                                                            delegate:nil
-                                                                                   cancelButtonTitle:BITHockeyLocalizedString(@"OK")
-                                                                                   otherButtonTitles:nil];
-                                         [alertView show];
-#pragma clang diagnostic pop
-                                         /*}*/
+                                         UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
+                                                                                                                  message:error.localizedDescription
+                                                                                                           preferredStyle:UIAlertControllerStyleAlert];
+                                         UIAlertAction *okAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"OK")
+                                                                                            style:UIAlertActionStyleCancel
+                                                                                          handler:^(UIAlertAction __unused *action) {}];
+                                         [alertController addAction:okAction];
+                                         [self presentViewController:alertController animated:YES completion:nil];
                                          typeof(self) strongSelf = weakSelf;
                                          [strongSelf setLoginUIEnabled:YES];
                                        });
