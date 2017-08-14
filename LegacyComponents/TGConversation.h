@@ -260,6 +260,7 @@ typedef enum {
 @property (nonatomic, strong) TGEncryptedConversationData *encryptedData;
 
 @property (nonatomic, strong, readonly) TGDatabaseMessageDraft *draft;
+@property (nonatomic) int32_t unreadMentionCount;
 
 @property (nonatomic, readonly) int32_t date;
 @property (nonatomic, readonly) int32_t unpinnedDate;
