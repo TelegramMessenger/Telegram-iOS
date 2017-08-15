@@ -329,7 +329,7 @@ final class MessageHistoryTable: Table {
             processedOperationsByPeerId[peerId]!.append(contentsOf: outputOperations)
         }
         
-        self.debugCheckTagIndexIntegrity(peerId: peerId)
+        //self.debugCheckTagIndexIntegrity(peerId: peerId)
     }
     
     private func internalStoreMessages(_ messages: [StoreMessage]) -> [InternalStoreMessage] {
