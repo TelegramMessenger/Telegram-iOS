@@ -18,13 +18,13 @@ public func searchMessages(account: Account, peerId: PeerId?, query: String, fro
         let searchResult: Signal<Api.messages.Messages?, NoError>
         
         let filter: Api.MessagesFilter
-
+        
         if let tags = tagMask {
-            if tags.contains(.File) {
+            if tags.contains(.file) {
                 filter = .inputMessagesFilterDocument
-            } else if tags.contains(.Music) {
+            } else if tags.contains(.music) {
                 filter = .inputMessagesFilterMusic
-            } else if tags.contains(.WebPage) {
+            } else if tags.contains(.webPage) {
                 filter = .inputMessagesFilterUrl
             } else {
                 filter = .inputMessagesFilterEmpty
@@ -49,7 +49,7 @@ public func searchMessages(account: Account, peerId: PeerId?, query: String, fro
                                 flags |= (1 << 0)
                             }
                         }
-                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offset: 0, maxId: Int32.max - 1, limit: 64))
+                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0))
                             |> map {Optional($0)}
                             |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
                                 return .single(nil)
