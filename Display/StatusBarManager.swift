@@ -159,19 +159,21 @@ class StatusBarManager {
         
         var visibleStatusBars: [StatusBar] = []
         
-        var globalStatusBar: (StatusBarStyle, CGFloat)?
+        var globalStatusBar: (StatusBarStyle, CGFloat, CGFloat)?
         
         var coveredIdentity = false
         var statusBarIndex = 0
         for i in 0 ..< mappedSurfaces.count {
             for mappedStatusBar in mappedSurfaces[i].statusBars {
                 if let statusBar = mappedStatusBar.statusBar {
-                    if mappedStatusBar.frame.origin.equalTo(CGPoint()) && !statusBar.layer.hasPositionOrOpacityAnimations() {
+                    if mappedStatusBar.frame.origin.equalTo(CGPoint()) && !statusBar.layer.hasPositionOrOpacityAnimations() && !statusBar.offsetNode.layer.hasPositionAnimations() {
                         if !coveredIdentity {
                             if statusBar.statusBarStyle != .Hide {
-                                coveredIdentity = CGFloat(1.0).isLessThanOrEqualTo(statusBar.alpha)
+                                if statusBar.offsetNode.frame.origin.equalTo(CGPoint()) {
+                                    coveredIdentity = CGFloat(1.0).isLessThanOrEqualTo(statusBar.alpha)
+                                }
                                 if statusBarIndex == 0 && globalStatusBar == nil {
-                                    globalStatusBar = (mappedStatusBar.style, statusBar.alpha)
+                                    globalStatusBar = (mappedStatusBar.style, statusBar.alpha, statusBar.offsetNode.frame.origin.y)
                                 } else {
                                     visibleStatusBars.append(statusBar)
                                 }
@@ -184,7 +186,7 @@ class StatusBarManager {
                     if !coveredIdentity {
                         coveredIdentity = true
                         if statusBarIndex == 0 && globalStatusBar == nil {
-                            globalStatusBar = (mappedStatusBar.style, 1.0)
+                            globalStatusBar = (mappedStatusBar.style, 1.0, 0.0)
                         }
                     }
                 }
@@ -223,7 +225,14 @@ class StatusBarManager {
             if self.host.statusBarStyle != statusBarStyle {
                 self.host.statusBarStyle = statusBarStyle
             }
-            self.host.statusBarWindow?.alpha = globalStatusBar.1
+            if let statusBarWindow = self.host.statusBarWindow {
+                statusBarWindow.alpha = globalStatusBar.1
+                var statusBarBounds = statusBarWindow.bounds
+                if !statusBarBounds.origin.y.isEqual(to: globalStatusBar.2) {
+                    statusBarBounds.origin.y = globalStatusBar.2
+                    statusBarWindow.bounds = statusBarBounds
+                }
+            }
         } else {
             self.host.statusBarWindow?.alpha = 0.0
         }

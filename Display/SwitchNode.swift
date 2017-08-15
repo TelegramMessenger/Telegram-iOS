@@ -52,9 +52,11 @@ open class SwitchNode: ASDisplayNode {
     }
     
     override public init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return SwitchNodeView()
-        }, didLoad: nil)
+        })
     }
     
     override open func didLoad() {

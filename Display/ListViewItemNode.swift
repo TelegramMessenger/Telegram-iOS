@@ -174,22 +174,27 @@ open class ListViewItemNode: ASDisplayNode {
         /*if layerBacked {
             super.init(layerBlock: {
                 return ASTransformLayer()
-            }, didLoad: nil)
+            })
         } else {
-            super.init(viewBlock: {
+            super.init()
+        
+        self.setViewBlock({
                 return ListViewItemView()
-            }, didLoad: nil)
+            })
         }*/
         
         if seeThrough {
             if (layerBacked) {
-                super.init(layerBlock: {
+                super.init()
+                self.setLayerBlock({
                     return CASeeThroughTracingLayer()
-                }, didLoad: nil)
+                })
             } else {
-                super.init(viewBlock: {
+                super.init()
+        
+        self.setViewBlock({
                     return CASeeThroughTracingView()
-                }, didLoad: nil)
+                })
             }
         } else {
             super.init()

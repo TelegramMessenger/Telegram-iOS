@@ -15,6 +15,15 @@ public extension ContainedViewLayoutTransitionCurve {
                 return kCAMediaTimingFunctionSpring
         }
     }
+    
+    var viewAnimationOptions: UIViewAnimationOptions {
+        switch self {
+            case .easeInOut:
+                return [.curveEaseInOut]
+            case .spring:
+                return UIViewAnimationOptions(rawValue: 7 << 16)
+        }
+    }
 }
 
 public enum ContainedViewLayoutTransition {
@@ -251,6 +260,44 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateTransformScale(node: ASDisplayNode, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        let t = node.layer.transform
+        let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+        if currentScale.isEqual(to: scale) {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+            case .immediate:
+                node.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                node.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+                node.layer.animateScale(from: currentScale, to: scale, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+        }
+    }
+}
+
+public extension ContainedViewLayoutTransition {
+    public func animateView(_ f: @escaping () -> Void) {
+        switch self {
+            case .immediate:
+                f()
+            case let .animated(duration, curve):
+                UIView.animate(withDuration: duration, delay: 0.0, options: curve.viewAnimationOptions, animations: {
+                    f()
+                }, completion: nil)
+        }
+    }
 }
 
 public protocol ContainableController: class {

@@ -25,9 +25,11 @@ open class GridNodeScroller: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return GridNodeScrollerView()
-        }, didLoad: nil)
+        })
         
         self.scrollView.scrollsToTop = false
     }

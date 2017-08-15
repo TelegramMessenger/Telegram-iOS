@@ -78,23 +78,39 @@ public final class StatusBar: ASDisplayNode {
     private var proxyNode: StatusBarProxyNode?
     private var removeProxyNodeScheduled = false
     
+    let offsetNode = ASDisplayNode()
     private let inCallBackgroundNode = ASDisplayNode()
     private let inCallLabel: StatusBarLabelNode
     
     private var inCallText: String? = nil
     
+    public var verticalOffset: CGFloat = 0.0 {
+        didSet {
+            if !self.verticalOffset.isEqual(to: oldValue) {
+                self.offsetNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -self.verticalOffset), size: CGSize())
+                self.layer.invalidateUpTheTree()
+            }
+        }
+    }
+    
     public override init() {
         self.inCallLabel = StatusBarLabelNode()
         self.inCallLabel.isLayerBacked = true
         
+        self.offsetNode.isLayerBacked = true
+        
         let labelSize = self.inCallLabel.measure(CGSize(width: 300.0, height: 300.0))
         self.inCallLabel.frame = CGRect(origin: CGPoint(x: 10.0, y: 20.0 + 4.0), size: labelSize)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return StatusBarView()
-        }, didLoad: nil)
+        })
+        
         (self.view as! StatusBarView).node = self
         
+        self.addSubnode(self.offsetNode)
         self.addSubnode(self.inCallBackgroundNode)
         
         self.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: WindowTracingTags.statusBar))

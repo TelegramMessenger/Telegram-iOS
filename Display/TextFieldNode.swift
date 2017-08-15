@@ -26,8 +26,10 @@ public class TextFieldNode: ASDisplayNode {
     }
     
     override public init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return TextFieldNodeView()
-        }, didLoad: nil)
+        })
     }
 }

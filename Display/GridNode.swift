@@ -15,10 +15,12 @@ public struct GridNodeInsertItem {
 
 public struct GridNodeUpdateItem {
     public let index: Int
+    public let previousIndex: Int
     public let item: GridItem
     
-    public init(index: Int, item: GridItem) {
+    public init(index: Int, previousIndex: Int, item: GridItem) {
         self.index = index
+        self.previousIndex = previousIndex
         self.item = item
     }
 }
@@ -139,15 +141,17 @@ public struct GridNodeTransaction {
     public let updateItems: [GridNodeUpdateItem]
     public let scrollToItem: GridNodeScrollToItem?
     public let updateLayout: GridNodeUpdateLayout?
+    public let itemTransition: ContainedViewLayoutTransition
     public let stationaryItems: GridNodeStationaryItems
     public let updateFirstIndexInSectionOffset: Int?
     
-    public init(deleteItems: [Int], insertItems: [GridNodeInsertItem], updateItems: [GridNodeUpdateItem], scrollToItem: GridNodeScrollToItem?, updateLayout: GridNodeUpdateLayout?, stationaryItems: GridNodeStationaryItems, updateFirstIndexInSectionOffset: Int?) {
+    public init(deleteItems: [Int], insertItems: [GridNodeInsertItem], updateItems: [GridNodeUpdateItem], scrollToItem: GridNodeScrollToItem?, updateLayout: GridNodeUpdateLayout?, itemTransition: ContainedViewLayoutTransition, stationaryItems: GridNodeStationaryItems, updateFirstIndexInSectionOffset: Int?) {
         self.deleteItems = deleteItems
         self.insertItems = insertItems
         self.updateItems = updateItems
         self.scrollToItem = scrollToItem
         self.updateLayout = updateLayout
+        self.itemTransition = itemTransition
         self.stationaryItems = stationaryItems
         self.updateFirstIndexInSectionOffset = updateFirstIndexInSectionOffset
     }
@@ -300,8 +304,8 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
         
         for updatedItem in transaction.updateItems {
-            self.items[updatedItem.index] = updatedItem.item
-            if let itemNode = self.itemNodes[updatedItem.index] {
+            self.items[updatedItem.previousIndex] = updatedItem.item
+            if let itemNode = self.itemNodes[updatedItem.previousIndex] {
                 updatedItem.item.update(node: itemNode)
             }
         }
@@ -377,7 +381,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             generatedScrollToItem = nil
         }
         
-        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: transaction.updateLayout?.transition, completion: completion)
+        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: transaction.updateLayout?.transition, itemTransition: transaction.itemTransition, completion: completion)
     }
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -396,7 +400,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.applyingContentOffset {
-            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, completion: { _ in })
+            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, itemTransition: .immediate, completion: { _ in })
         }
     }
     
@@ -736,24 +740,32 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         return lowestHeaderNode
     }
     
-    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, completion: (GridNodeDisplayedItemRange) -> Void) {
-        var previousItemFrames: ([WrappedGridItemNode: CGRect])?
+    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, itemTransition: ContainedViewLayoutTransition, completion: (GridNodeDisplayedItemRange) -> Void) {
+        var previousItemFrames: [WrappedGridItemNode: CGRect]?
+        var saveItemFrames = false
         switch presentationLayoutTransition.transition {
             case .animated:
-                var itemFrames: [WrappedGridItemNode: CGRect] = [:]
-                let contentOffset = self.scrollView.contentOffset
-                for (_, itemNode) in self.itemNodes {
-                    itemFrames[WrappedGridItemNode(node: itemNode)] = itemNode.frame.offsetBy(dx: 0.0, dy: -contentOffset.y)
-                }
-                for (_, sectionNode) in self.sectionNodes {
-                    itemFrames[WrappedGridItemNode(node: sectionNode)] = sectionNode.frame.offsetBy(dx: 0.0, dy: -contentOffset.y)
-                }
-                for itemNode in removedNodes {
-                    itemFrames[WrappedGridItemNode(node: itemNode)] = itemNode.frame.offsetBy(dx: 0.0, dy: -contentOffset.y)
-                }
-                previousItemFrames = itemFrames
+                saveItemFrames = true
             case .immediate:
                 break
+        }
+        if case .animated = itemTransition {
+            saveItemFrames = true
+        }
+        
+        if saveItemFrames {
+            var itemFrames: [WrappedGridItemNode: CGRect] = [:]
+            let contentOffset = self.scrollView.contentOffset
+            for (_, itemNode) in self.itemNodes {
+                itemFrames[WrappedGridItemNode(node: itemNode)] = itemNode.frame.offsetBy(dx: 0.0, dy: -contentOffset.y)
+            }
+            for (_, sectionNode) in self.sectionNodes {
+                itemFrames[WrappedGridItemNode(node: sectionNode)] = sectionNode.frame.offsetBy(dx: 0.0, dy: -contentOffset.y)
+            }
+            for itemNode in removedNodes {
+                itemFrames[WrappedGridItemNode(node: itemNode)] = itemNode.frame.offsetBy(dx: 0.0, dy: -contentOffset.y)
+            }
+            previousItemFrames = itemFrames
         }
         
         applyingContentOffset = true
@@ -939,6 +951,63 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 
                 for itemNode in removedNodes {
                     itemNode.removeFromSupernode()
+                }
+            }
+        } else if let previousItemFrames = previousItemFrames, case let .animated(duration, curve) = itemTransition {
+            let timingFunction: String
+            switch curve {
+                case .easeInOut:
+                    timingFunction = kCAMediaTimingFunctionEaseInEaseOut
+                case .spring:
+                    timingFunction = kCAMediaTimingFunctionSpring
+            }
+            
+            for index in self.itemNodes.keys {
+                let itemNode = self.itemNodes[index]!
+                if !existingItemIndices.contains(index) {
+                    if let _ = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
+                        self.removeItemNodeWithIndex(index, removeNode: false)
+                        itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+                        itemNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false, completion: { [weak itemNode] _ in
+                            itemNode?.removeFromSupernode()
+                        })
+                    } else {
+                        self.removeItemNodeWithIndex(index, removeNode: true)
+                    }
+                } else if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
+                    itemNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY), to: itemNode.layer.position, duration: duration, timingFunction: timingFunction)
+                } else {
+                    itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12, timingFunction: kCAMediaTimingFunctionEaseIn)
+                    itemNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                }
+            }
+            
+            for itemNode in removedNodes {
+                if let _ = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
+                    itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+                    itemNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.18, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false, completion: { [weak itemNode] _ in
+                        itemNode?.removeFromSupernode()
+                    })
+                } else {
+                    itemNode.removeFromSupernode()
+                }
+            }
+            
+            for wrappedSection in self.sectionNodes.keys {
+                let sectionNode = self.sectionNodes[wrappedSection]!
+                if !existingSections.contains(wrappedSection) {
+                    if let _ = previousItemFrames[WrappedGridItemNode(node: sectionNode)] {
+                        self.removeSectionNodeWithSection(wrappedSection, removeNode: false)
+                        sectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak sectionNode] _ in
+                            sectionNode?.removeFromSupernode()
+                        })
+                    } else {
+                        self.removeSectionNodeWithSection(wrappedSection, removeNode: true)
+                    }
+                } else if let previousFrame = previousItemFrames[WrappedGridItemNode(node: sectionNode)] {
+                    sectionNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY), to: sectionNode.layer.position, duration: duration, timingFunction: timingFunction)
+                } else {
+                    sectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseIn)
                 }
             }
         } else {

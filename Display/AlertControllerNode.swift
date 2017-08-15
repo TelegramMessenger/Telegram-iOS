@@ -21,7 +21,7 @@ final class AlertControllerNode: ASDisplayNode {
         self.effectNode = ASDisplayNode(viewBlock: {
             let view = UIView()//UIVisualEffectView(effect: UIBlurEffect(style: .light))
             return view
-        }, didLoad: nil)
+        })
         
         self.contentNode = contentNode
         

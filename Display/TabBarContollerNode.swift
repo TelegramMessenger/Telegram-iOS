@@ -17,9 +17,11 @@ final class TabBarControllerNode: ASDisplayNode {
     init(theme: TabBarControllerTheme, itemSelected: @escaping (Int) -> Void) {
         self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = theme.backgroundColor
         

@@ -2,17 +2,31 @@ import Foundation
 import AsyncDisplayKit
 
 final class ContextMenuActionNode: ASDisplayNode {
-    private let textNode: ASTextNode
+    private let textNode: ASTextNode?
+    private let iconNode: ASImageNode?
     private let action: () -> Void
     private let button: HighlightTrackingButton
     
     var dismiss: (() -> Void)?
     
     init(action: ContextMenuAction) {
-        self.textNode = ASTextNode()
         switch action.content {
             case let .text(title):
-                self.textNode.attributedText = NSAttributedString(string: title, font: Font.regular(14.0), textColor: UIColor.white)
+                let textNode = ASTextNode()
+                textNode.isLayerBacked = true
+                textNode.displaysAsynchronously = false
+                textNode.attributedText = NSAttributedString(string: title, font: Font.regular(14.0), textColor: UIColor.white)
+                
+                self.textNode = textNode
+                self.iconNode = nil
+            case let .icon(image):
+                let iconNode = ASImageNode()
+                iconNode.displaysAsynchronously = false
+                iconNode.displayWithoutProcessing = true
+                iconNode.image = image
+                
+                self.iconNode = iconNode
+                self.textNode = nil
         }
         self.action = action.action
         
@@ -21,7 +35,12 @@ final class ContextMenuActionNode: ASDisplayNode {
         super.init()
         
         self.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
-        self.addSubnode(self.textNode)
+        if let textNode = self.textNode {
+            self.addSubnode(textNode)
+        }
+        if let iconNode = self.iconNode {
+            self.addSubnode(iconNode)
+        }
         
         self.button.highligthedChanged = { [weak self] highlighted in
             self?.backgroundColor = highlighted ? UIColor(white: 0.0, alpha: 0.4) : UIColor(white: 0.0, alpha: 0.8)
@@ -45,14 +64,26 @@ final class ContextMenuActionNode: ASDisplayNode {
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        let textSize = self.textNode.measure(constrainedSize)
-        return CGSize(width: textSize.width + 36.0, height: 54.0)
+        if let textNode = self.textNode {
+            let textSize = textNode.measure(constrainedSize)
+            return CGSize(width: textSize.width + 36.0, height: 54.0)
+        } else if let iconNode = self.iconNode, let image = iconNode.image {
+            return CGSize(width: image.size.width + 36.0, height: 54.0)
+        } else {
+            return CGSize(width: 36.0, height: 54.0)
+        }
     }
     
     override func layout() {
         super.layout()
         
         self.button.frame = self.bounds
-        self.textNode.frame = CGRect(origin: CGPoint(x: floor((self.bounds.size.width - self.textNode.calculatedSize.width) / 2.0), y: floor((self.bounds.size.height - self.textNode.calculatedSize.height) / 2.0)), size: self.textNode.calculatedSize)
+        if let textNode = self.textNode {
+            textNode.frame = CGRect(origin: CGPoint(x: floor((self.bounds.size.width - textNode.calculatedSize.width) / 2.0), y: floor((self.bounds.size.height - textNode.calculatedSize.height) / 2.0)), size: textNode.calculatedSize)
+        }
+        if let iconNode = self.iconNode, let image = iconNode.image {
+            let iconSize = image.size
+            iconNode.frame = CGRect(origin: CGPoint(x: floor((self.bounds.size.width - iconSize.width) / 2.0), y: floor((self.bounds.size.height - iconSize.height) / 2.0)), size: iconSize)
+        }
     }
 }

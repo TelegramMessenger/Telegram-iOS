@@ -1,6 +1,7 @@
 
 public enum ContextMenuActionContent {
     case text(String)
+    case icon(UIImage)
 }
 
 public struct ContextMenuAction {

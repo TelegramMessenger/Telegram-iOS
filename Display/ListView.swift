@@ -4,6 +4,7 @@ import SwiftSignalKit
 
 private let usePerformanceTracker = false
 private let useDynamicTuning = false
+private let useBackgroundDeallocation = false
 
 private let infiniteScrollSize: CGFloat = 10000.0
 private let insertionAnimationDuration: Double = 0.4
@@ -29,7 +30,13 @@ private final class ListViewBackingLayer: CALayer {
     }
 }
 
-final class ListViewBackingView: UIView {
+#if os(iOS)
+typealias ListBaseView = UIView
+#else
+typealias ListBaseView = NSView
+#endif
+
+final class ListViewBackingView: ListBaseView {
     weak var target: ListView?
     
     override class var layerClass: AnyClass {
@@ -193,9 +200,11 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         performanceTrackerConfig.reportStackTraces = true
         self.performanceTracker = FBAnimationPerformanceTracker(config: performanceTrackerConfig)*/
         
-        super.init(viewBlock: { Void -> UIView in
+        super.init()
+        
+        self.setViewBlock({ Void -> UIView in
             return ListViewBackingView()
-        }, didLoad: nil)
+        })
         
         self.clipsToBounds = true
         
@@ -261,11 +270,20 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.pauseAnimations()
         self.displayLink.invalidate()
         
-        for itemNode in self.itemNodes {
-            ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
-        }
-        for itemHeaderNode in self.itemHeaderNodes {
-            ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemHeaderNode)
+        if useBackgroundDeallocation {
+            for itemNode in self.itemNodes {
+                ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
+            }
+            for itemHeaderNode in self.itemHeaderNodes {
+                ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemHeaderNode)
+            }
+        } else {
+            for itemNode in self.itemNodes {
+                ASPerformMainThreadDeallocation(itemNode)
+            }
+            for itemHeaderNode in self.itemHeaderNodes {
+                ASPerformMainThreadDeallocation(itemHeaderNode)
+            }
         }
         
         self.waitingForNodesDisposable.dispose()
@@ -2089,17 +2107,31 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         animation.completion = { _ in
                             for itemNode in temporaryPreviousNodes {
                                 itemNode.removeFromSupernode()
-                                ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
+                                if useBackgroundDeallocation {
+                                    ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
+                                } else {
+                                    ASPerformMainThreadDeallocation(itemNode)
+                                }
                             }
                             for headerNode in temporaryHeaderNodes {
                                 headerNode.removeFromSupernode()
-                                ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: headerNode)
+                                if useBackgroundDeallocation {
+                                    ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: headerNode)
+                                } else {
+                                    ASPerformMainThreadDeallocation(headerNode)
+                                }
                             }
                         }
                         self.layer.add(animation, forKey: nil)
                     } else {
-                        for itemNode in temporaryPreviousNodes {
-                            ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
+                        if useBackgroundDeallocation {
+                            for itemNode in temporaryPreviousNodes {
+                                ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
+                            }
+                        } else {
+                            for itemNode in temporaryPreviousNodes {
+                                ASPerformMainThreadDeallocation(itemNode)
+                            }
                         }
                     }
                 }
@@ -2135,7 +2167,11 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 
                 for (previousNode, _) in previousApparentFrames {
                     if previousNode.supernode == nil {
-                        ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: previousNode)
+                        if useBackgroundDeallocation {
+                            ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: previousNode)
+                        } else {
+                            ASPerformMainThreadDeallocation(previousNode)
+                        }
                     }
                 }
                 
@@ -2469,7 +2505,11 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             let node = self.itemNodes[i]
             if node.index == nil && node.apparentHeight <= CGFloat.ulpOfOne {
                 self.removeItemNodeAtIndex(i)
-                ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: node)
+                if useBackgroundDeallocation {
+                    ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: node)
+                } else {
+                    ASPerformMainThreadDeallocation(node)
+                }
             } else {
                 i += 1
             }

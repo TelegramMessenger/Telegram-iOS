@@ -33,30 +33,36 @@ class ASTransformView: UIView {
 
 open class ASTransformLayerNode: ASDisplayNode {
     public override init() {
-        super.init(layerBlock: {
+        super.init()
+        self.setLayerBlock({
             return ASTransformLayer()
-        }, didLoad: nil)
+        })
     }
 }
 
 open class ASTransformViewNode: ASDisplayNode {
     public override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return ASTransformView()
-        }, didLoad: nil)
+        })
     }
 }
 
 open class ASTransformNode: ASDisplayNode {
     public init(layerBacked: Bool = true) {
         if layerBacked {
-            super.init(layerBlock: {
+            super.init()
+            self.setLayerBlock({
                 return ASTransformLayer()
-            }, didLoad: nil)
+            })
         } else {
-            super.init(viewBlock: {
+            super.init()
+        
+            self.setViewBlock({
                 return ASTransformView()
-            }, didLoad: nil)
+            })
         }
     }
 }

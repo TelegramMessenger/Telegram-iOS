@@ -115,7 +115,7 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
                     targetX += 1
                 }
                 
-                let batteryColor = (baseMidRow + baseX).pointee
+                let batteryColor = (baseMidRow + baseX + 2).pointee
                 let batteryR = (batteryColor >> 16) & 0xff
                 let batteryG = (batteryColor >> 8) & 0xff
                 let batteryB = batteryColor & 0xff

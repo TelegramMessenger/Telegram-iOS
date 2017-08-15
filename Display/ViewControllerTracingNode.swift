@@ -19,9 +19,11 @@ private final class ViewControllerTracingNodeView: UITracingLayerView {
 
 open class ViewControllerTracingNode: ASDisplayNode {
     override public init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return ViewControllerTracingNodeView()
-        }, didLoad: nil)
+        })
     }
     
     override open func didLoad() {

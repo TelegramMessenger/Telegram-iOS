@@ -23,6 +23,10 @@ public final class NavigationBarTheme {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
     }
+    
+    public func withUpdatedSeparatorColor(_ color: UIColor) -> NavigationBarTheme {
+        return NavigationBarTheme(buttonColor: self.buttonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, separatorColor: color)
+    }
 }
 
 private func backArrowImage(color: UIColor) -> UIImage? {
@@ -478,7 +482,7 @@ open class NavigationBar: ASDisplayNode {
                         let finalX: CGFloat = floor((size.width - backButtonSize.width) / 2.0) - size.width
                         
                         self.backButtonNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize)
-                        self.backButtonNode.alpha = 1.0 - progress
+                        self.backButtonNode.alpha = (1.0 - progress) * (1.0 - progress)
                     
                         if let transitionTitleNode = self.transitionTitleNode {
                             let transitionTitleSize = transitionTitleNode.measure(CGSize(width: size.width, height: nominalHeight))
@@ -487,7 +491,7 @@ open class NavigationBar: ASDisplayNode {
                             let finalX: CGFloat = floor((size.width - transitionTitleSize.width) / 2.0) - size.width
                             
                             transitionTitleNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floor((nominalHeight - transitionTitleSize.height) / 2.0)), size: transitionTitleSize)
-                            transitionTitleNode.alpha = progress
+                            transitionTitleNode.alpha = progress * progress
                         }
                     
                         self.backButtonArrow.frame = CGRect(origin: CGPoint(x: 8.0 - progress * size.width, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
@@ -532,7 +536,7 @@ open class NavigationBar: ASDisplayNode {
                         let finalX: CGFloat = floor((size.width - transitionBackButtonSize.width) / 2.0)
                         
                         transitionBackButtonNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floor((nominalHeight - transitionBackButtonSize.height) / 2.0)), size: transitionBackButtonSize)
-                        transitionBackButtonNode.alpha = 1.0 - progress
+                        transitionBackButtonNode.alpha = (1.0 - progress) * (1.0 - progress)
                     }
                 
                     if let transitionBackArrowNode = self.transitionBackArrowNode {
@@ -562,7 +566,7 @@ open class NavigationBar: ASDisplayNode {
                         let finalX: CGFloat = leftButtonInset
                         
                         self.titleNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
-                        self.titleNode.alpha = 1.0 - progress
+                        self.titleNode.alpha = (1.0 - progress) * (1.0 - progress)
                     case .bottom:
                         var initialX: CGFloat = backButtonInset
                         if otherNavigationBar.backButtonNode.supernode != nil {
@@ -572,7 +576,7 @@ open class NavigationBar: ASDisplayNode {
                         let finalX: CGFloat = floor((size.width - titleSize.width) / 2.0)
                         
                         self.titleNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
-                    self.titleNode.alpha = progress
+                    self.titleNode.alpha = progress * progress
                 }
             } else {
                 self.titleNode.alpha = 1.0
@@ -581,15 +585,45 @@ open class NavigationBar: ASDisplayNode {
         }
         
         if let titleView = self.titleView {
-            let titleViewSize = CGSize(width: max(1.0, size.width - leftTitleInset - leftTitleInset), height: nominalHeight)
-            titleView.frame = CGRect(origin: CGPoint(x: leftTitleInset, y: contentVerticalOrigin), size: titleViewSize)
+            let titleSize = CGSize(width: max(1.0, size.width - leftTitleInset - leftTitleInset), height: nominalHeight)
+            titleView.frame = CGRect(origin: CGPoint(x: leftTitleInset, y: contentVerticalOrigin), size: titleSize)
+            
+            if let transitionState = self.transitionState, let otherNavigationBar = transitionState.navigationBar {
+                let progress = transitionState.progress
+                
+                switch transitionState.role {
+                    case .top:
+                        let initialX = floor((size.width - titleSize.width) / 2.0)
+                        let finalX: CGFloat = leftButtonInset
+                        
+                        titleView.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
+                        titleView.alpha = (1.0 - progress) * (1.0 - progress)
+                    case .bottom:
+                        var initialX: CGFloat = backButtonInset
+                        if otherNavigationBar.backButtonNode.supernode != nil {
+                            initialX += floor((otherNavigationBar.backButtonNode.frame.size.width - titleSize.width) / 2.0)
+                        }
+                        initialX += size.width * 0.3
+                        let finalX: CGFloat = floor((size.width - titleSize.width) / 2.0)
+                        
+                        titleView.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
+                        titleView.alpha = progress * progress
+                }
+            } else {
+                titleView.alpha = 1.0
+                titleView.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
+            }
         }
-        
-        //self.effectView.frame = self.bounds
     }
     
     public func makeTransitionTitleNode(foregroundColor: UIColor) -> ASDisplayNode? {
-        if let title = self.title {
+        if let titleView = self.titleView {
+            if let transitionView = titleView as? NavigationBarTitleTransitionNode {
+                return transitionView.makeTransitionMirrorNode()
+            } else {
+                return nil
+            }
+        } else if let title = self.title {
             let node = ASTextNode()
             node.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: foregroundColor)
             return node
