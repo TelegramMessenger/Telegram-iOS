@@ -1287,7 +1287,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                                 channelState = ChannelState(pts: pts, invalidatedPts: nil)
                             }
                             updatedState.updateChannelState(peer.id, state: channelState)
-                        case let .channelDifferenceTooLong(_, pts, timeout, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, messages, chats, users):
+                        case let .channelDifferenceTooLong(_, pts, timeout, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, messages, chats, users):
                             apiTimeout = timeout
                             
                             let channelState = ChannelState(pts: pts, invalidatedPts: pts)

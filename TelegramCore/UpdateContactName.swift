@@ -16,7 +16,7 @@ public enum UpdateContactNameError {
 public func updateContactName(account: Account, peerId: PeerId, firstName: String, lastName: String) -> Signal<Void, UpdateContactNameError> {
     return account.postbox.modify { modifier -> Signal<Void, UpdateContactNameError> in
         if let peer = modifier.getPeer(peerId) as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
-            return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: firstName, lastName: lastName)], replace: .boolFalse))
+            return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: firstName, lastName: lastName)]))
                 |> mapError { _ -> UpdateContactNameError in
                     return .generic
                 }

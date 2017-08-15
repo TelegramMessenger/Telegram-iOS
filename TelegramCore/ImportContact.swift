@@ -10,7 +10,7 @@ public func importContact(account:Account, firstName:String, lastName:String, ph
     
     let input = Api.InputContact.inputPhoneContact(clientId: 1, phone: phoneNumber, firstName: firstName, lastName: lastName)
     
-    return account.network.request(Api.functions.contacts.importContacts(contacts: [input], replace: .boolFalse))
+    return account.network.request(Api.functions.contacts.importContacts(contacts: [input]))
         |> map { Optional($0) }
         |> `catch` { _ -> Signal<Api.contacts.ImportedContacts?, NoError> in
             return .single(nil)

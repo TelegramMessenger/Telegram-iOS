@@ -172,8 +172,8 @@ public indirect enum RichText: Coding, Equatable {
     }
 }
 
-extension RichText {
-    var plainText: String {
+public extension RichText {
+    public var plainText: String {
         switch self {
             case .empty:
                 return ""

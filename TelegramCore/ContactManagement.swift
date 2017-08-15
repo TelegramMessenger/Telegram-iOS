@@ -19,14 +19,14 @@ private func md5(_ data : Data) -> Data {
     return res
 }
 
-private func updatedRemoteContactPeers(network: Network, hash: String) -> Signal<([Peer], [PeerId: PeerPresence])?, NoError> {
+private func updatedRemoteContactPeers(network: Network, hash: Int32) -> Signal<([Peer], [PeerId: PeerPresence], Int32)?, NoError> {
     return network.request(Api.functions.contacts.getContacts(hash: hash))
         |> retryRequest
-        |> map { result -> ([Peer], [PeerId: PeerPresence])? in
+        |> map { result -> ([Peer], [PeerId: PeerPresence], Int32)? in
             switch result {
                 case .contactsNotModified:
                     return nil
-                case let .contacts(_, users):
+                case let .contacts(_, savedCount, users):
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     for user in users {
@@ -36,52 +36,45 @@ private func updatedRemoteContactPeers(network: Network, hash: String) -> Signal
                             peerPresences[telegramUser.id] = presence
                         }
                     }
-                    return (peers, peerPresences)
+                    return (peers, peerPresences, savedCount)
             }
         }
+}
+
+private func hashForCountAndIds(count: Int32, ids: [Int32]) -> Int32 {
+    var acc: UInt32 = 0
+    
+    acc = (acc &* 20261) &+ UInt32(bitPattern: count)
+    
+    for id in ids {
+        let low = UInt32(bitPattern: id)
+        acc = (acc &* 20261) &+ low
+    }
+    return Int32(bitPattern: acc % UInt32(0x7FFFFFFF))
 }
 
 func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     let initialContactPeerIdsHash = postbox.contactPeerIdsView()
         |> take(1)
-        |> map { peerIds -> String in
-            var stringToHash = ""
-            var first = true
-            let sortedUserIds = Set(peerIds.peerIds.filter({ $0.namespace == Namespaces.Peer.CloudUser }).map({ $0.id })).sorted()
-            for userId in sortedUserIds {
-                if first {
-                    first = false
-                } else {
-                    stringToHash.append(",")
-                }
-                stringToHash.append("\(userId)")
-            }
+        |> map { view -> Int32 in
+            let sortedUserIds = Set(view.peerIds.filter({ $0.namespace == Namespaces.Peer.CloudUser }).map({ $0.id })).sorted()
             
-            let hashData = md5(stringToHash.data(using: .utf8)!)
-            let hashString = hashData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> String in
-                let hexString = NSMutableString()
-                for i in 0 ..< hashData.count {
-                    let byteValue = UInt(bytes.advanced(by: i).pointee)
-                    hexString.appendFormat("%02x", byteValue)
-                }
-                return hexString as String
-            }
-            
-            return hashString
+            return hashForCountAndIds(count: view.remoteTotalCount, ids: sortedUserIds)
         }
     
     let updatedPeers = initialContactPeerIdsHash
-        |> mapToSignal { hash -> Signal<([Peer], [PeerId: PeerPresence])?, NoError> in
+        |> mapToSignal { hash -> Signal<([Peer], [PeerId: PeerPresence], Int32)?, NoError> in
             return updatedRemoteContactPeers(network: network, hash: hash)
         }
     
     let appliedUpdatedPeers = updatedPeers
         |> mapToSignal { peersAndPresences -> Signal<Void, NoError> in
-            if let (peers, peerPresences) = peersAndPresences {
+            if let (peers, peerPresences, totalCount) = peersAndPresences {
                 return postbox.modify { modifier in
                     updatePeers(modifier: modifier, peers: peers, update: { return $1 })
                     modifier.updatePeerPresences(peerPresences)
                     modifier.replaceContactPeerIds(Set(peers.map { $0.id }))
+                    modifier.replaceRemoteContactCount(totalCount)
                 }
             } else {
                 return .complete()
@@ -94,7 +87,7 @@ func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError>
 public func addContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId) as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
-            return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: peer.firstName ?? "", lastName: peer.lastName ?? "")], replace: .boolFalse))
+            return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: peer.firstName ?? "", lastName: peer.lastName ?? "")]))
                 |> map { Optional($0) }
                 |> `catch` { _ -> Signal<Api.contacts.ImportedContacts?, NoError> in
                     return .single(nil)

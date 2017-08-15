@@ -234,7 +234,7 @@ private func applyAddedOrUpdatedContacts(network: Network, contacts: [ManagedDev
         apiContacts.append(.inputPhoneContact(clientId: nextId, phone: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName))
         nextId += 1
     }
-    return network.request(Api.functions.contacts.importContacts(contacts: apiContacts, replace: .boolFalse))
+    return network.request(Api.functions.contacts.importContacts(contacts: apiContacts))
         |> `catch` { _ -> Signal<Api.contacts.ImportedContacts, ManagedDeviceContactsError> in
             return .fail(.generic)
         }

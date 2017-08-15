@@ -13,11 +13,12 @@ private enum MessagePreParsingError: Error {
 
 func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: PeerId) -> Bool {
     if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
+        var updatedState = state
         var removeTagLocalIndices: [Int32] = []
         var addedDecryptedOperations = false
         modifier.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SecretIncomingEncrypted, { entry in
             if let operation = entry.contents as? SecretChatIncomingEncryptedOperation {
-                if let key = state.keychain.key(fingerprint: operation.keyFingerprint) {
+                if let key = updatedState.keychain.key(fingerprint: operation.keyFingerprint) {
                     withDecryptedMessageContents(key: key, data: operation.contents, { decryptedContents in
                         if let decryptedContents = decryptedContents {
                             withExtendedLifetime(decryptedContents, {
@@ -47,7 +48,7 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                             throw MessagePreParsingError.malformedData
                                         }
                                         
-                                        switch state.role {
+                                        switch updatedState.role {
                                             case .creator:
                                                 if seqOutValue < 0 || (seqInValue >= 0 && (seqInValue & 1) == 0) || (seqOutValue & 1) != 0 {
                                                     throw MessagePreParsingError.protocolViolation
@@ -77,7 +78,7 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                     
                                     let entryTagLocalIndex: StorePeerOperationLogEntryTagLocalIndex
                                     
-                                    switch state.embeddedState {
+                                    switch updatedState.embeddedState {
                                         case .terminated:
                                             throw MessagePreParsingError.invalidChatState
                                         case .handshake:
@@ -88,7 +89,7 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
                                                     throw MessagePreParsingError.protocolViolation
                                                 }
                                                 let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: parsedLayer, locallyRequestedLayer: nil, remotelyRequestedLayer: nil), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
-                                                let updatedState = state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceBasedLayerState))
+                                                updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceBasedLayerState))
                                                 modifier.setPeerChatState(peerId, state: updatedState)
                                                 entryTagLocalIndex = .manual(sequenceBasedLayerState.baseIncomingOperationIndex + sequenceInfo.operationIndex)
                                             } else {

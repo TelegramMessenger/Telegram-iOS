@@ -19,7 +19,7 @@ public struct RecentMediaItemId {
         self.mediaId = MediaId(namespace: mediaIdNamespace, id: mediaIdId)
     }
     
-    init(_ mediaId: MediaId) {
+    public init(_ mediaId: MediaId) {
         self.mediaId = mediaId
         var mediaIdNamespace: Int32 = mediaId.namespace
         var mediaIdId: Int64 = mediaId.id

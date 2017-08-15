@@ -13,7 +13,7 @@ private let typeVideo: Int32 = 4
 private let typeAudio: Int32 = 5
 private let typeHasLinkedStickers: Int32 = 6
 
-public enum StickerPackReference: Coding {
+public enum StickerPackReference: Coding, Equatable {
     case id(id: Int64, accessHash: Int64)
     case name(String)
     
@@ -40,6 +40,23 @@ public enum StickerPackReference: Coding {
                 encoder.encodeString(name, forKey: "n")
         }
     }
+    
+    public static func ==(lhs: StickerPackReference, rhs: StickerPackReference) -> Bool {
+        switch lhs {
+            case let .id(id, accessHash):
+                if case .id(id, accessHash) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .name(name):
+                if case .name(name) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public struct TelegramMediaVideoFlags: OptionSet {
@@ -56,9 +73,37 @@ public struct TelegramMediaVideoFlags: OptionSet {
     public static let instantRoundVideo = TelegramMediaVideoFlags(rawValue: 1 << 0)
 }
 
+public struct StickerMaskCoords: Coding {
+    public let n: Int32
+    public let x: Double
+    public let y: Double
+    public let zoom: Double
+    
+    public init(n: Int32, x: Double, y: Double, zoom: Double) {
+        self.n = n
+        self.x = x
+        self.y = y
+        self.zoom = zoom
+    }
+    
+    public init(decoder: Decoder) {
+        self.n = decoder.decodeInt32ForKey("n", orElse: 0)
+        self.x = decoder.decodeDoubleForKey("x", orElse: 0.0)
+        self.y = decoder.decodeDoubleForKey("y", orElse: 0.0)
+        self.zoom = decoder.decodeDoubleForKey("z", orElse: 0.0)
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeInt32(self.n, forKey: "n")
+        encoder.encodeDouble(self.x, forKey: "x")
+        encoder.encodeDouble(self.y, forKey: "y")
+        encoder.encodeDouble(self.zoom, forKey: "z")
+    }
+}
+
 public enum TelegramMediaFileAttribute: Coding {
     case FileName(fileName: String)
-    case Sticker(displayText: String, packReference: StickerPackReference?)
+    case Sticker(displayText: String, packReference: StickerPackReference?, maskData: StickerMaskCoords?)
     case ImageSize(size: CGSize)
     case Animated
     case Video(duration: Int, size: CGSize, flags: TelegramMediaVideoFlags)
@@ -71,7 +116,7 @@ public enum TelegramMediaFileAttribute: Coding {
             case typeFileName:
                 self = .FileName(fileName: decoder.decodeStringForKey("fn", orElse: ""))
             case typeSticker:
-                self = .Sticker(displayText: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference)
+                self = .Sticker(displayText: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference, maskData: decoder.decodeObjectForKey("mc", decoder: { StickerMaskCoords(decoder: $0) }) as? StickerMaskCoords)
             case typeImageSize:
                 self = .ImageSize(size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("h", orElse: 0))))
             case typeAnimated:
@@ -97,13 +142,18 @@ public enum TelegramMediaFileAttribute: Coding {
             case let .FileName(fileName):
                 encoder.encodeInt32(typeFileName, forKey: "t")
                 encoder.encodeString(fileName, forKey: "fn")
-            case let .Sticker(displayText, packReference):
+            case let .Sticker(displayText, packReference, maskCoords):
                 encoder.encodeInt32(typeSticker, forKey: "t")
                 encoder.encodeString(displayText, forKey: "dt")
                 if let packReference = packReference {
                     encoder.encodeObject(packReference, forKey: "pr")
                 } else {
                     encoder.encodeNil(forKey: "pr")
+                }
+                if let maskCoords = maskCoords {
+                    encoder.encodeObject(maskCoords, forKey: "mc")
+                } else {
+                    encoder.encodeNil(forKey: "mc")
                 }
             case let .ImageSize(size):
                 encoder.encodeInt32(typeImageSize, forKey: "t")
@@ -317,6 +367,28 @@ public func ==(lhs: TelegramMediaFile, rhs: TelegramMediaFile) -> Bool {
     return lhs.isEqual(rhs)
 }
 
+extension StickerPackReference {
+    init?(apiInputSet: Api.InputStickerSet) {
+        switch apiInputSet {
+            case .inputStickerSetEmpty:
+                return nil
+            case let .inputStickerSetID(id, accessHash):
+                self = .id(id: id, accessHash: accessHash)
+            case let .inputStickerSetShortName(shortName):
+                self = .name(shortName)
+        }
+    }
+}
+
+extension StickerMaskCoords {
+    init(apiMaskCoords: Api.MaskCoords) {
+        switch apiMaskCoords {
+            case let .maskCoords(n, x, y, zoom):
+                self.init(n: n, x: x, y: y, zoom: zoom)
+        }
+    }
+}
+
 public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAttribute]) -> [TelegramMediaFileAttribute] {
     var result: [TelegramMediaFileAttribute] = []
     for attribute in attributes {
@@ -324,16 +396,7 @@ public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.Docu
             case let .documentAttributeFilename(fileName):
                 result.append(.FileName(fileName: fileName))
             case let .documentAttributeSticker(_, alt, stickerSet, maskCoords):
-                let packReference: StickerPackReference?
-                switch stickerSet {
-                    case .inputStickerSetEmpty:
-                        packReference = nil
-                    case let .inputStickerSetID(id, accessHash):
-                        packReference = .id(id: id, accessHash: accessHash)
-                    case let .inputStickerSetShortName(shortName):
-                        packReference = .name(shortName)
-                }
-                result.append(.Sticker(displayText: alt, packReference: packReference))
+                result.append(.Sticker(displayText: alt, packReference: StickerPackReference(apiInputSet: stickerSet), maskData: maskCoords.flatMap(StickerMaskCoords.init)))
             case .documentAttributeHasStickers:
                 result.append(.HasLinkedStickers)
             case let .documentAttributeImageSize(w, h):

@@ -36,6 +36,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as OutgoingChatContextResultMessageAttribute:
                 return true
+            case _ as AutoremoveTimeoutMessageAttribute:
+                return true
             default:
                 return false
         }

@@ -417,7 +417,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -
                 result.append(.documentAttributeFilename(fileName: fileName))
             case .Animated:
                 result.append(.documentAttributeAnimated)
-            case let .Sticker(displayText, packReference):
+            case let .Sticker(displayText, packReference, _):
                 var stickerSet: SecretApi46.InputStickerSet = .inputStickerSetEmpty
                 if let packReference = packReference, case let .name(name) = packReference {
                     stickerSet = .inputStickerSetShortName(shortName: name)

@@ -150,7 +150,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                         var apiChannelPts: Int32?
                         let apiNotificationSettings: Api.PeerNotifySettings
                         switch dialog {
-                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, peerNotificationSettings, pts, _):
+                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
                                 apiPeer = peer
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId

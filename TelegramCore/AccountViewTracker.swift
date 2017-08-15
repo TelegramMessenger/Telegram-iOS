@@ -200,6 +200,8 @@ public final class AccountViewTracker {
     private var nextUpdatedViewCountDisposableId: Int32 = 0
     private var updatedViewCountDisposables = DisposableDict<Int32>()
     
+    private var updatedSeenPersonalMessageIds = Set<MessageId>()
+    
     private var cachedDataContexts: [PeerId: PeerCachedDataContext] = [:]
     private var cachedChannelParticipantsContexts: [PeerId: CachedChannelParticipantsContext] = [:]
     
@@ -402,6 +404,49 @@ public final class AccountViewTracker {
                         }
                         self.updatedViewCountDisposables.set(signal.start(), forKey: disposableId)
                     }
+                }
+            }
+        }
+    }
+    
+    public func updateMarkMentionsSeenForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            for messageId in messageIds {
+                if !self.updatedSeenPersonalMessageIds.contains(messageId) {
+                    self.updatedSeenPersonalMessageIds.insert(messageId)
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                if let account = self.account {
+                    let _ = (account.postbox.modify { modifier -> Void in
+                        for id in addedMessageIds {
+                            if let message = modifier.getMessage(id) {
+                                var consume = false
+                                inner: for attribute in message.attributes {
+                                    if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed, !attribute.pending {
+                                        consume = true
+                                        break inner
+                                    }
+                                }
+                                if consume {
+                                    modifier.updateMessage(id, update: { currentMessage in
+                                        var attributes = currentMessage.attributes
+                                        loop: for j in 0 ..< attributes.count {
+                                            if let attribute = attributes[j] as? ConsumablePersonalMentionMessageAttribute {
+                                                attributes[j] = ConsumablePersonalMentionMessageAttribute(consumed: attribute.consumed, pending: true)
+                                                break loop
+                                            }
+                                        }
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                    })
+
+                                    modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: ConsumePersonalMessageAction())
+                                }
+                            }
+                        }
+                    }).start()
                 }
             }
         }
@@ -790,6 +835,44 @@ public final class AccountViewTracker {
                     }
                     return CallListView(entries: entries, earlier: view.earlier, later: view.later)
                 }
+        } else {
+            return .never()
+        }
+    }
+    
+    public func unseenPersonalMessagesCount(peerId: PeerId) -> Signal<Int32, NoError> {
+        if let account = self.account {
+            let pendingKey: PostboxViewKey = .pendingMessageActionsSummary(type: .consumeUnseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            let summaryKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            return account.postbox.combinedView(keys: [pendingKey, summaryKey])
+                |> map { views -> Int32 in
+                    var count: Int32 = 0
+                    if let view = views.views[pendingKey] as? PendingMessageActionsSummaryView {
+                        count -= view.count
+                    }
+                    if let view = views.views[summaryKey] as? MessageHistoryTagSummaryView {
+                        if let unseenCount = view.count {
+                            count += unseenCount
+                        }
+                    }
+                    return max(0, count)
+                } |> distinctUntilChanged
+        } else {
+            return .never()
+        }
+    }
+    
+    public func tailChatListView(count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        if let account = self.account {
+            return account.postbox.tailChatListView(count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud)))
+        } else {
+            return .never()
+        }
+    }
+    
+    public func aroundChatListView(index: ChatListIndex, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        if let account = self.account {
+            return account.postbox.aroundChatListView(index: index, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud)))
         } else {
             return .never()
         }
