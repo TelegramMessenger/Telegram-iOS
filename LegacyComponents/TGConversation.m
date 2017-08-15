@@ -634,6 +634,7 @@
     conversation.pinnedMessageId = _pinnedMessageId;
     
     conversation->_draft = _draft;
+    conversation->_unreadMentionCount = _unreadMentionCount;
     conversation.pinnedDate = _pinnedDate;
     
     conversation->_channelAdminRights = _channelAdminRights;
@@ -756,6 +757,10 @@
     }
     
     if (!TGObjectCompare(_draft, other->_draft)) {
+        return false;
+    }
+    
+    if (_unreadMentionCount != other->_unreadMentionCount) {
         return false;
     }
     
