@@ -39,9 +39,11 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                         case .UpperToLower:
                             break
                         case .LowerToUpper:
-                            assertionFailure(".LowerToUpper not supported")
+                         //   assertionFailure(".LowerToUpper not supported")
+                        break
                         case .AroundIndex:
-                            assertionFailure(".AroundIndex not supported")
+                           // assertionFailure(".AroundIndex not supported")
+                        break
                     }
                     //request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: hole.maxIndex.id.id + 1, limit: Int32(limit)))
                     request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: Int32.max, limit: Int32(limit)))
