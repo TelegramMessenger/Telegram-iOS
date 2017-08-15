@@ -9,14 +9,18 @@
     NSTimeInterval _timeoutDate;
     bool _repeat;
     dispatch_block_t _completion;
-    SQueue *_queue;
+    dispatch_queue_t _nativeQueue;
 }
 
 @end
 
 @implementation STimer
 
-- (id)initWithTimeout:(NSTimeInterval)timeout repeat:(bool)repeat completion:(dispatch_block_t)completion queue:(SQueue *)queue
+- (id)initWithTimeout:(NSTimeInterval)timeout repeat:(bool)repeat completion:(dispatch_block_t)completion queue:(SQueue *)queue {
+    return [self initWithTimeout:timeout repeat:repeat completion:completion nativeQueue:queue._dispatch_queue];
+}
+
+- (id)initWithTimeout:(NSTimeInterval)timeout repeat:(bool)repeat completion:(dispatch_block_t)completion nativeQueue:(dispatch_queue_t)nativeQueue
 {
     self = [super init];
     if (self != nil)
@@ -26,7 +30,7 @@
         _timeout = timeout;
         _repeat = repeat;
         _completion = [completion copy];
-        _queue = queue;
+        _nativeQueue = nativeQueue;
     }
     return self;
 }
@@ -44,7 +48,7 @@
 {
     _timeoutDate = CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970 + _timeout;
     
-    _timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, [_queue _dispatch_queue]);
+    _timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, _nativeQueue);
     dispatch_source_set_timer(_timer, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(_timeout * NSEC_PER_SEC)), _repeat ? (int64_t)(_timeout * NSEC_PER_SEC) : DISPATCH_TIME_FOREVER, 0);
     
     dispatch_source_set_event_handler(_timer, ^
