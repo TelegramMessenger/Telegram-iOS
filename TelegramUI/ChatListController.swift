@@ -45,6 +45,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
         self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconChatsSelected")
         
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
         
@@ -139,6 +140,17 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     
     private func updateThemeAndStrings() {
         self.tabBarItem.title = self.presentationData.strings.DialogList_Title
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        var editing = false
+        self.chatListDisplayNode.chatListNode.updateState { state in
+            editing = state.editing
+            return state
+        }
+        if editing {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        } else {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+        }
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
         
         self.titleView.theme = self.presentationData.theme

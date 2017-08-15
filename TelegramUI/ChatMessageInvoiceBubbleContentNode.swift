@@ -59,7 +59,7 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, false, layoutConstants, position, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, nil, false, layoutConstants, position, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (refinedWidth, finalizeLayout) = continueLayout(constrainedSize)

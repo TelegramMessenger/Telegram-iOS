@@ -44,6 +44,7 @@ enum PresentationResourceKey: Int32 {
     case chatListDoubleCheck
     case chatListBadgeBackgroundActive
     case chatListBadgeBackgroundInactive
+    case chatListBadgeBackgroundMention
 
     case chatPrincipalThemeEssentialGraphics
     case chatBubbleVerticalLineIncomingImage
@@ -86,6 +87,7 @@ enum PresentationResourceKey: Int32 {
     case chatInputPanelVerticalSeparatorLineImage
     
     case chatMediaInputPanelHighlightedIconImage
+    case chatInputMediaPanelSavedStickersIconImage
     case chatInputMediaPanelRecentStickersIconImage
     case chatInputMediaPanelRecentGifsIconImage
     
@@ -110,8 +112,21 @@ enum PresentationResourceKey: Int32 {
     case chatInputSearchPanelDownDisabledImage
     case chatInputSearchPanelCalendarImage
     
+    case chatTitlePanelInfoImage
+    case chatTitlePanelSearchImage
+    case chatTitlePanelMuteImage
+    case chatTitlePanelUnmuteImage
+    case chatTitlePanelCallImage
+    case chatTitlePanelReportImage
+    
     case chatHistoryNavigationButtonImage
+    case chatHistoryMentionsButtonImage
     case chatHistoryNavigationButtonBadgeImage
+    
+    case chatMessageAttachedContentButtonIncoming
+    case chatMessageAttachedContentHighlightedButtonIncoming
+    case chatMessageAttachedContentButtonOutgoing
+    case chatMessageAttachedContentHighlightedButtonOutgoing
     
     case sharedMediaFileDownloadStartIcon
     case sharedMediaFileDownloadPauseIcon

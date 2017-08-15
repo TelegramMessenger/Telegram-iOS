@@ -74,7 +74,71 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
     }
 }
 
-func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, small: Bool, fitSize: CGSize, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMessageStickerDatas(account: account, file: file, small: small, fetched: fetched)
+    return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
+        return { preArguments in
+            var fullSizeImage: (UIImage, UIImage)?
+            if let fullSizeData = fullSizeData, fullSizeComplete {
+                if let image = imageFromAJpeg(data: fullSizeData) {
+                    fullSizeImage = image
+                }
+            }
+            
+            if let fullSizeImage = fullSizeImage {
+                var updatedFitSize = fitSize
+                if updatedFitSize.width.isEqual(to: 1.0) {
+                    updatedFitSize = fullSizeImage.0.size
+                }
+                
+                let contextSize = fullSizeImage.0.size.aspectFitted(updatedFitSize)
+                
+                let arguments = TransformImageArguments(corners: preArguments.corners, imageSize: contextSize, boundingSize: contextSize, intrinsicInsets: preArguments.intrinsicInsets)
+                
+                let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                
+                let thumbnailImage: CGImage? = nil
+                
+                var blurredThumbnailImage: UIImage?
+                if let thumbnailImage = thumbnailImage {
+                    let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
+                    let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 150.0, height: 150.0))
+                    let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                    thumbnailContext.withFlippedContext { c in
+                        c.interpolationQuality = .none
+                        c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                    }
+                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                    blurredThumbnailImage = thumbnailContext.generateImage()
+                }
+                
+                context.withFlippedContext { c in
+                    c.setBlendMode(.copy)
+                    if let blurredThumbnailImage = blurredThumbnailImage {
+                        c.interpolationQuality = .low
+                        c.draw(blurredThumbnailImage.cgImage!, in: arguments.drawingRect)
+                    }
+                    
+                    if let cgImage = fullSizeImage.0.cgImage, let cgImageAlpha = fullSizeImage.1.cgImage {
+                        c.setBlendMode(.normal)
+                        c.interpolationQuality = .medium
+                        
+                        let mask = CGImage(maskWidth: cgImageAlpha.width, height: cgImageAlpha.height, bitsPerComponent: cgImageAlpha.bitsPerComponent, bitsPerPixel: cgImageAlpha.bitsPerPixel, bytesPerRow: cgImageAlpha.bytesPerRow, provider: cgImageAlpha.dataProvider!, decode: nil, shouldInterpolate: true)
+                        
+                        c.draw(cgImage.masking(mask!)!, in: arguments.drawingRect)
+                    }
+                }
+                
+                return context
+            } else {
+                return nil
+            }
+        }
+    }
+}
+
+func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageStickerDatas(account: account, file: file, small: small, fetched: fetched)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in

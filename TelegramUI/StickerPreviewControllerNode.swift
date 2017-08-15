@@ -29,9 +29,11 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.imageNode = TransformImageNode()
         self.imageNode.addSubnode(self.textNode)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.addSubnode(self.dimNode)
         self.addSubnode(self.imageNode)
@@ -129,7 +131,7 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.item = item
         
-        for case let .Sticker(text, _) in item.file.attributes {
+        for case let .Sticker(text, _, _) in item.file.attributes {
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
             break
         }

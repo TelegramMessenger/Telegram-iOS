@@ -34,13 +34,13 @@ func chatListViewForLocation(_ location: ChatListNodeLocation, account: Account)
     switch location {
         case let .initial(count):
             let signal: Signal<(ChatListView, ViewUpdateType), NoError>
-            signal = account.postbox.tailChatListView(count)
+            signal = account.viewTracker.tailChatListView(count: count)
             return signal |> map { view, updateType -> ChatListNodeViewUpdate in
                 return ChatListNodeViewUpdate(view: view, type: updateType, scrollPosition: nil)
             }
         case let .navigation(index):
             var first = true
-            return account.postbox.aroundChatListView(index, count: 80) |> map { view, updateType -> ChatListNodeViewUpdate in
+            return account.viewTracker.aroundChatListView(index: index, count: 80) |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 if first {
                     first = false
@@ -54,7 +54,7 @@ func chatListViewForLocation(_ location: ChatListNodeLocation, account: Account)
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             let chatScrollPosition: ChatListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.postbox.aroundChatListView(index, count: 80) |> map { view, updateType -> ChatListNodeViewUpdate in
+            return account.viewTracker.aroundChatListView(index: index, count: 80) |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 let scrollPosition: ChatListNodeViewScrollPosition? = first ? chatScrollPosition : nil
                 if first {

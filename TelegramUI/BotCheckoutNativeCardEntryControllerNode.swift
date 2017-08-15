@@ -30,9 +30,11 @@ private final class BotCheckoutNativeCardEntryScrollerNode: ASDisplayNode {
     }
     
     override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return BotCheckoutNativeCardEntryScrollerNodeView()
-        }, didLoad: nil)
+        })
     }
 }
 

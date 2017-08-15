@@ -80,4 +80,12 @@ final class BotCheckoutWebInteractionController: ViewController {
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
+    
+    override var presentationController: UIPresentationController? {
+        get {
+            return nil
+        } set(value) {
+            
+        }
+    }
 }

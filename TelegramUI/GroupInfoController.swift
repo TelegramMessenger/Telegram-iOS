@@ -3,7 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import TelegramLegacyComponents
+import LegacyComponents
 
 private final class GroupInfoArguments {
     let account: Account
@@ -933,17 +933,15 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             }))
         })
     }, changeProfilePhoto: {
-        let emptyController = LegacyEmptyController()
+        /*let emptyController = LegacyEmptyController()
         let navigationController = makeLegacyNavigationController(rootController: emptyController)
         navigationController.setNavigationBarHidden(true, animated: false)
         navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
         
-        let legacyController = LegacyController(legacyController: navigationController, presentation: .custom)
+        let legacyController = LegacyController(presentation: .custom, legacyController: navigationController)
         
         presentControllerImpl?(legacyController, nil)
-        
-        let mixin = TGMediaAvatarMenuMixin(parentController: emptyController, hasDeleteButton: false, personalPhoto: true)!
-        mixin.applicationInterface = legacyController.applicationInterface
+        let mixin = TGMediaAvatarMenuMixin(context: LegacyControllerContext(controller: nil), parentController: emptyController, hasDeleteButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
         let _ = currentAvatarMixin.swap(mixin)
         mixin.didDismiss = { [weak legacyController] in
             legacyController?.dismiss()
@@ -974,7 +972,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             let _ = currentAvatarMixin.swap(nil)
             legacyController?.dismiss()
         }
-        mixin.present()
+        mixin.present()*/
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, presentController: { controller, presentationArguments in

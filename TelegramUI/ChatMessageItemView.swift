@@ -64,6 +64,8 @@ public class ChatMessageItemView: ListViewItemNode {
     var item: ChatMessageItem?
     var controllerInteraction: ChatControllerInteraction?
     
+    private var content: ChatMessageItemContent?
+    
     public required convenience init() {
         self.init(layerBacked: true)
     }
@@ -112,7 +114,6 @@ public class ChatMessageItemView: ListViewItemNode {
             self.transitionOffset = -self.bounds.size.height * 1.6
             self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
         }
-        //self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height * 1.4, to: 0.0, duration: duration)
     }
     
     func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
@@ -134,6 +135,9 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     func updateHighlightedState(animated: Bool) {
+    }
+    
+    func updateAutomaticMediaDownloadSettings() {
     }
     
     override public func header() -> ListViewItemHeader? {

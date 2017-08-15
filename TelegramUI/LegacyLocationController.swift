@@ -1,6 +1,6 @@
 import Foundation
 import Display
-import TelegramLegacyComponents
+import LegacyComponents
 import TelegramCore
 import Postbox
 
@@ -25,13 +25,15 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
         legacyLocation.venue = TGVenueAttachment(title: venue.title, address: venue.address, provider: venue.provider, venueId: venue.id)
     }
     
-    let controller = TGLocationViewController(locationAttachment: legacyLocation, peer: legacyPeer)!
+    let legacyController = LegacyController(presentation: .modal(animateIn: true))
+    let controller = TGLocationViewController(context: legacyController.context, locationAttachment: legacyLocation, peer: legacyPeer)!
+    controller.modalMode = true
     let navigationController = TGNavigationController(controllers: [controller])!
-    let legacyController = LegacyController(legacyController: navigationController, presentation: .modal(animateIn: true))
-    controller.customDismiss = { [weak legacyController] in
+    legacyController.bind(controller: navigationController)
+    controller.navigation_setDismiss({ [weak legacyController] in
         legacyController?.dismiss()
-    }
-    controller.customActions = { [weak legacyController] in
+    }, rootController: nil)
+    /*controller.shareAction = { [weak legacyController]  in
         if let legacyController = legacyController {
             var shareAction: (([PeerId]) -> Void)?
             let shareController = ShareController(account: account, shareAction: { peerIds in
@@ -46,7 +48,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
                 }
             }
         }
-    }
+    }*/
     controller.calloutPressed = { [weak legacyController] in
         legacyController?.dismiss()
         

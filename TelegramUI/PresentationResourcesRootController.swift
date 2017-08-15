@@ -13,14 +13,18 @@ private func generateShareButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationShare"), color: theme.rootController.navigationBar.accentTextColor)
 }
 
+func generateIndefiniteActivityIndicatorImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(color.cgColor)
+        let _ = try? drawSvgPath(context, path: "M11,22 C17.0751322,22 22,17.0751322 22,11 C22,4.92486775 17.0751322,0 11,0 C4.92486775,0 0,4.92486775 0,11 C0,12.4564221 0.28362493,13.8747731 0.827833595,15.1935223 C1.00609922,15.6255031 1.50080164,15.8311798 1.93278238,15.6529142 C2.36476311,15.4746485 2.57043984,14.9799461 2.39217421,14.5479654 C1.93209084,13.4330721 1.69230769,12.233965 1.69230769,11 C1.69230769,5.85950348 5.85950348,1.69230769 11,1.69230769 C16.1404965,1.69230769 20.3076923,5.85950348 20.3076923,11 C20.3076923,16.1404965 16.1404965,20.3076923 11,20.3076923 C10.5326821,20.3076923 10.1538462,20.6865283 10.1538462,21.1538462 C10.1538462,21.621164 10.5326821,22 11,22 Z ")
+    })
+}
+
 struct PresentationResourcesRootController {
     static func navigationIndefiniteActivityImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.rootNavigationIndefiniteActivity.rawValue, { theme in
-            return generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.rootController.navigationBar.accentTextColor.cgColor)
-                let _ = try? drawSvgPath(context, path: "M11,22 C17.0751322,22 22,17.0751322 22,11 C22,4.92486775 17.0751322,0 11,0 C4.92486775,0 0,4.92486775 0,11 C0,12.4564221 0.28362493,13.8747731 0.827833595,15.1935223 C1.00609922,15.6255031 1.50080164,15.8311798 1.93278238,15.6529142 C2.36476311,15.4746485 2.57043984,14.9799461 2.39217421,14.5479654 C1.93209084,13.4330721 1.69230769,12.233965 1.69230769,11 C1.69230769,5.85950348 5.85950348,1.69230769 11,1.69230769 C16.1404965,1.69230769 20.3076923,5.85950348 20.3076923,11 C20.3076923,16.1404965 16.1404965,20.3076923 11,20.3076923 C10.5326821,20.3076923 10.1538462,20.6865283 10.1538462,21.1538462 C10.1538462,21.621164 10.5326821,22 11,22 Z ")
-            })
+            generateIndefiniteActivityIndicatorImage(color: theme.rootController.navigationBar.accentTextColor)
         })
     }
     

@@ -55,9 +55,9 @@ public class TransformImageNode: ASDisplayNode {
             }
         }
         
-        self.disposable.set((result |> deliverOnMainQueue).start(next: {[weak self] next in
+        self.disposable.set((result |> deliverOnMainQueue).start(next: { [weak self] next in
             if dispatchOnDisplayLink {
-                displayLinkDispatcher.dispatch { [weak self] in
+                displayLinkDispatcher.dispatch {
                     if let strongSelf = self {
                         if strongSelf.alphaTransitionOnFirstUpdate && strongSelf.contents == nil {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)

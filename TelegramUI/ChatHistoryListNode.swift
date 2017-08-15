@@ -178,6 +178,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let account: Account
     private let peerId: PeerId
     private let messageId: MessageId?
+    private let tagMask: MessageTags?
     private let controllerInteraction: ChatControllerInteraction
     private let mode: ChatHistoryListMode
     
@@ -214,6 +215,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private let maxVisibleIncomingMessageIndex = ValuePromise<MessageIndex>(ignoreRepeated: true)
     let canReadHistory = Promise<Bool>()
+    private var canReadHistoryValue: Bool = false
+    private var canReadHistoryDisposable: Disposable?
     
     private let _chatHistoryLocation = ValuePromise<ChatHistoryLocation>()
     private var chatHistoryLocation: Signal<ChatHistoryLocation, NoError> {
@@ -223,6 +226,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
+    private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
     
     private var maxVisibleMessageIndexReported: MessageIndex?
     var maxVisibleMessageIndexUpdated: ((MessageIndex) -> Void)?
@@ -233,10 +237,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var themeAndStrings: Promise<(PresentationTheme, PresentationStrings)>
     private var presentationDataDisposable: Disposable?
     
+    private var isScrollAtBottomPosition = false
+    private var interactiveReadActionDisposable: Disposable?
+    
+    public var contentPositionChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
+    
     public init(account: Account, peerId: PeerId, tagMask: MessageTags?, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode = .bubbles) {
         self.account = account
         self.peerId = peerId
         self.messageId = messageId
+        self.tagMask = tagMask
         self.controllerInteraction = controllerInteraction
         self.mode = mode
         
@@ -252,6 +262,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.messageProcessingManager.process = { [weak account] messageIds in
             account?.viewTracker.updateViewCountForMessageIds(messageIds: messageIds)
+        }
+        self.messageMentionProcessingManager.process = { [weak account] messageIds in
+            account?.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
         }
         
         self.preloadPages = false
@@ -368,8 +381,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.readHistoryDisposable.set(readHistory.start())
         
+        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                if strongSelf.canReadHistoryValue != value {
+                    strongSelf.canReadHistoryValue = value
+                    strongSelf.updateReadHistoryActions()
+                }
+            }
+        })
+        
         if let messageId = messageId {
-            self._chatHistoryLocation.set(ChatHistoryLocation.InitialSearch(messageId: messageId, count: 60))
+            self._chatHistoryLocation.set(ChatHistoryLocation.InitialSearch(location: .id(messageId), count: 60))
         } else {
             self._chatHistoryLocation.set(ChatHistoryLocation.Initial(count: 60))
         }
@@ -381,8 +403,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         
                         var messageIdsWithViewCount: [MessageId] = []
+                        var messageIdsWithUnseenPersonalMention: [MessageId] = []
                         for i in (indexRange.0 ... indexRange.1) {
                             if case let .MessageEntry(message, _, _, _, _) = historyView.filteredEntries[i] {
+                                if message.tags.contains(.unseenPersonalMessage) {
+                                    for attribute in message.attributes {
+                                        if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
+                                            messageIdsWithUnseenPersonalMention.append(message.id)
+                                        }
+                                    }
+                                }
                                 inner: for attribute in message.attributes {
                                     if attribute is ViewCountMessageAttribute {
                                         messageIdsWithViewCount.append(message.id)
@@ -394,6 +424,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         
                         if !messageIdsWithViewCount.isEmpty {
                             strongSelf.messageProcessingManager.add(messageIdsWithViewCount)
+                        }
+                        
+                        if !messageIdsWithUnseenPersonalMention.isEmpty {
+                            strongSelf.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
                         }
                         
                         let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView.filteredEntries, indexRange: indexRange)
@@ -437,11 +471,36 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 }
             })
+        
+        self.visibleContentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self {
+                strongSelf.contentPositionChanged(offset)
+                
+                if strongSelf.tagMask == nil {
+                    var atBottom = false
+                    switch offset {
+                        case let .known(offsetValue):
+                            if offsetValue.isLessThanOrEqualTo(0.0) {
+                                atBottom = true
+                            }
+                        default:
+                            break
+                    }
+                    
+                    if atBottom != strongSelf.isScrollAtBottomPosition {
+                        strongSelf.isScrollAtBottomPosition = atBottom
+                        strongSelf.updateReadHistoryActions()
+                    }
+                }
+            }
+        }
     }
     
     deinit {
         self.historyDisposable.dispose()
         self.readHistoryDisposable.dispose()
+        self.interactiveReadActionDisposable?.dispose()
+        self.canReadHistoryDisposable?.dispose()
     }
     
     public func scrollToStartOfHistory() {
@@ -601,5 +660,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public func disconnect() {
         self.historyDisposable.set(nil)
+    }
+    
+    private func updateReadHistoryActions() {
+        let canRead = self.canReadHistoryValue && self.isScrollAtBottomPosition
+        if canRead != (self.interactiveReadActionDisposable != nil) {
+            if let interactiveReadActionDisposable = self.interactiveReadActionDisposable {
+                if !canRead {
+                    interactiveReadActionDisposable.dispose()
+                    self.interactiveReadActionDisposable = nil
+                }
+            } else if self.interactiveReadActionDisposable == nil {
+                self.interactiveReadActionDisposable = installInteractiveReadMessagesAction(postbox: self.account.postbox, peerId: self.peerId)
+            }
+        }
     }
 }

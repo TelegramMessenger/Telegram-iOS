@@ -82,10 +82,10 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: text, activate: {
                     nodeInteraction.activateSearch()
                 }), directionHint: entry.directionHint)
-            case let .PeerEntry(index, theme, strings, message, combinedReadState, notificationSettings, embeddedState, peer, editing, hasActiveRevealControls):
+            case let .PeerEntry(index, theme, strings, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo, editing, hasActiveRevealControls):
                 switch mode {
                     case .chatList:
-                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(theme: theme, strings: strings, account: account, index: index, message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, embeddedState: embeddedState, editing: editing, hasActiveRevealControls: hasActiveRevealControls, header: nil, interaction: nodeInteraction), directionHint: entry.directionHint)
+                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(theme: theme, strings: strings, account: account, index: index, message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, summaryInfo: summaryInfo, embeddedState: embeddedState, editing: editing, hasActiveRevealControls: hasActiveRevealControls, header: nil, interaction: nodeInteraction), directionHint: entry.directionHint)
                     case .peers:
                         var peer: Peer?
                         var chatPeer: Peer?
@@ -112,10 +112,10 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: text, activate: {
                     nodeInteraction.activateSearch()
                 }), directionHint: entry.directionHint)
-            case let .PeerEntry(index, theme, strings, message, combinedReadState, notificationSettings, embeddedState, peer, editing, hasActiveRevealControls):
+            case let .PeerEntry(index, theme, strings, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo, editing, hasActiveRevealControls):
                 switch mode {
                     case .chatList:
-                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(theme: theme, strings: strings, account: account, index: index, message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, embeddedState: embeddedState, editing: editing, hasActiveRevealControls: hasActiveRevealControls, header: nil, interaction: nodeInteraction), directionHint: entry.directionHint)
+                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(theme: theme, strings: strings, account: account, index: index, message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, summaryInfo: summaryInfo, embeddedState: embeddedState, editing: editing, hasActiveRevealControls: hasActiveRevealControls, header: nil, interaction: nodeInteraction), directionHint: entry.directionHint)
                     case .peers:
                         var peer: Peer?
                         var chatPeer: Peer?

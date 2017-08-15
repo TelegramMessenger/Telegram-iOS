@@ -2,7 +2,7 @@ import Foundation
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import TelegramLegacyComponents
+import LegacyComponents
 
 private let emojiFont = Font.regular(28.0)
 private let textFont = Font.regular(15.0)
@@ -74,7 +74,7 @@ final class CallControllerKeyPreviewNode: ASDisplayNode {
         
         UIView.animate(withDuration: 0.3, animations: {
             if #available(iOS 9.0, *) {
-                self.effectView.effect = TGBlurEffect.call()!
+                self.effectView.effect = UIBlurEffect(style: .dark)
             } else {
                 self.effectView.alpha = 1.0
             }

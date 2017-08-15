@@ -3,7 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import TelegramLegacyComponents
+import LegacyComponents
 
 private struct SettingsItemArguments {
     let account: Account
@@ -425,21 +425,20 @@ public func settingsController(account: Account, accountManager: AccountManager)
             }))
         })
     }, changeProfilePhoto: {
-        let emptyController = LegacyEmptyController()
+        let legacyController = LegacyController(presentation: .custom)
+        legacyController.statusBar.statusBarStyle = .Ignore
+        
+        let emptyController = LegacyEmptyController(context: legacyController.context)!
         let navigationController = makeLegacyNavigationController(rootController: emptyController)
         navigationController.setNavigationBarHidden(true, animated: false)
         navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
         
-        let legacyController = LegacyController(legacyController: navigationController, presentation: .custom)
+        legacyController.bind(controller: navigationController)
         
         presentControllerImpl?(legacyController, nil)
         
-        let mixin = TGMediaAvatarMenuMixin(parentController: emptyController, hasDeleteButton: false, personalPhoto: true)!
-        mixin.applicationInterface = legacyController.applicationInterface
+        let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
         let _ = currentAvatarMixin.swap(mixin)
-        mixin.didDismiss = { [weak legacyController] in
-            legacyController?.dismiss()
-        }
         mixin.didFinishWithImage = { image in
             if let image = image {
                 if let data = UIImageJPEGRepresentation(image, 0.6) {
@@ -466,7 +465,12 @@ public func settingsController(account: Account, accountManager: AccountManager)
             let _ = currentAvatarMixin.swap(nil)
             legacyController?.dismiss()
         }
-        mixin.present()
+        let menuController = mixin.present()
+        if let menuController = menuController {
+            menuController.customRemoveFromParentViewController = { [weak legacyController] in
+                legacyController?.dismiss()
+            }
+        }
     }, openPrivacyAndSecurity: {
         pushControllerImpl?(privacyAndSecurityController(account: account, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: account) |> map { Optional($0) })))
     }, openDataAndStorage: {

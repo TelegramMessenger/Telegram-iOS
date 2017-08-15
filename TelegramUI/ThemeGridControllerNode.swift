@@ -51,7 +51,7 @@ private func preparedThemeGridEntryTransition(account: Account, from fromEntries
     
     let deletions = deleteIndices
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction)) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
     
     return ThemeGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
@@ -78,9 +78,11 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.gridNode = GridNode()
         self.gridNode.showVerticalScrollIndicator = true
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = presentationData.theme.list.itemBackgroundColor
         
@@ -139,7 +141,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private func dequeueTransitions() {
         while !self.queuedTransitions.isEmpty {
             let transition = self.queuedTransitions.removeFirst()
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { [weak self] _ in
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.ready.set(true)
                 }
@@ -164,7 +166,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         insets.top += spacing
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, lineSpacing: spacing)), transition: .immediate), stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, lineSpacing: spacing)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         self.gridNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         

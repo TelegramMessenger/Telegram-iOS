@@ -61,9 +61,11 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.codeField.textField.isSecureTextEntry = true
         self.codeField.textField.returnKeyType = .done
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = UIColor.white
         

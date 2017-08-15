@@ -49,17 +49,22 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         
         return { item, layoutConstants, position, constrainedSize in
             var selectedMedia: Media?
+            var automaticDownload: Bool = false
             for media in item.message.media {
                 if let telegramImage = media as? TelegramMediaImage {
                     selectedMedia = telegramImage
+                    automaticDownload = item.controllerInteraction.automaticMediaDownloadSettings.categories.getPhoto(item.message.id.peerId)
                 } else if let telegramFile = media as? TelegramMediaFile {
                     selectedMedia = telegramFile
+                    if telegramFile.isAnimated {
+                        automaticDownload = item.controllerInteraction.automaticMediaDownloadSettings.categories.getGif(item.message.id.peerId)
+                    }
                 }
             }
             
             let initialImageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
             
-            let (initialWidth, _, refineLayout) = interactiveImageLayout(item.account, item.theme, item.strings, item.message, selectedMedia!, initialImageCorners, item.account.settings.automaticDownloadSettingsForPeerId(item.peerId).downloadPhotos, CGSize(width: constrainedSize.width, height: constrainedSize.height), layoutConstants)
+            let (initialWidth, _, refineLayout) = interactiveImageLayout(item.account, item.theme, item.strings, item.message, selectedMedia!, initialImageCorners, automaticDownload, CGSize(width: constrainedSize.width, height: constrainedSize.height), layoutConstants)
             
             return (initialWidth + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, { constrainedSize in
                 let (refinedWidth, finishLayout) = refineLayout(constrainedSize)

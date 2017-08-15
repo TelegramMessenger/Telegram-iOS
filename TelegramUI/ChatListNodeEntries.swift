@@ -62,14 +62,14 @@ enum ChatListNodeEntryId: Hashable, CustomStringConvertible {
 
 enum ChatListNodeEntry: Comparable, Identifiable {
     case SearchEntry(theme: PresentationTheme, text: String)
-    case PeerEntry(index: ChatListIndex, theme: PresentationTheme, strings: PresentationStrings, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, editing: Bool, hasActiveRevealControls: Bool)
+    case PeerEntry(index: ChatListIndex, theme: PresentationTheme, strings: PresentationStrings, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
     
     var index: ChatListIndex {
         switch self {
             case .SearchEntry:
                 return ChatListIndex.absoluteUpperBound
-            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _):
+            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole, _):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
@@ -80,7 +80,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         switch self {
             case .SearchEntry:
                 return .Search
-            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _):
+            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _):
                 return .PeerId(index.messageIndex.id.peerId.toInt64())
             case let .HoleEntry(hole, _):
                 return .Hole(Int64(hole.index.id.id))
@@ -99,9 +99,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .PeerEntry(lhsIndex, lhsTheme, lhsStrings, lhsMessage, lhsUnreadCount, lhsNotificationSettings, lhsEmbeddedState, lhsPeer, lhsEditing, lhsHasRevealControls):
+            case let .PeerEntry(lhsIndex, lhsTheme, lhsStrings, lhsMessage, lhsUnreadCount, lhsNotificationSettings, lhsEmbeddedState, lhsPeer, lhsSummaryInfo, lhsEditing, lhsHasRevealControls):
                 switch rhs {
-                    case let .PeerEntry(rhsIndex, rhsTheme, rhsStrings, rhsMessage, rhsUnreadCount, rhsNotificationSettings, rhsEmbeddedState, rhsPeer, rhsEditing, rhsHasRevealControls):
+                    case let .PeerEntry(rhsIndex, rhsTheme, rhsStrings, rhsMessage, rhsUnreadCount, rhsNotificationSettings, rhsEmbeddedState, rhsPeer, rhsSummaryInfo, rhsEditing, rhsHasRevealControls):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -140,6 +140,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                         if lhsPeer != rhsPeer {
                             return false
                         }
+                        if lhsSummaryInfo != rhsSummaryInfo {
+                            return false
+                        }
                         
                         return true
                     default:
@@ -160,8 +163,8 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState) 
     var result: [ChatListNodeEntry] = []
     for entry in view.entries {
         switch entry {
-            case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer):
-                result.append(.PeerEntry(index: index, theme: state.theme, strings: state.strings, message: message, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions))
+            case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
+                result.append(.PeerEntry(index: index, theme: state.theme, strings: state.strings, message: message, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions))
             case let .HoleEntry(hole):
                 result.append(.HoleEntry(hole, theme: state.theme))
         }

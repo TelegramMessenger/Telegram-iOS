@@ -79,7 +79,7 @@ public final class RadialTimeoutNode: ASDisplayNode {
         return RadialTimeoutNodeParameters(backgroundColor: self.nodeBackgroundColor, foregroundColor: self.nodeForegroundColor, value: value)
     }
     
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -98,7 +98,7 @@ public final class RadialTimeoutNode: ASDisplayNode {
             let radius = (bounds.size.width - 4.0) * 0.5
             
             let viewCenter = CGPoint(x: bounds.size.width * 0.5, y: bounds.size.height * 0.5)
-            var startAngle = -CGFloat.pi * 0.5
+            let startAngle = -CGFloat.pi * 0.5
             
             // update the end angle of the segment
             let endAngle = startAngle + 2.0 * CGFloat.pi * parameters.value

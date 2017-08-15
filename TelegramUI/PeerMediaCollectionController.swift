@@ -44,11 +44,13 @@ public class PeerMediaCollectionController: ViewController {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.interfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(.clear))
         
-        self.titleView = PeerMediaCollectionTitleView(mediaCollectionInterfaceState: self.interfaceState, toggle: { [weak self] in
+        self.title = self.presentationData.strings.SharedMedia_TitleAll
+        
+        /*self.titleView = PeerMediaCollectionTitleView(mediaCollectionInterfaceState: self.interfaceState, toggle: { [weak self] in
             self?.updateInterfaceState { $0.withToggledSelectingMode() }
-        })
+        })*/
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -206,7 +208,7 @@ public class PeerMediaCollectionController: ViewController {
             }, callPeer: { _ in
             }, longTap: { _ in
             }, openCheckoutOrReceipt: { _ in
-            })
+            }, automaticMediaDownloadSettings: .none)
         
         self.controllerInteraction = controllerInteraction
         
@@ -325,6 +327,8 @@ public class PeerMediaCollectionController: ViewController {
         }, reportPeer: {
         }, dismissReportPeer: {
         }, deleteChat: {
+        }, beginCall: {
+        }, toggleMessageStickerStarred: { _ in
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

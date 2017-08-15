@@ -5,12 +5,33 @@ import Display
 import UIKit
 import SwiftSignalKit
 
-func contextMenuForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, message: Message, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ContextMenuController? {
+private struct MessageContextMenuData {
+    let starStatus: Bool?
+    let canReply: Bool
+    let canPin: Bool
+    let canEdit: Bool
+}
+
+private let starIconEmpty = UIImage(bundleImageName: "Chat/Context Menu/StarIconEmpty")?.precomposed()
+private let starIconFilled = UIImage(bundleImageName: "Chat/Context Menu/StarIconFilled")?.precomposed()
+
+func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, message: Message, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<ContextMenuController?, NoError> {
     guard let peer = chatPresentationInterfaceState.peer, let interfaceInteraction = interfaceInteraction else {
-        return nil
+        return .single(nil)
     }
     
-    var actions: [ContextMenuAction] = []
+    let dataSignal: Signal<MessageContextMenuData, NoError>
+    
+    var loadStickerSaveStatus: MediaId?
+    for media in message.media {
+        if let file = media as? TelegramMediaFile {
+            for attribute in file.attributes {
+                if case let .Sticker(_, packInfo, _) = attribute, packInfo != nil {
+                    loadStickerSaveStatus = file.fileId
+                }
+            }
+        }
+    }
     
     var canReply = false
     var canPin = false
@@ -44,57 +65,83 @@ func contextMenuForChatPresentationIntefaceState(_ chatPresentationInterfaceStat
         }
     }
     
-    if canReply {
-        actions.append(ContextMenuAction(content: .text("Reply"), action: {
-            interfaceInteraction.setupReplyMessage(message.id)
-        }))
-    }
-    
-    if canEdit {
-        actions.append(ContextMenuAction(content: .text("Edit"), action: {
-            interfaceInteraction.setupEditMessage(message.id)
-        }))
-    }
-    
-    actions.append(ContextMenuAction(content: .text("Copy"), action: {
-        if !message.text.isEmpty {
-            UIPasteboard.general.string = message.text
+    if loadStickerSaveStatus != nil {
+        dataSignal = account.postbox.modify { modifier -> MessageContextMenuData in
+            var starStatus: Bool?
+            if let loadStickerSaveStatus = loadStickerSaveStatus {
+                if getIsStickerSaved(modifier: modifier, fileId: loadStickerSaveStatus) {
+                    starStatus = true
+                } else {
+                    starStatus = false
+                }
+            }
+            
+            return MessageContextMenuData(starStatus: starStatus, canReply: canReply, canPin: canPin, canEdit: canEdit)
         }
-    }))
+    } else {
+        dataSignal = .single(MessageContextMenuData(starStatus: nil, canReply: canReply, canPin: canPin, canEdit: canEdit))
+    }
     
-    if canPin {
-        if chatPresentationInterfaceState.pinnedMessageId != message.id {
-            actions.append(ContextMenuAction(content: .text("Pin"), action: {
-                interfaceInteraction.pinMessage(message.id)
-            }))
-        } else {
-            actions.append(ContextMenuAction(content: .text("Unpin"), action: {
-                interfaceInteraction.unpinMessage()
+    return dataSignal |> deliverOnMainQueue |> map { data -> ContextMenuController? in
+        var actions: [ContextMenuAction] = []
+        
+        if let starStatus = data.starStatus, let image = starStatus ? starIconFilled : starIconEmpty {
+            actions.append(ContextMenuAction(content: .icon(image), action: {
+                interfaceInteraction.toggleMessageStickerStarred(message.id)
             }))
         }
-    }
-    
-    for media in message.media {
-        if let file = media as? TelegramMediaFile {
-            if file.isVideo && file.isAnimated {
-                actions.append(ContextMenuAction(content: .text("Save"), action: {
-                    let _ = addSavedGif(postbox: account.postbox, file: file).start()
+        
+        if data.canReply {
+            actions.append(ContextMenuAction(content: .text("Reply"), action: {
+                interfaceInteraction.setupReplyMessage(message.id)
+            }))
+        }
+        
+        if data.canEdit {
+            actions.append(ContextMenuAction(content: .text("Edit"), action: {
+                interfaceInteraction.setupEditMessage(message.id)
+            }))
+        }
+        
+        actions.append(ContextMenuAction(content: .text("Copy"), action: {
+            if !message.text.isEmpty {
+                UIPasteboard.general.string = message.text
+            }
+        }))
+        
+        if data.canPin {
+            if chatPresentationInterfaceState.pinnedMessageId != message.id {
+                actions.append(ContextMenuAction(content: .text("Pin"), action: {
+                    interfaceInteraction.pinMessage(message.id)
                 }))
-                break
+            } else {
+                actions.append(ContextMenuAction(content: .text("Unpin"), action: {
+                    interfaceInteraction.unpinMessage()
+                }))
             }
         }
-    }
-    
-    actions.append(ContextMenuAction(content: .text("More..."), action: {
-        interfaceInteraction.beginMessageSelection(message.id)
-    }))
-
-    
-    if !actions.isEmpty {
-        let contextMenuController = ContextMenuController(actions: actions)
-        return contextMenuController
-    } else {
-        return nil
+        
+        for media in message.media {
+            if let file = media as? TelegramMediaFile {
+                if file.isVideo && file.isAnimated {
+                    actions.append(ContextMenuAction(content: .text("Save"), action: {
+                        let _ = addSavedGif(postbox: account.postbox, file: file).start()
+                    }))
+                    break
+                }
+            }
+        }
+        
+        actions.append(ContextMenuAction(content: .text("More..."), action: {
+            interfaceInteraction.beginMessageSelection(message.id)
+        }))
+        
+        if !actions.isEmpty {
+            let contextMenuController = ContextMenuController(actions: actions)
+            return contextMenuController
+        } else {
+            return nil
+        }
     }
 }
 

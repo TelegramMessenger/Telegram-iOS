@@ -13,12 +13,15 @@ private func mediaIsNotMergeable(_ media: Media) -> Bool {
     if let _ = media as? TelegramMediaAction {
         return true
     }
+    if let _ = media as? TelegramMediaExpiredContent {
+        return true
+    }
     
     return false
 }
 
 private func messagesShouldBeMerged(_ lhs: Message, _ rhs: Message) -> Bool {
-    if abs(lhs.timestamp - rhs.timestamp) < 5 * 60 && lhs.author?.id == rhs.author?.id {
+    if abs(lhs.timestamp - rhs.timestamp) < Int32(5 * 60) && lhs.author?.id == rhs.author?.id {
         for media in lhs.media {
             if mediaIsNotMergeable(media) {
                 return false

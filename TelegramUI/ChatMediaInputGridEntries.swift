@@ -27,7 +27,7 @@ struct ChatMediaInputGridEntry: Comparable, Identifiable {
     }
     
     static func ==(lhs: ChatMediaInputGridEntry, rhs: ChatMediaInputGridEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.stickerItem == rhs.stickerItem && lhs.theme === rhs.theme
+        return lhs.index == rhs.index && lhs.stickerItem == rhs.stickerItem && lhs.stickerPackInfo?.id == rhs.stickerPackInfo?.id && lhs.theme === rhs.theme
     }
     
     static func <(lhs: ChatMediaInputGridEntry, rhs: ChatMediaInputGridEntry) -> Bool {

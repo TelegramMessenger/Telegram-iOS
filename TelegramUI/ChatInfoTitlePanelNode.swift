@@ -9,6 +9,8 @@ private enum ChatInfoTitleButton {
     case info
     case mute
     case unmute
+    case call
+    case report
     
     func title(_ strings: PresentationStrings) -> String {
         switch self {
@@ -20,15 +22,79 @@ private enum ChatInfoTitleButton {
                 return strings.Conversation_Mute
             case .unmute:
                 return strings.Conversation_Unmute
+            case .call:
+                return strings.Conversation_Call
+            case .report:
+                return strings.ReportPeer_Report
+        }
+    }
+    
+    func icon(_ theme: PresentationTheme) -> UIImage? {
+        switch self {
+            case .search:
+                return PresentationResourcesChat.chatTitlePanelSearchImage(theme)
+            case .info:
+                return PresentationResourcesChat.chatTitlePanelInfoImage(theme)
+            case .mute:
+                return PresentationResourcesChat.chatTitlePanelMuteImage(theme)
+            case .unmute:
+                return PresentationResourcesChat.chatTitlePanelUnmuteImage(theme)
+            case .call:
+                return PresentationResourcesChat.chatTitlePanelCallImage(theme)
+            case .report:
+                return PresentationResourcesChat.chatTitlePanelReportImage(theme)
         }
     }
 }
 
-private func peerButtons(_ peer: Peer) -> [ChatInfoTitleButton] {
-    if let _ = peer as? TelegramUser {
-        return [.search, .info]
+private func peerButtons(_ peer: Peer, isMuted: Bool) -> [ChatInfoTitleButton] {
+    let muteAction: ChatInfoTitleButton
+    if isMuted {
+        muteAction = .unmute
     } else {
-        return [.search, .mute]
+        muteAction = .mute
+    }
+    
+    if let _ = peer as? TelegramUser {
+        return [.search, muteAction, .call, .info]
+    } else if let channel = peer as? TelegramChannel {
+        if channel.flags.contains(.isCreator) {
+            return [.search, muteAction, .info]
+        } else {
+            return [.search, .report, muteAction, .info]
+        }
+    } else if let group = peer as? TelegramGroup {
+        if case .creator = group.role {
+            return [.search, muteAction, .info]
+        } else {
+            return [.search, .report, muteAction, .info]
+        }
+    } else {
+        return [.search, muteAction, .info]
+    }
+}
+
+private let buttonFont = Font.regular(10.0)
+
+private final class ChatInfoTitlePanelButtonNode: HighlightableButtonNode {
+    override init() {
+        super.init()
+        
+        self.displaysAsynchronously = false
+        self.imageNode.displayWithoutProcessing = true
+        self.imageNode.displaysAsynchronously = false
+        
+        self.titleNode.displaysAsynchronously = false
+        
+        self.laysOutHorizontally = false
+    }
+    
+    func setup(text: String, color: UIColor, icon: UIImage?) {
+        self.setTitle(text, with: buttonFont, with: color, for: [])
+        self.setImage(icon, for: [])
+        if let icon = icon {
+            self.contentSpacing = max(0.0, 32.0 - icon.size.height)
+        }
     }
 }
 
@@ -36,7 +102,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var theme: PresentationTheme?
     
     private let separatorNode: ASDisplayNode
-    private var buttons: [(ChatInfoTitleButton, UIButton)] = []
+    private var buttons: [(ChatInfoTitleButton, ChatInfoTitlePanelButtonNode)] = []
     
     override init() {
         self.separatorNode = ASDisplayNode()
@@ -51,7 +117,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         let themeUpdated = self.theme !== interfaceState.theme
         self.theme = interfaceState.theme
         
-        let panelHeight: CGFloat = 44.0
+        let panelHeight: CGFloat = 55.0
         
         if themeUpdated {
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
@@ -60,7 +126,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let updatedButtons: [ChatInfoTitleButton]
         if let peer = interfaceState.peer {
-            updatedButtons = peerButtons(peer)
+            updatedButtons = peerButtons(peer, isMuted: interfaceState.peerIsMuted)
         } else {
             updatedButtons = []
         }
@@ -78,27 +144,27 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         if buttonsUpdated || themeUpdated {
-            for (_, view) in self.buttons {
-                view.removeFromSuperview()
+            for (_, buttonNode) in self.buttons {
+                buttonNode.removeFromSupernode()
             }
             self.buttons.removeAll()
             for button in updatedButtons {
-                let view = UIButton()
-                view.setTitle(button.title(interfaceState.strings), for: [])
-                view.titleLabel?.font = Font.regular(17.0)
-                view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor, for: [])
-                view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7), for: [.highlighted])
-                view.addTarget(self, action: #selector(self.buttonPressed(_:)), for: [.touchUpInside])
-                self.view.addSubview(view)
-                self.buttons.append((button, view))
+                let buttonNode = ChatInfoTitlePanelButtonNode()
+                buttonNode.laysOutHorizontally = false
+                
+                buttonNode.setup(text: button.title(interfaceState.strings), color: interfaceState.theme.rootController.navigationBar.accentTextColor, icon: button.icon(interfaceState.theme))
+                
+                buttonNode.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: [.touchUpInside])
+                self.addSubnode(buttonNode)
+                self.buttons.append((button, buttonNode))
             }
         }
         
         if !self.buttons.isEmpty {
             let buttonWidth = floor(width / CGFloat(self.buttons.count))
             var nextButtonOrigin: CGFloat = 0.0
-            for (_, view) in self.buttons {
-                view.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
+            for (_, buttonNode) in self.buttons {
+                buttonNode.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
                 nextButtonOrigin += buttonWidth
             }
         }
@@ -108,9 +174,9 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         return panelHeight
     }
     
-    @objc func buttonPressed(_ view: UIButton) {
-        for (button, buttonView) in self.buttons {
-            if buttonView === view {
+    @objc func buttonPressed(_ node: HighlightableButtonNode) {
+        for (button, buttonNode) in self.buttons {
+            if buttonNode === node {
                 switch button {
                     case .info:
                         self.interfaceInteraction?.openPeerInfo()
@@ -120,6 +186,10 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.togglePeerNotifications()
                     case .search:
                         self.interfaceInteraction?.beginMessageSearch()
+                    case .call:
+                        self.interfaceInteraction?.beginCall()
+                    case .report:
+                        self.interfaceInteraction?.reportPeer()
                 }
                 break
             }

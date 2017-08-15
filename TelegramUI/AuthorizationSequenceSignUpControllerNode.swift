@@ -73,9 +73,11 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "add\nphoto", font: Font.regular(16.0), textColor: UIColor(rgb: 0xbcbcc3), paragraphAlignment: .center), for: .normal)
         self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: UIColor(rgb: 0xbcbcc3)), for: .normal)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = UIColor.white
         

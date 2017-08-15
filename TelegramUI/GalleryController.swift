@@ -10,18 +10,18 @@ private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {
         switch media {
             case _ as TelegramMediaImage:
-                return .PhotoOrVideo
+                return .photoOrVideo
             case let file as TelegramMediaFile:
                 if file.isVideo {
                     if !file.isAnimated {
-                        return .PhotoOrVideo
+                        return .photoOrVideo
                     }
                 } else if file.isVoice {
-                    return .VoiceOrInstantVideo
+                    return .voiceOrInstantVideo
                 } else if file.isSticker {
                     return nil
                 } else {
-                    return .File
+                    return .file
                 }
             default:
                 break

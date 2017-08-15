@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import TelegramCore
 
 public struct AutomaticMediaDownloadCategoryPeers: Coding, Equatable {
     public let privateChats: Bool
@@ -45,6 +46,38 @@ public struct AutomaticMediaDownloadCategories: Coding, Equatable {
     public let voice: AutomaticMediaDownloadCategoryPeers
     public let instantVideo: AutomaticMediaDownloadCategoryPeers
     public let gif: AutomaticMediaDownloadCategoryPeers
+    
+    public func getPhoto(_ peerId: PeerId) -> Bool {
+        if peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudUser {
+            return self.photo.privateChats
+        } else {
+            return self.photo.groupsAndChannels
+        }
+    }
+    
+    public func getVoice(_ peerId: PeerId) -> Bool {
+        if peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudUser {
+            return self.voice.privateChats
+        } else {
+            return self.voice.groupsAndChannels
+        }
+    }
+    
+    public func getInstantVideo(_ peerId: PeerId) -> Bool {
+        if peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudUser {
+            return self.instantVideo.privateChats
+        } else {
+            return self.instantVideo.groupsAndChannels
+        }
+    }
+    
+    public func getGif(_ peerId: PeerId) -> Bool {
+        if peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudUser {
+            return self.gif.privateChats
+        } else {
+            return self.gif.groupsAndChannels
+        }
+    }
     
     public init(photo: AutomaticMediaDownloadCategoryPeers, voice: AutomaticMediaDownloadCategoryPeers, instantVideo: AutomaticMediaDownloadCategoryPeers, gif: AutomaticMediaDownloadCategoryPeers) {
         self.photo = photo
@@ -108,6 +141,10 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
         return AutomaticMediaDownloadSettings(categories: AutomaticMediaDownloadCategories(photo: AutomaticMediaDownloadCategoryPeers(privateChats: true, groupsAndChannels: true), voice: AutomaticMediaDownloadCategoryPeers(privateChats: true, groupsAndChannels: true), instantVideo: AutomaticMediaDownloadCategoryPeers(privateChats: true, groupsAndChannels: true), gif: AutomaticMediaDownloadCategoryPeers(privateChats: true, groupsAndChannels: true)), saveIncomingPhotos: false)
     }
     
+    public static var none: AutomaticMediaDownloadSettings {
+        return AutomaticMediaDownloadSettings(categories: AutomaticMediaDownloadCategories(photo: AutomaticMediaDownloadCategoryPeers(privateChats: false, groupsAndChannels: false), voice: AutomaticMediaDownloadCategoryPeers(privateChats: false, groupsAndChannels: false), instantVideo: AutomaticMediaDownloadCategoryPeers(privateChats: false, groupsAndChannels: false), gif: AutomaticMediaDownloadCategoryPeers(privateChats: false, groupsAndChannels: false)), saveIncomingPhotos: false)
+    }
+    
     init(categories: AutomaticMediaDownloadCategories, saveIncomingPhotos: Bool) {
         self.categories = categories
         self.saveIncomingPhotos = saveIncomingPhotos
@@ -142,6 +179,19 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     func withUpdatedSaveIncomingPhotos(_ saveIncomingPhotos: Bool) -> AutomaticMediaDownloadSettings {
         return AutomaticMediaDownloadSettings(categories: self.categories, saveIncomingPhotos: saveIncomingPhotos)
     }
+}
+
+public func currentAutomaticMediaDownloadSettings(postbox: Postbox) -> Signal<AutomaticMediaDownloadSettings, NoError> {
+    return postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])
+        |> map { view -> AutomaticMediaDownloadSettings in
+            let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+            if let value = view.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+                automaticMediaDownloadSettings = value
+            } else {
+                automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+            }
+            return automaticMediaDownloadSettings
+        }
 }
 
 func updateMediaDownloadSettingsInteractively(postbox: Postbox, _ f: @escaping (AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadSettings) -> Signal<Void, NoError> {

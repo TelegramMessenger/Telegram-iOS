@@ -121,9 +121,11 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         self.listNode = ListView()
         self.scrollNode = ASScrollNode()
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = nil
         self.isOpaque = false

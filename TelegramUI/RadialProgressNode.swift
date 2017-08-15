@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
-import TelegramLegacyComponents
+import LegacyComponents
 
 private class RadialProgressParameters: NSObject {
     let theme: RadialProgressTheme
@@ -95,7 +95,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
         return RadialProgressOverlayParameters(theme: self.theme, diameter: self.frame.size.width, state: updatedState)
     }
     
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -114,7 +114,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
                     break
                 case let .Fetching(progress):
                     let startAngle = -CGFloat.pi / 2.0
-                    let endAngle = 2.0 * (CGFloat.pi / 2.0) * CGFloat(progress) - CGFloat(M_PI_2)
+                    let endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
                     
                     let pathDiameter = parameters.diameter - 2.25 - 2.5 * 2.0
                     
@@ -274,7 +274,7 @@ class RadialProgressNode: ASControlNode {
         return RadialProgressParameters(theme: self.theme, diameter: self.frame.size.width, state: self.state)
     }
     
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {

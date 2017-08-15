@@ -1,6 +1,6 @@
 import Foundation
 import Display
-import TelegramLegacyComponents
+import LegacyComponents
 
 public enum LegacyControllerPresentation {
     case custom
@@ -20,7 +20,46 @@ private func passControllerAppearanceAnimated(in: Bool, presentation: LegacyCont
     }
 }
 
-private final class LegacyControllerApplicationInterface: NSObject, TGLegacyApplicationInterface {
+private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyComponentsOverlayWindowManager {
+    private weak var contentController: UIViewController?
+    private weak var parentController: ViewController?
+    private var controller: LegacyController?
+    private var boundController = false
+    
+    init(parentController: ViewController?) {
+        self.parentController = parentController
+        self.controller = LegacyController(presentation: .custom)
+        
+        super.init()
+    }
+    
+    func managesWindow() -> Bool {
+        return true
+    }
+    
+    func bindController(_ controller: UIViewController!) {
+        self.contentController = controller
+    }
+    
+    func context() -> LegacyComponentsContext! {
+        return self.controller?.context
+    }
+    
+    func setHidden(_ hidden: Bool, window: UIWindow!) {
+        if hidden {
+            self.controller?.dismiss()
+            self.controller = nil
+        } else if let contentController = self.contentController, let parentController = self.parentController, let controller = self.controller {
+            if !self.boundController {
+                controller.bind(controller: contentController)
+                self.boundController = true
+            }
+            parentController.present(controller, in: .window(.root))
+        }
+    }
+}
+
+final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     private weak var controller: ViewController?
     
     init(controller: ViewController?) {
@@ -29,14 +68,38 @@ private final class LegacyControllerApplicationInterface: NSObject, TGLegacyAppl
         super.init()
     }
     
-    @available(iOS 8.0, *)
-    public func currentSizeClass() -> UIUserInterfaceSizeClass {
-        return .compact
+    public func fullscreenBounds() -> CGRect {
+        if let controller = self.controller {
+            return controller.view.bounds
+        } else {
+            return CGRect()
+        }
     }
     
-    @available(iOS 8.0, *)
-    public func currentHorizontalSizeClass() -> UIUserInterfaceSizeClass {
-        return .compact
+    public func keyCommandController() -> TGKeyCommandController! {
+        return nil
+    }
+    
+    public func rootCallStatusBarHidden() -> Bool {
+        return true
+    }
+    
+    public func statusBarFrame() -> CGRect {
+        return legacyComponentsApplication!.statusBarFrame
+    }
+    
+    public func isStatusBarHidden() -> Bool {
+        if let controller = self.controller {
+            return controller.statusBar.isHidden
+        } else {
+            return true
+        }
+    }
+    
+    public func setStatusBarHidden(_ hidden: Bool, with animation: UIStatusBarAnimation) {
+        if let controller = self.controller {
+            controller.statusBar.isHidden = hidden
+        }
     }
     
     public func forceSetStatusBarHidden(_ hidden: Bool, with animation: UIStatusBarAnimation) {
@@ -45,81 +108,136 @@ private final class LegacyControllerApplicationInterface: NSObject, TGLegacyAppl
         }
     }
     
-    public func applicationBounds() -> CGRect {
-        if let controller = controller {
-            return controller.view.bounds;
+    public func statusBarStyle() -> UIStatusBarStyle {
+        if let controller = self.controller {
+            switch controller.statusBar.statusBarStyle {
+                case .Black:
+                    return .default
+                case .White:
+                    return .lightContent
+                default:
+                    return .default
+            }
         } else {
-            return CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 320.0, height: 480.0))
+            return .default
         }
     }
     
-    public func applicationStatusBarAlpha() -> CGFloat {
-        return controller?.statusBar.alpha ?? 1.0
+    public func setStatusBarStyle(_ statusBarStyle: UIStatusBarStyle, animated: Bool) {
+        if let controller = self.controller {
+            switch statusBarStyle {
+                case .default:
+                    controller.statusBar.statusBarStyle = .Black
+                case .lightContent:
+                    controller.statusBar.statusBarStyle = .White
+                default:
+                    controller.statusBar.statusBarStyle = .Black
+            }
+        }
     }
     
-    public func setApplicationStatusBarAlpha(_ alpha: CGFloat) {
-        controller?.statusBar.alpha = alpha
+    public func forceStatusBarAppearanceUpdate() {
     }
     
-    public func applicationStatusBarOffset() -> CGFloat {
+    public func currentlyInSplitView() -> Bool {
+        return false
+    }
+    
+    public func currentSizeClass() -> UIUserInterfaceSizeClass {
+        return .compact
+    }
+    
+    public func currentHorizontalSizeClass() -> UIUserInterfaceSizeClass {
+        return .compact
+    }
+    
+    public func currentVerticalSizeClass() -> UIUserInterfaceSizeClass {
+        return .compact
+    }
+    
+    public func sizeClassSignal() -> SSignal! {
+        return SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber)
+    }
+    
+    public func canOpen(_ url: URL!) -> Bool {
+        return false
+    }
+    
+    public func open(_ url: URL!) {
+    }
+    
+    public func serverMediaData(forAssetUrl url: String!) -> [AnyHashable : Any]! {
+        return nil
+    }
+    
+    public func presentActionSheet(_ actions: [LegacyComponentsActionSheetAction]!, view: UIView!, completion: ((LegacyComponentsActionSheetAction?) -> Swift.Void)!) {
+    }
+    
+    func makeOverlayWindowManager() -> LegacyComponentsOverlayWindowManager! {
+        return LegacyComponentsOverlayWindowManagerImpl(parentController: self.controller)
+    }
+    
+    func applicationStatusBarAlpha() -> CGFloat {
+        if let controller = self.controller {
+            return controller.statusBar.alpha
+        }
         return 0.0
     }
     
-    public func setApplicationStatusBarOffset(_ offset: CGFloat) {
-        
-    }
-    
-    public func animateApplicationStatusBarAppearance(_ statusBarAnimation: Int32, delay: TimeInterval, duration: TimeInterval, completion: (() -> Swift.Void)!) {
-        if let completion = completion {
-            completion()
+    func setApplicationStatusBarAlpha(_ alpha: CGFloat) {
+        if let controller = self.controller {
+            controller.statusBar.alpha = alpha
         }
     }
-    
-    public func animateApplicationStatusBarAppearance(_ statusBarAnimation: Int32, duration: TimeInterval, completion: (() -> Swift.Void)!) {
-        if let completion = completion {
-            completion()
-        }
+
+    func animateApplicationStatusBarAppearance(_ statusBarAnimation: Int32, delay: TimeInterval, duration: TimeInterval, completion: (() -> Void)!) {
+        completion?()
     }
     
-    public func animateApplicationStatusBarStyleTransition(withDuration duration: TimeInterval) {
-        
+    func animateApplicationStatusBarAppearance(_ statusBarAnimation: Int32, duration: TimeInterval, completion: (() -> Void)!) {
+        self.animateApplicationStatusBarAppearance(statusBarAnimation, delay: 0.0, duration: duration, completion: completion)
     }
     
-    public func makeOverlayControllerWindow(_ parentController: TGViewController!, contentController: TGOverlayController!, keepKeyboard: Bool) -> TGOverlayControllerWindow! {
-        return LegacyOverlayWindowHost(presentInWindow: { [weak self] c in
-            self?.controller?.present(c, in: .window(.root))
-        }, parentController: parentController, contentController: contentController, keepKeyboard: keepKeyboard)
+    func animateApplicationStatusBarStyleTransition(withDuration duration: TimeInterval) {
     }
 }
 
 public class LegacyController: ViewController {
-    private let legacyController: UIViewController
+    private var legacyController: UIViewController!
     private let presentation: LegacyControllerPresentation
     
     private var controllerNode: LegacyControllerNode {
         return self.displayNode as! LegacyControllerNode
     }
     
-    var applicationInterface: TGLegacyApplicationInterface {
-        return LegacyControllerApplicationInterface(controller: self)
+    private var contextImpl: LegacyControllerContext!
+    public var context: LegacyComponentsContext {
+        return self.contextImpl!
     }
     
     var controllerLoaded: (() -> Void)?
     public var presentationCompleted: (() -> Void)?
     
-    public init(legacyController: UIViewController, presentation: LegacyControllerPresentation) {
-        self.legacyController = legacyController
+    public init(presentation: LegacyControllerPresentation) {
         self.presentation = presentation
         
         super.init(navigationBarTheme: nil)
         
-        if let legacyController = legacyController as? TGLegacyApplicationInterfaceHolder {
-            legacyController.applicationInterface = self.applicationInterface
-        }
+        let contextImpl = LegacyControllerContext(controller: self)
+        self.contextImpl = contextImpl
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public func bind(controller: UIViewController) {
+        self.legacyController = controller
+        if let controller = controller as? TGViewController {
+            controller.customRemoveFromParentViewController = { [weak self] in
+                self?.dismiss()
+            }
+        }
     }
     
     override public func loadDisplayNode() {
@@ -181,19 +299,25 @@ public class LegacyController: ViewController {
             case .modal:
                 self.controllerNode.animateModalOut { [weak self] in
                     if let controller = self?.legacyController as? TGViewController {
-                        controller.didDismiss()
+                        //controller.didDismiss()
                     } else if let controller = self?.legacyController as? TGNavigationController {
-                        controller.didDismiss()
+                        //controller.didDismiss()
                     }
                     self?.presentingViewController?.dismiss(animated: false, completion: completion)
                 }
             case .custom:
                 if let controller = self.legacyController as? TGViewController {
-                    controller.didDismiss()
+                    //controller.didDismiss()
                 } else if let controller = self.legacyController as? TGNavigationController {
-                    controller.didDismiss()
+                    //controller.didDismiss()
                 }
                 self.presentingViewController?.dismiss(animated: false, completion: completion)
+        }
+    }
+    
+    func dismissWithAnimation() {
+        self.controllerNode.animateModalOut { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
     }
 }

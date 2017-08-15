@@ -79,6 +79,9 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func updateHiddenMedia(_ media: [Media]?) {
     }
     
+    func updateAutomaticMediaDownloadSettings(_ settings: AutomaticMediaDownloadSettings) {
+    }
+    
     func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
         return .none
     }

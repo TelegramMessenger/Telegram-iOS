@@ -55,8 +55,14 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
                 configuration.userContentController = userController
                 
                 webView = WKWebView(frame: CGRect(), configuration: configuration)
+                if #available(iOSApplicationExtension 9.0, *) {
+                    webView.allowsLinkPreview = false
+                }
             case .externalVerification:
                 webView = WKWebView()
+                if #available(iOSApplicationExtension 9.0, *) {
+                    webView.allowsLinkPreview = false
+                }
                 webView.navigationDelegate = self
         }
         self.webView = webView

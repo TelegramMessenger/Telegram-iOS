@@ -34,9 +34,11 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
     private var draggingStartPosition = CGPoint()
     
     override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return OverlayMediaControllerNodeView()
-        }, didLoad: nil)
+        })
         
         (self.view as! OverlayMediaControllerNodeView).hitTestImpl = { [weak self] point, event in
             return self?.hitTest(point, with: event)
@@ -321,7 +323,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                     let nodeSize = draggingNode.preferredSizeForOverlayDisplay()
                     let previousFrame = draggingNode.frame
                     
-                    let (updatedLocation, shouldDismiss) = self.nodeLocationForPosition(layout: validLayout, position: previousFrame.origin, velocity: recognizer.velocity(in: self.view), size: nodeSize, tempExtendedTopInset: draggingNode.tempExtendedTopInset)
+                    let (updatedLocation, shouldDismiss) = self.nodeLocationForPosition(layout: validLayout, position: CGPoint(x: previousFrame.midX, y: previousFrame.midY), velocity: recognizer.velocity(in: self.view), size: nodeSize, tempExtendedTopInset: draggingNode.tempExtendedTopInset)
                     
                     if shouldDismiss && draggingNode.isMinimizeable {
                         draggingNode.updateMinimizedEdge(updatedLocation.x.isZero ? .left : .right, adjusting: false)

@@ -2,7 +2,7 @@ import Foundation
 import TelegramCore
 
 func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
-    guard let inputQueryResult = chatPresentationInterfaceState.inputQueryResult, let peer = chatPresentationInterfaceState.peer else {
+    guard let inputQueryResult = chatPresentationInterfaceState.inputQueryResult, let _ = chatPresentationInterfaceState.peer else {
         return nil
     }
     

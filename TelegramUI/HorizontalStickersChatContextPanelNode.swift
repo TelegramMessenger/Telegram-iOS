@@ -73,7 +73,7 @@ private func preparedGridEntryTransition(account: Account, from fromEntries: [St
     
     let deletions = deleteIndices
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction)) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction)) }
     
     return StickerEntryTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
@@ -151,7 +151,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     private func dequeueTransitions() {
         while !self.queuedTransitions.isEmpty {
             let transition = self.queuedTransitions.removeFirst()
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
         }
     }
     
@@ -183,7 +183,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         self.gridNode.bounds = CGRect(x: gridBounds.minX, y: gridBounds.minY, width: gridFrame.size.height, height: gridFrame.size.width)
         self.gridNode.position = CGPoint(x: gridFrame.size.width / 2.0, y: gridFrame.size.height / 2.0)
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: CGSize(width: gridFrame.size.height, height: gridFrame.size.width), insets: UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0), preloadSize: 100.0, type: .fixed(itemSize: CGSize(width: 66.0, height: 66.0), lineSpacing: 0.0)), transition: .immediate), stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: CGSize(width: gridFrame.size.height, height: gridFrame.size.width), insets: UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0), preloadSize: 100.0, type: .fixed(itemSize: CGSize(width: 66.0, height: 66.0), lineSpacing: 0.0)), transition: .immediate), itemTransition: .immediate, stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         let dequeue = self.validLayout == nil
         self.validLayout = (size, interfaceState)

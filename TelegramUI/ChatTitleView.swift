@@ -4,7 +4,7 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
-import TelegramLegacyComponents
+import LegacyComponents
 
 final class ChatTitleView: UIView {
     private var theme: PresentationTheme
@@ -59,7 +59,7 @@ final class ChatTitleView: UIView {
                 }
                 if self.typingIndicator == nil {
                     let typingIndicator = TGModernConversationTitleActivityIndicator()
-                    typingIndicator.setColor(self.theme.rootController.navigationBar.accentTextColor)
+                    //typingIndicator.setColor(self.theme.rootController.navigationBar.accentTextColor)
                     self.addSubview(typingIndicator)
                     self.typingIndicator = typingIndicator
                 }

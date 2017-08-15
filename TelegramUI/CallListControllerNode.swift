@@ -179,9 +179,11 @@ final class CallListControllerNode: ASDisplayNode {
         
         self.listNode = ListView()
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.addSubnode(self.listNode)
         

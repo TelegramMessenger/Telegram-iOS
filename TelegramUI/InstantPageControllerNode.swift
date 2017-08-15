@@ -8,8 +8,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var webPage: TelegramMediaWebpage?
     
+    
     private var containerLayout: ContainerViewLayout?
+    private let statusBar: StatusBar
+    private let navigationBar: InstantPageNavigationBar
     private let scrollNode: ASScrollNode
+    private let scrollNodeHeader: ASDisplayNode
     
     var currentLayout: InstantPageLayout?
     var currentLayoutTiles: [InstantPageTile] = []
@@ -24,17 +28,25 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var previousContentOffset: CGPoint?
     var isDeceleratingBecauseOfDragging = false
     
-    init(account: Account) {
+    init(account: Account, strings: PresentationStrings, statusBar: StatusBar) {
         self.account = account
         
+        self.statusBar = statusBar
+        self.navigationBar = InstantPageNavigationBar(strings: strings)
         self.scrollNode = ASScrollNode()
+        self.scrollNodeHeader = ASDisplayNode()
+        self.scrollNodeHeader.backgroundColor = .black
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = .white
         self.addSubnode(self.scrollNode)
+        self.scrollNode.addSubnode(self.scrollNodeHeader)
+        self.addSubnode(self.navigationBar)
         self.scrollNode.view.delegate = self
     }
     
@@ -55,13 +67,16 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = layout
         
-        if self.scrollNode.bounds.size != layout.size {
+        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+        let scrollInsetTop = 44.0 + statusBarHeight
+        
+        if self.scrollNode.bounds.size != layout.size || !self.scrollNode.view.contentInset.top.isEqual(to: scrollInsetTop) {
             if !self.scrollNode.bounds.size.width.isEqual(to: layout.size.width) {
                 self.updateLayout()
             }
             self.scrollNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-            //_scrollViewHeader.frame = CGRectMake(0.0f, -2000.0f, bounds.size.width, 2000.0f);
-            //self.scrollView.contentInset = UIEdgeInsetsMake(_statusBarHeight + 44.0f, 0.0f, 0.0f, 0.0f);
+            self.scrollNodeHeader.frame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0), size: CGSize(width: layout.size.width, height: 2000.0))
+            self.scrollNode.view.contentInset = UIEdgeInsetsMake(scrollInsetTop, 0.0, 0.0, 0.0)
             if self.visibleItemsWithViews.isEmpty && self.visibleTiles.isEmpty {
                 self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: 0.0)
             }
@@ -282,6 +297,76 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func updateNavigationBar(forceState: Bool = false) {
+        let bounds = self.scrollNode.view.bounds
+        let contentOffset = self.scrollNode.view.contentOffset
         
+        let delta: CGFloat
+        if let previousContentOffset = self.previousContentOffset {
+            delta = contentOffset.y - previousContentOffset.y
+        } else {
+            delta = 0.0
+        }
+        self.previousContentOffset = contentOffset
+        
+        /*void (^block)(CGRect) = ^(CGRect navigationBarFrame) {
+            _navigationBar.frame = navigationBarFrame;
+            CGFloat navigationBarHeight = _navigationBar.bounds.size.height;
+            if (navigationBarHeight < FLT_EPSILON)
+            navigationBarHeight = 64.0f;
+            
+            CGFloat statusBarOffset = -MAX(0.0f, MIN(_statusBarHeight, _statusBarHeight + 44.0f - navigationBarHeight));
+            if (ABS(_statusBarOffset - statusBarOffset) > FLT_EPSILON) {
+                _statusBarOffset = statusBarOffset;
+                if (_statusBarOffsetUpdated) {
+                    _statusBarOffsetUpdated(statusBarOffset);
+                }
+                
+                _scrollView.scrollIndicatorInsets = UIEdgeInsetsMake(_navigationBar.bounds.size.height, 0.0f, 0.0f, 0.0f);
+            };
+        };*/
+        
+        var transition: ContainedViewLayoutTransition = .immediate
+        var navigationBarFrame = self.navigationBar.frame
+        navigationBarFrame.size.width = bounds.size.width
+        if navigationBarFrame.size.height.isZero {
+            navigationBarFrame.size.height = 64.0
+        }
+        if forceState {
+            transition = .animated(duration: 0.3, curve: .spring)
+            
+            if contentOffset.y <= -self.scrollNode.view.contentInset.top || CGFloat(32.0).isLess(than: navigationBarFrame.size.height) {
+                navigationBarFrame.size.height = 64.0
+            } else {
+                navigationBarFrame.size.height = 20.0
+            }
+        } else {
+            if contentOffset.y <= -self.scrollNode.view.contentInset.top {
+                navigationBarFrame.size.height = 64.0
+            } else {
+                navigationBarFrame.size.height -= delta
+            }
+            navigationBarFrame.size.height = max(20.0, min(64.0, navigationBarFrame.size.height))
+        }
+        
+        if navigationBarFrame.height.isEqual(to: 64.0) {
+            assert(true)
+        }
+        
+        let statusBarAlpha = min(1.0, max(0.0, (navigationBarFrame.size.height - 20.0) / 44.0))
+        transition.updateAlpha(node: self.statusBar, alpha: statusBarAlpha * statusBarAlpha)
+        self.statusBar.verticalOffset = navigationBarFrame.size.height - 64.0
+        
+        transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
+        self.navigationBar.updateLayout(size: navigationBarFrame.size, transition: transition)
+        
+        transition.animateView {
+            self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationBarFrame.size.height, left: 0.0, bottom: 0.0, right: 0.0)
+        }
+        
+        /*CGFloat progress = 0.0f;
+        if (_scrollView.contentSize.height > FLT_EPSILON) {
+            progress = MAX(0.0f, MIN(1.0f, (_scrollView.contentOffset.y + _scrollView.contentInset.top) / (_scrollView.contentSize.height - _scrollView.frame.size.height + _scrollView.contentInset.top)));
+        }
+        [_navigationBar setProgress:progress];*/
     }
 }

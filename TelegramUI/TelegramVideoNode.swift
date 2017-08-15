@@ -5,7 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-import TelegramLegacyComponents
+import LegacyComponents
 
 private func setupArrowFrame(size: CGSize, edge: OverlayMediaItemMinimizationEdge, view: TGEmbedPIPPullArrowView) {
     let arrowX: CGFloat

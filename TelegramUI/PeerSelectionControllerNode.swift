@@ -31,9 +31,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.chatListNode = ChatListNode(account: account, mode: .peers, theme: presentationData.theme, strings: presentationData.strings)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.addSubnode(self.chatListNode)
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData

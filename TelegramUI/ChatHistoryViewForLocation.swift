@@ -83,10 +83,19 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                     return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData))
                 }
             }
-        case let .InitialSearch(messageId, count):
+        case let .InitialSearch(searchLocation, count):
             var preloaded = false
             var fadeIn = false
-            return account.viewTracker.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            
+            let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
+            switch searchLocation {
+                case let .index(index):
+                    signal = account.viewTracker.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: index, fixedCombinedReadState: nil, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
+                case let .id(id):
+                    signal = account.viewTracker.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: id, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
+            }
+            
+            return signal |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 var cachedData: CachedPeerData?
                 for data in view.additionalData {
                     if case let .cachedPeerData(peerIdValue, value) = data, peerIdValue == peerId {
@@ -118,7 +127,6 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                     }
                     
                     preloaded = true
-                    //case Index(index: MessageIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
                     return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: .Index(index: anchorIndex, position: .Center(.Bottom), directionHint: .Down, animated: false), initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData))
                 }
             }

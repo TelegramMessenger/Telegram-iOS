@@ -15,6 +15,7 @@ class ChatListItem: ListViewItem {
     let peer: RenderedPeer
     let combinedReadState: CombinedPeerReadState?
     let notificationSettings: PeerNotificationSettings?
+    let summaryInfo: ChatListMessageTagSummaryInfo
     let embeddedState: PeerChatListEmbeddedInterfaceState?
     let editing: Bool
     let hasActiveRevealControls: Bool
@@ -24,7 +25,7 @@ class ChatListItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, index: ChatListIndex, message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedState: PeerChatListEmbeddedInterfaceState?, editing: Bool, hasActiveRevealControls: Bool, header: ListViewItemHeader?, interaction: ChatListNodeInteraction) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, index: ChatListIndex, message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, editing: Bool, hasActiveRevealControls: Bool, header: ListViewItemHeader?, interaction: ChatListNodeInteraction) {
         self.theme = theme
         self.strings = strings
         self.account = account
@@ -33,6 +34,7 @@ class ChatListItem: ListViewItem {
         self.peer = peer
         self.combinedReadState = combinedReadState
         self.notificationSettings = notificationSettings
+        self.summaryInfo = summaryInfo
         self.embeddedState = embeddedState
         self.editing = editing
         self.hasActiveRevealControls = hasActiveRevealControls
@@ -178,6 +180,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let separatorNode: ASDisplayNode
     let badgeBackgroundNode: ASImageNode
     let badgeTextNode: TextNode
+    let mentionBadgeNode: ASImageNode
     let mutedIconNode: ASImageNode
     
     var editableControlNode: ItemListEditableControlNode?
@@ -229,6 +232,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.badgeBackgroundNode.displaysAsynchronously = false
         self.badgeBackgroundNode.displayWithoutProcessing = true
         
+        self.mentionBadgeNode = ASImageNode()
+        self.mentionBadgeNode.isLayerBacked = true
+        self.mentionBadgeNode.displaysAsynchronously = false
+        self.mentionBadgeNode.displayWithoutProcessing = true
+        
         self.badgeTextNode = TextNode()
         self.badgeTextNode.isLayerBacked = true
         self.badgeTextNode.displaysAsynchronously = true
@@ -253,6 +261,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.dateNode)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.badgeBackgroundNode)
+        self.addSubnode(self.mentionBadgeNode)
         self.addSubnode(self.badgeTextNode)
         self.addSubnode(self.mutedIconNode)
     }
@@ -350,7 +359,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var statusImage: UIImage?
             var currentBadgeBackgroundImage: UIImage?
+            var currentMentionBadgeImage: UIImage?
             var currentMutedIconImage: UIImage?
+            
+            let tagSummaryCount = item.summaryInfo.tagSummaryCount ?? 0
+            let actionsSummaryCount = item.summaryInfo.actionsSummaryCount ?? 0
+            let totalMentionCount = tagSummaryCount - actionsSummaryCount
+            if totalMentionCount > 0 {
+                currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.theme)
+            }
             
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
             
@@ -414,7 +431,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                                     messageText = descriptionString
                                                     break inner
                                                 }
-                                            case let .Sticker(displayText, _):
+                                            case let .Sticker(displayText, _, _):
                                                 if displayText.isEmpty {
                                                     messageText = item.strings.Message_Sticker
                                                     break inner
@@ -569,11 +586,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let (badgeLayout, badgeApply) = badgeTextLayout(badgeAttributedString, nil, 1, .end, CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
-            let badgeSize: CGFloat
+            var badgeSize: CGFloat = 0.0
             if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
-                badgeSize = max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
-            } else {
-                badgeSize = 0.0
+                badgeSize += max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
+            }
+            if let currentMentionBadgeImage = currentMentionBadgeImage {
+                if !badgeSize.isZero {
+                    badgeSize += currentMentionBadgeImage.size.width + 4.0
+                } else {
+                    badgeSize += currentMentionBadgeImage.size.width + 5.0
+                }
             }
             
             let (authorLayout, authorApply) = authorLayout(hideAuthor ? nil : authorAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
@@ -658,19 +680,42 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.statusNode.isHidden = true
                     }
                     
+                    let badgeBackgroundWidth: CGFloat
                     if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
                         strongSelf.badgeBackgroundNode.image = currentBadgeBackgroundImage
                         strongSelf.badgeBackgroundNode.isHidden = false
                         
-                        let badgeBackgroundWidth = max(badgeLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
+                        badgeBackgroundWidth = max(badgeLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
                         let badgeBackgroundFrame = CGRect(x: contentRect.maxX - badgeBackgroundWidth, y: contentRect.maxY - currentBadgeBackgroundImage.size.height - 2.0, width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
                         let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 1.0), size: badgeLayout.size)
                         
                         strongSelf.badgeTextNode.frame = badgeTextFrame
                         strongSelf.badgeBackgroundNode.frame = badgeBackgroundFrame
                     } else {
+                        badgeBackgroundWidth = 0.0
                         strongSelf.badgeBackgroundNode.image = nil
                         strongSelf.badgeBackgroundNode.isHidden = true
+                    }
+                    
+                    if let currentMentionBadgeImage = currentMentionBadgeImage {
+                        strongSelf.mentionBadgeNode.image = currentMentionBadgeImage
+                        strongSelf.mentionBadgeNode.isHidden = false
+                        
+                        let mentionBadgeSize = currentMentionBadgeImage.size
+                        let mentionBadgeOffset: CGFloat
+                        if badgeBackgroundWidth.isZero {
+                            mentionBadgeOffset = contentRect.maxX - mentionBadgeSize.width
+                        } else {
+                            mentionBadgeOffset = contentRect.maxX - badgeBackgroundWidth - 6.0 - mentionBadgeSize.width
+                        }
+                        
+                        let badgeBackgroundWidth = mentionBadgeSize.width
+                        let badgeBackgroundFrame = CGRect(x: mentionBadgeOffset, y: contentRect.maxY - mentionBadgeSize.height - 2.0, width: badgeBackgroundWidth, height: mentionBadgeSize.height)
+                        
+                        strongSelf.mentionBadgeNode.frame = badgeBackgroundFrame
+                    } else {
+                        strongSelf.mentionBadgeNode.image = nil
+                        strongSelf.mentionBadgeNode.isHidden = true
                     }
                     
                     if let currentMutedIconImage = currentMutedIconImage {

@@ -32,6 +32,8 @@ final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
                         return file.resource
+                    } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let file = content.file {
+                        return file.resource
                     }
                 }
                 return nil
@@ -47,6 +49,10 @@ final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
                     if let file = media as? TelegramMediaFile {
                         if file.isMusic {
                             return true
+                        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let file = content.file {
+                            if file.isMusic {
+                                return true
+                            }
                         }
                     }
                 }
@@ -75,6 +81,24 @@ final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
                                     }
                                 default:
                                     break
+                            }
+                        }
+                        return nil
+                    } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let file = content.file {
+                        for attribute in file.attributes {
+                            switch attribute {
+                            case let .Audio(isVoice, duration, title, performer, _):
+                                if isVoice {
+                                    return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .voice)
+                                } else {
+                                    return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .music(title: title, performer: performer))
+                                }
+                            case let .Video(duration, _, flags):
+                                if flags.contains(.instantRoundVideo) {
+                                    return AudioPlaylistItemInfo(duration: Double(duration), labelInfo: .video)
+                                }
+                            default:
+                                break
                             }
                         }
                         return nil
@@ -131,14 +155,14 @@ func peerMessageHistoryAudioPlaylist(account: Account, messageId: MessageId) -> 
                                 switch attribute {
                                     case let .Video(_, _, flags):
                                         if flags.contains(.instantRoundVideo) {
-                                            tagMask = .VoiceOrInstantVideo
+                                            tagMask = .voiceOrInstantVideo
                                             break inner
                                         }
                                     case let .Audio(isVoice, _, _, _, _):
                                         if isVoice {
-                                            tagMask = .VoiceOrInstantVideo
+                                            tagMask = .voiceOrInstantVideo
                                         } else {
-                                            tagMask = .Music
+                                            tagMask = .music
                                         }
                                         break inner
                                     default:

@@ -12,10 +12,10 @@ struct NetworkStatusTitle: Equatable {
     }
 }
 
-final class NetworkStatusTitleView: UIView {
+final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
     private let titleNode: ASTextNode
     private let lockView: ChatListTitleLockView
-    private let activityIndicator: UIActivityIndicatorView
+    private let activityIndicator: ActivityIndicator
     private let buttonView: HighlightTrackingButton
     
     var title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false) {
@@ -24,11 +24,15 @@ final class NetworkStatusTitleView: UIView {
                 self.titleNode.attributedText = NSAttributedString(string: title.text, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 if self.title.activity != oldValue.activity {
                     if self.title.activity {
-                        self.activityIndicator.isHidden = false
-                        self.activityIndicator.startAnimating()
+                        if self.activityIndicator.layer.superlayer == nil {
+                            self.addSubnode(self.activityIndicator)
+                        }
+                        //self.activityIndicator.startAnimating()
                     } else {
-                        self.activityIndicator.isHidden = true
-                        self.activityIndicator.stopAnimating()
+                        if self.activityIndicator.layer.superlayer != nil {
+                            self.activityIndicator.removeFromSupernode()
+                        }
+                        //self.activityIndicator.stopAnimating()
                     }
                 }
                 self.setNeedsLayout()
@@ -63,8 +67,9 @@ final class NetworkStatusTitleView: UIView {
         self.titleNode.isOpaque = false
         self.titleNode.isUserInteractionEnabled = false
         
-        self.activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
-        self.activityIndicator.isHidden = true
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.secondaryTextColor), speed: .slow)
+        let activityIndicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
+        self.activityIndicator.frame = CGRect(origin: CGPoint(), size: activityIndicatorSize)
         
         self.lockView = ChatListTitleLockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0)))
         self.lockView.isHidden = true
@@ -77,7 +82,6 @@ final class NetworkStatusTitleView: UIView {
         self.addSubview(self.buttonView)
         self.addSubnode(self.titleNode)
         self.addSubview(self.lockView)
-        self.addSubview(self.activityIndicator)
         
         self.buttonView.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -112,7 +116,7 @@ final class NetworkStatusTitleView: UIView {
         var indicatorPadding: CGFloat = 0.0
         let indicatorSize = self.activityIndicator.bounds.size
         
-        if !self.activityIndicator.isHidden {
+        if self.activityIndicator.layer.superlayer != nil {
             indicatorPadding = indicatorSize.width + 6.0
         }
         
@@ -124,8 +128,8 @@ final class NetworkStatusTitleView: UIView {
         
         self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 4.0, width: 2.0, height: 2.0)
         
-        if !self.activityIndicator.isHidden {
-            self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY + 1.0), size: indicatorSize)
+        if self.activityIndicator.layer.superlayer != nil {
+            self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY - 1.0), size: indicatorSize)
         }
     }
     
@@ -150,5 +154,14 @@ final class NetworkStatusTitleView: UIView {
     
     @objc func buttonPressed() {
         self.toggleIsLocked?()
+    }
+    
+    func makeTransitionMirrorNode() -> ASDisplayNode {
+        let view = NetworkStatusTitleView(theme: self.theme)
+        view.title = self.title
+        
+        return ASDisplayNode(viewBlock: {
+            return view
+        }, didLoad: nil)
     }
 }

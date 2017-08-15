@@ -13,7 +13,7 @@ private struct FetchControls {
 final class ChatMessageInteractiveMediaNode: ASTransformNode {
     private let imageNode: TransformImageNode
     private var videoNode: ManagedVideoNode?
-    private var progressNode: RadialProgressNode?
+    private var statusNode: RadialStatusNode?
     private var timeoutNode: RadialTimeoutNode?
     private var labelNode: ChatMessageInteractiveMediaLabelNode?
     private var tapRecognizer: UITapGestureRecognizer?
@@ -93,15 +93,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     
     @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            /*if let file = self.media as? TelegramMediaFile, let message = self.message, (file.isVideo || file.isAnimated || file.mimeType.hasPrefix("video/")) && !message.containsSecretMedia {
+            if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 self.activateLocalContent()
-            } else {*/
-                if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
-                    self.activateLocalContent()
-                } else {
-                    self.progressPressed()
-                }
-            //}
+            } else {
+                self.progressPressed()
+            }
         }
     }
     
@@ -173,7 +169,15 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             }
             
             return (maxWidth, updatedCorners, { constrainedSize in
-                return (min(maxWidth, nativeSize.width), { boundingWidth in
+                let resultWidth: CGFloat
+                
+                if isSecretMedia {
+                    resultWidth = maxWidth
+                } else {
+                    resultWidth = min(maxWidth, nativeSize.width)
+                }
+                
+                return (resultWidth, { boundingWidth in
                     let drawingSize: CGSize
                     let boundingSize: CGSize
                     
@@ -301,7 +305,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             strongSelf.media = media
                             strongSelf.themeAndStrings = (theme, strings)
                             strongSelf.imageNode.frame = imageFrame
-                            strongSelf.progressNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
+                            strongSelf.statusNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             strongSelf.timeoutNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             
                             if replaceVideoNode {
@@ -346,9 +350,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                     strongSelf.timeoutNode?.updateTheme(backgroundColor: updatedTheme.chat.bubble.mediaOverlayControlBackgroundColor, foregroundColor: updatedTheme.chat.bubble.mediaOverlayControlForegroundColor)
                                 }
                                 
-                                if let progressNode = strongSelf.progressNode {
-                                    progressNode.removeFromSupernode()
-                                    strongSelf.progressNode = nil
+                                if let statusNode = strongSelf.statusNode {
+                                    statusNode.transitionToState(.none, completion: { [weak statusNode] in
+                                        statusNode?.removeFromSupernode()
+                                    })
+                                    strongSelf.statusNode = nil
                                 }
                             } else if let timeoutNode = strongSelf.timeoutNode {
                                 timeoutNode.removeFromSupernode()
@@ -375,43 +381,54 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                             }
                                             
                                             if progressRequired {
-                                                if strongSelf.progressNode == nil {
-                                                    let progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: theme.chat.bubble.mediaOverlayControlBackgroundColor, foregroundColor: theme.chat.bubble.mediaOverlayControlForegroundColor, icon: nil))
-                                                    progressNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
-                                                    progressNode.position = strongSelf.imageNode.position
-                                                    strongSelf.progressNode = progressNode
-                                                    strongSelf.addSubnode(progressNode)
+                                                if strongSelf.statusNode == nil {
+                                                    let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.bubble.mediaOverlayControlBackgroundColor)
+                                                    statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
+                                                    statusNode.position = strongSelf.imageNode.position
+                                                    strongSelf.statusNode = statusNode
+                                                    strongSelf.addSubnode(statusNode)
                                                 } else if let _ = updatedTheme {
-                                                    strongSelf.progressNode?.updateTheme(RadialProgressTheme(backgroundColor: theme.chat.bubble.mediaOverlayControlBackgroundColor, foregroundColor: theme.chat.bubble.mediaOverlayControlForegroundColor, icon: nil))
+                                                    
+                                                    //strongSelf.progressNode?.updateTheme(RadialProgressTheme(backgroundColor: theme.chat.bubble.mediaOverlayControlBackgroundColor, foregroundColor: theme.chat.bubble.mediaOverlayControlForegroundColor, icon: nil))
                                                 }
                                             } else {
-                                                if let progressNode = strongSelf.progressNode {
-                                                    progressNode.removeFromSupernode()
-                                                    strongSelf.progressNode = nil
+                                                if let statusNode = strongSelf.statusNode {
+                                                    statusNode.transitionToState(.none, completion: { [weak statusNode] in
+                                                        statusNode?.removeFromSupernode()
+                                                    })
+                                                    strongSelf.statusNode = nil
                                                 }
                                             }
                                             
-                                            var state: RadialProgressState
-                                            var hide = false
+                                            var state: RadialStatusNodeState
+                                            let bubbleTheme = theme.chat.bubble
                                             switch status {
                                                 case let .Fetching(progress):
-                                                    state = .Fetching(progress: progress)
+                                                    state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(progress), cancelEnabled: true)
                                                 case .Local:
-                                                    state = .None
+                                                    state = .none
                                                     if isSecretMedia && secretProgressIcon != nil {
-                                                        state = .Image(secretProgressIcon!)
+                                                        state = .customIcon(secretProgressIcon!)
                                                     } else if let file = media as? TelegramMediaFile {
                                                         if !isInlinePlayableVideo && file.isVideo {
-                                                            state = .Play
+                                                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                                         } else {
-                                                            hide = true
+                                                            state = .none
                                                         }
                                                     }
                                                 case .Remote:
-                                                    state = .Remote
+                                                    state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
                                             }
-                                            strongSelf.progressNode?.state = state
-                                            strongSelf.progressNode?.isHidden = hide
+                                            if let statusNode = strongSelf.statusNode {
+                                                if state == .none {
+                                                    strongSelf.statusNode = nil
+                                                }
+                                                statusNode.transitionToState(state, completion: { [weak statusNode] in
+                                                    if state == .none {
+                                                        statusNode?.removeFromSupernode()
+                                                    }
+                                                })
+                                            }
                                         }
                                     }
                                 }))

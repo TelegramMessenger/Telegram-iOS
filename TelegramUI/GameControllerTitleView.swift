@@ -4,7 +4,7 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
-import TelegramLegacyComponents
+import LegacyComponents
 
 final class GameControllerTitleView: UIView {
     private var theme: PresentationTheme

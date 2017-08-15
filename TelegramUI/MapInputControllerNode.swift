@@ -15,9 +15,11 @@ final class MapInputControllerNode: ASDisplayNode, MKMapViewDelegate {
         self.locationManager = CLLocationManager()
         self.mapView = MKMapView()
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = UIColor.white
         

@@ -4,6 +4,11 @@ import Display
 
 private let badgeFont = Font.regular(13.0)
 
+enum ChatHistoryNavigationButtonType {
+    case down
+    case mentions
+}
+
 class ChatHistoryNavigationButtonNode: ASControlNode {
     private let imageNode: ASImageNode
     private let badgeBackgroundNode: ASImageNode
@@ -21,12 +26,17 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     
     private var theme: PresentationTheme
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, type: ChatHistoryNavigationButtonType) {
         self.theme = theme
         
         self.imageNode = ASImageNode()
         self.imageNode.displayWithoutProcessing = true
-        self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
+        switch type {
+            case .down:
+                self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
+            case .mentions:
+                self.imageNode.image = PresentationResourcesChat.chatHistoryMentionsButtonImage(theme)
+        }
         self.imageNode.isLayerBacked = true
         
         self.badgeBackgroundNode = ASImageNode()

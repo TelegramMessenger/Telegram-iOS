@@ -8,17 +8,17 @@ import TelegramCore
 private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction) -> ASDisplayNode {
     switch mode {
         case .photoOrVideo:
-            return ChatHistoryGridNode(account: account, peerId: peerId, messageId: messageId, tagMask: .PhotoOrVideo, controllerInteraction: controllerInteraction)
+            return ChatHistoryGridNode(account: account, peerId: peerId, messageId: messageId, tagMask: .photoOrVideo, controllerInteraction: controllerInteraction)
         case .file:
-            let node = ChatHistoryListNode(account: account, peerId: peerId, tagMask: .File, messageId: messageId, controllerInteraction: controllerInteraction, mode: .list)
+            let node = ChatHistoryListNode(account: account, peerId: peerId, tagMask: .file, messageId: messageId, controllerInteraction: controllerInteraction, mode: .list)
             node.preloadPages = true
             return node
         case .music:
-            let node = ChatHistoryListNode(account: account, peerId: peerId, tagMask: .Music, messageId: messageId, controllerInteraction: controllerInteraction, mode: .list)
+            let node = ChatHistoryListNode(account: account, peerId: peerId, tagMask: .music, messageId: messageId, controllerInteraction: controllerInteraction, mode: .list)
             node.preloadPages = true
             return node
         case .webpage:
-            let node = ChatHistoryListNode(account: account, peerId: peerId, tagMask: .WebPage, messageId: messageId, controllerInteraction: controllerInteraction, mode: .list)
+            let node = ChatHistoryListNode(account: account, peerId: peerId, tagMask: .webPage, messageId: messageId, controllerInteraction: controllerInteraction, mode: .list)
             node.preloadPages = true
             return node
     }
@@ -29,6 +29,8 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     private let peerId: PeerId
     private let controllerInteraction: ChatControllerInteraction
     private let interfaceInteraction: ChatPanelInterfaceInteraction
+    
+    private let sectionsNode: PeerMediaCollectionSectionsNode
     
     private var historyNodeImpl: ASDisplayNode
     var historyNode: ChatHistoryNode {
@@ -61,17 +63,42 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         self.presentationData = (account.applicationContext as! TelegramApplicationContext).currentPresentationData.with { $0 }
         self.mediaCollectionInterfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
+        self.sectionsNode = PeerMediaCollectionSectionsNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        
         self.historyNodeImpl = historyNodeImplForMode(self.mediaCollectionInterfaceState.mode, account: account, peerId: peerId, messageId: messageId, controllerInteraction: controllerInteraction)
         
         self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings)
         
-        super.init(viewBlock: {
-            return UITracingLayerView()
-        }, didLoad: nil)
+        super.init()
         
+        self.setViewBlock({
+            return UITracingLayerView()
+        })
+        
+        self.historyNodeImpl.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
         self.addSubnode(self.historyNodeImpl)
+        self.addSubnode(self.sectionsNode)
+        
+        self.sectionsNode.indexUpdated = { [weak self] index in
+            if let strongSelf = self {
+                let mode: PeerMediaCollectionMode
+                switch index {
+                    case 0:
+                        mode = .photoOrVideo
+                    case 1:
+                        mode = .file
+                    case 2:
+                        mode = .webpage
+                    case 3:
+                        mode = .music
+                    default:
+                        mode = .photoOrVideo
+                }
+                strongSelf.requestUpdateMediaCollectionInterfaceState(true, { $0.withMode(mode) })
+            }
+        }
     }
     
     deinit {
@@ -83,6 +110,11 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
+        
+        let sectionsHeight = self.sectionsNode.updateLayout(width: layout.size.width, transition: transition)
+        transition.updateFrame(node: self.sectionsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: sectionsHeight)))
+        
+        insets.top += sectionsHeight
         
         if let selectionState = self.mediaCollectionInterfaceState.selectionState {
             let interfaceState = self.chatPresentationInterfaceState.updatedPeer({ _ in self.mediaCollectionInterfaceState.peer })
@@ -189,6 +221,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             if self.mediaCollectionInterfaceState.mode != mediaCollectionInterfaceState.mode {
                 if let containerLayout = self.containerLayout, self.candidateHistoryNode == nil || self.candidateHistoryNode!.1 != mediaCollectionInterfaceState.mode {
                     let node = historyNodeImplForMode(mediaCollectionInterfaceState.mode, account: self.account, peerId: self.peerId, messageId: nil, controllerInteraction: self.controllerInteraction)
+                    node.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
                     self.candidateHistoryNode = (node, mediaCollectionInterfaceState.mode)
                     
                     var insets = containerLayout.0.insets(options: [.input])
@@ -209,9 +242,14 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                         |> deliverOnMainQueue).start(next: { [weak self, weak node] _ in
                             if let strongSelf = self, let strongNode = node, strongNode == strongSelf.candidateHistoryNode?.0 {
                                 strongSelf.candidateHistoryNode = nil
-                                strongSelf.insertSubnode(strongNode, aboveSubnode: strongSelf.historyNodeImpl)
-                                strongSelf.historyNodeImpl.removeFromSupernode()
+                                strongSelf.insertSubnode(strongNode, belowSubnode: strongSelf.historyNodeImpl)
+                                
+                                let previousNode = strongSelf.historyNodeImpl
                                 strongSelf.historyNodeImpl = strongNode
+                                
+                                previousNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousNode] _ in
+                                    previousNode?.removeFromSupernode()
+                                })
                             }
                         }))
                 }

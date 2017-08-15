@@ -116,9 +116,11 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         
         self.phoneInputNode = PhoneInputNode(fontSize: 17.0)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
         

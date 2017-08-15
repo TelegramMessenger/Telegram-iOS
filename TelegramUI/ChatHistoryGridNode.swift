@@ -36,15 +36,15 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
     return entries.map { entry -> GridNodeUpdateItem in
         switch entry.entry {
             case let .MessageEntry(message, _, _, _, _):
-                return GridNodeUpdateItem(index: entry.index, item: GridMessageItem(theme: theme, strings: strings, account: account, message: message, controllerInteraction: controllerInteraction))
+                return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridMessageItem(theme: theme, strings: strings, account: account, message: message, controllerInteraction: controllerInteraction))
             case .HoleEntry:
-                return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
+                return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
             case .UnreadEntry:
                 assertionFailure()
-                return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
+                return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
             case .ChatInfoEntry, .EmptyChatInfoEntry:
                 assertionFailure()
-                return GridNodeUpdateItem(index: entry.index, item: GridHoleItem())
+                return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
         }
     }
 }
@@ -250,7 +250,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         self.historyDisposable.set(appliedTransition.start())
         
         if let messageId = messageId {
-            self._chatHistoryLocation.set(ChatHistoryLocation.InitialSearch(messageId: messageId, count: 100))
+            self._chatHistoryLocation.set(ChatHistoryLocation.InitialSearch(location: .id(messageId), count: 100))
         } else {
             self._chatHistoryLocation.set(ChatHistoryLocation.Initial(count: 100))
         }
@@ -382,15 +382,15 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     updateLayout = GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: .fixed(itemSize: CGSize(width: 200.0, height: 200.0), lineSpacing: 0.0)), transition: .immediate)
                 }
                 
-                self.transaction(GridNodeTransaction(deleteItems: mappedTransition.deleteItems, insertItems: mappedTransition.insertItems, updateItems: mappedTransition.updateItems, scrollToItem: mappedTransition.scrollToItem, updateLayout: updateLayout, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: mappedTransition.topOffsetWithinMonth), completion: completion)
+                self.transaction(GridNodeTransaction(deleteItems: mappedTransition.deleteItems, insertItems: mappedTransition.insertItems, updateItems: mappedTransition.updateItems, scrollToItem: mappedTransition.scrollToItem, updateLayout: updateLayout, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: mappedTransition.topOffsetWithinMonth), completion: completion)
             } else {
-                self.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.topOffsetWithinMonth), completion: completion)
+                self.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.topOffsetWithinMonth), completion: completion)
             }
         }
     }
     
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets) {
-        self.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: .fixed(itemSize: itemSizeForContainerLayout(size: updateSizeAndInsets.size), lineSpacing: 0.0)), transition: .immediate), stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: .fixed(itemSize: itemSizeForContainerLayout(size: updateSizeAndInsets.size), lineSpacing: 0.0)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true

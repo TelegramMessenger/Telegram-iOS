@@ -28,7 +28,7 @@ final class InstantPageTileNode: ASDisplayNode {
         return InstantPageTileNodeParameters(tile: self.tile)
     }
     
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         
         let context = UIGraphicsGetCurrentContext()!
         

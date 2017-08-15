@@ -20,9 +20,11 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
         self.labelNode = ASTextNode()
         self.buttonNode = HighlightableButtonNode()
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Settings/ChangePhoneIntroIcon"), color: presentationData.theme.list.freeTextColor)
         let textColor = self.presentationData.theme.list.freeTextColor

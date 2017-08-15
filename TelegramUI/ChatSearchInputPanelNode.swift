@@ -47,7 +47,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.resultsLabel = TextNode()
         self.resultsLabel.isLayerBacked = true
         self.resultsLabel.displaysAsynchronously = false
-        self.activityIndicator = ActivityIndicator(theme: theme)
+        self.activityIndicator = ActivityIndicator(type: .navigationAccent(theme))
         self.activityIndicator.isHidden = true
         
         super.init()

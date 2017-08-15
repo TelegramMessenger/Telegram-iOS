@@ -25,9 +25,11 @@ open class GalleryItemNode: ASDisplayNode {
     var baseNavigationController: () -> NavigationController? = { return nil }
     
     override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
     }
     
     open func ready() -> Signal<Void, NoError> {

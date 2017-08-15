@@ -19,9 +19,11 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.account = account
         self.listNode = ListView()
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = .white
         

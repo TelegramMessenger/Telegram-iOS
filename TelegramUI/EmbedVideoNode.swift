@@ -5,7 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-import TelegramLegacyComponents
+import LegacyComponents
 
 private func setupArrowFrame(size: CGSize, edge: OverlayMediaItemMinimizationEdge, view: TGEmbedPIPPullArrowView) {
     let arrowX: CGFloat
@@ -34,8 +34,16 @@ private final class SharedEmbedVideoContext: SharedVideoContext {
     var ready: Signal<Void, NoError> {
         return self._ready.get()
     }
+    
+    private let _preloadCompleted = ValuePromise<Bool>()
+    var preloadCompleted: Signal<Bool, NoError> {
+        return self._preloadCompleted.get()
+    }
+    
     private let thumbnail = Promise<UIImage?>()
     private var thumbnailDisposable: Disposable?
+    
+    private var loadProgressDisposable: Disposable?
     
     init(account: Account, audioSessionManager: ManagedAudioSession, webpage: TelegramMediaWebpageLoadedContent) {
         let converted = TGWebPageMediaAttachment()
@@ -79,6 +87,21 @@ private final class SharedEmbedVideoContext: SharedVideoContext {
         
         super.init()
         
+        let nativeLoadProgress = self.playerView.loadProgress()
+        let loadProgress: Signal<Float, NoError> = Signal { subscriber in
+            let disposable = nativeLoadProgress?.start(next: { value in
+                subscriber.putNext((value as! NSNumber).floatValue)
+            })
+            return ActionDisposable {
+                disposable?.dispose()
+            }
+        }
+        self.loadProgressDisposable = (loadProgress |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf._preloadCompleted.set(value.isEqual(to: 1.0))
+            }
+        })
+        
         if let image = webpage.image {
             self.thumbnailDisposable = (rawMessagePhoto(account: account, photo: image) |> deliverOnMainQueue).start(next: { [weak self] image in
                 if let strongSelf = self {
@@ -90,7 +113,7 @@ private final class SharedEmbedVideoContext: SharedVideoContext {
             self._ready.set(.single())
         }
         
-        self.playerView.requestAudioSession = { [weak self] in
+        /*self.playerView.requestAudioSession = { [weak self] in
             assert(Queue.mainQueue().isCurrent())
             if let strongSelf = self, !strongSelf.hasAudioSession {
                 strongSelf.audioSessionDisposable.set(audioSessionManager.push(audioSessionType: .play, overrideSpeaker: false, once: false, activate: {
@@ -120,13 +143,16 @@ private final class SharedEmbedVideoContext: SharedVideoContext {
                 strongSelf.hasAudioSession = false
                 strongSelf.audioSessionDisposable.set(nil)
             }
-        }
+        }*/
         
         self.playerView.stateSignal()
     }
     
     deinit {
-        audioSessionDisposable.dispose()
+        self.audioSessionDisposable.dispose()
+        
+        self.loadProgressDisposable?.dispose()
+        self.thumbnailDisposable?.dispose()
     }
     
     func play() {
@@ -205,13 +231,13 @@ final class EmbedVideoNode: OverlayMediaItemNode {
     private let backgroundNode: ASImageNode
     private let imageNode: TransformImageNode
     private var snapshotView: UIView?
-    private let progressNode: RadialProgressNode
+    private var statusNode: RadialStatusNode?
     private let controlsNode: PictureInPictureVideoControlsNode?
     private var minimizedBlurView: UIVisualEffectView?
     private var minimizedArrowView: TGEmbedPIPPullArrowView?
     private var minimizedEdge: OverlayMediaItemMinimizationEdge?
     
-    private var statusDisposable: Disposable?
+    private var preloadDisposable: Disposable?
     
     var tapped: (() -> Void)?
     var dismissed: (() -> Void)?
@@ -228,7 +254,7 @@ final class EmbedVideoNode: OverlayMediaItemNode {
     }
     
     override var group: OverlayMediaItemNodeGroup? {
-        return OverlayMediaItemNodeGroup(rawValue: 0)
+        return OverlayMediaItemNodeGroup(rawValue: 1)
     }
     
     override var isMinimizeable: Bool {
@@ -249,7 +275,6 @@ final class EmbedVideoNode: OverlayMediaItemNode {
         self.backgroundNode.displaysAsynchronously = false
         
         self.imageNode = TransformImageNode()
-        self.progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(white: 0.0, alpha: 0.6), foregroundColor: UIColor(white: 1.0, alpha: 1.0), icon: nil))
         
         var leaveImpl: (() -> Void)?
         var togglePlayPauseImpl: (() -> Void)?
@@ -294,6 +319,9 @@ final class EmbedVideoNode: OverlayMediaItemNode {
         
         if withOverlayControls {
             self.backgroundNode.image = backgroundImage
+            
+            self.layer.masksToBounds = true
+            self.layer.cornerRadius = 2.5
         }
         
         self.addSubnode(self.backgroundNode)
@@ -324,6 +352,8 @@ final class EmbedVideoNode: OverlayMediaItemNode {
                 manager.sharedVideoContextManager.detachSharedVideoContext(id: source.id, index: contextId)
             }
         }
+        
+        self.preloadDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -388,12 +418,16 @@ final class EmbedVideoNode: OverlayMediaItemNode {
             context.playerView.transform = CGAffineTransform(scaleX: videoFrame.size.width / context.intrinsicSize.width, y: videoFrame.size.height / context.intrinsicSize.height)
         }
         
-        let backgroundInsets = UIEdgeInsets(top: 2.0, left: 3.0, bottom: 4.0, right: 3.0)
+        let backgroundInsets = UIEdgeInsets(top: 11.5, left: 13.5, bottom: 11.5, right: 13.5)
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: -backgroundInsets.left, y: -backgroundInsets.top), size: CGSize(width: videoFrame.size.width + backgroundInsets.left + backgroundInsets.right, height: videoFrame.size.height + backgroundInsets.top + backgroundInsets.bottom))
         
         self.imageNode.asyncLayout()(arguments)()
         self.imageNode.frame = videoFrame
         self.snapshotView?.frame = self.imageNode.frame
+        
+        if let statusNode = self.statusNode {
+            statusNode.frame = CGRect(origin: CGPoint(x: floor((size.width - 50.0) / 2.0), y: floor((size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
+        }
         
         if let controlsNode = self.controlsNode {
             controlsNode.frame = videoFrame
@@ -499,6 +533,28 @@ final class EmbedVideoNode: OverlayMediaItemNode {
                         }
                     })
                     self._ready.set(context.ready)
+                    
+                    self.preloadDisposable = (context.preloadCompleted |> deliverOnMainQueue).start(next: { [weak self] value in
+                        if let strongSelf = self {
+                            if value {
+                                if let statusNode = strongSelf.statusNode {
+                                    strongSelf.statusNode = nil
+                                    statusNode.transitionToState(.none, completion: { [weak statusNode] in
+                                        statusNode?.removeFromSupernode()
+                                    })
+                                }
+                            } else {
+                                if strongSelf.statusNode == nil {
+                                    let statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
+                                    strongSelf.statusNode = statusNode
+                                    strongSelf.addSubnode(statusNode)
+                                    let size = strongSelf.bounds.size
+                                    statusNode.frame = CGRect(origin: CGPoint(x: floor((size.width - 50.0) / 2.0), y: floor((size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
+                                    statusNode.transitionToState(.progress(color: .white, value: nil, cancelEnabled: false), completion: {})
+                                }
+                            }
+                        }
+                    })
                 }
             })
         }
@@ -575,10 +631,10 @@ final class EmbedVideoNode: OverlayMediaItemNode {
                 self.minimizedBlurView?.isHidden = false
                 
                 switch edge {
-                case .left:
-                    break
-                case .right:
-                    break
+                    case .left:
+                        break
+                    case .right:
+                        break
                 }
             }
             

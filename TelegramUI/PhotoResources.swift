@@ -1460,7 +1460,7 @@ func chatAvatarGalleryPhoto(account: Account, representations: [TelegramMediaIma
 
 private func builtinWallpaperData() -> Signal<UIImage, NoError> {
     return Signal { subscriber in
-        if let image = UIImage(bundleImageName: "Chat/Wallpapers/Builtin0") {
+        if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath) {
             subscriber.putNext(image)
         }
         subscriber.putCompletion()

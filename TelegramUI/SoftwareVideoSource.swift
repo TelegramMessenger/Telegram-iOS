@@ -135,6 +135,12 @@ final class SoftwareVideoSource {
     }
     
     deinit {
+        if let avIoContext = self.avIoContext {
+            if avIoContext.pointee.buffer != nil {
+                av_free(avIoContext.pointee.buffer)
+            }
+            av_free(avIoContext)
+        }
         if let avFormatContext = self.avFormatContext {
             avformat_free_context(avFormatContext)
         }
@@ -179,7 +185,7 @@ final class SoftwareVideoSource {
                         duration = videoStream.fps
                     }
                     
-                    let frame = MediaTrackDecodableFrame(type: .video, packet: &packet.packet, pts: pts, dts: dts, duration: duration)
+                    let frame = MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)
                     frames.append(frame)
                 }
             } else {

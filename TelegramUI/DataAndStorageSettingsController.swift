@@ -3,7 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import TelegramLegacyComponents
+import LegacyComponents
 
 private enum AutomaticDownloadCategory {
     case photo

@@ -22,7 +22,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
     private let consumableContentNode: ASImageNode
     
     private var iconNode: TransformImageNode?
-    private var progressNode: RadialProgressNode?
+    private var statusNode: RadialStatusNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
     private let statusDisposable = MetaDisposable()
@@ -282,6 +282,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 let minVoiceWidth: CGFloat = 120.0
                 let maxVoiceWidth = constrainedSize.width
                 let maxVoiceLength: CGFloat = 30.0
+                let minVoiceLength: CGFloat = 2.0
                 
                 let minLayoutWidth: CGFloat
                 if isVoice {
@@ -289,12 +290,15 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     //b = log (y1/y2) / (x1-x2)
                     //a = y1 / exp bx1
                     
-                    let b = log(maxVoiceWidth / minVoiceWidth) / (maxVoiceLength - 0.0)
+                    /*let b = log(maxVoiceWidth / minVoiceWidth) / (maxVoiceLength)
                     let a = minVoiceWidth / exp(CGFloat(0.0))
                     
                     let y = a * exp(b * min(maxVoiceLength, CGFloat(audioDuration)))
                     
-                    minLayoutWidth = floor(y)
+                    minLayoutWidth = floor(y)*/
+                    
+                    let calcDuration = max(minVoiceLength, min(maxVoiceLength, CGFloat(audioDuration)))
+                    minLayoutWidth = minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
                 } else {
                     minLayoutWidth = max(titleLayout.size.width, descriptionLayout.size.width) + 44.0 + 8.0
                 }
@@ -379,47 +383,62 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                         if let strongSelf = strongSelf {
                                             strongSelf.resourceStatus = status
                                             
-                                            if strongSelf.progressNode == nil {
-                                                let progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor, foregroundColor: incoming ? bubbleTheme.incomingFillColor : bubbleTheme.outgoingFillColor, icon: fileIconImage))
-                                                strongSelf.progressNode = progressNode
-                                                progressNode.frame = progressFrame
-                                                strongSelf.addSubnode(progressNode)
+                                            if strongSelf.statusNode == nil {
+                                                let statusNode = RadialStatusNode(backgroundNodeColor: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor)
+                                                strongSelf.statusNode = statusNode
+                                                statusNode.frame = progressFrame
+                                                strongSelf.addSubnode(statusNode)
                                             } else if let _ = updatedTheme {
-                                                strongSelf.progressNode?.updateTheme(RadialProgressTheme(backgroundColor: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor, foregroundColor: incoming ? bubbleTheme.incomingFillColor : bubbleTheme.outgoingFillColor, icon: fileIconImage))
+                                                //strongSelf.progressNode?.updateTheme(RadialProgressTheme(backgroundColor: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor, foregroundColor: incoming ? bubbleTheme.incomingFillColor : bubbleTheme.outgoingFillColor, icon: fileIconImage))
                                             }
                                             
+                                            let state: RadialStatusNodeState
+                                            let statusForegroundColor = incoming ? bubbleTheme.incomingFillColor : bubbleTheme.outgoingFillColor
                                             switch status {
                                                 case let .fetchStatus(fetchStatus):
                                                     switch fetchStatus {
                                                         case let .Fetching(progress):
-                                                            strongSelf.progressNode?.state = .Fetching(progress: progress)
+                                                            state = .progress(color: statusForegroundColor, value: CGFloat(progress), cancelEnabled: true)
                                                         case .Local:
                                                             if isAudio {
-                                                                strongSelf.progressNode?.state = .Play
+                                                                state = .play(statusForegroundColor)
+                                                            } else if let fileIconImage = fileIconImage {
+                                                                state = .customIcon(fileIconImage)
                                                             } else {
-                                                                strongSelf.progressNode?.state = .Icon
+                                                                state = .none
                                                             }
                                                         case .Remote:
                                                             if isAudio {
-                                                                strongSelf.progressNode?.state = .Play
+                                                                state = .play(statusForegroundColor)
                                                             } else {
-                                                                strongSelf.progressNode?.state = .Remote
+                                                                state = .download(statusForegroundColor)
                                                             }
                                                     }
                                                 case let .playbackStatus(playbackStatus):
                                                     switch playbackStatus {
                                                         case .playing:
-                                                            strongSelf.progressNode?.state = .Pause
+                                                            state = .pause(statusForegroundColor)
                                                         case .paused:
-                                                            strongSelf.progressNode?.state = .Play
+                                                            state = .play(statusForegroundColor)
                                                     }
+                                            }
+                                            
+                                            if let statusNode = strongSelf.statusNode {
+                                                if state == .none {
+                                                    strongSelf.statusNode = nil
+                                                }
+                                                statusNode.transitionToState(state, completion: { [weak statusNode] in
+                                                    if state == .none {
+                                                        statusNode?.removeFromSupernode()
+                                                    }
+                                                })
                                             }
                                         }
                                     }
                                 }))
                             }
                             
-                            strongSelf.progressNode?.frame = progressFrame
+                            strongSelf.statusNode?.frame = progressFrame
                             
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)

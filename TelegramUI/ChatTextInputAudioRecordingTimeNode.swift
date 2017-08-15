@@ -80,7 +80,7 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
         return ChatTextInputAudioRecordingTimeNodeParameters(timestamp: self.timestamp, theme: self.theme)
     }
     
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {

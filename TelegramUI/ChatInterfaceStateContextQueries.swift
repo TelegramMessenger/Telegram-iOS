@@ -22,7 +22,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
                     let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = searchStickers(postbox: account.postbox, query: query)
                         |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                             return { _ in
-                                return  .stickers(stickers)
+                                return .stickers(stickers)
                             }
                         }
                     return (inputQuery, signal |> then(stickers))

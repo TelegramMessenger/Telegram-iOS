@@ -45,9 +45,6 @@ public final class ChatControllerInteraction {
     let openMessageContextMenu: (MessageId, ASDisplayNode, CGRect) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
     let clickThroughMessage: () -> Void
-    var hiddenMedia: [MessageId: [Media]] = [:]
-    var selectionState: ChatInterfaceSelectionState?
-    var highlightedState: ChatInterfaceHighlightedState?
     let toggleMessageSelection: (MessageId) -> Void
     let sendMessage: (String) -> Void
     let sendSticker: (TelegramMediaFile) -> Void
@@ -66,7 +63,12 @@ public final class ChatControllerInteraction {
     let longTap: (ChatControllerInteractionLongTapAction) -> Void
     let openCheckoutOrReceipt: (MessageId) -> Void
     
-    public init(openMessage: @escaping (MessageId) -> Void, openSecretMessagePreview: @escaping (MessageId) -> Void, closeSecretMessagePreview: @escaping () -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageId?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, sendGif: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (MessageId) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void) {
+    var hiddenMedia: [MessageId: [Media]] = [:]
+    var selectionState: ChatInterfaceSelectionState?
+    var highlightedState: ChatInterfaceHighlightedState?
+    var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+    
+    public init(openMessage: @escaping (MessageId) -> Void, openSecretMessagePreview: @escaping (MessageId) -> Void, closeSecretMessagePreview: @escaping () -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageId?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, sendGif: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (MessageId) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings) {
         self.openMessage = openMessage
         self.openSecretMessagePreview = openSecretMessagePreview
         self.closeSecretMessagePreview = closeSecretMessagePreview
@@ -92,5 +94,7 @@ public final class ChatControllerInteraction {
         self.callPeer = callPeer
         self.longTap = longTap
         self.openCheckoutOrReceipt = openCheckoutOrReceipt
+        
+        self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
     }
 }

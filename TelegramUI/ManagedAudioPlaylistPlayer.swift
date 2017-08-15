@@ -279,6 +279,12 @@ final class ManagedAudioPlaylistPlayer {
                                             if file.isInstantVideo {
                                                 instantVideo = (file, message.id, message.stableId)
                                             }
+                                        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                            if let file = content.file {
+                                                if file.isInstantVideo {
+                                                    instantVideo = (file, message.id, message.stableId)
+                                                }
+                                            }
                                         }
                                     }
                                     if message.flags.contains(.Incoming) {

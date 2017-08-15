@@ -18,6 +18,7 @@ private struct ChatMediaInputGridTransition {
     let updateFirstIndexInSectionOffset: Int?
     let stationaryItems: GridNodeStationaryItems
     let scrollToItem: GridNodeScrollToItem?
+    let animated: Bool
 }
 
 private func preparedChatMediaInputPanelEntryTransition(account: Account, from fromEntries: [ChatMediaInputPanelEntry], to toEntries: [ChatMediaInputPanelEntry], inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputPanelTransition {
@@ -33,9 +34,10 @@ private func preparedChatMediaInputPanelEntryTransition(account: Account, from f
 private func preparedChatMediaInputGridEntryTransition(account: Account, from fromEntries: [ChatMediaInputGridEntry], to toEntries: [ChatMediaInputGridEntry], update: StickerPacksCollectionUpdate, interfaceInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputGridTransition {
     var stationaryItems: GridNodeStationaryItems = .none
     var scrollToItem: GridNodeScrollToItem?
+    var animated = false
     switch update {
         case .generic:
-            break
+            animated = true
         case .scroll:
             var fromStableIds = Set<ChatMediaInputGridEntryStableId>()
             for entry in fromEntries {
@@ -71,19 +73,22 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, from fr
     
     let deletions = deleteIndices
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction)) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction)) }
     
     var firstIndexInSectionOffset = 0
     if !toEntries.isEmpty {
         firstIndexInSectionOffset = Int(toEntries[0].index.itemIndex.index)
     }
     
-    return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
+    return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, animated: animated)
 }
 
-private func chatMediaInputPanelEntries(view: ItemCollectionsView, recentStickers: OrderedItemListView?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
+private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     entries.append(.recentGifs(theme))
+    if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
+        entries.append(.savedStickers(theme))
+    }
     if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
         entries.append(.recentPacks(theme))
     }
@@ -97,7 +102,7 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, recentSticker
     return entries
 }
 
-private func chatMediaInputGridEntries(view: ItemCollectionsView, recentStickers: OrderedItemListView?, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
+private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     var stickerPackInfos: [ItemCollectionId: StickerPackCollectionInfo] = [:]
@@ -107,8 +112,19 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, recentStickers
         }
     }
     
+    if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
+        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_Favorited.uppercased(), shortName: "", hash: 0, count: 0)
+        for i in 0 ..< savedStickers.items.count {
+            if let item = savedStickers.items[i].contents as? SavedStickerItem {
+                let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
+                let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
+                entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+            }
+        }
+    }
+    
     if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
-        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: "FREQUENTLY USED", shortName: "", hash: 0, count: 0)
+        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", hash: 0, count: 0)
         for i in 0 ..< min(20, recentStickers.items.count) {
             if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
                 let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
@@ -172,7 +188,7 @@ final class ChatMediaInputNodeInteraction {
 private func clipScrollPosition(_ position: StickerPacksCollectionPosition) -> StickerPacksCollectionPosition {
     switch position {
         case let .scroll(index):
-            if let index = index, index.collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
+            if let index = index, index.collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue || index.collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
                 return .scroll(aroundIndex: nil)
             }
         default:
@@ -262,6 +278,9 @@ final class ChatMediaInputNode: ChatInputNode {
                 var index: Int32 = 0
                 if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentGifs.rawValue {
                     strongSelf.setCurrentPane(.gifs, transition: .animated(duration: 0.25, curve: .spring))
+                } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue {
+                    strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
+                    strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil)))
                 } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
                     strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
                     strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil)))
@@ -293,13 +312,13 @@ final class ChatMediaInputNode: ChatInputNode {
             |> mapToSignal { position -> Signal<(ItemCollectionsView, StickerPacksCollectionUpdate), NoError> in
                 switch position {
                     case .initial:
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
+                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 return (view, .generic)
                             }
                     case let .scroll(aroundIndex):
                         var firstTime = true
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 140)
+                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 140)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 let update: StickerPacksCollectionUpdate
                                 if firstTime {
@@ -312,7 +331,7 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                     case let .navigate(index):
                         var firstTime = true
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 140)
+                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 140)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 let update: StickerPacksCollectionUpdate
                                 if firstTime {
@@ -335,15 +354,17 @@ final class ChatMediaInputNode: ChatInputNode {
                 let (view, update) = viewAndUpdate
                 let (theme, strings) = themeAndStrings
                 
+                var savedStickers: OrderedItemListView?
                 var recentStickers: OrderedItemListView?
                 for orderedView in view.orderedItemListsViews {
                     if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
                         recentStickers = orderedView
-                        break
+                    } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
+                        savedStickers = orderedView
                     }
                 }
-                let panelEntries = chatMediaInputPanelEntries(view: view, recentStickers: recentStickers, theme: theme)
-                let gridEntries = chatMediaInputGridEntries(view: view, recentStickers: recentStickers, strings: strings, theme: theme)
+                let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, theme: theme)
+                let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, strings: strings, theme: theme)
                 let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
                 return (view, preparedChatMediaInputPanelEntryTransition(account: account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: account, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)
             }
@@ -351,8 +372,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.disposable.set((transitions |> deliverOnMainQueue).start(next: { [weak self] (view, panelTransition, panelFirstTime, gridTransition, gridFirstTime) in
             if let strongSelf = self {
                 strongSelf.currentView = view
-                strongSelf.enqueuePanelTransition(panelTransition, firstTime: panelFirstTime)
-                strongSelf.enqueueGridTransition(gridTransition, firstTime: gridFirstTime)
+                strongSelf.enqueuePanelTransition(panelTransition, firstTime: panelFirstTime, thenGridTransition: gridTransition, gridFirstTime: gridFirstTime)
             }
         }))
         
@@ -470,7 +490,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.listView.ensureItemNodeVisible(itemNode)
                     ensuredNodeVisible = true
                 }
-            } else if let itemNode = itemNode as? ChatMediaInputRecentStickerPacksItemNode {
+            } else if let itemNode = itemNode as? ChatMediaInputMetaSectionItemNode {
                 itemNode.updateIsHighlighted()
                 if itemNode.currentCollectionId == collectionId {
                     self.listView.ensureItemNodeVisible(itemNode)
@@ -609,7 +629,7 @@ final class ChatMediaInputNode: ChatInputNode {
         return panelHeight
     }
     
-    private func enqueuePanelTransition(_ transition: ChatMediaInputPanelTransition, firstTime: Bool) {
+    private func enqueuePanelTransition(_ transition: ChatMediaInputPanelTransition, firstTime: Bool, thenGridTransition gridTransition: ChatMediaInputGridTransition, gridFirstTime: Bool) {
         var options = ListViewDeleteAndInsertOptions()
         if firstTime {
             options.insert(.Synchronous)
@@ -618,11 +638,18 @@ final class ChatMediaInputNode: ChatInputNode {
             options.insert(.AnimateInsertion)
         }
         self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.enqueueGridTransition(gridTransition, firstTime: gridFirstTime)
+            }
         })
     }
     
     private func enqueueGridTransition(_ transition: ChatMediaInputGridTransition, firstTime: Bool) {
-        self.stickerPane.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
+        var itemTransition: ContainedViewLayoutTransition = .immediate
+        if transition.animated {
+            itemTransition = .animated(duration: 0.3, curve: .spring)
+        }
+        self.stickerPane.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: itemTransition, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
     }
     
     @objc func previewGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {

@@ -47,12 +47,10 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.maximumNumberOfLines = 1
-        //self.titleNode.contentMode = .topLeft
         
         self.textNode = ASTextNode()
         self.textNode.isLayerBacked = true
         self.textNode.maximumNumberOfLines = 2
-        //self.textNode.contentMode = .topLeft
         
         self.imageNode = TransformImageNode()
         
@@ -144,7 +142,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                                 }
                                 selectedText = true
                                 break loop
-                            case let .Sticker(displayText, _):
+                            case let .Sticker(displayText, _, _):
                                 messageText = "\(displayText) Sticker"
                                 selectedText = true
                                 break loop

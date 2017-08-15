@@ -39,11 +39,12 @@ class ChatControllerNode: ASDisplayNode {
     private var textInputPanelNode: ChatTextInputPanelNode?
     private var inputMediaNode: ChatMediaInputNode?
     
-    let navigateToLatestButton: ChatHistoryNavigationButtonNode
+    let navigateButtons: ChatHistoryNavigationButtons
     
     private var ignoreUpdateHeight = false
     
     var chatPresentationInterfaceState: ChatPresentationInterfaceState
+    var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
     
     var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
@@ -59,11 +60,12 @@ class ChatControllerNode: ASDisplayNode {
     private var scheduledLayoutTransitionRequestId: Int = 0
     private var scheduledLayoutTransitionRequest: (Int, ContainedViewLayoutTransition)?
     
-    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, navigationBar: NavigationBar) {
+    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar) {
         self.account = account
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
         self.chatPresentationInterfaceState = chatPresentationInterfaceState
+        self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         self.navigationBar = navigationBar
         
         self.backgroundNode = ASDisplayNode()
@@ -85,12 +87,13 @@ class ChatControllerNode: ASDisplayNode {
         self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelStrokeColor
         self.inputPanelBackgroundSeparatorNode.isLayerBacked = true
         
-        self.navigateToLatestButton = ChatHistoryNavigationButtonNode(theme: self.chatPresentationInterfaceState.theme)
-        self.navigateToLatestButton.alpha = 0.0
+        self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = UIColor(rgb: 0xdee3e9)
         
@@ -103,7 +106,9 @@ class ChatControllerNode: ASDisplayNode {
         } else {
             switch wallpaper {
                 case .builtin:
-                    backgroundImage = UIImage(bundleImageName: "Chat/Wallpapers/Builtin0")?.precomposed()
+                    if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
+                        backgroundImage = UIImage(contentsOfFile: filePath)?.precomposed()
+                    }
                 case let .color(color):
                     backgroundImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
                         context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
@@ -123,17 +128,14 @@ class ChatControllerNode: ASDisplayNode {
         
         self.backgroundNode.contents = backgroundImage?.cgImage
         
-        
         self.addSubnode(self.backgroundNode)
-        
         self.addSubnode(self.historyNode)
-        
         self.addSubnode(self.titleAccessoryPanelContainer)
         
         self.addSubnode(self.inputPanelBackgroundNode)
         self.addSubnode(self.inputPanelBackgroundSeparatorNode)
         
-        self.addSubnode(self.navigateToLatestButton)
+        self.addSubnode(self.navigateButtons)
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
@@ -295,7 +297,7 @@ class ChatControllerNode: ASDisplayNode {
         }
         insets.top += navigationBarHeight
         
-        transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 50.0)))
+        transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 56.0)))
         
         var titleAccessoryPanelFrame: CGRect?
         if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
@@ -347,7 +349,7 @@ class ChatControllerNode: ASDisplayNode {
                 let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
                 self.inputPanelNode = inputPanelNode
-                self.insertSubnode(inputPanelNode, belowSubnode: self.navigateToLatestButton)
+                self.insertSubnode(inputPanelNode, aboveSubnode: self.navigateButtons)
             } else {
                 let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, transition: transition, interfaceState: self.chatPresentationInterfaceState)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
@@ -369,7 +371,7 @@ class ChatControllerNode: ASDisplayNode {
                 if let inputPanelNode = self.inputPanelNode {
                     self.insertSubnode(accessoryPanelNode, belowSubnode: inputPanelNode)
                 } else {
-                    self.insertSubnode(accessoryPanelNode, belowSubnode: self.navigateToLatestButton)
+                    self.insertSubnode(accessoryPanelNode, aboveSubnode: self.navigateButtons)
                 }
                 
                 accessoryPanelNode.dismiss = { [weak self, weak accessoryPanelNode] in
@@ -428,12 +430,12 @@ class ChatControllerNode: ASDisplayNode {
         
         listViewTransaction(ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: insets.bottom + inputPanelsHeight + 4.0, left: insets.right, bottom: insets.top, right: insets.left), duration: duration, curve: listViewCurve))
         
-        let navigateToLatestButtonSize = self.navigateToLatestButton.bounds.size
-        let navigateToLatestButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - navigateToLatestButtonSize.width - 6.0, y: layout.size.height - insets.bottom - inputPanelsHeight - navigateToLatestButtonSize.height - 6.0), size: navigateToLatestButtonSize)
+        let navigateButtonsSize = self.navigateButtons.updateLayout(transition: transition)
+        let navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - navigateButtonsSize.width - 6.0, y: layout.size.height - insets.bottom - inputPanelsHeight - navigateButtonsSize.height - 6.0), size: navigateButtonsSize)
         
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: inputBackgroundFrame)
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: inputBackgroundFrame.origin.y - UIScreenPixel), size: CGSize(width: inputBackgroundFrame.size.width, height: UIScreenPixel)))
-        transition.updateFrame(node: self.navigateToLatestButton, frame: navigateToLatestButtonFrame)
+        transition.updateFrame(node: self.navigateButtons, frame: navigateButtonsFrame)
         
         if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let titleAccessoryPanelFrame = titleAccessoryPanelFrame, !titleAccessoryPanelNode.frame.equalTo(titleAccessoryPanelFrame) {
             if immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance {
@@ -607,7 +609,7 @@ class ChatControllerNode: ASDisplayNode {
             let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             
-            self.navigateToLatestButton.updateTheme(theme: chatPresentationInterfaceState.theme)
+            self.navigateButtons.updateTheme(theme: chatPresentationInterfaceState.theme)
             
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
             var extendedSearchLayout = false
@@ -663,6 +665,14 @@ class ChatControllerNode: ASDisplayNode {
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    func updateAutomaticMediaDownloadSettings() {
+        self.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                itemNode.updateAutomaticMediaDownloadSettings()
             }
         }
     }

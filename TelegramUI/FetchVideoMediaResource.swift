@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramLegacyComponents
+import LegacyComponents
 
 private final class VideoConversionWatcher: TGMediaVideoFileWatcher {
     private let update: (String, Int) -> Void

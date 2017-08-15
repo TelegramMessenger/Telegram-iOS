@@ -211,6 +211,17 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatInputMediaPanelSavedStickersIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputMediaPanelSavedStickersIconImage.rawValue, { theme in
+            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/SavedStickersTabIcon"), color: theme.chat.inputMediaPanel.panelIconColor) {
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })
+        })
+    }
+    
     static func chatInputMediaPanelRecentStickersIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelRecentStickersIconImage.rawValue, { theme in
             return generateImage(CGSize(width: 26.0, height: 26.0), rotatedContext: { size, context in
@@ -391,6 +402,23 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatHistoryMentionsButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatHistoryMentionsButtonImage.rawValue, { theme in
+            return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.chat.historyNavigation.fillColor.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: size.width - 1.0, height: size.height - 1.0)))
+                context.setLineWidth(0.5)
+                context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
+                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigateToMentions"), color: theme.chat.historyNavigation.foregroundColor), let cgImage = image.cgImage {
+                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })
+        })
+    }
+    
     static func chatHistoryNavigationButtonBadgeImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatHistoryNavigationButtonBadgeImage.rawValue, { theme in
             return generateStretchableFilledCircleImage(diameter: 18.0, color: theme.chat.historyNavigation.badgeBackgroundColor, backgroundColor: nil)
@@ -475,6 +503,73 @@ struct PresentationResourcesChat {
     static func chatInputSearchPanelCalendarImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputSearchPanelCalendarImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/Calendar"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    /*
+     case chatTitlePanelSearchImage
+     case chatTitlePanelMuteImage
+     case chatTitlePanelUnmuteImage
+     case chatTitlePanelCallImage
+     */
+    
+    static func chatTitlePanelInfoImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTitlePanelInfoImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/InfoIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    static func chatTitlePanelSearchImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTitlePanelSearchImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/SearchIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    static func chatTitlePanelMuteImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTitlePanelMuteImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionMuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    static func chatTitlePanelUnmuteImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTitlePanelUnmuteImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionMuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    static func chatTitlePanelCallImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTitlePanelCallImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconCalls"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    static func chatTitlePanelReportImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTitlePanelReportImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/ReportIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    static func chatMessageAttachedContentButtonIncoming(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIncoming.rawValue, { theme in
+            return generateStretchableFilledCircleImage(diameter: 8.0, color: nil, strokeColor: theme.chat.bubble.incomingAccentColor, strokeWidth: 1.0, backgroundColor: nil)
+        })
+    }
+    
+    static func chatMessageAttachedContentHighlightedButtonIncoming(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIncoming.rawValue, { theme in
+            return generateStretchableFilledCircleImage(diameter: 8.0, color: theme.chat.bubble.incomingAccentColor)
+        })
+    }
+    
+    static func chatMessageAttachedContentButtonOutgoing(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonOutgoing.rawValue, { theme in
+            return generateStretchableFilledCircleImage(diameter: 8.0, color: nil, strokeColor: theme.chat.bubble.outgoingAccentColor, strokeWidth: 1.0, backgroundColor: nil)
+        })
+    }
+    
+    static func chatMessageAttachedContentHighlightedButtonOutgoing(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonOutgoing.rawValue, { theme in
+            return generateStretchableFilledCircleImage(diameter: 8.0, color: theme.chat.bubble.outgoingAccentColor)
         })
     }
 }

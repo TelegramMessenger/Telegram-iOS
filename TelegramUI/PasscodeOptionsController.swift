@@ -3,7 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import TelegramLegacyComponents
+import LegacyComponents
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOn: () -> Void
@@ -213,7 +213,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
     
     let arguments = PasscodeOptionsControllerArguments(turnPasscodeOn: {
         var dismissImpl: (() -> Void)?
-        let controller = TGPasscodeEntryController(style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
+        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true))
+        let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
                 let challenge = PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil)
                 let _ = account.postbox.modify({ modifier -> Void in
@@ -229,7 +230,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
                 dismissImpl?()
             }
         })!
-        let legacyController = LegacyController(legacyController: controller, presentation: LegacyControllerPresentation.modal(animateIn: true))
+        legacyController.bind(controller: controller)
         legacyController.supportedOrientations = .portrait
         legacyController.statusBar.statusBarStyle = .White
         presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -259,7 +260,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
         presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, changePasscode: {
         var dismissImpl: (() -> Void)?
-        let controller = TGPasscodeEntryController(style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
+        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true))
+        let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
                 let _ = account.postbox.modify({ modifier -> Void in
                     var data = modifier.getAccessChallengeData()
@@ -276,7 +278,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
                 dismissImpl?()
             }
         })!
-        let legacyController = LegacyController(legacyController: controller, presentation: LegacyControllerPresentation.modal(animateIn: true))
+        legacyController.bind(controller: controller)
         legacyController.supportedOrientations = .portrait
         legacyController.statusBar.statusBarStyle = .White
         presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -365,7 +367,8 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
                 attemptData = TGPasscodeEntryAttemptData(numberOfInvalidAttempts: Int(attempts.count), dateOfLastInvalidAttempt: Double(attempts.timestamp))
             }
             var dismissImpl: (() -> Void)?
-            let controller = TGPasscodeEntryController(style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeVerifySimple, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
+            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true))
+            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeVerifySimple, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
                 if value != nil {
                     completion(false)
                 }
@@ -403,7 +406,7 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
                     modifier.setAccessChallengeData(data)
                 }).start()
             }
-            let legacyController = LegacyController(legacyController: controller, presentation: LegacyControllerPresentation.modal(animateIn: animateIn))
+            legacyController.bind(controller: controller)
             legacyController.supportedOrientations = .portrait
             legacyController.statusBar.statusBarStyle = .White
             dismissImpl = { [weak legacyController] in

@@ -7,9 +7,11 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode {
     var dismiss: (() -> Void)?
     
     override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = UIColor.white
     }

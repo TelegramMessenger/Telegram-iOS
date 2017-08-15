@@ -47,8 +47,8 @@ private func dictFromLocalization(_ value: Localization) -> [String: String] {
     return dict
 }
 
-public func currentPresentationData(postbox: Postbox) -> Signal<PresentationData, NoError> {
-    return postbox.modify { modifier -> (PresentationThemeSettings, LocalizationSettings?) in
+public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(PresentationData, AutomaticMediaDownloadSettings), NoError> {
+    return postbox.modify { modifier -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings) in
         let themeSettings: PresentationThemeSettings
         if let current = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
             themeSettings = current
@@ -63,8 +63,15 @@ public func currentPresentationData(postbox: Postbox) -> Signal<PresentationData
             localizationSettings = nil
         }
         
-        return (themeSettings, localizationSettings)
-    } |> map { (themeSettings, localizationSettings) -> PresentationData in
+        let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+        if let value = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings) as? AutomaticMediaDownloadSettings {
+            automaticMediaDownloadSettings = value
+        } else {
+            automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+        }
+        
+        return (themeSettings, localizationSettings, automaticMediaDownloadSettings)
+    } |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings) -> (PresentationData, AutomaticMediaDownloadSettings) in
         let themeValue: PresentationTheme
         switch themeSettings.theme {
             case let .builtin(reference):
@@ -81,7 +88,7 @@ public func currentPresentationData(postbox: Postbox) -> Signal<PresentationData
         } else {
             stringsValue = defaultPresentationStrings
         }
-        return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper)
+        return (PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper), automaticMediaDownloadSettings)
     }
 }
 

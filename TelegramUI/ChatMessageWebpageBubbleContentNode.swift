@@ -32,6 +32,22 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 controllerInteraction.openMessage(item.message.id)
             }
         }
+        self.contentNode.activateAction = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item, let controllerInteraction = strongSelf.controllerInteraction {
+                var webPageContent: TelegramMediaWebpageLoadedContent?
+                for media in item.message.media {
+                    if let media = media as? TelegramMediaWebpage {
+                        if case let .Loaded(content) = media.content {
+                            webPageContent = content
+                        }
+                        break
+                    }
+                }
+                if let webpage = webPageContent {
+                    controllerInteraction.openUrl(webpage.url)
+                }
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -58,6 +74,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var subtitle: String?
             var text: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
+            var actionTitle: String?
             
             if let webpage = webPageContent {
                 if let websiteName = webpage.websiteName, !websiteName.isEmpty {
@@ -89,9 +106,22 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (image, [.preferMediaInline])
                     }
                 }
+                
+                if let _ = webpage.instantPage {
+                    actionTitle = item.strings.Conversation_InstantPagePreview
+                } else if let type = webpage.type {
+                    switch type {
+                        case "telegram_channel":
+                            actionTitle = item.strings.Conversation_ViewChannel
+                        case "telegram_supergroup":
+                            actionTitle = item.strings.Conversation_ViewGroup
+                        default:
+                            break
+                    }
+                }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, true, layoutConstants, position, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, actionTitle, true, layoutConstants, position, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (refinedWidth, finalizeLayout) = continueLayout(constrainedSize)
@@ -137,6 +167,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     return .instantPage
                 }
             }
+            return .ignore
         }
         return .none
     }

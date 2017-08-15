@@ -61,7 +61,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             
             var automaticDownload = false
             if selectedFile!.isVoice {
-                automaticDownload = true
+                automaticDownload = item.controllerInteraction.automaticMediaDownloadSettings.categories.getVoice(item.message.id.peerId)
             }
             
             let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.theme, item.strings, item.message, selectedFile!, automaticDownload, item.message.effectivelyIncoming, statusType, CGSize(width: constrainedSize.width, height: constrainedSize.height))

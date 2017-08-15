@@ -20,9 +20,11 @@ final class NotificationContainerControllerNode: ASDisplayNode {
     private var timeoutTimer: SwiftSignalKit.Timer?
     
     override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return NotificationContainerControllerNodeView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = nil
         self.isOpaque = false

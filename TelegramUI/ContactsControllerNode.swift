@@ -27,9 +27,11 @@ final class ContactsControllerNode: ASDisplayNode {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         

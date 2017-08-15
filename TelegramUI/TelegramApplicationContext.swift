@@ -35,26 +35,42 @@ public final class TelegramApplicationContext {
         return self._presentationData.get()
     }
     
+    public let currentAutomaticMediaDownloadSettings: Atomic<AutomaticMediaDownloadSettings>
+    private let _automaticMediaDownloadSettings = Promise<AutomaticMediaDownloadSettings>()
+    public var automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError> {
+        return self._automaticMediaDownloadSettings.get()
+    }
+    
     private let presentationDataDisposable = MetaDisposable()
+    private let automaticMediaDownloadSettingsDisposable = MetaDisposable()
     
     public var navigateToCurrentCall: (() -> Void)?
     public var hasOngoingCall: Signal<Bool, NoError>?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>) {
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.currentPresentationData = Atomic(value: currentPresentationData)
+        self.currentAutomaticMediaDownloadSettings = Atomic(value: currentMediaDownloadSettings)
         self._presentationData.set(.single(currentPresentationData) |> then(presentationData))
+        self._automaticMediaDownloadSettings.set(.single(currentMediaDownloadSettings) |> then(automaticMediaDownloadSettings))
         
         self.presentationDataDisposable.set(self._presentationData.get().start(next: { [weak self] next in
             if let strongSelf = self {
                 let _ = strongSelf.currentPresentationData.swap(next)
             }
         }))
+        
+        self.automaticMediaDownloadSettingsDisposable.set(self._automaticMediaDownloadSettings.get().start(next: { [weak self] next in
+            if let strongSelf = self {
+                let _ = strongSelf.currentAutomaticMediaDownloadSettings.swap(next)
+            }
+        }))
     }
     
     deinit {
         self.presentationDataDisposable.dispose()
+        self.automaticMediaDownloadSettingsDisposable.dispose()
     }
     
     public func attachOverlayMediaController(_ controller: OverlayMediaController) {

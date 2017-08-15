@@ -123,7 +123,7 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
         return MediaPlayerTimeTextNodeParameters(state: self.state, alignment: self.alignment, mode: self.mode, textColor: self.textColor)
     }
     
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {

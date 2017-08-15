@@ -1035,6 +1035,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
+    override func updateAutomaticMediaDownloadSettings() {
+        if let item = self.item, let controllerInteraction = self.controllerInteraction {
+            for contentNode in self.contentNodes {
+                contentNode.updateAutomaticMediaDownloadSettings(controllerInteraction.automaticMediaDownloadSettings)
+            }
+        }
+    }
+    
     override func updateSelectionState(animated: Bool) {
         guard let controllerInteraction = self.controllerInteraction else {
             return

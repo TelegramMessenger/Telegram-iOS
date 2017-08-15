@@ -26,22 +26,43 @@ final class InstantPageTextLine {
 
 final class InstantPageTextItem: InstantPageItem {
     let lines: [InstantPageTextLine]
+    let rtlLineIndices: Set<Int>
     let hasLinks: Bool
     var frame: CGRect
     var alignment: NSTextAlignment = .left
     let medias: [InstantPageMedia] = []
     let wantsNode: Bool = false
     
+    var containsRTL: Bool {
+        return !self.rtlLineIndices.isEmpty
+    }
+    
     init(frame: CGRect, lines: [InstantPageTextLine]) {
         self.frame = frame
         self.lines = lines
         var hasLinks = false
+        var index = 0
+        var rtlLineIndices = Set<Int>()
         for line in lines {
             if !line.urlItems.isEmpty {
                 hasLinks = true
             }
+            
+            let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+            if glyphRuns.count != 0 {
+                inner: for i in 0 ..< glyphRuns.count {
+                    let runStatus = CTRunGetStatus(glyphRuns[i] as! CTRun)
+                    
+                    if runStatus.contains(.rightToLeft) {
+                        rtlLineIndices.insert(index)
+                        break inner
+                    }
+                }
+            }
+            index += 1
         }
         self.hasLinks = hasLinks
+        self.rtlLineIndices = rtlLineIndices
     }
     
     func drawInTile(context: CGContext) {
@@ -55,7 +76,9 @@ final class InstantPageTextItem: InstantPageItem {
         let lowerOriginBound = clipRect.maxY + 10.0
         let boundsWidth = self.frame.size.width
         
-        for line in self.lines {
+        for i in 0 ..< self.lines.count {
+            let line = self.lines[i]
+            
             let lineFrame = line.frame
             if lineFrame.maxY < upperOriginBound || lineFrame.minY > lowerOriginBound {
                 continue
@@ -64,6 +87,10 @@ final class InstantPageTextItem: InstantPageItem {
             var lineOrigin = lineFrame.origin
             if self.alignment == .center {
                 lineOrigin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
+            } else if self.alignment == .right {
+                lineOrigin.x = boundsWidth - lineFrame.size.width
+            } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
+                lineOrigin.x = boundsWidth - lineFrame.size.width
             }
             
             context.textPosition = CGPoint(x: lineOrigin.x, y: lineOrigin.y + lineFrame.size.height)
@@ -287,17 +314,6 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                 let textLine = InstantPageTextLine(line: line, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: fontLineHeight), urlItems: urlItems, strikethroughItems: strikethroughItems)
                 
                 lines.append(textLine)
-                
-                var rightAligned = false
-                
-                /*let glyphRuns = CTLineGetGlyphRuns(line)
-                if CFArrayGetCount(glyphRuns) != 0 {
-                    if (CTRunGetStatus(CFArrayGetValueAtIndex(glyphRuns, 0) as! CTRun).rawValue & CTRunStatus.rightToLeft.rawValue) != 0 {
-                        rightAligned = true
-                    }
-                }*/
-                
-                //hadRTL |= rightAligned;
                 
                 currentLineOrigin.x = 0.0;
                 currentLineOrigin.y += fontLineHeight + fontLineSpacing

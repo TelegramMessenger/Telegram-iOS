@@ -52,9 +52,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: false, options: []), selectionState: ContactListNodeGroupSelectionState())
         self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.chatList.searchBarKeyboardColor), placeholder: self.presentationData.strings.Compose_TokenListPlaceholder)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         

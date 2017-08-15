@@ -3,7 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import TelegramLegacyComponents
+import LegacyComponents
 
 private final class ChannelInfoControllerArguments {
     let account: Account
@@ -404,11 +404,13 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                     entries.append(.banned(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Banned, value: "\(kickedCount)"))
                 }
             } else {
-                if let adminCount = cachedChannelData.participantsSummary.adminCount {
-                    entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Management, value: "\(adminCount)"))
-                }
-                if let memberCount = cachedChannelData.participantsSummary.memberCount {
-                    entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Members, value: "\(memberCount)"))
+                if peer.adminRights != nil || peer.flags.contains(.isCreator) {
+                    if let adminCount = cachedChannelData.participantsSummary.adminCount {
+                        entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Management, value: "\(adminCount)"))
+                    }
+                    if let memberCount = cachedChannelData.participantsSummary.memberCount {
+                        entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Members, value: "\(memberCount)"))
+                    }
                 }
             }
         }
@@ -520,7 +522,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             }))
         })
     }, changeProfilePhoto: {
-        let emptyController = LegacyEmptyController()
+        /*let emptyController = LegacyEmptyController()
         let navigationController = makeLegacyNavigationController(rootController: emptyController)
         navigationController.setNavigationBarHidden(true, animated: false)
         navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
@@ -529,8 +531,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         
         presentControllerImpl?(legacyController, nil)
         
-        let mixin = TGMediaAvatarMenuMixin(parentController: emptyController, hasDeleteButton: false, personalPhoto: true)!
-        mixin.applicationInterface = legacyController.applicationInterface
+        let mixin = TGMediaAvatarMenuMixin(context: LegacyControllerContext(controller: nil), parentController: emptyController, hasDeleteButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
         let _ = currentAvatarMixin.swap(mixin)
         mixin.didDismiss = { [weak legacyController] in
             legacyController?.dismiss()
@@ -561,7 +562,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             let _ = currentAvatarMixin.swap(nil)
             legacyController?.dismiss()
         }
-        mixin.present()
+        mixin.present()*/
     }, updateEditingName: { editingName in
         updateState { state in
             if let editingState = state.editingState {
@@ -746,7 +747,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: channelInfoEntries(account: account, presentationData: presentationData, view: view, state: state), style: .plain)
             
             return (controllerState, (listState, arguments))

@@ -38,9 +38,11 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.pager = GalleryPagerNode(pageGap: pageGap)
         self.footerNode = GalleryFooterNode(controllerInteraction: controllerInteraction)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.pager.toggleControlsVisibility = { [weak self] in
             if let strongSelf = self {

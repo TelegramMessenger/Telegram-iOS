@@ -50,16 +50,14 @@ public final class ShareController: ViewController {
         
         super.init(navigationBarTheme: nil)
         
-        self.peers.set(account.postbox.tailChatListView(100) |> take(1) |> map { view -> [Peer] in
+        self.peers.set(account.viewTracker.tailChatListView(count: 100) |> take(1) |> map { view -> [Peer] in
             var peers: [Peer] = []
             for entry in view.0.entries.reversed() {
                 switch entry {
-                    case let .MessageEntry(_, message, _, _, _, renderedPeer):
-                        if let message = message {
-                            if let peer = message.peers[message.id.peerId] {
-                                if canSendMessagesToPeer(peer) {
-                                    peers.append(peer)
-                                }
+                    case let .MessageEntry(_, message, _, _, _, renderedPeer, _):
+                        if let peer = renderedPeer.chatMainPeer {
+                            if canSendMessagesToPeer(peer) {
+                                peers.append(peer)
                             }
                         }
                     default:

@@ -93,7 +93,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
             var text = ""
             for attribute in stickerItem.file.attributes {
-                if case let .Sticker(displayText, _) = attribute {
+                if case let .Sticker(displayText, _, _) = attribute {
                     text = displayText
                     break
                 }

@@ -10,6 +10,7 @@ private let titleFont: UIFont = Font.semibold(15.0)
 private let textFont: UIFont = Font.regular(15.0)
 private let textBoldFont: UIFont = Font.semibold(15.0)
 private let textFixedFont: UIFont = Font.regular(15.0)
+private let buttonFont: UIFont = Font.semibold(13.0)
 
 struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
     var rawValue: Int32
@@ -26,12 +27,139 @@ struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
     static let preferMediaBeforeText = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 1)
 }
 
+private final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
+    private let textNode: TextNode
+    private let highlightedTextNode: TextNode
+    private let backgroundNode: ASImageNode
+    
+    private var regularImage: UIImage?
+    private var highlightedImage: UIImage?
+    
+    var pressed: (() -> Void)?
+    
+    override init() {
+        self.textNode = TextNode()
+        self.textNode.isLayerBacked = true
+        self.highlightedTextNode = TextNode()
+        self.highlightedTextNode.isLayerBacked = true
+        
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode.displaysAsynchronously = false
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.highlightedTextNode)
+        self.highlightedTextNode.isHidden = true
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.backgroundNode.image = strongSelf.highlightedImage
+                    strongSelf.textNode.isHidden = true
+                    strongSelf.highlightedTextNode.isHidden = false
+                } else {
+                    UIView.transition(with: strongSelf.view, duration: 0.2, options: [.transitionCrossDissolve], animations: {
+                        strongSelf.backgroundNode.image = strongSelf.regularImage
+                        strongSelf.textNode.isHidden = false
+                        strongSelf.highlightedTextNode.isHidden = true
+                    }, completion: nil)
+                }
+            }
+        }
+        
+        self.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc func buttonPressed() {
+        self.pressed?()
+    }
+    
+    static func asyncLayout(_ current: ChatMessageAttachedContentButtonNode?) -> (_ width: CGFloat, _ regularImage: UIImage, _ highlightedImage: UIImage, _ title: String, _ titleColor: UIColor, _ highlightedTitleColor: UIColor) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageAttachedContentButtonNode)) {
+        let previousRegularImage = current?.regularImage
+        let previousHighlightedImage = current?.highlightedImage
+        
+        let maybeMakeTextLayout = (current?.textNode).flatMap(TextNode.asyncLayout)
+        let maybeMakeHighlightedTextLayout = (current?.highlightedTextNode).flatMap(TextNode.asyncLayout)
+        
+        return { width, regularImage, highlightedImage, title, titleColor, highlightedTitleColor in
+            let targetNode: ChatMessageAttachedContentButtonNode
+            if let current = current {
+                targetNode = current
+            } else {
+                targetNode = ChatMessageAttachedContentButtonNode()
+            }
+            
+            let makeTextLayout: (NSAttributedString?, UIColor?, Int, CTLineTruncationType, CGSize, NSTextAlignment, TextNodeCutout?, UIEdgeInsets) -> (TextNodeLayout, () -> TextNode)
+            if let maybeMakeTextLayout = maybeMakeTextLayout {
+                makeTextLayout = maybeMakeTextLayout
+            } else {
+                makeTextLayout = TextNode.asyncLayout(targetNode.textNode)
+            }
+            
+            let makeHighlightedTextLayout: (NSAttributedString?, UIColor?, Int, CTLineTruncationType, CGSize, NSTextAlignment, TextNodeCutout?, UIEdgeInsets) -> (TextNodeLayout, () -> TextNode)
+            if let maybeMakeHighlightedTextLayout = maybeMakeHighlightedTextLayout {
+                makeHighlightedTextLayout = maybeMakeHighlightedTextLayout
+            } else {
+                makeHighlightedTextLayout = TextNode.asyncLayout(targetNode.highlightedTextNode)
+            }
+            
+            var updatedRegularImage: UIImage?
+            if regularImage !== previousRegularImage {
+                updatedRegularImage = regularImage
+            }
+            
+            var updatedHighlightedImage: UIImage?
+            if highlightedImage !== previousHighlightedImage {
+                updatedHighlightedImage = highlightedImage
+            }
+            
+            let labelInset: CGFloat = 8.0
+            
+            let (textSize, textApply) = makeTextLayout(NSAttributedString(string: title, font: buttonFont, textColor: titleColor), nil, 1, .end, CGSize(width: max(1.0, width - labelInset * 2.0), height: CGFloat.greatestFiniteMagnitude), .left, nil, UIEdgeInsets())
+            
+            let (_, highlightedTextApply) = makeHighlightedTextLayout(NSAttributedString(string: title, font: buttonFont, textColor: highlightedTitleColor), nil, 1, .end, CGSize(width: max(1.0, width - labelInset * 2.0), height: CGFloat.greatestFiniteMagnitude), .left, nil, UIEdgeInsets())
+            
+            return (textSize.size.width + labelInset * 2.0, { refinedWidth in
+                return (CGSize(width: refinedWidth, height: 33.0), {
+                    if let updatedRegularImage = updatedRegularImage {
+                        targetNode.regularImage = updatedRegularImage
+                        if !targetNode.textNode.isHidden {
+                            targetNode.backgroundNode.image = updatedRegularImage
+                        }
+                    }
+                    if let updatedHighlightedImage = updatedHighlightedImage {
+                        targetNode.highlightedImage = updatedHighlightedImage
+                        if targetNode.textNode.isHidden {
+                            targetNode.backgroundNode.image = updatedHighlightedImage
+                        }
+                    }
+                    
+                    let _ = textApply()
+                    let _ = highlightedTextApply()
+                    
+                    targetNode.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: refinedWidth, height: 33.0))
+                    targetNode.textNode.frame = CGRect(origin: CGPoint(x: floor((refinedWidth - textSize.size.width) / 2.0), y: floor((33.0 - textSize.size.height) / 2.0)), size: textSize.size)
+                    targetNode.highlightedTextNode.frame = targetNode.textNode.frame
+                    
+                    return targetNode
+                })
+            })
+        }
+    }
+}
+
 final class ChatMessageAttachedContentNode: ASDisplayNode {
     private let lineNode: ASImageNode
     private let textNode: TextNode
     private let inlineImageNode: TransformImageNode
     private var contentImageNode: ChatMessageInteractiveMediaNode?
     private var contentFileNode: ChatMessageInteractiveFileNode?
+    private var buttonBackgroundNode: ASImageNode?
+    private var buttonNode: ChatMessageAttachedContentButtonNode?
     
     private let statusNode: ChatMessageDateAndStatusNode
     
@@ -73,7 +201,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.addSubnode(self.statusNode)
     }
     
-    func asyncLayout() -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ account: Account, _ message: Message, _ messageRead: Bool, _ title: String?, _ subtitle: String?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    func asyncLayout() -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ automaticDownloadSettings: AutomaticMediaDownloadSettings, _ account: Account, _ message: Message, _ messageRead: Bool, _ title: String?, _ subtitle: String?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let textAsyncLayout = TextNode.asyncLayout(self.textNode)
         let currentImage = self.media as? TelegramMediaImage
         let imageLayout = self.inlineImageNode.asyncLayout()
@@ -81,7 +209,9 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         let contentImageLayout = ChatMessageInteractiveMediaNode.asyncLayout(self.contentImageNode)
         let contentFileLayout = ChatMessageInteractiveFileNode.asyncLayout(self.contentFileNode)
         
-        return { theme, strings, account, message, messageRead, title, subtitle, text, entities, mediaAndFlags, displayLine, layoutConstants, position, constrainedSize in
+        let makeButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.buttonNode)
+        
+        return { theme, strings, automaticDownloadSettings, account, message, messageRead, title, subtitle, text, entities, mediaAndFlags, actionTitle, displayLine, layoutConstants, position, constrainedSize in
             let incoming = message.effectivelyIncoming
             
             var insets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 5.0, right: 8.0)
@@ -172,20 +302,27 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             if let (media, flags) = mediaAndFlags {
                 if let file = media as? TelegramMediaFile {
                     if file.isVideo {
-                        let (initialImageWidth, _, refineLayout) = contentImageLayout(account, theme, strings, message, file, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
+                        var automaticDownload = false
+                        if file.isAnimated {
+                            automaticDownload = automaticDownloadSettings.categories.getGif(message.id.peerId)
+                        } else if file.isInstantVideo {
+                            automaticDownload = automaticDownloadSettings.categories.getInstantVideo(message.id.peerId)
+                        }
+                        let (initialImageWidth, _, refineLayout) = contentImageLayout(account, theme, strings, message, file, ImageCorners(radius: 4.0), automaticDownload, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else {
                         var automaticDownload = false
                         if file.isVoice {
-                            automaticDownload = true
+                            automaticDownload = automaticDownloadSettings.categories.getVoice(message.id.peerId)
                         }
-                        let (_, refineLayout) = contentFileLayout(account, theme, strings, message, file, automaticDownload,message.effectivelyIncoming, nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(account, theme, strings, message, file, automaticDownload, message.effectivelyIncoming, nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = media as? TelegramMediaImage {
                     if !flags.contains(.preferMediaInline) {
-                        let (initialImageWidth, _, refineLayout) = contentImageLayout(account, theme, strings, message, image, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
+                        let automaticDownload = automaticDownloadSettings.categories.getPhoto(message.id.peerId)
+                        let (initialImageWidth, _, refineLayout) = contentImageLayout(account, theme, strings, message, image, ImageCorners(radius: 4.0), automaticDownload, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else if let dimensions = largestImageRepresentation(image.representations)?.dimensions {
@@ -196,7 +333,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     }
                 } else if let image = media as? TelegramMediaWebFile {
-                    let (initialImageWidth, _, refineLayout) = contentImageLayout(account, theme, strings, message, image, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
+                    let automaticDownload = automaticDownloadSettings.categories.getPhoto(message.id.peerId)
+                    let (initialImageWidth, _, refineLayout) = contentImageLayout(account, theme, strings, message, image, ImageCorners(radius: 4.0), automaticDownload, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height), layoutConstants)
                     initialWidth = initialImageWidth + insets.left + insets.right
                     refineContentImageLayout = refineLayout
                 }
@@ -265,10 +403,13 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 let lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(theme)
                 
                 var boundingSize = textFrame.size
+                var lineHeight = textFrame.size.height
                 if let statusFrame = statusFrame {
                     boundingSize = textFrame.union(statusFrame).size
+                    if let _ = actionTitle {
+                        lineHeight = boundingSize.height
+                    }
                 }
-                var lineHeight = textFrame.size.height
                 if let inlineImageSize = inlineImageSize {
                     if boundingSize.height < inlineImageSize.height {
                         boundingSize.height = inlineImageSize.height
@@ -293,8 +434,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     boundingSize.width = max(boundingSize.width, refinedWidth)
                 }
                 
-                boundingSize.width += insets.left + insets.right
-                boundingSize.height += insets.top + insets.bottom
                 lineHeight += insets.top + insets.bottom
                 
                 var imageApply: (() -> Void)?
@@ -303,6 +442,31 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     let arguments = TransformImageArguments(corners: imageCorners, imageSize: inlineImageDimensions.aspectFilled(inlineImageSize), boundingSize: inlineImageSize, intrinsicInsets: UIEdgeInsets())
                     imageApply = imageLayout(arguments)
                 }
+                
+                var continueActionButtonLayout: ((CGFloat) -> (CGSize, () -> ChatMessageAttachedContentButtonNode))?
+                if let actionTitle = actionTitle {
+                    let buttonImage: UIImage
+                    let buttonHighlightedImage: UIImage
+                    let titleColor: UIColor
+                    let titleHighlightedColor: UIColor
+                    if incoming {
+                        buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(theme)!
+                        buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(theme)!
+                        titleColor = theme.chat.bubble.incomingAccentColor
+                        titleHighlightedColor = theme.chat.bubble.incomingFillColor
+                    } else {
+                        buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(theme)!
+                        buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(theme)!
+                        titleColor = theme.chat.bubble.outgoingAccentColor
+                        titleHighlightedColor = theme.chat.bubble.outgoingFillColor
+                    }
+                    let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, actionTitle, titleColor, titleHighlightedColor)
+                    boundingSize.width = max(buttonWidth, boundingSize.width)
+                    continueActionButtonLayout = continueLayout
+                }
+                
+                boundingSize.width += insets.left + insets.right
+                boundingSize.height += insets.top + insets.bottom
                 
                 return (boundingSize.width, { boundingWidth in
                     var adjustedBoundingSize = boundingSize
@@ -341,9 +505,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         adjustedLineHeight += imageHeigthAddition + 4.0
                     }
                     
-                    /*if let _ = webPageContent?.instantPage {
-                        adjustedBoundingSize.height += 4.0
-                    }*/
+                    var actionButtonSizeAndApply: ((CGSize, () -> ChatMessageAttachedContentButtonNode))?
+                    if let continueActionButtonLayout = continueActionButtonLayout {
+                        let (size, apply) = continueActionButtonLayout(boundingWidth - 9.0 - insets.right)
+                        actionButtonSizeAndApply = (size, apply)
+                        adjustedBoundingSize.height += 7.0 + size.height
+                    }
                     
                     var adjustedStatusFrame: CGRect?
                     if let statusFrame = statusFrame {
@@ -441,6 +608,24 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                             
                             strongSelf.textNode.frame = textFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
+                            
+                            if let (size, apply) = actionButtonSizeAndApply {
+                                let buttonNode = apply()
+                                if buttonNode !== strongSelf.buttonNode {
+                                    strongSelf.buttonNode?.removeFromSupernode()
+                                    strongSelf.buttonNode = buttonNode
+                                    strongSelf.addSubnode(buttonNode)
+                                    buttonNode.pressed = {
+                                        if let strongSelf = self {
+                                            strongSelf.activateAction?()
+                                        }
+                                    }
+                                }
+                                buttonNode.frame = CGRect(origin: CGPoint(x: 9.0, y: adjustedLineHeight - insets.top - insets.bottom - 2.0 + 6.0), size: size)
+                            } else if let buttonNode = strongSelf.buttonNode {
+                                buttonNode.removeFromSupernode()
+                                strongSelf.buttonNode = nil
+                            }
                             
                             if let (_, statusApply) = statusSizeAndApply, let adjustedStatusFrame = adjustedStatusFrame {
                                 strongSelf.statusNode.frame = adjustedStatusFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)

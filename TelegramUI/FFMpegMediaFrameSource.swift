@@ -199,8 +199,8 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             self.performWithContext { [weak self] context in
                 context.initializeState(postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding)
                 
-                context.seek(timestamp: timestamp, completed: { [weak self] streamDescriptions, timestamp in
-                    queue.async { [weak self] in
+                context.seek(timestamp: timestamp, completed: { streamDescriptions, timestamp in
+                    queue.async {
                         if let strongSelf = self {
                             var audioBuffer: MediaTrackFrameBuffer?
                             var videoBuffer: MediaTrackFrameBuffer?

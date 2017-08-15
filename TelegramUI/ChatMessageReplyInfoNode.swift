@@ -26,7 +26,7 @@ func textStringForReplyMessage(_ message: Message) -> (String, Bool) {
                     var fileName: String = "File"
                     for attribute in file.attributes {
                         switch attribute {
-                            case let .Sticker(text, _):
+                            case let .Sticker(text, _, _):
                                 return ("\(text) Sticker", true)
                             case let .FileName(name):
                                 fileName = name

@@ -25,7 +25,7 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
     }
 }
 
-private func actionForPeer(peer: Peer, muteState: PeerMuteState) -> SubscriberAction? {
+private func actionForPeer(peer: Peer, isMuted: Bool) -> SubscriberAction? {
     if let channel = peer as? TelegramChannel {
         switch channel.participationStatus {
             case .kicked:
@@ -33,10 +33,10 @@ private func actionForPeer(peer: Peer, muteState: PeerMuteState) -> SubscriberAc
             case .left:
                 return .join
             case .member:
-                if case .unmuted = muteState {
-                    return .muteNotifications
-                } else {
+                if isMuted {
                     return .unmuteNotifications
+                } else {
+                    return .muteNotifications
                 }
         }
     } else {
@@ -48,14 +48,11 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private let button: UIButton
     private let activityIndicator: UIActivityIndicatorView
     
-    private var muteState: PeerMuteState = .unmuted
     private var action: SubscriberAction?
     
     private let actionDisposable = MetaDisposable()
     
     private var presentationInterfaceState: ChatPresentationInterfaceState?
-    
-    private var notificationSettingsDisposable = MetaDisposable()
     
     private var layoutData: CGFloat?
     
@@ -74,7 +71,6 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     
     deinit {
         self.actionDisposable.dispose()
-        self.notificationSettingsDisposable.dispose()
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -105,15 +101,9 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 }).start())
             case .kicked:
                 break
-            case .muteNotifications:
+            case .muteNotifications, .unmuteNotifications:
                 if let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.peer {
-                    let muteState: PeerMuteState = .muted(until: Int32.max)
-                    self.actionDisposable.set(changePeerNotificationSettings(account: account, peerId: peer.id, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
-                }
-            case .unmuteNotifications:
-                if let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.peer {
-                    let muteState: PeerMuteState = .unmuted
-                    self.actionDisposable.set(changePeerNotificationSettings(account: account, peerId: peer.id, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
+                    self.actionDisposable.set(togglePeerMuted(account: account, peerId: peer.id).start())
                 }
         }
     }
@@ -125,8 +115,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
-            if let peer = interfaceState.peer, previousState?.peer == nil || !peer.isEqual(previousState!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings {
-                if let action = actionForPeer(peer: peer, muteState: self.muteState) {
+            if let peer = interfaceState.peer, previousState?.peer == nil || !peer.isEqual(previousState!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted {
+                if let action = actionForPeer(peer: peer, isMuted: interfaceState.peerIsMuted) {
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
                     self.button.setTitle(title, for: [])
@@ -135,34 +125,6 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     self.button.sizeToFit()
                 } else {
                     self.action = nil
-                }
-                
-                if let account = self.account {
-                    self.notificationSettingsDisposable.set((account.postbox.peerView(id: peer.id) |> map { view -> PeerMuteState in
-                        if let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings {
-                            return notificationSettings.muteState
-                        } else {
-                            return .unmuted
-                        }
-                    }
-                    |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] muteState in
-                        if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let peer = presentationInterfaceState.peer {
-                            strongSelf.muteState = muteState
-                            let action = actionForPeer(peer: peer, muteState: muteState)
-                            if let layoutData = strongSelf.layoutData, action != strongSelf.action {
-                                strongSelf.action = action
-                                if let action = action {
-                                    let (title, color) = titleAndColorForAction(action, theme: presentationInterfaceState.theme, strings: presentationInterfaceState.strings)
-                                    strongSelf.button.setTitle(title, for: [])
-                                    strongSelf.button.setTitleColor(color, for: [.normal])
-                                    strongSelf.button.setTitleColor(color.withAlphaComponent(0.5), for: [.highlighted])
-                                    strongSelf.button.sizeToFit()
-                                }
-                                
-                                let _ = strongSelf.updateLayout(width: layoutData, transition: .immediate, interfaceState: presentationInterfaceState)
-                            }
-                        }
-                    }))
                 }
             }
         }

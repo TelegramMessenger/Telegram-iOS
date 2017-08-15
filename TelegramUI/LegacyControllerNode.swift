@@ -14,9 +14,11 @@ final class LegacyControllerNode: ASDisplayNode {
     }
     
     override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.clipsToBounds = true
     }

@@ -26,12 +26,30 @@ struct FFMpegMediaFrameSourceDescriptionSet {
     let video: FFMpegMediaFrameSourceDescription?
 }
 
-private struct InitializedState {
+private final class InitializedState {
     fileprivate let avIoContext: UnsafeMutablePointer<AVIOContext>
     fileprivate let avFormatContext: UnsafeMutablePointer<AVFormatContext>
     
     fileprivate let audioStream: StreamContext?
     fileprivate let videoStream: StreamContext?
+    
+    init(avIoContext: UnsafeMutablePointer<AVIOContext>, avFormatContext: UnsafeMutablePointer<AVFormatContext>, audioStream: StreamContext?, videoStream: StreamContext?) {
+        self.avIoContext = avIoContext
+        self.avFormatContext = avFormatContext
+        self.audioStream = audioStream
+        self.videoStream = videoStream
+    }
+    
+    deinit {
+        let avIoContext = Optional(self.avIoContext)
+        if self.avIoContext.pointee.buffer != nil {
+            av_free(self.avIoContext.pointee.buffer)
+        }
+        av_free(avIoContext)
+        
+        var avFormatContext = Optional(self.avFormatContext)
+        avformat_close_input(&avFormatContext)
+    }
 }
 
 struct FFMpegMediaFrameSourceStreamContextInfo {
@@ -304,8 +322,6 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             }
         }
         
-        
-        
         self.initializedState = InitializedState(avIoContext: avIoContext, avFormatContext: avFormatContext, audioStream: audioStream, videoStream: videoStream)
     }
     
@@ -372,7 +388,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                         duration = videoStream.fps
                     }
                     
-                    let frame = MediaTrackDecodableFrame(type: .video, packet: &packet.packet, pts: pts, dts: dts, duration: duration)
+                    let frame = MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)
                     frames.append(frame)
                     
                     if videoTimestamp == nil || videoTimestamp! < CMTimeGetSeconds(pts) {
@@ -395,7 +411,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                         duration = audioStream.fps
                     }
                     
-                    let frame = MediaTrackDecodableFrame(type: .audio, packet: &packet.packet, pts: pts, dts: dts, duration: duration)
+                    let frame = MediaTrackDecodableFrame(type: .audio, packet: packet, pts: pts, dts: dts, duration: duration)
                     frames.append(frame)
                     
                     if audioTimestamp == nil || audioTimestamp! < CMTimeGetSeconds(pts) {

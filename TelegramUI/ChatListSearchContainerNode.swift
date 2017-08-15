@@ -257,7 +257,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     interaction.peerSelected(peer)
                 })
             case let .message(message, theme, strings):
-                return ChatListItem(theme: theme, strings: strings, account: account, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), message: message, peer: RenderedPeer(message: message), combinedReadState: nil, notificationSettings: nil, embeddedState: nil, editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: theme, strings: strings) : nil, interaction: interaction)
+                return ChatListItem(theme: theme, strings: strings, account: account, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), message: message, peer: RenderedPeer(message: message), combinedReadState: nil, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: theme, strings: strings) : nil, interaction: interaction)
         }
     }
 }

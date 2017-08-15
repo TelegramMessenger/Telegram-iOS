@@ -26,9 +26,11 @@ class ChatListControllerNode: ASDisplayNode {
         
         self.themeAndStrings = (theme, strings)
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.addSubnode(self.chatListNode)
     }

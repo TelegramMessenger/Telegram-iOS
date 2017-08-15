@@ -3,7 +3,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-import TelegramLegacyComponents
+import LegacyComponents
 
 private let leaveImage = UIImage(bundleImageName: "Media Gallery/PictureInPictureLeave")?.precomposed()
 private let pauseImage = UIImage(bundleImageName: "Media Gallery/PictureInPicturePause")?.precomposed()

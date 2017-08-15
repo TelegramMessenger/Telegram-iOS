@@ -1,33 +1,34 @@
 import Foundation
 import UIKit
-import TelegramLegacyComponents
+import LegacyComponents
 import Display
 import SwiftSignalKit
 import Postbox
+import TelegramCore
 
-func legacyAttachmentMenu(theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], presentOverlayController: @escaping (UIViewController) -> (() -> Void), openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
-    let controller = TGMenuSheetController()
-    controller.applicationInterface = parentController.applicationInterface
+func legacyAttachmentMenu(account: Account, peer: Peer, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+    let controller = TGMenuSheetController(context: parentController.context, dark: false)!
     controller.dismissesByOutsideTap = true
     controller.hasSwipeGesture = true
     controller.maxHeight = 445.0 - TGMenuSheetButtonItemViewHeight
     
     var itemViews: [Any] = []
-    
-    let carouselItem = TGAttachmentCarouselItemView(camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType)!
-    carouselItem.presentOverlayController = { controller in
-        return presentOverlayController(controller!)
-    }
+    let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: false)!
+    carouselItem.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
+    carouselItem.recipientName = peer.displayTitle
     carouselItem.cameraPressed = { [weak controller] cameraView in
         if let controller = controller {
             openCamera(cameraView, controller)
         }
     }
+    if peer is TelegramUser || peer is TelegramSecretChat {
+        carouselItem.hasTimer = true
+    }
     carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles in
         if let controller = controller, let carouselItem = carouselItem {
             controller.dismiss(animated: true)
             let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
-            let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator())
+            let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: true)
             sendMessagesWithSignals(signals)
         }
     };
@@ -84,8 +85,4 @@ func legacyAttachmentMenu(theme: PresentationTheme, strings: PresentationStrings
     controller.setItemViews(itemViews)
     
     return controller
-}
-
-func legacyFileAttachmentMenu(menuSheetController: TGMenuSheetController) {
-    
 }

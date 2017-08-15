@@ -1,9 +1,14 @@
 import Postbox
 import Display
 
+enum ChatHistoryInitialSearchLocation {
+    case index(MessageIndex)
+    case id(MessageId)
+}
+
 enum ChatHistoryLocation: Equatable {
     case Initial(count: Int)
-    case InitialSearch(messageId: MessageId, count: Int)
+    case InitialSearch(location: ChatHistoryInitialSearchLocation, count: Int)
     case Navigation(index: MessageIndex, anchorIndex: MessageIndex)
     case Scroll(index: MessageIndex, anchorIndex: MessageIndex, sourceIndex: MessageIndex, scrollPosition: ListViewScrollPosition, animated: Bool)
 }

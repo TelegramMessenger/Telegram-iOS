@@ -49,7 +49,7 @@ final class AudioWaveformNode: ASDisplayNode {
         return AudioWaveformNodeParameters(waveform: self.waveform, color: self.color)
     }
     
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         
         let context = UIGraphicsGetCurrentContext()!
         

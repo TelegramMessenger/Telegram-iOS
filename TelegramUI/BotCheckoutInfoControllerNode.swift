@@ -61,9 +61,11 @@ private final class BotCheckoutInfoControllerScrollerNode: ASDisplayNode {
     }
     
     override init() {
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return BotCheckoutInfoControllerScrollerNodeView()
-        }, didLoad: nil)
+        })
     }
 }
 

@@ -24,7 +24,7 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     }
     
     func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {
-        var status = avcodec_send_packet(self.codecContext, frame.packet)
+        var status = frame.packet.sendToDecoder(self.codecContext)
         if status == 0 {
             status = avcodec_receive_frame(self.codecContext, self.audioFrame)
             if status == 0 {

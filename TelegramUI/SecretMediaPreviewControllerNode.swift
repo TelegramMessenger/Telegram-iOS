@@ -15,9 +15,11 @@ class SecretMediaPreviewControllerNode: ASDisplayNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor.black
         
-        super.init(viewBlock: {
+        super.init()
+        
+        self.setViewBlock({
             return UITracingLayerView()
-        }, didLoad: nil)
+        })
         
         self.addSubnode(self.backgroundNode)
     }
