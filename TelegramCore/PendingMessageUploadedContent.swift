@@ -35,9 +35,12 @@ func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoin
 
 func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, peerId: PeerId, messageId: MessageId?, attributes: [MessageAttribute], text: String, media: [Media]) -> PendingMessageUploadContent {
     var contextResult: OutgoingChatContextResultMessageAttribute?
+    var autoremoveAttribute: AutoremoveTimeoutMessageAttribute?
     for attribute in attributes {
         if let attribute = attribute as? OutgoingChatContextResultMessageAttribute {
             contextResult = attribute
+        } else if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+            autoremoveAttribute = attribute
         }
     }
     
@@ -58,7 +61,7 @@ func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoin
         return .ready(.chatContextResult(contextResult))
     } else if let media = media.first {
         if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
-            return .upload(uploadedMediaImageContent(network: network, postbox: postbox, peerId: peerId, image: image, text: text))
+            return .upload(uploadedMediaImageContent(network: network, postbox: postbox, peerId: peerId, image: image, text: text, autoremoveAttribute: autoremoveAttribute))
         } else if let file = media as? TelegramMediaFile {
             if let resource = file.resource as? CloudDocumentMediaResource {
                 return .ready(.media(Api.InputMedia.inputMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), caption: text)))
@@ -84,7 +87,7 @@ func messageContentToUpload(network: Network, postbox: Postbox, transformOutgoin
     }
 }
 
-private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerId: PeerId, image: TelegramMediaImage, text: String) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
+private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerId: PeerId, image: TelegramMediaImage, text: String, autoremoveAttribute: AutoremoveTimeoutMessageAttribute?) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
         return multipartUpload(network: network, postbox: postbox, source: .resource(largestRepresentation.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
             |> mapError { _ -> PendingMessageUploadError in return .generic }
@@ -93,7 +96,13 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerI
                     case let .progress(progress):
                         return .progress(progress)
                     case let .inputFile(file):
-                        return .content(.media(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: file, caption: text, stickers: nil, ttlSeconds: nil)))
+                        var flags: Int32 = 0
+                        var ttlSeconds: Int32?
+                        if let autoremoveAttribute = autoremoveAttribute {
+                            flags |= 1 << 1
+                            ttlSeconds = autoremoveAttribute.timeout
+                        }
+                        return .content(.media(Api.InputMedia.inputMediaUploadedPhoto(flags: flags, file: file, caption: text, stickers: nil, ttlSeconds: ttlSeconds)))
                     case let .inputSecretFile(file, size, key):
                         return .content(.secretMedia(file, size, key))
                 }
@@ -113,9 +122,9 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 attributes.append(.documentAttributeFilename(fileName: fileName))
             case let .ImageSize(size):
                 attributes.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
-            case let .Sticker(displayText, packReference):
+            case let .Sticker(displayText, packReference, maskCoords):
                 var stickerSet: Api.InputStickerSet = .inputStickerSetEmpty
-                let flags: Int32 = 0
+                var flags: Int32 = 0
                 if let packReference = packReference {
                     switch packReference {
                         case let .id(id, accessHash):
@@ -124,7 +133,12 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                             stickerSet = .inputStickerSetShortName(shortName: name)
                     }
                 }
-                attributes.append(.documentAttributeSticker(flags: flags, alt: displayText, stickerset: stickerSet, maskCoords: nil))
+                var inputMaskCoords: Api.MaskCoords?
+                if let maskCoords = maskCoords {
+                    flags |= 1 << 0
+                    inputMaskCoords = .maskCoords(n: maskCoords.n, x: maskCoords.x, y: maskCoords.y, zoom: maskCoords.zoom)
+                }
+                attributes.append(.documentAttributeSticker(flags: flags, alt: displayText, stickerset: stickerSet, maskCoords: inputMaskCoords))
             case .HasLinkedStickers:
                 attributes.append(.documentAttributeHasStickers)
             case let .Video(duration, size, videoFlags):
@@ -272,11 +286,22 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, transf
                 case let .inputFile(inputFile):
                     if case let .done(thumbnail) = media {
                         let inputMedia: Api.InputMedia
-                        if let thumbnail = thumbnail {
-                            inputMedia = Api.InputMedia.inputMediaUploadedDocument(flags: (1 << 2), file: inputFile, thumb: thumbnail, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), caption: text, stickers: nil, ttlSeconds: nil)
-                        } else {
-                            inputMedia = Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), caption: text, stickers: nil, ttlSeconds: nil)
+                        var flags: Int32 = 0
+                        
+                        if let _ = thumbnail {
+                            flags |= 1 << 2
                         }
+                        
+                        var ttlSeconds: Int32?
+                        for attribute in attributes {
+                            if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                                flags |= 1 << 1
+                                ttlSeconds = attribute.timeout
+                            }
+                        }
+                    
+                        inputMedia = Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnail, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), caption: text, stickers: nil, ttlSeconds: ttlSeconds)
+                        
                         return .single(.content(.media(inputMedia)))
                     } else {
                         return .complete()

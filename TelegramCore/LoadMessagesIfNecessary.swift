@@ -9,7 +9,6 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-
 public enum GetMessagesStrategy  {
     case local
     case cloud

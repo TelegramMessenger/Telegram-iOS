@@ -37,7 +37,7 @@ public struct StickerPackCollectionInfoFlags : OptionSet {
 
 public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     public let id: ItemCollectionId
-    public let flags:StickerPackCollectionInfoFlags
+    public let flags: StickerPackCollectionInfoFlags
     public let accessHash: Int64
     public let title: String
     public let shortName: String
@@ -107,7 +107,7 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
 public final class StickerPackItem: ItemCollectionItem, Equatable {
     public let index: ItemCollectionItemIndex
     public let file: TelegramMediaFile
-    public var indexKeys: [MemoryBuffer]
+    public let indexKeys: [MemoryBuffer]
     
     public init(index: ItemCollectionItemIndex, file: TelegramMediaFile, indexKeys: [MemoryBuffer]) {
         self.index = index
@@ -130,6 +130,18 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
     
     public static func ==(lhs: StickerPackItem, rhs: StickerPackItem) -> Bool {
         return lhs.index == rhs.index && lhs.file == rhs.file && lhs.indexKeys == rhs.indexKeys
+    }
+    
+    public func getStringRepresentationsOfIndexKeys() -> [String] {
+        var stringRepresentations: [String] = []
+        for key in self.indexKeys {
+            key.withDataNoCopy { data in
+                if let string = String(data: data, encoding: .utf8) {
+                    stringRepresentations.append(string)
+                }
+            }
+        }
+        return stringRepresentations
     }
 }
 

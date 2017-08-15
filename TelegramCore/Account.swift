@@ -227,6 +227,7 @@ private var declaredEncodables: Void = {
     declareEncodable(ArchivedStickerPacksInfo.self, f: { ArchivedStickerPacksInfo(decoder: $0) })
     declareEncodable(SynchronizeChatInputStateOperation.self, f: { SynchronizeChatInputStateOperation(decoder: $0) })
     declareEncodable(SynchronizeSavedGifsOperation.self, f: { SynchronizeSavedGifsOperation(decoder: $0) })
+    declareEncodable(SynchronizeSavedStickersOperation.self, f: { SynchronizeSavedStickersOperation(decoder: $0) })
     declareEncodable(CacheStorageSettings.self, f: { CacheStorageSettings(decoder: $0) })
     declareEncodable(LocalizationSettings.self, f: { LocalizationSettings(decoder: $0) })
     declareEncodable(ProxySettings.self, f: { ProxySettings(decoder: $0) })
@@ -240,6 +241,9 @@ private var declaredEncodables: Void = {
     declareEncodable(TemporaryTwoStepPasswordToken.self, f: { TemporaryTwoStepPasswordToken(decoder: $0) })
     declareEncodable(AuthorSignatureMessageAttribute.self, f: { AuthorSignatureMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaExpiredContent.self, f: { TelegramMediaExpiredContent(decoder: $0) })
+    declareEncodable(SavedStickerItem.self, f: { SavedStickerItem(decoder: $0) })
+    declareEncodable(ConsumablePersonalMentionMessageAttribute.self, f: { ConsumablePersonalMentionMessageAttribute(decoder: $0) })
+    declareEncodable(ConsumePersonalMessageAction.self, f: { ConsumePersonalMessageAction(decoder: $0) })
     
     return
 }()
@@ -268,7 +272,7 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
         initializeMessageNamespacesWithHoles.append((peerNamespace, Namespaces.Message.Cloud))
     }
     
-    let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
+    let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
     
     let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
     
@@ -456,8 +460,6 @@ public class Account {
     
     public var applicationContext: Any?
     
-    public let settings: AccountSettings = defaultAccountSettings()
-    
     public let notificationToken = Promise<Data>()
     public let voipToken = Promise<Data>()
     private let notificationTokenDisposable = MetaDisposable()
@@ -636,9 +638,11 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentStickers(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())

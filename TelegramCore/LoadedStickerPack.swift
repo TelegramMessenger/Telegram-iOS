@@ -84,17 +84,16 @@ public func loadedStickerPack(account: Account, reference: StickerPackReference)
                             var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
                             for pack in packs {
                                 switch pack {
-                                case let .stickerPack(text, fileIds):
-                                    let key = ValueBoxKey(text).toMemoryBuffer()
-                                    for fileId in fileIds {
-                                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                        if indexKeysByFile[mediaId] == nil {
-                                            indexKeysByFile[mediaId] = [key]
-                                        } else {
-                                            indexKeysByFile[mediaId]!.append(key)
+                                    case let .stickerPack(text, fileIds):
+                                        let key = ValueBoxKey(text).toMemoryBuffer()
+                                        for fileId in fileIds {
+                                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                            if indexKeysByFile[mediaId] == nil {
+                                                indexKeysByFile[mediaId] = [key]
+                                            } else {
+                                                indexKeysByFile[mediaId]!.append(key)
+                                            }
                                         }
-                                    }
-                                    break
                                 }
                             }
                             

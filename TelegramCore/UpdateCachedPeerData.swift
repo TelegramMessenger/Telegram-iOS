@@ -210,14 +210,14 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                             switch result {
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
-                                        case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _):
+                                        case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _, _):
                                             modifier.updatePeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                         case .chatFull:
                                             break
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -261,6 +261,20 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             
                                             modifier.updatePeerPresences(peerPresences)
                                             
+                                            let stickerPack: StickerPackCollectionInfo? = stickerSet.flatMap { apiSet -> StickerPackCollectionInfo in
+                                                let namespace: ItemCollectionId.Namespace
+                                                switch apiSet {
+                                                    case let .stickerSet(flags, _, _, _, _, _, _):
+                                                        if (flags & (1 << 3)) != 0 {
+                                                            namespace = Namespaces.ItemCollection.CloudMaskPacks
+                                                        } else {
+                                                            namespace = Namespaces.ItemCollection.CloudStickerPacks
+                                                        }
+                                                }
+                                                
+                                                return StickerPackCollectionInfo(apiSet: apiSet, namespace: namespace)
+                                            }
+                                            
                                             modifier.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                                 let previous: CachedChannelData
                                                 if let current = current as? CachedChannelData {
@@ -275,6 +289,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                     .withUpdatedExportedInvitation(ExportedInvitation(apiExportedInvite: apiExportedInvite))
                                                     .withUpdatedBotInfos(botInfos)
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)
+                                                    .withUpdatedStickerPack(stickerPack)
                                             })
                                         case .chatFull:
                                             break

@@ -45,9 +45,9 @@ public struct CloudFileMediaResourceId: MediaResourceId {
 
 public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipartFetchableResource {
     public let datacenterId: Int
-    let volumeId: Int64
-    let localId: Int32
-    let secret: Int64
+    public let volumeId: Int64
+    public let localId: Int32
+    public let secret: Int64
     public let size: Int?
     
     public var id: MediaResourceId {
@@ -130,7 +130,7 @@ public struct CloudDocumentMediaResourceId: MediaResourceId {
 public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMultipartFetchableResource {
     public let datacenterId: Int
     let fileId: Int64
-    let accessHash: Int64
+    public let accessHash: Int64
     public let size: Int?
     
     public var id: MediaResourceId {

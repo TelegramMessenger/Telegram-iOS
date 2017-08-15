@@ -14,7 +14,7 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
         return (network.request(Api.functions.help.getConfig()) |> retryRequest |> mapToSignal { result -> Signal<Void, NoError> in
             return postbox.modify { modifier -> Void in
                 switch result {
-                    case let .config(_, _, _, _, _, dcOptions, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, onlineCloudTimeoutMs, notifyCloudDelayMs, notifyDefaultDelayMs, chatBigSize, pushChatPeriodMs, pushChatLimit, savedGifsLimit, editTimeLimit, ratingEDecay, stickersRecentLimit, tmpSessions, pinnedDialogsCountMax, callReceiveTimeoutMs, callRingTimeoutMs, callConnectTimeoutMs, callPacketTimeoutMs, meUrlPrefix, suggestedLangCode, langPackVersion, disabledFeatures):
+                    case let .config(_, _, _, _, _, dcOptions, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, onlineCloudTimeoutMs, notifyCloudDelayMs, notifyDefaultDelayMs, chatBigSize, pushChatPeriodMs, pushChatLimit, savedGifsLimit, editTimeLimit, ratingEDecay, stickersRecentLimit, stickersFavedLimit, tmpSessions, pinnedDialogsCountMax, callReceiveTimeoutMs, callRingTimeoutMs, callConnectTimeoutMs, callPacketTimeoutMs, meUrlPrefix, suggestedLangCode, langPackVersion, disabledFeatures):
                         var addressList: [Int: [MTDatacenterAddress]] = [:]
                         for option in dcOptions {
                             switch option {

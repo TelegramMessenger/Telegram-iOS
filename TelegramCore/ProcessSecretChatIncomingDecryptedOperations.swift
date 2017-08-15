@@ -428,7 +428,7 @@ extension TelegramMediaFileAttribute {
                     case let .inputStickerSetShortName(shortName):
                         packReference = .name(shortName)
                 }
-                self = .Sticker(displayText: alt, packReference: packReference)
+                self = .Sticker(displayText: alt, packReference: packReference, maskData: nil)
             case let .documentAttributeVideo(duration, w, h):
                 self = .Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h)), flags: [])
             default:

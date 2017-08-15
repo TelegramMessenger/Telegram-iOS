@@ -49,6 +49,7 @@ public struct Namespaces {
         public static let CloudFeaturedStickerPacks: Int32 = 4
         public static let CloudArchivedStickerPacks: Int32 = 5
         public static let CloudWallpapers: Int32 = 6
+        public static let CloudSavedStickers: Int32 = 7
     }
     
     struct CachedItemCollection {
@@ -66,13 +67,14 @@ public struct Namespaces {
 }
 
 public extension MessageTags {
-    static let PhotoOrVideo = MessageTags(rawValue: 1 << 0)
-    static let File = MessageTags(rawValue: 1 << 1)
-    static let Music = MessageTags(rawValue: 1 << 2)
-    static let WebPage = MessageTags(rawValue: 1 << 3)
-    static let VoiceOrInstantVideo = MessageTags(rawValue: 1 << 4)
+    static let photoOrVideo = MessageTags(rawValue: 1 << 0)
+    static let file = MessageTags(rawValue: 1 << 1)
+    static let music = MessageTags(rawValue: 1 << 2)
+    static let webPage = MessageTags(rawValue: 1 << 3)
+    static let voiceOrInstantVideo = MessageTags(rawValue: 1 << 4)
+    static let unseenPersonalMessage = MessageTags(rawValue: 1 << 5)
     
-    static let all: MessageTags = [.PhotoOrVideo, .File, .Music, .WebPage, .VoiceOrInstantVideo]
+    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage]
 }
 
 public extension GlobalMessageTags {
@@ -80,6 +82,10 @@ public extension GlobalMessageTags {
     static let MissedCalls = GlobalMessageTags(rawValue: 1 << 1)
     
     static let all: GlobalMessageTags = [.Calls, .MissedCalls]
+}
+
+public extension PendingMessageActionType {
+    static let consumeUnseenPersonalMessage = PendingMessageActionType(rawValue: 0)
 }
 
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
@@ -99,6 +105,7 @@ struct OperationLogTags {
     static let SynchronizeChatInputStates = PeerOperationLogTag(value: 11)
     static let SynchronizeSavedGifs = PeerOperationLogTag(value: 12)
     static let SynchronizeLocalizationUpdates = PeerOperationLogTag(value: 13)
+    static let SynchronizeSavedStickers = PeerOperationLogTag(value: 14)
 }
 
 private enum PreferencesKeyValues: Int32 {

@@ -216,7 +216,7 @@ private func validateBatch(postbox: Postbox, network: Network, messageIds: [Mess
                                 }
                             case let .channelDifferenceEmpty(_, pts, _):
                                 finalPts = pts
-                            case let .channelDifferenceTooLong(_, pts, _, _, _, _, _, _, _, _):
+                            case let .channelDifferenceTooLong(_, pts, _, _, _, _, _, _, _, _, _):
                                 finalPts = pts
                         }
                         

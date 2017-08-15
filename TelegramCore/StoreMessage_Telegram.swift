@@ -7,32 +7,41 @@ import Foundation
 
 public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?) -> (MessageTags, GlobalMessageTags) {
     var isSecret = false
+    var isUnconsumedPersonalMention = false
     for attribute in attributes {
         if let timerAttribute = attribute as? AutoremoveTimeoutMessageAttribute {
             if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
                 isSecret = true
             }
-            break
+        } else if let mentionAttribute = attribute as? ConsumablePersonalMentionMessageAttribute {
+            if !mentionAttribute.consumed {
+                isUnconsumedPersonalMention = true
+            }
         }
     }
     
     var tags = MessageTags()
     var globalTags = GlobalMessageTags()
+    
+    if isUnconsumedPersonalMention {
+        tags.insert(.unseenPersonalMessage)
+    }
+    
     for attachment in media {
         if let _ = attachment as? TelegramMediaImage {
             if !isSecret {
-                tags.insert(.PhotoOrVideo)
+                tags.insert(.photoOrVideo)
             }
         } else if let file = attachment as? TelegramMediaFile {
-            var refinedTag: MessageTags? = .File
+            var refinedTag: MessageTags? = .file
             inner: for attribute in file.attributes {
                 switch attribute {
                     case let .Video(_, _, flags):
                         if flags.contains(.instantRoundVideo) {
-                            refinedTag = .VoiceOrInstantVideo
+                            refinedTag = .voiceOrInstantVideo
                         } else {
                             if !isSecret {
-                                refinedTag = .PhotoOrVideo
+                                refinedTag = .photoOrVideo
                             } else {
                                 refinedTag = nil
                             }
@@ -40,9 +49,9 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                         break inner
                     case let .Audio(isVoice, _, _, _, _):
                         if isVoice {
-                            refinedTag = .VoiceOrInstantVideo
+                            refinedTag = .voiceOrInstantVideo
                         } else {
-                            refinedTag = .Music
+                            refinedTag = .music
                         }
                         break inner
                     case .Sticker:
@@ -56,7 +65,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                 tags.insert(refinedTag)
             }
         } else if let webpage = attachment as? TelegramMediaWebpage, case .Loaded = webpage.content {
-            tags.insert(.WebPage)
+            tags.insert(.webPage)
         } else if let action = attachment as? TelegramMediaAction {
             switch action.action {
                 case let .phoneCall(_, discardReason, _):
@@ -69,16 +78,17 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             }
         }
     }
-    if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.WebPage) {
+    if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.webPage) {
         for entity in textEntities {
             switch entity.type {
                 case .Url, .Email:
-                    tags.insert(.WebPage)
+                    tags.insert(.webPage)
                 default:
                     break
             }
         }
     }
+    
     return (tags, globalTags)
 }
 
@@ -474,6 +484,8 @@ extension StoreMessage {
                     var notificationFlags: NotificationInfoMessageAttributeFlags = []
                     if (flags & (1 << 4)) != 0 {
                         notificationFlags.insert(.personal)
+                        let notConsumed = (flags & (1 << 5)) != 0
+                        attributes.append(ConsumablePersonalMentionMessageAttribute(consumed: !notConsumed, pending: false))
                     }
                     if (flags & (1 << 13)) != 0 {
                         notificationFlags.insert(.muted)

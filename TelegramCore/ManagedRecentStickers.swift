@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
+private func hashForIds(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0
     
     for id in ids {
@@ -20,12 +20,15 @@ private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
     return Int32(bitPattern: acc % UInt32(0x7FFFFFFF))
 }
 
-private func managedRecentMedia(postbox: Postbox, network: Network, collectionId: Int32, fetch: @escaping (Int32) -> Signal<[OrderedItemListEntry]?, NoError>) -> Signal<Void, NoError> {
+private func managedRecentMedia(postbox: Postbox, network: Network, collectionId: Int32, reverseHashOrder: Bool, fetch: @escaping (Int32) -> Signal<[OrderedItemListEntry]?, NoError>) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Signal<Void, NoError> in
-        let itemIds = modifier.getOrderedListItemIds(collectionId: collectionId).map {
+        var itemIds = modifier.getOrderedListItemIds(collectionId: collectionId).map {
             RecentMediaItemId($0).mediaId.id
         }
-        return fetch(hashForIdsReverse(itemIds))
+        if reverseHashOrder {
+            itemIds.reverse()
+        }
+        return fetch(hashForIds(itemIds))
             |> mapToSignal { items in
                 if let items = items {
                     return postbox.modify { modifier -> Void in
@@ -39,7 +42,7 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
 }
 
 func managedRecentStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentStickers, fetch: { hash in
+    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentStickers, reverseHashOrder: false, fetch: { hash in
         return network.request(Api.functions.messages.getRecentStickers(flags: 0, hash: hash))
             |> retryRequest
             |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
@@ -60,7 +63,7 @@ func managedRecentStickers(postbox: Postbox, network: Network) -> Signal<Void, N
 }
 
 func managedRecentGifs(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentGifs, fetch: { hash in
+    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentGifs, reverseHashOrder: false, fetch: { hash in
         return network.request(Api.functions.messages.getSavedGifs(hash: hash))
             |> retryRequest
             |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
@@ -72,6 +75,46 @@ func managedRecentGifs(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                         for gif in gifs {
                             if let file = telegramMediaFileFromApiDocument(gif), let id = file.id {
                                 items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: RecentMediaItem(file)))
+                            }
+                        }
+                        return .single(items)
+                }
+        }
+    })
+}
+
+func managedSavedStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudSavedStickers, reverseHashOrder: true, fetch: { hash in
+        return network.request(Api.functions.messages.getFavedStickers(hash: hash))
+            |> retryRequest
+            |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+                switch result {
+                    case .favedStickersNotModified:
+                        return .single(nil)
+                    case let .favedStickers(_, packs, stickers):
+                        var fileStringRepresentations: [MediaId: [String]] = [:]
+                        for pack in packs {
+                            switch pack {
+                                case let .stickerPack(text, fileIds):
+                                    for fileId in fileIds {
+                                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                        if fileStringRepresentations[mediaId] == nil {
+                                            fileStringRepresentations[mediaId] = [text]
+                                        } else {
+                                            fileStringRepresentations[mediaId]!.append(text)
+                                        }
+                                    }
+                            }
+                        }
+                        
+                        var items: [OrderedItemListEntry] = []
+                        for sticker in stickers {
+                            if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                                var stringRepresentations: [String] = []
+                                if let representations = fileStringRepresentations[id] {
+                                    stringRepresentations = representations
+                                }
+                                items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: SavedStickerItem(file: file, stringRepresentations: stringRepresentations)))
                             }
                         }
                         return .single(items)

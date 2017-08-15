@@ -74,7 +74,7 @@ func fetchPeerCloudReadState(network: Network, postbox: Postbox, peerId: PeerId,
                         let apiReadOutboxMaxId: Int32
                         let apiUnreadCount: Int32
                         switch dialog {
-                            case let .dialog(_, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _):
+                            case let .dialog(_, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, _):
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId
                                 apiReadOutboxMaxId = readOutboxMaxId
@@ -109,7 +109,7 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                                         let apiUnreadCount: Int32
                                         var apiChannelPts: Int32 = 0
                                         switch dialog {
-                                            case let .dialog(_, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, pts, _):
+                                            case let .dialog(_, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, pts, _):
                                                 apiTopMessage = topMessage
                                                 apiReadInboxMaxId = readInboxMaxId
                                                 apiReadOutboxMaxId = readOutboxMaxId

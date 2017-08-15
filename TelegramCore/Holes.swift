@@ -10,15 +10,15 @@ import Foundation
 #endif
 
 private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
-    if tagMask == .PhotoOrVideo {
+    if tagMask == .photoOrVideo {
         return Api.MessagesFilter.inputMessagesFilterPhotoVideo
-    } else if tagMask == .File {
+    } else if tagMask == .file {
         return Api.MessagesFilter.inputMessagesFilterDocument
-    } else if tagMask == .Music {
+    } else if tagMask == .music {
         return Api.MessagesFilter.inputMessagesFilterMusic
-    } else if tagMask == .WebPage {
+    } else if tagMask == .webPage {
         return Api.MessagesFilter.inputMessagesFilterUrl
-    } else if tagMask == .VoiceOrInstantVideo {
+    } else if tagMask == .voiceOrInstantVideo {
         return Api.MessagesFilter.inputMessagesFilterRoundVoice
     } else {
         return nil
@@ -35,16 +35,58 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                 
                 let request: Signal<Api.messages.Messages, MTRpcError>
                 if let tagMask = tagMask, let filter = messageFilterForTagMask(tagMask) {
-                    switch direction {
-                        case .UpperToLower:
-                            break
-                        case .LowerToUpper:
-                            assertionFailure(".LowerToUpper not supported")
-                        case .AroundIndex:
-                            assertionFailure(".AroundIndex not supported")
+                    if tagMask == MessageTags.unseenPersonalMessage {
+                        let offsetId: Int32
+                        let addOffset: Int32
+                        let selectedLimit = limit
+                        let maxId: Int32
+                        let minId: Int32
+                        
+                        switch direction {
+                            case .UpperToLower:
+                                offsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                                addOffset = 0
+                                maxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                                minId = 1
+                            case .LowerToUpper:
+                                offsetId = hole.min <= 1 ? 1 : (hole.min - 1)
+                                addOffset = Int32(-limit)
+                                maxId = Int32.max
+                                minId = hole.min - 1
+                            case let .AroundIndex(index):
+                                offsetId = index.id.id
+                                addOffset = Int32(-limit / 2)
+                                maxId = Int32.max
+                                minId = 1
+                        }
+                        request = network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                    } else {
+                        let offsetId: Int32
+                        let addOffset: Int32
+                        let selectedLimit = limit
+                        let maxId: Int32
+                        let minId: Int32
+                        
+                        switch direction {
+                            case .UpperToLower:
+                                offsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                                addOffset = 0
+                                maxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                                minId = 1
+                            case .LowerToUpper:
+                                offsetId = hole.min <= 1 ? 1 : (hole.min - 1)
+                                addOffset = Int32(-limit)
+                                maxId = Int32.max
+                                minId = hole.min - 1
+                            case let .AroundIndex(index):
+                                offsetId = index.id.id
+                                addOffset = Int32(-limit / 2)
+                                maxId = Int32.max
+                                minId = 1
+                        }
+                        
+                        request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                     }
-                    //request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: hole.maxIndex.id.id + 1, limit: Int32(limit)))
-                    request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: Int32.max, limit: Int32(limit)))
                 } else {
                     let offsetId: Int32
                     let addOffset: Int32
@@ -70,7 +112,6 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                             minId = 1
                     }
                     
-                    //request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1), minId: hole.min - 1))
                     request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                 }
                 
@@ -183,6 +224,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                 var replacementHole: ChatListHole?
                 var storeMessages: [StoreMessage] = []
                 var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
+                var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
                 var chatStates: [PeerId: PeerChatState] = [:]
                 var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
                 
@@ -197,15 +239,17 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             let apiReadOutboxMaxId: Int32
                             let apiTopMessage: Int32
                             let apiUnreadCount: Int32
+                            let apiUnreadMentionsCount: Int32
                             var apiChannelPts: Int32?
                             let apiNotificationSettings: Api.PeerNotifySettings
                             switch dialog {
-                                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, peerNotificationSettings, pts, _):
+                                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
                                     apiPeer = peer
                                     apiTopMessage = topMessage
                                     apiReadInboxMaxId = readInboxMaxId
                                     apiReadOutboxMaxId = readOutboxMaxId
                                     apiUnreadCount = unreadCount
+                                    apiUnreadMentionsCount = unreadMentionsCount
                                     apiNotificationSettings = peerNotificationSettings
                                     apiChannelPts = pts
                             }
@@ -224,6 +268,10 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                                 readStates[peerId] = [:]
                             }
                             readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                            
+                            if apiUnreadMentionsCount != 0 && apiTopMessage != 0 {
+                                mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
+                            }
                             
                             if let apiChannelPts = apiChannelPts {
                                 chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
@@ -253,16 +301,18 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             let apiReadInboxMaxId: Int32
                             let apiReadOutboxMaxId: Int32
                             let apiUnreadCount: Int32
+                            let apiUnreadMentionsCount: Int32
                             let apiNotificationSettings: Api.PeerNotifySettings
                             let isPinned: Bool
                             switch dialog {
-                                case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, peerNotificationSettings, _, _):
+                                case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, _, _):
                                     isPinned = (flags & (1 << 2)) != 0
                                     apiPeer = peer
                                     apiTopMessage = topMessage
                                     apiReadInboxMaxId = readInboxMaxId
                                     apiReadOutboxMaxId = readOutboxMaxId
                                     apiUnreadCount = unreadCount
+                                    apiUnreadMentionsCount = unreadMentionsCount
                                     apiNotificationSettings = peerNotificationSettings
                             }
                             
@@ -280,6 +330,10 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                                 readStates[peerId] = [:]
                             }
                             readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                            
+                            if apiUnreadMentionsCount != 0 && apiTopMessage != 0 {
+                                mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
+                            }
                             
                             notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                             
@@ -317,15 +371,17 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                                 let apiReadOutboxMaxId: Int32
                                 let apiTopMessage: Int32
                                 let apiUnreadCount: Int32
+                                let apiUnreadMentionsCount: Int32
                                 var apiChannelPts: Int32?
                                 let apiNotificationSettings: Api.PeerNotifySettings
                                 switch dialog {
-                                    case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, peerNotificationSettings, pts, _):
+                                    case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
                                         apiPeer = peer
                                         apiTopMessage = topMessage
                                         apiReadInboxMaxId = readInboxMaxId
                                         apiReadOutboxMaxId = readOutboxMaxId
                                         apiUnreadCount = unreadCount
+                                        apiUnreadMentionsCount = unreadMentionsCount
                                         apiNotificationSettings = peerNotificationSettings
                                         apiChannelPts = pts
                                 }
@@ -346,6 +402,10 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                                     readStates[peerId] = [:]
                                 }
                                 readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                                
+                                if apiUnreadMentionsCount != 0 && apiTopMessage != 0 {
+                                    mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
+                                }
                                 
                                 if let apiChannelPts = apiChannelPts {
                                     chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
@@ -413,6 +473,10 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                     if let replacePinnedPeerIds = replacePinnedPeerIds {
                         modifier.setPinnedPeerIds(replacePinnedPeerIds)
                     }
+                    
+                    for (peerId, summary) in mentionTagSummaries {
+                        modifier.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
+                    }
                 }
             }
         }
@@ -431,7 +495,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageInd
     }
     return offset
         |> mapToSignal { (timestamp, id, peer) -> Signal<Void, NoError> in
-            let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: peer, q: "", fromId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offset: 0, maxId: holeIndex.id.id, limit: limit))
+            let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: peer, q: "", fromId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offsetId: 0, addOffset: 0, limit: limit, maxId: holeIndex.id.id, minId: 0))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<Void, NoError> in
                     let messages: [Api.Message]
