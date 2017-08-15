@@ -7,6 +7,16 @@ class MessageHistoryTagsTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)
     
+    private let summaryTable: MessageHistoryTagsSummaryTable
+    private let summaryTags: MessageTags
+    
+    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration, summaryTable: MessageHistoryTagsSummaryTable) {
+        self.summaryTable = summaryTable
+        self.summaryTags = seedConfiguration.messageTagsWithSummary
+        
+        super.init(valueBox: valueBox, table: table)
+    }
+    
     private func key(_ tagMask: MessageTags, index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)) -> ValueBoxKey {
         key.setInt64(0, value: index.id.peerId.toInt64())
         key.setUInt32(8, value: tagMask.rawValue)
@@ -30,12 +40,23 @@ class MessageHistoryTagsTable: Table {
         return key.successor
     }
     
-    func add(_ tagMask: MessageTags, index: MessageIndex) {
-        self.valueBox.set(self.table, key: self.key(tagMask, index: index, key: self.sharedKey), value: MemoryBuffer())
+    func add(_ tagMask: MessageTags, index: MessageIndex, isHole: Bool, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary]) {
+        for tag in tagMask {
+            self.valueBox.set(self.table, key: self.key(tag, index: index, key: self.sharedKey), value: MemoryBuffer())
+            if !isHole && self.summaryTags.contains(tag) {
+                self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries)
+            }
+        }
     }
     
-    func remove(_ tagMask: MessageTags, index: MessageIndex) {
-        self.valueBox.remove(self.table, key: self.key(tagMask, index: index, key: self.sharedKey))
+    func remove(_ tagMask: MessageTags, index: MessageIndex, isHole: Bool, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary]) {
+        for tag in tagMask {
+            self.valueBox.remove(self.table, key: self.key(tag, index: index, key: self.sharedKey))
+            
+            if !isHole && self.summaryTags.contains(tag) {
+                self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries)
+            }
+        }
     }
     
     func entryLocation(at index: MessageIndex, tagMask: MessageTags) -> MessageHistoryEntryLocation? {
@@ -143,5 +164,15 @@ class MessageHistoryTagsTable: Table {
             return true
         }, limit: 0)
         return count
+    }
+    
+    func debugGetAllIndices() -> [MessageIndex] {
+        var indices: [MessageIndex] = []
+        self.valueBox.scan(self.table, values: { key, value in
+            let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4))
+            indices.append(index)
+            return true
+        })
+        return indices
     }
 }

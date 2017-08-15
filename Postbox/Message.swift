@@ -346,6 +346,10 @@ public struct StoreMessageForwardInfo {
         self.date = date
         self.authorSignature = authorSignature
     }
+    
+    public init(_ info: MessageForwardInfo) {
+        self.init(authorId: info.author.id, sourceId: info.source?.id, sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature)
+    }
 }
 
 public struct MessageForwardInfo: Equatable {
@@ -395,7 +399,7 @@ public extension MessageAttribute {
     }
 }
 
-public final class Message: CustomStringConvertible {
+public final class Message {
     public let stableId: UInt32
     public let stableVersion: UInt32
     
@@ -431,10 +435,6 @@ public final class Message: CustomStringConvertible {
         self.peers = peers
         self.associatedMessages = associatedMessages
         self.associatedMessageIds = associatedMessageIds
-    }
-    
-    public var description: String {
-        return "Message(stableId: \(self.stableId), id: \(self.id), text: \(self.text))"
     }
 }
 

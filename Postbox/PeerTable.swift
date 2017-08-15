@@ -51,27 +51,29 @@ final class PeerTable: Table {
     }
     
     override func beforeCommit() {
-        for (peerId, previousPeer) in self.updatedInitialPeers {
-            if let peer = self.cachedPeers[peerId] {
-                self.sharedEncoder.reset()
-                self.sharedEncoder.encodeRootObject(peer)
-                
-                self.valueBox.set(self.table, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
-                
-                let previousAssociation = previousPeer?.associatedPeerId
-                if previousAssociation != peer.associatedPeerId {
-                    if let previousAssociation = previousAssociation {
-                        self.reverseAssociatedTable.removeReverseAssociation(target: previousAssociation, from: peerId)
+        if !self.updatedInitialPeers.isEmpty {
+            for (peerId, previousPeer) in self.updatedInitialPeers {
+                if let peer = self.cachedPeers[peerId] {
+                    self.sharedEncoder.reset()
+                    self.sharedEncoder.encodeRootObject(peer)
+                    
+                    self.valueBox.set(self.table, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
+                    
+                    let previousAssociation = previousPeer?.associatedPeerId
+                    if previousAssociation != peer.associatedPeerId {
+                        if let previousAssociation = previousAssociation {
+                            self.reverseAssociatedTable.removeReverseAssociation(target: previousAssociation, from: peerId)
+                        }
+                        if let associatedPeerId = peer.associatedPeerId {
+                            self.reverseAssociatedTable.addReverseAssociation(target: associatedPeerId, from: peerId)
+                        }
                     }
-                    if let associatedPeerId = peer.associatedPeerId {
-                        self.reverseAssociatedTable.addReverseAssociation(target: associatedPeerId, from: peerId)
-                    }
+                } else {
+                    assertionFailure()
                 }
-            } else {
-                assertionFailure()
             }
+            
+            self.updatedInitialPeers.removeAll()
         }
-        
-        self.updatedInitialPeers.removeAll()
     }
 }

@@ -80,28 +80,30 @@ final class MessageHistorySynchronizeReadStateTable: Table {
     }
     
     override func beforeCommit() {
-        let key = ValueBoxKey(length: 8)
-        let buffer = WriteBuffer()
-        for (peerId, operation) in self.updatedPeerIds {
-            key.setInt64(0, value: peerId.toInt64())
-            if let operation = operation {
-                buffer.reset()
-                switch operation {
-                    case let .Push(_, thenSync):
-                        var operationValue: Int8 = 0
-                        buffer.write(&operationValue, offset: 0, length: 1)
-                        var syncValue: Int8 = thenSync ? 1 : 0
-                        buffer.write(&syncValue, offset: 0, length: 1)
-                    case .Validate:
-                        var operationValue: Int8 = 1
-                        buffer.write(&operationValue, offset: 0, length: 1)
+        if !self.updatedPeerIds.isEmpty {
+            let key = ValueBoxKey(length: 8)
+            let buffer = WriteBuffer()
+            for (peerId, operation) in self.updatedPeerIds {
+                key.setInt64(0, value: peerId.toInt64())
+                if let operation = operation {
+                    buffer.reset()
+                    switch operation {
+                        case let .Push(_, thenSync):
+                            var operationValue: Int8 = 0
+                            buffer.write(&operationValue, offset: 0, length: 1)
+                            var syncValue: Int8 = thenSync ? 1 : 0
+                            buffer.write(&syncValue, offset: 0, length: 1)
+                        case .Validate:
+                            var operationValue: Int8 = 1
+                            buffer.write(&operationValue, offset: 0, length: 1)
+                    }
+                    
+                    self.valueBox.set(self.table, key: key, value: buffer)
+                } else {
+                    self.valueBox.remove(self.table, key: key)
                 }
-                
-                self.valueBox.set(self.table, key: key, value: buffer)
-            } else {
-                self.valueBox.remove(self.table, key: key)
             }
+            self.updatedPeerIds.removeAll()
         }
-        self.updatedPeerIds.removeAll()
     }
 }

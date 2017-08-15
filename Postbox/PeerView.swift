@@ -141,7 +141,7 @@ final class MutablePeerView: MutablePostboxView {
         }
         
         if let notificationSettings = updatedNotificationSettings[self.peerId] {
-            self.notificationSettings =  notificationSettings
+            self.notificationSettings = notificationSettings
             updated = true
         }
         

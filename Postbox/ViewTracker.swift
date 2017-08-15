@@ -307,7 +307,7 @@ final class ViewTracker {
         
         for (mutableView, pipe) in self.chatListViews.copyItems() {
             if mutableView.refreshDueToExternalTransaction(fetchAroundChatEntries: fetchAroundChatEntries) {
-                mutableView.render(self.renderMessage, getPeer: { id in
+                mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
                     return self.getPeer(id)
                 }, getPeerNotificationSettings: self.getPeerNotificationSettings)
                 pipe.putNext((ChatListView(mutableView), .Generic))
@@ -403,9 +403,9 @@ final class ViewTracker {
         if !transaction.chatListOperations.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentUpdatedPeers.isEmpty {
             for (mutableView, pipe) in self.chatListViews.copyItems() {
                 let context = MutableChatListViewReplayContext()
-                if mutableView.replay(transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, context: context) {
+                if mutableView.replay(transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, transaction: transaction, context: context) {
                     mutableView.complete(context: context, fetchEarlier: self.fetchEarlierChatEntries, fetchLater: self.fetchLaterChatEntries)
-                    mutableView.render(self.renderMessage, getPeer: { id in
+                    mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
                         return self.getPeer(id)
                     }, getPeerNotificationSettings: self.getPeerNotificationSettings)
                     //var updateType: ViewUpdateType = .Generic
@@ -442,7 +442,7 @@ final class ViewTracker {
         
         if let replaceContactPeerIds = transaction.replaceContactPeerIds {
             for (mutableView, pipe) in self.contactPeerIdsViews.copyItems() {
-                if mutableView.replay(replace: replaceContactPeerIds) {
+                if mutableView.replay(updateRemoteTotalCount: transaction.replaceRemoteContactCount, replace: replaceContactPeerIds) {
                     pipe.putNext(ContactPeerIdsView(mutableView))
                 }
             }

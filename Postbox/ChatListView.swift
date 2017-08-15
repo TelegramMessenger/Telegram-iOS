@@ -1,12 +1,56 @@
 import Foundation
 
+public struct ChatListEntryMessageTagSummaryComponent {
+    public let tag: MessageTags
+    public let namespace: MessageId.Namespace
+    
+    public init(tag: MessageTags, namespace: MessageId.Namespace) {
+        self.tag = tag
+        self.namespace = namespace
+    }
+}
+
+public struct ChatListEntryPendingMessageActionsSummaryComponent {
+    public let type: PendingMessageActionType
+    public let namespace: MessageId.Namespace
+    
+    public init(type: PendingMessageActionType, namespace: MessageId.Namespace) {
+        self.type = type
+        self.namespace = namespace
+    }
+}
+
+public struct ChatListEntrySummaryComponents {
+    public let tagSummary: ChatListEntryMessageTagSummaryComponent?
+    public let actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent?
+    
+    public init(tagSummary: ChatListEntryMessageTagSummaryComponent? = nil, actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent? = nil) {
+        self.tagSummary = tagSummary
+        self.actionsSummary = actionsSummary
+    }
+}
+
+public struct ChatListMessageTagSummaryInfo: Equatable {
+    public let tagSummaryCount: Int32?
+    public let actionsSummaryCount: Int32?
+    
+    public init(tagSummaryCount: Int32? = nil, actionsSummaryCount: Int32? = nil) {
+        self.tagSummaryCount = tagSummaryCount
+        self.actionsSummaryCount = actionsSummaryCount
+    }
+    
+    public static func ==(lhs: ChatListMessageTagSummaryInfo, rhs: ChatListMessageTagSummaryInfo) -> Bool {
+        return lhs.tagSummaryCount == rhs.tagSummaryCount && lhs.actionsSummaryCount == rhs.actionsSummaryCount
+    }
+}
+
 public enum ChatListEntry: Comparable {
-    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer)
+    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
     
     public var index: ChatListIndex {
         switch self {
-            case let .MessageEntry(index, _, _, _, _, _):
+            case let .MessageEntry(index, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
@@ -16,9 +60,9 @@ public enum ChatListEntry: Comparable {
 
 public func ==(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
     switch lhs {
-        case let .MessageEntry(lhsIndex, lhsMessage, lhsReadState, lhsSettings, lhsEmbeddedState, lhsPeer):
+        case let .MessageEntry(lhsIndex, lhsMessage, lhsReadState, lhsSettings, lhsEmbeddedState, lhsPeer, lhsInfo):
             switch rhs {
-                case let .MessageEntry(rhsIndex, rhsMessage, rhsReadState, rhsSettings, rhsEmbeddedState, rhsPeer):
+                case let .MessageEntry(rhsIndex, rhsMessage, rhsReadState, rhsSettings, rhsEmbeddedState, rhsPeer, rhsInfo):
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -45,6 +89,9 @@ public func ==(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
                     if lhsPeer != rhsPeer {
                         return false
                     }
+                    if lhsInfo != rhsInfo {
+                        return false
+                    }
                     return true
                 default:
                     return false
@@ -64,14 +111,14 @@ public func <(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
 
 enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(ChatListIndex, IntermediateMessage?, CombinedPeerReadState?, PeerChatListEmbeddedInterfaceState?)
-    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer)
+    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
     
     var index: ChatListIndex {
         switch self {
             case let .IntermediateMessageEntry(index, _, _, _):
                 return index
-            case let .MessageEntry(index, _, _, _, _, _):
+            case let .MessageEntry(index, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
@@ -164,16 +211,18 @@ private func updatedRenderedPeer(_ renderedPeer: RenderedPeer, updatedPeers: [Pe
 }
 
 final class MutableChatListView {
+    private let summaryComponents: ChatListEntrySummaryComponents
     fileprivate var earlier: MutableChatListEntry?
     fileprivate var later: MutableChatListEntry?
     fileprivate var entries: [MutableChatListEntry]
     private var count: Int
     
-    init(earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int) {
+    init(earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.earlier = earlier
         self.entries = entries
         self.later = later
         self.count = count
+        self.summaryComponents = summaryComponents
     }
     
     func refreshDueToExternalTransaction(fetchAroundChatEntries: (_ index: ChatListIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?)) -> Bool {
@@ -194,7 +243,7 @@ final class MutableChatListView {
         }
     }
     
-    func replay(_ operations: [ChatListOperation], updatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], updatedPeers: [PeerId: Peer], context: MutableChatListViewReplayContext) -> Bool {
+    func replay(_ operations: [ChatListOperation], updatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], updatedPeers: [PeerId: Peer], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         for operation in operations {
             switch operation {
@@ -219,13 +268,13 @@ final class MutableChatListView {
         if !updatedPeerNotificationSettings.isEmpty {
             for i in 0 ..< self.entries.count {
                 switch self.entries[i] {
-                    case let .MessageEntry(index, message, readState, _, embeddedState, peer):
+                    case let .MessageEntry(index, message, readState, _, embeddedState, peer, summaryInfo):
                         var notificationSettingsPeerId = peer.peerId
                         if let peer = peer.peers[peer.peerId], let associatedPeerId = peer.associatedPeerId {
                             notificationSettingsPeerId = associatedPeerId
                         }
                         if let settings = updatedPeerNotificationSettings[notificationSettingsPeerId] {
-                            self.entries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer)
+                            self.entries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer, summaryInfo)
                             hasChanges = true
                         }
                     default:
@@ -236,14 +285,46 @@ final class MutableChatListView {
         if !updatedPeers.isEmpty {
             for i in 0 ..< self.entries.count {
                 switch self.entries[i] {
-                    case let .MessageEntry(index, message, readState, settings, embeddedState, peer):
+                    case let .MessageEntry(index, message, readState, settings, embeddedState, peer, summaryInfo):
                         var updatedMessage: Message?
                         if let message = message {
                             updatedMessage = updateMessagePeers(message, updatedPeers: updatedPeers)
                         }
                         let updatedPeer = updatedRenderedPeer(peer, updatedPeers: updatedPeers)
                         if updatedMessage != nil || updatedPeer != nil {
-                            self.entries[i] = .MessageEntry(index, updatedMessage ?? message, readState, settings, embeddedState, updatedPeer ?? peer)
+                            self.entries[i] = .MessageEntry(index, updatedMessage ?? message, readState, settings, embeddedState, updatedPeer ?? peer, summaryInfo)
+                            hasChanges = true
+                        }
+                    default:
+                        continue
+                }
+            }
+        }
+        if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty {
+            for i in 0 ..< self.entries.count {
+                switch self.entries[i] {
+                    case let .MessageEntry(index, message, readState, settings, embeddedState, peer, currentSummary):
+                        var updatedTagSummaryCount: Int32?
+                        var updatedActionsSummaryCount: Int32?
+                        
+                        if let tagSummary = self.summaryComponents.tagSummary {
+                            let key = MessageHistoryTagsSummaryKey(tag: tagSummary.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                            if let summary = transaction.currentUpdatedMessageTagSummaries[key] {
+                                updatedTagSummaryCount = summary.count
+                            }
+                        }
+                        
+                        if let actionsSummary = self.summaryComponents.actionsSummary {
+                            let key = PendingMessageActionsSummaryKey(type: actionsSummary.type, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
+                            if let count = transaction.currentUpdatedMessageActionsSummaries[key] {
+                                updatedActionsSummaryCount = count
+                            }
+                        }
+                        
+                        if updatedTagSummaryCount != nil || updatedActionsSummaryCount != nil {
+                            let summaryInfo = ChatListMessageTagSummaryInfo(tagSummaryCount: updatedTagSummaryCount ?? currentSummary.tagSummaryCount, actionsSummaryCount: updatedActionsSummaryCount ?? currentSummary.actionsSummaryCount)
+                            
+                            self.entries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer, summaryInfo)
                             hasChanges = true
                         }
                     default:
@@ -464,7 +545,7 @@ final class MutableChatListView {
         return nil
     }
     
-    func render(_ renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?) {
+    func render(postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?) {
         for i in 0 ..< self.entries.count {
             switch self.entries[i] {
                 case let .IntermediateMessageEntry(index, message, combinedReadState, embeddedState):
@@ -488,7 +569,22 @@ final class MutableChatListView {
                         }
                     }
                     
-                    self.entries[i] = .MessageEntry(index, renderedMessage, combinedReadState, notificationSettings, embeddedState, RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers))
+                    var tagSummaryCount: Int32?
+                    var actionsSummaryCount: Int32?
+                    
+                    if let tagSummary = self.summaryComponents.tagSummary {
+                        let key = MessageHistoryTagsSummaryKey(tag: tagSummary.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                        if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
+                            tagSummaryCount = summary.count
+                        }
+                    }
+                    
+                    if let actionsSummary = self.summaryComponents.actionsSummary {
+                        let key = PendingMessageActionsSummaryKey(type: actionsSummary.type, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
+                        actionsSummaryCount = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(key.peerId, key.namespace, key.type))
+                    }
+                    
+                    self.entries[i] = .MessageEntry(index, renderedMessage, combinedReadState, notificationSettings, embeddedState, RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount))
                 default:
                     break
             }
@@ -505,8 +601,8 @@ public final class ChatListView {
         var entries: [ChatListEntry] = []
         for entry in mutableView.entries {
             switch entry {
-                case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer):
-                    entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer))
+                case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
+                    entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
                 case let .HoleEntry(hole):
                     entries.append(.HoleEntry(hole))
                 case .IntermediateMessageEntry:

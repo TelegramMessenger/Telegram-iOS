@@ -20,8 +20,8 @@ public struct MessageHistoryHole: Equatable, CustomStringConvertible {
     public var description: String {
         return "MessageHistoryHole(peerId: \(self.maxIndex.id.peerId), min: \(self.min), max: \(self.maxIndex.id.id))"
     }
-}
 
-public func ==(lhs: MessageHistoryHole, rhs: MessageHistoryHole) -> Bool {
-    return lhs.maxIndex == rhs.maxIndex && lhs.min == rhs.min && lhs.tags == rhs.tags
+    public static func ==(lhs: MessageHistoryHole, rhs: MessageHistoryHole) -> Bool {
+        return lhs.maxIndex == rhs.maxIndex && lhs.min == rhs.min && lhs.tags == rhs.tags
+    }
 }

@@ -65,6 +65,17 @@
 		D0575AE41E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */; };
 		D05F09A61C9E9F9300BB6F96 /* MediaResourceStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */; };
 		D060B77B1CF4845A0050BE9B /* ReadStateTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */; };
+		D07047A01F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D070479F1F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift */; };
+		D07047A21F3CE58200F6A8D4 /* PendingMessageActionsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047A11F3CE58200F6A8D4 /* PendingMessageActionsTable.swift */; };
+		D07047A31F3CE58200F6A8D4 /* PendingMessageActionsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047A11F3CE58200F6A8D4 /* PendingMessageActionsTable.swift */; };
+		D07047A51F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047A41F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift */; };
+		D07047A61F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047A41F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift */; };
+		D07047A81F3DA8D700F6A8D4 /* PendingMessageActionsMetadataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047A71F3DA8D700F6A8D4 /* PendingMessageActionsMetadataTable.swift */; };
+		D07047A91F3DA8D700F6A8D4 /* PendingMessageActionsMetadataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047A71F3DA8D700F6A8D4 /* PendingMessageActionsMetadataTable.swift */; };
+		D07047AB1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047AA1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift */; };
+		D07047AC1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047AA1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift */; };
+		D07047B11F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047B01F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift */; };
+		D07047B21F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047B01F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift */; };
 		D073CE741DCBF3B4007511FD /* Peer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7831B28AE0900A402D9 /* Peer.swift */; };
 		D073CE751DCBF3B4007511FD /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A79D1B28B50400A402D9 /* Message.swift */; };
 		D073CE761DCBF3B4007511FD /* IntermediateMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D510F81D63BCC200A97B8A /* IntermediateMessage.swift */; };
@@ -336,6 +347,12 @@
 		D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccessChallengeDataView.swift; sourceTree = "<group>"; };
 		D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceStatus.swift; sourceTree = "<group>"; };
 		D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReadStateTableTests.swift; sourceTree = "<group>"; };
+		D070479F1F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTagsSummaryTable.swift; sourceTree = "<group>"; };
+		D07047A11F3CE58200F6A8D4 /* PendingMessageActionsTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PendingMessageActionsTable.swift; sourceTree = "<group>"; };
+		D07047A41F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTagSummaryView.swift; sourceTree = "<group>"; };
+		D07047A71F3DA8D700F6A8D4 /* PendingMessageActionsMetadataTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PendingMessageActionsMetadataTable.swift; sourceTree = "<group>"; };
+		D07047AA1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PendingMessageActionsView.swift; sourceTree = "<group>"; };
+		D07047B01F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PendingMessageActionsSummaryView.swift; sourceTree = "<group>"; };
 		D07516401B2D9CEF00AE42E0 /* sqlite3.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqlite3.c; sourceTree = "<group>"; };
 		D07516411B2D9CEF00AE42E0 /* sqlite3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqlite3.h; sourceTree = "<group>"; };
 		D07516421B2D9CEF00AE42E0 /* sqlite3ext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqlite3ext.h; sourceTree = "<group>"; };
@@ -567,7 +584,10 @@
 				D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */,
 				D0D510F51D63BBE100A97B8A /* MessageHistoryOperation.swift */,
 				D00EED1D1C81F28D00341DFF /* MessageHistoryTagsTable.swift */,
+				D070479F1F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift */,
 				D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */,
+				D07047A11F3CE58200F6A8D4 /* PendingMessageActionsTable.swift */,
+				D07047A71F3DA8D700F6A8D4 /* PendingMessageActionsMetadataTable.swift */,
 				D0E1D30B1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift */,
 				D033A6F61C73D512006A2EAB /* MessageHistoryUnsentTable.swift */,
 				D0F9E8641C58CB7F00037222 /* ChatListTable.swift */,
@@ -690,6 +710,9 @@
 				D0F53BF21E794C6700117362 /* PeerChatStateView.swift */,
 				D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */,
 				D0E1D30E1ECA53F900FCEEF1 /* GlobalMessageTagsView.swift */,
+				D07047A41F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift */,
+				D07047AA1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift */,
+				D07047B01F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -959,6 +982,7 @@
 				D0F7B1C71E045C6A007EB8A5 /* MessageHistoryTable.swift in Sources */,
 				D0B418571D7DFE29004562A4 /* Postbox.swift in Sources */,
 				D0B418251D7DFE0C004562A4 /* RedBlackTree.swift in Sources */,
+				D07047A31F3CE58200F6A8D4 /* PendingMessageActionsTable.swift in Sources */,
 				D0BEAF681E54B33900BD963D /* AccountRecord.swift in Sources */,
 				D0F7B1C61E045C6A007EB8A5 /* MessageHistoryIndexTable.swift in Sources */,
 				D0F7B1CD1E045C6A007EB8A5 /* MessageMediaTable.swift in Sources */,
@@ -982,6 +1006,7 @@
 				D00C7CE41E37861C0080C3D5 /* MessageView.swift in Sources */,
 				D08775011E3E3D9F00A97350 /* PreferencesTable.swift in Sources */,
 				D0F7B1CC1E045C6A007EB8A5 /* ChatListIndexTable.swift in Sources */,
+				D07047A61F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift in Sources */,
 				D0B4185E1D7DFE54004562A4 /* IpcNotifier.mm in Sources */,
 				D0F7B1D31E045C6A007EB8A5 /* CachedPeerDataTable.swift in Sources */,
 				D079FCE71F06A31C0038FADE /* NoticeTable.swift in Sources */,
@@ -1000,6 +1025,7 @@
 				D0B418501D7DFE20004562A4 /* UnsentMessageIndicesView.swift in Sources */,
 				D0BEAF641E54B2FA00BD963D /* AccountManager.swift in Sources */,
 				D073CE7F1DCBF3B4007511FD /* ItemCollection.swift in Sources */,
+				D07047B21F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift in Sources */,
 				D0F7B1D91E045C6A007EB8A5 /* OrderStatisticTable.swift in Sources */,
 				D0C0B5AF1EE1B3F4000F4D2C /* PostboxUpgrade_13to14.swift in Sources */,
 				D073CEA01DCBF3C1007511FD /* ItemCollectionsView.swift in Sources */,
@@ -1027,6 +1053,7 @@
 				D0B418231D7DFE0C004562A4 /* SimpleDictionary.swift in Sources */,
 				D0B4185C1D7DFE2F004562A4 /* MurMurHash32.m in Sources */,
 				D0F7B1E01E045C6A007EB8A5 /* ItemCacheTable.swift in Sources */,
+				D07047A91F3DA8D700F6A8D4 /* PendingMessageActionsMetadataTable.swift in Sources */,
 				D0F7B1E11E045C6A007EB8A5 /* ReverseIndexReferenceTable.swift in Sources */,
 				D0B418241D7DFE0C004562A4 /* SimpleSet.swift in Sources */,
 				D073CE7B1DCBF3B4007511FD /* PeerNameIndexRepresentation.swift in Sources */,
@@ -1038,6 +1065,7 @@
 				D00C7CD51E365C4E0080C3D5 /* PeerChatListInclusion.swift in Sources */,
 				D0F7B1CB1E045C6A007EB8A5 /* ChatListTable.swift in Sources */,
 				D0F7B1C01E045C62007EB8A5 /* StringIndexTokens.swift in Sources */,
+				D07047AC1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift in Sources */,
 				D0F7B1CA1E045C6A007EB8A5 /* MessageHistoryUnsentTable.swift in Sources */,
 				D01BAA561ED1D70C00295217 /* ManagedFile.swift in Sources */,
 				D0BEAF6B1E54B5FB00BD963D /* AccountManagerMetadataTable.swift in Sources */,
@@ -1094,6 +1122,7 @@
 				D0BEAF671E54B33900BD963D /* AccountRecord.swift in Sources */,
 				D021E0D61DB4FCFC00C6B04F /* ItemCollectionInfoTable.swift in Sources */,
 				D0079F6B1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift in Sources */,
+				D07047A81F3DA8D700F6A8D4 /* PendingMessageActionsMetadataTable.swift in Sources */,
 				D08C713A1C501F0700779C0F /* MessageHistoryHole.swift in Sources */,
 				D044CA2A1C617D39002160FF /* SeedConfiguration.swift in Sources */,
 				D07CFF811DCA765D00761F81 /* PeerChatInterfaceState.swift in Sources */,
@@ -1125,6 +1154,7 @@
 				D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */,
 				D033A6F91C73E440006A2EAB /* UnsentMessageHistoryView.swift in Sources */,
 				D07827C31E008F7300071108 /* ReverseIndexReferenceTable.swift in Sources */,
+				D07047A51F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift in Sources */,
 				D09ADF0C1D2EB83500C8208D /* OrderStatisticTable.swift in Sources */,
 				D0CE63F61CA1CCB2002BC462 /* MediaResource.swift in Sources */,
 				D0F82D0F1E43A024007E499C /* OrderedItemListIndexTable.swift in Sources */,
@@ -1145,6 +1175,8 @@
 				D03120FA1DA540F0006A2A60 /* CachedPeerData.swift in Sources */,
 				D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */,
 				D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */,
+				D07047AB1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift in Sources */,
+				D07047A01F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift in Sources */,
 				D0FA0AC71E77F0A2005BB9B7 /* ItemCollectionInfosView.swift in Sources */,
 				D0F019FD1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift in Sources */,
 				D0F9E8651C58CB7F00037222 /* ChatListTable.swift in Sources */,
@@ -1171,6 +1203,7 @@
 				D0BC38721E409E670044D6FE /* RenderedPeer.swift in Sources */,
 				D08775031E3E3E7400A97350 /* PreferencesEntry.swift in Sources */,
 				D0AB0B901D65D4AB002C78E7 /* UnsentMessageIndicesView.swift in Sources */,
+				D07047A21F3CE58200F6A8D4 /* PendingMessageActionsTable.swift in Sources */,
 				D01BAA551ED1D70C00295217 /* ManagedFile.swift in Sources */,
 				D0BEAF6A1E54B5FB00BD963D /* AccountManagerMetadataTable.swift in Sources */,
 				D0F02CDF1E99223D0065DEE2 /* Upgrades.swift in Sources */,
@@ -1196,6 +1229,7 @@
 				D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */,
 				D0D511001D64A58900A97B8A /* IpcPipe.swift in Sources */,
 				D01C7EDE1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */,
+				D07047B11F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -114,6 +114,9 @@ final class OrderedItemListTable: Table {
             self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: items[i].id), value: MemoryBuffer(memory: &indexValue, capacity: 4, length: 4, freeWhenDone: false))
             self.indexTable.set(collectionId: collectionId, id: items[i].id, content: items[i].contents)
         }
+        #if (arch(i386) || arch(x86_64)) && os(iOS)
+            assert(self.testIntegrity(collectionId: collectionId))
+        #endif
     }
     
     func addItemOrMoveToFirstPosition(collectionId: Int32, item: OrderedItemListEntry, removeTailIfCountExceeds: Int?, operations: inout [Int32: [OrderedItemListOperation]]) {
@@ -142,8 +145,8 @@ final class OrderedItemListTable: Table {
             }
             
             offsetUntilIndex = orderedIds.count
-            self.indexTable.set(collectionId: collectionId, id: item.id, content: item.contents)
         }
+        self.indexTable.set(collectionId: collectionId, id: item.id, content: item.contents)
         
         for i in 0 ..< offsetUntilIndex {
             var updatedIndex: UInt32 = UInt32(i + 1)
@@ -154,6 +157,9 @@ final class OrderedItemListTable: Table {
         self.valueBox.set(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: 0), value: item.id)
         var itemIndex: UInt32 = 0
         self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: item.id), value: MemoryBuffer(memory: &itemIndex, capacity: 4, length: 4, freeWhenDone: false))
+        #if (arch(i386) || arch(x86_64)) && os(iOS)
+            assert(self.testIntegrity(collectionId: collectionId))
+        #endif
     }
     
     func remove(collectionId: Int32, itemId: MemoryBuffer, operations: inout [Int32: [OrderedItemListOperation]]) {
@@ -164,21 +170,25 @@ final class OrderedItemListTable: Table {
                 self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: itemId))
                 self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: index))
                 
+                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[orderedIds.count - 1]))
+                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(orderedIds.count - 1)))
+                
                 for i in (Int(index) + 1) ..< orderedIds.count {
                     var updatedIndex: UInt32 = UInt32(i - 1)
                     self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[i]), value: MemoryBuffer(memory: &updatedIndex, capacity: 4, length: 4, freeWhenDone: false))
                     self.valueBox.set(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: updatedIndex), value: orderedIds[i])
                 }
                 
-                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[orderedIds.count - 1]))
-                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(orderedIds.count - 1)))
-                
                 if operations[collectionId] == nil {
                     operations[collectionId] = []
                 }
                 operations[collectionId]!.append(.remove(itemId))
             }
+            self.indexTable.remove(collectionId: collectionId, id: itemId)
         }
+        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        assert(self.testIntegrity(collectionId: collectionId))
+        #endif
     }
     
     func testIntegrity(collectionId: Int32) -> Bool {

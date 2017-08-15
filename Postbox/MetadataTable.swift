@@ -6,6 +6,7 @@ private enum MetadataKey: Int32 {
     case TransactionStateVersion = 3
     case MasterClientId = 4
     case AccessChallenge = 5
+    case RemoteContactCount = 6
 }
 
 public struct AccessChallengeAttempts: Coding, Equatable {
@@ -155,6 +156,7 @@ final class MetadataTable: Table {
     }
     
     private var cachedState: Coding?
+    private var cachedRemoteContactCount: Int32?
     
     private let sharedBuffer = WriteBuffer()
     
@@ -262,7 +264,30 @@ final class MetadataTable: Table {
         })
     }
     
+    func setRemoteContactCount(_ count: Int32) {
+        self.cachedRemoteContactCount = count
+        var mutableCount: Int32 = count
+        self.valueBox.set(self.table, key: self.key(.RemoteContactCount), value: MemoryBuffer(memory: &mutableCount, capacity: 4, length: 4, freeWhenDone: false))
+    }
+    
+    func getRemoteContactCount() -> Int32 {
+        if let cachedRemoteContactCount = self.cachedRemoteContactCount {
+            return cachedRemoteContactCount
+        } else {
+            if let value = self.valueBox.get(self.table, key: self.key(.RemoteContactCount)) {
+                var count: Int32 = 0
+                value.read(&count, offset: 0, length: 4)
+                self.cachedRemoteContactCount = count
+                return count
+            } else {
+                self.cachedRemoteContactCount = 0
+                return 0
+            }
+        }
+    }
+    
     override func clearMemoryCache() {
         self.cachedState = nil
+        self.cachedRemoteContactCount = nil
     }
 }

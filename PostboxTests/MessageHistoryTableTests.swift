@@ -15,6 +15,7 @@ private let authorPeerId = PeerId(namespace: 1, id: 6)
 private let peer = TestPeer(id: 6, data: "abc")
 private let tag1 = MessageTags(rawValue: 1 << 0)
 private let tag2 = MessageTags(rawValue: 1 << 1)
+private let summaryTag = MessageTags(rawValue: 1 << 2)
 
 private func ==(lhs: [Media], rhs: [Media]) -> Bool {
     if lhs.count != rhs.count {
@@ -202,7 +203,49 @@ private func ==(lhs: MediaEntry, rhs: MediaEntry) -> Bool {
 private extension MessageTags {
     static let First = MessageTags(rawValue: 1 << 0)
     static let Second = MessageTags(rawValue: 1 << 1)
+    static let Summary = MessageTags(rawValue: 1 << 2)
 }
+
+private final class PendingMessageAction1: PendingMessageActionData {
+    init() {
+    }
+    
+    init(decoder: Decoder) {
+    }
+    
+    func encode(_ encoder: Encoder) {
+    }
+    
+    func isEqual(to: PendingMessageActionData) -> Bool {
+        if let _ = to as? PendingMessageAction1 {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+private final class PendingMessageAction2: PendingMessageActionData {
+    init() {
+    }
+    
+    init(decoder: Decoder) {
+    }
+    
+    func encode(_ encoder: Encoder) {
+    }
+    
+    func isEqual(to: PendingMessageActionData) -> Bool {
+        if let _ = to as? PendingMessageAction2 {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+private let pendingAction1 = PendingMessageActionType(rawValue: 0)
+private let pendingAction2 = PendingMessageActionType(rawValue: 1)
 
 class MessageHistoryTableTests: XCTestCase {
     var valueBox: ValueBox?
@@ -222,13 +265,18 @@ class MessageHistoryTableTests: XCTestCase {
     var globalTagsTable: GlobalMessageHistoryTagsTable?
     var reverseAssociatedTable: ReverseAssociatedPeerTable?
     var textIndexTable: MessageHistoryTextIndexTable?
+    var messageHistoryTagsSummaryTable: MessageHistoryTagsSummaryTable?
+    var pendingMessageActionsTable: PendingMessageActionsTable?
+    var pendingMessageActionsMetadataTable: PendingMessageActionsMetadataTable?
     
     override class func setUp() {
         super.setUp()
         
-        declareEncodable(TestEmbeddedMedia.self, f: {TestEmbeddedMedia(decoder: $0)})
-        declareEncodable(TestExternalMedia.self, f: {TestExternalMedia(decoder: $0)})
-        declareEncodable(TestPeer.self, f: {TestPeer(decoder: $0)})
+        declareEncodable(TestEmbeddedMedia.self, f: { TestEmbeddedMedia(decoder: $0) })
+        declareEncodable(TestExternalMedia.self, f: { TestExternalMedia(decoder: $0) })
+        declareEncodable(TestPeer.self, f: { TestPeer(decoder: $0) })
+        declareEncodable(PendingMessageAction1.self, f: PendingMessageAction1.init)
+        declareEncodable(PendingMessageAction2.self, f: PendingMessageAction2.init)
     }
     
     override func setUp() {
@@ -239,12 +287,15 @@ class MessageHistoryTableTests: XCTestCase {
         path = NSTemporaryDirectory() + "\(randomId)"
         self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue())
         
-        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [])
+        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second, .Summary], messageTagsWithSummary: [.Summary], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [])
         
         self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, table: GlobalMessageIdsTable.tableSpec(5), namespace: namespace)
         self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, table: MessageHistoryMetadataTable.tableSpec(7))
         self.unsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox!, table: MessageHistoryUnsentTable.tableSpec(8))
-        self.tagsTable = MessageHistoryTagsTable(valueBox: self.valueBox!, table: MessageHistoryTagsTable.tableSpec(9))
+        self.messageHistoryTagsSummaryTable = MessageHistoryTagsSummaryTable(valueBox: self.valueBox!, table: MessageHistoryTagsSummaryTable.tableSpec(16))
+        self.pendingMessageActionsMetadataTable = PendingMessageActionsMetadataTable(valueBox: self.valueBox!, table: PendingMessageActionsMetadataTable.tableSpec(17))
+        self.pendingMessageActionsTable = PendingMessageActionsTable(valueBox: self.valueBox!, table: PendingMessageActionsTable.tableSpec(18), metadataTable: self.pendingMessageActionsMetadataTable!)
+        self.tagsTable = MessageHistoryTagsTable(valueBox: self.valueBox!, table: MessageHistoryTagsTable.tableSpec(9), seedConfiguration: seedConfiguration, summaryTable: self.messageHistoryTagsSummaryTable!)
         self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, table: MessageHistoryIndexTable.tableSpec(1), globalMessageIdsTable: self.globalMessageIdsTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
         self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, table: MessageMediaTable.tableSpec(2))
         self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, table: MessageHistoryReadStateTable.tableSpec(10))
@@ -252,7 +303,7 @@ class MessageHistoryTableTests: XCTestCase {
         self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox!, table: MessageGloballyUniqueIdTable.tableSpec(12))
         self.globalTagsTable = GlobalMessageHistoryTagsTable(valueBox: self.valueBox!, table: GlobalMessageHistoryTagsTable.tableSpec(13))
         self.textIndexTable = MessageHistoryTextIndexTable(valueBox: self.valueBox!, table: MessageHistoryTextIndexTable.tableSpec(15))
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, globalTagsTable: self.globalTagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!, textIndexTable: self.textIndexTable!)
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, globalTagsTable: self.globalTagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!, textIndexTable: self.textIndexTable!, summaryTable: self.messageHistoryTagsSummaryTable!, pendingActionsTable: self.pendingMessageActionsTable!)
         self.reverseAssociatedTable = ReverseAssociatedPeerTable(valueBox: self.valueBox!, table: ReverseAssociatedPeerTable.tableSpec(14))
         self.peerTable = PeerTable(valueBox: self.valueBox!, table: PeerTable.tableSpec(6), reverseAssociatedTable: self.reverseAssociatedTable!)
         self.peerTable!.set(peer)
@@ -277,7 +328,11 @@ class MessageHistoryTableTests: XCTestCase {
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
-        let _ = self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: StoreMessageForwardInfo(authorId: peerId, sourceId: peerId, sourceMessageId: MessageId(peerId: peerId, namespace: 0, id: 10), date: 10, authorSignature: "abc"), authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var pendingActionsMetadataOperations: [PendingMessageActionsSummaryOperation] = []
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        
+        let _ = self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: StoreMessageForwardInfo(authorId: peerId, sourceId: peerId, sourceMessageId: MessageId(peerId: peerId, namespace: 0, id: 10), date: 10, authorSignature: "abc"), authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, pendingActionsMetadataOperations: &pendingActionsMetadataOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries)
     }
 
     private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
@@ -285,7 +340,11 @@ class MessageHistoryTableTests: XCTestCase {
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
-        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var pendingActionsMetadataOperations: [PendingMessageActionsSummaryOperation] = []
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        
+        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, pendingActionsMetadataOperations: &pendingActionsMetadataOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries)
     }
     
     private func addHole(_ id: Int32) {
@@ -293,7 +352,11 @@ class MessageHistoryTableTests: XCTestCase {
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
-        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var pendingActionsMetadataOperations: [PendingMessageActionsSummaryOperation] = []
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        
+        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, pendingActionsMetadataOperations: &pendingActionsMetadataOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries)
     }
     
     private func removeMessages(_ ids: [Int32]) {
@@ -301,7 +364,11 @@ class MessageHistoryTableTests: XCTestCase {
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
-        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var pendingActionsMetadataOperations: [PendingMessageActionsSummaryOperation] = []
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        
+        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, pendingActionsMetadataOperations: &pendingActionsMetadataOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries)
     }
     
     private func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil) {
@@ -309,7 +376,11 @@ class MessageHistoryTableTests: XCTestCase {
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
-        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var pendingActionsMetadataOperations: [PendingMessageActionsSummaryOperation] = []
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        
+        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, pendingActionsMetadataOperations: &pendingActionsMetadataOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries)
     }
     
     private func fillMultipleHoles(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil, _ tags: MessageTags = []) {
@@ -317,7 +388,17 @@ class MessageHistoryTableTests: XCTestCase {
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
-        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations)
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var pendingActionsMetadataOperations: [PendingMessageActionsSummaryOperation] = []
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        
+        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, pendingActionsMetadataOperations: &pendingActionsMetadataOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries)
+    }
+    
+    private func replaceSummary(_ count: Int32, _ maxId: MessageId.Id) {
+        
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        self.messageHistoryTagsSummaryTable!.replace(key: MessageHistoryTagsSummaryKey(tag: .Summary, peerId: peerId, namespace: namespace), count: count, maxId: maxId, updatedSummaries: &updatedMessageTagSummaries)
     }
     
     private func expectEntries(_ entries: [Entry], tagMask: MessageTags? = nil) {
@@ -385,6 +466,73 @@ class MessageHistoryTableTests: XCTestCase {
         let actualMedia = self.mediaTable!.debugList().map({MediaEntry($0)})
         if media != actualMedia {
             XCTFail("Expected\n\(media)\nActual\n\(actualMedia)")
+        }
+    }
+    
+    private func expectSummary(_ summary: MessageHistoryTagNamespaceSummary?) {
+        let actualSummary = self.messageHistoryTagsSummaryTable!.get(MessageHistoryTagsSummaryKey(tag: .Summary, peerId: peerId, namespace: namespace))
+        if actualSummary != summary {
+            XCTFail("Expected\n\(String(describing: summary))\nActual\n\(String(describing: actualSummary))\n")
+        }
+    }
+    
+    private func setMessageAction(_ id: Int32, _ type: PendingMessageActionType, _ data: PendingMessageActionData?) {
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var pendingActionsMetadataOperations: [PendingMessageActionsSummaryOperation] = []
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        
+        self.historyTable!.setPendingMessageAction(id: MessageId(peerId: peerId, namespace: namespace, id: id), type: type, action: data, pendingActionsOperations: &pendingActionsOperations, pendingActionsMetadataOperations: &pendingActionsMetadataOperations)
+    }
+    
+    private func expectMessageAction(_ id: Int32, _ type: PendingMessageActionType, _ data: PendingMessageActionData?) {
+        let current = self.pendingMessageActionsTable!.getAction(id: MessageId(peerId: peerId, namespace: namespace, id: id), type: type)
+        var changed = false
+        if let current = current, let data = data {
+            if !current.isEqual(to: data) {
+                changed = true
+            }
+        } else if (current != nil) != (data != nil) {
+            changed = true
+        }
+        if changed {
+            XCTFail("Expected\n\(String(describing: data))\nActual\n\(String(describing: current))\n")
+        }
+    }
+    
+    private func expectPeerNamespaceMessageActionCount(_ count: Int32) {
+        let current = self.pendingMessageActionsMetadataTable!.getCount(.peerNamespace(peerId, namespace))
+        if count != current {
+            XCTFail("Expected\n\(count)\nActual\n\(current)\n")
+        }
+    }
+    
+    private func expectPeerNamespaceActionMessageActionCount(_ count: Int32, _ type: PendingMessageActionType) {
+        let current = self.pendingMessageActionsMetadataTable!.getCount(.peerNamespaceAction(peerId, namespace, type))
+        if count != current {
+            XCTFail("Expected\n\(count)\nActual\n\(current)\n")
+        }
+    }
+    
+    private func expectPeerMessageActions(_ type: PendingMessageActionType, _ actions: [(Int32, PendingMessageActionData)]) {
+        let current = self.pendingMessageActionsTable!.getActions(type: type).map {
+            ($0.id.id, $0.action)
+        }
+        var changed = false
+        if current.count != actions.count {
+            changed = true
+        } else {
+            for i in 0 ..< current.count {
+                if current[i].0 != actions[i].0 {
+                    changed = true
+                    break
+                } else if !current[i].1.isEqual(to: actions[i].1) {
+                    changed = true
+                    break
+                }
+            }
+        }
+        if changed {
+            XCTFail("Expected\n\(actions)\nActual\n\(current)\n")
         }
     }
     
@@ -1176,5 +1324,103 @@ class MessageHistoryTableTests: XCTestCase {
         
         result = self.textIndexTable!.search(peerId: nil, text: "abc' AND def", tags: nil).sorted()
         XCTAssert(result.isEmpty)
+    }
+    
+    func testSummary1() {
+        expectSummary(nil)
+        addMessage(100, 100, "m100", [], [], [.First])
+        expectSummary(nil)
+        addMessage(200, 200, "m200", [], [], [.Summary])
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 0, count: 1, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 0)))
+        replaceSummary(2, 200)
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 2, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
+        addMessage(150, 150, "m200", [], [], [.Summary])
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 2, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
+        removeMessages([150])
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 1, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
+        removeMessages([200])
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 0, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
+        addMessage(300, 300, "m300", [], [], [.Summary])
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 1, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
+        addHole(400)
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 1, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
+    }
+    
+    func testSummary2() {
+        addHole(400)
+        expectSummary(nil)
+    }
+    
+    func testSummary3() {
+        addMessage(200, 200, "m200", [], [], [.Summary])
+        addHole(100)
+        replaceSummary(0, 200)
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 0, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
+        addMessage(300, 300, "m300", [], [], [.Summary])
+        addHole(250)
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 1, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
+        replaceSummary(10, 300)
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 2, count: 10, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 300)))
+        self.updateMessage(300, 300, 300, "m300", [], [], [])
+        expectSummary(MessageHistoryTagNamespaceSummary(version: 2, count: 9, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 300)))
+    }
+    
+    func testPendingMessageActions1() {
+        expectMessageAction(100, pendingAction1, nil)
+        expectPeerNamespaceMessageActionCount(0)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction1)
+        setMessageAction(100, pendingAction1, PendingMessageAction1())
+        expectMessageAction(100, pendingAction1, nil)
+        expectPeerNamespaceMessageActionCount(0)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction1)
+        addMessage(100, 100)
+        expectMessageAction(100, pendingAction1, nil)
+        expectPeerNamespaceMessageActionCount(0)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction1)
+        setMessageAction(100, pendingAction1, PendingMessageAction1())
+        expectMessageAction(100, pendingAction1, PendingMessageAction1())
+        expectPeerNamespaceMessageActionCount(1)
+        expectPeerNamespaceActionMessageActionCount(1, pendingAction1)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction2)
+        removeMessages([100])
+        expectMessageAction(100, pendingAction1, nil)
+        expectPeerNamespaceMessageActionCount(0)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction1)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction2)
+        
+        addMessage(100, 100)
+        setMessageAction(100, pendingAction1, PendingMessageAction1())
+        expectPeerNamespaceMessageActionCount(1)
+        expectPeerNamespaceActionMessageActionCount(1, pendingAction1)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction2)
+        
+        setMessageAction(100, pendingAction1, PendingMessageAction1())
+        expectPeerNamespaceMessageActionCount(1)
+        expectPeerNamespaceActionMessageActionCount(1, pendingAction1)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction2)
+        
+        setMessageAction(100, pendingAction2, PendingMessageAction2())
+        expectPeerNamespaceMessageActionCount(2)
+        expectPeerNamespaceActionMessageActionCount(1, pendingAction1)
+        expectPeerNamespaceActionMessageActionCount(1, pendingAction2)
+        
+        addMessage(200, 200)
+        setMessageAction(200, pendingAction1, PendingMessageAction1())
+        expectPeerNamespaceMessageActionCount(3)
+        expectPeerNamespaceActionMessageActionCount(2, pendingAction1)
+        expectPeerNamespaceActionMessageActionCount(1, pendingAction2)
+        expectPeerMessageActions(pendingAction1, [(100, PendingMessageAction1()), (200, PendingMessageAction1())])
+        expectPeerMessageActions(pendingAction2, [(100, PendingMessageAction2())])
+        
+        removeMessages([100])
+        expectPeerNamespaceMessageActionCount(1)
+        expectPeerNamespaceActionMessageActionCount(1, pendingAction1)
+        expectPeerNamespaceActionMessageActionCount(0, pendingAction2)
+        expectPeerMessageActions(pendingAction2, [])
+        expectPeerMessageActions(pendingAction1, [(200, PendingMessageAction1())])
+    }
+    
+    func testPendingMessageActions2() {
+        
     }
 }

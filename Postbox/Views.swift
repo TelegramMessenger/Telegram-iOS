@@ -10,6 +10,9 @@ public enum PostboxViewKey: Hashable {
     case preferences(keys: Set<ValueBoxKey>)
     case globalMessageTags(globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?)
     case peer(peerId: PeerId)
+    case pendingMessageActions(type: PendingMessageActionType)
+    case pendingMessageActionsSummary(type: PendingMessageActionType, peerId: PeerId, namespace: MessageId.Namespace)
+    case historyTagSummaryView(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace)
     
     public var hashValue: Int {
         switch self {
@@ -31,6 +34,12 @@ public enum PostboxViewKey: Hashable {
                 return 4
             case let .peer(peerId):
                 return peerId.hashValue
+            case let .pendingMessageActions(type):
+                return type.hashValue
+            case let .pendingMessageActionsSummary(type, peerId, namespace):
+                return type.hashValue ^ peerId.hashValue ^ namespace.hashValue
+            case let .historyTagSummaryView(tag, peerId, namespace):
+                return tag.rawValue.hashValue ^ peerId.hashValue ^ namespace.hashValue
         }
     }
     
@@ -90,6 +99,24 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case let .pendingMessageActions(type):
+                if case .pendingMessageActions(type) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .pendingMessageActionsSummary(type, peerId, namespace):
+                if case .pendingMessageActionsSummary(type, peerId, namespace) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .historyTagSummaryView(tag, peerId, namespace):
+                if case .historyTagSummaryView(tag, peerId, namespace) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -114,5 +141,11 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableGlobalMessageTagsView(postbox: postbox, globalTag: globalTag, position: position, count: count, groupingPredicate: groupingPredicate)
         case let .peer(peerId):
             return MutablePeerView(postbox: postbox, peerId: peerId)
+        case let .pendingMessageActions(type):
+            return MutablePendingMessageActionsView(postbox: postbox, type: type)
+        case let .pendingMessageActionsSummary(type, peerId, namespace):
+            return MutablePendingMessageActionsSummaryView(postbox: postbox, type: type, peerId: peerId, namespace: namespace)
+        case let .historyTagSummaryView(tag, peerId, namespace):
+            return MutableMessageHistoryTagSummaryView(postbox: postbox, tag: tag, peerId: peerId, namespace: namespace)
     }
 }

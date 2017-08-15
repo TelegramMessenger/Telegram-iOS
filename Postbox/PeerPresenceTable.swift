@@ -40,15 +40,17 @@ final class PeerPresenceTable: Table {
     }
     
     override func beforeCommit() {
-        for peerId in self.updatedPeerIds {
-            if let presence = self.cachedPresences[peerId] {
-                self.sharedEncoder.reset()
-                self.sharedEncoder.encodeRootObject(presence)
-                
-                self.valueBox.set(self.table, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
+        if !self.updatedPeerIds.isEmpty {
+            for peerId in self.updatedPeerIds {
+                if let presence = self.cachedPresences[peerId] {
+                    self.sharedEncoder.reset()
+                    self.sharedEncoder.encodeRootObject(presence)
+                    
+                    self.valueBox.set(self.table, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
+                }
             }
+            
+            self.updatedPeerIds.removeAll()
         }
-        
-        self.updatedPeerIds.removeAll()
     }
 }

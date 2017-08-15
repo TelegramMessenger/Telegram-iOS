@@ -40,16 +40,18 @@ final class PeerChatStateTable: Table {
     }
     
     override func beforeCommit() {
-        let sharedEncoder = Encoder()
-        for id in self.updatedPeerIds {
-            if let wrappedState = self.cachedPeerChatStates[id], let state = wrappedState {
-                sharedEncoder.reset()
-                sharedEncoder.encodeRootObject(state)
-                self.valueBox.set(self.table, key: self.key(id), value: sharedEncoder.readBufferNoCopy())
-            } else {
-                self.valueBox.remove(self.table, key: self.key(id))
+        if !self.updatedPeerIds.isEmpty {
+            let sharedEncoder = Encoder()
+            for id in self.updatedPeerIds {
+                if let wrappedState = self.cachedPeerChatStates[id], let state = wrappedState {
+                    sharedEncoder.reset()
+                    sharedEncoder.encodeRootObject(state)
+                    self.valueBox.set(self.table, key: self.key(id), value: sharedEncoder.readBufferNoCopy())
+                } else {
+                    self.valueBox.remove(self.table, key: self.key(id))
+                }
             }
+            self.updatedPeerIds.removeAll()
         }
-        self.updatedPeerIds.removeAll()
     }
 }
