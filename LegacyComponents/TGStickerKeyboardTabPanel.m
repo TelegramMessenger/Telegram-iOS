@@ -12,6 +12,8 @@
     TGStickerKeyboardViewStyle _style;
     
     bool _showRecent;
+    bool _showFavorite;
+    bool _showGroup;
     bool _showGifs;
     bool _showTrendingFirst;
     bool _showTrendingLast;
@@ -23,6 +25,8 @@
     
     NSString *_trendingStickersBadge;
     CGFloat _innerAlpha;
+    
+    NSString *_avatarUrl;
     
     bool _expanded;
 }
@@ -96,6 +100,14 @@
     return self;
 }
 
+- (void)setAvatarUrl:(NSString *)avatarUrl
+{
+    _avatarUrl = avatarUrl;
+    
+    TGStickerKeyboardTabCell *cell = (TGStickerKeyboardTabCell *)[_collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForRow:2 inSection:1]];
+    [cell setUrl:_avatarUrl];
+}
+
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
 {
     if (_expanded)
@@ -157,7 +169,7 @@
 
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)__unused collectionView
 {
-    return 2 + ((_style == TGStickerKeyboardViewDefaultStyle) ? 1 : 0);
+    return 5 + ((_style == TGStickerKeyboardViewDefaultStyle) ? 1 : 0);
 }
 
 - (NSInteger)collectionView:(UICollectionView *)__unused collectionView numberOfItemsInSection:(NSInteger)__unused section
@@ -165,8 +177,14 @@
     if (section == 0) {
         return (_showGifs ? 1 : 0) + (_showTrendingFirst ? 1 : 0);
     } else if (section == 1) {
-        return 1 + _stickerPacks.count;
+        return (_showFavorite ? 1 : 0);
     } else if (section == 2) {
+        return (_showRecent ? 1 : 0);
+    } else if (section == 3) {
+        return (_showGroup ? 1 : 0);
+    } else if (section == 4) {
+        return _stickerPacks.count;
+    } else if (section == 5) {
         return 1 + (_showTrendingLast ? 1 : 0);
     } else {
         return 0;
@@ -175,9 +193,6 @@
 
 - (CGSize)collectionView:(UICollectionView *)__unused collectionView layout:(UICollectionViewLayout*)__unused collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)__unused indexPath
 {
-    if (indexPath.section == 1 && indexPath.item == 0 && !_showRecent)
-        return CGSizeMake(1.0f, _collectionView.frame.size.height);
-    
     CGFloat width = 52.0f;
     if (_style == TGStickerKeyboardViewDefaultStyle)
         width = 48.0f;
@@ -218,21 +233,35 @@
         }
         
         return cell;
-    } else if (indexPath.section == 1) {
+    } else if (indexPath.section == 1 || indexPath.section == 2 || indexPath.section == 3 || indexPath.section == 4) {
         TGStickerKeyboardTabCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabCell" forIndexPath:indexPath];
         [cell setStyle:_style];
         
-        if (indexPath.item == 0) {
+        if (indexPath.section == 1) {
+            if (_showFavorite) {
+                [cell setFavorite];
+            } else {
+                [cell setNone];
+            }
+        }
+        else if (indexPath.section == 2) {
             if (_showRecent) {
                 [cell setRecent];
             } else {
                 [cell setNone];
             }
         }
+        else if (indexPath.section == 3) {
+            if (_showGroup) {
+                [cell setUrl:_avatarUrl];
+            } else {
+                [cell setNone];
+            }
+        }
         else
         {
-            if (((TGStickerPack *)_stickerPacks[indexPath.item - 1]).documents.count != 0)
-                [cell setDocumentMedia:((TGStickerPack *)_stickerPacks[indexPath.item - 1]).documents[0]];
+            if (((TGStickerPack *)_stickerPacks[indexPath.item]).documents.count != 0)
+                [cell setDocumentMedia:((TGStickerPack *)_stickerPacks[indexPath.item]).documents[0]];
             else
                 [cell setNone];
         }
@@ -240,7 +269,7 @@
         [cell setInnerAlpha:_innerAlpha];
         
         return cell;
-    } else if (indexPath.section == 2) {
+    } else if (indexPath.section == 5) {
         TGStickerKeyboardTabSettingsCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabSettingsCell" forIndexPath:indexPath];
         [cell setStyle:_style];
 
@@ -325,19 +354,21 @@
         } else {
             [self scrollToTrendingButton];
         }
-    } else if (indexPath.section == 1) {
+    } else if (indexPath.section == 1 || indexPath.section == 2 || indexPath.section == 3 || indexPath.section == 4) {
         if (_currentStickerPackIndexChanged)
-            _currentStickerPackIndexChanged(indexPath.item);
-    } else if (indexPath.section == 2) {
+            _currentStickerPackIndexChanged(indexPath.section - 1 + indexPath.row);
+    } else if (indexPath.section == 5) {
         if (indexPath.item == 0 && _showTrendingLast) {
             [self scrollToTrendingButton];
         }
     }
 }
 
-- (void)setStickerPacks:(NSArray *)stickerPacks showRecent:(bool)showRecent showGifs:(bool)showGifs showTrendingFirst:(bool)showTrendingFirst showTrendingLast:(bool)showTrendingLast {
+- (void)setStickerPacks:(NSArray *)stickerPacks showRecent:(bool)showRecent showFavorite:(bool)showFavorite showGroup:(bool)showGroup showGifs:(bool)showGifs showTrendingFirst:(bool)showTrendingFirst showTrendingLast:(bool)showTrendingLast {
     _stickerPacks = stickerPacks;
     _showRecent = showRecent;
+    _showFavorite = showFavorite;
+    _showGroup = showGroup;
     _showGifs = showGifs;
     _showTrendingFirst = showTrendingFirst;
     _showTrendingLast = showTrendingLast;
@@ -347,11 +378,20 @@
 
 - (void)setCurrentStickerPackIndex:(NSUInteger)currentStickerPackIndex animated:(bool)animated
 {
+    NSInteger section = currentStickerPackIndex + 1;
+    NSInteger row = 0;
+    
+    if (section >= 4)
+    {
+        section = 4;
+        row = currentStickerPackIndex - 4;
+    }
+ 
     NSArray *selectedItems = [_collectionView indexPathsForSelectedItems];
-    if (selectedItems.count == 1 && ((NSIndexPath *)selectedItems[0]).item == (NSInteger)currentStickerPackIndex)
+    if (selectedItems.count == 1 && ((NSIndexPath *)selectedItems[0]).section == (NSInteger)section && ((NSIndexPath *)selectedItems[0]).row == (NSInteger)row)
         return;
     
-    UICollectionViewLayoutAttributes *attributes = [_collectionLayout layoutAttributesForItemAtIndexPath:[NSIndexPath indexPathForItem:currentStickerPackIndex inSection:1]];
+    UICollectionViewLayoutAttributes *attributes = [_collectionLayout layoutAttributesForItemAtIndexPath:[NSIndexPath indexPathForItem:row inSection:section]];
     UICollectionViewScrollPosition scrollPosition = UICollectionViewScrollPositionNone;
     if (!CGRectContainsRect(_collectionView.bounds, attributes.frame))
     {
@@ -362,7 +402,7 @@
         else
             scrollPosition = UICollectionViewScrollPositionRight;
     }
-    [_collectionView selectItemAtIndexPath:[NSIndexPath indexPathForItem:currentStickerPackIndex inSection:1] animated:animated scrollPosition:scrollPosition];
+    [_collectionView selectItemAtIndexPath:[NSIndexPath indexPathForItem:row inSection:section] animated:animated scrollPosition:scrollPosition];
 }
 
 - (void)setCurrentGifsModeSelected {
@@ -395,7 +435,7 @@
 - (void)scrollToTrendingButton {
     NSIndexPath *indexPath = [NSIndexPath indexPathForItem:_showGifs ? 1 : 0 inSection:0];
     if (_showTrendingLast) {
-        indexPath = [NSIndexPath indexPathForItem:0 inSection:2];
+        indexPath = [NSIndexPath indexPathForItem:0 inSection:5];
     }
     if (indexPath.section < [self numberOfSectionsInCollectionView:_collectionView] && indexPath.item < [self collectionView:_collectionView numberOfItemsInSection:indexPath.section]) {
         UICollectionViewLayoutAttributes *attributes = [_collectionLayout layoutAttributesForItemAtIndexPath:indexPath];
@@ -432,7 +472,7 @@
                 }
             }
         }
-        TGStickerKeyboardTabSettingsCell *cell = (TGStickerKeyboardTabSettingsCell *)[_collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:2]];
+        TGStickerKeyboardTabSettingsCell *cell = (TGStickerKeyboardTabSettingsCell *)[_collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:5]];
         if (cell != nil) {
             [cell setBadge:badge];
         }
@@ -449,6 +489,9 @@
 - (void)updateExpanded:(bool)expanded
 {
     if (iosMajorVersion() < 8)
+        return;
+    
+    if (!_showGifs)
         return;
     
     [UIView animateWithDuration:0.2 animations:^

@@ -22,9 +22,9 @@ static const CGFloat TGStickersTopMargin = 140.0f;
 
 @implementation TGStickerItemPreviewView
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context frame:(CGRect)frame
 {
-    self = [super initWithFrame:frame];
+    self = [super initWithContext:context frame:frame];
     if (self != nil)
     {
         self.eccentric = true;

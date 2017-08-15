@@ -6,9 +6,11 @@
 
 @interface TGStickerKeyboardTabCell : UICollectionViewCell
 
+- (void)setFavorite;
 - (void)setRecent;
 - (void)setNone;
 - (void)setDocumentMedia:(TGDocumentMediaAttachment *)documentMedia;
+- (void)setUrl:(NSString *)url;
 
 - (void)setStyle:(TGStickerKeyboardViewStyle)style;
 

@@ -6,6 +6,7 @@
 #import "TGStringUtils.h"
 
 #import <LegacyComponents/TGImageView.h>
+#import <LegacyComponents/TGRemoteImageView.h>
 
 static void setViewFrame(UIView *view, CGRect frame)
 {
@@ -19,7 +20,9 @@ static void setViewFrame(UIView *view, CGRect frame)
 @interface TGStickerKeyboardTabCell ()
 {
     TGImageView *_imageView;
+    TGRemoteImageView *_remoteImageView;
     TGStickerKeyboardViewStyle _style;
+    bool _favorite;
     bool _recent;
 }
 
@@ -52,17 +55,16 @@ static void setViewFrame(UIView *view, CGRect frame)
     [_imageView reset];
 }
 
-- (void)_updateRecentIcon
+- (void)_updateIcon:(UIImage *)image
 {
-    UIImage *recentTabImage = TGComponentsImageNamed(@"StickerKeyboardRecentTab.png");
     if (_style == TGStickerKeyboardViewPaintDarkStyle)
     {
         UIColor *color = self.selected ? [UIColor blackColor] : UIColorRGB(0xb4b5b5);
-        _imageView.image = TGTintedImage(recentTabImage, color);
+        _imageView.image = TGTintedImage(image, color);
     }
     else
     {
-        _imageView.image = recentTabImage;
+        _imageView.image = image;
     }
 }
 
@@ -71,22 +73,46 @@ static void setViewFrame(UIView *view, CGRect frame)
     [super setSelected:selected];
     
     if (_recent)
-        [self _updateRecentIcon];
+         [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardRecentTab.png")];
+    else if (_favorite)
+         [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardFavoriteTab.png")];
+}
+
+- (void)setFavorite
+{
+    _recent = false;
+    _favorite = true;
+    
+    _remoteImageView.hidden = true;
+    _imageView.hidden = false;
+    
+    [_imageView reset];
+    _imageView.contentMode = UIViewContentModeCenter;
+    
+    [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardFavoriteTab.png")];
 }
 
 - (void)setRecent
 {
     _recent = true;
+    _favorite = false;
+    
+    _remoteImageView.hidden = true;
+    _imageView.hidden = false;
     
     [_imageView reset];
     _imageView.contentMode = UIViewContentModeCenter;
     
-    [self _updateRecentIcon];
+    [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardRecentTab.png")];
 }
 
 - (void)setNone
 {
     _recent = false;
+    _favorite = false;
+    
+    _remoteImageView.hidden = true;
+    _imageView.hidden = false;
     
     [_imageView reset];
     _imageView.image = nil;
@@ -95,7 +121,10 @@ static void setViewFrame(UIView *view, CGRect frame)
 - (void)setDocumentMedia:(TGDocumentMediaAttachment *)documentMedia
 {
     _recent = false;
+    _favorite = false;
     
+    _remoteImageView.hidden = true;
+    _imageView.hidden = false;
     _imageView.contentMode = UIViewContentModeScaleAspectFit;
     
     NSMutableString *uri = [[NSMutableString alloc] initWithString:@"sticker-preview://?"];
@@ -114,6 +143,24 @@ static void setViewFrame(UIView *view, CGRect frame)
     [uri appendFormat:@"&highQuality=1"];
     
     [_imageView loadUri:uri withOptions:nil];
+}
+
+- (void)setUrl:(NSString *)url
+{
+    _recent = false;
+    _favorite = false;
+    
+    _imageView.contentMode = UIViewContentModeScaleAspectFit;
+    
+    if (_remoteImageView == nil)
+    {
+        _remoteImageView = [[TGRemoteImageView alloc] initWithFrame:_imageView.frame];
+        [_imageView.superview addSubview:_remoteImageView];
+    }
+    
+    _remoteImageView.hidden = false;
+    _imageView.hidden = true;
+    [_remoteImageView loadImage:url filter:@"circle:37x37" placeholder:nil];
 }
 
 - (void)setStyle:(TGStickerKeyboardViewStyle)style
@@ -143,7 +190,9 @@ static void setViewFrame(UIView *view, CGRect frame)
             self.selectedBackgroundView.clipsToBounds = true;
             
             if (_recent)
-                [self _updateRecentIcon];
+                [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardRecentTab.png")];
+            else if (_favorite)
+                [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardFavoriteTab.png")];
         }
             break;
             

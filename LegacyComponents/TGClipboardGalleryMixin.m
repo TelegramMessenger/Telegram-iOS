@@ -175,7 +175,7 @@
     
     [_galleryController setPreviewMode:false];
     
-    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithParentController:_parentController contentController:_galleryController];
+    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:[_context makeOverlayWindowManager] parentController:_parentController contentController:_galleryController];
     controllerWindow.hidden = false;
     _galleryController.view.clipsToBounds = true;
     

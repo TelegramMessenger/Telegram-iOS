@@ -403,7 +403,7 @@ typedef enum {
     
     [_collectionView reloadData];
     
-    [_tabPanel setStickerPacks:_section == TGPhotoStickersViewSectionMasks ? _maskStickerPacks : _genericStickerPacks showRecent:_section == TGPhotoStickersViewSectionMasks ? (_recentStickers.count != 0) : (_recentMasks.count != 0) showGifs:false showTrendingFirst:false showTrendingLast:false];
+    [_tabPanel setStickerPacks:_section == TGPhotoStickersViewSectionMasks ? _maskStickerPacks : _genericStickerPacks showRecent:_section == TGPhotoStickersViewSectionMasks ? (_recentStickers.count != 0) : (_recentMasks.count != 0) showFavorite:false showGroup:false showGifs:false showTrendingFirst:false showTrendingLast:false];
 }
 
 - (void)updateRecentDocuments
@@ -880,7 +880,7 @@ typedef enum {
     if (section != _section) {
         _section = section;
         
-        [_tabPanel setStickerPacks:_section == TGPhotoStickersViewSectionMasks ? _maskStickerPacks : _genericStickerPacks showRecent:_section == TGPhotoStickersViewSectionMasks ? (_recentMasks.count != 0) : (_recentStickers.count != 0) showGifs:false showTrendingFirst:false showTrendingLast:false];
+        [_tabPanel setStickerPacks:_section == TGPhotoStickersViewSectionMasks ? _maskStickerPacks : _genericStickerPacks showRecent:_section == TGPhotoStickersViewSectionMasks ? (_recentMasks.count != 0) : (_recentStickers.count != 0) showFavorite:false showGroup:false showGifs:false showTrendingFirst:false showTrendingLast:false];
         [_collectionView reloadData];
         
         [self updateCurrentSection];
