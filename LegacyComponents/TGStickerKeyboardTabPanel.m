@@ -14,6 +14,7 @@
     bool _showRecent;
     bool _showFavorite;
     bool _showGroup;
+    bool _showGroupLast;
     bool _showGifs;
     bool _showTrendingFirst;
     bool _showTrendingLast;
@@ -185,7 +186,7 @@
     } else if (section == 4) {
         return _stickerPacks.count;
     } else if (section == 5) {
-        return 1 + (_showTrendingLast ? 1 : 0);
+        return 1 + (_showGroupLast ? 1 : 0) + (_showTrendingLast ? 1 : 0);
     } else {
         return 0;
     }
@@ -270,22 +271,34 @@
         
         return cell;
     } else if (indexPath.section == 5) {
-        TGStickerKeyboardTabSettingsCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabSettingsCell" forIndexPath:indexPath];
-        [cell setStyle:_style];
-
-        if (_showTrendingLast && indexPath.item == 0) {
-            [cell setBadge:_trendingStickersBadge];
-            [cell setMode:TGStickerKeyboardTabSettingsCellTrending];
-            cell.pressed = nil;
-        } else {
-            [cell setBadge:nil];
-            [cell setMode:TGStickerKeyboardTabSettingsCellSettings];
-            cell.pressed = self.openSettings;
+        if (_showGroupLast && indexPath.row == 0)
+        {
+            TGStickerKeyboardTabCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabCell" forIndexPath:indexPath];
+            [cell setStyle:_style];
+            [cell setUrl:_avatarUrl];
+            [cell setInnerAlpha:_innerAlpha];
+            
+            return cell;
         }
-        
-        [cell setInnerAlpha:_innerAlpha];
-        
-        return cell;
+        else
+        {
+            TGStickerKeyboardTabSettingsCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabSettingsCell" forIndexPath:indexPath];
+            [cell setStyle:_style];
+
+            if (_showTrendingLast && ((_showGroupLast && indexPath.item == 1) || (!_showGroupLast && indexPath.item == 0))) {
+                [cell setBadge:_trendingStickersBadge];
+                [cell setMode:TGStickerKeyboardTabSettingsCellTrending];
+                cell.pressed = nil;
+            } else {
+                [cell setBadge:nil];
+                [cell setMode:TGStickerKeyboardTabSettingsCellSettings];
+                cell.pressed = self.openSettings;
+            }
+            
+            [cell setInnerAlpha:_innerAlpha];
+            
+            return cell;
+        }
     } else {
         return nil;
     }
@@ -358,17 +371,21 @@
         if (_currentStickerPackIndexChanged)
             _currentStickerPackIndexChanged(indexPath.section - 1 + indexPath.row);
     } else if (indexPath.section == 5) {
-        if (indexPath.item == 0 && _showTrendingLast) {
+        if (_showGroupLast && indexPath.item == 0) {
+            if (_currentStickerPackIndexChanged)
+                _currentStickerPackIndexChanged(_stickerPacks.count + 3);
+        } else if (_showTrendingLast && (indexPath.item == 0 || indexPath.item == 1)) {
             [self scrollToTrendingButton];
         }
     }
 }
 
-- (void)setStickerPacks:(NSArray *)stickerPacks showRecent:(bool)showRecent showFavorite:(bool)showFavorite showGroup:(bool)showGroup showGifs:(bool)showGifs showTrendingFirst:(bool)showTrendingFirst showTrendingLast:(bool)showTrendingLast {
+- (void)setStickerPacks:(NSArray *)stickerPacks showRecent:(bool)showRecent showFavorite:(bool)showFavorite showGroup:(bool)showGroup showGroupLast:(bool)showGroupLast showGifs:(bool)showGifs showTrendingFirst:(bool)showTrendingFirst showTrendingLast:(bool)showTrendingLast {
     _stickerPacks = stickerPacks;
     _showRecent = showRecent;
     _showFavorite = showFavorite;
     _showGroup = showGroup;
+    _showGroupLast = showGroupLast;
     _showGifs = showGifs;
     _showTrendingFirst = showTrendingFirst;
     _showTrendingLast = showTrendingLast;

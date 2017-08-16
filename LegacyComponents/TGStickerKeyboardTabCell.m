@@ -212,6 +212,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     transform = CGAffineTransformScale(transform, innerAlpha, innerAlpha);
     
     _imageView.transform = transform;
+    _remoteImageView.transform = transform;
     self.selectedBackgroundView.transform = transform;
 }
 
@@ -225,11 +226,13 @@ static void setViewFrame(UIView *view, CGRect frame)
     {
         imageSide = 28.0f;
         setViewFrame(_imageView, CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 4.0f, imageSide, imageSide));
+        setViewFrame(_remoteImageView, CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 4.0f, imageSide, imageSide));
         setViewFrame(self.selectedBackgroundView, CGRectMake(floor((self.frame.size.width - 36.0f) / 2.0f), 0, 36.0f, 36.0f));
     }
     else
     {
         _imageView.frame = CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 6.0f, imageSide, imageSide);
+        _remoteImageView.frame = _imageView.frame;
         
         if (_style == TGStickerKeyboardViewPaintStyle)
         {

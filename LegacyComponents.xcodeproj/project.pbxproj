@@ -16,6 +16,8 @@
 		09750FC61F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */; };
 		09750FCD1F30E53A001B9886 /* TGClipboardGalleryMixin.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09750FCE1F30E53A001B9886 /* TGClipboardGalleryMixin.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */; };
+		09FAA0B31F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09FAA0B11F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h */; };
+		09FAA0B41F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09FAA0B21F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m */; };
 		D017772C1F1F8F100044446D /* LegacyComponents.h in Headers */ = {isa = PBXBuildFile; fileRef = D017772A1F1F8F100044446D /* LegacyComponents.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D01777511F1F8FE60044446D /* LegacyComponentsGlobals.h in Headers */ = {isa = PBXBuildFile; fileRef = D01777381F1F8FE60044446D /* LegacyComponentsGlobals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D01777531F1F8FE60044446D /* PSCoding.h in Headers */ = {isa = PBXBuildFile; fileRef = D017773A1F1F8FE60044446D /* PSCoding.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1125,6 +1127,8 @@
 		09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryPhotoItem.m; sourceTree = "<group>"; };
 		09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryMixin.h; sourceTree = "<group>"; };
 		09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryMixin.m; sourceTree = "<group>"; };
+		09FAA0B11F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGEmbedTwitchPlayerView.h; sourceTree = "<group>"; };
+		09FAA0B21F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGEmbedTwitchPlayerView.m; sourceTree = "<group>"; };
 		D01777271F1F8F100044446D /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D017772A1F1F8F100044446D /* LegacyComponents.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LegacyComponents.h; sourceTree = "<group>"; };
 		D017772B1F1F8F100044446D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -3556,6 +3560,8 @@
 				D07BCB4E1F2B6A5600ED97AA /* TGEmbedPlayerView.m */,
 				D07BCB4F1F2B6A5600ED97AA /* TGEmbedSoundCloudPlayerView.h */,
 				D07BCB501F2B6A5600ED97AA /* TGEmbedSoundCloudPlayerView.m */,
+				09FAA0B11F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h */,
+				09FAA0B21F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m */,
 				D07BCB511F2B6A5600ED97AA /* TGEmbedVideoPlayerView.h */,
 				D07BCB521F2B6A5600ED97AA /* TGEmbedVideoPlayerView.m */,
 				D07BCB531F2B6A5600ED97AA /* TGEmbedVimeoPlayerView.h */,
@@ -4174,6 +4180,7 @@
 				D07BC8041F2A2C0B00ED97AA /* PGPhotoBlurPass.h in Headers */,
 				D07BC8411F2A2D7900ED97AA /* TGPhotoCaptionController.h in Headers */,
 				D017785D1F1F961D0044446D /* TGActionMediaAttachment.h in Headers */,
+				09FAA0B31F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h in Headers */,
 				D07BCA011F2A9A2B00ED97AA /* TGMediaPickerGalleryPhotoItemView.h in Headers */,
 				D07BC8081F2A2C0B00ED97AA /* PGPhotoEnhanceColorConversionFilter.h in Headers */,
 				D0177A841F2218AB0044446D /* TGModernGalleryImageItemContainerView.h in Headers */,
@@ -4518,6 +4525,7 @@
 				D017791B1F20F4A20044446D /* TGImageLuminanceMap.m in Sources */,
 				D07BCB6B1F2B6A5600ED97AA /* TGEmbedSoundCloudPlayerView.m in Sources */,
 				D07BCB631F2B6A5600ED97AA /* TGEmbedPlayerControls.m in Sources */,
+				09FAA0B41F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m in Sources */,
 				D01778321F1F961D0044446D /* TGInstantPage.m in Sources */,
 				D017776B1F1F909E0044446D /* LegacyComponentsGlobals.m in Sources */,
 				D07BCB651F2B6A5600ED97AA /* TGEmbedPlayerScrubber.m in Sources */,

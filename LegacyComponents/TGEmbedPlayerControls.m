@@ -381,6 +381,8 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
             _scrubber.hidden = false;
         }
         
+        _positionLabel.hidden = (state.position < 0.0);
+        
         if (!_scrubber.hidden)
         {
             [_scrubber setDownloadProgress:state.downloadProgress];
