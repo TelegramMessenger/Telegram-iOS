@@ -5079,7 +5079,7 @@
 			};
 			name = Debug;
 		};
-		D01778951F1FA5960044446D /* Hockeyapp */ = {
+		D01778951F1FA5960044446D /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -5123,9 +5123,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = Hockeyapp;
+			name = "Release Hockeyapp";
 		};
-		D01778961F1FA5960044446D /* Hockeyapp */ = {
+		D01778961F1FA5960044446D /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -5150,7 +5150,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 			};
-			name = Hockeyapp;
+			name = "Release Hockeyapp";
 		};
 		D07BCBFF1F2B79AE00ED97AA /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
@@ -5315,7 +5315,7 @@
 				D01778931F1FA58C0044446D /* Debug */,
 				D017772E1F1F8F100044446D /* Release */,
 				D07BCC011F2B79B900ED97AA /* Release AppStore */,
-				D01778951F1FA5960044446D /* Hockeyapp */,
+				D01778951F1FA5960044446D /* Release Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -5328,7 +5328,7 @@
 				D01778941F1FA58C0044446D /* Debug */,
 				D01777311F1F8F100044446D /* Release */,
 				D07BCC021F2B79B900ED97AA /* Release AppStore */,
-				D01778961F1FA5960044446D /* Hockeyapp */,
+				D01778961F1FA5960044446D /* Release Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
