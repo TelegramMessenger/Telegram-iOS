@@ -109,7 +109,7 @@
     
     return [[[MTSignal mergeSignals:signals] take:1] mapToSignal:^MTSignal *(MTBackupDatacenterData *data) {
         if (data != nil && data.addressList.count != 0) {
-            MTApiEnvironment *apiEnvironment = [[MTApiEnvironment alloc] init];
+            MTApiEnvironment *apiEnvironment = [currentContext.apiEnvironment copy];
             
             NSMutableDictionary *datacenterAddressOverrides = [[NSMutableDictionary alloc] init];
             
@@ -120,6 +120,8 @@
             apiEnvironment.apiId = currentContext.apiEnvironment.apiId;
             apiEnvironment.layer = currentContext.apiEnvironment.layer;
             apiEnvironment = [apiEnvironment withUpdatedLangPackCode:currentContext.apiEnvironment.langPackCode];
+            apiEnvironment.disableUpdates = true;
+            apiEnvironment.langPack = currentContext.apiEnvironment.langPack;
             
             MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization apiEnvironment:apiEnvironment];
             

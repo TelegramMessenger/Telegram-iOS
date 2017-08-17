@@ -263,7 +263,7 @@ typedef enum {
             
         case UIDeviceIFPGA: return IFPGA_NAMESTRING;
             
-        case UIDeviceOSX: return @"OSX";
+        case UIDeviceOSX: return @"macOS";
             
         default: return IOS_FAMILY_UNKNOWN_DEVICE;
     }
@@ -371,6 +371,22 @@ typedef enum {
     [result _updateApiInitializationHash];
     
     return result;
+}
+
+-(id)copy {
+    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    result.apiId = self.apiId;
+    result.appVersion = self.appVersion;
+    result.layer = self.layer;
+    result.langPack = self.langPack;
+    result->_langPackCode = self.langPackCode;
+    result.disableUpdates = self.disableUpdates;
+    result.tcpPayloadPrefix = self.tcpPayloadPrefix;
+    result.datacenterAddressOverrides = self.datacenterAddressOverrides;
+    result->_socksProxySettings = self.socksProxySettings;
+    [result _updateApiInitializationHash];
+    return result;
+
 }
 
 - (MTApiEnvironment *)withUpdatedSocksProxySettings:(MTSocksProxySettings *)socksProxySettings {
