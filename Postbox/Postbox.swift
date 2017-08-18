@@ -439,6 +439,11 @@ public final class Modifier {
         return nil
     }
     
+    public func getMedia(_ id: MediaId) -> Media? {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryTable.getMedia(id)
+    }
+    
     public func findMessageIdByTimestamp(peerId: PeerId, timestamp: Int32) -> MessageId? {
         assert(!self.disposed)
         return self.postbox?.messageHistoryTable.findMessageId(peerId: peerId, timestamp: timestamp)
@@ -1812,6 +1817,8 @@ public final class Postbox {
                     additionalDataEntries.append(.cachedPeerData(peerId, self.cachedPeerDataTable.get(peerId)))
                 case let .peerChatState(peerId):
                     additionalDataEntries.append(.peerChatState(peerId, self.peerChatStateTable.get(peerId) as? PeerChatState))
+                case .totalUnreadCount:
+                    additionalDataEntries.append(.totalUnreadCount(self.messageHistoryMetadataTable.getChatListTotalUnreadCount()))
             }
         }
         

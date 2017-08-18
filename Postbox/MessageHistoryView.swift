@@ -3,11 +3,13 @@ import Foundation
 public enum AdditionalMessageHistoryViewData {
     case cachedPeerData(PeerId)
     case peerChatState(PeerId)
+    case totalUnreadCount
 }
 
 public enum AdditionalMessageHistoryViewDataEntry {
     case cachedPeerData(PeerId, CachedPeerData?)
     case peerChatState(PeerId, PeerChatState?)
+    case totalUnreadCount(Int32)
 }
 
 public struct MessageHistoryViewId: Equatable {
@@ -688,6 +690,8 @@ final class MutableMessageHistoryView {
                         self.additionalDatas[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
                         hasChanges = true
                     }
+                case .totalUnreadCount:
+                    break
             }
         }
         

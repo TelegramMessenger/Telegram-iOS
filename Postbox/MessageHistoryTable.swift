@@ -456,6 +456,12 @@ final class MessageHistoryTable: Table {
         }
     }
     
+    func getMedia(_ id: MediaId) -> Media? {
+        return self.messageMediaTable.get(id, embedded: { index, id in
+            return self.embeddedMediaForIndex(index, id: id)
+        })
+    }
+    
     func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         for (peerId, namespaces) in states {
             if let combinedState = self.readStateTable.resetStates(peerId, namespaces: namespaces) {
