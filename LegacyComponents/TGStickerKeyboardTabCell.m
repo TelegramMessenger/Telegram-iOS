@@ -5,8 +5,9 @@
 #import "TGDocumentMediaAttachment.h"
 #import "TGStringUtils.h"
 
+#import "TGLetteredAvatarView.h"
+
 #import <LegacyComponents/TGImageView.h>
-#import <LegacyComponents/TGRemoteImageView.h>
 
 static void setViewFrame(UIView *view, CGRect frame)
 {
@@ -20,7 +21,7 @@ static void setViewFrame(UIView *view, CGRect frame)
 @interface TGStickerKeyboardTabCell ()
 {
     TGImageView *_imageView;
-    TGRemoteImageView *_remoteImageView;
+    TGLetteredAvatarView *_avatarView;
     TGStickerKeyboardViewStyle _style;
     bool _favorite;
     bool _recent;
@@ -83,7 +84,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     _recent = false;
     _favorite = true;
     
-    _remoteImageView.hidden = true;
+    _avatarView.hidden = true;
     _imageView.hidden = false;
     
     [_imageView reset];
@@ -97,7 +98,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     _recent = true;
     _favorite = false;
     
-    _remoteImageView.hidden = true;
+    _avatarView.hidden = true;
     _imageView.hidden = false;
     
     [_imageView reset];
@@ -111,7 +112,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     _recent = false;
     _favorite = false;
     
-    _remoteImageView.hidden = true;
+    _avatarView.hidden = true;
     _imageView.hidden = false;
     
     [_imageView reset];
@@ -123,7 +124,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     _recent = false;
     _favorite = false;
     
-    _remoteImageView.hidden = true;
+    _avatarView.hidden = true;
     _imageView.hidden = false;
     _imageView.contentMode = UIViewContentModeScaleAspectFit;
     
@@ -145,22 +146,53 @@ static void setViewFrame(UIView *view, CGRect frame)
     [_imageView loadUri:uri withOptions:nil];
 }
 
-- (void)setUrl:(NSString *)url
+- (void)setUrl:(NSString *)avatarUrl peerId:(int64_t)peerId title:(NSString *)title
 {
     _recent = false;
     _favorite = false;
     
     _imageView.contentMode = UIViewContentModeScaleAspectFit;
     
-    if (_remoteImageView == nil)
+    CGFloat diameter = 32.0f;
+    
+    static UIImage *placeholder = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
     {
-        _remoteImageView = [[TGRemoteImageView alloc] initWithFrame:_imageView.frame];
-        [_imageView.superview addSubview:_remoteImageView];
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(diameter, diameter), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        
+        //!placeholder
+        CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+        CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
+        CGContextSetStrokeColorWithColor(context, UIColorRGB(0xd9d9d9).CGColor);
+        CGContextSetLineWidth(context, 1.0f);
+        CGContextStrokeEllipseInRect(context, CGRectMake(0.5f, 0.5f, diameter - 1.0f, diameter - 1.0f));
+        
+        placeholder = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    });
+    
+    if (_avatarView == nil)
+    {
+        _avatarView = [[TGLetteredAvatarView alloc] initWithFrame:_imageView.frame];
+        [_avatarView setSingleFontSize:18.0f doubleFontSize:18.0f useBoldFont:false];
+        [_imageView.superview addSubview:_avatarView];
     }
     
-    _remoteImageView.hidden = false;
+    if (avatarUrl.length != 0)
+    {
+        _avatarView.fadeTransitionDuration = 0.3;
+        if (![avatarUrl isEqualToString:_avatarView.currentUrl])
+            [_avatarView loadImage:avatarUrl filter:@"circle:32x32" placeholder:placeholder];
+    }
+    else
+    {
+        [_avatarView loadGroupPlaceholderWithSize:CGSizeMake(diameter, diameter) conversationId:peerId title:title placeholder:placeholder];
+    }
+    
+    _avatarView.hidden = false;
     _imageView.hidden = true;
-    [_remoteImageView loadImage:url filter:@"circle:37x37" placeholder:nil];
 }
 
 - (void)setStyle:(TGStickerKeyboardViewStyle)style
@@ -212,7 +244,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     transform = CGAffineTransformScale(transform, innerAlpha, innerAlpha);
     
     _imageView.transform = transform;
-    _remoteImageView.transform = transform;
+    _avatarView.transform = transform;
     self.selectedBackgroundView.transform = transform;
 }
 
@@ -226,13 +258,13 @@ static void setViewFrame(UIView *view, CGRect frame)
     {
         imageSide = 28.0f;
         setViewFrame(_imageView, CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 4.0f, imageSide, imageSide));
-        setViewFrame(_remoteImageView, CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 4.0f, imageSide, imageSide));
+        setViewFrame(_avatarView, CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 4.0f, imageSide, imageSide));
         setViewFrame(self.selectedBackgroundView, CGRectMake(floor((self.frame.size.width - 36.0f) / 2.0f), 0, 36.0f, 36.0f));
     }
     else
     {
         _imageView.frame = CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 6.0f, imageSide, imageSide);
-        _remoteImageView.frame = _imageView.frame;
+        _avatarView.frame = _imageView.frame;
         
         if (_style == TGStickerKeyboardViewPaintStyle)
         {

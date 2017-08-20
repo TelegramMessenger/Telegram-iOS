@@ -28,6 +28,8 @@
     CGFloat _innerAlpha;
     
     NSString *_avatarUrl;
+    int64_t _peerId;
+    NSString *_title;
     
     bool _expanded;
 }
@@ -101,12 +103,14 @@
     return self;
 }
 
-- (void)setAvatarUrl:(NSString *)avatarUrl
+- (void)setAvatarUrl:(NSString *)avatarUrl peerId:(int64_t)peerId title:(NSString *)title
 {
     _avatarUrl = avatarUrl;
+    _peerId = peerId;
+    _title = title;
     
     TGStickerKeyboardTabCell *cell = (TGStickerKeyboardTabCell *)[_collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForRow:2 inSection:1]];
-    [cell setUrl:_avatarUrl];
+    [cell setUrl:_avatarUrl peerId:peerId title:title];
 }
 
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
@@ -254,7 +258,7 @@
         }
         else if (indexPath.section == 3) {
             if (_showGroup) {
-                [cell setUrl:_avatarUrl];
+                [cell setUrl:_avatarUrl peerId:_peerId title:_title];
             } else {
                 [cell setNone];
             }
@@ -275,7 +279,7 @@
         {
             TGStickerKeyboardTabCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabCell" forIndexPath:indexPath];
             [cell setStyle:_style];
-            [cell setUrl:_avatarUrl];
+            [cell setUrl:_avatarUrl peerId:_peerId title:_title];
             [cell setInnerAlpha:_innerAlpha];
             
             return cell;
@@ -402,6 +406,9 @@
     {
         section = 4;
         row = currentStickerPackIndex - 4;
+        
+        if (!_showGroup)
+            row++;
     }
  
     NSArray *selectedItems = [_collectionView indexPathsForSelectedItems];

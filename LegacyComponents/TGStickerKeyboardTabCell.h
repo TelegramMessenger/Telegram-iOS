@@ -10,7 +10,7 @@
 - (void)setRecent;
 - (void)setNone;
 - (void)setDocumentMedia:(TGDocumentMediaAttachment *)documentMedia;
-- (void)setUrl:(NSString *)url;
+- (void)setUrl:(NSString *)avatarUrl peerId:(int64_t)peerId title:(NSString *)title;
 
 - (void)setStyle:(TGStickerKeyboardViewStyle)style;
 

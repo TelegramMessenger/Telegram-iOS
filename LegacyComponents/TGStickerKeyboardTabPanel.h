@@ -27,7 +27,7 @@ typedef enum
 - (void)setCurrentTrendingModeSelected;
 - (void)setTrendingStickersBadge:(NSString *)badge;
 
-- (void)setAvatarUrl:(NSString *)avatarUrl;
+- (void)setAvatarUrl:(NSString *)avatarUrl peerId:(int64_t)peerId title:(NSString *)title;
 
 - (void)setInnerAlpha:(CGFloat)alpha;
 
