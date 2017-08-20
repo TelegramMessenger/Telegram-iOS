@@ -203,6 +203,7 @@ typedef enum {
 @property (nonatomic, strong) NSString *text;
 @property (nonatomic, strong) NSArray *media;
 @property (nonatomic, strong) NSData *mediaData;
+@property (nonatomic) int64_t messageFlags;
 
 @property (nonatomic) int unreadCount;
 @property (nonatomic) int serviceUnreadCount;
