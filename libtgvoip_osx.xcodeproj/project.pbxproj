@@ -189,6 +189,8 @@
 		69A6DF441E9614B700000E69 /* AudioInputAudioUnitOSX.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DF401E9614B700000E69 /* AudioInputAudioUnitOSX.h */; };
 		69A6DF451E9614B700000E69 /* AudioOutputAudioUnitOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A6DF411E9614B700000E69 /* AudioOutputAudioUnitOSX.cpp */; };
 		69A6DF461E9614B700000E69 /* AudioOutputAudioUnitOSX.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DF421E9614B700000E69 /* AudioOutputAudioUnitOSX.h */; };
+		69AC14901F4B41CF00AC3173 /* Resampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69AC148E1F4B41CF00AC3173 /* Resampler.cpp */; };
+		69AC14911F4B41CF00AC3173 /* Resampler.h in Headers */ = {isa = PBXBuildFile; fileRef = 69AC148F1F4B41CF00AC3173 /* Resampler.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -420,6 +422,8 @@
 		69A6DF401E9614B700000E69 /* AudioInputAudioUnitOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioInputAudioUnitOSX.h; sourceTree = "<group>"; };
 		69A6DF411E9614B700000E69 /* AudioOutputAudioUnitOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioOutputAudioUnitOSX.cpp; sourceTree = "<group>"; };
 		69A6DF421E9614B700000E69 /* AudioOutputAudioUnitOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioOutputAudioUnitOSX.h; sourceTree = "<group>"; };
+		69AC148E1F4B41CF00AC3173 /* Resampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Resampler.cpp; path = "../../../../Telegram-iOS/submodules/libtgvoip/audio/Resampler.cpp"; sourceTree = "<group>"; };
+		69AC148F1F4B41CF00AC3173 /* Resampler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Resampler.h; path = "../../../../Telegram-iOS/submodules/libtgvoip/audio/Resampler.h"; sourceTree = "<group>"; };
 		69F842361E67540700C110F7 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -493,6 +497,8 @@
 				692AB8891E6759DD00706ACC /* AudioInput.h */,
 				692AB88A1E6759DD00706ACC /* AudioOutput.cpp */,
 				692AB88B1E6759DD00706ACC /* AudioOutput.h */,
+				69AC148E1F4B41CF00AC3173 /* Resampler.cpp */,
+				69AC148F1F4B41CF00AC3173 /* Resampler.h */,
 			);
 			path = audio;
 			sourceTree = "<group>";
@@ -933,6 +939,7 @@
 				69A6DF301E96149300000E69 /* delay_estimator_internal.h in Headers */,
 				69A6DEBB1E96149300000E69 /* basictypes.h in Headers */,
 				69A6DEE71E96149300000E69 /* spl_inl_mips.h in Headers */,
+				69AC14911F4B41CF00AC3173 /* Resampler.h in Headers */,
 				69A6DF261E96149300000E69 /* nsx_defines.h in Headers */,
 				698848441F4B39F700076DF0 /* AudioOutputAudioUnit.h in Headers */,
 				69A6DEC11E96149300000E69 /* safe_conversions_impl.h in Headers */,
@@ -1109,6 +1116,7 @@
 				69A6DEFC1E96149300000E69 /* vector_scaling_operations.c in Sources */,
 				692AB8E61E6759DD00706ACC /* JitterBuffer.cpp in Sources */,
 				69A6DEFA1E96149300000E69 /* splitting_filter_impl.c in Sources */,
+				69AC14901F4B41CF00AC3173 /* Resampler.cpp in Sources */,
 				69A6DEE01E96149300000E69 /* get_hanning_window.c in Sources */,
 				69A6DF161E96149300000E69 /* digital_agc.c in Sources */,
 				69A6DF061E96149300000E69 /* aec_core_neon.cc in Sources */,
