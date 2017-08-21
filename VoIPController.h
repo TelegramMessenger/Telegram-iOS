@@ -324,6 +324,16 @@ public:
 	 * @param password Password; empty string if none
 	 */
 	void SetProxy(int protocol, std::string address, uint16_t port, std::string username, std::string password);
+		/**
+		 * Get the number of signal bars to display in the client UI.
+		 * @return the number of signal bars, from 1 to 4
+		 */
+		int GetSignalBarsCount();
+		/**
+		 * Set the callback to be called when the signal bar count changes.
+		 * @param f
+		 */
+		void SetSignalBarsCountCallback(void (*f)(VoIPController*, int));
 
 private:
 	struct PendingOutgoingPacket{
@@ -453,6 +463,9 @@ private:
 	std::string proxyUsername;
 	std::string proxyPassword;
 	IPv4Address* resolvedProxyAddress;
+
+		int signalBarCount;
+		void (*signalBarCountCallback)(VoIPController*, int);
 	
 	/*** server config values ***/
 	uint32_t maxAudioBitrate;

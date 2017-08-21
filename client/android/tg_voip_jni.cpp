@@ -21,6 +21,7 @@ JavaVM* sharedJVM;
 jfieldID audioRecordInstanceFld=NULL;
 jfieldID audioTrackInstanceFld=NULL;
 jmethodID setStateMethod=NULL;
+jmethodID setSignalBarsMethod=NULL;
 
 struct impl_data_android_t{
 	jobject javaObject;
@@ -49,6 +50,26 @@ void updateConnectionState(VoIPController* cntrlr, int state){
 	}
 }
 
+void updateSignalBarCount(VoIPController* cntrlr, int count){
+	impl_data_android_t* impl=(impl_data_android_t*) cntrlr->implData;
+	if(!impl->javaObject)
+		return;
+	JNIEnv* env=NULL;
+	bool didAttach=false;
+	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
+	if(!env){
+		sharedJVM->AttachCurrentThread(&env, NULL);
+		didAttach=true;
+	}
+
+	if(setSignalBarsMethod)
+		env->CallVoidMethod(impl->javaObject, setSignalBarsMethod, count);
+
+	if(didAttach){
+		sharedJVM->DetachCurrentThread();
+	}
+}
+
 extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativeInit(JNIEnv* env, jobject thiz, jint systemVersion){
 	AudioOutputAndroid::systemVersion=systemVersion;
 
@@ -70,12 +91,14 @@ extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativ
 	}
 
 	setStateMethod=env->GetMethodID(env->GetObjectClass(thiz), "handleStateChange", "(I)V");
+	setSignalBarsMethod=env->GetMethodID(env->GetObjectClass(thiz), "handleSignalBarsChange", "(I)V");
 
 	impl_data_android_t* impl=(impl_data_android_t*) malloc(sizeof(impl_data_android_t));
 	impl->javaObject=env->NewGlobalRef(thiz);
 	VoIPController* cntrlr=new VoIPController();
 	cntrlr->implData=impl;
 	cntrlr->SetStateCallback(updateConnectionState);
+	cntrlr->SetSignalBarsCountCallback(updateSignalBarCount);
 	return (jlong)(intptr_t)cntrlr;
 }
 

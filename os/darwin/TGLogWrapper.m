@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 
-#import <ASCommon.h>
+extern void TGLogv(NSString *format, va_list args);
 
 void __tgvoip_call_tglog(const char* format, ...){
 	va_list args;
