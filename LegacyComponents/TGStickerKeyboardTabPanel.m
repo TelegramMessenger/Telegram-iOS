@@ -109,7 +109,7 @@
     _peerId = peerId;
     _title = title;
     
-    TGStickerKeyboardTabCell *cell = (TGStickerKeyboardTabCell *)[_collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForRow:2 inSection:1]];
+    TGStickerKeyboardTabCell *cell = (TGStickerKeyboardTabCell *)[_collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:3]];
     [cell setUrl:_avatarUrl peerId:peerId title:title];
 }
 

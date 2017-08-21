@@ -37,6 +37,7 @@ typedef enum {
 - (void)setupNavigationBarForController:(UIViewController *)viewController animated:(bool)animated;
 
 - (void)updateControllerLayout:(bool)animated;
+- (void)updatePlayerOnControllers;
 
 - (void)acquireRotationLock;
 - (void)releaseRotationLock;

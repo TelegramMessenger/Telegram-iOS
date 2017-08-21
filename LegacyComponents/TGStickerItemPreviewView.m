@@ -83,7 +83,7 @@ static const CGFloat TGStickersTopMargin = 140.0f;
     CGFloat y = bounds.size.height / 2.0f;
     if (bounds.size.height > bounds.size.width && self.eccentric)
         y = bounds.size.height / 3.0f;
-    else if(bounds.size.height < bounds.size.width && self.actionsPresented)
+    else if (!TGIsPad() && bounds.size.height < bounds.size.width && self.actionsPresented)
         y = bounds.size.height / 4.0f;
     
     return CGPointMake(bounds.size.width / 2.0f, y);
