@@ -13,6 +13,7 @@ public enum PostboxViewKey: Hashable {
     case pendingMessageActions(type: PendingMessageActionType)
     case pendingMessageActionsSummary(type: PendingMessageActionType, peerId: PeerId, namespace: MessageId.Namespace)
     case historyTagSummaryView(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace)
+    case cachedPeerData(peerId: PeerId)
     
     public var hashValue: Int {
         switch self {
@@ -40,6 +41,8 @@ public enum PostboxViewKey: Hashable {
                 return type.hashValue ^ peerId.hashValue ^ namespace.hashValue
             case let .historyTagSummaryView(tag, peerId, namespace):
                 return tag.rawValue.hashValue ^ peerId.hashValue ^ namespace.hashValue
+            case let .cachedPeerData(peerId):
+                return peerId.hashValue
         }
     }
     
@@ -117,6 +120,12 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case let .cachedPeerData(peerId):
+                if case .cachedPeerData(peerId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -147,5 +156,7 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePendingMessageActionsSummaryView(postbox: postbox, type: type, peerId: peerId, namespace: namespace)
         case let .historyTagSummaryView(tag, peerId, namespace):
             return MutableMessageHistoryTagSummaryView(postbox: postbox, tag: tag, peerId: peerId, namespace: namespace)
+        case let .cachedPeerData(peerId):
+            return MutableCachedPeerDataView(postbox: postbox, peerId: peerId)
     }
 }

@@ -610,6 +610,12 @@ public final class Modifier {
         }
     }
     
+    public func unorderedItemListScan(tag: UnorderedItemListEntryTag, _ f: (UnorderedItemListEntry) -> Void) {
+        if let postbox = self.postbox {
+            postbox.unorderedItemListTable.scan(tag: tag, f)
+        }
+    }
+    
     public func unorderedItemListDifference(tag: UnorderedItemListEntryTag, updatedEntryInfos: [ValueBoxKey: UnorderedItemListEntryInfo]) -> (metaInfo: UnorderedItemListTagMetaInfo?, added: [ValueBoxKey], removed: [UnorderedItemListEntry], updated: [UnorderedItemListEntry]) {
         assert(!self.disposed)
         if let postbox = self.postbox {

@@ -147,6 +147,27 @@ final class UnorderedItemListTable: Table {
         self.valueBox.set(self.table, key: self.entryKey(tag: tag, id: entry.id), value: sharedBuffer)
     }
     
+    func scan(tag: UnorderedItemListEntryTag, _ f: (UnorderedItemListEntry) -> Void) {
+        let tagLength = tag.value.length
+        self.valueBox.range(self.table, start: self.entryLowerBoundKey(tag: tag), end: self.entryUpperBoundKey(tag: tag), values: { key, value in
+            let entryKey = extractEntryKey(tagLength: tagLength, key: key)
+            
+            var hashValue: Int64 = 0
+            value.read(&hashValue, offset: 0, length: 8)
+            let tempBuffer = MemoryBuffer(memory: value.memory.advanced(by: 8), capacity: value.length - 8, length: value.length - 8, freeWhenDone: false)
+            let contents = withExtendedLifetime(tempBuffer, {
+                return Decoder(buffer: tempBuffer).decodeRootObject()
+            })
+            if let contents = contents {
+                f(UnorderedItemListEntry(id: entryKey, info: UnorderedItemListEntryInfo(hashValue: hashValue), contents: contents))
+            } else {
+                assertionFailure()
+            }
+            
+            return true
+        }, limit: 0)
+    }
+    
     func difference(tag: UnorderedItemListEntryTag, updatedEntryInfos: [ValueBoxKey: UnorderedItemListEntryInfo]) -> (metaInfo: UnorderedItemListTagMetaInfo?, added: [ValueBoxKey], removed: [UnorderedItemListEntry], updated: [UnorderedItemListEntry]) {
         let currentEntryInfos = self.getEntryInfos(tag: tag)
         var currentInfoIds = Set<ValueBoxKey>()

@@ -196,6 +196,8 @@
 		D0C0B5AC1EE1AB08000F4D2C /* ReverseAssociatedPeerTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5AA1EE1AB08000F4D2C /* ReverseAssociatedPeerTable.swift */; };
 		D0C0B5AE1EE1B3F4000F4D2C /* PostboxUpgrade_13to14.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5AD1EE1B3F4000F4D2C /* PostboxUpgrade_13to14.swift */; };
 		D0C0B5AF1EE1B3F4000F4D2C /* PostboxUpgrade_13to14.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5AD1EE1B3F4000F4D2C /* PostboxUpgrade_13to14.swift */; };
+		D0C27B451F4B598200A4E170 /* CachedPeerDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B441F4B598200A4E170 /* CachedPeerDataView.swift */; };
+		D0C27B461F4B598200A4E170 /* CachedPeerDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B441F4B598200A4E170 /* CachedPeerDataView.swift */; };
 		D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */; };
 		D0C674CC1CBB14A700183765 /* PeerReadState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674CB1CBB14A700183765 /* PeerReadState.swift */; };
 		D0C735281C864DF300BB3149 /* PeerChatStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C735271C864DF300BB3149 /* PeerChatStateTable.swift */; };
@@ -409,6 +411,7 @@
 		D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C0B5AA1EE1AB08000F4D2C /* ReverseAssociatedPeerTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReverseAssociatedPeerTable.swift; sourceTree = "<group>"; };
 		D0C0B5AD1EE1B3F4000F4D2C /* PostboxUpgrade_13to14.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_13to14.swift; sourceTree = "<group>"; };
+		D0C27B441F4B598200A4E170 /* CachedPeerDataView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedPeerDataView.swift; sourceTree = "<group>"; };
 		D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryReadStateTable.swift; sourceTree = "<group>"; };
 		D0C674CB1CBB14A700183765 /* PeerReadState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerReadState.swift; sourceTree = "<group>"; };
 		D0C735271C864DF300BB3149 /* PeerChatStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatStateTable.swift; sourceTree = "<group>"; };
@@ -714,6 +717,7 @@
 				D07047A41F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift */,
 				D07047AA1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift */,
 				D07047B01F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift */,
+				D0C27B441F4B598200A4E170 /* CachedPeerDataView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1087,6 +1091,7 @@
 				D073CE741DCBF3B4007511FD /* Peer.swift in Sources */,
 				D073CE7A1DCBF3B4007511FD /* PeerReadState.swift in Sources */,
 				D0F02CE31E9922F50065DEE2 /* PostboxUpgrade_12to13.swift in Sources */,
+				D0C27B461F4B598200A4E170 /* CachedPeerDataView.swift in Sources */,
 				D073CE801DCBF3B4007511FD /* PeerChatInterfaceState.swift in Sources */,
 				D0F7B1C81E045C6A007EB8A5 /* MessageHistoryOperation.swift in Sources */,
 				D0B844031DAB91A7005F29E1 /* PeerView.swift in Sources */,
@@ -1225,6 +1230,7 @@
 				D01F7D9B1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */,
 				D0F02CE21E9922F50065DEE2 /* PostboxUpgrade_12to13.swift in Sources */,
 				D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */,
+				D0C27B451F4B598200A4E170 /* CachedPeerDataView.swift in Sources */,
 				D0C674CC1CBB14A700183765 /* PeerReadState.swift in Sources */,
 				D0D510F41D63BA8400A97B8A /* PostboxTransaction.swift in Sources */,
 				D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */,
