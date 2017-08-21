@@ -267,6 +267,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 
 - (void)filterOutExpiredMedia;
 - (bool)hasExpiredMedia;
+- (bool)hasUnreadContent;
 
 @end
 
