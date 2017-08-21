@@ -21,7 +21,9 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                         
                         addSynchronizeConsumeMessageContentsOperation(modifier: modifier, messageIds: [message.id])
                     }
-                    break
+                } else if let attribute = updatedAttributes[i] as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed {
+                    modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: messageId, action: ConsumePersonalMessageAction())
+                    updatedAttributes[i] = ConsumablePersonalMentionMessageAttribute(consumed: attribute.consumed, pending: true)
                 }
             }
             
@@ -78,6 +80,7 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
         var updateMessage = false
         var updatedAttributes = message.attributes
         var updatedMedia = message.media
+        var updatedTags = message.tags
         
         for i in 0 ..< updatedAttributes.count {
             if let attribute = updatedAttributes[i] as? ConsumableContentMessageAttribute {
@@ -85,7 +88,12 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
                     updatedAttributes[i] = ConsumableContentMessageAttribute(consumed: true)
                     updateMessage = true
                 }
-                break
+            } else if let attribute = updatedAttributes[i] as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed {
+                if attribute.pending {
+                    modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: messageId, action: nil)
+                }
+                updatedAttributes[i] = ConsumablePersonalMentionMessageAttribute(consumed: true, pending: false)
+                updatedTags.remove(.unseenPersonalMessage)
             }
         }
         
@@ -118,7 +126,7 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
                 if let forwardInfo = currentMessage.forwardInfo {
                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                 }
-                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: updatedMedia))
+                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: updatedMedia))
             })
         }
     }

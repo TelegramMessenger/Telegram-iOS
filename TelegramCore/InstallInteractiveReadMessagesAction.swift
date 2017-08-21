@@ -13,13 +13,21 @@ public func installInteractiveReadMessagesAction(postbox: Postbox, peerId: PeerI
         
         for message in messages {
             if case let .Id(id) = message.id {
+                var hasUnconsumedMention = false
+                var hasUnconsumedContent = false
+                
                 if message.tags.contains(.unseenPersonalMessage) {
                     inner: for attribute in message.attributes {
                         if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed, !attribute.pending {
-                            consumeMessageIds.append(id)
-                            break inner
+                            hasUnconsumedMention = true
+                        } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
+                            hasUnconsumedContent = true
                         }
                     }
+                }
+                
+                if hasUnconsumedMention && !hasUnconsumedContent {
+                    consumeMessageIds.append(id)
                 }
             }
         }

@@ -473,6 +473,10 @@
 		D0C0B58B1ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5891ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift */; };
 		D0C0B58D1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B58C1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift */; };
 		D0C0B58E1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B58C1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift */; };
+		D0C27B3F1F4B51D000A4E170 /* CachedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */; };
+		D0C27B401F4B51D000A4E170 /* CachedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */; };
+		D0C27B421F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */; };
+		D0C27B431F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */; };
 		D0C48F391E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */; };
 		D0C48F3A1E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */; };
 		D0C48F3C1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */; };
@@ -839,6 +843,8 @@
 		D0BEAF5F1E54ACF900BD963D /* AccountManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountManager.swift; sourceTree = "<group>"; };
 		D0C0B5891ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedLocalizationUpdatesOperations.swift; sourceTree = "<group>"; };
 		D0C0B58C1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeLocalizationUpdatesOperation.swift; sourceTree = "<group>"; };
+		D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedStickerPack.swift; sourceTree = "<group>"; };
+		D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerSpecificStickerPack.swift; sourceTree = "<group>"; };
 		D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacksInfo.swift; sourceTree = "<group>"; };
 		D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedPeerFromMessage.swift; sourceTree = "<group>"; };
 		D0C50E331E93A86600F62E39 /* CallSessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSessionManager.swift; sourceTree = "<group>"; };
@@ -962,6 +968,8 @@
 				D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */,
 				D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */,
 				D0E23DDE1E8082A400B9B6D2 /* ArchivedStickerPacks.swift */,
+				D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */,
+				D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */,
 			);
 			name = "Sticker Management";
 			sourceTree = "<group>";
@@ -1754,6 +1762,7 @@
 				D02ABC7B1E30058F00CAE539 /* DeleteMessagesInteractively.swift in Sources */,
 				C2E064681ECEEF0A00387BB8 /* TelegramMediaInvoice.swift in Sources */,
 				D0448C9F1E27F5EB005A61A7 /* Random.swift in Sources */,
+				D0C27B3F1F4B51D000A4E170 /* CachedStickerPack.swift in Sources */,
 				D0B843B21DA7FF30005F29E1 /* NBAsYouTypeFormatter.m in Sources */,
 				D07047B71F3DF2CD00F6A8D4 /* ManagedConsumePersonalMessagesActions.swift in Sources */,
 				D03B0CDB1D62245F00955575 /* ApiUtils.swift in Sources */,
@@ -1875,6 +1884,7 @@
 				D0177B7B1DF8A16C00A5083A /* SecretChatState.swift in Sources */,
 				D0AAD1AA1E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift in Sources */,
 				D03B0D5C1D631A6900955575 /* Download.swift in Sources */,
+				D0C27B421F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */,
 				D01749591E1092BC0057C89A /* RequestStartBot.swift in Sources */,
 				D01B27A21E394D8B0022A4C0 /* PrivacySettings.swift in Sources */,
 				D0223A9B1EA5654D00211D94 /* TelegramMediaResource.swift in Sources */,
@@ -2052,6 +2062,7 @@
 				D001F3F31E128A1C007A8C60 /* UpdateMessageService.swift in Sources */,
 				D0C50E351E93A86600F62E39 /* CallSessionManager.swift in Sources */,
 				D0B8442D1DAB91E0005F29E1 /* NBMetadataCoreTest.m in Sources */,
+				D0C27B431F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */,
 				D0B844131DAB91CD005F29E1 /* StringFormat.swift in Sources */,
 				D0C0B58E1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift in Sources */,
 				D0E35A131DE4C69100BC6096 /* OutgoingChatContextResultMessageAttribute.swift in Sources */,
@@ -2183,6 +2194,7 @@
 				D0C0B58B1ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift in Sources */,
 				D0B844331DAB91E0005F29E1 /* NBPhoneNumber.m in Sources */,
 				D001F3F51E128A1C007A8C60 /* PendingMessageManager.swift in Sources */,
+				D0C27B401F4B51D000A4E170 /* CachedStickerPack.swift in Sources */,
 				D001F3F61E128A1C007A8C60 /* PendingMessageUploadedContent.swift in Sources */,
 				D01C7ED71EF5E468008305F1 /* ProxySettings.swift in Sources */,
 				C2366C871E4F403C0097CCFF /* AddressNames.swift in Sources */,

@@ -970,7 +970,9 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     updatedState.addUpdatePinnedPeerIds(.sync)
                 }
             case let .updateReadMessagesContents(messages, _, _):
-                updatedState.addReadGlobalMessagesContents(messages)
+                updatedState.addReadMessagesContents((nil, messages))
+            case let .updateChannelReadMessagesContents(channelId, messages):
+                updatedState.addReadMessagesContents((PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), messages))
             case let .updateChannelMessageViews(channelId, id, views):
                 updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: id), count: views)
             case let .updateNewStickerSet(stickerset):
@@ -1421,7 +1423,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1598,9 +1600,15 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     case .sync:
                         addSynchronizePinnedChatsOperation(modifier: modifier)
                 }
-            case let .ReadGlobalMessageContents(globalIds):
-                for messageId in modifier.messageIdsForGlobalIds(globalIds) {
-                    markMessageContentAsConsumedRemotely(modifier: modifier, messageId: messageId)
+            case let .ReadMessageContents(peerId, messageIds):
+                if let peerId = peerId {
+                    for id in messageIds {
+                        markMessageContentAsConsumedRemotely(modifier: modifier, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))
+                    }
+                } else {
+                    for messageId in modifier.messageIdsForGlobalIds(messageIds) {
+                        markMessageContentAsConsumedRemotely(modifier: modifier, messageId: messageId)
+                    }
                 }
             case let .UpdateMessageImpressionCount(id, count):
                 modifier.updateMessage(id, update: { currentMessage in

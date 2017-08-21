@@ -37,12 +37,14 @@ final class ManagedDeviceContactEntryContents: Coding {
     let lastName: String
     let phoneNumber: String
     let peerId: PeerId?
+    let importDelayedUntil: Int32?
     
-    init(firstName: String, lastName: String, phoneNumber: String, peerId: PeerId?) {
+    init(firstName: String, lastName: String, phoneNumber: String, peerId: PeerId?, importDelayedUntil: Int32?) {
         self.firstName = firstName
         self.lastName = lastName
         self.phoneNumber = phoneNumber
         self.peerId = peerId
+        self.importDelayedUntil = importDelayedUntil
     }
     
     init(decoder: Decoder) {
@@ -54,6 +56,7 @@ final class ManagedDeviceContactEntryContents: Coding {
         } else {
             self.peerId = nil
         }
+        self.importDelayedUntil = decoder.decodeOptionalInt32ForKey("dt")
     }
     
     func encode(_ encoder: Encoder) {
@@ -65,10 +68,19 @@ final class ManagedDeviceContactEntryContents: Coding {
         } else {
             encoder.encodeNil(forKey: "p")
         }
+        if let importDelayedUntil = self.importDelayedUntil {
+            encoder.encodeInt32(importDelayedUntil, forKey: "dt")
+        } else {
+            encoder.encodeNil(forKey: "dt")
+        }
     }
     
     func withUpdatedPeerId(_ peerId: PeerId?) -> ManagedDeviceContactEntryContents {
-        return ManagedDeviceContactEntryContents(firstName: self.firstName, lastName: self.lastName, phoneNumber: self.phoneNumber, peerId: peerId)
+        return ManagedDeviceContactEntryContents(firstName: self.firstName, lastName: self.lastName, phoneNumber: self.phoneNumber, peerId: peerId, importDelayedUntil: self.importDelayedUntil)
+    }
+    
+    func withUpdatedImportDelayedUntil(_ importDelayedUntil: Int32?) -> ManagedDeviceContactEntryContents {
+        return ManagedDeviceContactEntryContents(firstName: self.firstName, lastName: self.lastName, phoneNumber: self.phoneNumber, peerId: self.peerId, importDelayedUntil: importDelayedUntil)
     }
 }
 
@@ -76,7 +88,7 @@ private func unorderedListEntriesForDeviceContact(_ deviceContact: DeviceContact
     var entries: [UnorderedItemListEntry] = []
     for phoneNumber in deviceContact.phoneNumbers {
         let stringToHash = "\(deviceContact.firstName):\(deviceContact.lastName):\(phoneNumber.number)"
-        entries.append(UnorderedItemListEntry(id: ValueBoxKey(phoneNumber.number), info: UnorderedItemListEntryInfo(hashValue: Int64(stringToHash.hashValue)), contents: ManagedDeviceContactEntryContents(firstName: deviceContact.firstName, lastName: deviceContact.lastName, phoneNumber: phoneNumber.number, peerId: nil)))
+        entries.append(UnorderedItemListEntry(id: ValueBoxKey(phoneNumber.number), info: UnorderedItemListEntryInfo(hashValue: Int64(stringToHash.hashValue)), contents: ManagedDeviceContactEntryContents(firstName: deviceContact.firstName, lastName: deviceContact.lastName, phoneNumber: phoneNumber.number, peerId: nil, importDelayedUntil: nil)))
     }
     return entries
 }
@@ -106,9 +118,21 @@ func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: S
             let appliedDifference = postbox.modify { modifier -> Signal<Void, ManagedDeviceContactsError> in
                 let (metaInfo, added, removed, updated) = modifier.unorderedItemListDifference(tag: Namespaces.UnorderedItemList.synchronizedDeviceContacts, updatedEntryInfos: infos)
                 
+                let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+                var reimportKeys = Set<ValueBoxKey>()
+                modifier.unorderedItemListScan(tag: Namespaces.UnorderedItemList.synchronizedDeviceContacts, { entry in
+                    if let contents = entry.contents as? ManagedDeviceContactEntryContents {
+                        if let importDelayedUntil = contents.importDelayedUntil, importDelayedUntil <= timestamp {
+                            reimportKeys.insert(entry.id)
+                        }
+                    }
+                })
+                
                 var addedOrUpdatedContacts: [ManagedDeviceContactEntryContents] = []
                 
                 for id in added {
+                    reimportKeys.remove(id)
+                    
                     if let entry = entries[id], let contents = entry.contents as? ManagedDeviceContactEntryContents {
                         addedOrUpdatedContacts.append(contents)
                     } else {
@@ -117,6 +141,8 @@ func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: S
                 }
                 
                 for previousEntry in updated {
+                    reimportKeys.remove(previousEntry.id)
+                    
                     if let entry = entries[previousEntry.id], let contents = entry.contents as? ManagedDeviceContactEntryContents {
                         addedOrUpdatedContacts.append(contents)
                     } else {
@@ -126,10 +152,18 @@ func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: S
                 
                 var removedPeerIds: [PeerId] = []
                 for entry in removed {
+                    reimportKeys.remove(entry.id)
+                    
                     if let contents = entry.contents as? ManagedDeviceContactEntryContents {
                         if let peerId = contents.peerId {
                             removedPeerIds.append(peerId)
                         }
+                    }
+                }
+                
+                for id in reimportKeys {
+                    if let entry = entries[id], let contents = entry.contents as? ManagedDeviceContactEntryContents {
+                        addedOrUpdatedContacts.append(contents)
                     }
                 }
                 
@@ -264,9 +298,14 @@ private func applyAddedOrUpdatedContacts(network: Network, contacts: [ManagedDev
                     
                     let reimportClientIds = Set(retryContacts)
                     
+                    let reimportTimestamp = Int32(CFAbsoluteTimeGetCurrent()) + Int32(1 * 60 * 60)
                     for (clientId, contents) in clientIdToContact {
-                        if !importedClientIds.contains(clientId) && !reimportClientIds.contains(clientId) {
-                            importedContents[ValueBoxKey(contents.phoneNumber)] = contents
+                        if !importedClientIds.contains(clientId) {
+                            var updatedContents = contents
+                            if reimportClientIds.contains(clientId) {
+                                updatedContents = updatedContents.withUpdatedImportDelayedUntil(reimportTimestamp)
+                            }
+                            importedContents[ValueBoxKey(contents.phoneNumber)] = updatedContents
                         }
                     }
                 

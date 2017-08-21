@@ -28,6 +28,64 @@ public enum LoadedStickerPack {
     case result(info: StickerPackCollectionInfo, items: [ItemCollectionItem], installed: Bool)
 }
 
+func remoteStickerPack(network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> {
+    return network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet))
+        |> map { Optional($0) }
+        |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
+            return .single(nil)
+        }
+        |> map { result -> (StickerPackCollectionInfo, [ItemCollectionItem])? in
+            guard let result = result else {
+                return nil
+            }
+            
+            let info: StickerPackCollectionInfo
+            var items: [ItemCollectionItem] = []
+            switch result {
+            case let .stickerSet(set, packs, documents):
+                let namespace: ItemCollectionId.Namespace
+                switch set {
+                case let .stickerSet(flags, _, _, _, _, _, _):
+                    if (flags & (1 << 3)) != 0 {
+                        namespace = Namespaces.ItemCollection.CloudMaskPacks
+                    } else {
+                        namespace = Namespaces.ItemCollection.CloudStickerPacks
+                    }
+                }
+                info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
+                var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
+                for pack in packs {
+                    switch pack {
+                    case let .stickerPack(text, fileIds):
+                        let key = ValueBoxKey(text).toMemoryBuffer()
+                        for fileId in fileIds {
+                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                            if indexKeysByFile[mediaId] == nil {
+                                indexKeysByFile[mediaId] = [key]
+                            } else {
+                                indexKeysByFile[mediaId]!.append(key)
+                            }
+                        }
+                    }
+                }
+                
+                for apiDocument in documents {
+                    if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
+                        let fileIndexKeys: [MemoryBuffer]
+                        if let indexKeys = indexKeysByFile[id] {
+                            fileIndexKeys = indexKeys
+                        } else {
+                            fileIndexKeys = []
+                        }
+                        items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
+                    }
+                }
+            }
+            
+            return (info, items)
+        }
+}
+
 public func loadedStickerPack(account: Account, reference: StickerPackReference) -> Signal<LoadedStickerPack, NoError> {
     return account.postbox.modify { modifier -> Signal<LoadedStickerPack, NoError> in
         switch reference {
@@ -57,68 +115,21 @@ public func loadedStickerPack(account: Account, reference: StickerPackReference)
                 break
         }
         
-        let signal: Signal<LoadedStickerPack, NoError> = account.network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet))
-                |> map { Optional($0) }
-                |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { result -> Signal<LoadedStickerPack, NoError> in
-                    guard let result = result else {
-                        return .single(.none)
-                    }
-                    
-                    let info: StickerPackCollectionInfo
-                    var items: [ItemCollectionItem] = []
-                    switch result {
-                        case let .stickerSet(set, packs, documents):
-                            let namespace: ItemCollectionId.Namespace
-                            switch set {
-                                case let .stickerSet(flags, _, _, _, _, _, _):
-                                    if (flags & (1 << 3)) != 0 {
-                                        namespace = Namespaces.ItemCollection.CloudMaskPacks
-                                    } else {
-                                        namespace = Namespaces.ItemCollection.CloudStickerPacks
-                                    }
-                            }
-                            info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
-                            var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
-                            for pack in packs {
-                                switch pack {
-                                    case let .stickerPack(text, fileIds):
-                                        let key = ValueBoxKey(text).toMemoryBuffer()
-                                        for fileId in fileIds {
-                                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                            if indexKeysByFile[mediaId] == nil {
-                                                indexKeysByFile[mediaId] = [key]
-                                            } else {
-                                                indexKeysByFile[mediaId]!.append(key)
-                                            }
-                                        }
-                                }
-                            }
-                            
-                            for apiDocument in documents {
-                                if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
-                                    let fileIndexKeys: [MemoryBuffer]
-                                    if let indexKeys = indexKeysByFile[id] {
-                                        fileIndexKeys = indexKeys
-                                    } else {
-                                        fileIndexKeys = []
-                                    }
-                                    items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
-                                }
-                            }
-                    }
-                    
-                    return account.postbox.combinedView(keys: [PostboxViewKey.itemCollectionInfo(id: info.id)])
-                        |> map { view in
-                            if let view = view.views[PostboxViewKey.itemCollectionInfo(id: info.id)] as? ItemCollectionInfoView, let info = view.info as? StickerPackCollectionInfo {
-                                return .result(info: info, items: items, installed: true)
-                            } else {
-                                return .result(info: info, items: items, installed: false)
-                            }
+        let signal = remoteStickerPack(network: account.network, reference: reference) |> mapToSignal { result -> Signal<LoadedStickerPack, NoError> in
+            if let result = result {
+                return account.postbox.combinedView(keys: [PostboxViewKey.itemCollectionInfo(id: result.0.id)])
+                    |> map { view in
+                        if let view = view.views[PostboxViewKey.itemCollectionInfo(id: result.0.id)] as? ItemCollectionInfoView, let info = view.info as? StickerPackCollectionInfo {
+                            return .result(info: info, items: result.1, installed: true)
+                        } else {
+                            return .result(info: result.0, items: result.1, installed: false)
                         }
-                }
+                    }
+            } else {
+                return .single(.none)
+            }
+        }
+        
         return .single(.fetching) |> then(signal)
     } |> switchToLatest
 }

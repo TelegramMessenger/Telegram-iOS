@@ -67,7 +67,7 @@ enum AccountStateMutationOperation {
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
     case AddPeerInputActivity(chatPeerId: PeerId, peerId: PeerId?, activity: PeerInputActivity?)
     case UpdatePinnedPeerIds(AccountStateUpdatePinnerPeerIdsOperation)
-    case ReadGlobalMessageContents([Int32])
+    case ReadMessageContents((PeerId?, [Int32]))
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
     case UpdateChatInputState(PeerId, SynchronizeableChatInputState?)
@@ -245,8 +245,8 @@ struct AccountMutableState {
         self.addOperation(.UpdatePinnedPeerIds(operation))
     }
     
-    mutating func addReadGlobalMessagesContents(_ globalIds: [Int32]) {
-        self.addOperation(.ReadGlobalMessageContents(globalIds))
+    mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, [Int32])) {
+        self.addOperation(.ReadMessageContents(peerIdsAndMessageIds))
     }
     
     mutating func addUpdateMessageImpressionCount(id: MessageId, count: Int32) {
@@ -267,7 +267,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadGlobalMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {

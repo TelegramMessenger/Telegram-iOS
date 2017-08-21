@@ -428,7 +428,7 @@ extension StoreMessage {
                 }
                 
                 for case let file as TelegramMediaFile in medias {
-                    if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                    if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
                         if file.isVoice {
                             consumableContent = (true, (flags & (1 << 5)) == 0)
                             break
