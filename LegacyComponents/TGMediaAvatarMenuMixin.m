@@ -402,6 +402,15 @@
             if (strongController != nil && strongController.dismissalBlock != nil)
                 strongController.dismissalBlock();
         };
+        controller.requestSearchController = ^TGViewController *
+        {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            __strong TGMediaAssetsController *strongController = weakController;
+            if (strongSelf == nil)
+                return nil;
+            
+            return strongSelf.requestSearchController(strongController);
+        };
         presentBlock(controller);
     };
     

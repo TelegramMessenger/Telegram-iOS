@@ -399,16 +399,35 @@
 
 - (void)setCurrentStickerPackIndex:(NSUInteger)currentStickerPackIndex animated:(bool)animated
 {
-    NSInteger section = currentStickerPackIndex + 1;
+    NSInteger section = 0;
     NSInteger row = 0;
     
-    if (section >= 4)
+    if (_style != TGStickerKeyboardViewPaintStyle && _style != TGStickerKeyboardViewPaintDarkStyle)
     {
-        section = 4;
-        row = currentStickerPackIndex - 4;
+        section = currentStickerPackIndex + 1;
         
-        if (!_showGroup)
-            row++;
+        if (section >= 4 + _stickerPacks.count)
+        {
+            section = 5 + currentStickerPackIndex - _stickerPacks.count - 3;
+        }
+        else if (section >= 4)
+        {
+            section = 4;
+            row = currentStickerPackIndex - 3;
+        }
+    }
+    else
+    {
+        if (currentStickerPackIndex == 0)
+        {
+            section = 2;
+            row = 0;
+        }
+        else
+        {
+            section = 4;
+            row = currentStickerPackIndex - 1;
+        }
     }
  
     NSArray *selectedItems = [_collectionView indexPathsForSelectedItems];
@@ -459,7 +478,11 @@
 - (void)scrollToTrendingButton {
     NSIndexPath *indexPath = [NSIndexPath indexPathForItem:_showGifs ? 1 : 0 inSection:0];
     if (_showTrendingLast) {
-        indexPath = [NSIndexPath indexPathForItem:0 inSection:5];
+        NSInteger item = 0;
+        if ([self collectionView:_collectionView numberOfItemsInSection:5] > 2)
+            item = 1;
+        
+        indexPath = [NSIndexPath indexPathForItem:item inSection:5];
     }
     if (indexPath.section < [self numberOfSectionsInCollectionView:_collectionView] && indexPath.item < [self collectionView:_collectionView numberOfItemsInSection:indexPath.section]) {
         UICollectionViewLayoutAttributes *attributes = [_collectionLayout layoutAttributesForItemAtIndexPath:indexPath];

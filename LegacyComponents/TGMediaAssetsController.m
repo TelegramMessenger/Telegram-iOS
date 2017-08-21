@@ -694,14 +694,13 @@
 
 - (void)searchButtonPressed
 {
-    __weak TGMediaAssetsController *weakSelf = self;
-    if (false) {
-        
+    if (self.requestSearchController) {
+        _searchController = self.requestSearchController();
     }
     /*TGWebSearchController *searchController = [[TGWebSearchController alloc] initWithContext:[TGLegacyComponentsContext shared] forAvatarSelection:(_intent == TGMediaAssetsControllerSetProfilePhotoIntent) embedded:true];
     searchController.captionsEnabled = self.captionsEnabled;
     searchController.suggestionContext = self.suggestionContext;
-    
+
     __weak TGWebSearchController *weakController = searchController;
     searchController.avatarCompletionBlock = ^(UIImage *image)
     {
@@ -738,7 +737,7 @@
     };
     searchController.parentNavigationController = self;
     [searchController presentEmbeddedInController:self animated:true];
-    
+
     _searchController = searchController;*/
 }
 

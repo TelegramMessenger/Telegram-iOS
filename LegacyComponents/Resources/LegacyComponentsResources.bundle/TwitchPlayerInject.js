@@ -47,6 +47,21 @@ function fixPlayer() {
         statusOverlay.style.padding = '1.5em 1.5em 5.5em 2.5em';
     }
     
+    var recommendationOverlay = document.getElementById('js-player-recommendations-overlay');
+    if (recommendationOverlay != null) {
+        recommendationOverlay.style.display = 'none';
+    }
+    
+    var adOverlay = document.getElementsByClassName('player-ad-overlay')[0];
+    if (adOverlay != null) {
+        adOverlay.style.display = 'none';
+    }
+    
+    var alertOverlay = document.getElementById('js-player-alert-container');
+    if (alertOverlay != null) {
+        alertOverlay.style.display = 'none';
+    }
+    
     var video = document.getElementsByTagName('video')[0];
     video.setAttribute('webkit-playsinline', '');
     video.setAttribute('playsinline', '');

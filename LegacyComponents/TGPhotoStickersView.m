@@ -167,7 +167,7 @@ typedef enum {
         {
             __strong TGPhotoStickersView *strongSelf = weakSelf;
             if (strongSelf != nil)
-                [strongSelf scrollToSection:index];
+                [strongSelf scrollToSection:index == 1 ? 0 : index - 2];
         };
         [_wrapperView addSubview:_tabPanel];
         
@@ -404,7 +404,7 @@ typedef enum {
     
     [_collectionView reloadData];
     
-    [_tabPanel setStickerPacks:_section == TGPhotoStickersViewSectionMasks ? _maskStickerPacks : _genericStickerPacks showRecent:_section == TGPhotoStickersViewSectionMasks ? (_recentStickers.count != 0) : (_recentMasks.count != 0) showFavorite:false showGroup:false showGroupLast:false showGifs:false showTrendingFirst:false showTrendingLast:false];
+    [_tabPanel setStickerPacks:_section == TGPhotoStickersViewSectionMasks ? _maskStickerPacks : _genericStickerPacks showRecent:_section == TGPhotoStickersViewSectionMasks ? (_recentMasks.count != 0) : (_recentStickers.count != 0) showFavorite:false showGroup:false showGroupLast:false showGifs:false showTrendingFirst:false showTrendingLast:false];
 }
 
 - (void)updateRecentDocuments
