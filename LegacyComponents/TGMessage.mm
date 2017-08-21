@@ -1149,6 +1149,20 @@ typedef enum {
     return false;
 }
 
+- (bool)hasUnreadContent {
+    if (self.contentProperties[@"contentsRead"] == nil) {
+        for (id media in self.mediaAttachments) {
+            if ([media isKindOfClass:[TGDocumentMediaAttachment class]]) {
+                TGDocumentMediaAttachment *document = media;
+                if ([document isVoice] || [document isRoundVideo]) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 @end
 
 @interface TGMediaId ()
