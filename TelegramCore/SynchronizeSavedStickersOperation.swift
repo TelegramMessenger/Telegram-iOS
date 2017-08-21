@@ -173,3 +173,15 @@ public func removeSavedSticker(modifier: Modifier, mediaId: MediaId) {
         }
     }
 }
+
+public func removeSavedSticker(postbox: Postbox, mediaId: MediaId) -> Signal<Void, Void> {
+    return postbox.modify { modifier in
+        if let entry = modifier.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents as? SavedStickerItem {
+            if let resource = item.file.resource as? CloudDocumentMediaResource {
+                modifier.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: entry.id)
+                addSynchronizeSavedStickersOperation(modifier: modifier, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
+            }
+        }
+    }
+    
+}

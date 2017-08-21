@@ -65,7 +65,7 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
                     |> delay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
                     |> then(postbox.modify { modifier -> Void in
                         if let message = modifier.getMessage(entry.messageId) {
-                            if message.id.namespace == Namespaces.Peer.SecretChat {
+                            if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                                 modifier.deleteMessages([entry.messageId])
                             } else {
                                 modifier.updateMessage(message.id, update: { currentMessage in
