@@ -322,6 +322,14 @@
             }
         }
     }
+    else
+    {
+        if ([cell isKindOfClass:[TGStickerKeyboardTabSettingsCell class]])
+        {
+            TGStickerKeyboardTabSettingsCell *settingsCell = (TGStickerKeyboardTabSettingsCell *)cell;
+            [settingsCell setInnerAlpha:_innerAlpha];
+        }
+    }
 }
 
 - (void)collectionView:(UICollectionView *)__unused collectionView didEndDisplayingCell:(UICollectionViewCell *)cell forItemAtIndexPath:(NSIndexPath *)indexPath

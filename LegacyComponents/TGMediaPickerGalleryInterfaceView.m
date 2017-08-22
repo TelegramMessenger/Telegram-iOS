@@ -37,7 +37,7 @@
 
 #import <LegacyComponents/TGPhotoCaptionInputMixin.h>
 
-@interface TGMediaPickerGalleryInterfaceView ()
+@interface TGMediaPickerGalleryInterfaceView () <ASWatcher>
 {
     id<TGModernGalleryItem> _currentItem;
     __weak TGModernGalleryItemView *_currentItemView;
@@ -69,11 +69,17 @@
     SMetaDisposable *_itemAvailabilityDisposable;
     SMetaDisposable *_itemSelectedDisposable;
     
+    NSTimer *_tooltipTimer;
+    TGMenuContainerView *_tooltipContainerView;
+    
     void (^_closePressed)();
     void (^_scrollViewOffsetRequested)(CGFloat offset);
     
     id<LegacyComponentsContext> _context;
 }
+
+@property (nonatomic, strong) ASHandle *actionHandle;
+
 @end
 
 @implementation TGMediaPickerGalleryInterfaceView
@@ -83,6 +89,8 @@
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
     {
+        _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
+        
         _context = context;
         _selectionContext = selectionContext;
         _editingContext = editingContext;
@@ -267,6 +275,8 @@
 
 - (void)dealloc
 {
+    [_actionHandle reset];
+
     [_adjustmentsDisposable dispose];
     [_captionDisposable dispose];
     [_itemSelectedDisposable dispose];
@@ -572,8 +582,6 @@
     {
         TGMediaVideoEditAdjustments *videoAdjustments = (TGMediaVideoEditAdjustments *)adjustments;
         _muteButton.selected = videoAdjustments.sendAsGif;
-        //if (videoAdjustments.sendAsGif)
-        //    disabledButtons = TGPhotoEditorTimerTab;
     }
     
     TGPhotoEditorButton *qualityButton = [_portraitToolbarView buttonForTab:TGPhotoEditorQualityTab];
@@ -617,7 +625,20 @@
         UIImage *icon = [TGPhotoEditorInterfaceAssets timerIconForValue:value];
         [timerButton setIconImage:defaultIcon activeIconImage:icon];
         
-        timerButton = [_landscapeToolbarView buttonForTab:TGPhotoEditorTimerTab];
+        TGPhotoEditorButton *landscapeTimerButton = [_landscapeToolbarView buttonForTab:TGPhotoEditorTimerTab];
+        
+        if ([self shouldDisplayTooltip])
+        {
+            TGDispatchAfter(0.5, dispatch_get_main_queue(), ^
+            {
+                if (self.frame.size.width > self.frame.size.height)
+                    [self setupTooltip:[_landscapeToolbarView convertRect:landscapeTimerButton.frame toView:self]];
+                else
+                    [self setupTooltip:[_portraitToolbarView convertRect:timerButton.frame toView:self]];
+            });
+        }
+        
+        timerButton = landscapeTimerButton;
         [timerButton setIconImage:defaultIcon activeIconImage:icon];
         
         if (value > 0)
@@ -629,6 +650,52 @@
     
     [_portraitToolbarView setEditButtonsDisabled:disabledButtons];
     [_landscapeToolbarView setEditButtonsDisabled:disabledButtons];
+}
+
+- (bool)shouldDisplayTooltip
+{
+    return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedMediaTimerTooltip_v0"] boolValue];
+}
+
+- (void)setupTooltip:(CGRect)rect
+{
+    if (_tooltipContainerView != nil)
+        return;
+    
+    _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:2.5 repeat:false];
+    
+    _tooltipContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, self.frame.size.height)];
+    [self addSubview:_tooltipContainerView];
+    
+    NSMutableArray *actions = [[NSMutableArray alloc] init];
+    [actions addObject:[[NSDictionary alloc] initWithObjectsAndKeys:TGLocalized(@"MediaPicker.TimerTooltip"), @"title", nil]];
+    
+    [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:_actionHandle];
+    [_tooltipContainerView.menuView sizeToFit];
+    _tooltipContainerView.menuView.buttonHighlightDisabled = true;
+    
+    [_tooltipContainerView showMenuFromRect:rect animated:false];
+    
+    [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"TG_displayedMediaTimerTooltip_v0"];
+}
+
+- (void)tooltipTimerTick
+{
+    [_tooltipTimer invalidate];
+    _tooltipTimer = nil;
+    
+    [_tooltipContainerView hideMenu];
+}
+
+- (void)actionStageActionRequested:(NSString *)action options:(id)__unused options
+{
+    if ([action isEqualToString:@"menuAction"])
+    {
+        [_tooltipTimer invalidate];
+        _tooltipTimer = nil;
+        
+        [_tooltipContainerView hideMenu];
+    }
 }
 
 - (void)updateSelectionInterface:(NSUInteger)selectedCount counterVisible:(bool)counterVisible animated:(bool)animated

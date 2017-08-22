@@ -284,7 +284,8 @@
                         [((TGViewController *)controller) setAdditionalStatusBarHeight:_currentAdditionalStatusBarHeight];
                     }
                 }
-                [((UIViewController *)maybeController) setNeedsStatusBarAppearanceUpdate];
+                if (iosMajorVersion() >= 7)
+                    [((UIViewController *)maybeController) setNeedsStatusBarAppearanceUpdate];
             }
         }
     }
