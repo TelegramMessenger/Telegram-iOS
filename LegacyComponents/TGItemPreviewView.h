@@ -7,6 +7,7 @@
 
 @property (nonatomic, copy) CGPoint (^sourcePointForItem)(id item);
 @property (nonatomic, copy) void (^onDismiss)(void);
+@property (nonatomic, copy) void (^willDismiss)(void);
 
 @property (nonatomic, assign) bool eccentric;
 @property (nonatomic, strong) id item;

@@ -615,6 +615,9 @@ typedef enum
 
 - (void)performCommit
 {
+    if (self.willDismiss != nil)
+        self.willDismiss();
+    
     [UIView animateWithDuration:0.3 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:^
     {
         _mainSheetView.frame = CGRectMake(_mainSheetView.frame.origin.x, -_mainSheetView.frame.size.height, _mainSheetView.frame.size.width, _mainSheetView.frame.size.height);
@@ -634,6 +637,9 @@ typedef enum
 
 - (void)performDismissal
 {
+    if (self.willDismiss != nil)
+        self.willDismiss();
+    
     if (_actionsPresented)
     {
         [self addSubview:_actionsSheetView];

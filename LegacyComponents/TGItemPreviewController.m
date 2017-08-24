@@ -25,7 +25,7 @@
         _previewView = previewView;
         
         TGOverlayControllerWindow *window = [[TGOverlayControllerWindow alloc] initWithManager:[context makeOverlayWindowManager] parentController:parentController contentController:self keepKeyboard:true];
-        window.windowLevel = 100000000.0f;
+        window.windowLevel = UIWindowLevelStatusBar;
         window.tag = 0xbeef;
         window.userInteractionEnabled = previewView.userInteractionEnabled;
         window.hidden = false;
@@ -36,6 +36,16 @@
             __strong TGItemPreviewController *strongSelf = weakSelf;
             if (strongSelf != nil)
                 [strongSelf dismissImmediately];
+        };
+        
+        _previewView.willDismiss = ^{
+            __strong TGItemPreviewController *strongSelf = weakSelf;
+            if (strongSelf != nil && strongSelf.onDismiss != nil)
+            {
+                void (^onDismiss)(void) = [strongSelf.onDismiss copy];
+                strongSelf.onDismiss = nil;
+                onDismiss();
+            }
         };
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
@@ -109,6 +119,13 @@
 
 - (void)dismiss
 {
+    if (self.onDismiss != nil)
+    {
+        void (^onDismiss)(void) = [self.onDismiss copy];
+        self.onDismiss = nil;
+        onDismiss();
+    }
+    
     [_previewView animateDismiss:^
     {
         [self dismissImmediately];
@@ -126,6 +143,9 @@
     
     if (_autorotationWasEnabled)
         [TGViewController enableAutorotation];
+    
+    if (self.onDismiss != nil)
+        self.onDismiss();
 }
 
 @end

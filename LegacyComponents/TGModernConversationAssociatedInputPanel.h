@@ -12,6 +12,9 @@ typedef enum
 @property (nonatomic, readonly) TGModernConversationAssociatedInputPanelStyle style;
 @property (nonatomic, copy) void (^preferredHeightUpdated)();
 
+@property (nonatomic, copy) void (^resultPreviewAppeared)(void);
+@property (nonatomic, copy) void (^resultPreviewDisappeared)(bool restoreFocus);
+
 @property (nonatomic) CGFloat overlayBarOffset;
 @property (nonatomic) CGFloat barInset;
 @property (nonatomic, copy) void (^updateOverlayBarOffset)(CGFloat);

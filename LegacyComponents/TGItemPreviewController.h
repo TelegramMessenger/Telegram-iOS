@@ -7,6 +7,8 @@
 
 @interface TGItemPreviewController : TGOverlayController
 
+@property (nonatomic, copy) void (^onDismiss)(void);
+
 @property (nonatomic, copy) CGPoint (^sourcePointForItem)(id item);
 @property (nonatomic, readonly) TGItemPreviewView *previewView;
 
