@@ -26,7 +26,7 @@ public struct NoticeEntryKey: Hashable {
 }
 
 private struct CachedEntry {
-    let entry: Coding?
+    let entry: PostboxCoding?
 }
 
 final class NoticeTable: Table {
@@ -37,11 +37,11 @@ final class NoticeTable: Table {
         return ValueBoxTable(id: id, keyType: .binary)
     }
     
-    func get(key: NoticeEntryKey) -> Coding? {
+    func get(key: NoticeEntryKey) -> PostboxCoding? {
         if let cached = self.cachedEntries[key] {
             return cached.entry
         } else {
-            if let value = self.valueBox.get(self.table, key: key.combinedKey), let object = Decoder(buffer: value).decodeRootObject() {
+            if let value = self.valueBox.get(self.table, key: key.combinedKey), let object = PostboxDecoder(buffer: value).decodeRootObject() {
                 self.cachedEntries[key] = CachedEntry(entry: object)
                 return object
             } else {
@@ -51,7 +51,7 @@ final class NoticeTable: Table {
         }
     }
     
-    func set(key: NoticeEntryKey, value: Coding?) {
+    func set(key: NoticeEntryKey, value: PostboxCoding?) {
         self.cachedEntries[key] = CachedEntry(entry: value)
         updatedEntryKeys.insert(key)
     }
@@ -64,7 +64,7 @@ final class NoticeTable: Table {
         if !self.updatedEntryKeys.isEmpty {
             for key in self.updatedEntryKeys {
                 if let value = self.cachedEntries[key]?.entry {
-                    let encoder = Encoder()
+                    let encoder = PostboxEncoder()
                     encoder.encodeRootObject(value)
                     withExtendedLifetime(encoder, {
                         self.valueBox.set(self.table, key: key.combinedKey, value: encoder.readBufferNoCopy())

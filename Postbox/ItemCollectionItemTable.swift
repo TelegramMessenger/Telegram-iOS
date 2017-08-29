@@ -113,7 +113,7 @@ final class ItemCollectionItemTable: Table {
     func lowerItems(collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
         var items: [ItemCollectionItem] = []
         self.valueBox.range(self.table, start: self.key(collectionId: collectionId, index: itemIndex), end: self.lowerBound(collectionId: collectionId), values: { _, value in
-            if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
+            if let item = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                 items.append(item)
             } else {
                 assertionFailure()
@@ -136,7 +136,7 @@ final class ItemCollectionItemTable: Table {
     func higherItems(collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
         var items: [ItemCollectionItem] = []
         self.valueBox.range(self.table, start: self.key(collectionId: collectionId, index: itemIndex), end: self.upperBound(collectionId: collectionId), values: { _, value in
-            if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
+            if let item = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                 items.append(item)
             } else {
                 assertionFailure()
@@ -151,7 +151,7 @@ final class ItemCollectionItemTable: Table {
         self.valueBox.range(self.table, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), values: { key, value in
             let collectionId = ItemCollectionId(namespace: namespace, id: key.getInt64(4))
             //let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
-            if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
+            if let item = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                 if items[collectionId] != nil {
                     items[collectionId]!.append(item)
                 } else {
@@ -169,7 +169,7 @@ final class ItemCollectionItemTable: Table {
         var items: [ItemCollectionItem] = []
         self.valueBox.range(self.table, start: self.lowerBound(collectionId: collectionId), end: self.upperBound(collectionId: collectionId), values: { key, value in
             //let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
-            if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
+            if let item = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                 items.append(item)
             } else {
                 assertionFailure()
@@ -195,7 +195,7 @@ final class ItemCollectionItemTable: Table {
             currentIndices.insert(itemIndex)
             
             if !updatedIndices.contains(itemIndex) {
-                if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
+                if let item = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                     if !item.indexKeys.isEmpty {
                         removedIndexKeys[itemIndex] = item.indexKeys
                     }
@@ -216,7 +216,7 @@ final class ItemCollectionItemTable: Table {
             }
         }
         
-        let sharedEncoder = Encoder()
+        let sharedEncoder = PostboxEncoder()
         for index in addedIndices {
             let item = itemByIndex[index]!
             sharedEncoder.reset()
@@ -234,7 +234,7 @@ final class ItemCollectionItemTable: Table {
         let references = self.reverseIndexTable.exactReferences(namespace: ReverseIndexNamespace(namespace), token: key)
         var resultsByCollectionId: [ItemCollectionId: [(ItemCollectionItemIndex, ItemCollectionItem)]] = [:]
         for reference in references {
-            if let value = self.valueBox.get(self.table, key: self.key(collectionId: reference.collectionId, index: reference.itemIndex)), let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
+            if let value = self.valueBox.get(self.table, key: self.key(collectionId: reference.collectionId, index: reference.itemIndex)), let item = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                 if resultsByCollectionId[reference.collectionId] == nil {
                     resultsByCollectionId[reference.collectionId] = [(reference.itemIndex, item)]
                 } else {

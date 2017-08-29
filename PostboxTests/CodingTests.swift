@@ -3,10 +3,10 @@ import XCTest
 
 import Postbox
 
-class TestParent: Coding, Equatable {
+class TestParent: PostboxCoding, Equatable {
     var parentInt32: Int32
     
-    required init(decoder: Decoder) {
+    required init(decoder: PostboxDecoder) {
         self.parentInt32 = decoder.decodeInt32ForKey("parentInt32", orElse: 0)
     }
     
@@ -14,7 +14,7 @@ class TestParent: Coding, Equatable {
         self.parentInt32 = parentInt32
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.parentInt32, forKey: "parentInt32")
     }
 }
@@ -27,7 +27,7 @@ class TestObject: TestParent {
     var int32Array: [Int32]
     var int64Array: [Int64]
     
-    required init(decoder: Decoder) {
+    required init(decoder: PostboxDecoder) {
         self.int32 = decoder.decodeInt32ForKey("int32", orElse: 0)
         self.int64 = decoder.decodeInt64ForKey("int64", orElse: 0)
         self.double = decoder.decodeDoubleForKey("double", orElse: 0.0)
@@ -47,7 +47,7 @@ class TestObject: TestParent {
         super.init(parentInt32: parentInt32)
     }
     
-    override func encode(_ encoder: Encoder) {
+    override func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.int32, forKey: "int32")
         encoder.encodeInt64(self.int64, forKey: "int64")
         encoder.encodeDouble(self.double, forKey: "double")
@@ -58,9 +58,9 @@ class TestObject: TestParent {
     }
 }
 
-class TestKey: Coding, Hashable {
+class TestKey: PostboxCoding, Hashable {
     let value: Int
-    required init(decoder: Decoder) {
+    required init(decoder: PostboxDecoder) {
         self.value = Int(decoder.decodeInt32ForKey("value", orElse: 0))
     }
     
@@ -68,7 +68,7 @@ class TestKey: Coding, Hashable {
         self.value = value
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.value), forKey: "value")
     }
     
@@ -97,11 +97,11 @@ func ==(lhs: TestKey, rhs: TestKey) -> Bool {
     return lhs.value == rhs.value
 }
 
-class EmptyState: Coding {
-    required init(decoder: Decoder) {
+class EmptyState: PostboxCoding {
+    required init(decoder: PostboxDecoder) {
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
     }
 }
 
@@ -119,7 +119,7 @@ class SerializationTests: XCTestCase {
         declareEncodable(TestObject.self, f: { TestObject(decoder: $0) })
         declareEncodable(TestKey.self, f: { TestKey(decoder: $0) })
         
-        let encoder = Encoder()
+        let encoder = PostboxEncoder()
         encoder.encodeInt32(12345, forKey: "a")
         encoder.encodeInt64(Int64(12345), forKey: "b")
         encoder.encodeBool(true, forKey: "c")
@@ -142,7 +142,7 @@ class SerializationTests: XCTestCase {
         
         encoder.encodeObjectDictionary(beforeDictionary, forKey: "i")
         
-        let decoder = Decoder(buffer: encoder.makeReadBufferAndReset())
+        let decoder = PostboxDecoder(buffer: encoder.makeReadBufferAndReset())
         
         let afterDictionary = decoder.decodeObjectDictionaryForKey("i") as [TestKey : TestParent]
         XCTAssert(afterDictionary == beforeDictionary, "object dictionary failed")

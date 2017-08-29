@@ -384,7 +384,7 @@ public func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
     return true
 }
 
-public protocol MessageAttribute: Coding {
+public protocol MessageAttribute: PostboxCoding {
     var associatedPeerIds: [PeerId] { get }
     var associatedMessageIds: [MessageId] { get }
 }

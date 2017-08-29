@@ -11,6 +11,7 @@ public enum PostboxViewKey: Hashable {
     case globalMessageTags(globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?)
     case peer(peerId: PeerId)
     case pendingMessageActions(type: PendingMessageActionType)
+    case invalidatedMessageHistoryTagSummaries(tagMask: MessageTags, namespace: MessageId.Namespace)
     case pendingMessageActionsSummary(type: PendingMessageActionType, peerId: PeerId, namespace: MessageId.Namespace)
     case historyTagSummaryView(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace)
     case cachedPeerData(peerId: PeerId)
@@ -37,6 +38,8 @@ public enum PostboxViewKey: Hashable {
                 return peerId.hashValue
             case let .pendingMessageActions(type):
                 return type.hashValue
+            case let .invalidatedMessageHistoryTagSummaries(tagMask, namespace):
+                return tagMask.rawValue.hashValue ^ namespace.hashValue
             case let .pendingMessageActionsSummary(type, peerId, namespace):
                 return type.hashValue ^ peerId.hashValue ^ namespace.hashValue
             case let .historyTagSummaryView(tag, peerId, namespace):
@@ -108,6 +111,12 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case .invalidatedMessageHistoryTagSummaries:
+                if case .invalidatedMessageHistoryTagSummaries = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .pendingMessageActionsSummary(type, peerId, namespace):
                 if case .pendingMessageActionsSummary(type, peerId, namespace) = rhs {
                     return true
@@ -152,6 +161,8 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePeerView(postbox: postbox, peerId: peerId)
         case let .pendingMessageActions(type):
             return MutablePendingMessageActionsView(postbox: postbox, type: type)
+        case let .invalidatedMessageHistoryTagSummaries(tagMask, namespace):
+            return MutableInvalidatedMessageHistoryTagSummariesView(postbox: postbox, tagMask: tagMask, namespace: namespace)
         case let .pendingMessageActionsSummary(type, peerId, namespace):
             return MutablePendingMessageActionsSummaryView(postbox: postbox, type: type, peerId: peerId, namespace: namespace)
         case let .historyTagSummaryView(tag, peerId, namespace):

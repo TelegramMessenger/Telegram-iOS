@@ -12,8 +12,8 @@ final class OrderedItemListIndexTable: Table {
         return key
     }
     
-    func get(collectionId: Int32, id: MemoryBuffer) -> Coding? {
-        if let value = self.valueBox.get(self.table, key: self.key(collectionId: collectionId, id: id)), let content = Decoder(buffer: value).decodeRootObject() {
+    func get(collectionId: Int32, id: MemoryBuffer) -> PostboxCoding? {
+        if let value = self.valueBox.get(self.table, key: self.key(collectionId: collectionId, id: id)), let content = PostboxDecoder(buffer: value).decodeRootObject() {
             return content
         } else {
             return nil
@@ -24,8 +24,8 @@ final class OrderedItemListIndexTable: Table {
         self.valueBox.remove(self.table, key: self.key(collectionId: collectionId, id: id))
     }
     
-    func set(collectionId: Int32, id: MemoryBuffer, content: Coding) {
-        let encoder = Encoder()
+    func set(collectionId: Int32, id: MemoryBuffer, content: PostboxCoding) {
+        let encoder = PostboxEncoder()
         encoder.encodeRootObject(content)
         withExtendedLifetime(encoder, {
             self.valueBox.set(self.table, key: self.key(collectionId: collectionId, id: id), value: encoder.readBufferNoCopy())

@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol PendingMessageActionData: Coding {
+public protocol PendingMessageActionData: PostboxCoding {
     func isEqual(to: PendingMessageActionData) -> Bool
 }
 
@@ -121,7 +121,7 @@ final class PendingMessageActionsTable: Table {
     
     func getAction(id: MessageId, type: PendingMessageActionType) -> PendingMessageActionData? {
         if let value = self.valueBox.get(self.table, key: self.forwardKey(id: id, actionType: type)) {
-            if let action = Decoder(buffer: value).decodeRootObject() as? PendingMessageActionData {
+            if let action = PostboxDecoder(buffer: value).decodeRootObject() as? PendingMessageActionData {
                 return action
             } else {
                 assertionFailure()
@@ -135,7 +135,7 @@ final class PendingMessageActionsTable: Table {
     func setAction(id: MessageId, type: PendingMessageActionType, action: PendingMessageActionData?, operations: inout [PendingMessageActionsOperation], updatedSummaries: inout [PendingMessageActionsSummaryKey: Int32]) {
         let currentAction = self.getAction(id: id, type: type)
         if let action = action {
-            let encoder = Encoder()
+            let encoder = PostboxEncoder()
             encoder.encodeRootObject(action)
             self.valueBox.set(self.table, key: self.forwardKey(id: id, actionType: type), value: encoder.readBufferNoCopy())
             self.valueBox.set(self.table, key: self.reverseKey(id: id, actionType: type), value: MemoryBuffer())

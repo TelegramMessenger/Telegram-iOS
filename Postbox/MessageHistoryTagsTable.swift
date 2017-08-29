@@ -40,21 +40,21 @@ class MessageHistoryTagsTable: Table {
         return key.successor
     }
     
-    func add(_ tagMask: MessageTags, index: MessageIndex, isHole: Bool, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary]) {
+    func add(_ tagMask: MessageTags, index: MessageIndex, isHole: Bool, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         for tag in tagMask {
             self.valueBox.set(self.table, key: self.key(tag, index: index, key: self.sharedKey), value: MemoryBuffer())
             if !isHole && self.summaryTags.contains(tag) {
-                self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries)
+                self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)
             }
         }
     }
     
-    func remove(_ tagMask: MessageTags, index: MessageIndex, isHole: Bool, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary]) {
+    func remove(_ tagMask: MessageTags, index: MessageIndex, isHole: Bool, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         for tag in tagMask {
             self.valueBox.remove(self.table, key: self.key(tag, index: index, key: self.sharedKey))
             
             if !isHole && self.summaryTags.contains(tag) {
-                self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries)
+                self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)
             }
         }
     }

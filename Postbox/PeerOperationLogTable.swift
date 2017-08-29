@@ -11,7 +11,7 @@ public struct PeerMergedOperationLogEntry {
     public let tag: PeerOperationLogTag
     public let tagLocalIndex: Int32
     public let mergedIndex: Int32
-    public let contents: Coding
+    public let contents: PostboxCoding
 }
 
 public enum StorePeerOperationLogEntryTagLocalIndex {
@@ -29,9 +29,9 @@ public struct PeerOperationLogEntry {
     public let tag: PeerOperationLogTag
     public let tagLocalIndex: Int32
     public let mergedIndex: Int32?
-    public let contents: Coding
+    public let contents: PostboxCoding
     
-    public func withUpdatedContents(_ contents: Coding) -> PeerOperationLogEntry {
+    public func withUpdatedContents(_ contents: PostboxCoding) -> PeerOperationLogEntry {
         return PeerOperationLogEntry(peerId: self.peerId, tag: self.tag, tagLocalIndex: self.tagLocalIndex, mergedIndex: self.mergedIndex, contents: contents)
     }
     
@@ -58,7 +58,7 @@ public struct PeerOperationLogTag: Equatable {
 
 public enum PeerOperationLogEntryUpdateContents {
     case none
-    case update(Coding)
+    case update(PostboxCoding)
 }
 
 public enum PeerOperationLogEntryUpdateTagMergedIndex {
@@ -89,7 +89,7 @@ private func parseEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex:
     var contentLength: Int32 = 0
     value.read(&contentLength, offset: 0, length: 4)
     assert(value.length - value.offset == Int(contentLength))
-    if let contents = Decoder(buffer: MemoryBuffer(memory: value.memory.advanced(by: value.offset), capacity: Int(contentLength), length: Int(contentLength), freeWhenDone: false)).decodeRootObject() {
+    if let contents = PostboxDecoder(buffer: MemoryBuffer(memory: value.memory.advanced(by: value.offset), capacity: Int(contentLength), length: Int(contentLength), freeWhenDone: false)).decodeRootObject() {
         return PeerOperationLogEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, mergedIndex: mergedIndex, contents: contents)
     } else {
         return nil
@@ -131,7 +131,7 @@ final class PeerOperationLogTable: Table {
         return self.metadataTable.getNextLocalIndex(peerId: peerId, tag: tag)
     }
     
-    func addEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: StorePeerOperationLogEntryTagLocalIndex, tagMergedIndex: StorePeerOperationLogEntryTagMergedIndex, contents: Coding, operations: inout [PeerMergedOperationLogOperation]) {
+    func addEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: StorePeerOperationLogEntryTagLocalIndex, tagMergedIndex: StorePeerOperationLogEntryTagMergedIndex, contents: PostboxCoding, operations: inout [PeerMergedOperationLogOperation]) {
         let index: Int32
         switch tagLocalIndex {
             case .automatic:
@@ -156,7 +156,7 @@ final class PeerOperationLogTable: Table {
             buffer.write(&mergedIndexValue, offset: 0, length: 4)
         }
         
-        let encoder = Encoder()
+        let encoder = PostboxEncoder()
         encoder.encodeRootObject(contents)
         withExtendedLifetime(encoder, {
             let contentBuffer = encoder.readBufferNoCopy()
@@ -295,9 +295,9 @@ final class PeerOperationLogTable: Table {
             var contentLength: Int32 = 0
             value.read(&contentLength, offset: 0, length: 4)
             assert(value.length - value.offset == Int(contentLength))
-            if let contents = Decoder(buffer: MemoryBuffer(memory: value.memory.advanced(by: value.offset), capacity: Int(contentLength), length: Int(contentLength), freeWhenDone: false)).decodeRootObject() {
+            if let contents = PostboxDecoder(buffer: MemoryBuffer(memory: value.memory.advanced(by: value.offset), capacity: Int(contentLength), length: Int(contentLength), freeWhenDone: false)).decodeRootObject() {
                 let entryUpdate = f(PeerOperationLogEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, mergedIndex: mergedIndex, contents: contents))
-                var updatedContents: Coding?
+                var updatedContents: PostboxCoding?
                 switch entryUpdate.contents {
                     case .none:
                         break
@@ -333,7 +333,7 @@ final class PeerOperationLogTable: Table {
                         buffer.write(&mergedIndexValue, offset: 0, length: 4)
                     }
                     
-                    let encoder = Encoder()
+                    let encoder = PostboxEncoder()
                     if let updatedContents = updatedContents {
                         encoder.encodeRootObject(updatedContents)
                     } else {

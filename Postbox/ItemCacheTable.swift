@@ -45,16 +45,16 @@ final class ItemCacheTable: Table {
         return key
     }
     
-    func put(id: ItemCacheEntryId, entry: Coding, metaTable: ItemCacheMetaTable) {
-        let encoder = Encoder()
+    func put(id: ItemCacheEntryId, entry: PostboxCoding, metaTable: ItemCacheMetaTable) {
+        let encoder = PostboxEncoder()
         encoder.encodeRootObject(entry)
         withExtendedLifetime(encoder, {
             self.valueBox.set(self.table, key: self.itemKey(id: id), value: encoder.readBufferNoCopy())
         })
     }
     
-    func retrieve(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) -> Coding? {
-        if let value = self.valueBox.get(self.table, key: self.itemKey(id: id)), let entry = Decoder(buffer: value).decodeRootObject() {
+    func retrieve(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) -> PostboxCoding? {
+        if let value = self.valueBox.get(self.table, key: self.itemKey(id: id)), let entry = PostboxDecoder(buffer: value).decodeRootObject() {
             return entry
         }
         return nil

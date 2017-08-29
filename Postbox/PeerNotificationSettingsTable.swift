@@ -5,7 +5,7 @@ final class PeerNotificationSettingsTable: Table {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
-    private let sharedEncoder = Encoder()
+    private let sharedEncoder = PostboxEncoder()
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedSettings: [PeerId: PeerNotificationSettings] = [:]
@@ -31,7 +31,7 @@ final class PeerNotificationSettingsTable: Table {
             return settings
         }
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
-            if let settings = Decoder(buffer: value).decodeRootObject() as? PeerNotificationSettings {
+            if let settings = PostboxDecoder(buffer: value).decodeRootObject() as? PeerNotificationSettings {
                 self.cachedSettings[id] = settings
                 return settings
             }

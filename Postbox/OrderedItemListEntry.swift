@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol OrderedItemListEntryContents: Coding {
+public protocol OrderedItemListEntryContents: PostboxCoding {
     
 }
 

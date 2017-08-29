@@ -5,7 +5,7 @@ final class PeerChatStateTable: Table {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
-    private var cachedPeerChatStates: [PeerId: Coding?] = [:]
+    private var cachedPeerChatStates: [PeerId: PostboxCoding?] = [:]
     private var updatedPeerIds = Set<PeerId>()
     
     private let sharedKey = ValueBoxKey(length: 8)
@@ -15,11 +15,11 @@ final class PeerChatStateTable: Table {
         return self.sharedKey
     }
     
-    func get(_ id: PeerId) -> Coding? {
+    func get(_ id: PeerId) -> PostboxCoding? {
         if let state = self.cachedPeerChatStates[id] {
             return state
         } else {
-            if let value = self.valueBox.get(self.table, key: self.key(id)), let state = Decoder(buffer: value).decodeRootObject() {
+            if let value = self.valueBox.get(self.table, key: self.key(id)), let state = PostboxDecoder(buffer: value).decodeRootObject() {
                 self.cachedPeerChatStates[id] = state
                 return state
             } else {
@@ -29,7 +29,7 @@ final class PeerChatStateTable: Table {
         }
     }
     
-    func set(_ id: PeerId, state: Coding?) {
+    func set(_ id: PeerId, state: PostboxCoding?) {
         self.cachedPeerChatStates[id] = state
         self.updatedPeerIds.insert(id)
     }
@@ -41,7 +41,7 @@ final class PeerChatStateTable: Table {
     
     override func beforeCommit() {
         if !self.updatedPeerIds.isEmpty {
-            let sharedEncoder = Encoder()
+            let sharedEncoder = PostboxEncoder()
             for id in self.updatedPeerIds {
                 if let wrappedState = self.cachedPeerChatStates[id], let state = wrappedState {
                     sharedEncoder.reset()

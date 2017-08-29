@@ -12,14 +12,14 @@ public struct ItemCacheCollectionSpec {
     }
 }
 
-struct ItemCacheCollectionState: Coding {
+struct ItemCacheCollectionState: PostboxCoding {
     let nextAccessIndex: Int32
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.nextAccessIndex = decoder.decodeInt32ForKey("i", orElse: 0)
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.nextAccessIndex, forKey: "i")
     }
 }
@@ -43,7 +43,7 @@ final class ItemCacheMetaTable: Table {
         if let cached = self.cachedCollectionStates[id] {
             return cached
         } else {
-            if let value = self.valueBox.get(self.table, key: self.key(id)), let state = Decoder(buffer: value).decodeRootObject() as? ItemCacheCollectionState {
+            if let value = self.valueBox.get(self.table, key: self.key(id)), let state = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCacheCollectionState {
                 self.cachedCollectionStates[id] = state
                 return state
             } else {
@@ -64,7 +64,7 @@ final class ItemCacheMetaTable: Table {
     
     override func beforeCommit() {
         if !self.updatedCollectionStateIds.isEmpty {
-            let sharedEncoder = Encoder()
+            let sharedEncoder = PostboxEncoder()
             for id in self.updatedCollectionStateIds {
                 if let state = self.cachedCollectionStates[id] {
                     sharedEncoder.reset()

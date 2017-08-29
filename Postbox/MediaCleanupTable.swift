@@ -9,7 +9,7 @@ final class MediaCleanupTable: Table {
         super.init(valueBox: valueBox, table: table)
     }
     
-    func add(_ media: Media, sharedEncoder: Encoder = Encoder()) {
+    func add(_ media: Media, sharedEncoder: PostboxEncoder = PostboxEncoder()) {
     }
     
     func debugList() -> [Media] {

@@ -9,7 +9,7 @@ private enum MetadataKey: Int32 {
     case RemoteContactCount = 6
 }
 
-public struct AccessChallengeAttempts: Coding, Equatable {
+public struct AccessChallengeAttempts: PostboxCoding, Equatable {
     public let count: Int32
     public let timestamp: Int32
     
@@ -18,12 +18,12 @@ public struct AccessChallengeAttempts: Coding, Equatable {
         self.timestamp = timestamp
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.count = decoder.decodeInt32ForKey("c", orElse: 0)
         self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.count, forKey: "c")
         encoder.encodeInt32(self.timestamp, forKey: "t")
     }
@@ -33,12 +33,12 @@ public struct AccessChallengeAttempts: Coding, Equatable {
     }
 }
 
-public enum PostboxAccessChallengeData: Coding, Equatable {
+public enum PostboxAccessChallengeData: PostboxCoding, Equatable {
     case none
     case numericalPassword(value: String, timeout: Int32?, attempts: AccessChallengeAttempts?)
     case plaintextPassword(value: String, timeout: Int32?, attempts: AccessChallengeAttempts?)
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .none
@@ -52,7 +52,7 @@ public enum PostboxAccessChallengeData: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "r")
@@ -155,7 +155,7 @@ final class MetadataTable: Table {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
-    private var cachedState: Coding?
+    private var cachedState: PostboxCoding?
     private var cachedRemoteContactCount: Int32?
     
     private let sharedBuffer = WriteBuffer()
@@ -187,12 +187,12 @@ final class MetadataTable: Table {
         self.valueBox.set(self.table, key: self.key(.UserVersion), value: buffer)
     }
     
-    func state() -> Coding? {
+    func state() -> PostboxCoding? {
         if let cachedState = self.cachedState {
             return cachedState
         } else {
             if let value = self.valueBox.get(self.table, key: self.key(.State)) {
-                if let state = Decoder(buffer: value).decodeRootObject() {
+                if let state = PostboxDecoder(buffer: value).decodeRootObject() {
                     self.cachedState = state
                     return state
                 }
@@ -201,10 +201,10 @@ final class MetadataTable: Table {
         }
     }
     
-    func setState(_ state: Coding) {
+    func setState(_ state: PostboxCoding) {
         self.cachedState = state
         
-        let encoder = Encoder()
+        let encoder = PostboxEncoder()
         encoder.encodeRootObject(state)
         withExtendedLifetime(encoder, {
             self.valueBox.set(self.table, key: self.key(.State), value: encoder.readBufferNoCopy())
@@ -250,14 +250,14 @@ final class MetadataTable: Table {
     
     func accessChallengeData() -> PostboxAccessChallengeData {
         if let value = self.valueBox.get(self.table, key: self.key(.AccessChallenge)) {
-            return PostboxAccessChallengeData(decoder: Decoder(buffer: value))
+            return PostboxAccessChallengeData(decoder: PostboxDecoder(buffer: value))
         } else {
             return .none
         }
     }
     
     func setAccessChallengeData(_ data: PostboxAccessChallengeData) {
-        let encoder = Encoder()
+        let encoder = PostboxEncoder()
         data.encode(encoder)
         withExtendedLifetime(encoder, {
             self.valueBox.set(self.table, key: self.key(.AccessChallenge), value: encoder.readBufferNoCopy())

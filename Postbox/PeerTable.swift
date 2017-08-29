@@ -7,7 +7,7 @@ final class PeerTable: Table {
     
     private let reverseAssociatedTable: ReverseAssociatedPeerTable
     
-    private let sharedEncoder = Encoder()
+    private let sharedEncoder = PostboxEncoder()
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedPeers: [PeerId: Peer] = [:]
@@ -37,7 +37,7 @@ final class PeerTable: Table {
             return peer
         }
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
-            if let peer = Decoder(buffer: value).decodeRootObject() as? Peer {
+            if let peer = PostboxDecoder(buffer: value).decodeRootObject() as? Peer {
                 self.cachedPeers[id] = peer
                 return peer
             }

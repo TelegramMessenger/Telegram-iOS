@@ -18,7 +18,7 @@ final class PeerChatInterfaceStateTable: Table {
     func get(_ peerId: PeerId) -> PeerChatInterfaceState? {
         if let cachedValue = self.states[peerId] {
             return cachedValue
-        } else if let value = self.valueBox.get(self.table, key: self.key(peerId, sharedKey: self.sharedKey)), let state = Decoder(buffer: value).decodeRootObject() as? PeerChatInterfaceState {
+        } else if let value = self.valueBox.get(self.table, key: self.key(peerId, sharedKey: self.sharedKey)), let state = PostboxDecoder(buffer: value).decodeRootObject() as? PeerChatInterfaceState {
             self.states[peerId] = state
             return state
         } else {
@@ -60,7 +60,7 @@ final class PeerChatInterfaceStateTable: Table {
     
     override func beforeCommit() {
         if !self.peerIdsWithUpdatedStates.isEmpty {
-            let sharedEncoder = Encoder()
+            let sharedEncoder = PostboxEncoder()
             for peerId in self.peerIdsWithUpdatedStates {
                 if let state = self.states[peerId] {
                     if let state = state {

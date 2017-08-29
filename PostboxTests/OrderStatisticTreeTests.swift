@@ -81,6 +81,7 @@ class OrderStatisticTreeTests: XCTestCase {
     var globalTagsTable: GlobalMessageHistoryTagsTable?
     var textIndexTable: MessageHistoryTextIndexTable?
     var messageHistoryTagsSummaryTable: MessageHistoryTagsSummaryTable?
+    var invalidatedMessageHistoryTagsSummaryTable: InvalidatedMessageHistoryTagsSummaryTable?
     var pendingMessageActionsTable: PendingMessageActionsTable?
     var pendingMessageActionsMetadataTable: PendingMessageActionsMetadataTable?
     
@@ -97,7 +98,8 @@ class OrderStatisticTreeTests: XCTestCase {
         self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, table: GlobalMessageIdsTable.tableSpec(5), namespace: namespace)
         self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, table: MessageHistoryMetadataTable.tableSpec(7))
         self.unsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox!, table: MessageHistoryUnsentTable.tableSpec(8))
-        self.messageHistoryTagsSummaryTable = MessageHistoryTagsSummaryTable(valueBox: self.valueBox!, table: MessageHistoryTagsSummaryTable.tableSpec(15))
+        self.invalidatedMessageHistoryTagsSummaryTable = InvalidatedMessageHistoryTagsSummaryTable(valueBox: self.valueBox!, table: MessageHistoryTagsSummaryTable.tableSpec(18))
+        self.messageHistoryTagsSummaryTable = MessageHistoryTagsSummaryTable(valueBox: self.valueBox!, table: MessageHistoryTagsSummaryTable.tableSpec(15), invalidateTable: self.invalidatedMessageHistoryTagsSummaryTable!)
         self.pendingMessageActionsMetadataTable = PendingMessageActionsMetadataTable(valueBox: self.valueBox!, table: PendingMessageActionsMetadataTable.tableSpec(16))
         self.pendingMessageActionsTable = PendingMessageActionsTable(valueBox: self.valueBox!, table: PendingMessageActionsTable.tableSpec(17), metadataTable: self.pendingMessageActionsMetadataTable!)
         self.tagsTable = MessageHistoryTagsTable(valueBox: self.valueBox!, table: MessageHistoryTagsTable.tableSpec(9), seedConfiguration: seedConfiguration, summaryTable: messageHistoryTagsSummaryTable!)

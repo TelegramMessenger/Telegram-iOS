@@ -38,7 +38,7 @@ final class MessageMediaTable: Table {
             if type == MediaEntryType.Direct.rawValue {
                 var dataLength: Int32 = 0
                 value.read(&dataLength, offset: 0, length: 4)
-                if let media = Decoder(buffer: MemoryBuffer(memory: value.memory + value.offset, capacity: Int(dataLength), length: Int(dataLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                if let media = PostboxDecoder(buffer: MemoryBuffer(memory: value.memory + value.offset, capacity: Int(dataLength), length: Int(dataLength), freeWhenDone: false)).decodeRootObject() as? Media {
                     return media
                 }
             } else if type == MediaEntryType.MessageReference.rawValue {
@@ -59,7 +59,7 @@ final class MessageMediaTable: Table {
         return nil
     }
     
-    func set(_ media: Media, index: MessageIndex, messageHistoryTable: MessageHistoryTable, sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: Encoder = Encoder()) -> InsertMediaResult {
+    func set(_ media: Media, index: MessageIndex, messageHistoryTable: MessageHistoryTable, sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: PostboxEncoder = PostboxEncoder()) -> InsertMediaResult {
         if let id = media.id {
             if let value = self.valueBox.get(self.table, key: self.key(id)) {
                 var type: Int8 = 0
@@ -200,7 +200,7 @@ final class MessageMediaTable: Table {
         }
     }
     
-    func update(_ id: MediaId, media: Media, messageHistoryTable: MessageHistoryTable, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: Encoder = Encoder())  {
+    func update(_ id: MediaId, media: Media, messageHistoryTable: MessageHistoryTable, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: PostboxEncoder = PostboxEncoder())  {
         if let updatedId = media.id {
             if let value = self.valueBox.get(self.table, key: self.key(id)) {
                 var type: Int8 = 0
@@ -260,7 +260,7 @@ final class MessageMediaTable: Table {
             if type == MediaEntryType.Direct.rawValue {
                 var dataLength: Int32 = 0
                 value.read(&dataLength, offset: 0, length: 4)
-                if let media = Decoder(buffer: MemoryBuffer(memory: value.memory + value.offset, capacity: Int(dataLength), length: Int(dataLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                if let media = PostboxDecoder(buffer: MemoryBuffer(memory: value.memory + value.offset, capacity: Int(dataLength), length: Int(dataLength), freeWhenDone: false)).decodeRootObject() as? Media {
                     
                     value.skip(Int(dataLength))
                     

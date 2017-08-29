@@ -2,7 +2,7 @@ import Foundation
 
 final class MutablePeerChatStateView: MutablePostboxView {
     let peerId: PeerId
-    var chatState: Coding?
+    var chatState: PostboxCoding?
     
     init(postbox: Postbox, peerId: PeerId) {
         self.peerId = peerId
@@ -25,7 +25,7 @@ final class MutablePeerChatStateView: MutablePostboxView {
 
 public final class PeerChatStateView: PostboxView {
     public let peerId: PeerId
-    public let chatState: Coding?
+    public let chatState: PostboxCoding?
     
     init(_ view: MutablePeerChatStateView) {
         self.peerId = view.peerId

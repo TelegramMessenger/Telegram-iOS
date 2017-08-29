@@ -5,7 +5,7 @@ final class PeerPresenceTable: Table {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
-    private let sharedEncoder = Encoder()
+    private let sharedEncoder = PostboxEncoder()
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedPresences: [PeerId: PeerPresence] = [:]
@@ -26,7 +26,7 @@ final class PeerPresenceTable: Table {
             return presence
         }
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
-            if let presence = Decoder(buffer: value).decodeRootObject() as? PeerPresence {
+            if let presence = PostboxDecoder(buffer: value).decodeRootObject() as? PeerPresence {
                 self.cachedPresences[id] = presence
                 return presence
             }

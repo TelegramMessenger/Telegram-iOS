@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MediaId: Hashable, Coding, CustomStringConvertible {
+public struct MediaId: Hashable, PostboxCoding, CustomStringConvertible {
     public typealias Namespace = Int32
     public typealias Id = Int64
     
@@ -35,12 +35,12 @@ public struct MediaId: Hashable, Coding, CustomStringConvertible {
         buffer.offset += 12
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.namespace = decoder.decodeInt32ForKey("n", orElse: 0)
         self.id = decoder.decodeInt64ForKey("i", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.namespace, forKey: "n")
         encoder.encodeInt64(self.id, forKey: "i")
     }
@@ -78,7 +78,7 @@ public func ==(lhs: MediaId, rhs: MediaId) -> Bool {
     return lhs.id == rhs.id && lhs.namespace == rhs.namespace
 }
 
-public protocol Media: class, Coding {
+public protocol Media: class, PostboxCoding {
     var id: MediaId? { get }
     var peerIds: [PeerId] { get }
     

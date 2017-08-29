@@ -39,7 +39,7 @@ final class ItemCollectionInfoTable: Table {
         } else {
             var infos: [(Int, ItemCollectionId, ItemCollectionInfo)] = []
             self.valueBox.range(self.table, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), values: { key, value in
-                if let info = Decoder(buffer: value).decodeRootObject() as? ItemCollectionInfo {
+                if let info = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionInfo {
                     infos.append((Int(key.getInt32(4)), ItemCollectionId(namespace: namespace, id: key.getInt64(4 + 4)), info))
                 }
                 return true
@@ -85,7 +85,7 @@ final class ItemCollectionInfoTable: Table {
             }
             return true
         }, limit: 0)
-        if let infoKey = infoKey, let value = self.valueBox.get(self.table, key: infoKey), let info = Decoder(buffer: value).decodeRootObject() as? ItemCollectionInfo  {
+        if let infoKey = infoKey, let value = self.valueBox.get(self.table, key: infoKey), let info = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionInfo  {
             return info
         } else {
             return nil
@@ -152,7 +152,7 @@ final class ItemCollectionInfoTable: Table {
         }
         
         var index: Int32 = 0
-        let sharedEncoder = Encoder()
+        let sharedEncoder = PostboxEncoder()
         for (id, info) in infos {
             sharedEncoder.reset()
             sharedEncoder.encodeRootObject(info)

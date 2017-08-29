@@ -11,9 +11,9 @@ public struct UnorderedItemListEntryInfo {
 public struct UnorderedItemListEntry {
     public let id: ValueBoxKey
     public let info: UnorderedItemListEntryInfo
-    public let contents: Coding
+    public let contents: PostboxCoding
     
-    public init(id: ValueBoxKey, info: UnorderedItemListEntryInfo, contents: Coding) {
+    public init(id: ValueBoxKey, info: UnorderedItemListEntryInfo, contents: PostboxCoding) {
         self.id = id
         self.info = info
         self.contents = contents
@@ -28,7 +28,7 @@ public struct UnorderedItemListEntryTag {
     }
 }
 
-public protocol UnorderedItemListTagMetaInfo: Coding {
+public protocol UnorderedItemListTagMetaInfo: PostboxCoding {
     func isEqual(to: UnorderedItemListTagMetaInfo) -> Bool
 }
 
@@ -88,7 +88,7 @@ final class UnorderedItemListTable: Table {
     }
     
     private func getMetaInfo(tag: UnorderedItemListEntryTag) -> UnorderedItemListTagMetaInfo? {
-        if let value = self.valueBox.get(self.table, key: self.metaInfoKey(tag: tag)), let info = Decoder(buffer: value).decodeRootObject() as? UnorderedItemListTagMetaInfo {
+        if let value = self.valueBox.get(self.table, key: self.metaInfoKey(tag: tag)), let info = PostboxDecoder(buffer: value).decodeRootObject() as? UnorderedItemListTagMetaInfo {
             return info
         } else {
             return nil
@@ -96,7 +96,7 @@ final class UnorderedItemListTable: Table {
     }
     
     private func setMetaInfo(tag: UnorderedItemListEntryTag, info: UnorderedItemListTagMetaInfo) {
-        let encoder = Encoder()
+        let encoder = PostboxEncoder()
         encoder.encodeRootObject(info)
         self.valueBox.set(self.table, key: self.metaInfoKey(tag: tag), value: encoder.readBufferNoCopy())
     }
@@ -117,7 +117,7 @@ final class UnorderedItemListTable: Table {
             value.read(&hashValue, offset: 0, length: 8)
             let tempBuffer = MemoryBuffer(memory: value.memory.advanced(by: 8), capacity: value.length - 8, length: value.length - 8, freeWhenDone: false)
             let contents = withExtendedLifetime(tempBuffer, {
-                return Decoder(buffer: tempBuffer).decodeRootObject()
+                return PostboxDecoder(buffer: tempBuffer).decodeRootObject()
             })
             if let contents = contents {
                 let entry = UnorderedItemListEntry(id: id, info: UnorderedItemListEntryInfo(hashValue: hashValue), contents: contents)
@@ -131,7 +131,7 @@ final class UnorderedItemListTable: Table {
         }
     }
     
-    private func setEntry(tag: UnorderedItemListEntryTag, entry: UnorderedItemListEntry, sharedBuffer: WriteBuffer, sharedEncoder: Encoder) {
+    private func setEntry(tag: UnorderedItemListEntryTag, entry: UnorderedItemListEntry, sharedBuffer: WriteBuffer, sharedEncoder: PostboxEncoder) {
         sharedBuffer.reset()
         sharedEncoder.reset()
         
@@ -156,7 +156,7 @@ final class UnorderedItemListTable: Table {
             value.read(&hashValue, offset: 0, length: 8)
             let tempBuffer = MemoryBuffer(memory: value.memory.advanced(by: 8), capacity: value.length - 8, length: value.length - 8, freeWhenDone: false)
             let contents = withExtendedLifetime(tempBuffer, {
-                return Decoder(buffer: tempBuffer).decodeRootObject()
+                return PostboxDecoder(buffer: tempBuffer).decodeRootObject()
             })
             if let contents = contents {
                 f(UnorderedItemListEntry(id: entryKey, info: UnorderedItemListEntryInfo(hashValue: hashValue), contents: contents))
@@ -226,7 +226,7 @@ final class UnorderedItemListTable: Table {
         self.setMetaInfo(tag: tag, info: updatedInfo)
         
         let sharedBuffer = WriteBuffer()
-        let sharedEncoder = Encoder()
+        let sharedEncoder = PostboxEncoder()
         for entry in setItems {
             self.setEntry(tag: tag, entry: entry, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder)
         }

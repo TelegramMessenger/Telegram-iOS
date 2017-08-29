@@ -5,7 +5,7 @@ final class CachedPeerDataTable: Table {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
-    private let sharedEncoder = Encoder()
+    private let sharedEncoder = PostboxEncoder()
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedDatas: [PeerId: CachedPeerData] = [:]
@@ -30,7 +30,7 @@ final class CachedPeerDataTable: Table {
             return status
         }
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
-            if let data = Decoder(buffer: value).decodeRootObject() as? CachedPeerData {
+            if let data = PostboxDecoder(buffer: value).decodeRootObject() as? CachedPeerData {
                 self.cachedDatas[id] = data
                 return data
             }

@@ -18,7 +18,7 @@ final class AccountManagerRecordTable: Table {
     func getRecords() -> [AccountRecord] {
         var records: [AccountRecord] = []
         self.valueBox.scan(self.table, values: { _, value in
-            let record = AccountRecord(decoder: Decoder(buffer: value))
+            let record = AccountRecord(decoder: PostboxDecoder(buffer: value))
             records.append(record)
             return true
         })
@@ -27,7 +27,7 @@ final class AccountManagerRecordTable: Table {
     
     func getRecord(id: AccountRecordId) -> AccountRecord? {
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
-            return AccountRecord(decoder: Decoder(buffer: value))
+            return AccountRecord(decoder: PostboxDecoder(buffer: value))
         } else {
             return nil
         }
@@ -35,7 +35,7 @@ final class AccountManagerRecordTable: Table {
     
     func setRecord(id: AccountRecordId, record: AccountRecord?, operations: inout [AccountManagerRecordOperation]) {
         if let record = record {
-            let encoder = Encoder()
+            let encoder = PostboxEncoder()
             record.encode(encoder)
             withExtendedLifetime(encoder, {
                 self.valueBox.set(self.table, key: self.key(id), value: encoder.readBufferNoCopy())

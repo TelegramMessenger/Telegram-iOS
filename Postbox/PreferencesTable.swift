@@ -20,7 +20,7 @@ final class PreferencesTable: Table {
         if let cached = self.cachedEntries[key] {
             return cached.entry
         } else {
-            if let value = self.valueBox.get(self.table, key: key), let object = Decoder(buffer: value).decodeRootObject() as? PreferencesEntry {
+            if let value = self.valueBox.get(self.table, key: key), let object = PostboxDecoder(buffer: value).decodeRootObject() as? PreferencesEntry {
                 self.cachedEntries[key] = CachedEntry(entry: object)
                 return object
             } else {
@@ -44,7 +44,7 @@ final class PreferencesTable: Table {
         if !self.updatedEntryKeys.isEmpty {
             for key in self.updatedEntryKeys {
                 if let value = self.cachedEntries[key]?.entry {
-                    let encoder = Encoder()
+                    let encoder = PostboxEncoder()
                     encoder.encodeRootObject(value)
                     withExtendedLifetime(encoder, {
                         self.valueBox.set(self.table, key: key, value: encoder.readBufferNoCopy())

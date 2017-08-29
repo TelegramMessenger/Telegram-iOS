@@ -13,10 +13,10 @@ private struct TestListItem: OrderedItemListEntryContents {
         
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         
     }
 }

@@ -6,7 +6,7 @@ public struct MessageHistoryHole: Equatable, CustomStringConvertible {
     public let min: MessageId.Id
     let tags: UInt32
     
-    init(stableId: UInt32, maxIndex: MessageIndex, min: MessageId.Id, tags: UInt32) {
+    public init(stableId: UInt32, maxIndex: MessageIndex, min: MessageId.Id, tags: UInt32) {
         self.stableId = stableId
         self.maxIndex = maxIndex
         self.min = min

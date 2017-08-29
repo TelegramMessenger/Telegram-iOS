@@ -12,7 +12,7 @@ func postboxUpgrade_13to14(metadataTable: MetadataTable, valueBox: ValueBox) {
     
     let peerTable = ValueBoxTable(id: 2, keyType: .int64)
     valueBox.scan(peerTable, values: { _, value in
-        if let peer = Decoder(buffer: value).decodeRootObject() as? Peer {
+        if let peer = PostboxDecoder(buffer: value).decodeRootObject() as? Peer {
             if let association = peer.associatedPeerId {
                 if reverseAssociations[association] == nil {
                     reverseAssociations[association] = Set()

@@ -58,7 +58,7 @@ public struct ItemCollectionId: Comparable, Hashable {
     }
 }
 
-public protocol ItemCollectionInfo: Coding {
+public protocol ItemCollectionInfo: PostboxCoding {
     
 }
 
@@ -99,7 +99,7 @@ public struct ItemCollectionItemIndex: Comparable, Hashable {
     }
 }
 
-public protocol ItemCollectionItem: Coding {
+public protocol ItemCollectionItem: PostboxCoding {
     var index: ItemCollectionItemIndex { get }
     var indexKeys: [MemoryBuffer] { get }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol AccountRecordAttribute: Coding {
+public protocol AccountRecordAttribute: PostboxCoding {
     func isEqual(to: AccountRecordAttribute) -> Bool
 }
 
@@ -34,7 +34,7 @@ public func generateAccountRecordId() -> AccountRecordId {
     return AccountRecordId(rawValue: id)
 }
 
-public struct AccountRecord: Coding, Equatable {
+public struct AccountRecord: PostboxCoding, Equatable {
     public let id: AccountRecordId
     public let attributes: [AccountRecordAttribute]
     
@@ -43,14 +43,14 @@ public struct AccountRecord: Coding, Equatable {
         self.attributes = attributes
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.id = AccountRecordId(rawValue: decoder.decodeInt64ForKey("id", orElse: 0))
-        self.attributes = (decoder.decodeObjectArrayForKey("attributes") as [Coding]).map { $0 as! AccountRecordAttribute }
+        self.attributes = (decoder.decodeObjectArrayForKey("attributes") as [PostboxCoding]).map { $0 as! AccountRecordAttribute }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id.int64, forKey: "id")
-        let attributes: [Coding] = self.attributes.map { $0 }
+        let attributes: [PostboxCoding] = self.attributes.map { $0 }
         encoder.encodeGenericObjectArray(attributes, forKey: "attributes")
     }
     
