@@ -63,18 +63,18 @@ public struct TelegramChannelAdminRightsFlags: OptionSet {
     }
 }
 
-public struct TelegramChannelAdminRights: Coding, Equatable {
+public struct TelegramChannelAdminRights: PostboxCoding, Equatable {
     public let flags: TelegramChannelAdminRightsFlags
     
     public init(flags: TelegramChannelAdminRightsFlags) {
         self.flags = flags
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.flags = TelegramChannelAdminRightsFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
     }
     

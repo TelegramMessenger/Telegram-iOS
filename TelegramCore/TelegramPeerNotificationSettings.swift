@@ -9,7 +9,7 @@ public enum PeerMuteState: Equatable {
     case unmuted
     case muted(until: Int32)
     
-    fileprivate static func decodeInline(_ decoder: Decoder) -> PeerMuteState {
+    fileprivate static func decodeInline(_ decoder: PostboxDecoder) -> PeerMuteState {
         switch decoder.decodeInt32ForKey("m.v", orElse: 0) {
             case 0:
                 return .unmuted
@@ -20,7 +20,7 @@ public enum PeerMuteState: Equatable {
         }
     }
     
-    fileprivate func encodeInline(_ encoder: Encoder) {
+    fileprivate func encodeInline(_ encoder: PostboxEncoder) {
         switch self {
             case .unmuted:
                 encoder.encodeInt32(0, forKey: "m.v")
@@ -61,7 +61,7 @@ public enum PeerMessageSound: Equatable {
     case bundledModern(id: Int32)
     case bundledClassic(id: Int32)
     
-    static func decodeInline(_ decoder: Decoder) -> PeerMessageSound {
+    static func decodeInline(_ decoder: PostboxDecoder) -> PeerMessageSound {
         switch decoder.decodeInt32ForKey("s.v", orElse: 0) {
             case PeerMessageSoundValue.none.rawValue:
                 return .none
@@ -75,7 +75,7 @@ public enum PeerMessageSound: Equatable {
         }
     }
     
-    func encodeInline(_ encoder: Encoder) {
+    func encodeInline(_ encoder: PostboxEncoder) {
         switch self {
             case .none:
                 encoder.encodeInt32(PeerMessageSoundValue.none.rawValue, forKey: "s.v")
@@ -134,12 +134,12 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
         self.messageSound = messageSound
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.muteState = PeerMuteState.decodeInline(decoder)
         self.messageSound = PeerMessageSound.decodeInline(decoder)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         self.muteState.encodeInline(encoder)
         self.messageSound.encodeInline(encoder)
     }

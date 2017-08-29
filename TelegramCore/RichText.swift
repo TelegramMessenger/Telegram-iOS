@@ -18,7 +18,7 @@ private enum RichTextTypes: Int32 {
     case concat = 9
 }
 
-public indirect enum RichText: Coding, Equatable {
+public indirect enum RichText: PostboxCoding, Equatable {
     case empty
     case plain(String)
     case bold(RichText)
@@ -30,7 +30,7 @@ public indirect enum RichText: Coding, Equatable {
     case email(text: RichText, email: String)
     case concat([RichText])
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case RichTextTypes.empty.rawValue:
                 self = .empty
@@ -63,7 +63,7 @@ public indirect enum RichText: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .empty:
                 encoder.encodeInt32(RichTextTypes.empty.rawValue, forKey: "r")

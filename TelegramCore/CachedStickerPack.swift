@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-private final class CachedStickerPack: Coding {
+private final class CachedStickerPack: PostboxCoding {
     let items: [StickerPackItem]
     let hash: Int32
     
@@ -16,12 +16,12 @@ private final class CachedStickerPack: Coding {
         self.hash = hash
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.items = decoder.decodeObjectArrayForKey("it").map { $0 as! StickerPackItem }
         self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.items, forKey: "it")
         encoder.encodeInt32(self.hash, forKey: "h")
     }

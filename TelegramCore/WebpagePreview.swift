@@ -31,3 +31,24 @@ public func webpagePreview(account: Account, url: String) -> Signal<TelegramMedi
             }
         }
 }
+
+public func actualizedWebpage(postbox: Postbox, network: Network, webpage: TelegramMediaWebpage) -> Signal<TelegramMediaWebpage, NoError> {
+    if case let .Loaded(content) = webpage.content {
+        return network.request(Api.functions.messages.getWebPage(url: content.url, hash: content.hash))
+            |> `catch` { _ -> Signal<Api.WebPage, NoError> in
+                return .single(.webPageNotModified)
+            }
+            |> mapToSignal { result -> Signal<TelegramMediaWebpage, NoError> in
+                if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result), case .Loaded = updatedWebpage.content {
+                    return postbox.modify { modifier -> TelegramMediaWebpage in
+                        modifier.updateMedia(updatedWebpage.webpageId, update: updatedWebpage)
+                        return updatedWebpage
+                    }
+                } else {
+                    return .complete()
+                }
+            }
+    } else {
+        return .complete()
+    }
+}

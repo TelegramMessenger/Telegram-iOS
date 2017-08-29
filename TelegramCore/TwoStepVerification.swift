@@ -236,7 +236,7 @@ public func recoverTwoStepVerificationPassword(account: Account, code: String) -
         }
 }
 
-public struct TemporaryTwoStepPasswordToken: Coding, Equatable {
+public struct TemporaryTwoStepPasswordToken: PostboxCoding, Equatable {
     public let token: Data
     public let validUntilDate: Int32
     public let requiresBiometrics: Bool
@@ -247,13 +247,13 @@ public struct TemporaryTwoStepPasswordToken: Coding, Equatable {
         self.requiresBiometrics = requiresBiometrics
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.token = decoder.decodeBytesForKey("t")!.makeData()
         self.validUntilDate = decoder.decodeInt32ForKey("d", orElse: 0)
         self.requiresBiometrics = decoder.decodeInt32ForKey("b", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeBytes(MemoryBuffer(data: self.token), forKey: "t")
         encoder.encodeInt32(self.validUntilDate, forKey: "d")
         encoder.encodeInt32(self.requiresBiometrics ? 1 : 0, forKey: "b")

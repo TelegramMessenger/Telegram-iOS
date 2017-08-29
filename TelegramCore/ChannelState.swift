@@ -14,12 +14,12 @@ final class ChannelState: PeerChatState, Equatable, CustomStringConvertible {
         self.invalidatedPts = invalidatedPts
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.pts = decoder.decodeInt32ForKey("pts", orElse: 0)
         self.invalidatedPts = decoder.decodeOptionalInt32ForKey("ipts")
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.pts, forKey: "pts")
         if let invalidatedPts = self.invalidatedPts {
             encoder.encodeInt32(invalidatedPts, forKey: "ipts")

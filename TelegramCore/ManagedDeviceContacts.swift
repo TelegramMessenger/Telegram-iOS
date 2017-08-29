@@ -15,11 +15,11 @@ final class ManagedDeviceContactsMetaInfo: UnorderedItemListTagMetaInfo {
         self.version = version
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.version = decoder.decodeInt32ForKey("v", orElse: 0)
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.version, forKey: "v")
     }
     
@@ -32,7 +32,7 @@ final class ManagedDeviceContactsMetaInfo: UnorderedItemListTagMetaInfo {
     }
 }
 
-final class ManagedDeviceContactEntryContents: Coding {
+final class ManagedDeviceContactEntryContents: PostboxCoding {
     let firstName: String
     let lastName: String
     let phoneNumber: String
@@ -47,7 +47,7 @@ final class ManagedDeviceContactEntryContents: Coding {
         self.importDelayedUntil = importDelayedUntil
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.firstName = decoder.decodeStringForKey("f", orElse: "")
         self.lastName = decoder.decodeStringForKey("l", orElse: "")
         self.phoneNumber = decoder.decodeStringForKey("n", orElse: "")
@@ -59,7 +59,7 @@ final class ManagedDeviceContactEntryContents: Coding {
         self.importDelayedUntil = decoder.decodeOptionalInt32ForKey("dt")
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.firstName, forKey: "f")
         encoder.encodeString(self.lastName, forKey: "l")
         encoder.encodeString(self.phoneNumber, forKey: "n")

@@ -66,7 +66,7 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
         self.size = size
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.datacenterId = Int(decoder.decodeInt32ForKey("d", orElse: 0))
         self.volumeId = decoder.decodeInt64ForKey("v", orElse: 0)
         self.localId = decoder.decodeInt32ForKey("l", orElse: 0)
@@ -78,7 +78,7 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.datacenterId), forKey: "d")
         encoder.encodeInt64(self.volumeId, forKey: "v")
         encoder.encodeInt32(self.localId, forKey: "l")
@@ -148,7 +148,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMul
         self.size = size
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.datacenterId = Int(decoder.decodeInt32ForKey("d", orElse: 0))
         self.fileId = decoder.decodeInt64ForKey("f", orElse: 0)
         self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
@@ -159,7 +159,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMul
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.datacenterId), forKey: "d")
         encoder.encodeInt64(self.fileId, forKey: "f")
         encoder.encodeInt64(self.accessHash, forKey: "a")
@@ -206,11 +206,11 @@ public class LocalFileMediaResource: TelegramMediaResource {
         self.fileId = fileId
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.fileId = decoder.decodeInt64ForKey("f", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fileId, forKey: "f")
     }
     
@@ -260,14 +260,14 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
         self.size = size
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.localFilePath = decoder.decodeStringForKey("p", orElse: "")
         self.randomId = decoder.decodeInt64ForKey("r", orElse: 0)
         self.isUniquelyReferencedTemporaryFile = decoder.decodeInt32ForKey("t", orElse: 0) != 0
         self.size = decoder.decodeOptionalInt32ForKey("s")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.localFilePath, forKey: "p")
         encoder.encodeInt64(self.randomId, forKey: "r")
         encoder.encodeInt32(self.isUniquelyReferencedTemporaryFile ? 1 : 0, forKey: "t")
@@ -320,7 +320,7 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
         self.size = size
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.url = decoder.decodeStringForKey("u", orElse: "")
         if let size = decoder.decodeOptionalInt32ForKey("s") {
             self.size = Int(size)
@@ -329,7 +329,7 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.url, forKey: "u")
         if let size = self.size {
             encoder.encodeInt32(Int32(size), forKey: "s")
@@ -393,14 +393,14 @@ public final class WebFileReferenceMediaResource: TelegramMediaResource, Telegra
         return Api.InputWebFileLocation.inputWebFileLocation(url: url, accessHash: accessHash)
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.url = decoder.decodeStringForKey("u", orElse: "")
         self.size = decoder.decodeInt32ForKey("s", orElse: 0)
         self._datacenterId = decoder.decodeInt32ForKey("d", orElse: 0)
         self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.url, forKey: "u")
         encoder.encodeInt32(self.size, forKey: "s")
         encoder.encodeInt32(self._datacenterId, forKey: "d")
@@ -468,7 +468,7 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
         self.key = key
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.fileId = decoder.decodeInt64ForKey("i", orElse: 0)
         self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
         if let size = decoder.decodeOptionalInt32ForKey("s") {
@@ -481,7 +481,7 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
         self.key = decoder.decodeObjectForKey("k", decoder: { SecretFileEncryptionKey(decoder: $0) }) as! SecretFileEncryptionKey
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fileId, forKey: "i")
         encoder.encodeInt64(self.accessHash, forKey: "a")
         if let size = self.size {
@@ -543,10 +543,10 @@ public final class EmptyMediaResource: TelegramMediaResource {
     public init() {
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
     }
     
     public var id: MediaResourceId {

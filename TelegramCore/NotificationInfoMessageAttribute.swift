@@ -30,11 +30,11 @@ public class NotificationInfoMessageAttribute: MessageAttribute {
         self.flags = flags
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.flags = NotificationInfoMessageAttributeFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
     }
 }

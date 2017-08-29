@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-final class CachedResolvedByNamePeer: Coding {
+final class CachedResolvedByNamePeer: PostboxCoding {
     let peerId: PeerId?
     let timestamp: Int32
     
@@ -29,7 +29,7 @@ final class CachedResolvedByNamePeer: Coding {
         self.timestamp = timestamp
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         if let peerId = decoder.decodeOptionalInt64ForKey("p") {
             self.peerId = PeerId(peerId)
         } else {
@@ -38,7 +38,7 @@ final class CachedResolvedByNamePeer: Coding {
         self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         if let peerId = self.peerId {
             encoder.encodeInt64(peerId.toInt64(), forKey: "p")
         } else {

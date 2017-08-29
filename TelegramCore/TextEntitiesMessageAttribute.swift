@@ -97,7 +97,7 @@ public enum MessageTextEntityType: Equatable {
     }
 }
 
-public struct MessageTextEntity: Coding, Equatable {
+public struct MessageTextEntity: PostboxCoding, Equatable {
     public let range: Range<Int>
     public let type: MessageTextEntityType
     
@@ -106,7 +106,7 @@ public struct MessageTextEntity: Coding, Equatable {
         self.type = type
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.range = Int(decoder.decodeInt32ForKey("start", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("end", orElse: 0))
         let type: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
         switch type {
@@ -137,7 +137,7 @@ public struct MessageTextEntity: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.range.lowerBound), forKey: "start")
         encoder.encodeInt32(Int32(self.range.upperBound), forKey: "end")
         switch self.type {
@@ -195,11 +195,11 @@ public class TextEntitiesMessageAttribute: MessageAttribute, Equatable {
         self.entities = entities
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.entities = decoder.decodeObjectArrayWithDecoderForKey("entities")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.entities, forKey: "entities")
     }
     

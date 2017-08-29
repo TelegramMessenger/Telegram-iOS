@@ -16,12 +16,12 @@ public final class SuggestedLocalizationEntry: PreferencesEntry {
         self.isSeen = isSeen
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.languageCode = decoder.decodeStringForKey("lc", orElse: "en")
         self.isSeen = decoder.decodeInt32ForKey("s", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.languageCode, forKey: "lc")
         encoder.encodeInt32(self.isSeen ? 1 : 0, forKey: "s")
     }

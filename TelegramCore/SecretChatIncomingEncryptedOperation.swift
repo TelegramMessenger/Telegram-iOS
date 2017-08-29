@@ -27,7 +27,7 @@ enum SecretChatIncomingEncryptedOperationType: Int32 {
     }
 }
 
-final class SecretChatIncomingEncryptedOperation: Coding {
+final class SecretChatIncomingEncryptedOperation: PostboxCoding {
     let peerId: PeerId
     let globallyUniqueId: Int64
     let timestamp: Int32
@@ -46,7 +46,7 @@ final class SecretChatIncomingEncryptedOperation: Coding {
         self.mediaFileReference = mediaFileReference
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.globallyUniqueId = decoder.decodeInt64ForKey("u", orElse: 0)
         self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
@@ -56,7 +56,7 @@ final class SecretChatIncomingEncryptedOperation: Coding {
         self.mediaFileReference = decoder.decodeObjectForKey("m", decoder: { SecretChatFileReference(decoder: $0) }) as? SecretChatFileReference
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
         encoder.encodeInt64(self.globallyUniqueId, forKey: "u")
         encoder.encodeInt32(self.timestamp, forKey: "t")

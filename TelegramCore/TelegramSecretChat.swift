@@ -33,7 +33,7 @@ public final class TelegramSecretChat: Peer {
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
         self.regularPeerId = PeerId(decoder.decodeInt64ForKey("r", orElse: 0))
         self.notificationSettingsPeerId = self.regularPeerId
@@ -45,7 +45,7 @@ public final class TelegramSecretChat: Peer {
         self.messageAutoremoveTimeout = decoder.decodeOptionalInt32ForKey("at")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id.toInt64(), forKey: "i")
         encoder.encodeInt64(self.regularPeerId.toInt64(), forKey: "r")
         encoder.encodeInt64(self.accessHash, forKey: "h")
@@ -85,11 +85,11 @@ public final class CachedSecretChatData: CachedPeerData {
         self.reportStatus = reportStatus
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("rs", orElse: 0))!
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.reportStatus.rawValue, forKey: "rs")
     }
     

@@ -53,6 +53,7 @@ enum AccountStateMutationOperation {
     case ReadInbox(MessageId)
     case ReadOutbox(MessageId)
     case ResetReadState(PeerId, MessageId.Namespace, MessageId.Id, MessageId.Id, MessageId.Id, Int32)
+    case ResetMessageTagSummary(PeerId, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
     case UpdateState(AuthorizedAccountState.State)
     case UpdateChannelState(PeerId, ChannelState)
     case UpdatePeerNotificationSettings(PeerId, PeerNotificationSettings)
@@ -167,6 +168,10 @@ struct AccountMutableState {
     
     mutating func resetReadState(_ peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32) {
         self.addOperation(.ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count))
+    }
+    
+    mutating func resetMessageTagSummary(_ peerId: PeerId, namespace: MessageId.Namespace, count: Int32, range: MessageHistoryTagNamespaceCountValidityRange) {
+        self.addOperation(.ResetMessageTagSummary(peerId, namespace, count, range))
     }
     
     mutating func updateState(_ state: AuthorizedAccountState.State) {
@@ -313,6 +318,8 @@ struct AccountMutableState {
                         self.readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: namespace, id: maxIncomingReadId)
                     }
                 }
+            case let .ResetMessageTagSummary(peerId, namespace, count, range):
+                break
         }
         
         self.operations.append(operation)

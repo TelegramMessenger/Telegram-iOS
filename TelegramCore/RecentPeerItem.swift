@@ -32,11 +32,11 @@ public final class RecentPeerItem: OrderedItemListEntryContents {
         self.rating = rating
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.rating = decoder.decodeDoubleForKey("r", orElse: 0.0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeDouble(self.rating, forKey: "r")
     }
 }

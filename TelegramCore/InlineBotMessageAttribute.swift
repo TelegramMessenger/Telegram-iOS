@@ -16,11 +16,11 @@ public class InlineBotMessageAttribute: MessageAttribute {
         self.peerId = peerId
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "i")
     }
 }

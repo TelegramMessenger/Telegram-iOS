@@ -14,11 +14,11 @@ public class ViewCountMessageAttribute: MessageAttribute {
         self.count = count
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.count = Int(decoder.decodeInt32ForKey("c", orElse: 0))
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.count), forKey: "c")
     }
 }

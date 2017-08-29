@@ -13,11 +13,11 @@ private let typeVideo: Int32 = 4
 private let typeAudio: Int32 = 5
 private let typeHasLinkedStickers: Int32 = 6
 
-public enum StickerPackReference: Coding, Equatable {
+public enum StickerPackReference: PostboxCoding, Equatable {
     case id(id: Int64, accessHash: Int64)
     case name(String)
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .id(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
@@ -29,7 +29,7 @@ public enum StickerPackReference: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .id(id, accessHash):
                 encoder.encodeInt32(0, forKey: "r")
@@ -73,7 +73,7 @@ public struct TelegramMediaVideoFlags: OptionSet {
     public static let instantRoundVideo = TelegramMediaVideoFlags(rawValue: 1 << 0)
 }
 
-public struct StickerMaskCoords: Coding {
+public struct StickerMaskCoords: PostboxCoding {
     public let n: Int32
     public let x: Double
     public let y: Double
@@ -86,14 +86,14 @@ public struct StickerMaskCoords: Coding {
         self.zoom = zoom
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.n = decoder.decodeInt32ForKey("n", orElse: 0)
         self.x = decoder.decodeDoubleForKey("x", orElse: 0.0)
         self.y = decoder.decodeDoubleForKey("y", orElse: 0.0)
         self.zoom = decoder.decodeDoubleForKey("z", orElse: 0.0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.n, forKey: "n")
         encoder.encodeDouble(self.x, forKey: "x")
         encoder.encodeDouble(self.y, forKey: "y")
@@ -101,7 +101,7 @@ public struct StickerMaskCoords: Coding {
     }
 }
 
-public enum TelegramMediaFileAttribute: Coding {
+public enum TelegramMediaFileAttribute: PostboxCoding {
     case FileName(fileName: String)
     case Sticker(displayText: String, packReference: StickerPackReference?, maskData: StickerMaskCoords?)
     case ImageSize(size: CGSize)
@@ -110,7 +110,7 @@ public enum TelegramMediaFileAttribute: Coding {
     case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: MemoryBuffer?)
     case HasLinkedStickers
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         let type: Int32 = decoder.decodeInt32ForKey("t", orElse: 0)
         switch type {
             case typeFileName:
@@ -137,7 +137,7 @@ public enum TelegramMediaFileAttribute: Coding {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .FileName(fileName):
                 encoder.encodeInt32(typeFileName, forKey: "t")
@@ -222,7 +222,7 @@ public final class TelegramMediaFile: Media, Equatable {
         self.attributes = attributes
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.fileId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
         self.previewRepresentations = decoder.decodeObjectArrayForKey("pr")
@@ -235,7 +235,7 @@ public final class TelegramMediaFile: Media, Equatable {
         self.attributes = decoder.decodeObjectArrayForKey("at")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         self.fileId.encodeToBuffer(buffer)
         encoder.encodeBytes(buffer, forKey: "i")

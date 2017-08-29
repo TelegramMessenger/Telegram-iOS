@@ -14,11 +14,11 @@ public class AuthorSignatureMessageAttribute: MessageAttribute {
         self.signature = signature
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.signature = decoder.decodeStringForKey("s", orElse: "")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.signature, forKey: "s")
     }
 }

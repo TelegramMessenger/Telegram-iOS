@@ -23,12 +23,12 @@ public final class TelegramMediaImage: Media, Equatable {
         self.representations = representations
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.imageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.representations = decoder.decodeObjectArrayForKey("r")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         self.imageId.encodeToBuffer(buffer)
         encoder.encodeBytes(buffer, forKey: "i")
@@ -80,7 +80,7 @@ public func ==(lhs: TelegramMediaImage, rhs: TelegramMediaImage) -> Bool {
     return lhs.isEqual(rhs)
 }
 
-public final class TelegramMediaImageRepresentation: Coding, Equatable, CustomStringConvertible {
+public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, CustomStringConvertible {
     public let dimensions: CGSize
     public let resource: TelegramMediaResource
     
@@ -89,12 +89,12 @@ public final class TelegramMediaImageRepresentation: Coding, Equatable, CustomSt
         self.resource = resource
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.dimensions = CGSize(width: CGFloat(decoder.decodeInt32ForKey("dx", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("dy", orElse: 0)))
         self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.dimensions.width), forKey: "dx")
         encoder.encodeInt32(Int32(self.dimensions.height), forKey: "dy")
         encoder.encodeObject(self.resource, forKey: "r")

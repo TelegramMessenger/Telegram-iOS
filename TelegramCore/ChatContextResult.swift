@@ -9,13 +9,13 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public enum ChatContextResultMessage: Coding, Equatable {
+public enum ChatContextResultMessage: PostboxCoding, Equatable {
     case auto(caption: String, replyMarkup: ReplyMarkupMessageAttribute?)
     case text(text: String, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, replyMarkup: ReplyMarkupMessageAttribute?)
     case mapLocation(media: TelegramMediaMap, replyMarkup: ReplyMarkupMessageAttribute?)
     case contact(media: TelegramMediaContact, replyMarkup: ReplyMarkupMessageAttribute?)
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_v", orElse: 0) {
             case 0:
                 self = .auto(caption: decoder.decodeStringForKey("c", orElse: ""), replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
@@ -30,7 +30,7 @@ public enum ChatContextResultMessage: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .auto(caption, replyMarkup):
                 encoder.encodeInt32(0, forKey: "_v")

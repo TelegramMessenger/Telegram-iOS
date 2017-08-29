@@ -14,12 +14,12 @@ public class ConsumablePersonalMentionMessageAttribute: MessageAttribute {
         self.pending = pending
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.consumed = decoder.decodeInt32ForKey("c", orElse: 0) != 0
         self.pending = decoder.decodeInt32ForKey("p", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.consumed ? 1 : 0, forKey: "c")
         encoder.encodeInt32(self.pending ? 1 : 0, forKey: "p")
     }

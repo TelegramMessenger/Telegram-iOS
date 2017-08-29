@@ -5,18 +5,18 @@ import Foundation
     import Postbox
 #endif
 
-public struct ExportedInvitation: Coding, Equatable {
+public struct ExportedInvitation: PostboxCoding, Equatable {
     public let link: String
     
     init(link: String) {
         self.link = link
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.link = decoder.decodeStringForKey("l", orElse: "")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.link, forKey: "l")
     }
     

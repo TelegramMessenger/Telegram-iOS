@@ -13,12 +13,12 @@ private enum SynchronizeSavedGifsOperationContentType: Int32 {
     case sync
 }
 
-enum SynchronizeSavedGifsOperationContent: Coding {
+enum SynchronizeSavedGifsOperationContent: PostboxCoding {
     case add(id: Int64, accessHash: Int64)
     case remove(id: Int64, accessHash: Int64)
     case sync
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SynchronizeSavedGifsOperationContentType.add.rawValue:
                 self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
@@ -32,7 +32,7 @@ enum SynchronizeSavedGifsOperationContent: Coding {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .add(id, accessHash):
                 encoder.encodeInt32(SynchronizeSavedGifsOperationContentType.add.rawValue, forKey: "r")
@@ -48,18 +48,18 @@ enum SynchronizeSavedGifsOperationContent: Coding {
     }
 }
 
-final class SynchronizeSavedGifsOperation: Coding {
+final class SynchronizeSavedGifsOperation: PostboxCoding {
     let content: SynchronizeSavedGifsOperationContent
     
     init(content: SynchronizeSavedGifsOperationContent) {
         self.content = content
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.content = decoder.decodeObjectForKey("c", decoder: { SynchronizeSavedGifsOperationContent(decoder: $0) }) as! SynchronizeSavedGifsOperationContent
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.content, forKey: "c")
     }
 }

@@ -29,7 +29,7 @@ public final class TelegramMediaGame: Media {
         self.file = file
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.gameId = decoder.decodeInt64ForKey("i", orElse: 0)
         self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
         self.name = decoder.decodeStringForKey("n", orElse: "")
@@ -39,7 +39,7 @@ public final class TelegramMediaGame: Media {
         self.file = decoder.decodeObjectForKey("f") as? TelegramMediaFile
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.gameId, forKey: "i")
         encoder.encodeInt64(self.accessHash, forKey: "h")
         encoder.encodeString(self.name, forKey: "n")

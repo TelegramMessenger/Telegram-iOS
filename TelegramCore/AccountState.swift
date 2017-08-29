@@ -13,13 +13,13 @@ private enum SentAuthorizationCodeTypeValue: Int32 {
     case flashCall = 3
 }
 
-public enum SentAuthorizationCodeType: Coding, Equatable {
+public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     case otherSession(length: Int32)
     case sms(length: Int32)
     case call(length: Int32)
     case flashCall(pattern: String)
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case SentAuthorizationCodeTypeValue.otherSession.rawValue:
                 self = .otherSession(length: decoder.decodeInt32ForKey("l", orElse: 0))
@@ -34,7 +34,7 @@ public enum SentAuthorizationCodeType: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .otherSession(length):
                 encoder.encodeInt32(SentAuthorizationCodeTypeValue.otherSession.rawValue, forKey: "v")
@@ -95,14 +95,14 @@ private enum UnauthorizedAccountStateContentsValue: Int32 {
     case signUp = 5
 }
 
-public enum UnauthorizedAccountStateContents: Coding, Equatable {
+public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
     case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?)
     case passwordEntry(hint: String, number: String?, code: String?)
     case signUp(number: String, codeHash: String, code: String, firstName: String, lastName: String)
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case UnauthorizedAccountStateContentsValue.empty.rawValue:
                 self = .empty
@@ -124,7 +124,7 @@ public enum UnauthorizedAccountStateContents: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .empty:
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.empty.rawValue, forKey: "v")
@@ -230,12 +230,12 @@ public final class UnauthorizedAccountState: AccountState {
         self.contents = contents
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.masterDatacenterId = decoder.decodeInt32ForKey("dc", orElse: 0)
         self.contents = decoder.decodeObjectForKey("c", decoder: { UnauthorizedAccountStateContents(decoder: $0) }) as! UnauthorizedAccountStateContents
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.masterDatacenterId, forKey: "dc")
         encoder.encodeObject(self.contents, forKey: "c")
     }

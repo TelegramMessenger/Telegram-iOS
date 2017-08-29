@@ -12,11 +12,11 @@ public class ChannelMessageStateVersionAttribute: MessageAttribute {
         self.pts = pts
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.pts = decoder.decodeInt32ForKey("p", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.pts, forKey: "p")
     }
 }

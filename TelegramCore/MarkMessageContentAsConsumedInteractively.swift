@@ -94,6 +94,7 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
                 }
                 updatedAttributes[i] = ConsumablePersonalMentionMessageAttribute(consumed: true, pending: false)
                 updatedTags.remove(.unseenPersonalMessage)
+                updateMessage = true
             }
         }
         

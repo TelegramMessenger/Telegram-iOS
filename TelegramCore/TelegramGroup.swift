@@ -73,7 +73,7 @@ public final class TelegramGroup: Peer {
         self.version = version
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
         self.title = decoder.decodeStringForKey("t", orElse: "")
         self.photo = decoder.decodeObjectArrayForKey("ph")
@@ -92,7 +92,7 @@ public final class TelegramGroup: Peer {
         self.version = Int(decoder.decodeInt32ForKey("v", orElse: 0))
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id.toInt64(), forKey: "i")
         encoder.encodeString(self.title, forKey: "t")
         encoder.encodeObjectArray(self.photo, forKey: "ph")

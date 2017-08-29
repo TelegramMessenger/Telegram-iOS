@@ -7,14 +7,14 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-final class SynchronizeLocalizationUpdatesOperation: Coding {
+final class SynchronizeLocalizationUpdatesOperation: PostboxCoding {
     init() {
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
     }
 }
 

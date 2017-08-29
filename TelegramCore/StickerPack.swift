@@ -54,7 +54,7 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         self.count = count
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.id = ItemCollectionId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0))
         self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
         self.title = decoder.decodeStringForKey("t", orElse: "")
@@ -64,7 +64,7 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         self.count = decoder.decodeInt32ForKey("n", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.id.namespace, forKey: "i.n")
         encoder.encodeInt64(self.id.id, forKey: "i.i")
         encoder.encodeInt64(self.accessHash, forKey: "a")
@@ -115,13 +115,13 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
         self.indexKeys = indexKeys
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.index = ItemCollectionItemIndex(index: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0))
         self.file = decoder.decodeObjectForKey("f") as! TelegramMediaFile
         self.indexKeys = decoder.decodeBytesArrayForKey("s")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.index.index, forKey: "i.n")
         encoder.encodeInt64(self.index.id, forKey: "i.i")
         encoder.encodeObject(self.file, forKey: "f")

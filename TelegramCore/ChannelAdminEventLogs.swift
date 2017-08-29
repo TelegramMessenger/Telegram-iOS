@@ -1,4 +1,3 @@
-
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
@@ -6,7 +5,6 @@
     import Postbox
     import SwiftSignalKit
 #endif
-
 
 public typealias AdminLogEventId = Int64
 

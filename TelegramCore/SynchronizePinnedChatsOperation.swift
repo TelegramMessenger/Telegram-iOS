@@ -5,18 +5,18 @@ import Foundation
     import Postbox
 #endif
 
-final class SynchronizePinnedChatsOperation: Coding {
+final class SynchronizePinnedChatsOperation: PostboxCoding {
     let previousPeerIds: [PeerId]
     
     init(previousPeerIds: [PeerId]) {
         self.previousPeerIds = previousPeerIds
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.previousPeerIds = PeerId.decodeArrayFromBuffer(decoder.decodeBytesForKey("p")!)
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         PeerId.encodeArrayToBuffer(self.previousPeerIds, buffer: buffer)
         encoder.encodeBytes(buffer, forKey: "p")

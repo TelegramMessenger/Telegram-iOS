@@ -10,7 +10,7 @@ import Foundation
 #endif
 import TelegramCorePrivateModule
 
-public protocol AccountState: Coding {
+public protocol AccountState: PostboxCoding {
     func equalsTo(_ other: AccountState) -> Bool
 }
 
@@ -19,7 +19,7 @@ public func ==(lhs: AccountState, rhs: AccountState) -> Bool {
 }
 
 public class AuthorizedAccountState: AccountState {
-    public final class State: Coding, Equatable, CustomStringConvertible {
+    public final class State: PostboxCoding, Equatable, CustomStringConvertible {
         let pts: Int32
         let qts: Int32
         let date: Int32
@@ -32,14 +32,14 @@ public class AuthorizedAccountState: AccountState {
             self.seq = seq
         }
         
-        public init(decoder: Decoder) {
+        public init(decoder: PostboxDecoder) {
             self.pts = decoder.decodeInt32ForKey("pts", orElse: 0)
             self.qts = decoder.decodeInt32ForKey("qts", orElse: 0)
             self.date = decoder.decodeInt32ForKey("date", orElse: 0)
             self.seq = decoder.decodeInt32ForKey("seq", orElse: 0)
         }
         
-        public func encode(_ encoder: Encoder) {
+        public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeInt32(self.pts, forKey: "pts")
             encoder.encodeInt32(self.qts, forKey: "qts")
             encoder.encodeInt32(self.date, forKey: "date")
@@ -56,13 +56,13 @@ public class AuthorizedAccountState: AccountState {
     
     let state: State?
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId", orElse: 0)
         self.peerId = PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0))
         self.state = decoder.decodeObjectForKey("state", decoder: { return State(decoder: $0) }) as? State
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.masterDatacenterId, forKey: "masterDatacenterId")
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "peerId")
         if let state = self.state {

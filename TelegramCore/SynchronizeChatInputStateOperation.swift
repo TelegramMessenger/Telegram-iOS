@@ -5,18 +5,18 @@ import Foundation
     import Postbox
 #endif
 
-final class SynchronizeChatInputStateOperation: Coding {
+final class SynchronizeChatInputStateOperation: PostboxCoding {
     let previousState: SynchronizeableChatInputState?
     
     init(previousState: SynchronizeableChatInputState?) {
         self.previousState = previousState
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.previousState = decoder.decodeObjectForKey("p", decoder: { SynchronizeableChatInputState(decoder: $0) }) as? SynchronizeableChatInputState
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         if let previousState = self.previousState {
             encoder.encodeObject(previousState, forKey: "p")
         } else {
