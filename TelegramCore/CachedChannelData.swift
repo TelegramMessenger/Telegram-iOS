@@ -20,7 +20,7 @@ public struct CachedChannelFlags: OptionSet {
     public static let canChangeUsername = CachedChannelFlags(rawValue: 1 << 1)
 }
 
-public struct CachedChannelParticipantsSummary: Coding, Equatable {
+public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {
     public let memberCount: Int32?
     public let adminCount: Int32?
     public let bannedCount: Int32?
@@ -33,7 +33,7 @@ public struct CachedChannelParticipantsSummary: Coding, Equatable {
         self.kickedCount = kickedCount
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         if let memberCount = decoder.decodeOptionalInt32ForKey("p.m") {
             self.memberCount = memberCount
         } else {
@@ -56,7 +56,7 @@ public struct CachedChannelParticipantsSummary: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         if let memberCount = self.memberCount {
             encoder.encodeInt32(memberCount, forKey: "p.m")
         } else {
@@ -185,7 +185,7 @@ public final class CachedChannelData: CachedPeerData {
         return CachedChannelData(flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, stickerPack: stickerPack)
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.flags = CachedChannelFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         self.about = decoder.decodeOptionalStringForKey("a")
         self.participantsSummary = CachedChannelParticipantsSummary(decoder: decoder)
@@ -218,7 +218,7 @@ public final class CachedChannelData: CachedPeerData {
         self.peerIds = peerIds
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
         if let about = self.about {
             encoder.encodeString(about, forKey: "a")

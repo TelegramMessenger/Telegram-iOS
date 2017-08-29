@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public final class NamedGeoPlace: Coding {
+public final class NamedGeoPlace: PostboxCoding {
     public let country: String?
     public let state: String?
     public let city: String?
@@ -20,7 +20,7 @@ public final class NamedGeoPlace: Coding {
         self.street = street
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.country = decoder.decodeOptionalStringForKey("gp_co")
         self.state = decoder.decodeOptionalStringForKey("gp_sta")
         self.city = decoder.decodeOptionalStringForKey("gp_ci")
@@ -28,7 +28,7 @@ public final class NamedGeoPlace: Coding {
         self.street = decoder.decodeOptionalStringForKey("gp_str")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         if let country = self.country {
             encoder.encodeString(country, forKey: "gp_co")
         }
@@ -51,7 +51,7 @@ public final class NamedGeoPlace: Coding {
     }
 }
 
-public final class MapVenue: Coding {
+public final class MapVenue: PostboxCoding {
     public let title: String
     public let address: String?
     public let provider: String?
@@ -64,14 +64,14 @@ public final class MapVenue: Coding {
         self.id = id
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.title = decoder.decodeStringForKey("ti", orElse: "")
         self.address = decoder.decodeOptionalStringForKey("ad")
         self.provider = decoder.decodeOptionalStringForKey("pr")
         self.id = decoder.decodeOptionalStringForKey("id")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.title, forKey: "ti")
         
         if let address = self.address {
@@ -102,14 +102,14 @@ public final class TelegramMediaMap: Media {
         self.venue = venue
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.latitude = decoder.decodeDoubleForKey("la", orElse: 0.0)
         self.longitude = decoder.decodeDoubleForKey("lo", orElse: 0.0)
         self.geoPlace = decoder.decodeObjectForKey("gp", decoder: { NamedGeoPlace(decoder: $0) }) as? NamedGeoPlace
         self.venue = decoder.decodeObjectForKey("ve", decoder: { MapVenue(decoder: $0) }) as? MapVenue
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeDouble(self.latitude, forKey: "la")
         encoder.encodeDouble(self.longitude, forKey: "lo")
         if let geoPlace = self.geoPlace {

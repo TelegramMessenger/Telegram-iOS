@@ -10,36 +10,36 @@ enum SynchronizeInstalledStickerPacksOperationNamespace: Int32 {
     case masks = 1
 }
 
-final class SynchronizeInstalledStickerPacksOperation: Coding {
+final class SynchronizeInstalledStickerPacksOperation: PostboxCoding {
     let previousPacks: [ItemCollectionId]
     
     init(previousPacks: [ItemCollectionId]) {
         self.previousPacks = previousPacks
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.previousPacks = ItemCollectionId.decodeArrayFromBuffer(decoder.decodeBytesForKey("p")!)
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         ItemCollectionId.encodeArrayToBuffer(self.previousPacks, buffer: buffer)
         encoder.encodeBytes(buffer, forKey: "p")
     }
 }
 
-final class SynchronizeMarkFeaturedStickerPacksAsSeenOperation: Coding {
+final class SynchronizeMarkFeaturedStickerPacksAsSeenOperation: PostboxCoding {
     let ids: [ItemCollectionId]
     
     init(ids: [ItemCollectionId]) {
         self.ids = ids
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.ids = ItemCollectionId.decodeArrayFromBuffer(decoder.decodeBytesForKey("p")!)
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         ItemCollectionId.encodeArrayToBuffer(self.ids, buffer: buffer)
         encoder.encodeBytes(buffer, forKey: "p")

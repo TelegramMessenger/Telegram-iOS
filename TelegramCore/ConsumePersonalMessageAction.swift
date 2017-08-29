@@ -11,10 +11,10 @@ final class ConsumePersonalMessageAction: PendingMessageActionData {
     init() {
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
     }
     
     func isEqual(to: PendingMessageActionData) -> Bool {

@@ -36,11 +36,11 @@ public final class RecentMediaItem: OrderedItemListEntryContents, Equatable {
         self.media = media
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.media = decoder.decodeObjectForKey("m") as! Media
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.media, forKey: "m")
     }
     

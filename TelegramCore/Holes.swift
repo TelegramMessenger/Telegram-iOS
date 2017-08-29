@@ -31,10 +31,10 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
         //|> delay(4.0, queue: Queue.concurrentDefaultQueue())
         |> mapToSignal { peer in
             if let inputPeer = apiInputPeer(peer) {
-                let limit = 100
+                let limit = 20
                 
                 let request: Signal<Api.messages.Messages, MTRpcError>
-                if let tagMask = tagMask, let filter = messageFilterForTagMask(tagMask) {
+                if let tagMask = tagMask {
                     if tagMask == MessageTags.unseenPersonalMessage {
                         let offsetId: Int32
                         let addOffset: Int32
@@ -60,7 +60,7 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                                 minId = 1
                         }
                         request = network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
-                    } else {
+                    } else if let filter = messageFilterForTagMask(tagMask) {
                         let offsetId: Int32
                         let addOffset: Int32
                         let selectedLimit = limit
@@ -86,6 +86,9 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                         }
                         
                         request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                    } else {
+                        assertionFailure()
+                        request = .never()
                     }
                 } else {
                     let offsetId: Int32
@@ -269,7 +272,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             }
                             readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                             
-                            if apiUnreadMentionsCount != 0 && apiTopMessage != 0 {
+                            if apiTopMessage != 0 {
                                 mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
                             }
                             
@@ -331,8 +334,8 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             }
                             readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                             
-                            if apiUnreadMentionsCount != 0 && apiTopMessage != 0 {
-                                mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
+                            if apiTopMessage != 0 {
+                                mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: 0, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
                             }
                             
                             notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
@@ -403,7 +406,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                                 }
                                 readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                                 
-                                if apiUnreadMentionsCount != 0 && apiTopMessage != 0 {
+                                if apiTopMessage != 0 {
                                     mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
                                 }
                                 

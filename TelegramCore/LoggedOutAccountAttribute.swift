@@ -9,10 +9,10 @@ public final class LoggedOutAccountAttribute: AccountRecordAttribute {
     public init() {
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
     }
     
     public func isEqual(to: AccountRecordAttribute) -> Bool {

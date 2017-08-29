@@ -16,7 +16,7 @@ import TelegramCorePrivateModule
     private typealias SignalKitTimer = SwiftSignalKit.Timer
 #endif
 
-public final class SecretFileEncryptionKey: Coding, Equatable {
+public final class SecretFileEncryptionKey: PostboxCoding, Equatable {
     public let aesKey: Data
     public let aesIv: Data
     
@@ -25,12 +25,12 @@ public final class SecretFileEncryptionKey: Coding, Equatable {
         self.aesIv = aesIv
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.aesKey = decoder.decodeBytesForKey("k")!.makeData()
         self.aesIv = decoder.decodeBytesForKey("i")!.makeData()
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeBytes(MemoryBuffer(data: self.aesKey), forKey: "k")
         encoder.encodeBytes(MemoryBuffer(data: self.aesIv), forKey: "i")
     }

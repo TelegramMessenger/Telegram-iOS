@@ -12,10 +12,10 @@ public final class TelegramMediaUnsupported: Media {
     init() {
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
     }
     
     public func isEqual(_ other: Media) -> Bool {

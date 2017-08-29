@@ -11,12 +11,12 @@ private enum SecretChatOutgoingFileValue: Int32 {
     case uploadedLarge = 2
 }
 
-enum SecretChatOutgoingFileReference: Coding {
+enum SecretChatOutgoingFileReference: PostboxCoding {
     case remote(id: Int64, accessHash: Int64)
     case uploadedRegular(id: Int64, partCount: Int32, md5Digest: String, keyFingerprint: Int32)
     case uploadedLarge(id: Int64, partCount: Int32, keyFingerprint: Int32)
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case SecretChatOutgoingFileValue.remote.rawValue:
                 self = .remote(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("a", orElse: 0))
@@ -30,7 +30,7 @@ enum SecretChatOutgoingFileReference: Coding {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .remote(id, accessHash):
                 encoder.encodeInt32(SecretChatOutgoingFileValue.remote.rawValue, forKey: "v")
@@ -51,7 +51,7 @@ enum SecretChatOutgoingFileReference: Coding {
     }
 }
 
-struct SecretChatOutgoingFile: Coding {
+struct SecretChatOutgoingFile: PostboxCoding {
     let reference: SecretChatOutgoingFileReference
     let size: Int32
     let key: SecretFileEncryptionKey
@@ -62,13 +62,13 @@ struct SecretChatOutgoingFile: Coding {
         self.key = key
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.reference = decoder.decodeObjectForKey("r", decoder: { SecretChatOutgoingFileReference(decoder: $0) }) as! SecretChatOutgoingFileReference
         self.size = decoder.decodeInt32ForKey("s", orElse: 0)
         self.key = SecretFileEncryptionKey(aesKey: decoder.decodeBytesForKey("k")!.makeData(), aesIv: decoder.decodeBytesForKey("i")!.makeData())
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.reference, forKey: "r")
         encoder.encodeInt32(self.size, forKey: "s")
         encoder.encodeBytes(MemoryBuffer(data: self.key.aesKey), forKey: "k")
@@ -98,7 +98,7 @@ private enum SecretChatOutgoingOperationValue: Int32 {
     case terminate = 14
 }
 
-enum SecretChatOutgoingOperationContents: Coding {
+enum SecretChatOutgoingOperationContents: PostboxCoding {
     case initialHandshakeAccept(gA: MemoryBuffer, accessHash: Int64, b: MemoryBuffer)
     case sendMessage(layer: SecretChatLayer, id: MessageId, file: SecretChatOutgoingFile?)
     case readMessagesContent(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
@@ -115,7 +115,7 @@ enum SecretChatOutgoingOperationContents: Coding {
     case setMessageAutoremoveTimeout(layer: SecretChatLayer, actionGloballyUniqueId: Int64, timeout: Int32, messageId: MessageId)
     case terminate(reportSpam: Bool)
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SecretChatOutgoingOperationValue.initialHandshakeAccept.rawValue:
                 self = .initialHandshakeAccept(gA: decoder.decodeBytesForKey("g")!, accessHash: decoder.decodeInt64ForKey("h", orElse: 0), b: decoder.decodeBytesForKey("b")!)
@@ -153,7 +153,7 @@ enum SecretChatOutgoingOperationContents: Coding {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .initialHandshakeAccept(gA, accessHash, b):
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.initialHandshakeAccept.rawValue, forKey: "r")
@@ -244,7 +244,7 @@ enum SecretChatOutgoingOperationContents: Coding {
     }
 }
 
-final class SecretChatOutgoingOperation: Coding {
+final class SecretChatOutgoingOperation: PostboxCoding {
     let contents: SecretChatOutgoingOperationContents
     let mutable: Bool
     let delivered: Bool
@@ -255,13 +255,13 @@ final class SecretChatOutgoingOperation: Coding {
         self.delivered = delivered
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.contents = decoder.decodeObjectForKey("c", decoder: { SecretChatOutgoingOperationContents(decoder: $0) }) as! SecretChatOutgoingOperationContents
         self.mutable = decoder.decodeInt32ForKey("m", orElse: 0) != 0
         self.delivered = decoder.decodeInt32ForKey("d", orElse: 0) != 0
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.contents, forKey: "c")
         encoder.encodeInt32(self.mutable ? 1 : 0, forKey: "m")
         encoder.encodeInt32(self.delivered ? 1 : 0, forKey: "d")

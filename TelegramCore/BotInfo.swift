@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public struct BotCommand: Coding, Equatable {
+public struct BotCommand: PostboxCoding, Equatable {
     public let text: String
     public let description: String
     
@@ -14,12 +14,12 @@ public struct BotCommand: Coding, Equatable {
         self.description = description
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.text = decoder.decodeStringForKey("t", orElse: "")
         self.description = decoder.decodeStringForKey("d", orElse: "")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.text, forKey: "t")
         encoder.encodeString(self.description, forKey: "d")
     }
@@ -29,7 +29,7 @@ public struct BotCommand: Coding, Equatable {
     }
 }
 
-public final class BotInfo: Coding, Equatable {
+public final class BotInfo: PostboxCoding, Equatable {
     public let description: String
     public let commands: [BotCommand]
     
@@ -38,12 +38,12 @@ public final class BotInfo: Coding, Equatable {
         self.commands = commands
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.description = decoder.decodeStringForKey("d", orElse: "")
         self.commands = decoder.decodeObjectArrayWithDecoderForKey("c")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.description, forKey: "d")
         encoder.encodeObjectArray(self.commands, forKey: "c")
     }

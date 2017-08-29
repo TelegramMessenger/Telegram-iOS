@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public struct SynchronizeableChatInputState: Coding, Equatable {
+public struct SynchronizeableChatInputState: PostboxCoding, Equatable {
     public let replyToMessageId: MessageId?
     public let text: String
     public let timestamp: Int32
@@ -16,7 +16,7 @@ public struct SynchronizeableChatInputState: Coding, Equatable {
         self.timestamp = timestamp
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.text = decoder.decodeStringForKey("t", orElse: "")
         self.timestamp = decoder.decodeInt32ForKey("s", orElse: 0)
         if let messageIdPeerId = decoder.decodeOptionalInt64ForKey("m.p"), let messageIdNamespace = decoder.decodeOptionalInt32ForKey("m.n"), let messageIdId = decoder.decodeOptionalInt32ForKey("m.i") {
@@ -26,7 +26,7 @@ public struct SynchronizeableChatInputState: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.text, forKey: "t")
         encoder.encodeInt32(self.timestamp, forKey: "s")
         if let replyToMessageId = self.replyToMessageId {

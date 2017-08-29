@@ -12,7 +12,7 @@ private enum ChannelParticipantValue: Int32 {
     case moderator = 3
 }
 
-public struct ChannelParticipantAdminInfo: Coding, Equatable {
+public struct ChannelParticipantAdminInfo: PostboxCoding, Equatable {
     public let rights: TelegramChannelAdminRights
     public let promotedBy: PeerId
     public let canBeEditedByAccountPeer: Bool
@@ -23,13 +23,13 @@ public struct ChannelParticipantAdminInfo: Coding, Equatable {
         self.canBeEditedByAccountPeer = canBeEditedByAccountPeer
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.rights = decoder.decodeObjectForKey("r", decoder: { TelegramChannelAdminRights(decoder: $0) }) as! TelegramChannelAdminRights
         self.promotedBy = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.canBeEditedByAccountPeer = decoder.decodeInt32ForKey("e", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.rights, forKey: "r")
         encoder.encodeInt64(self.promotedBy.toInt64(), forKey: "p")
         encoder.encodeInt32(self.canBeEditedByAccountPeer ? 1 : 0, forKey: "e")
@@ -40,7 +40,7 @@ public struct ChannelParticipantAdminInfo: Coding, Equatable {
     }
 }
 
-public struct ChannelParticipantBannedInfo: Coding, Equatable {
+public struct ChannelParticipantBannedInfo: PostboxCoding, Equatable {
     public let rights: TelegramChannelBannedRights
     public let restrictedBy: PeerId
     public let isMember: Bool
@@ -51,13 +51,13 @@ public struct ChannelParticipantBannedInfo: Coding, Equatable {
         self.isMember = isMember
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.rights = decoder.decodeObjectForKey("r", decoder: { TelegramChannelBannedRights(decoder: $0) }) as! TelegramChannelBannedRights
         self.restrictedBy = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.isMember = decoder.decodeInt32ForKey("m", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.rights, forKey: "r")
         encoder.encodeInt64(self.restrictedBy.toInt64(), forKey: "p")
         encoder.encodeInt32(self.isMember ? 1 : 0, forKey: "m")
@@ -68,7 +68,7 @@ public struct ChannelParticipantBannedInfo: Coding, Equatable {
     }
 }
 
-public enum ChannelParticipant: Coding, Equatable {
+public enum ChannelParticipant: PostboxCoding, Equatable {
     case creator(id: PeerId)
     case member(id: PeerId, invitedAt: Int32, adminInfo: ChannelParticipantAdminInfo?, banInfo: ChannelParticipantBannedInfo?)
     
@@ -110,7 +110,7 @@ public enum ChannelParticipant: Coding, Equatable {
         }
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case ChannelParticipantValue.member.rawValue:
                 self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0), adminInfo: decoder.decodeObjectForKey("ai", decoder: { ChannelParticipantAdminInfo(decoder: $0) }) as? ChannelParticipantAdminInfo, banInfo: decoder.decodeObjectForKey("bi", decoder: { ChannelParticipantBannedInfo(decoder: $0) }) as? ChannelParticipantBannedInfo)
@@ -121,7 +121,7 @@ public enum ChannelParticipant: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .member(id, invitedAt, adminInfo, banInfo):
                 encoder.encodeInt32(ChannelParticipantValue.member.rawValue, forKey: "r")
@@ -144,18 +144,18 @@ public enum ChannelParticipant: Coding, Equatable {
     }
 }
 
-public final class CachedChannelParticipants: Coding, Equatable {
+public final class CachedChannelParticipants: PostboxCoding, Equatable {
     public let participants: [ChannelParticipant]
     
     init(participants: [ChannelParticipant]) {
         self.participants = participants
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.participants = decoder.decodeObjectArrayWithDecoderForKey("p")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.participants, forKey: "p")
     }
     

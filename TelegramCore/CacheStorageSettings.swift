@@ -18,11 +18,11 @@ public struct CacheStorageSettings: PreferencesEntry, Equatable {
         self.defaultCacheStorageTimeout = defaultCacheStorageTimeout
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.defaultCacheStorageTimeout = decoder.decodeInt32ForKey("dt", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.defaultCacheStorageTimeout, forKey: "dt")
     }
     

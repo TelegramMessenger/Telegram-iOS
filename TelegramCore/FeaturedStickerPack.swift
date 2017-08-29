@@ -36,13 +36,13 @@ public final class FeaturedStickerPackItem: OrderedItemListEntryContents {
         self.unread = unread
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.info = decoder.decodeObjectForKey("i") as! StickerPackCollectionInfo
         self.topItems = decoder.decodeObjectArrayForKey("t")
         self.unread = decoder.decodeInt32ForKey("u", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.info, forKey: "i")
         encoder.encodeObjectArray(self.topItems, forKey: "t")
         encoder.encodeInt32(self.unread ? 1 : 0, forKey: "u")

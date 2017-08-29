@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public enum GroupParticipant: Coding, Equatable {
+public enum GroupParticipant: PostboxCoding, Equatable {
     case member(id: PeerId, invitedBy: PeerId, invitedAt: Int32)
     case creator(id: PeerId)
     case admin(id: PeerId, invitedBy: PeerId, invitedAt: Int32)
@@ -21,7 +21,7 @@ public enum GroupParticipant: Coding, Equatable {
         }
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
@@ -34,7 +34,7 @@ public enum GroupParticipant: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .member(id, invitedBy, invitedAt):
                 encoder.encodeInt32(0, forKey: "v")
@@ -87,7 +87,7 @@ public enum GroupParticipant: Coding, Equatable {
     }
 }
 
-public final class CachedGroupParticipants: Coding, Equatable {
+public final class CachedGroupParticipants: PostboxCoding, Equatable {
     public let participants: [GroupParticipant]
     let version: Int32
     
@@ -96,12 +96,12 @@ public final class CachedGroupParticipants: Coding, Equatable {
         self.version = version
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.participants = decoder.decodeObjectArrayWithDecoderForKey("p")
         self.version = decoder.decodeInt32ForKey("v", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.participants, forKey: "p")
         encoder.encodeInt32(self.version, forKey: "v")
     }

@@ -35,7 +35,7 @@ public struct BotUserInfoFlags: OptionSet {
     public static let requiresGeolocationForInlineRequests = BotUserInfoFlags(rawValue: (1 << 2))
 }
 
-public struct BotUserInfo: Coding, Equatable {
+public struct BotUserInfo: PostboxCoding, Equatable {
     public let flags: BotUserInfoFlags
     public let inlinePlaceholder: String?
     
@@ -44,12 +44,12 @@ public struct BotUserInfo: Coding, Equatable {
         self.inlinePlaceholder = inlinePlaceholder
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.flags = BotUserInfoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         self.inlinePlaceholder = decoder.decodeOptionalStringForKey("ip")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
         if let inlinePlaceholder = self.inlinePlaceholder {
             encoder.encodeString(inlinePlaceholder, forKey: "ip")
@@ -107,7 +107,7 @@ public final class TelegramUser: Peer {
         self.flags = flags
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
         
         let accessHash: Int64 = decoder.decodeInt64ForKey("ah", orElse: 0)
@@ -134,7 +134,7 @@ public final class TelegramUser: Peer {
         self.flags = UserInfoFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id.toInt64(), forKey: "i")
         
         if let accessHash = self.accessHash {

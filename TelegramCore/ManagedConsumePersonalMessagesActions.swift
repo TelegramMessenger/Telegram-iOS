@@ -11,10 +11,12 @@ import Foundation
 
 private final class ManagedConsumePersonalMessagesActionsHelper {
     var operationDisposables: [MessageId: Disposable] = [:]
+    var validateDisposables: [InvalidatedMessageHistoryTagsSummaryEntry: Disposable] = [:]
     
-    func update(_ entries: [PendingMessageActionsEntry]) -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)]) {
+    func update(entries: [PendingMessageActionsEntry], invalidateEntries: Set<InvalidatedMessageHistoryTagsSummaryEntry>) -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)], beginValidateOperations: [(InvalidatedMessageHistoryTagsSummaryEntry, MetaDisposable)]) {
         var disposeOperations: [Disposable] = []
         var beginOperations: [(PendingMessageActionsEntry, MetaDisposable)] = []
+        var beginValidateOperations: [(InvalidatedMessageHistoryTagsSummaryEntry, MetaDisposable)] = []
         
         var hasRunningOperationForPeerId = Set<PeerId>()
         var validIds = Set<MessageId>()
@@ -43,7 +45,32 @@ private final class ManagedConsumePersonalMessagesActionsHelper {
             self.operationDisposables.removeValue(forKey: id)
         }
         
-        return (disposeOperations, beginOperations)
+        var validInvalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+        
+        for entry in invalidateEntries {
+            if !hasRunningOperationForPeerId.contains(entry.key.peerId) {
+                validInvalidateEntries.insert(entry)
+                if self.validateDisposables[entry] == nil {
+                    let disposable = MetaDisposable()
+                    beginValidateOperations.append((entry, disposable))
+                    self.validateDisposables[entry] = disposable
+                }
+            }
+        }
+        
+        var removeValidateEntries: [InvalidatedMessageHistoryTagsSummaryEntry] = []
+        for (entry, disposable) in self.validateDisposables {
+            if !validInvalidateEntries.contains(entry) {
+                removeValidateEntries.append(entry)
+                disposeOperations.append(disposable)
+            }
+        }
+        
+        for entry in removeValidateEntries {
+            self.validateDisposables.removeValue(forKey: entry)
+        }
+        
+        return (disposeOperations, beginOperations, beginValidateOperations)
     }
     
     func reset() -> [Disposable] {
@@ -65,20 +92,24 @@ private func withTakenAction(postbox: Postbox, type: PendingMessageActionType, i
     } |> switchToLatest
 }
 
-
 func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
-        let key = PostboxViewKey.pendingMessageActions(type: .consumeUnseenPersonalMessage)
-        let disposable = postbox.combinedView(keys: [key]).start(next: { view in
+        let actionsKey = PostboxViewKey.pendingMessageActions(type: .consumeUnseenPersonalMessage)
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
+        let disposable = postbox.combinedView(keys: [actionsKey, invalidateKey]).start(next: { view in
             var entries: [PendingMessageActionsEntry] = []
-            if let v = view.views[key] as? PendingMessageActionsView {
+            var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+            if let v = view.views[actionsKey] as? PendingMessageActionsView {
                 entries = v.entries
             }
+            if let v = view.views[invalidateKey] as? InvalidatedMessageHistoryTagSummariesView {
+                invalidateEntries = v.entries
+            }
             
-            let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)]) in
-                return helper.update(entries)
+            let (disposeOperations, beginOperations, beginValidateOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)], beginValidateOperations: [(InvalidatedMessageHistoryTagsSummaryEntry, MetaDisposable)]) in
+                return helper.update(entries: entries, invalidateEntries: invalidateEntries)
             }
             
             for disposable in disposeOperations {
@@ -100,6 +131,14 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
                     modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: entry.id, action: nil)
                 })
                 
+                disposable.set(signal.start())
+            }
+            
+            for (entry, disposable) in beginValidateOperations {
+                let signal = synchronizeUnseenPersonalMentionsTag(postbox: postbox, network: network, entry: entry)
+                    |> then(postbox.modify { modifier -> Void in
+                        modifier.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+                    })
                 disposable.set(signal.start())
             }
         })
@@ -182,4 +221,42 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Post
     } else {
         return .complete()
     }
+}
+
+private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Signal<Void, NoError> in
+        if let peer = modifier.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
+            return network.request(Api.functions.messages.getPeerDialogs(peers: [inputPeer]))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    if let result = result {
+                        switch result {
+                            case let .peerDialogs(dialogs, _, _, _, _):
+                                if let dialog = dialogs.filter({ $0.peerId == entry.key.peerId }).first {
+                                    let apiTopMessage: Int32
+                                    let apiUnreadMentionsCount: Int32
+                                    switch dialog {
+                                        case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _):
+                                            apiTopMessage = topMessage
+                                            apiUnreadMentionsCount = unreadMentionsCount
+                                        }
+                                    
+                                    return postbox.modify { modifier -> Void in
+                                        modifier.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
+                                    }
+                                } else {
+                                    return .complete()
+                                }
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
 }

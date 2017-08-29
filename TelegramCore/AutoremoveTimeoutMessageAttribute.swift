@@ -20,12 +20,12 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         self.countdownBeginTime = countdownBeginTime
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.timeout = decoder.decodeInt32ForKey("t", orElse: 0)
         self.countdownBeginTime = decoder.decodeOptionalInt32ForKey("c")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.timeout, forKey: "t")
         if let countdownBeginTime = self.countdownBeginTime {
             encoder.encodeInt32(countdownBeginTime, forKey: "c")

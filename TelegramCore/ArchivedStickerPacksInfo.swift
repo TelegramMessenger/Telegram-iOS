@@ -32,11 +32,11 @@ public final class ArchivedStickerPacksInfo: OrderedItemListEntryContents {
         self.count = count
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.count = decoder.decodeInt32ForKey("c", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.count, forKey: "c")
     }
 }

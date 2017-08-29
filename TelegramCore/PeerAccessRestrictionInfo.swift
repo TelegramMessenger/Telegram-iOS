@@ -5,18 +5,18 @@ import Foundation
     import Postbox
 #endif
 
-public final class PeerAccessRestrictionInfo: Coding, Equatable {
+public final class PeerAccessRestrictionInfo: PostboxCoding, Equatable {
     public let reason: String
     
     init(reason: String) {
         self.reason = reason
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.reason = decoder.decodeStringForKey("rsn", orElse: "")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.reason, forKey: "rsn")
     }
     

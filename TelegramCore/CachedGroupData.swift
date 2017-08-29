@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public final class CachedPeerBotInfo: Coding, Equatable {
+public final class CachedPeerBotInfo: PostboxCoding, Equatable {
     public let peerId: PeerId
     public let botInfo: BotInfo
     
@@ -14,12 +14,12 @@ public final class CachedPeerBotInfo: Coding, Equatable {
         self.botInfo = botInfo
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.botInfo = decoder.decodeObjectForKey("i", decoder: { return BotInfo(decoder: $0) }) as! BotInfo
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
         encoder.encodeObject(self.botInfo, forKey: "i")
     }
@@ -63,7 +63,7 @@ public final class CachedGroupData: CachedPeerData {
         self.peerIds = peerIds
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         let participants = decoder.decodeObjectForKey("p", decoder: { CachedGroupParticipants(decoder: $0) }) as? CachedGroupParticipants
         self.participants = participants
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
@@ -83,7 +83,7 @@ public final class CachedGroupData: CachedPeerData {
         self.peerIds = peerIds
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         if let participants = self.participants {
             encoder.encodeObject(participants, forKey: "p")
         } else {

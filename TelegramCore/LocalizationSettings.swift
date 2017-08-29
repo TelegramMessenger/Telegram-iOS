@@ -14,12 +14,12 @@ public final class LocalizationSettings: PreferencesEntry, Equatable {
         self.localization = localization
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.languageCode = decoder.decodeStringForKey("lc", orElse: "en")
         self.localization = decoder.decodeObjectForKey("loc", decoder: { Localization(decoder: $0) }) as! Localization
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.languageCode, forKey: "lc")
         encoder.encodeObject(self.localization, forKey: "loc")
     }

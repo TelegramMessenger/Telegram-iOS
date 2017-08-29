@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public protocol TelegramMediaResource: MediaResource, Coding {
+public protocol TelegramMediaResource: MediaResource, PostboxCoding {
     func isEqual(to: TelegramMediaResource) -> Bool
 }
 

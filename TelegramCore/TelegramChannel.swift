@@ -102,7 +102,7 @@ public enum TelegramChannelInfo: Equatable {
         }
     }
     
-    fileprivate func encode(encoder: Encoder) {
+    fileprivate func encode(encoder: PostboxEncoder) {
         switch self {
             case let .broadcast(info):
                 encoder.encodeInt32(0, forKey: "i.t")
@@ -113,7 +113,7 @@ public enum TelegramChannelInfo: Equatable {
         }
     }
     
-    fileprivate static func decode(decoder: Decoder) -> TelegramChannelInfo {
+    fileprivate static func decode(decoder: PostboxDecoder) -> TelegramChannelInfo {
         let type: Int32 = decoder.decodeInt32ForKey("i.t", orElse: 0)
         if type == 0 {
             return .broadcast(TelegramChannelBroadcastInfo(flags: TelegramChannelBroadcastFlags(rawValue: decoder.decodeInt32ForKey("i.f", orElse: 0))))
@@ -176,7 +176,7 @@ public final class TelegramChannel: Peer {
         self.bannedRights = bannedRights
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
         self.accessHash = decoder.decodeOptionalInt64ForKey("ah")
         self.title = decoder.decodeStringForKey("t", orElse: "")
@@ -192,7 +192,7 @@ public final class TelegramChannel: Peer {
         self.bannedRights = decoder.decodeObjectForKey("br", decoder: { TelegramChannelBannedRights(decoder: $0) }) as? TelegramChannelBannedRights
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id.toInt64(), forKey: "i")
         if let accessHash = self.accessHash {
             encoder.encodeInt64(accessHash, forKey: "ah")

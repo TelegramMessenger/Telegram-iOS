@@ -20,11 +20,11 @@ public final class TelegramMediaExpiredContent: Media {
         self.data = data
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.data = TelegramMediaExpiredContentData(rawValue: decoder.decodeInt32ForKey("d", orElse: 0))!
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.data.rawValue, forKey: "d")
     }
     

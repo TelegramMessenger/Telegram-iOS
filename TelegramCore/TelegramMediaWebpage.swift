@@ -5,9 +5,10 @@ import Foundation
     import Postbox
 #endif
 
-public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
+public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let url: String
     public let displayUrl: String
+    public let hash: Int32
     public let type: String?
     public let websiteName: String?
     public let title: String?
@@ -22,9 +23,10 @@ public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
     public let file: TelegramMediaFile?
     public let instantPage: InstantPage?
     
-    public init(url: String, displayUrl: String, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: CGSize?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, instantPage: InstantPage?) {
+    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: CGSize?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, instantPage: InstantPage?) {
         self.url = url
         self.displayUrl = displayUrl
+        self.hash = hash
         self.type = type
         self.websiteName = websiteName
         self.title = title
@@ -39,9 +41,10 @@ public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
         self.instantPage = instantPage
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.url = decoder.decodeStringForKey("u", orElse: "")
         self.displayUrl = decoder.decodeStringForKey("d", orElse: "")
+        self.hash = decoder.decodeInt32ForKey("ha", orElse: 0)
         self.type = decoder.decodeOptionalStringForKey("ty")
         self.websiteName = decoder.decodeOptionalStringForKey("ws")
         self.title = decoder.decodeOptionalStringForKey("ti")
@@ -79,9 +82,10 @@ public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.url, forKey: "u")
         encoder.encodeString(self.displayUrl, forKey: "d")
+        encoder.encodeInt32(self.hash, forKey: "ha")
         if let type = self.type {
             encoder.encodeString(type, forKey: "ty")
         } else {
@@ -204,7 +208,7 @@ public final class TelegramMediaWebpage: Media, Equatable {
         self.content = content
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.webpageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         
         if decoder.decodeInt32ForKey("ct", orElse: 0) == 0 {
@@ -214,7 +218,7 @@ public final class TelegramMediaWebpage: Media, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         self.webpageId.encodeToBuffer(buffer)
         encoder.encodeBytes(buffer, forKey: "i")
@@ -287,7 +291,7 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage) -> TelegramMedia
             if let cachedPage = cachedPage {
                 instantPage = InstantPage(apiPage: cachedPage)
             }
-            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, instantPage: instantPage)))
+            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, instantPage: instantPage)))
         case .webPageEmpty:
             return nil
     }

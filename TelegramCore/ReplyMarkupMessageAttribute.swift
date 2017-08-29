@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public enum ReplyMarkupButtonAction: Coding, Equatable {
+public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
     case text
     case url(String)
     case callback(MemoryBuffer)
@@ -15,7 +15,7 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
     case openWebApp
     case payment
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .text
@@ -38,7 +38,7 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .text:
                 encoder.encodeInt32(0, forKey: "v")
@@ -117,7 +117,7 @@ public enum ReplyMarkupButtonAction: Coding, Equatable {
     }
 }
 
-public struct ReplyMarkupButton: Coding, Equatable {
+public struct ReplyMarkupButton: PostboxCoding, Equatable {
     public let title: String
     public let action: ReplyMarkupButtonAction
     
@@ -126,12 +126,12 @@ public struct ReplyMarkupButton: Coding, Equatable {
         self.action = action
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.title = decoder.decodeStringForKey(".t", orElse: "")
         self.action = ReplyMarkupButtonAction(decoder: decoder)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.title, forKey: ".t")
         self.action.encode(encoder)
     }
@@ -141,18 +141,18 @@ public struct ReplyMarkupButton: Coding, Equatable {
     }
 }
 
-public struct ReplyMarkupRow: Coding, Equatable {
+public struct ReplyMarkupRow: PostboxCoding, Equatable {
     public let buttons: [ReplyMarkupButton]
     
     init(buttons: [ReplyMarkupButton]) {
         self.buttons = buttons
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.buttons = decoder.decodeObjectArrayWithDecoderForKey("b")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.buttons, forKey: "b")
     }
     
@@ -188,12 +188,12 @@ public class ReplyMarkupMessageAttribute: MessageAttribute, Equatable {
         self.flags = flags
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.rows = decoder.decodeObjectArrayWithDecoderForKey("r")
         self.flags = ReplyMarkupMessageFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.rows, forKey: "r")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
     }

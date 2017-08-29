@@ -23,14 +23,14 @@ public class TelegramMediaWebFile: Media {
         self.attributes = attributes
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
         self.mimeType = decoder.decodeStringForKey("mt", orElse: "")
         self.size = decoder.decodeInt32ForKey("s", orElse: 0)
         self.attributes = decoder.decodeObjectArrayForKey("at")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.resource, forKey: "r")
         encoder.encodeString(self.mimeType, forKey: "mt")
         encoder.encodeInt32(self.size, forKey: "s")

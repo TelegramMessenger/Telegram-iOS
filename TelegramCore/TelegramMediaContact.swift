@@ -25,7 +25,7 @@ public final class TelegramMediaContact: Media {
         }
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.firstName = decoder.decodeStringForKey("n.f", orElse: "")
         self.lastName = decoder.decodeStringForKey("n.l", orElse: "")
         self.phoneNumber = decoder.decodeStringForKey("pn", orElse: "")
@@ -38,7 +38,7 @@ public final class TelegramMediaContact: Media {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.firstName, forKey: "n.f")
         encoder.encodeString(self.lastName, forKey: "n.l")
         encoder.encodeString(self.phoneNumber, forKey: "pn")

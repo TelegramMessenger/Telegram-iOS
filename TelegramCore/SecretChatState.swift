@@ -15,7 +15,7 @@ enum SecretChatLayer: Int32 {
     case layer46 = 46
 }
 
-public struct SecretChatKeySha1Fingerprint: Coding, Equatable {
+public struct SecretChatKeySha1Fingerprint: PostboxCoding, Equatable {
     public let k0: Int64
     public let k1: Int64
     public let k2: Int32
@@ -43,13 +43,13 @@ public struct SecretChatKeySha1Fingerprint: Coding, Equatable {
         self.k2 = k2
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.k0 = decoder.decodeInt64ForKey("k0", orElse: 0)
         self.k1 = decoder.decodeInt64ForKey("k1", orElse: 0)
         self.k2 = decoder.decodeInt32ForKey("k2", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.k0, forKey: "k0")
         encoder.encodeInt64(self.k1, forKey: "k1")
         encoder.encodeInt32(self.k2, forKey: "k2")
@@ -82,7 +82,7 @@ public struct SecretChatKeySha1Fingerprint: Coding, Equatable {
     }
 }
 
-public struct SecretChatKeySha256Fingerprint: Coding, Equatable {
+public struct SecretChatKeySha256Fingerprint: PostboxCoding, Equatable {
     public let k0: Int64
     public let k1: Int64
     public let k2: Int64
@@ -113,14 +113,14 @@ public struct SecretChatKeySha256Fingerprint: Coding, Equatable {
         self.k3 = k3
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.k0 = decoder.decodeInt64ForKey("k0", orElse: 0)
         self.k1 = decoder.decodeInt64ForKey("k1", orElse: 0)
         self.k2 = decoder.decodeInt64ForKey("k2", orElse: 0)
         self.k3 = decoder.decodeInt64ForKey("k3", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.k0, forKey: "k0")
         encoder.encodeInt64(self.k1, forKey: "k1")
         encoder.encodeInt64(self.k2, forKey: "k2")
@@ -156,7 +156,7 @@ public struct SecretChatKeySha256Fingerprint: Coding, Equatable {
     }
 }
 
-public struct SecretChatKeyFingerprint: Coding, Equatable {
+public struct SecretChatKeyFingerprint: PostboxCoding, Equatable {
     public let sha1: SecretChatKeySha1Fingerprint
     public let sha256: SecretChatKeySha256Fingerprint
     
@@ -165,12 +165,12 @@ public struct SecretChatKeyFingerprint: Coding, Equatable {
         self.sha256 = sha256
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.sha1 = decoder.decodeObjectForKey("1", decoder: { SecretChatKeySha1Fingerprint(decoder: $0) }) as! SecretChatKeySha1Fingerprint
         self.sha256 = decoder.decodeObjectForKey("2", decoder: { SecretChatKeySha256Fingerprint(decoder: $0) }) as! SecretChatKeySha256Fingerprint
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.sha1, forKey: "1")
         encoder.encodeObject(self.sha256, forKey: "2")
     }
@@ -193,11 +193,11 @@ private enum SecretChatEmbeddedStateValue: Int32 {
     case sequenceBasedLayer = 3
 }
 
-enum SecretChatHandshakeState: Coding, Equatable {
+enum SecretChatHandshakeState: PostboxCoding, Equatable {
     case accepting
     case requested(g: Int32, p: MemoryBuffer, a: MemoryBuffer)
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .accepting
@@ -209,7 +209,7 @@ enum SecretChatHandshakeState: Coding, Equatable {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .accepting:
                 encoder.encodeInt32(0, forKey: "r")
@@ -239,7 +239,7 @@ enum SecretChatHandshakeState: Coding, Equatable {
     }
 }
 
-struct SecretChatLayerNegotiationState: Coding, Equatable {
+struct SecretChatLayerNegotiationState: PostboxCoding, Equatable {
     let activeLayer: Int32
     let locallyRequestedLayer: Int32?
     let remotelyRequestedLayer: Int32?
@@ -250,13 +250,13 @@ struct SecretChatLayerNegotiationState: Coding, Equatable {
         self.remotelyRequestedLayer = remotelyRequestedLayer
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.activeLayer = decoder.decodeInt32ForKey("a", orElse: 0)
         self.locallyRequestedLayer = decoder.decodeOptionalInt32ForKey("lr")
         self.remotelyRequestedLayer = decoder.decodeOptionalInt32ForKey("rr")
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.activeLayer, forKey: "a")
         if let locallyRequestedLayer = self.locallyRequestedLayer {
             encoder.encodeInt32(locallyRequestedLayer, forKey: "lr")
@@ -295,13 +295,13 @@ private enum SecretChatRekeySessionDataValue: Int32 {
     case accepted = 3
 }
 
-enum SecretChatRekeySessionData: Coding, Equatable {
+enum SecretChatRekeySessionData: PostboxCoding, Equatable {
     case requesting
     case requested(a: MemoryBuffer, config: SecretChatEncryptionConfig)
     case accepting
     case accepted(key: MemoryBuffer, keyFingerprint: Int64)
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SecretChatRekeySessionDataValue.requesting.rawValue:
                 self = .requesting
@@ -316,7 +316,7 @@ enum SecretChatRekeySessionData: Coding, Equatable {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .requesting:
                 encoder.encodeInt32(SecretChatRekeySessionDataValue.requesting.rawValue, forKey: "r")
@@ -363,7 +363,7 @@ enum SecretChatRekeySessionData: Coding, Equatable {
     }
 }
 
-struct SecretChatRekeySessionState: Coding, Equatable {
+struct SecretChatRekeySessionState: PostboxCoding, Equatable {
     let id: Int64
     let data: SecretChatRekeySessionData
     
@@ -372,12 +372,12 @@ struct SecretChatRekeySessionState: Coding, Equatable {
         self.data = data
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.id = decoder.decodeInt64ForKey("i", orElse: 0)
         self.data = decoder.decodeObjectForKey("d", decoder: { SecretChatRekeySessionData(decoder: $0) }) as! SecretChatRekeySessionData
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id, forKey: "i")
         encoder.encodeObject(self.data, forKey: "d")
     }
@@ -393,7 +393,7 @@ struct SecretChatRekeySessionState: Coding, Equatable {
     }
 }
 
-struct SecretChatSequenceBasedLayerState: Coding, Equatable {
+struct SecretChatSequenceBasedLayerState: PostboxCoding, Equatable {
     let layerNegotiationState: SecretChatLayerNegotiationState
     let rekeyState: SecretChatRekeySessionState?
     let baseIncomingOperationIndex: Int32
@@ -408,7 +408,7 @@ struct SecretChatSequenceBasedLayerState: Coding, Equatable {
         self.topProcessedCanonicalIncomingOperationIndex = topProcessedCanonicalIncomingOperationIndex
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.layerNegotiationState = decoder.decodeObjectForKey("ln", decoder: { SecretChatLayerNegotiationState(decoder: $0) }) as! SecretChatLayerNegotiationState
         self.rekeyState = decoder.decodeObjectForKey("rs", decoder: { SecretChatRekeySessionState(decoder: $0) }) as? SecretChatRekeySessionState
         self.baseIncomingOperationIndex = decoder.decodeInt32ForKey("bi", orElse: 0)
@@ -420,7 +420,7 @@ struct SecretChatSequenceBasedLayerState: Coding, Equatable {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.layerNegotiationState, forKey: "ln")
         if let rekeyState = self.rekeyState {
             encoder.encodeObject(rekeyState, forKey: "rs")
@@ -477,7 +477,7 @@ struct SecretChatSequenceBasedLayerState: Coding, Equatable {
     }
 }
 
-enum SecretChatEmbeddedState: Coding, Equatable {
+enum SecretChatEmbeddedState: PostboxCoding, Equatable {
     case terminated
     case handshake(SecretChatHandshakeState)
     case basicLayer
@@ -494,7 +494,7 @@ enum SecretChatEmbeddedState: Coding, Equatable {
         }
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SecretChatEmbeddedStateValue.terminated.rawValue:
                 self = .terminated
@@ -510,7 +510,7 @@ enum SecretChatEmbeddedState: Coding, Equatable {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .terminated:
                 encoder.encodeInt32(SecretChatEmbeddedStateValue.terminated.rawValue, forKey: "r")
@@ -574,7 +574,7 @@ final class SecretChatState: PeerChatState, SecretChatKeyState, Equatable {
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.role = SecretChatRole(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
         self.embeddedState = decoder.decodeObjectForKey("s", decoder: { return SecretChatEmbeddedState(decoder: $0) }) as! SecretChatEmbeddedState
         self.keychain = decoder.decodeObjectForKey("k", decoder: { return SecretChatKeychain(decoder: $0) }) as! SecretChatKeychain
@@ -582,7 +582,7 @@ final class SecretChatState: PeerChatState, SecretChatKeyState, Equatable {
         self.messageAutoremoveTimeout = decoder.decodeOptionalInt32ForKey("a")
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.role.rawValue, forKey: "r")
         encoder.encodeObject(self.embeddedState, forKey: "s")
         encoder.encodeObject(self.keychain, forKey: "k")

@@ -358,6 +358,8 @@
 		D09D8C0B1D4FAB1D0081DBEC /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09D8C011D4FAB1D0081DBEC /* TelegramCore.framework */; };
 		D09D8C101D4FAB1D0081DBEC /* TelegramCoreTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D09D8C0F1D4FAB1D0081DBEC /* TelegramCoreTests.m */; };
 		D09D8C121D4FAB1D0081DBEC /* TelegramCore.h in Headers */ = {isa = PBXBuildFile; fileRef = D09D8C041D4FAB1D0081DBEC /* TelegramCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0A472B61F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */; };
+		D0A472B71F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */; };
 		D0AAD1A81E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1A71E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift */; };
 		D0AAD1AA1E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1A91E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift */; };
 		D0AAD1B81E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1B71E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift */; };
@@ -781,6 +783,7 @@
 		D09D8C0A1D4FAB1D0081DBEC /* TelegramCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TelegramCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D09D8C0F1D4FAB1D0081DBEC /* TelegramCoreTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TelegramCoreTests.m; sourceTree = "<group>"; };
 		D09D8C111D4FAB1D0081DBEC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadedPeer.swift; sourceTree = "<group>"; };
 		D0AAD1A71E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoremoveTimeoutMessageAttribute.swift; sourceTree = "<group>"; };
 		D0AAD1A91E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplyMaxReadIndexInteractively.swift; sourceTree = "<group>"; };
 		D0AAD1B71E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedAutoremoveMessageOperations.swift; sourceTree = "<group>"; };
@@ -1476,6 +1479,7 @@
 				C23BC3861E9BE3CA00D79F92 /* ImportContact.swift */,
 				C205FEA71EB3B75900455808 /* ExportMessageLink.swift */,
 				C230BEB51EE9A3760029586C /* ChannelAdminEventLogs.swift */,
+				D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -1744,6 +1748,7 @@
 				D0B843B71DA7FF30005F29E1 /* NBMetadataCoreMapper.m in Sources */,
 				D0AB0B921D65E9FA002C78E7 /* ManagedServiceViews.swift in Sources */,
 				D0DB7F031F43030C00591D48 /* InstallInteractiveReadMessagesAction.swift in Sources */,
+				D0A472B61F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */,
 				D0AAD1B81E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift in Sources */,
 				D01A21A91F38CDDC00DDA104 /* ManagedSynchronizeSavedStickersOperations.swift in Sources */,
 				D099EA1C1DE72867001AF5A8 /* PeerCommands.swift in Sources */,
@@ -2127,6 +2132,7 @@
 				D001F3EF1E128A1C007A8C60 /* AccountIntermediateState.swift in Sources */,
 				D0223A991EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift in Sources */,
 				D00C7CCD1E3620C30080C3D5 /* CachedChannelParticipants.swift in Sources */,
+				D0A472B71F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */,
 				D03C536E1DAD5CA9004C17B3 /* PhoneNumber.swift in Sources */,
 				D0BC387C1E40D2880044D6FE /* TogglePeerChatPinned.swift in Sources */,
 				D0528E6B1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */,

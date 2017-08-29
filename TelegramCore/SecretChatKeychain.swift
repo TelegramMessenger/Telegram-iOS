@@ -5,11 +5,11 @@ import Foundation
     import Postbox
 #endif
 
-enum SecretChatKeyValidity: Coding, Equatable {
+enum SecretChatKeyValidity: PostboxCoding, Equatable {
     case indefinite
     case sequenceBasedIndexRange(fromCanonicalIndex: Int32)
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .indefinite
@@ -21,7 +21,7 @@ enum SecretChatKeyValidity: Coding, Equatable {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .indefinite:
                 encoder.encodeInt32(0, forKey: "r")
@@ -49,7 +49,7 @@ enum SecretChatKeyValidity: Coding, Equatable {
     }
 }
 
-final class SecretChatKey: Coding, Equatable {
+final class SecretChatKey: PostboxCoding, Equatable {
     let fingerprint: Int64
     let key: MemoryBuffer
     let validity: SecretChatKeyValidity
@@ -62,14 +62,14 @@ final class SecretChatKey: Coding, Equatable {
         self.useCount = useCount
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.fingerprint = decoder.decodeInt64ForKey("f", orElse: 0)
         self.key = decoder.decodeBytesForKey("k")!
         self.validity = decoder.decodeObjectForKey("v", decoder: { SecretChatKeyValidity(decoder: $0) }) as! SecretChatKeyValidity
         self.useCount = decoder.decodeInt32ForKey("u", orElse: 0)
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fingerprint, forKey: "f")
         encoder.encodeBytes(self.key, forKey: "k")
         encoder.encodeObject(self.validity, forKey: "v")
@@ -94,18 +94,18 @@ final class SecretChatKey: Coding, Equatable {
     }
 }
 
-final class SecretChatKeychain: Coding, Equatable {
+final class SecretChatKeychain: PostboxCoding, Equatable {
     let keys: [SecretChatKey]
     
     init(keys: [SecretChatKey]) {
         self.keys = keys
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.keys = decoder.decodeObjectArrayWithDecoderForKey("k")
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.keys, forKey: "k")
     }
     

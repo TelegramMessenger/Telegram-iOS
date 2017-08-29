@@ -87,7 +87,7 @@ private func writeString(_ buffer: WriteBuffer, _ string: String) {
     }
 }
 
-public final class Localization: Coding, Equatable {
+public final class Localization: PostboxCoding, Equatable {
     public let version: Int32
     public let entries: [LocalizationEntry]
     
@@ -96,7 +96,7 @@ public final class Localization: Coding, Equatable {
         self.entries = entries
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.version = decoder.decodeInt32ForKey("v", orElse: 0)
         let count = decoder.decodeInt32ForKey("c", orElse: 0)
         var entries: [LocalizationEntry] = []
@@ -192,7 +192,7 @@ public final class Localization: Coding, Equatable {
         self.entries = entries
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.entries.count), forKey: "c")
         
         let buffer = WriteBuffer()

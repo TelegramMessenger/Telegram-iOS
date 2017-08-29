@@ -26,7 +26,7 @@ public struct TelegramChannelBannedRightsFlags: OptionSet {
     public static let banEmbedLinks = TelegramChannelBannedRightsFlags(rawValue: 1 << 7)
 }
 
-public struct TelegramChannelBannedRights: Coding, Equatable {
+public struct TelegramChannelBannedRights: PostboxCoding, Equatable {
     public let flags: TelegramChannelBannedRightsFlags
     public let untilDate: Int32
     
@@ -35,12 +35,12 @@ public struct TelegramChannelBannedRights: Coding, Equatable {
         self.untilDate = untilDate
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.flags = TelegramChannelBannedRightsFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         self.untilDate = decoder.decodeInt32ForKey("d", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
         encoder.encodeInt32(self.untilDate, forKey: "d")
     }

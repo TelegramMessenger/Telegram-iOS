@@ -14,12 +14,12 @@ public final class SavedStickerItem: OrderedItemListEntryContents, Equatable {
         self.stringRepresentations = stringRepresentations
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.file = decoder.decodeObjectForKey("f") as! TelegramMediaFile
         self.stringRepresentations = decoder.decodeStringArrayForKey("sr")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.file, forKey: "f")
         encoder.encodeStringArray(self.stringRepresentations, forKey: "sr")
     }

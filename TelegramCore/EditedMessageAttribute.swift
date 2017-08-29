@@ -12,11 +12,11 @@ public class EditedMessageAttribute: MessageAttribute {
         self.date = date
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.date = decoder.decodeInt32ForKey("d", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.date, forKey: "d")
     }
 }

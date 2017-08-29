@@ -22,14 +22,14 @@ public final class ProxySettings: PreferencesEntry {
         self.password = password
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.host = decoder.decodeStringForKey("host", orElse: "")
         self.port = decoder.decodeInt32ForKey("port", orElse: 0)
         self.username = decoder.decodeOptionalStringForKey("username")
         self.password = decoder.decodeOptionalStringForKey("password")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.host, forKey: "host")
         encoder.encodeInt32(self.port, forKey: "port")
         if let username = self.username {

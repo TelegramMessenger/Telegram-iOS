@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public enum UserPresenceStatus: Comparable, Coding {
+public enum UserPresenceStatus: Comparable, PostboxCoding {
     case none
     case present(until: Int32)
     case recently
@@ -89,7 +89,7 @@ public enum UserPresenceStatus: Comparable, Coding {
         }
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .none
@@ -106,7 +106,7 @@ public enum UserPresenceStatus: Comparable, Coding {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "v")
@@ -130,11 +130,11 @@ public final class TelegramUserPresence: PeerPresence, Equatable {
         self.status = status
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.status = UserPresenceStatus(decoder: decoder)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         self.status.encode(encoder)
     }
     

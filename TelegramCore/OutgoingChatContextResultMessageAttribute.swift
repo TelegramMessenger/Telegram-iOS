@@ -14,12 +14,12 @@ public class OutgoingChatContextResultMessageAttribute: MessageAttribute {
         self.id = id
     }
     
-    required public init(decoder: Decoder) {
+    required public init(decoder: PostboxDecoder) {
         self.queryId = decoder.decodeInt64ForKey("q", orElse: 0)
         self.id = decoder.decodeStringForKey("i", orElse: "")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.queryId, forKey: "q")
         encoder.encodeString(self.id, forKey: "i")
     }

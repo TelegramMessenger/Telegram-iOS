@@ -21,7 +21,7 @@ extension CloudChatRemoveMessagesType {
     }
 }
 
-final class CloudChatRemoveMessagesOperation: Coding {
+final class CloudChatRemoveMessagesOperation: PostboxCoding {
     let messageIds: [MessageId]
     let type: CloudChatRemoveMessagesType
     
@@ -30,12 +30,12 @@ final class CloudChatRemoveMessagesOperation: Coding {
         self.type = type
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.messageIds = MessageId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("i")!)
         self.type = CloudChatRemoveMessagesType(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         MessageId.encodeArrayToBuffer(self.messageIds, buffer: buffer)
         encoder.encodeBytes(buffer, forKey: "i")
@@ -43,7 +43,7 @@ final class CloudChatRemoveMessagesOperation: Coding {
     }
 }
 
-final class CloudChatRemoveChatOperation: Coding {
+final class CloudChatRemoveChatOperation: PostboxCoding {
     let peerId: PeerId
     let reportChatSpam: Bool
     let topMessageId: MessageId?
@@ -54,7 +54,7 @@ final class CloudChatRemoveChatOperation: Coding {
         self.topMessageId = topMessageId
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.reportChatSpam = decoder.decodeInt32ForKey("r", orElse: 0) != 0
         if let messageIdPeerId = decoder.decodeOptionalInt64ForKey("m.p"), let messageIdNamespace = decoder.decodeOptionalInt32ForKey("m.n"), let messageIdId = decoder.decodeOptionalInt32ForKey("m.i") {
@@ -64,7 +64,7 @@ final class CloudChatRemoveChatOperation: Coding {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
         encoder.encodeInt32(self.reportChatSpam ? 1 : 0, forKey: "r")
         if let topMessageId = self.topMessageId {
@@ -79,7 +79,7 @@ final class CloudChatRemoveChatOperation: Coding {
     }
 }
 
-final class CloudChatClearHistoryOperation: Coding {
+final class CloudChatClearHistoryOperation: PostboxCoding {
     let peerId: PeerId
     let topMessageId: MessageId
     
@@ -88,12 +88,12 @@ final class CloudChatClearHistoryOperation: Coding {
         self.topMessageId = topMessageId
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.topMessageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0))
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
         encoder.encodeInt64(self.topMessageId.peerId.toInt64(), forKey: "m.p")
         encoder.encodeInt32(self.topMessageId.namespace, forKey: "m.n")

@@ -12,7 +12,7 @@ public enum PhoneCallDiscardReason: Int32 {
     case busy = 3
 }
 
-public enum TelegramMediaActionType: Coding, Equatable {
+public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case unknown
     case groupCreated(title: String)
     case addedMembers(peerIds: [PeerId])
@@ -29,7 +29,7 @@ public enum TelegramMediaActionType: Coding, Equatable {
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
     case paymentSent(currency: String, totalAmount: Int64)
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
         switch rawValue {
             case 1:
@@ -72,7 +72,7 @@ public enum TelegramMediaActionType: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .unknown:
                 break
@@ -272,11 +272,11 @@ public final class TelegramMediaAction: Media {
         self.action = action
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.action = TelegramMediaActionType(decoder: decoder)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         self.action.encode(encoder)
     }
     

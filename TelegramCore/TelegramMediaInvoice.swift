@@ -48,7 +48,7 @@ public final class TelegramMediaInvoice: Media {
         self.flags = flags
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.title = decoder.decodeStringForKey("t", orElse: "")
         self.description = decoder.decodeStringForKey("d", orElse: "")
         self.currency = decoder.decodeStringForKey("c", orElse: "")
@@ -64,7 +64,7 @@ public final class TelegramMediaInvoice: Media {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.title, forKey: "t")
         encoder.encodeString(self.description, forKey: "d")
         encoder.encodeString(self.currency, forKey: "nc")

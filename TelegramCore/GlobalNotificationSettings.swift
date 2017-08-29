@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public struct MessageNotificationSettings: Coding, Equatable {
+public struct MessageNotificationSettings: PostboxCoding, Equatable {
     public let enabled: Bool
     public let displayPreviews: Bool
     public let sound: PeerMessageSound
@@ -20,13 +20,13 @@ public struct MessageNotificationSettings: Coding, Equatable {
         self.sound = sound
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.enabled = decoder.decodeInt32ForKey("e", orElse: 0) != 0
         self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
         self.sound = PeerMessageSound.decodeInline(decoder)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "e")
         encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
         self.sound.encodeInline(encoder)
@@ -58,7 +58,7 @@ public struct MessageNotificationSettings: Coding, Equatable {
     }
 }
 
-public struct GlobalNotificationSettingsSet: Coding, Equatable {
+public struct GlobalNotificationSettingsSet: PostboxCoding, Equatable {
     public let privateChats: MessageNotificationSettings
     public let groupChats: MessageNotificationSettings
     
@@ -71,12 +71,12 @@ public struct GlobalNotificationSettingsSet: Coding, Equatable {
         self.groupChats = groupChats
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.privateChats = decoder.decodeObjectForKey("p", decoder: { MessageNotificationSettings(decoder: $0) }) as! MessageNotificationSettings
         self.groupChats = decoder.decodeObjectForKey("g", decoder: { MessageNotificationSettings(decoder: $0) }) as! MessageNotificationSettings
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.privateChats, forKey: "p")
         encoder.encodeObject(self.groupChats, forKey: "g")
     }
@@ -117,12 +117,12 @@ public struct GlobalNotificationSettings: PreferencesEntry, Equatable {
         self.remote = remote
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.toBeSynchronized = decoder.decodeObjectForKey("s", decoder: { GlobalNotificationSettingsSet(decoder: $0) }) as? GlobalNotificationSettingsSet
         self.remote = decoder.decodeObjectForKey("r", decoder: { GlobalNotificationSettingsSet(decoder: $0) }) as! GlobalNotificationSettingsSet
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         if let toBeSynchronized = self.toBeSynchronized {
             encoder.encodeObject(toBeSynchronized, forKey: "s")
         } else {

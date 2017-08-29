@@ -30,7 +30,7 @@ public final class CachedUserData: CachedPeerData {
         self.commonGroupCount = commonGroupCount
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.about = decoder.decodeOptionalStringForKey("a")
         self.botInfo = decoder.decodeObjectForKey("bi") as? BotInfo
         self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
@@ -38,7 +38,7 @@ public final class CachedUserData: CachedPeerData {
         self.commonGroupCount = decoder.decodeInt32ForKey("cg", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         if let about = self.about {
             encoder.encodeString(about, forKey: "a")
         } else {

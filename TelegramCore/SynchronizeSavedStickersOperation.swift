@@ -13,12 +13,12 @@ private enum SynchronizeSavedStickersOperationContentType: Int32 {
     case sync
 }
 
-enum SynchronizeSavedStickersOperationContent: Coding {
+enum SynchronizeSavedStickersOperationContent: PostboxCoding {
     case add(id: Int64, accessHash: Int64)
     case remove(id: Int64, accessHash: Int64)
     case sync
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SynchronizeSavedStickersOperationContentType.add.rawValue:
                 self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
@@ -32,7 +32,7 @@ enum SynchronizeSavedStickersOperationContent: Coding {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .add(id, accessHash):
                 encoder.encodeInt32(SynchronizeSavedStickersOperationContentType.add.rawValue, forKey: "r")
@@ -48,18 +48,18 @@ enum SynchronizeSavedStickersOperationContent: Coding {
     }
 }
 
-final class SynchronizeSavedStickersOperation: Coding {
+final class SynchronizeSavedStickersOperation: PostboxCoding {
     let content: SynchronizeSavedStickersOperationContent
     
     init(content: SynchronizeSavedStickersOperationContent) {
         self.content = content
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.content = decoder.decodeObjectForKey("c", decoder: { SynchronizeSavedStickersOperationContent(decoder: $0) }) as! SynchronizeSavedStickersOperationContent
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.content, forKey: "c")
     }
 }

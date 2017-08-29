@@ -31,7 +31,7 @@ private enum InstantPageBlockType: Int32 {
     case audio = 22
 }
 
-public indirect enum InstantPageBlock: Coding, Equatable {
+public indirect enum InstantPageBlock: PostboxCoding, Equatable {
     case unsupported
     case title(RichText)
     case subtitle(RichText)
@@ -56,7 +56,7 @@ public indirect enum InstantPageBlock: Coding, Equatable {
     case slideshow(items: [InstantPageBlock], caption: RichText)
     case channelBanner(TelegramChannel?)
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case InstantPageBlockType.unsupported.rawValue:
                 self = .unsupported
@@ -119,7 +119,7 @@ public indirect enum InstantPageBlock: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .unsupported:
                 encoder.encodeInt32(InstantPageBlockType.unsupported.rawValue, forKey: "r")
@@ -399,14 +399,14 @@ public indirect enum InstantPageBlock: Coding, Equatable {
     }
 }
 
-private final class MediaDictionary: Coding {
+private final class MediaDictionary: PostboxCoding {
     let dict: [MediaId: Media]
     
     init(dict: [MediaId: Media]) {
         self.dict = dict
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         let idsBufer = decoder.decodeBytesForKey("i")!
         let mediaIds = MediaId.decodeArrayFromBuffer(idsBufer)
         let medias = decoder.decodeObjectArrayForKey("m")
@@ -420,9 +420,9 @@ private final class MediaDictionary: Coding {
         self.dict = dict
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         var mediaIds: [MediaId] = []
-        var medias: [Coding] = []
+        var medias: [PostboxCoding] = []
         for mediaId in self.dict.keys {
             mediaIds.append(mediaId)
             medias.append(self.dict[mediaId]!)
@@ -434,7 +434,7 @@ private final class MediaDictionary: Coding {
     }
 }
 
-public final class InstantPage: Coding, Equatable {
+public final class InstantPage: PostboxCoding, Equatable {
     public let blocks: [InstantPageBlock]
     public let media: [MediaId: Media]
     public let isComplete: Bool
@@ -445,13 +445,13 @@ public final class InstantPage: Coding, Equatable {
         self.isComplete = isComplete
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.blocks = decoder.decodeObjectArrayWithDecoderForKey("b")
         self.media = MediaDictionary(decoder: decoder).dict
         self.isComplete = decoder.decodeInt32ForKey("c", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.blocks, forKey: "b")
         MediaDictionary(dict: self.media).encode(encoder)
         encoder.encodeInt32(self.isComplete ? 1 : 0, forKey: "c")
