@@ -34,6 +34,8 @@
 		C27982541E73078400262BFD /* SecretChatStateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27982521E73077800262BFD /* SecretChatStateBridge.swift */; };
 		C28725421EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */; };
 		C28725431EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */; };
+		C29340F31F5080FA0074991E /* UpdateGroupSpecificStickerset.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29340F21F5080FA0074991E /* UpdateGroupSpecificStickerset.swift */; };
+		C29340F41F5081280074991E /* UpdateGroupSpecificStickerset.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29340F21F5080FA0074991E /* UpdateGroupSpecificStickerset.swift */; };
 		C2A315C01E2E776A00D89000 /* RequestStartBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749581E1092BC0057C89A /* RequestStartBot.swift */; };
 		C2E064681ECEEF0A00387BB8 /* TelegramMediaInvoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E064671ECEEF0A00387BB8 /* TelegramMediaInvoice.swift */; };
 		C2E064691ECEEF0B00387BB8 /* TelegramMediaInvoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E064671ECEEF0A00387BB8 /* TelegramMediaInvoice.swift */; };
@@ -597,6 +599,7 @@
 		C27982501E72C97800262BFD /* MacosLegacy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacosLegacy.swift; sourceTree = "<group>"; };
 		C27982521E73077800262BFD /* SecretChatStateBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatStateBridge.swift; sourceTree = "<group>"; };
 		C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationInfoMessageAttribute.swift; sourceTree = "<group>"; };
+		C29340F21F5080FA0074991E /* UpdateGroupSpecificStickerset.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdateGroupSpecificStickerset.swift; sourceTree = "<group>"; };
 		C2E064671ECEEF0A00387BB8 /* TelegramMediaInvoice.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramMediaInvoice.swift; sourceTree = "<group>"; };
 		C2E0646C1ECF171D00387BB8 /* TelegramMediaWebDocument.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramMediaWebDocument.swift; sourceTree = "<group>"; };
 		C2F4ED1C1EC60064005F2696 /* RateCall.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RateCall.swift; sourceTree = "<group>"; };
@@ -973,6 +976,7 @@
 				D0E23DDE1E8082A400B9B6D2 /* ArchivedStickerPacks.swift */,
 				D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */,
 				D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */,
+				C29340F21F5080FA0074991E /* UpdateGroupSpecificStickerset.swift */,
 			);
 			name = "Sticker Management";
 			sourceTree = "<group>";
@@ -1858,6 +1862,7 @@
 				D0DC354E1DE368F7000195EB /* RequestChatContextResults.swift in Sources */,
 				D0BC38771E40BAAA0044D6FE /* ManagedSynchronizePinnedChatsOperations.swift in Sources */,
 				D0B843851DA6EDC4005F29E1 /* CachedChannelData.swift in Sources */,
+				C29340F31F5080FA0074991E /* UpdateGroupSpecificStickerset.swift in Sources */,
 				D01C7ED31EF5DF83008305F1 /* LimitsConfiguration.swift in Sources */,
 				D0F02CE51E9926C40065DEE2 /* ManagedConfigurationUpdates.swift in Sources */,
 				D0528E6A1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */,
@@ -1965,6 +1970,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C29340F41F5081280074991E /* UpdateGroupSpecificStickerset.swift in Sources */,
 				C25638021E79E7FC00311607 /* TwoStepVerification.swift in Sources */,
 				C27982541E73078400262BFD /* SecretChatStateBridge.swift in Sources */,
 				D00DBBD81E64E41100DB5485 /* CreateSecretChat.swift in Sources */,
