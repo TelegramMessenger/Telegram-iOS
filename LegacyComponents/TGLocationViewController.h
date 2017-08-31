@@ -9,6 +9,7 @@
 
 @interface TGLocationViewController : TGViewController
 
+@property (nonatomic, assign) bool modalMode;
 @property (nonatomic, assign) bool previewMode;
 
 @property (nonatomic, copy) bool (^presentShareMenu)(TGMenuSheetController *, CLLocationCoordinate2D);

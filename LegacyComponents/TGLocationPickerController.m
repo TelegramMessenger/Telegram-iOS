@@ -2,6 +2,8 @@
 
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
+#import "TGImageUtils.h"
+#import "TGFont.h"
 
 #import <MapKit/MapKit.h>
 
@@ -126,14 +128,9 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 
 @implementation TGLocationPickerController
 
-- (instancetype)init
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGLocationPickerControllerIntent)intent
 {
-    return [self initWithIntent:TGLocationPickerControllerDefaultIntent];
-}
-
-- (instancetype)initWithIntent:(TGLocationPickerControllerIntent)intent
-{
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _intent = intent;
