@@ -154,6 +154,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
 public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpageLoadedContent) -> Bool {
     if lhs.url != rhs.url
     || lhs.displayUrl != rhs.displayUrl
+    || lhs.hash != rhs.hash
     || lhs.type != rhs.type
     || lhs.websiteName != rhs.websiteName
     || lhs.title != rhs.title

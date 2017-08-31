@@ -115,6 +115,9 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                         return updated
                                     })
                                     modifier.updatePeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                    if let presence = TelegramUserPresence(apiUser: user) {
+                                        modifier.updatePeerPresences([peer.id: presence])
+                                    }
                             }
                             modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
                                 let previous: CachedUserData

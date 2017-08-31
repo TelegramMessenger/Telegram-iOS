@@ -31,7 +31,7 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
         //|> delay(4.0, queue: Queue.concurrentDefaultQueue())
         |> mapToSignal { peer in
             if let inputPeer = apiInputPeer(peer) {
-                let limit = 20
+                let limit = 100
                 
                 let request: Signal<Api.messages.Messages, MTRpcError>
                 if let tagMask = tagMask {
