@@ -39,7 +39,7 @@ public func actualizedWebpage(postbox: Postbox, network: Network, webpage: Teleg
                 return .single(.webPageNotModified)
             }
             |> mapToSignal { result -> Signal<TelegramMediaWebpage, NoError> in
-                if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result), case .Loaded = updatedWebpage.content {
+                if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
                     return postbox.modify { modifier -> TelegramMediaWebpage in
                         modifier.updateMedia(updatedWebpage.webpageId, update: updatedWebpage)
                         return updatedWebpage

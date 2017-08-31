@@ -279,7 +279,7 @@ private final class MultipartCdnHashSource {
                         strongSelf.requestMore()
                     }
                 } else {
-                    assertionFailure()
+                    //assertionFailure()
                 }
             }
         }))
