@@ -262,7 +262,7 @@ typedef enum
     controlsFrame.origin.y = CGRectGetMaxY(controlsFrame) - height;
     controlsFrame.size.height = height;
     
-    _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame sendImage:[_assets sendImage]];
+    _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets];
     _controlsView.clipsToBounds = true;
     _controlsView.parent = self;
     _controlsView.isAlreadyLocked = self.isAlreadyLocked;
