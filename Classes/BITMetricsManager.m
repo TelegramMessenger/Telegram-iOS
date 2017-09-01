@@ -74,13 +74,12 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 
 - (void)setDisabled:(BOOL)disabled {
   if (_disabled == disabled) { return; }
-  
+    _disabled = disabled;
   if (disabled) {
     [self unregisterObservers];
   } else {
-    [self registerObservers];
+    [self startManager];
   }
-  _disabled = disabled;
 }
 
 #pragma mark - Sessions
