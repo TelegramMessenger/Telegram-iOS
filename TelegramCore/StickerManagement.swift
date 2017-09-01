@@ -26,6 +26,7 @@ func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoEr
         addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
         addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
         addSynchronizeSavedGifsOperation(modifier: modifier, operation: .sync)
+        addSynchronizeSavedStickersOperation(modifier: modifier, operation: .sync)
     } |> then(.complete() |> delay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
