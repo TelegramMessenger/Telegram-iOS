@@ -6,6 +6,7 @@
 
 @property (nonatomic, strong) UIColor *placeholderColor;
 @property (nonatomic, strong) UIFont *placeholderFont;
+@property (nonatomic) CGFloat placeholderOffset;
 
 @property (nonatomic) CGFloat leftInset;
 @property (nonatomic) CGFloat rightInset;

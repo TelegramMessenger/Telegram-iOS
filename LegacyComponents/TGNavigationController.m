@@ -284,7 +284,8 @@
                         [((TGViewController *)controller) setAdditionalStatusBarHeight:_currentAdditionalStatusBarHeight];
                     }
                 }
-                [((UIViewController *)maybeController) setNeedsStatusBarAppearanceUpdate];
+                if (iosMajorVersion() >= 7)
+                    [((UIViewController *)maybeController) setNeedsStatusBarAppearanceUpdate];
             }
         }
     }
@@ -516,7 +517,7 @@ static UIView *findDimmingView(UIView *view)
 
 - (void)setupPlayerOnControllers:(NSArray *)controllers
 {
-    if (_displayPlayer && [[self navigationBar] isKindOfClass:[TGNavigationBar class]])
+    if ((_displayPlayer || _forceAdditionalNavigationBarHeight) && [[self navigationBar] isKindOfClass:[TGNavigationBar class]])
     {
         for (id maybeController in controllers)
         {
@@ -525,7 +526,7 @@ static UIView *findDimmingView(UIView *view)
                 TGViewController *controller = maybeController;
                 [controller setAdditionalNavigationBarHeight:_currentAdditionalNavigationBarHeight];
             }
-            else if ([maybeController isKindOfClass:[UITabBarController class]] && [maybeController conformsToProtocol:@protocol(TGNavigationControllerTabsController)])
+            else if (_displayPlayer && [maybeController isKindOfClass:[UITabBarController class]] && [maybeController conformsToProtocol:@protocol(TGNavigationControllerTabsController)])
             {
                 [self setupPlayerOnControllers:((UITabBarController *)maybeController).viewControllers];
             }
@@ -535,7 +536,7 @@ static UIView *findDimmingView(UIView *view)
 
 - (void)updatePlayerOnControllers
 {
-    if (_displayPlayer && [[self navigationBar] isKindOfClass:[TGNavigationBar class]])
+    if ((_displayPlayer || _forceAdditionalNavigationBarHeight) && [[self navigationBar] isKindOfClass:[TGNavigationBar class]])
     {
         for (id maybeController in [self viewControllers])
         {
@@ -543,7 +544,7 @@ static UIView *findDimmingView(UIView *view)
             {
                 [((TGViewController *)maybeController) setAdditionalNavigationBarHeight:_currentAdditionalNavigationBarHeight];
             }
-            else if ([maybeController isKindOfClass:[UITabBarController class]] && [maybeController conformsToProtocol:@protocol(TGNavigationControllerTabsController)])
+            else if (_displayPlayer && [maybeController isKindOfClass:[UITabBarController class]] && [maybeController conformsToProtocol:@protocol(TGNavigationControllerTabsController)])
             {
                 for (id controller in ((UITabBarController *)maybeController).viewControllers)
                 {

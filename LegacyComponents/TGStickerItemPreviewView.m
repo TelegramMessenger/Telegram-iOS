@@ -22,9 +22,9 @@ static const CGFloat TGStickersTopMargin = 140.0f;
 
 @implementation TGStickerItemPreviewView
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context frame:(CGRect)frame
 {
-    self = [super initWithFrame:frame];
+    self = [super initWithContext:context frame:frame];
     if (self != nil)
     {
         self.eccentric = true;
@@ -83,7 +83,7 @@ static const CGFloat TGStickersTopMargin = 140.0f;
     CGFloat y = bounds.size.height / 2.0f;
     if (bounds.size.height > bounds.size.width && self.eccentric)
         y = bounds.size.height / 3.0f;
-    else if(bounds.size.height < bounds.size.width && self.actionsPresented)
+    else if (!TGIsPad() && bounds.size.height < bounds.size.width && self.actionsPresented)
         y = bounds.size.height / 4.0f;
     
     return CGPointMake(bounds.size.width / 2.0f, y);

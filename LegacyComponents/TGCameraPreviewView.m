@@ -150,7 +150,9 @@
     }
     else
     {
-        [self.legacyPreviewLayer setSession:nil];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.legacyPreviewLayer setSession:nil];
+        });
     }
     _wrapperView = nil;
 }

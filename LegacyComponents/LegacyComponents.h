@@ -33,6 +33,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGKeyCommandController.h>
 #import <LegacyComponents/TGWeakDelegate.h>
 #import <LegacyComponents/TGCache.h>
+#import <LegacyComponents/TGLiveUploadInterface.h>
 
 #import <LegacyComponents/JNWSpringAnimation.h>
 #import <LegacyComponents/POPAnimationEvent.h>
@@ -289,3 +290,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGSearchDisplayMixin.h>
 
 #import <LegacyComponents/TGPhotoEditorSliderView.h>
+
+#import <LegacyComponents/TGClipboardGalleryMixin.h>
+#import <LegacyComponents/TGClipboardGalleryPhotoItem.h>
+#import <LegacyComponents/TGVideoMessageCaptureController.h>

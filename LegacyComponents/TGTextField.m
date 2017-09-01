@@ -21,7 +21,7 @@
         else if (self.textAlignment == NSTextAlignmentRight)
             placeholderOrigin.x = rect.size.width - placeholderSize.width;
         
-        placeholderOrigin.y += TGRetinaPixel;
+        placeholderOrigin.y += TGScreenPixel + _placeholderOffset;
         
         [self.placeholder drawAtPoint:placeholderOrigin withFont:_placeholderFont];
     }
@@ -38,7 +38,7 @@
 
 - (CGRect)editingRectForBounds:(CGRect)bounds
 {
-    return CGRectOffset([self textRectForBounds:bounds], 0.0f, TGRetinaPixel + _editingRectOffset);
+    return CGRectOffset([self textRectForBounds:bounds], 0.0f, TGScreenPixel + _editingRectOffset);
 }
 
 - (CGRect)placeholderRectForBounds:(CGRect)bounds

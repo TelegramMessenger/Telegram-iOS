@@ -15,6 +15,7 @@
 #import "TGEmbedVinePlayerView.h"
 #import "TGEmbedInstagramPlayerView.h"
 #import "TGEmbedSoundCloudPlayerView.h"
+#import "TGEmbedTwitchPlayerView.h"
 #import "TGEmbedVideoPlayerView.h"
 
 #import <libkern/OSAtomic.h>
@@ -844,6 +845,7 @@
             [TGEmbedVinePlayerView class],
             [TGEmbedInstagramPlayerView class],
             [TGEmbedSoundCloudPlayerView class],
+            [TGEmbedTwitchPlayerView class],
             [TGEmbedVideoPlayerView class]
         ];
     });

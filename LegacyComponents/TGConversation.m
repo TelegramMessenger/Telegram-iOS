@@ -524,6 +524,7 @@
         _pinnedDate = [coder decodeInt32ForCKey:"pdt"];
         _channelAdminRights = [coder decodeObjectForCKey:"car"];
         _channelBannedRights = [coder decodeObjectForCKey:"cbr"];
+        _messageFlags = [coder decodeInt64ForCKey:"mf"];
     }
     return self;
 }
@@ -573,6 +574,7 @@
     [coder encodeInt32:_chatCreationDate forCKey:"ccd"];
     [coder encodeObject:_channelAdminRights forCKey:"car"];
     [coder encodeObject:_channelBannedRights forCKey:"cbr"];
+    [coder encodeInt64:_messageFlags forCKey:"mf"];
 }
 
 - (id)copyWithZone:(NSZone *)__unused zone
@@ -634,10 +636,13 @@
     conversation.pinnedMessageId = _pinnedMessageId;
     
     conversation->_draft = _draft;
+    conversation->_unreadMentionCount = _unreadMentionCount;
     conversation.pinnedDate = _pinnedDate;
     
     conversation->_channelAdminRights = _channelAdminRights;
     conversation->_channelBannedRights = _channelBannedRights;
+    
+    conversation->_messageFlags = _messageFlags;
     
     return conversation;
 }
@@ -668,6 +673,7 @@
     _unread = [self isMessageUnread:message];
     _deliveryError = message.deliveryState == TGMessageDeliveryStateFailed;
     _deliveryState = message.deliveryState;
+    _messageFlags = message.flags;
 }
 
 - (void)mergeEmptyMessage {
@@ -678,6 +684,7 @@
     _unread = false;
     _deliveryError = false;
     _deliveryState = TGMessageDeliveryStateDelivered;
+    _messageFlags = 0;
 }
 
 - (NSData *)mediaData
@@ -756,6 +763,10 @@
     }
     
     if (!TGObjectCompare(_draft, other->_draft)) {
+        return false;
+    }
+    
+    if (_unreadMentionCount != other->_unreadMentionCount) {
         return false;
     }
     
@@ -838,7 +849,7 @@
     
     int32_t magic = 0x7acde441;
     [data appendBytes:&magic length:4];
-    int32_t version = 7;
+    int32_t version = 8;
     [data appendBytes:&version length:4];
     
     for (int i = 0; i < 3; i++)
@@ -878,6 +889,8 @@
     
     [data appendBytes:&_messageDate length:4];
     [data appendBytes:&_minMessageDate length:4];
+    
+    [data appendBytes:&_messageFlags length:8];
     
     return data;
 }
@@ -967,6 +980,11 @@
                             [data getBytes:&_minMessageDate range:NSMakeRange(ptr, 4)];
                             ptr += 4;
                         }
+                    }
+                    
+                    if (version >= 8) {
+                        [data getBytes:&_messageFlags range:NSMakeRange(ptr, 8)];
+                        ptr += 8;
                     }
                 }
             }

@@ -35,7 +35,8 @@ typedef enum {
     TGMessageFlagForceReply = (1 << 7),
     TGMessageFlagLayerMaskExtended = 0xff << 8,
     TGMessageFlagSilent = (1 << 16),
-    TGMessageFlagEdited = (1 << 17)
+    TGMessageFlagEdited = (1 << 17),
+    TGMessageFlagContainsUnseenMention = (1 << 18)
 } TGMessageFlags;
 
 
@@ -244,6 +245,19 @@ typedef enum {
     return _flags & TGMessageFlagContainsMention;
 }
 
+- (void)setContainsUnseenMention:(bool)containsUnseenMention
+{
+    if (containsUnseenMention)
+        _flags |= TGMessageFlagContainsUnseenMention;
+    else
+        _flags &= (~TGMessageFlagContainsUnseenMention);
+}
+
+- (bool)containsUnseenMention
+{
+    return _flags & TGMessageFlagContainsUnseenMention;
+}
+
 + (NSUInteger)layerFromFlags:(int64_t)flags
 {
     int32_t layerLow = (int32_t)((flags & TGMessageFlagLayerMask) >> 1);
@@ -252,6 +266,10 @@ typedef enum {
     if (value < 1)
         value = 1;
     return value;
+}
+
++ (bool)containsUnseenMention:(int64_t)flags {
+    return flags & TGMessageFlagContainsUnseenMention;
 }
 
 - (int64_t)forwardPeerId
@@ -1125,6 +1143,20 @@ typedef enum {
             TGDocumentMediaAttachment *documentMedia = media;
             if (documentMedia.documentId == 0 && documentMedia.localDocumentId == 0) {
                 return true;
+            }
+        }
+    }
+    return false;
+}
+
+- (bool)hasUnreadContent {
+    if (self.contentProperties[@"contentsRead"] == nil) {
+        for (id media in self.mediaAttachments) {
+            if ([media isKindOfClass:[TGDocumentMediaAttachment class]]) {
+                TGDocumentMediaAttachment *document = media;
+                if ([document isVoice] || [document isRoundVideo]) {
+                    return true;
+                }
             }
         }
     }

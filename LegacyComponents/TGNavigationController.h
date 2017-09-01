@@ -26,6 +26,7 @@ typedef enum {
 @property (nonatomic) bool showCallStatusBar;
 
 @property (nonatomic) CGFloat currentAdditionalNavigationBarHeight;
+@property (nonatomic) bool forceAdditionalNavigationBarHeight;
 
 + (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers;
 + (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers navigationBarClass:(Class)navigationBarClass;
@@ -36,6 +37,7 @@ typedef enum {
 - (void)setupNavigationBarForController:(UIViewController *)viewController animated:(bool)animated;
 
 - (void)updateControllerLayout:(bool)animated;
+- (void)updatePlayerOnControllers;
 
 - (void)acquireRotationLock;
 - (void)releaseRotationLock;

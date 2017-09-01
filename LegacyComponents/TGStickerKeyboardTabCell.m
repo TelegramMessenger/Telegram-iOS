@@ -5,6 +5,8 @@
 #import "TGDocumentMediaAttachment.h"
 #import "TGStringUtils.h"
 
+#import "TGLetteredAvatarView.h"
+
 #import <LegacyComponents/TGImageView.h>
 
 static void setViewFrame(UIView *view, CGRect frame)
@@ -19,7 +21,9 @@ static void setViewFrame(UIView *view, CGRect frame)
 @interface TGStickerKeyboardTabCell ()
 {
     TGImageView *_imageView;
+    TGLetteredAvatarView *_avatarView;
     TGStickerKeyboardViewStyle _style;
+    bool _favorite;
     bool _recent;
 }
 
@@ -52,17 +56,16 @@ static void setViewFrame(UIView *view, CGRect frame)
     [_imageView reset];
 }
 
-- (void)_updateRecentIcon
+- (void)_updateIcon:(UIImage *)image
 {
-    UIImage *recentTabImage = TGComponentsImageNamed(@"StickerKeyboardRecentTab.png");
     if (_style == TGStickerKeyboardViewPaintDarkStyle)
     {
         UIColor *color = self.selected ? [UIColor blackColor] : UIColorRGB(0xb4b5b5);
-        _imageView.image = TGTintedImage(recentTabImage, color);
+        _imageView.image = TGTintedImage(image, color);
     }
     else
     {
-        _imageView.image = recentTabImage;
+        _imageView.image = image;
     }
 }
 
@@ -71,22 +74,46 @@ static void setViewFrame(UIView *view, CGRect frame)
     [super setSelected:selected];
     
     if (_recent)
-        [self _updateRecentIcon];
+         [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardRecentTab.png")];
+    else if (_favorite)
+         [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardFavoriteTab.png")];
+}
+
+- (void)setFavorite
+{
+    _recent = false;
+    _favorite = true;
+    
+    _avatarView.hidden = true;
+    _imageView.hidden = false;
+    
+    [_imageView reset];
+    _imageView.contentMode = UIViewContentModeCenter;
+    
+    [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardFavoriteTab.png")];
 }
 
 - (void)setRecent
 {
     _recent = true;
+    _favorite = false;
+    
+    _avatarView.hidden = true;
+    _imageView.hidden = false;
     
     [_imageView reset];
     _imageView.contentMode = UIViewContentModeCenter;
     
-    [self _updateRecentIcon];
+    [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardRecentTab.png")];
 }
 
 - (void)setNone
 {
     _recent = false;
+    _favorite = false;
+    
+    _avatarView.hidden = true;
+    _imageView.hidden = false;
     
     [_imageView reset];
     _imageView.image = nil;
@@ -95,7 +122,10 @@ static void setViewFrame(UIView *view, CGRect frame)
 - (void)setDocumentMedia:(TGDocumentMediaAttachment *)documentMedia
 {
     _recent = false;
+    _favorite = false;
     
+    _avatarView.hidden = true;
+    _imageView.hidden = false;
     _imageView.contentMode = UIViewContentModeScaleAspectFit;
     
     NSMutableString *uri = [[NSMutableString alloc] initWithString:@"sticker-preview://?"];
@@ -114,6 +144,55 @@ static void setViewFrame(UIView *view, CGRect frame)
     [uri appendFormat:@"&highQuality=1"];
     
     [_imageView loadUri:uri withOptions:nil];
+}
+
+- (void)setUrl:(NSString *)avatarUrl peerId:(int64_t)peerId title:(NSString *)title
+{
+    _recent = false;
+    _favorite = false;
+    
+    _imageView.contentMode = UIViewContentModeScaleAspectFit;
+    
+    CGFloat diameter = 32.0f;
+    
+    static UIImage *placeholder = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
+    {
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(diameter, diameter), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        
+        //!placeholder
+        CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+        CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
+        CGContextSetStrokeColorWithColor(context, UIColorRGB(0xd9d9d9).CGColor);
+        CGContextSetLineWidth(context, 1.0f);
+        CGContextStrokeEllipseInRect(context, CGRectMake(0.5f, 0.5f, diameter - 1.0f, diameter - 1.0f));
+        
+        placeholder = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    });
+    
+    if (_avatarView == nil)
+    {
+        _avatarView = [[TGLetteredAvatarView alloc] initWithFrame:_imageView.frame];
+        [_avatarView setSingleFontSize:18.0f doubleFontSize:18.0f useBoldFont:false];
+        [_imageView.superview addSubview:_avatarView];
+    }
+    
+    if (avatarUrl.length != 0)
+    {
+        _avatarView.fadeTransitionDuration = 0.3;
+        if (![avatarUrl isEqualToString:_avatarView.currentUrl])
+            [_avatarView loadImage:avatarUrl filter:@"circle:32x32" placeholder:placeholder];
+    }
+    else
+    {
+        [_avatarView loadGroupPlaceholderWithSize:CGSizeMake(diameter, diameter) conversationId:peerId title:title placeholder:placeholder];
+    }
+    
+    _avatarView.hidden = false;
+    _imageView.hidden = true;
 }
 
 - (void)setStyle:(TGStickerKeyboardViewStyle)style
@@ -143,7 +222,9 @@ static void setViewFrame(UIView *view, CGRect frame)
             self.selectedBackgroundView.clipsToBounds = true;
             
             if (_recent)
-                [self _updateRecentIcon];
+                [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardRecentTab.png")];
+            else if (_favorite)
+                [self _updateIcon:TGComponentsImageNamed(@"StickerKeyboardFavoriteTab.png")];
         }
             break;
             
@@ -163,6 +244,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     transform = CGAffineTransformScale(transform, innerAlpha, innerAlpha);
     
     _imageView.transform = transform;
+    _avatarView.transform = transform;
     self.selectedBackgroundView.transform = transform;
 }
 
@@ -176,11 +258,13 @@ static void setViewFrame(UIView *view, CGRect frame)
     {
         imageSide = 28.0f;
         setViewFrame(_imageView, CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 4.0f, imageSide, imageSide));
+        setViewFrame(_avatarView, CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 4.0f, imageSide, imageSide));
         setViewFrame(self.selectedBackgroundView, CGRectMake(floor((self.frame.size.width - 36.0f) / 2.0f), 0, 36.0f, 36.0f));
     }
     else
     {
         _imageView.frame = CGRectMake(CGFloor((self.frame.size.width - imageSide) / 2.0f), 6.0f, imageSide, imageSide);
+        _avatarView.frame = _imageView.frame;
         
         if (_style == TGStickerKeyboardViewPaintStyle)
         {

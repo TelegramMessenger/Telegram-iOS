@@ -203,6 +203,7 @@ typedef enum {
 @property (nonatomic, strong) NSString *text;
 @property (nonatomic, strong) NSArray *media;
 @property (nonatomic, strong) NSData *mediaData;
+@property (nonatomic) int64_t messageFlags;
 
 @property (nonatomic) int unreadCount;
 @property (nonatomic) int serviceUnreadCount;
@@ -260,6 +261,7 @@ typedef enum {
 @property (nonatomic, strong) TGEncryptedConversationData *encryptedData;
 
 @property (nonatomic, strong, readonly) TGDatabaseMessageDraft *draft;
+@property (nonatomic) int32_t unreadMentionCount;
 
 @property (nonatomic, readonly) int32_t date;
 @property (nonatomic, readonly) int32_t unpinnedDate;

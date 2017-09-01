@@ -212,6 +212,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 @property (nonatomic, readonly) int64_t forwardPeerId;
 
 @property (nonatomic) bool containsMention;
+@property (nonatomic) bool containsUnseenMention;
 
 @property (nonatomic, strong) TGActionMediaAttachment *actionInfo;
 
@@ -256,6 +257,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 + (NSData *)serializeAttachment:(TGMediaAttachment *)attachment;
 + (NSArray *)parseMediaAttachments:(NSData *)data;
 + (NSUInteger)layerFromFlags:(int64_t)flags;
++ (bool)containsUnseenMention:(int64_t)flags;
 
 - (NSData *)serializeContentProperties;
 + (NSData *)serializeContentProperties:(NSDictionary *)contentProperties;
@@ -265,6 +267,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 
 - (void)filterOutExpiredMedia;
 - (bool)hasExpiredMedia;
+- (bool)hasUnreadContent;
 
 @end
 

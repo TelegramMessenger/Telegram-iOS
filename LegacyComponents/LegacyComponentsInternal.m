@@ -169,6 +169,9 @@ static NSBundle *frameworkBundle() {
 }
 
 UIImage *TGComponentsImageNamed(NSString *name) {
+    if (iosMajorVersion() < 8)
+        return [UIImage imageNamed:[NSString stringWithFormat:@"LegacyComponentsResources.bundle/%@", name]];
+    
     UIImage *image = [UIImage imageNamed:name inBundle:frameworkBundle() compatibleWithTraitCollection:nil];
     if (image == nil) {
         assert(true);

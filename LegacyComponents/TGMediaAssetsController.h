@@ -33,6 +33,8 @@ typedef enum
 @property (nonatomic, copy) void (^completionBlock)(NSArray *signals);
 @property (nonatomic, copy) void (^dismissalBlock)(void);
 
+@property (nonatomic, copy) TGViewController *(^requestSearchController)(void);
+
 @property (nonatomic, readonly) TGMediaAssetsPickerController *pickerController;
 
 - (UIBarButtonItem *)rightBarButtonItem;

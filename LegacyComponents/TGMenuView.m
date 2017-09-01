@@ -165,14 +165,21 @@ static UIImage *pagerLeftButtonHighlightedImage() {
     if (title.length == 0)
         title = [self titleForState:UIControlStateNormal];
     
-    if (self.isMultiline)
+    if (title.length > 0)
     {
-        CGSize size = [title sizeWithFont:self.titleLabel.font constrainedToSize:CGSizeMake(self.maxWidth - 18.0f, FLT_MAX) lineBreakMode:NSLineBreakByWordWrapping];
-        self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, ceil(size.width) + 18, MAX(41.0f, ceil(size.height) + 20.0f));
+        if (self.isMultiline)
+        {
+            CGSize size = [title sizeWithFont:self.titleLabel.font constrainedToSize:CGSizeMake(self.maxWidth - 18.0f, FLT_MAX) lineBreakMode:NSLineBreakByWordWrapping];
+            self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, ceil(size.width) + 18, MAX(41.0f, ceil(size.height) + 20.0f));
+        }
+        else
+        {
+            self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, [title sizeWithFont:self.titleLabel.font].width + 34, 41);
+        }
     }
     else
     {
-        self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, [title sizeWithFont:self.titleLabel.font].width + 34, 41);
+        self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, self.imageView.frame.size.width + 24.0f, 41);
     }
 }
 
@@ -304,6 +311,8 @@ static UIImage *pagerLeftButtonHighlightedImage() {
         else if ([titleValue isKindOfClass:[NSAttributedString class]])
             attributedTitle = titleValue;
         
+        id imageValue = [dict objectForKey:@"image"];
+        
         TGMenuButtonView *buttonView = nil;
         
         if (index < (int)_buttonViews.count)
@@ -335,6 +344,13 @@ static UIImage *pagerLeftButtonHighlightedImage() {
             [buttonView setTitle:title forState:UIControlStateNormal];
         else if (attributedTitle)
             [buttonView setAttributedTitle:attributedTitle forState:UIControlStateNormal];
+        
+        if ([imageValue isKindOfClass:[UIImage class]])
+        {
+            [buttonView setImage:imageValue forState:UIControlStateNormal];
+            //buttonView.imageEdgeInsets = UIEdgeInsetsMake(0.0f, 10.0f, 0.0f, 10.0f);
+        }
+        
         buttonView.selected = false;
     }
     

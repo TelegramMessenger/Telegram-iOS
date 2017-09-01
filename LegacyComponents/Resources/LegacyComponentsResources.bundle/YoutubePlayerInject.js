@@ -13,7 +13,7 @@ function fixChrome() {
 }
 
 function initial() {
-    var css = 'video::-webkit-media-controls { display:none !important; }',
+    var css = 'video::-webkit-media-controls { display: none !important } video::--webkit-media-controls-play-button { display: none !important; -webkit-appearance: none; } video::-webkit-media-controls-start-playback-button { display: none !important; -webkit-appearance: none; }',
     head = document.head || document.getElementsByTagName('head')[0],
     style = document.createElement('style');
     

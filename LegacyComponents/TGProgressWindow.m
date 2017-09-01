@@ -243,7 +243,7 @@ static bool TGProgressWindowIsLight = true;
     self = [super initWithFrame:frame];
     if (self)
     {
-        self.windowLevel = UIWindowLevelStatusBar + 10000000.0f;
+        self.windowLevel = UIWindowLevelStatusBar;
         self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         
         TGProgressWindowController *controller = [[TGProgressWindowController alloc] init:TGProgressWindowIsLight];
