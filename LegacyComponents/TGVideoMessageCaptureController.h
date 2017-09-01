@@ -2,6 +2,16 @@
 
 @class TGVideoEditAdjustments;
 
+@interface TGVideoMessageCaptureControllerAssets : NSObject
+
+@property (nonatomic, strong, readonly) UIImage *sendImage;
+@property (nonatomic, strong, readonly) UIImage *slideToCancelImage;
+@property (nonatomic, strong, readonly) UIImage *actionDelete;
+
+- (instancetype)initWithSendImage:(UIImage *)sendImage slideToCancelImage:(UIImage *)slideToCancelImage actionDelete:(UIImage *)actionDelete;
+
+@end
+
 @interface TGVideoMessageCaptureController : TGOverlayController
 
 @property (nonatomic, copy) id (^requestActivityHolder)();
@@ -11,7 +21,7 @@
 @property (nonatomic, copy) void(^onStop)(void);
 @property (nonatomic, copy) void(^onCancel)(void);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface;
 - (void)buttonInteractionUpdate:(CGPoint)value;
 - (void)setLocked;
 

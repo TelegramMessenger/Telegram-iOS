@@ -41,6 +41,20 @@ typedef enum
 
 @end
 
+@implementation TGVideoMessageCaptureControllerAssets
+
+- (instancetype)initWithSendImage:(UIImage *)sendImage slideToCancelImage:(UIImage *)slideToCancelImage actionDelete:(UIImage *)actionDelete {
+    self = [super init];
+    if (self != nil) {
+        _sendImage = sendImage;
+        _slideToCancelImage = slideToCancelImage;
+        _actionDelete = actionDelete;
+    }
+    return self;
+}
+
+@end
+
 @interface TGVideoMessageCaptureController () <TGVideoCameraPipelineDelegate, TGVideoMessageScrubberDataSource, TGVideoMessageScrubberDelegate>
 {
     SQueue *_queue;
@@ -109,6 +123,8 @@ typedef enum
     id<LegacyComponentsContext> _context;
     UIView *(^_transitionInView)();
     id<TGLiveUploadInterface> _liveUploadInterface;
+    
+	TGVideoMessageCaptureControllerAssets *_assets;
 }
 
 @property (nonatomic, copy) bool(^isAlreadyLocked)(void);
@@ -117,7 +133,7 @@ typedef enum
 
 @implementation TGVideoMessageCaptureController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -126,6 +142,7 @@ typedef enum
         _transitionInView = [transitionInView copy];
         self.isAlreadyLocked = isAlreadyLocked;
         _liveUploadInterface = liveUploadInterface;
+        _assets = assets;
         
         _url = [TGVideoMessageCaptureController tempOutputPath];
         _queue = [[SQueue alloc] init];
@@ -223,7 +240,7 @@ typedef enum
     _circleWrapperView.clipsToBounds = false;
     [_wrapperView addSubview:_circleWrapperView];
     
-    _shadowView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"VideoMessageShadow"]];
+    _shadowView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"VideoMessageShadow")];
     _shadowView.frame = _circleWrapperView.bounds;
     [_circleWrapperView addSubview:_shadowView];
     
@@ -245,7 +262,7 @@ typedef enum
     controlsFrame.origin.y = CGRectGetMaxY(controlsFrame) - height;
     controlsFrame.size.height = height;
     
-    _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame];
+    _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame sendImage:[_assets sendImage]];
     _controlsView.clipsToBounds = true;
     _controlsView.parent = self;
     _controlsView.isAlreadyLocked = self.isAlreadyLocked;
@@ -298,7 +315,7 @@ typedef enum
         _switchButton.alpha = 0.0f;
         _switchButton.adjustsImageWhenHighlighted = false;
         _switchButton.adjustsImageWhenDisabled = false;
-        [_switchButton setImage:TGComponentsImageNamed(@"VideoRecordPositionSwitch.png") forState:UIControlStateNormal];
+        [_switchButton setImage:TGComponentsImageNamed(@"VideoRecordPositionSwitch") forState:UIControlStateNormal];
         [_switchButton addTarget:self action:@selector(changeCameraPosition) forControlEvents:UIControlEventTouchUpInside];
         [self.view addSubview:_switchButton];
     }
@@ -1041,7 +1058,7 @@ static UIImage *startImage = nil;
 + (UIImage *)startImage
 {
     if (startImage == nil)
-        startImage = [UIImage imageWithContentsOfFile:[self _startImagePath]] ? : [UIImage imageNamed:@"VideoMessagePlaceholder.jpg"];
+        startImage = [UIImage imageWithContentsOfFile:[self _startImagePath]] ? : TGComponentsImageNamed (@"VideoMessagePlaceholder.jpg");
     
     return startImage;
 }
