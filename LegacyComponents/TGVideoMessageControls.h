@@ -1,6 +1,8 @@
 #import <UIKit/UIKit.h>
 #import <LegacyComponents/TGVideoMessageScrubber.h>
 
+@class TGVideoMessageCaptureControllerAssets;
+
 @interface TGVideoMessageControls : UIView
 
 @property (nonatomic, readonly) TGVideoMessageScrubber *scrubberView;
@@ -16,6 +18,8 @@
 @property (nonatomic, assign) bool positionChangeAvailable;
 
 @property (nonatomic, weak) id<TGVideoMessageScrubberDelegate, TGVideoMessageScrubberDataSource> parent;
+
+- (instancetype)initWithFrame:(CGRect)frame assets:(TGVideoMessageCaptureControllerAssets *)assets;
 
 - (void)captureStarted;
 - (void)recordingStarted;

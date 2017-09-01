@@ -1,6 +1,7 @@
 #import "TGVideoMessageTrimView.h"
 
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
+#import "LegacyComponentsInternal.h"
 
 @interface TGVideoMessageTrimView () <UIGestureRecognizerDelegate>
 {
@@ -33,14 +34,14 @@
         _leftSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 16, 33)];
         _leftSegmentView.exclusiveTouch = true;
         _leftSegmentView.adjustsImageWhenHighlighted = false;
-        [_leftSegmentView setBackgroundImage:[UIImage imageNamed:@"VideoMessageLeftHandle"] forState:UIControlStateNormal];
+        [_leftSegmentView setBackgroundImage:TGComponentsImageNamed(@"VideoMessageLeftHandle") forState:UIControlStateNormal];
         _leftSegmentView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -10);
         [self addSubview:_leftSegmentView];
         
         _rightSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 16, 33)];
         _rightSegmentView.exclusiveTouch = true;
         _rightSegmentView.adjustsImageWhenHighlighted = false;
-        [_rightSegmentView setBackgroundImage:[UIImage imageNamed:@"VideoMessageRightHandle"] forState:UIControlStateNormal];
+        [_rightSegmentView setBackgroundImage:TGComponentsImageNamed(@"VideoMessageRightHandle") forState:UIControlStateNormal];
         _rightSegmentView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -10, -5, -25);
         [self addSubview:_rightSegmentView];
         

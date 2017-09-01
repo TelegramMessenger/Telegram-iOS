@@ -9,6 +9,8 @@
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
 
+#import "TGVideoMessageCaptureController.h"
+
 static void setViewFrame(UIView *view, CGRect frame)
 {
     CGAffineTransform transform = view.transform;
@@ -42,10 +44,20 @@ static CGRect viewFrame(UIView *view)
     UILabel *_recordDurationLabel;
     
     CFAbsoluteTime _recordingInterfaceShowTime;
+    
+	TGVideoMessageCaptureControllerAssets *_assets;
 }
 @end
 
 @implementation TGVideoMessageControls
+
+- (instancetype)initWithFrame:(CGRect)frame assets:(TGVideoMessageCaptureControllerAssets *)assets {
+    self = [super initWithFrame:frame];
+    if (self != nil) {
+        _assets = assets;
+    }
+    return self;
+}
 
 - (void)captureStarted
 {
@@ -117,7 +129,7 @@ static CGRect viewFrame(UIView *view)
             setViewFrame(_slideToCancelLabel, CGRectMake(CGFloor((self.frame.size.width - _slideToCancelLabel.frame.size.width) / 2.0f), CGFloor((self.frame.size.height - _slideToCancelLabel.frame.size.height) / 2.0f), _slideToCancelLabel.frame.size.width, _slideToCancelLabel.frame.size.height));
             _slideToCancelLabel.alpha = 0.0f;
             
-            _slideToCancelArrow = [[UIImageView alloc] initWithImage:TGTintedImage([UIImage imageNamed:@"ModernConversationAudioSlideToCancel.png"], UIColorRGB(0x9597a0))];
+            _slideToCancelArrow = [[UIImageView alloc] initWithImage:TGTintedImage(_assets.slideToCancelImage, UIColorRGB(0x9597a0))];
             CGRect slideToCancelArrowFrame = viewFrame(_slideToCancelArrow);
             setViewFrame(_slideToCancelArrow, CGRectMake(CGFloor((self.frame.size.width - _slideToCancelLabel.frame.size.width) / 2.0f) - slideToCancelArrowFrame.size.width - 7.0f, CGFloor((self.frame.size.height - _slideToCancelLabel.frame.size.height) / 2.0f), slideToCancelArrowFrame.size.width, slideToCancelArrowFrame.size.height));
             _slideToCancelArrow.alpha = 0.0f;
@@ -313,7 +325,7 @@ static CGRect viewFrame(UIView *view)
 
 - (void)setStopped
 {
-    UIImage *deleteImage = [UIImage imageNamed:@"ModernConversationActionDelete.png"];
+    UIImage *deleteImage = _assets.actionDelete;
     
     _deleteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 45.0f, 45.0f)];
     [_deleteButton setImage:deleteImage forState:UIControlStateNormal];
@@ -331,7 +343,7 @@ static CGRect viewFrame(UIView *view)
     _sendButton = sendButton;
     _sendButton.alpha = 0.0f;
     _sendButton.exclusiveTouch = true;
-    [_sendButton setImage:[UIImage imageNamed:@"ModernConversationSend"] forState:UIControlStateNormal];
+    [_sendButton setImage:_assets.sendImage forState:UIControlStateNormal];
     _sendButton.adjustsImageWhenHighlighted = false;
     [_sendButton addTarget:self action:@selector(sendButtonPressed) forControlEvents:UIControlEventTouchUpInside];
     [self addSubview:_sendButton];

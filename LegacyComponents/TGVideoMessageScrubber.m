@@ -82,10 +82,10 @@ typedef enum
         _summaryThumbnailWrapperView.clipsToBounds = true;
         [_wrapperView addSubview:_summaryThumbnailWrapperView];
         
-        _leftMaskView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"VideoMessageScrubberLeftMask"]];
+        _leftMaskView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"VideoMessageScrubberLeftMask")];
         [_wrapperView addSubview:_leftMaskView];
         
-        _rightMaskView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"VideoMessageScrubberRightMask"]];
+        _rightMaskView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"VideoMessageScrubberRightMask")];
         [_wrapperView addSubview:_rightMaskView];
         
         _leftCurtainView = [[UIView alloc] init];
