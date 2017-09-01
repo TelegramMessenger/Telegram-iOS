@@ -1131,6 +1131,8 @@
 		D07BCBFC1F2B757700ED97AA /* TGEmbedPIPScrubber.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCBFA1F2B757700ED97AA /* TGEmbedPIPScrubber.m */; };
 		D07BCC051F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCC031F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D07BCC061F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCC041F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m */; };
+		D0B6D3E01F5986DD003BBB35 /* TGModernConversationInputMicButton.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B6D3DE1F5986DD003BBB35 /* TGModernConversationInputMicButton.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0B6D3E11F5986DD003BBB35 /* TGModernConversationInputMicButton.m in Sources */ = {isa = PBXBuildFile; fileRef = D0B6D3DF1F5986DD003BBB35 /* TGModernConversationInputMicButton.m */; };
 		D0F7C9C41F55DA49005B255A /* TGVideoCameraMovieRecorder.h in Headers */ = {isa = PBXBuildFile; fileRef = D0F7C9C21F55DA49005B255A /* TGVideoCameraMovieRecorder.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0F7C9C51F55DA49005B255A /* TGVideoCameraMovieRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F7C9C31F55DA49005B255A /* TGVideoCameraMovieRecorder.m */; };
 		D0F7C9C81F55DA83005B255A /* TGVideoCameraGLRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = D0F7C9C61F55DA83005B255A /* TGVideoCameraGLRenderer.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -2265,6 +2267,8 @@
 		D07BCBFA1F2B757700ED97AA /* TGEmbedPIPScrubber.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGEmbedPIPScrubber.m; sourceTree = "<group>"; };
 		D07BCC031F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGModernConversationTitleActivityIndicator.h; sourceTree = "<group>"; };
 		D07BCC041F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGModernConversationTitleActivityIndicator.m; sourceTree = "<group>"; };
+		D0B6D3DE1F5986DD003BBB35 /* TGModernConversationInputMicButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGModernConversationInputMicButton.h; sourceTree = "<group>"; };
+		D0B6D3DF1F5986DD003BBB35 /* TGModernConversationInputMicButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGModernConversationInputMicButton.m; sourceTree = "<group>"; };
 		D0EB42021F3142F400838FE6 /* LegacyComponentsResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = LegacyComponentsResources.bundle; path = Resources/LegacyComponentsResources.bundle; sourceTree = "<group>"; };
 		D0F7C9C21F55DA49005B255A /* TGVideoCameraMovieRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoCameraMovieRecorder.h; sourceTree = "<group>"; };
 		D0F7C9C31F55DA49005B255A /* TGVideoCameraMovieRecorder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGVideoCameraMovieRecorder.m; sourceTree = "<group>"; };
@@ -3704,6 +3708,8 @@
 		D0F7C9C11F55DA29005B255A /* Video Message */ = {
 			isa = PBXGroup;
 			children = (
+				D0B6D3DE1F5986DD003BBB35 /* TGModernConversationInputMicButton.h */,
+				D0B6D3DF1F5986DD003BBB35 /* TGModernConversationInputMicButton.m */,
 				D042690B1F586B140037ECE8 /* TGVideoMessageControls.h */,
 				D042690C1F586B140037ECE8 /* TGVideoMessageControls.m */,
 				D0F7C9C61F55DA83005B255A /* TGVideoCameraGLRenderer.h */,
@@ -3893,6 +3899,7 @@
 				D07BC8C91F2A37EC00ED97AA /* TGPhotoPaintScrollView.h in Headers */,
 				D07BCBB51F2B6F6300ED97AA /* CBCoubLoopCompositionMaker.h in Headers */,
 				D07BC9351F2A3BD100ED97AA /* TGPhotoTextEntityView.h in Headers */,
+				D0B6D3E01F5986DD003BBB35 /* TGModernConversationInputMicButton.h in Headers */,
 				D07BCBAC1F2B6F6300ED97AA /* CBConstance.h in Headers */,
 				D07BCC051F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h in Headers */,
 				D01778391F1F961D0044446D /* TGAudioWaveform.h in Headers */,
@@ -4534,6 +4541,7 @@
 				D07BCB711F2B6A5600ED97AA /* TGEmbedVinePlayerView.m in Sources */,
 				D07BCA0A1F2A9A2B00ED97AA /* TGMediaPickerGalleryVideoScrubber.m in Sources */,
 				D07BC9861F2A472900ED97AA /* TGPhotoStickersCollectionView.m in Sources */,
+				D0B6D3E11F5986DD003BBB35 /* TGModernConversationInputMicButton.m in Sources */,
 				D01778EC1F20CAE60044446D /* TGViewController+TGRecursiveEnumeration.m in Sources */,
 				D01777561F1F8FE60044446D /* PSKeyValueCoder.m in Sources */,
 				D07BC83C1F2A2D0C00ED97AA /* TGSecretTimerValueControllerItemView.m in Sources */,
