@@ -40,6 +40,7 @@ VoIPControllerWrapper::VoIPControllerWrapper(){
 	controller=new VoIPController();
 	controller->implData=(void*)this;
 	controller->SetStateCallback(VoIPControllerWrapper::OnStateChanged);
+	controller->SetSignalBarsCountCallback(VoIPControllerWrapper::OnSignalBarsChanged);
 	stateCallback=nullptr;
 }
 
@@ -136,9 +137,18 @@ void VoIPControllerWrapper::OnStateChanged(VoIPController* c, int state){
 	reinterpret_cast<VoIPControllerWrapper^>(c->implData)->OnStateChangedInternal(state);
 }
 
+void VoIPControllerWrapper::OnSignalBarsChanged(VoIPController* c, int count){
+	reinterpret_cast<VoIPControllerWrapper^>(c->implData)->OnSignalBarsChangedInternal(count);
+}
+
 void VoIPControllerWrapper::OnStateChangedInternal(int state){
 	if(stateCallback)
 		stateCallback->OnCallStateChanged((CallState)state);
+}
+
+void VoIPControllerWrapper::OnSignalBarsChangedInternal(int count){
+	if(stateCallback)
+		stateCallback->OnSignalBarsChanged(count);
 }
 
 void VoIPControllerWrapper::SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath){

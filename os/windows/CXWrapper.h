@@ -60,6 +60,7 @@ namespace libtgvoip{
 
 	public interface class IStateCallback{
 		void OnCallStateChanged(CallState newState);
+		void OnSignalBarsChanged(int count);
 	};
 
     public ref class VoIPControllerWrapper sealed{
@@ -85,7 +86,9 @@ namespace libtgvoip{
 		//static Platform::String^ TestAesIge();
 	private:
 		static void OnStateChanged(tgvoip::VoIPController* c, int state);
+		static void OnSignalBarsChanged(tgvoip::VoIPController* c, int count);
 		void OnStateChangedInternal(int state);
+		void OnSignalBarsChangedInternal(int count);
 		tgvoip::VoIPController* controller;
 		IStateCallback^ stateCallback;
     };
