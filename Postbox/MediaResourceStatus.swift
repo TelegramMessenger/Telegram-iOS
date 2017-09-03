@@ -30,7 +30,7 @@ public func ==(lhs: MediaResourceStatus, rhs: MediaResourceStatus) -> Bool {
         case let .Fetching(lhsProgress):
             switch rhs {
                 case let .Fetching(rhsProgress):
-                    return abs(lhsProgress - rhsProgress) < FLT_EPSILON
+                    return lhsProgress.isEqual(to: rhsProgress)
                 default:
                     return false
             }
