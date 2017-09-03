@@ -6,11 +6,6 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public enum PreloadedMessageHistoryView {
-    case Loading
-    case Preloaded(MessageHistoryView)
-}
-
 public protocol PeerChatState: PostboxCoding {
     func equals(_ other: PeerChatState) -> Bool
 }
