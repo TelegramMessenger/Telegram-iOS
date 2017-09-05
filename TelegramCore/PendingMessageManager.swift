@@ -30,7 +30,7 @@ private final class PendingMessageContext {
 }
 
 private final class PeerPendingMessagesSummaryContext {
-    var messageDeliveredSubscribers = Bag<(Void) -> Void>()
+    var messageDeliveredSubscribers = Bag<() -> Void>()
 }
 
 private enum PendingMessageResult {
