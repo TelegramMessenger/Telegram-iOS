@@ -167,10 +167,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     }
     switch chatPresentationInterfaceState.inputMode {
         case .media, .inputButtons:
-            return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
+            return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
             if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
-                return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
+                return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.isEmpty {
                     var accessoryItems: [ChatTextInputAccessoryItem] = []
@@ -181,9 +181,9 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup {
                         accessoryItems.append(.inputButtons)
                     }
-                    return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
+                    return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
                 } else {
-                    return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
+                    return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
                 }
             }
     }

@@ -23,6 +23,9 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
     
     override init() {
         self.scrollView = UIScrollView()
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+        }
         
         super.init()
         

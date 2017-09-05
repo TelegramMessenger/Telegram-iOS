@@ -382,10 +382,10 @@ final class ChatListNode: ListView {
     
     func scrollToLatest() {
         if let view = self.chatListView?.originalView, view.laterIndex == nil {
-            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         } else {
             let location: ChatListNodeLocation = .scroll(index: ChatListIndex.absoluteUpperBound, sourceIndex: ChatListIndex.absoluteLowerBound
-                , scrollPosition: .Top, animated: true)
+                , scrollPosition: .top(0.0), animated: true)
             self.currentLocation = location
             self.chatListLocation.set(location)
         }

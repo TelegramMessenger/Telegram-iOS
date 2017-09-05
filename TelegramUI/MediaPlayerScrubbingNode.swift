@@ -85,6 +85,7 @@ private final class MediaPlayerScrubbingForegroundNode: ASDisplayNode {
 }
 
 final class MediaPlayerScrubbingNode: ASDisplayNode {
+    private let lineCap: MediaPlayerScrubbingNodeCap
     private let lineHeight: CGFloat
     
     private let backgroundNode: ASImageNode
@@ -120,20 +121,21 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
     }
     
     private var statusDisposable: Disposable?
-    private var statusValuePromise = Promise<MediaPlayerStatus>()
+    private var statusValuePromise = Promise<MediaPlayerStatus?>()
     
     var status: Signal<MediaPlayerStatus, NoError>? {
         didSet {
             if let status = self.status {
-                self.statusValuePromise.set(status)
+                self.statusValuePromise.set(status |> map { $0 })
             } else {
-                self.statusValuePromise.set(.never())
+                self.statusValuePromise.set(.single(nil))
             }
         }
     }
     
     init(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, scrubberHandle: Bool, backgroundColor: UIColor, foregroundColor: UIColor) {
         self.lineHeight = lineHeight
+        self.lineCap = lineCap
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
@@ -234,6 +236,20 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
     }
     
+    func updateColors(backgroundColor: UIColor, foregroundColor: UIColor) {
+        switch lineCap {
+            case .round:
+                self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: backgroundColor)
+                self.foregroundContentNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: foregroundColor)
+            case .square:
+                self.backgroundNode.backgroundColor = backgroundColor
+                self.foregroundContentNode.backgroundColor = foregroundColor
+        }
+        if let handleNode = self.handleNode as? ASImageNode {
+            handleNode.image = generateHandleBackground(color: foregroundColor)
+        }
+    }
+    
     private func preparedAnimation(keyPath: String, from: NSValue, to: NSValue, duration: Double, beginTime: Double?, offset: Double, speed: Float, repeatForever: Bool = false) -> CAAnimation {
         let animation = CABasicAnimation(keyPath: keyPath)
         animation.fromValue = from
@@ -244,7 +260,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         animation.speed = speed
         animation.timeOffset = offset
         animation.isAdditive = false
-        animation.repeatCount = Float.infinity
+        //animation.repeatCount = Float.infinity
         if let beginTime = beginTime {
             animation.beginTime = beginTime
         }

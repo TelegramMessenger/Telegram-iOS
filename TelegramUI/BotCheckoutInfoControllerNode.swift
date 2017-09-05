@@ -41,6 +41,18 @@ private final class BotCheckoutInfoAddressItems {
 private final class BotCheckoutInfoControllerScrollerNodeView: UIScrollView {
     var ignoreUpdateBounds = false
     
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.contentInsetAdjustmentBehavior = .never
+        }
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override var bounds: CGRect {
         get {
             return super.bounds
@@ -64,7 +76,7 @@ private final class BotCheckoutInfoControllerScrollerNode: ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            return BotCheckoutInfoControllerScrollerNodeView()
+            return BotCheckoutInfoControllerScrollerNodeView(frame: CGRect())
         })
     }
 }

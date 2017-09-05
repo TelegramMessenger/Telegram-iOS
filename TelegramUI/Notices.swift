@@ -2,14 +2,14 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-final class ApplicationSpecificBoolNotice: Coding {
+final class ApplicationSpecificBoolNotice: PostboxCoding {
     init() {
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
     }
 }
 

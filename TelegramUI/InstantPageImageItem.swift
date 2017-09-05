@@ -1,12 +1,8 @@
 import Foundation
+import Postbox
 import TelegramCore
 
-enum InstantPageMediaArguments {
-    case image(interactive: Bool, roundCorners: Bool, fit: Bool)
-    case video(interactive: Bool, autoplay: Bool)
-}
-
-final class InstantPageMediaItem: InstantPageItem {
+final class InstantPageImageItem: InstantPageItem {
     var frame: CGRect
     
     let media: InstantPageMedia
@@ -14,19 +10,22 @@ final class InstantPageMediaItem: InstantPageItem {
         return [self.media]
     }
     
-    let arguments: InstantPageMediaArguments
+    let interactive: Bool
+    let roundCorners: Bool
+    let fit: Bool
     
     let wantsNode: Bool = true
-    let hasLinks: Bool = false
     
-    init(frame: CGRect, media: InstantPageMedia, arguments: InstantPageMediaArguments) {
+    init(frame: CGRect, media: InstantPageMedia, interactive: Bool, roundCorners: Bool, fit: Bool) {
         self.frame = frame
         self.media = media
-        self.arguments = arguments
+        self.interactive = interactive
+        self.roundCorners = roundCorners
+        self.fit = fit
     }
     
-    func node(account: Account) -> InstantPageNode? {
-        return InstantPageMediaNode(account: account, media: self.media, arguments: self.arguments)
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
+        return InstantPageImageNode(account: account, media: self.media, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -34,7 +33,7 @@ final class InstantPageMediaItem: InstantPageItem {
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if let node = node as? InstantPageMediaNode {
+        if let node = node as? InstantPageImageNode {
             return node.media == self.media
         } else {
             return false
@@ -56,7 +55,7 @@ final class InstantPageMediaItem: InstantPageItem {
     func drawInTile(context: CGContext) {
     }
     
-    func linkSelectionViews() -> [InstantPageLinkSelectionView] {
+    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
 }

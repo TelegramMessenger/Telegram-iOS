@@ -19,11 +19,11 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
         self.dataSaving = dataSaving
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.dataSaving = VoiceCallDataSaving(rawValue: decoder.decodeInt32ForKey("ds", orElse: 0))!
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.dataSaving.rawValue, forKey: "ds")
     }
     

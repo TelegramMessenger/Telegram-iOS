@@ -223,6 +223,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
+        }
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         

@@ -10,6 +10,8 @@ import SafariServices
 public class ChatController: TelegramController {
     private var containerLayout = ContainerViewLayout()
     
+    public let v = 1
+    
     private let account: Account
     public let peerId: PeerId
     private let messageId: MessageId?
@@ -65,6 +67,11 @@ public class ChatController: TelegramController {
     private var audioRecorderFeedback: HapticFeedback?
     private var audioRecorder = Promise<ManagedAudioRecorder?>()
     private var audioRecorderDisposable: Disposable?
+    
+    private var videoRecorderValue: InstantVideoController?
+    private var tempVideoRecorderValue: InstantVideoController?
+    private var videoRecorder = Promise<InstantVideoController?>()
+    private var videoRecorderDisposable: Disposable?
     
     private var buttonKeyboardMessageDisposable: Disposable?
     private var cachedDataDisposable: Disposable?
@@ -742,11 +749,11 @@ public class ChatController: TelegramController {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedInputTextPanelState { panelState in
                             if let audioRecorder = audioRecorder {
-                                if panelState.audioRecordingState == nil {
-                                    return panelState.withUpdatedAudioRecordingState(ChatTextInputPanelAudioRecordingState(recorder: audioRecorder))
+                                if panelState.mediaRecordingState == nil {
+                                    return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorder, isLocked: false))
                                 }
                             } else {
-                                return panelState.withUpdatedAudioRecordingState(nil)
+                                return panelState.withUpdatedMediaRecordingState(nil)
                             }
                             return panelState
                         }
@@ -755,6 +762,45 @@ public class ChatController: TelegramController {
                     if let audioRecorder = audioRecorder {
                         audioRecorder.start()
                     }
+                }
+            }
+        })
+        
+        self.videoRecorderDisposable = (self.videoRecorder.get() |> deliverOnMainQueue).start(next: { [weak self] videoRecorder in
+            if let strongSelf = self {
+                if strongSelf.videoRecorderValue !== videoRecorder {
+                    let previousVideoRecorderValue = strongSelf.videoRecorderValue
+                    strongSelf.videoRecorderValue = videoRecorder
+                    
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        $0.updatedInputTextPanelState { panelState in
+                            if let videoRecorder = videoRecorder {
+                                if panelState.mediaRecordingState == nil {
+                                    return panelState.withUpdatedMediaRecordingState(.video(status: .recording(videoRecorder.audioStatus), isLocked: false))
+                                }
+                            } else {
+                                return panelState.withUpdatedMediaRecordingState(nil)
+                            }
+                            return panelState
+                        }
+                    })
+                    
+                    if let videoRecorder = videoRecorder {
+                        videoRecorder.onDismiss = {
+                            if let strongSelf = self {
+                                strongSelf.videoRecorder.set(.single(nil))
+                            }
+                        }
+                        strongSelf.present(videoRecorder, in: .window(.root))
+                    }
+                    
+                    if let previousVideoRecorderValue = previousVideoRecorderValue {
+                        previousVideoRecorderValue.dismissVideo()
+                    }
+                    
+                    /*if let videoRecorder = videoRecorder {
+                        videoRecorder.start()
+                    }*/
                 }
             }
         })
@@ -817,6 +863,7 @@ public class ChatController: TelegramController {
         self.contextQueryState?.1.dispose()
         self.urlPreviewQueryState?.1.dispose()
         self.audioRecorderDisposable?.dispose()
+        self.videoRecorderDisposable?.dispose()
         self.buttonKeyboardMessageDisposable?.dispose()
         self.cachedDataDisposable?.dispose()
         self.resolveUrlDisposable?.dispose()
@@ -898,6 +945,14 @@ public class ChatController: TelegramController {
                                 }
                             })
                         })
+                        if let readStateData = combinedInitialData.readStateData {
+                            let globalRemainingUnreadCount = readStateData.totalUnreadCount - readStateData.unreadCount
+                            if globalRemainingUnreadCount > 0 {
+                                strongSelf.navigationItem.badge = "\(globalRemainingUnreadCount)"
+                            } else {
+                                strongSelf.navigationItem.badge = ""
+                            }
+                        }
                     }
                 }
             }
@@ -1064,14 +1119,14 @@ public class ChatController: TelegramController {
                             insertItems.append(ListViewInsertItem(index: item.index, previousIndex: item.previousIndex, item: item.item, directionHint: item.directionHint == .Down ? .Up : nil))
                         }
                         
-                        let scrollToItem = ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Spring(duration: 0.4), directionHint: .Up)
+                        let scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: 0.4), directionHint: .Up)
                         
                         var stationaryItemRange: (Int, Int)?
                         if let maxInsertedItem = maxInsertedItem {
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, scrolledToIndex: transition.scrolledToIndex), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -1193,10 +1248,17 @@ public class ChatController: TelegramController {
         
         self.chatDisplayNode.navigateButtons.mentionsPressed = { [weak self] in
             if let strongSelf = self, strongSelf.isNodeLoaded {
-                let signal = earliestUnseenPersonalMentionMessage(postbox: strongSelf.account.postbox, peerId: strongSelf.peerId)
-                strongSelf.navigationActionDisposable.set((signal |> take(1) |> deliverOnMainQueue).start(next: { messageId in
-                    if let strongSelf = self, let messageId = messageId {
-                        strongSelf.navigateToMessage(from: nil, to: messageId)
+                let signal = earliestUnseenPersonalMentionMessage(postbox: strongSelf.account.postbox, network: strongSelf.account.network, peerId: strongSelf.peerId)
+                strongSelf.navigationActionDisposable.set((signal |> deliverOnMainQueue).start(next: { result in
+                    if let strongSelf = self {
+                        switch result {
+                            case let .result(messageId):
+                                if let messageId = messageId {
+                                    strongSelf.navigateToMessage(from: nil, to: messageId)
+                                }
+                            case .loading:
+                                break
+                        }
                     }
                 }))
             }
@@ -1522,10 +1584,33 @@ public class ChatController: TelegramController {
             if let strongSelf = self {
                 strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .automatic(returnToPeerId: strongSelf.peerId))), fromMessageId: nil)
             }
-        }, beginAudioRecording: { [weak self] in
-            self?.requestAudioRecorder()
-        }, finishAudioRecording: { [weak self] sendAudio in
-            self?.dismissAudioRecorder(sendAudio: sendAudio)
+        }, beginMediaRecording: { [weak self] isVideo in
+            if let strongSelf = self {
+                if isVideo {
+                    strongSelf.requestVideoRecorder()
+                } else {
+                    strongSelf.requestAudioRecorder()
+                }
+            }
+        }, finishMediaRecording: { [weak self] sendMedia in
+            self?.dismissMediaRecorder(sendMedia: sendMedia)
+        }, stopMediaRecording: { [weak self] in
+            self?.stopMediaRecorder()
+        }, lockMediaRecording: { [weak self] in
+            self?.lockMediaRecorder()
+        }, switchMediaRecordingMode: { [weak self] in
+            self?.updateChatPresentationInterfaceState(interactive: true, {
+                return $0.updatedInterfaceState { current in
+                    let mode: ChatTextInputMediaRecordingButtonMode
+                    switch current.mediaRecordingMode {
+                        case .audio:
+                            mode = .video
+                        case .video:
+                            mode = .audio
+                    }
+                    return current.withUpdatedMediaRecordingMode(mode)
+                }
+            })
         }, setupMessageAutoremoveTimeout: { [weak self] in
             if let strongSelf = self, strongSelf.peerId.namespace == Namespaces.Peer.SecretChat {
                 strongSelf.chatDisplayNode.dismissInput()
@@ -1645,16 +1730,29 @@ public class ChatController: TelegramController {
                     } |> switchToLatest).start()
                 }
             }
+        }, presentController: { [weak self] controller in
+            self?.present(controller, in: .window(.root))
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
-        self.chatUnreadCountDisposable = (self.account.postbox.unreadMessageCountsView(items: [.peer(self.peerId)]) |> deliverOnMainQueue).start(next: { [weak self] items in
+        self.chatUnreadCountDisposable = (self.account.postbox.unreadMessageCountsView(items: [.peer(self.peerId), .total]) |> deliverOnMainQueue).start(next: { [weak self] items in
             if let strongSelf = self {
                 var unreadCount: Int32 = 0
                 if let count = items.count(for: .peer(strongSelf.peerId)) {
                     unreadCount = count
                 }
+                var totalCount: Int32 = 0
+                if let count = items.count(for: .total) {
+                    totalCount = count
+                }
                 
                 strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
+                
+                let globalRemainingUnreadCount = totalCount - unreadCount
+                if globalRemainingUnreadCount > 0 {
+                    strongSelf.navigationItem.badge = "\(globalRemainingUnreadCount)"
+                } else {
+                    strongSelf.navigationItem.badge = ""
+                }
             }
         })
         
@@ -1737,7 +1835,8 @@ public class ChatController: TelegramController {
         
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
         let timestamp = Int32(Date().timeIntervalSince1970)
-        let interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
+        let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
+        let interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp).withUpdatedHistoryScrollState(scrollState)
         let _ = updatePeerChatInterfaceState(account: account, peerId: self.peerId, state: interfaceState).start()
     }
     
@@ -2044,10 +2143,18 @@ public class ChatController: TelegramController {
         }
     }
     
-    private func dismissAudioRecorder(sendAudio: Bool) {
+    private func requestVideoRecorder() {
+        if self.videoRecorderValue == nil {
+            if let currentInputPanelFrame = self.chatDisplayNode.currentInputPanelFrame() {
+                self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, panelFrame: currentInputPanelFrame, account: self.account, peerId: self.peerId)))
+            }
+        }
+    }
+    
+    private func dismissMediaRecorder(sendMedia: Bool) {
         if let audioRecorderValue = self.audioRecorderValue {
             audioRecorderValue.stop()
-            if sendAudio {
+            if sendMedia {
                 let _ = (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self] data in
                     if let strongSelf = self, let data = data {
                         if data.duration < 0.5 {
@@ -2074,8 +2181,45 @@ public class ChatController: TelegramController {
                     }
                 })
             }
+            self.audioRecorder.set(.single(nil))
+        } else if let videoRecorderValue = self.videoRecorderValue {
+            if sendMedia {
+                videoRecorderValue.completeVideo()
+                self.tempVideoRecorderValue = videoRecorderValue
+                self.videoRecorder.set(.single(nil))
+            } else {
+                self.videoRecorder.set(.single(nil))
+            }
         }
-        self.audioRecorder.set(.single(nil))
+    }
+    
+    private func stopMediaRecorder() {
+        if let audioRecorderValue = self.audioRecorderValue {
+            audioRecorderValue.stop()
+            self.audioRecorder.set(.single(nil))
+        } else if let videoRecorderValue = self.videoRecorderValue {
+            if videoRecorderValue.stopVideo() {
+                self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                    $0.updatedInputTextPanelState { panelState in
+                        return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
+                    }
+                })
+            } else {
+                self.videoRecorder.set(.single(nil))
+            }
+        }
+    }
+    
+    private func lockMediaRecorder() {
+        if self.presentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                return $0.updatedInputTextPanelState { panelState in
+                    return panelState.withUpdatedMediaRecordingState(panelState.mediaRecordingState?.withLocked(true))
+                }
+            })
+        }
+        
+        self.videoRecorderValue?.lockVideo()
     }
     
     private func navigateToMessage(from fromId: MessageId?, to toId: MessageId, rememberInStack: Bool = true) {

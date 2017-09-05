@@ -15,7 +15,8 @@ private let rootTabBar = PresentationThemeRootTabBar(
     textColor: UIColor(rgb: 0x929292),
     selectedTextColor: accentColor,
     badgeBackgroundColor: UIColor(rgb: 0xff3b30),
-    badgeTextColor: .white)
+    badgeTextColor: .white
+)
 
 private let rootNavigationBar = PresentationThemeRootNavigationBar(
     buttonColor: accentColor,
@@ -24,7 +25,9 @@ private let rootNavigationBar = PresentationThemeRootNavigationBar(
     controlColor: UIColor(rgb: 0x7e8791),
     accentTextColor: accentColor,
     backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0),
-    separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
+    separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0),
+    badgeBackgroundColor: UIColor(rgb: 0xff3b30),
+    badgeTextColor: .white
 )
 
 private let activeNavigationSearchBar = PresentationThemeActiveNavigationSearchBar(

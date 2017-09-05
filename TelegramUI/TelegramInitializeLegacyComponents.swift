@@ -39,6 +39,22 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
     }
 }
 
+private func encodeText(_ string: String, _ key: Int) -> String {
+    var result = ""
+    for c in string.unicodeScalars {
+        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
+    }
+    return result
+}
+
+private let keyboardWindowClass: AnyClass? = {
+    if #available(iOS 9.0, *) {
+        return NSClassFromString(encodeText("VJSfnpufLfzcpbseXjoepx", -1))
+    } else {
+        return NSClassFromString(encodeText("VJUfyuFggfdutXjoepx", -1))
+    }
+}()
+
 private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyComponentsGlobalsProvider {
     func log(_ string: String!) {
         print(string)
@@ -57,6 +73,15 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func applicationKeyboardWindow() -> UIWindow! {
+        guard let keyboardWindowClass = keyboardWindowClass else {
+            return nil
+        }
+        
+        for window in legacyComponentsApplication.windows {
+            if window.isKind(of: keyboardWindowClass) {
+                return window
+            }
+        }
         return nil
     }
     

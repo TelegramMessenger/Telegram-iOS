@@ -7,10 +7,10 @@ public enum PresentationBuilinThemeReference: Int32 {
     case dark
 }
 
-public enum PresentationThemeReference: Coding, Equatable {
+public enum PresentationThemeReference: PostboxCoding, Equatable {
     case builtin(PresentationBuilinThemeReference)
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .builtin(PresentationBuilinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
@@ -20,7 +20,7 @@ public enum PresentationThemeReference: Coding, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .builtin(reference):
                 encoder.encodeInt32(0, forKey: "v")
@@ -53,12 +53,12 @@ public struct PresentationThemeSettings: PreferencesEntry {
         self.theme = theme
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.chatWallpaper = (decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper) ?? .builtin
         self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as! PresentationThemeReference
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.chatWallpaper, forKey: "w")
         encoder.encodeObject(self.theme, forKey: "t")
     }

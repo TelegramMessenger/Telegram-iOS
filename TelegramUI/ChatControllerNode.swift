@@ -139,7 +139,9 @@ class ChatControllerNode: ASDisplayNode {
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
-        self.textInputPanelNode = ChatTextInputPanelNode()
+        self.textInputPanelNode = ChatTextInputPanelNode(theme: chatPresentationInterfaceState.theme, presentController: { [weak self] controller in
+            self?.interfaceInteraction?.presentController(controller)
+        })
         self.textInputPanelNode?.updateHeight = { [weak self] in
             if let strongSelf = self, let _ = strongSelf.inputPanelNode as? ChatTextInputPanelNode, !strongSelf.ignoreUpdateHeight {
                 strongSelf.requestLayout(.animated(duration: 0.1, curve: .easeInOut))
@@ -723,5 +725,9 @@ class ChatControllerNode: ASDisplayNode {
             self.inputMediaNode = inputNode
             let _ = inputNode.updateLayout(width: self.bounds.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
         }
+    }
+    
+    func currentInputPanelFrame() -> CGRect? {
+        return self.inputPanelNode?.frame
     }
 }

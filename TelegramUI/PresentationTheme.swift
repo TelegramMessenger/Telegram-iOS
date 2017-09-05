@@ -7,7 +7,7 @@ public enum PresentationThemeParsingError: Error {
     case generic
 }
 
-private func parseColor(_ decoder: Decoder, _ key: String) throws -> UIColor {
+private func parseColor(_ decoder: PostboxDecoder, _ key: String) throws -> UIColor {
     if let value = decoder.decodeOptionalInt32ForKey(key) {
         return UIColor(argb: UInt32(bitPattern: value))
     } else {
@@ -36,7 +36,7 @@ public final class PresentationThemeRootTabBar {
         self.badgeTextColor = badgeTextColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.backgroundColor = try parseColor(decoder, "backgroundColor")
         self.separatorColor = try parseColor(decoder, "separatorColor")
         self.iconColor = try parseColor(decoder, "iconColor")
@@ -47,7 +47,7 @@ public final class PresentationThemeRootTabBar {
         self.badgeTextColor = try parseColor(decoder, "badgeTextColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -81,7 +81,7 @@ public final class PresentationThemeRootNavigationStatusBar {
         self.style = style
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         if let styleValue = decoder.decodeOptionalInt32ForKey("style"), let style = PresentationThemeStatusBarStyle(rawValue: styleValue) {
             self.style = style
         } else {
@@ -89,7 +89,7 @@ public final class PresentationThemeRootNavigationStatusBar {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.style.rawValue, forKey: "style")
     }
 }
@@ -102,8 +102,10 @@ public final class PresentationThemeRootNavigationBar {
     public let accentTextColor: UIColor
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
+    public let badgeBackgroundColor: UIColor
+    public let badgeTextColor: UIColor
     
-    public init(buttonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor) {
+    public init(buttonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeTextColor: UIColor) {
         self.buttonColor = buttonColor
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
@@ -111,9 +113,11 @@ public final class PresentationThemeRootNavigationBar {
         self.accentTextColor = accentTextColor
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
+        self.badgeBackgroundColor = badgeBackgroundColor
+        self.badgeTextColor = badgeTextColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.buttonColor = try parseColor(decoder, "buttonColor")
         self.primaryTextColor = try parseColor(decoder, "primaryTextColor")
         self.secondaryTextColor = try parseColor(decoder, "secondaryTextColor")
@@ -121,9 +125,11 @@ public final class PresentationThemeRootNavigationBar {
         self.accentTextColor = try parseColor(decoder, "accentTextColor")
         self.backgroundColor = try parseColor(decoder, "backgroundColor")
         self.separatorColor = try parseColor(decoder, "separatorColor")
+        self.badgeBackgroundColor = try parseColor(decoder, "badgeBackgroundColor")
+        self.badgeTextColor = try parseColor(decoder, "badgeTextColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -155,7 +161,7 @@ public final class PresentationThemeActiveNavigationSearchBar {
         self.separatorColor = separatorColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.backgroundColor = try parseColor(decoder, "backgroundColor")
         self.accentColor = try parseColor(decoder, "accentColor")
         self.inputFillColor = try parseColor(decoder, "inputFillColor")
@@ -165,7 +171,7 @@ public final class PresentationThemeActiveNavigationSearchBar {
         self.separatorColor = try parseColor(decoder, "separatorColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -191,7 +197,7 @@ public final class PresentationThemeRootController {
         self.activeNavigationSearchBar = activeNavigationSearchBar
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         if let statusBar = (try? decoder.decodeObjectForKeyThrowing("statusBar", decoder: { try PresentationThemeRootNavigationStatusBar(decoder: $0) })) as? PresentationThemeRootNavigationStatusBar {
             self.statusBar = statusBar
         } else {
@@ -214,7 +220,7 @@ public final class PresentationThemeRootController {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectWithEncoder(self.statusBar, encoder: { self.statusBar.encode($0) }, forKey: "statusBar")
         encoder.encodeObjectWithEncoder(self.tabBar, encoder: { self.tabBar.encode($0) }, forKey: "tabBar")
         encoder.encodeObjectWithEncoder(self.navigationBar, encoder: { self.navigationBar.encode($0) }, forKey: "navigationBar")
@@ -233,13 +239,13 @@ public final class PresentationThemeSwitch {
         self.contentColor = contentColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.frameColor = try parseColor(decoder, "frameColor")
         self.handleColor = try parseColor(decoder, "handleColor")
         self.contentColor = try parseColor(decoder, "contentColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -291,7 +297,7 @@ public final class PresentationThemeList {
         self.itemSwitchColors = itemSwitchColors
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.blocksBackgroundColor = try parseColor(decoder, "blocksBackgroundColor")
         self.plainBackgroundColor = try parseColor(decoder, "plainBackgroundColor")
         self.itemPrimaryTextColor = try parseColor(decoder, "itemPrimaryTextColor")
@@ -315,7 +321,7 @@ public final class PresentationThemeList {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -379,7 +385,7 @@ public final class PresentationThemeChatList {
         self.searchBarKeyboardColor = searchBarKeyboardColor
     }
     
-    init(decoder: Decoder) throws {
+    init(decoder: PostboxDecoder) throws {
         self.backgroundColor = try parseColor(decoder, "backgroundColor")
         self.itemSeparatorColor = try parseColor(decoder, "itemSeparatorColor")
         self.itemBackgroundColor = try parseColor(decoder, "itemBackgroundColor")
@@ -408,7 +414,7 @@ public final class PresentationThemeChatList {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -528,7 +534,7 @@ public final class PresentationThemeChatBubble {
         self.actionButtonsTextColor = actionButtonsTextColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.incomingFillColor = try parseColor(decoder, "incomingFillColor")
         self.incomingFillHighlightedColor = try parseColor(decoder, "incomingFillHighlightedColor")
         self.incomingStrokeColor = try parseColor(decoder, "incomingStrokeColor")
@@ -578,7 +584,7 @@ public final class PresentationThemeChatBubble {
         self.actionButtonsTextColor = try parseColor(decoder, "actionButtonsTextColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -616,7 +622,7 @@ public final class PresentationThemeServiceMessage {
         self.dateTextColor = dateTextColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.serviceMessageFillColor = try parseColor(decoder, "serviceMessageFillColor")
         self.serviceMessagePrimaryTextColor = try parseColor(decoder, "serviceMessagePrimaryTextColor")
         self.unreadBarFillColor = try parseColor(decoder, "unreadBarFillColor")
@@ -627,7 +633,7 @@ public final class PresentationThemeServiceMessage {
         self.dateTextColor = try parseColor(decoder, "dateTextColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -689,7 +695,7 @@ public final class PresentationThemeChatInputPanel {
         self.keyboardColor = keyboardColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.panelBackgroundColor = try parseColor(decoder, "panelBackgroundColor")
         self.panelStrokeColor = try parseColor(decoder, "panelStrokeColor")
         self.panelControlAccentColor = try parseColor(decoder, "panelControlAccentColor")
@@ -710,7 +716,7 @@ public final class PresentationThemeChatInputPanel {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -744,7 +750,7 @@ public final class PresentationThemeInputMediaPanel {
         self.gifsBackgroundColor = gifsBackgroundColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.panelSerapatorColor = try parseColor(decoder, "panelSerapatorColor")
         self.panelIconColor = try parseColor(decoder, "panelIconColor")
         self.panelHighlightedIconBackgroundColor = try parseColor(decoder, "panelHighlightedIconBackgroundColor")
@@ -753,7 +759,7 @@ public final class PresentationThemeInputMediaPanel {
         self.gifsBackgroundColor = try parseColor(decoder, "gifsBackgroundColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -787,7 +793,7 @@ public final class PresentationThemeInputButtonPanel {
         self.buttonTextColor = buttonTextColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.panelSerapatorColor = try parseColor(decoder, "panelSerapatorColor")
         self.panelBackgroundColor = try parseColor(decoder, "panelBackgroundColor")
         self.buttonFillColor = try parseColor(decoder, "buttonFillColor")
@@ -797,7 +803,7 @@ public final class PresentationThemeInputButtonPanel {
         self.buttonTextColor = try parseColor(decoder, "buttonTextColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -827,7 +833,7 @@ public final class PresentationThemeChatHistoryNavigation {
         self.badgeTextColor = badgeTextColor
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         self.fillColor = try parseColor(decoder, "fillColor")
         self.strokeColor = try parseColor(decoder, "strokeColor")
         self.foregroundColor = try parseColor(decoder, "foregroundColor")
@@ -835,7 +841,7 @@ public final class PresentationThemeChatHistoryNavigation {
         self.badgeTextColor = try parseColor(decoder, "badgeTextColor")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         for child in Mirror(reflecting: self).children {
             if let label = child.label {
                 if let value = child.value as? UIColor {
@@ -869,7 +875,7 @@ public final class PresentationThemeChat {
         self.historyNavigation = historyNavigation
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         if let bubble = (try? decoder.decodeObjectForKeyThrowing("bubble", decoder: { try PresentationThemeChatBubble(decoder: $0) })) as? PresentationThemeChatBubble {
             self.bubble = bubble
         } else {
@@ -902,7 +908,7 @@ public final class PresentationThemeChat {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectWithEncoder(self.bubble, encoder: { self.bubble.encode($0) }, forKey: "bubble")
         encoder.encodeObjectWithEncoder(self.serviceMessage, encoder: { self.serviceMessage.encode($0) }, forKey: "serviceMessage")
         encoder.encodeObjectWithEncoder(self.inputPanel, encoder: { self.inputPanel.encode($0) }, forKey: "inputPanel")
@@ -927,7 +933,7 @@ public final class PresentationTheme: Equatable {
         self.chat = chat
     }
     
-    public init(decoder: Decoder) throws {
+    public init(decoder: PostboxDecoder) throws {
         if let rootController = (try? decoder.decodeObjectForKeyThrowing("rootController", decoder: { try PresentationThemeRootController(decoder: $0) })) as? PresentationThemeRootController {
             self.rootController = rootController
         } else {
@@ -950,7 +956,7 @@ public final class PresentationTheme: Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectWithEncoder(self.rootController, encoder: { self.rootController.encode($0) }, forKey: "list")
         encoder.encodeObjectWithEncoder(self.list, encoder: { self.list.encode($0) }, forKey: "list")
         encoder.encodeObjectWithEncoder(self.chatList, encoder: { self.chatList.encode($0) }, forKey: "chatList")

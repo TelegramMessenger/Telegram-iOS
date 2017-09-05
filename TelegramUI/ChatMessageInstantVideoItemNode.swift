@@ -9,6 +9,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     var hostedVideoNode: InstantVideoNode?
     var tapRecognizer: UITapGestureRecognizer?
     
+    private var statusNode: RadialStatusNode?
+    private var videoFrame: CGRect?
+    
     private var selectionNode: ChatMessageSelectionNode?
     
     private var appliedItem: ChatMessageItem?
@@ -93,6 +96,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 updatedMuteIconImage = PresentationResourcesChat.chatInstantMessageMuteIconImage(item.theme)
             }
             
+            let theme = item.theme
+            let isSecretMedia = item.message.containsSecretMedia
+            
             let incoming = item.message.effectivelyIncoming
             let imageSize = displaySize
             
@@ -111,7 +117,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             var updatedPlaybackStatus: Signal<FileMediaResourceStatus, NoError>?
             if let updatedFile = updatedFile, updatedMedia {
-                updatedPlaybackStatus = fileMediaResourceStatus(account: item.account, file: updatedFile, message: item.message)
+                updatedPlaybackStatus = combineLatest(fileMediaResourceStatus(account: item.account, file: updatedFile, message: item.message), item.account.pendingMessageManager.pendingMessageStatus(item.message.id))
+                    |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
+                        if let pendingStatus = pendingStatus {
+                            return .fetchStatus(.Fetching(progress: pendingStatus.progress))
+                        } else {
+                            return resourceStatus
+                        }
+                    }
             }
             
             let avatarInset: CGFloat
@@ -207,6 +220,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: imageSize.height), insets: layoutInsets), { [weak self] animation in
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
+                    strongSelf.videoFrame = videoFrame
                     
                     if let updatedMuteIconImage = updatedMuteIconImage {
                         strongSelf.muteIconNode.image = updatedMuteIconImage
@@ -220,7 +234,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     
                     if let updatedPlaybackStatus = updatedPlaybackStatus {
                         strongSelf.playbackStatusDisposable.set((updatedPlaybackStatus |> deliverOnMainQueue).start(next: { status in
-                            if let strongSelf = self {
+                            if let strongSelf = self, let videoFrame = strongSelf.videoFrame {
                                 let displayMute: Bool
                                 switch status {
                                     case let .fetchStatus(fetchStatus):
@@ -243,6 +257,68 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                         strongSelf.muteIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                                         strongSelf.muteIconNode.layer.animateScale(from: 1.0, to: 0.4, duration: 0.15)
                                     }
+                                }
+                                
+                                var progressRequired = false
+                                if case let .fetchStatus(fetchStatus) = status {
+                                    if case .Local = fetchStatus {
+                                        if let file = updatedFile, file.isVideo {
+                                            progressRequired = true
+                                        } else if isSecretMedia {
+                                            progressRequired = true
+                                        }
+                                    } else {
+                                        progressRequired = true
+                                    }
+                                }
+                                
+                                if progressRequired {
+                                    if strongSelf.statusNode == nil {
+                                        let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.bubble.mediaOverlayControlBackgroundColor)
+                                        statusNode.frame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floor((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floor((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
+                                        strongSelf.statusNode = statusNode
+                                        strongSelf.addSubnode(statusNode)
+                                    } else if let _ = updatedTheme {
+                                        
+                                        //strongSelf.progressNode?.updateTheme(RadialProgressTheme(backgroundColor: theme.chat.bubble.mediaOverlayControlBackgroundColor, foregroundColor: theme.chat.bubble.mediaOverlayControlForegroundColor, icon: nil))
+                                    }
+                                } else {
+                                    if let statusNode = strongSelf.statusNode {
+                                        statusNode.transitionToState(.none, completion: { [weak statusNode] in
+                                            statusNode?.removeFromSupernode()
+                                        })
+                                        strongSelf.statusNode = nil
+                                    }
+                                }
+                                
+                                var state: RadialStatusNodeState
+                                let bubbleTheme = theme.chat.bubble
+                                switch status {
+                                    case let .fetchStatus(fetchStatus):
+                                        switch fetchStatus {
+                                            case let .Fetching(progress):
+                                                state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(progress), cancelEnabled: true)
+                                            case .Local:
+                                                state = .none
+                                                /*if isSecretMedia && secretProgressIcon != nil {
+                                                    state = .customIcon(secretProgressIcon!)
+                                                } else */
+                                            case .Remote:
+                                                state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
+                                        }
+                                    default:
+                                        state = .none
+                                        break
+                                }
+                                if let statusNode = strongSelf.statusNode {
+                                    if state == .none {
+                                        strongSelf.statusNode = nil
+                                    }
+                                    statusNode.transitionToState(state, completion: { [weak statusNode] in
+                                        if state == .none {
+                                            statusNode?.removeFromSupernode()
+                                        }
+                                    })
                                 }
                             }
                         }))

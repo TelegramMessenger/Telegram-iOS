@@ -510,7 +510,7 @@ final class ChatMediaInputNode: ChatInputNode {
             let firstVisibleIndex = currentView.collectionInfos.index(where: { id, _, _ in return id == firstVisibleCollectionId })
             if let targetIndex = targetIndex, let firstVisibleIndex = firstVisibleIndex {
                 let toRight = targetIndex > firstVisibleIndex
-                self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [], scrollToItem: ListViewScrollToItem(index: targetIndex, position: toRight ? .Bottom : .Top, animated: true, curve: .Default, directionHint: toRight ? .Down : .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil)
+                self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [], scrollToItem: ListViewScrollToItem(index: targetIndex, position: toRight ? .bottom(0.0) : .top(0.0), animated: true, curve: .Default, directionHint: toRight ? .Down : .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil)
             }
         }
     }

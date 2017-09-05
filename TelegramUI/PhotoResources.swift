@@ -1620,10 +1620,6 @@ func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(T
                             c.draw(fullSizeImage, in: fittedRect)
                             
                             c.setBlendMode(.normal)
-                            
-                            if let locationPinImage = locationPinImage {
-                                c.draw(locationPinImage.cgImage!, in: CGRect(origin: CGPoint(x: floor((arguments.drawingSize.width - locationPinImage.size.width) / 2.0), y: floor((arguments.drawingSize.height - locationPinImage.size.height) / 2.0) - 5.0), size: locationPinImage.size))
-                            }
                         }
                     } else {
                         context.withFlippedContext { c in
@@ -1632,10 +1628,6 @@ func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(T
                             c.fill(arguments.drawingRect)
                             
                             c.setBlendMode(.normal)
-                            
-                            if let locationPinImage = locationPinImage {
-                                c.draw(locationPinImage.cgImage!, in: CGRect(origin: CGPoint(x: floor((arguments.drawingSize.width - locationPinImage.size.width) / 2.0), y: floor((arguments.drawingSize.height - locationPinImage.size.height) / 2.0) - 5.0), size: locationPinImage.size))
-                            }
                         }
                     }
                 }

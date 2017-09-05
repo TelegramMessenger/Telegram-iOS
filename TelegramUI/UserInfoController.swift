@@ -355,7 +355,7 @@ private func stringForBlockAction(strings: PresentationStrings, action: Destruct
     }
 }
 
-private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, state: UserInfoState, peerChatState: Coding?) -> [UserInfoEntry] {
+private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, state: UserInfoState, peerChatState: PostboxCoding?) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {

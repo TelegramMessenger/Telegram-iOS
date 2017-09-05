@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 
-public final class VideoMediaResourceAdjustments: Coding, Equatable {
+public final class VideoMediaResourceAdjustments: PostboxCoding, Equatable {
     let data: MemoryBuffer
     let digest: MemoryBuffer
     
@@ -11,12 +11,12 @@ public final class VideoMediaResourceAdjustments: Coding, Equatable {
         self.digest = digest
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.data = decoder.decodeBytesForKey("d")!
         self.digest = decoder.decodeBytesForKey("h")!
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeBytes(self.data, forKey: "d")
         encoder.encodeBytes(self.digest, forKey: "h")
     }
@@ -64,12 +64,12 @@ public final class VideoLibraryMediaResource: TelegramMediaResource {
         self.adjustments = adjustments
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.localIdentifier = decoder.decodeStringForKey("i", orElse: "")
         self.adjustments = decoder.decodeObjectForKey("a", decoder: { VideoMediaResourceAdjustments(decoder: $0) }) as? VideoMediaResourceAdjustments
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.localIdentifier, forKey: "i")
         if let adjustments = self.adjustments {
             encoder.encodeObject(adjustments, forKey: "a")
@@ -126,13 +126,13 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
         self.adjustments = adjustments
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.randomId = decoder.decodeInt64ForKey("i", orElse: 0)
         self.path = decoder.decodeStringForKey("p", orElse: "")
         self.adjustments = decoder.decodeObjectForKey("a", decoder: { VideoMediaResourceAdjustments(decoder: $0) }) as? VideoMediaResourceAdjustments
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.randomId, forKey: "i")
         encoder.encodeString(self.path, forKey: "p")
         if let adjustments = self.adjustments {
@@ -182,11 +182,11 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
         self.localIdentifier = localIdentifier
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.localIdentifier = decoder.decodeStringForKey("i", orElse: "")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.localIdentifier, forKey: "i")
     }
     

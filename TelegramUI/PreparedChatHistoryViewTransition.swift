@@ -4,7 +4,7 @@ import Postbox
 import TelegramCore
 import Display
 
-func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?) -> Signal<ChatHistoryViewTransition, NoError> {
+func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, readStateData: ChatHistoryCombinedInitialReadStateData?) -> Signal<ChatHistoryViewTransition, NoError> {
     return Signal { subscriber in
         let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
         
@@ -106,64 +106,84 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
         
         if let scrollPosition = scrollPosition {
             switch scrollPosition {
-            case let .Unread(unreadIndex):
-                var index = toView.filteredEntries.count - 1
-                for entry in toView.filteredEntries {
-                    if case .UnreadEntry = entry {
-                        scrollToItem = ListViewScrollToItem(index: index, position: .Bottom, animated: false, curve: .Default, directionHint: .Down)
-                        break
-                    }
-                    index -= 1
-                }
-                
-                if scrollToItem == nil {
+                case let .unread(unreadIndex):
                     var index = toView.filteredEntries.count - 1
                     for entry in toView.filteredEntries {
-                        if entry.index >= unreadIndex {
-                            scrollToItem = ListViewScrollToItem(index: index, position: .Bottom, animated: false, curve: .Default,  directionHint: .Down)
+                        if case .UnreadEntry = entry {
+                            scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: .Default, directionHint: .Down)
                             break
                         }
                         index -= 1
                     }
-                }
-                
-                if scrollToItem == nil {
-                    var index = 0
-                    for entry in toView.filteredEntries.reversed() {
-                        if entry.index < unreadIndex {
-                            scrollToItem = ListViewScrollToItem(index: index, position: .Bottom, animated: false, curve: .Default, directionHint: .Down)
+                    
+                    if scrollToItem == nil {
+                        var index = toView.filteredEntries.count - 1
+                        for entry in toView.filteredEntries {
+                            if entry.index >= unreadIndex {
+                                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: .Default,  directionHint: .Down)
+                                break
+                            }
+                            index -= 1
+                        }
+                    }
+                    
+                    if scrollToItem == nil {
+                        var index = 0
+                        for entry in toView.filteredEntries.reversed() {
+                            if entry.index < unreadIndex {
+                                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: .Default, directionHint: .Down)
+                                break
+                            }
+                            index += 1
+                        }
+                    }
+                case let .positionRestoration(scrollIndex, relativeOffset):
+                    var index = toView.filteredEntries.count - 1
+                    for entry in toView.filteredEntries {
+                        if entry.index >= scrollIndex {
+                            scrollToItem = ListViewScrollToItem(index: index, position: .top(relativeOffset), animated: false, curve: .Default,  directionHint: .Down)
                             break
                         }
-                        index += 1
+                        index -= 1
                     }
-                }
-            case let .Index(scrollIndex, position, directionHint, animated):
-                if case .Center = position {
-                    scrolledToIndex = scrollIndex
-                }
-                var index = toView.filteredEntries.count - 1
-                for entry in toView.filteredEntries {
-                    if entry.index >= scrollIndex {
-                        scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default, directionHint: directionHint)
-                        break
+                    
+                    if scrollToItem == nil {
+                        var index = 0
+                        for entry in toView.filteredEntries.reversed() {
+                            if entry.index < scrollIndex {
+                                scrollToItem = ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: .Default, directionHint: .Down)
+                                break
+                            }
+                            index += 1
+                        }
                     }
-                    index -= 1
-                }
-                
-                if scrollToItem == nil {
-                    var index = 0
-                    for entry in toView.filteredEntries.reversed() {
-                        if entry.index < scrollIndex {
+                case let .index(scrollIndex, position, directionHint, animated):
+                    if case .center = position {
+                        scrolledToIndex = scrollIndex
+                    }
+                    var index = toView.filteredEntries.count - 1
+                    for entry in toView.filteredEntries {
+                        if entry.index >= scrollIndex {
                             scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default, directionHint: directionHint)
                             break
                         }
-                        index += 1
+                        index -= 1
                     }
-                }
+                    
+                    if scrollToItem == nil {
+                        var index = 0
+                        for entry in toView.filteredEntries.reversed() {
+                            if entry.index < scrollIndex {
+                                scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default, directionHint: directionHint)
+                                break
+                            }
+                            index += 1
+                        }
+                    }
             }
         }
         
-        subscriber.putNext(ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, scrolledToIndex: scrolledToIndex))
+        subscriber.putNext(ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, readStateData: readStateData, scrolledToIndex: scrolledToIndex))
         subscriber.putCompletion()
         
         return EmptyDisposable

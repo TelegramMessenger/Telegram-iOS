@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import Display
 
 final class ChatPanelInterfaceInteractionStatuses {
     let editingMessage: Signal<Bool, NoError>
@@ -45,8 +46,11 @@ final class ChatPanelInterfaceInteraction {
     let sendBotCommand: (Peer, String) -> Void
     let sendBotStart: (String?) -> Void
     let botSwitchChatWithPayload: (PeerId, String) -> Void
-    let beginAudioRecording: () -> Void
-    let finishAudioRecording: (Bool) -> Void
+    let beginMediaRecording: (Bool) -> Void
+    let finishMediaRecording: (Bool) -> Void
+    let stopMediaRecording: () -> Void
+    let lockMediaRecording: () -> Void
+    let switchMediaRecordingMode: () -> Void
     let setupMessageAutoremoveTimeout: () -> Void
     let sendSticker: (TelegramMediaFile) -> Void
     let unblockPeer: () -> Void
@@ -57,9 +61,10 @@ final class ChatPanelInterfaceInteraction {
     let deleteChat: () -> Void
     let beginCall: () -> Void
     let toggleMessageStickerStarred: (MessageId) -> Void
+    let presentController: (ViewController) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
-    init(setupReplyMessage: @escaping (MessageId) -> Void, setupEditMessage: @escaping (MessageId) -> Void, beginMessageSelection: @escaping (MessageId) -> Void, deleteSelectedMessages: @escaping () -> Void, forwardSelectedMessages: @escaping () -> Void, updateTextInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void, editMessage: @escaping (MessageId, String) -> Void, beginMessageSearch: @escaping () -> Void, dismissMessageSearch: @escaping () -> Void, updateMessageSearch: @escaping (String) -> Void, navigateMessageSearch: @escaping (ChatPanelSearchNavigationAction) -> Void, openCalendarSearch: @escaping () -> Void, navigateToMessage: @escaping (MessageId) -> Void, openPeerInfo: @escaping () -> Void, togglePeerNotifications: @escaping () -> Void, sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult) -> Void, sendBotCommand: @escaping (Peer, String) -> Void, sendBotStart: @escaping (String?) -> Void, botSwitchChatWithPayload: @escaping (PeerId, String) -> Void, beginAudioRecording: @escaping () -> Void, finishAudioRecording: @escaping (Bool) -> Void, setupMessageAutoremoveTimeout: @escaping () -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, unblockPeer: @escaping () -> Void, pinMessage: @escaping (MessageId) -> Void, unpinMessage: @escaping () -> Void, reportPeer: @escaping () -> Void, dismissReportPeer: @escaping () -> Void, deleteChat: @escaping () -> Void, beginCall: @escaping () -> Void, toggleMessageStickerStarred: @escaping (MessageId) -> Void, statuses: ChatPanelInterfaceInteractionStatuses?) {
+    init(setupReplyMessage: @escaping (MessageId) -> Void, setupEditMessage: @escaping (MessageId) -> Void, beginMessageSelection: @escaping (MessageId) -> Void, deleteSelectedMessages: @escaping () -> Void, forwardSelectedMessages: @escaping () -> Void, updateTextInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void, editMessage: @escaping (MessageId, String) -> Void, beginMessageSearch: @escaping () -> Void, dismissMessageSearch: @escaping () -> Void, updateMessageSearch: @escaping (String) -> Void, navigateMessageSearch: @escaping (ChatPanelSearchNavigationAction) -> Void, openCalendarSearch: @escaping () -> Void, navigateToMessage: @escaping (MessageId) -> Void, openPeerInfo: @escaping () -> Void, togglePeerNotifications: @escaping () -> Void, sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult) -> Void, sendBotCommand: @escaping (Peer, String) -> Void, sendBotStart: @escaping (String?) -> Void, botSwitchChatWithPayload: @escaping (PeerId, String) -> Void, beginMediaRecording: @escaping (Bool) -> Void, finishMediaRecording: @escaping (Bool) -> Void, stopMediaRecording: @escaping () -> Void, lockMediaRecording: @escaping () -> Void, switchMediaRecordingMode: @escaping () -> Void, setupMessageAutoremoveTimeout: @escaping () -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, unblockPeer: @escaping () -> Void, pinMessage: @escaping (MessageId) -> Void, unpinMessage: @escaping () -> Void, reportPeer: @escaping () -> Void, dismissReportPeer: @escaping () -> Void, deleteChat: @escaping () -> Void, beginCall: @escaping () -> Void, toggleMessageStickerStarred: @escaping (MessageId) -> Void, presentController: @escaping (ViewController) -> Void, statuses: ChatPanelInterfaceInteractionStatuses?) {
         self.setupReplyMessage = setupReplyMessage
         self.setupEditMessage = setupEditMessage
         self.beginMessageSelection = beginMessageSelection
@@ -80,8 +85,11 @@ final class ChatPanelInterfaceInteraction {
         self.sendBotCommand = sendBotCommand
         self.sendBotStart = sendBotStart
         self.botSwitchChatWithPayload = botSwitchChatWithPayload
-        self.beginAudioRecording = beginAudioRecording
-        self.finishAudioRecording = finishAudioRecording
+        self.beginMediaRecording = beginMediaRecording
+        self.finishMediaRecording = finishMediaRecording
+        self.stopMediaRecording = stopMediaRecording
+        self.lockMediaRecording = lockMediaRecording
+        self.switchMediaRecordingMode = switchMediaRecordingMode
         self.setupMessageAutoremoveTimeout = setupMessageAutoremoveTimeout
         self.sendSticker = sendSticker
         self.unblockPeer = unblockPeer
@@ -92,6 +100,7 @@ final class ChatPanelInterfaceInteraction {
         self.deleteChat = deleteChat
         self.beginCall = beginCall
         self.toggleMessageStickerStarred = toggleMessageStickerStarred
+        self.presentController = presentController
         self.statuses = statuses
     }
 }

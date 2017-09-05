@@ -15,12 +15,12 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
         self.autolockTimeout = autolockTimeout
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.enableBiometrics = decoder.decodeInt32ForKey("b", orElse: 0) != 0
         self.autolockTimeout = decoder.decodeOptionalInt32ForKey("al")
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.enableBiometrics ? 1 : 0, forKey: "s")
         if let autolockTimeout = self.autolockTimeout {
             encoder.encodeInt32(autolockTimeout, forKey: "al")

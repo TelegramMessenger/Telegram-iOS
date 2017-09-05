@@ -236,7 +236,7 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func updateState(state: Coding?) {
+    private func updateState(state: PostboxCoding?) {
         if let state = state as? UnauthorizedAccountState {
             switch state.contents {
                 case .empty:

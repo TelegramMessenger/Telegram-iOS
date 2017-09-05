@@ -168,6 +168,16 @@ final class InstantVideoNode: OverlayMediaItemNode {
                 
             }
         })
+        
+        self.manager.sharedVideoContextManager.withSharedVideoContext(id: self.source.id, { [weak self] context in
+            if let strongSelf = self, let context = context as? SharedInstantVideoContext {
+                context.addPlaybackCompleted {
+                    if let strongSelf = self {
+                        strongSelf.playbackEnded?()
+                    }
+                }
+            }
+        })
     }
     
     deinit {

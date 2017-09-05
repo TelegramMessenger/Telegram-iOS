@@ -1,8 +1,8 @@
 import Foundation
+import Postbox
 import TelegramCore
 
 final class InstantPageAnchorItem: InstantPageItem {
-    let hasLinks: Bool = false
     let wantsNode: Bool = false
     let medias: [InstantPageMedia] = []
 
@@ -21,7 +21,7 @@ final class InstantPageAnchorItem: InstantPageItem {
     func drawInTile(context: CGContext) {
     }
     
-    func node(account: Account) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
         return nil
     }
     
@@ -29,7 +29,7 @@ final class InstantPageAnchorItem: InstantPageItem {
         return false
     }
     
-    func linkSelectionViews() -> [InstantPageLinkSelectionView] {
+    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
     

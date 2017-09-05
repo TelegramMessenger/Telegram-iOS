@@ -189,6 +189,14 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         self.transitionDisposable.dispose()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
+        }
+    }
+    
     func animateIn() {
         self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
     }
@@ -352,7 +360,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     }
     
     func scrollToTop() {
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

@@ -24,7 +24,9 @@ private let rootNavigationBar = PresentationThemeRootNavigationBar(
     controlColor: UIColor(rgb: 0x5e5e5e),
     accentTextColor: accentColor,
     backgroundColor: UIColor(rgb: 0x121212),
-    separatorColor: UIColor(rgb: 0x1a1a1a)
+    separatorColor: UIColor(rgb: 0x1a1a1a),
+    badgeBackgroundColor: UIColor(rgb: 0xff3600),
+    badgeTextColor: .white
 )
 
 private let activeNavigationSearchBar = PresentationThemeActiveNavigationSearchBar(

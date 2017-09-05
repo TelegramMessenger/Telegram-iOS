@@ -31,6 +31,9 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     init(pageGap: CGFloat) {
         self.pageGap = pageGap
         self.scrollView = UIScrollView()
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+        }
         
         super.init()
         
@@ -145,7 +148,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func updateItemNodes() {
-        if self.items.isEmpty {
+        if self.items.isEmpty || self.containerLayout == nil {
             return
         }
         

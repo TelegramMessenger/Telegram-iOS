@@ -33,6 +33,16 @@ final class instantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
         self.webView.frame = self.bounds
     }
     
+    func transitionNode(media: InstantPageMedia) -> ASDisplayNode? {
+        return nil
+    }
+    
+    func updateHiddenMedia(media: InstantPageMedia?) {
+    }
+    
     func updateIsVisible(_ isVisible: Bool) {
+    }
+    
+    func update(strings: PresentationStrings, theme: InstantPageTheme) {
     }
 }

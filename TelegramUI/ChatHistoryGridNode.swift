@@ -54,11 +54,11 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
     if let scrollToItem = transition.scrollToItem {
         let mappedPosition: GridNodeScrollToItemPosition
         switch scrollToItem.position {
-            case .Top:
+            case .top:
                 mappedPosition = .top
-            case .Center:
+            case .center:
                 mappedPosition = .center
-            case .Bottom:
+            case .bottom:
                 mappedPosition = .bottom
         }
         let scrollTransition: ContainedViewLayoutTransition
@@ -236,7 +236,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, theme: themeAndStrings.0, strings: themeAndStrings.1))
                     let previous = previousView.swap(processedView)
                     
-                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0, from: previous, theme: themeAndStrings.0, strings: themeAndStrings.1) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
+                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil, readStateData: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0, from: previous, theme: themeAndStrings.0, strings: themeAndStrings.1) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
             }
         }
         
@@ -303,15 +303,15 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     }
     
     public func scrollToStartOfHistory() {
-        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.lowerBound(peerId: self.peerId), anchorIndex: MessageIndex.lowerBound(peerId: self.peerId), sourceIndex: MessageIndex.upperBound(peerId: self.peerId), scrollPosition: .Bottom, animated: true))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.lowerBound(peerId: self.peerId), anchorIndex: MessageIndex.lowerBound(peerId: self.peerId), sourceIndex: MessageIndex.upperBound(peerId: self.peerId), scrollPosition: .bottom(0.0), animated: true))
     }
     
     public func scrollToEndOfHistory() {
-        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.upperBound(peerId: self.peerId), anchorIndex: MessageIndex.upperBound(peerId: self.peerId), sourceIndex: MessageIndex.lowerBound(peerId: self.peerId), scrollPosition: .Top, animated: true))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.upperBound(peerId: self.peerId), anchorIndex: MessageIndex.upperBound(peerId: self.peerId), sourceIndex: MessageIndex.lowerBound(peerId: self.peerId), scrollPosition: .top(0.0), animated: true))
     }
     
     public func scrollToMessage(from fromIndex: MessageIndex, to toIndex: MessageIndex) {
-        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: toIndex, anchorIndex: toIndex, sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: toIndex, anchorIndex: toIndex, sourceIndex: fromIndex, scrollPosition: .center(.bottom), animated: true))
     }
     
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {

@@ -35,6 +35,11 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor.black
         self.scrollView = UIScrollView()
+
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+        }
+
         self.pager = GalleryPagerNode(pageGap: pageGap)
         self.footerNode = GalleryFooterNode(controllerInteraction: controllerInteraction)
         

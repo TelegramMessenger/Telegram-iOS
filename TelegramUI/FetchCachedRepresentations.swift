@@ -134,20 +134,16 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
         if resourceData.complete {
             let tempFilePath = NSTemporaryDirectory() + "\(arc4random()).mov"
             
-            _ = try? FileManager.default.removeItem(atPath: tempFilePath)
-            _ = try? FileManager.default.linkItem(atPath: resourceData.path, toPath: tempFilePath)
-            
-            var fullSizeImage: CGImage?
-            
-            let asset = AVAsset(url: URL(fileURLWithPath: tempFilePath))
-            let imageGenerator = AVAssetImageGenerator(asset: asset)
-            imageGenerator.maximumSize = CGSize(width: 800.0, height: 800.0)
-            imageGenerator.appliesPreferredTrackTransform = true
-            if let image = try? imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil) {
-                fullSizeImage = image
-            }
-            
-            if let fullSizeImage = fullSizeImage {
+            do {
+                let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
+                try FileManager.default.linkItem(atPath: resourceData.path, toPath: tempFilePath)
+                
+                let asset = AVAsset(url: URL(fileURLWithPath: tempFilePath))
+                let imageGenerator = AVAssetImageGenerator(asset: asset)
+                imageGenerator.maximumSize = CGSize(width: 800.0, height: 800.0)
+                imageGenerator.appliesPreferredTrackTransform = true
+                let fullSizeImage = try imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil)
+                
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
                 let path = NSTemporaryDirectory() + "\(randomId)"
@@ -170,6 +166,8 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                 
                 subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
                 subscriber.putCompletion()
+            } catch (let e) {
+                print("\(e)")
             }
         }
         return EmptyDisposable

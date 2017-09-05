@@ -31,6 +31,13 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
         self.controller = LegacyController(presentation: .custom)
         
         super.init()
+        
+        if let parentController = parentController {
+            if parentController.statusBar.statusBarStyle == .Hide {
+                self.controller?.statusBar.statusBarStyle = parentController.statusBar.statusBarStyle
+            }
+            self.controller?.view.frame = parentController.view.bounds
+        }
     }
     
     func managesWindow() -> Bool {
@@ -275,10 +282,13 @@ public class LegacyController: ViewController {
                     self.controllerNode.animateModalIn(completion: { [weak self] in
                         self?.presentationCompleted?()
                     })
+                } else {
+                    self.presentationCompleted?()
                 }
                 self.legacyController.viewDidAppear(animated && animateIn)
             case .custom:
                 self.legacyController.viewDidAppear(animated)
+                self.presentationCompleted?()
         }
     }
     

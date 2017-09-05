@@ -339,6 +339,24 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatInputPanelVideoButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelVideoButtonImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconVideo"), color: theme.chat.inputPanel.panelControlColor)
+        })
+    }
+    
+    static func chatInputPanelVoiceActiveButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelVoiceActiveButtonImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: .white)
+        })
+    }
+    
+    static func chatInputPanelVideoActiveButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelVideoActiveButtonImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconVideo"), color: .white)
+        })
+    }
+    
     static func chatInputPanelAttachmentButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelAttachmentButtonImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: theme.chat.inputPanel.panelControlColor)

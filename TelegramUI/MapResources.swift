@@ -40,14 +40,14 @@ public class MapSnapshotMediaResource: TelegramMediaResource {
         self.height = height
     }
     
-    public required init(decoder: Decoder) {
+    public required init(decoder: PostboxDecoder) {
         self.latitude = decoder.decodeDoubleForKey("lt", orElse: 0.0)
         self.longitude = decoder.decodeDoubleForKey("ln", orElse: 0.0)
         self.width = decoder.decodeInt32ForKey("w", orElse: 0)
         self.height = decoder.decodeInt32ForKey("h", orElse: 0)
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeDouble(self.latitude, forKey: "lt")
         encoder.encodeDouble(self.longitude, forKey: "ln")
         encoder.encodeInt32(self.width, forKey: "w")

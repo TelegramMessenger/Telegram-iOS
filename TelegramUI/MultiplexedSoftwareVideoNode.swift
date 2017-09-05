@@ -109,6 +109,9 @@ final class MultiplexedSoftwareVideoNode: UIView {
     init(account: Account, scrollView: UIScrollView) {
         self.account = account
         self.scrollView = scrollView
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+        }
         self.trackingNode = MultiplexedSoftwareVideoTrackingNode()
         self.sourceManager = MultiplexedSoftwareVideoSourceManager(queue: self.videoSourceQueue, account: account)
         

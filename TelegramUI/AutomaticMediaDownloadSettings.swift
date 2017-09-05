@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
-public struct AutomaticMediaDownloadCategoryPeers: Coding, Equatable {
+public struct AutomaticMediaDownloadCategoryPeers: PostboxCoding, Equatable {
     public let privateChats: Bool
     public let groupsAndChannels: Bool
     
@@ -12,12 +12,12 @@ public struct AutomaticMediaDownloadCategoryPeers: Coding, Equatable {
         self.groupsAndChannels = groupsAndChannels
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.privateChats = decoder.decodeInt32ForKey("p", orElse: 0) != 0
         self.groupsAndChannels = decoder.decodeInt32ForKey("g", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.privateChats ? 1 : 0, forKey: "p")
         encoder.encodeInt32(self.groupsAndChannels ? 1 : 0, forKey: "g")
     }
@@ -41,7 +41,7 @@ public struct AutomaticMediaDownloadCategoryPeers: Coding, Equatable {
     }
 }
 
-public struct AutomaticMediaDownloadCategories: Coding, Equatable {
+public struct AutomaticMediaDownloadCategories: PostboxCoding, Equatable {
     public let photo: AutomaticMediaDownloadCategoryPeers
     public let voice: AutomaticMediaDownloadCategoryPeers
     public let instantVideo: AutomaticMediaDownloadCategoryPeers
@@ -86,14 +86,14 @@ public struct AutomaticMediaDownloadCategories: Coding, Equatable {
         self.gif = gif
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.photo = decoder.decodeObjectForKey("p", decoder: { AutomaticMediaDownloadCategoryPeers(decoder: $0) }) as! AutomaticMediaDownloadCategoryPeers
         self.voice = decoder.decodeObjectForKey("v", decoder: { AutomaticMediaDownloadCategoryPeers(decoder: $0) }) as! AutomaticMediaDownloadCategoryPeers
         self.instantVideo = decoder.decodeObjectForKey("iv", decoder: { AutomaticMediaDownloadCategoryPeers(decoder: $0) }) as! AutomaticMediaDownloadCategoryPeers
         self.gif = decoder.decodeObjectForKey("g", decoder: { AutomaticMediaDownloadCategoryPeers(decoder: $0) }) as! AutomaticMediaDownloadCategoryPeers
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.photo, forKey: "p")
         encoder.encodeObject(self.voice, forKey: "v")
         encoder.encodeObject(self.instantVideo, forKey: "iv")
@@ -150,12 +150,12 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
         self.saveIncomingPhotos = saveIncomingPhotos
     }
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         self.categories = decoder.decodeObjectForKey("c", decoder: { AutomaticMediaDownloadCategories(decoder: $0) }) as! AutomaticMediaDownloadCategories
         self.saveIncomingPhotos = decoder.decodeInt32ForKey("siph", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.categories, forKey: "c")
         encoder.encodeInt32(self.saveIncomingPhotos ? 1 : 0, forKey: "siph")
     }

@@ -2,41 +2,54 @@ import Foundation
 import Display
 import AsyncDisplayKit
 
-private let backArrowImage = UIImage(bundleImageName: "Instant View/BackArrow")?.precomposed()
-private let settingsImage = UIImage(bundleImageName: "Instant View/SettingsIcon")?.precomposed()
+private let backArrowImage = NavigationBarTheme.generateBackArrowImage(color: .white)
+private let moreImage = generateTintedImage(image: UIImage(bundleImageName: "Instant View/MoreIcon"), color: .white)
+private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Instant View/ActionIcon"), color: .white)
 
 final class InstantPageNavigationBar: ASDisplayNode {
     private var strings: PresentationStrings
     
-    private var pageProgress: CGFloat = 0.0
+    private let pageProgressNode: ASDisplayNode
+    private let backButton: HighlightableButtonNode
+    private let moreButton: HighlightableButtonNode
+    private let actionButton: HighlightableButtonNode
+    private let scrollToTopButton: HighlightableButtonNode
+    private let arrowNode: ASImageNode
     
-    let pageProgressNode: ASDisplayNode
-    let backButton: HighlightableButtonNode
-    let shareButton: HighlightableButtonNode
-    let settingsButton: HighlightableButtonNode
-    let scrollToTopButton: HighlightableButtonNode
-    let arrowNode: ASImageNode
-    let shareLabel: ASTextNode
-    var shareLabelSize: CGSize
-    var shareLabelSmallSize: CGSize
+    private let intrinsicMoreSize: CGSize
+    private let intrinsicSmallMoreSize: CGSize
+    private let intrinsicActionSize: CGSize
+    private let intrinsicSmallActionSize: CGSize
+    
+    private var dimmed: Bool = false
+    private var buttonsAlphaFactor: CGFloat = 1.0
     
     var back: (() -> Void)?
     var share: (() -> Void)?
     var settings: (() -> Void)?
+    var scrollToTop: (() -> Void)?
     
     init(strings: PresentationStrings) {
         self.strings = strings
         
         self.pageProgressNode = ASDisplayNode()
         self.pageProgressNode.isLayerBacked = true
+        self.pageProgressNode.backgroundColor = UIColor(rgb: 0x242425)
         
         self.backButton = HighlightableButtonNode()
-        self.shareButton = HighlightableButtonNode()
-        self.settingsButton = HighlightableButtonNode()
+        self.moreButton = HighlightableButtonNode()
+        self.actionButton = HighlightableButtonNode()
         self.scrollToTopButton = HighlightableButtonNode()
         
-        self.settingsButton.setImage(settingsImage, for: [])
-        self.settingsButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: 44.0, height: 44.0))
+        self.actionButton.setImage(actionImage, for: [])
+        self.intrinsicActionSize = CGSize(width: 44.0, height: 44.0)
+        self.intrinsicSmallActionSize = CGSize(width: 20.0, height: 20.0)
+        self.actionButton.frame = CGRect(origin: CGPoint(), size: self.intrinsicActionSize)
+        
+        self.moreButton.setImage(moreImage, for: [])
+        self.intrinsicMoreSize = CGSize(width: 44.0, height: 44.0)
+        self.intrinsicSmallMoreSize = CGSize(width: 20.0, height: 20.0)
+        self.moreButton.frame = CGRect(origin: CGPoint(), size: self.intrinsicMoreSize)
         
         self.arrowNode = ASImageNode()
         self.arrowNode.image = backArrowImage
@@ -44,50 +57,55 @@ final class InstantPageNavigationBar: ASDisplayNode {
         self.arrowNode.displayWithoutProcessing = true
         self.arrowNode.displaysAsynchronously = false
         
-        self.shareLabel = ASTextNode()
-        self.shareLabel.attributedText = NSAttributedString(string: strings.Channel_Share, font: Font.regular(17.0), textColor: UIColor(white: 1.0, alpha: 0.7))
-        self.shareLabel.isLayerBacked = true
-        self.shareLabel.displaysAsynchronously = false
-        
-        let shareLabelSmall = ASTextNode()
-        shareLabelSmall.attributedText = NSAttributedString(string: strings.Channel_Share, font: Font.regular(12.0), textColor: UIColor(white: 1.0, alpha: 0.7))
-        
-        self.shareLabelSize = self.shareLabel.measure(CGSize(width: 200.0, height: 100.0))
-        self.shareLabelSmallSize = shareLabelSmall.measure(CGSize(width: 200.0, height: 100.0))
-        
-        self.shareLabel.frame = CGRect(origin: CGPoint(), size: self.shareLabelSize)
-        
         super.init()
         
         self.backgroundColor = .black
         
         self.backButton.addSubnode(self.arrowNode)
-        self.shareButton.addSubnode(self.shareLabel)
         
         self.addSubnode(self.pageProgressNode)
         self.addSubnode(self.backButton)
-        self.addSubnode(self.shareButton)
         self.addSubnode(self.scrollToTopButton)
-        //self.addSubnode(self.settingsButton)
+        self.addSubnode(self.moreButton)
+        self.addSubnode(self.actionButton)
         
         self.backButton.addTarget(self, action: #selector(self.backPressed), forControlEvents: .touchUpInside)
-        self.shareButton.addTarget(self, action: #selector(self.sharePressed), forControlEvents: .touchUpInside)
-        self.settingsButton.addTarget(self, action: #selector(self.settingsPressed), forControlEvents: .touchUpInside)
+        self.actionButton.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)
+        self.moreButton.addTarget(self, action: #selector(self.morePressed), forControlEvents: .touchUpInside)
+        self.scrollToTopButton.addTarget(self, action: #selector(self.scrollToTopPressed), forControlEvents: .touchUpInside)
     }
     
     @objc func backPressed() {
         self.back?()
     }
     
-    @objc func sharePressed() {
+    @objc func actionPressed() {
         self.share?()
     }
     
-    @objc func settingsPressed() {
+    @objc func morePressed() {
         self.settings?()
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    @objc func scrollToTopPressed() {
+        self.scrollToTop?()
+    }
+    
+    func updateDimmed(_ dimmed: Bool, transition: ContainedViewLayoutTransition) {
+        if dimmed != self.dimmed {
+            self.dimmed = dimmed
+            transition.updateAlpha(node: self.arrowNode, alpha: dimmed ? 0.5 : 1.0)
+            var buttonsAlpha = self.buttonsAlphaFactor
+            if dimmed {
+                buttonsAlpha *= 0.5
+            }
+            transition.updateAlpha(node: self.actionButton, alpha: buttonsAlpha)
+        }
+    }
+    
+    func updateLayout(size: CGSize, pageProgress: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.pageProgressNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: floorToScreenPixels(size.width * pageProgress), height: size.height)))
+        
         transition.updateFrame(node: self.backButton, frame: CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: CGSize(width: 100.0, height: size.height)))
         if let image = arrowNode.image {
             let arrowImageSize = image.size
@@ -102,41 +120,39 @@ final class InstantPageNavigationBar: ASDisplayNode {
             transition.updateFrame(node: self.arrowNode, frame: CGRect(origin: CGPoint(x: 8.0, y: max(0.0, size.height - 44.0) + floor((min(size.height, 44.0) - scaledArrowSize.height) / 2.0)), size: scaledArrowSize))
         }
         
-        transition.updateFrame(node: shareButton, frame: CGRect(origin: CGPoint(x: size.width - 80.0, y: 0.0), size: CGSize(width: 80.0, height: size.height)))
-        
-        let shareImageSize = self.shareLabelSize
-        let shareSmallImageSize = self.shareLabelSmallSize
-        let shareHeight: CGFloat
+        let offsetScaleFactor: CGFloat
+        let buttonScaleFactor: CGFloat
         if size.height.isLess(than: 64.0) {
-            let k = (shareImageSize.height - shareSmallImageSize.height) / 44.0
-            let b = shareSmallImageSize.height - k * 20.0;
-            shareHeight = k * size.height + b
+            offsetScaleFactor = max(size.height - 20.0, 0.0) / 44.0
+            let k = (self.intrinsicMoreSize.height - self.intrinsicSmallMoreSize.height) / 44.0
+            let b = self.intrinsicSmallMoreSize.height - k * 20.0;
+            buttonScaleFactor = (k * size.height + b) / self.intrinsicMoreSize.height
         } else {
-            shareHeight = shareImageSize.height;
+            offsetScaleFactor = 1.0
+            buttonScaleFactor = 1.0
         }
-        let shareHeightFactor = shareHeight / shareImageSize.height
-        transition.updateTransformScale(node: self.shareLabel, scale: shareHeightFactor)
         
-        let scaledShareSize = CGSize(width: shareImageSize.width * shareHeightFactor, height: shareImageSize.height * shareHeightFactor)
-        let shareLabelCenter = CGPoint(x: 80.0 - 8.0 - scaledShareSize.width / 2.0, y: max(0.0, size.height - 44.0) + min(size.height, 44.0) / 2.0)
-        transition.updatePosition(node: self.shareLabel, position: shareLabelCenter)
+        var alphaFactor = min(1.0, offsetScaleFactor * offsetScaleFactor)
+        self.buttonsAlphaFactor = alphaFactor
+        if self.dimmed {
+            alphaFactor *= 0.5
+        }
         
-        let alpha = 1.0 - (shareImageSize.height - shareHeight) / (shareImageSize.height - shareSmallImageSize.height)
-        let diffFactor = shareSmallImageSize.height / shareImageSize.height
-        let smallSettingsWidth = 44.0 * diffFactor
-        let offset = smallSettingsWidth / 4.0
+        transition.updateTransformScale(node: self.moreButton, scale: buttonScaleFactor)
+        transition.updatePosition(node: self.moreButton, position: CGPoint(x: size.width - buttonScaleFactor * self.intrinsicMoreSize.width / 2.0, y: offsetScaleFactor * 20.0 + buttonScaleFactor * self.intrinsicMoreSize.height / 2.0))
+        transition.updateAlpha(node: self.moreButton, alpha: alphaFactor)
+        transition.updateTransformScale(node: self.actionButton, scale: buttonScaleFactor)
+        transition.updatePosition(node: self.actionButton, position: CGPoint(x: size.width - buttonScaleFactor * self.intrinsicMoreSize.width - buttonScaleFactor * self.intrinsicActionSize.width / 2.0, y: offsetScaleFactor * 20.0 + buttonScaleFactor * self.intrinsicActionSize.height / 2.0))
+        transition.updateAlpha(node: self.actionButton, alpha: alphaFactor)
         
-        let spacing = max(4.0, (shareLabelCenter.x - scaledShareSize.width / 2.0) * -1.0 + 4.0)
-        
-        let xa = shareLabelCenter.x - scaledShareSize.width / 2.0
-        let xb = spacing - (44.0 * shareHeightFactor) / 2.0
-        let ya = max(0.0, size.height - 44.0)
-        let yb = min(size.height, 44.0) / 2.0 - 22.0 - 44.0 / 2.0
-        transition.updatePosition(node: self.settingsButton, position: CGPoint(x: xa - xb, y: ya + yb))
-        transition.updateTransformScale(node: self.settingsButton, scale: shareHeightFactor)
-        
-        transition.updateAlpha(node: self.settingsButton, alpha: alpha)
-        
-        transition.updateFrame(node: self.scrollToTopButton, frame: CGRect(origin: CGPoint(x: 100.0, y: 0.0), size: CGSize(width: size.width - 100.0 - 80.0 - 44.0, height: size.height)))
+        transition.updateFrame(node: self.scrollToTopButton, frame: CGRect(origin: CGPoint(x: 64.0, y: 0.0), size: CGSize(width: size.width - 64.0, height: size.height)))
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.dimmed {
+            return nil
+        } else {
+            return super.hitTest(point, with: event)
+        }
     }
 }

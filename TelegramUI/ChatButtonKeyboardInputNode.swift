@@ -58,6 +58,14 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         self.addSubnode(self.separatorNode)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
+        }
+    }
+    
     private func heightForWidth(width: CGFloat) -> CGFloat {
         return defaultPortraitPanelHeight
     }

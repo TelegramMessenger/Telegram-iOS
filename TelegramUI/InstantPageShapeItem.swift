@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 import TelegramCore
 
 enum InstantPageShape {
@@ -15,7 +16,6 @@ final class InstantPageShapeItem: InstantPageItem {
     
     let medias: [InstantPageMedia] = []
     let wantsNode: Bool = false
-    let hasLinks: Bool = false
     
     init(frame: CGRect, shapeFrame: CGRect, shape: InstantPageShape, color: UIColor) {
         self.frame = frame
@@ -55,11 +55,11 @@ final class InstantPageShapeItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
         return nil
     }
     
-    func linkSelectionViews() -> [InstantPageLinkSelectionView] {
+    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
     

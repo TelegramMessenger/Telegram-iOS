@@ -150,7 +150,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         textInputPanelNode.account = account
                         return textInputPanelNode
                     } else {
-                        let panel = ChatTextInputPanelNode()
+                        let panel = ChatTextInputPanelNode(theme: chatPresentationInterfaceState.theme, presentController: { [weak interfaceInteraction] controller in
+                            interfaceInteraction?.presentController(controller)
+                        })
                         panel.interfaceInteraction = interfaceInteraction
                         panel.account = account
                         return panel

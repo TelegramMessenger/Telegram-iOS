@@ -547,9 +547,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            if let combinedReadState = combinedReadState {
-                let unreadCount = combinedReadState.count
-                if unreadCount != 0 {
+            if let unreadCount = combinedReadState?.count, unreadCount > 0 {
+                if let message = message, message.tags.contains(.unseenPersonalMessage), unreadCount == 1 {
+                } else {
                     let badgeTextColor: UIColor
                     if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
                         if case .unmuted = notificationSettings.muteState {

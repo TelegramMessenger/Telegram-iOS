@@ -53,33 +53,83 @@ enum ChatTextInputAccessoryItem: Equatable {
     }
 }
 
-struct ChatTextInputPanelAudioRecordingState: Equatable {
-    let recorder: ManagedAudioRecorder
+enum ChatVideoRecordingStatus: Equatable {
+    case recording(InstantVideoControllerRecordingStatus)
+    case editing
     
-    init(recorder: ManagedAudioRecorder) {
-        self.recorder = recorder
+    static func ==(lhs: ChatVideoRecordingStatus, rhs: ChatVideoRecordingStatus) -> Bool {
+        switch lhs {
+            case let .recording(lhsStatus):
+                if case let .recording(rhsStatus) = rhs, lhsStatus === rhsStatus {
+                    return true
+                } else {
+                    return false
+                }
+            case .editing:
+                if case .editing = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
+enum ChatTextInputPanelMediaRecordingState: Equatable {
+    case audio(recorder: ManagedAudioRecorder, isLocked: Bool)
+    case video(status: ChatVideoRecordingStatus, isLocked: Bool)
+    
+    var isLocked: Bool {
+        switch self {
+            case let .audio(_, isLocked):
+                return isLocked
+            case let .video(_, isLocked):
+                return isLocked
+        }
     }
     
-    static func ==(lhs: ChatTextInputPanelAudioRecordingState, rhs: ChatTextInputPanelAudioRecordingState) -> Bool {
-        return lhs.recorder === rhs.recorder
+    func withLocked(_ isLocked: Bool) -> ChatTextInputPanelMediaRecordingState {
+        switch self {
+            case let .audio(recorder, _):
+                return .audio(recorder: recorder, isLocked: isLocked)
+            case let .video(status, _):
+                return .video(status: status, isLocked: isLocked)
+        }
+    }
+    
+    static func ==(lhs: ChatTextInputPanelMediaRecordingState, rhs: ChatTextInputPanelMediaRecordingState) -> Bool {
+        switch lhs {
+            case let .audio(lhsRecorder, lhsIsLocked):
+                if case let .audio(rhsRecorder, rhsIsLocked) = rhs, lhsRecorder === rhsRecorder, lhsIsLocked == rhsIsLocked {
+                    return true
+                } else {
+                    return false
+                }
+            case let .video(status, isLocked):
+                if case .video(status, isLocked) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
     }
 }
 
 struct ChatTextInputPanelState: Equatable {
     let accessoryItems: [ChatTextInputAccessoryItem]
     let contextPlaceholder: NSAttributedString?
-    let audioRecordingState: ChatTextInputPanelAudioRecordingState?
+    let mediaRecordingState: ChatTextInputPanelMediaRecordingState?
     
-    init(accessoryItems: [ChatTextInputAccessoryItem], contextPlaceholder: NSAttributedString?, audioRecordingState: ChatTextInputPanelAudioRecordingState?) {
+    init(accessoryItems: [ChatTextInputAccessoryItem], contextPlaceholder: NSAttributedString?, mediaRecordingState: ChatTextInputPanelMediaRecordingState?) {
         self.accessoryItems = accessoryItems
         self.contextPlaceholder = contextPlaceholder
-        self.audioRecordingState = audioRecordingState
+        self.mediaRecordingState = mediaRecordingState
     }
     
     init() {
         self.accessoryItems = []
         self.contextPlaceholder = nil
-        self.audioRecordingState = nil
+        self.mediaRecordingState = nil
     }
     
     static func ==(lhs: ChatTextInputPanelState, rhs: ChatTextInputPanelState) -> Bool {
@@ -91,14 +141,14 @@ struct ChatTextInputPanelState: Equatable {
         } else if (lhs.contextPlaceholder != nil) != (rhs.contextPlaceholder != nil) {
             return false
         }
-        if lhs.audioRecordingState != rhs.audioRecordingState {
+        if lhs.mediaRecordingState != rhs.mediaRecordingState {
             return false
         }
         return true
     }
     
-    func withUpdatedAudioRecordingState(_ audioRecordingState: ChatTextInputPanelAudioRecordingState?) -> ChatTextInputPanelState {
-        return ChatTextInputPanelState(accessoryItems: self.accessoryItems, contextPlaceholder: self.contextPlaceholder, audioRecordingState: audioRecordingState)
+    func withUpdatedMediaRecordingState(_ mediaRecordingState: ChatTextInputPanelMediaRecordingState?) -> ChatTextInputPanelState {
+        return ChatTextInputPanelState(accessoryItems: self.accessoryItems, contextPlaceholder: self.contextPlaceholder, mediaRecordingState: mediaRecordingState)
     }
 }
 
@@ -171,7 +221,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textInputNode: ASEditableTextNode?
     
     let textInputBackgroundView: UIImageView
-    let micButton: ChatTextInputAudioRecordingButton
+    let micButton: ChatTextInputMediaRecordingButton
     let sendButton: HighlightableButton
     let attachmentButton: HighlightableButton
     let searchLayoutClearButton: HighlightableButton
@@ -265,7 +315,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let accessoryButtonSpacing: CGFloat = 0.0
     let accessoryButtonInset: CGFloat = 4.0 + UIScreenPixel
     
-    override init() {
+    init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
         self.textInputBackgroundView = UIImageView()
         self.textPlaceholderNode = TextNode()
         self.textPlaceholderNode.isLayerBacked = true
@@ -273,7 +323,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.searchLayoutClearButton = HighlightableButton()
         self.searchLayoutProgressView = UIImageView(image: searchLayoutProgressImage)
         self.searchLayoutProgressView.isHidden = true
-        self.micButton = ChatTextInputAudioRecordingButton()
+        self.micButton = ChatTextInputMediaRecordingButton(theme: theme, presentController: presentController)
         self.sendButton = HighlightableButton()
         
         super.init()
@@ -282,18 +332,40 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.view.addSubview(self.attachmentButton)
         
         self.micButton.beginRecording = { [weak self] in
-            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                interfaceInteraction.beginAudioRecording()
+            if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let interfaceInteraction = strongSelf.interfaceInteraction {
+                let isVideo: Bool
+                switch presentationInterfaceState.interfaceState.mediaRecordingMode {
+                    case .audio:
+                        isVideo = false
+                    case .video:
+                        isVideo = true
+                }
+                interfaceInteraction.beginMediaRecording(isVideo)
             }
         }
-        self.micButton.endRecording = { [weak self] sendAudio in
+        self.micButton.endRecording = { [weak self] sendMedia in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                interfaceInteraction.finishAudioRecording(sendAudio)
+                interfaceInteraction.finishMediaRecording(sendMedia)
             }
         }
         self.micButton.offsetRecordingControls = { [weak self] in
             if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState {
                 let _ = strongSelf.updateLayout(width: strongSelf.bounds.size.width, transition: .immediate, interfaceState: presentationInterfaceState)
+            }
+        }
+        self.micButton.stopRecording = { [weak self] in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                interfaceInteraction.stopMediaRecording()
+            }
+        }
+        self.micButton.updateLocked = { [weak self] _ in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                interfaceInteraction.lockMediaRecording()
+            }
+        }
+        self.micButton.switchMode = { [weak self] in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                interfaceInteraction.switchMediaRecordingMode()
             }
         }
         self.view.addSubview(self.micButton)
@@ -522,18 +594,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: width)
         let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
         
+        self.micButton.updateMode(mode: interfaceState.interfaceState.mediaRecordingMode, animated: transition.isAnimated)
+        
+        var hideMicButton = false
         var audioRecordingItemsVerticalOffset: CGFloat = 0.0
-        if let audioRecordingState = interfaceState.inputTextPanelState.audioRecordingState {
-            self.micButton.audioRecorder = audioRecordingState.recorder
-            let audioRecordingInfoContainerNode: ASDisplayNode
-            if let currentAudioRecordingInfoContainerNode = self.audioRecordingInfoContainerNode {
-                audioRecordingInfoContainerNode = currentAudioRecordingInfoContainerNode
-            } else {
-                audioRecordingInfoContainerNode = ASDisplayNode()
-                self.audioRecordingInfoContainerNode = audioRecordingInfoContainerNode
-                self.insertSubnode(audioRecordingInfoContainerNode, at: 0)
-            }
-            
+        if let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState {
             audioRecordingItemsVerticalOffset = panelHeight * 2.0
             transition.updateAlpha(layer: self.textInputBackgroundView.layer, alpha: 0.0)
             if let textInputNode = self.textInputNode {
@@ -543,81 +608,107 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 transition.updateAlpha(layer: button.layer, alpha: 0.0)
             }
             
-            var animateCancelSlideIn = false
-            let audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator
-            if let currentAudioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
-                audioRecordingCancelIndicator = currentAudioRecordingCancelIndicator
-            } else {
-                animateCancelSlideIn = transition.isAnimated
-                
-                audioRecordingCancelIndicator = ChatTextInputAudioRecordingCancelIndicator(theme: interfaceState.theme, strings: interfaceState.strings)
-                self.audioRecordingCancelIndicator = audioRecordingCancelIndicator
-                self.insertSubnode(audioRecordingCancelIndicator, at: 0)
-            }
-            
-            audioRecordingCancelIndicator.frame = CGRect(origin: CGPoint(x: floor((width - audioRecordingCancelIndicator.bounds.size.width) / 2.0) - self.micButton.controlsOffset, y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingCancelIndicator.bounds.size.height) / 2.0)), size: audioRecordingCancelIndicator.bounds.size)
-            
-            if animateCancelSlideIn {
-                let position = audioRecordingCancelIndicator.layer.position
-                audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(x: width + audioRecordingCancelIndicator.bounds.size.width, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-            }
-            
-            var animateTimeSlideIn = false
-            let audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode
-            if let currentAudioRecordingTimeNode = self.audioRecordingTimeNode {
-                audioRecordingTimeNode = currentAudioRecordingTimeNode
-            } else {
-                audioRecordingTimeNode = ChatTextInputAudioRecordingTimeNode(theme: interfaceState.theme)
-                self.audioRecordingTimeNode = audioRecordingTimeNode
-                audioRecordingInfoContainerNode.addSubnode(audioRecordingTimeNode)
-                
-                if transition.isAnimated {
-                    animateTimeSlideIn = true
-                }
-            }
-            
-            let audioRecordingTimeSize = audioRecordingTimeNode.measure(CGSize(width: 200.0, height: 100.0))
-            
-            audioRecordingInfoContainerNode.frame = CGRect(origin: CGPoint(x: min(0.0, audioRecordingCancelIndicator.frame.minX - audioRecordingTimeSize.width - 8.0 - 28.0), y: 0.0), size: CGSize(width: width, height: panelHeight))
-            
-            audioRecordingTimeNode.frame = CGRect(origin: CGPoint(x: 28.0, y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingTimeSize.height) / 2.0)), size: audioRecordingTimeSize)
-            if animateTimeSlideIn {
-                let position = audioRecordingTimeNode.layer.position
-                audioRecordingTimeNode.layer.animatePosition(from: CGPoint(x: position.x - 28.0 - audioRecordingTimeSize.width, y: position.y), to: position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            }
-            
-            audioRecordingTimeNode.audioRecorder = audioRecordingState.recorder
-            
-            var animateDotSlideIn = false
-            let audioRecordingDotNode: ASImageNode
-            if let currentAudioRecordingDotNode = self.audioRecordingDotNode {
-                audioRecordingDotNode = currentAudioRecordingDotNode
-            } else {
-                animateDotSlideIn = transition.isAnimated
-                
-                audioRecordingDotNode = ASImageNode()
-                audioRecordingDotNode.image = PresentationResourcesChat.chatInputPanelMediaRecordingDotImage(interfaceState.theme)
-                self.audioRecordingDotNode = audioRecordingDotNode
-                audioRecordingInfoContainerNode.addSubnode(audioRecordingDotNode)
-            }
-            audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: audioRecordingTimeNode.frame.minX - 17.0, y: panelHeight - minimalHeight + floor((minimalHeight - 9.0) / 2.0)), size: CGSize(width: 9.0, height: 9.0))
-            if animateDotSlideIn {
-                let position = audioRecordingDotNode.layer.position
-                audioRecordingDotNode.layer.animatePosition(from: CGPoint(x: position.x - 9.0 - 51.0, y: position.y), to: position, duration: 0.7, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak audioRecordingDotNode] finished in
-                    if finished {
-                        let animation = CAKeyframeAnimation(keyPath: "opacity")
-                        animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
-                        animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
-                        animation.duration = 0.5
-                        animation.autoreverses = true
-                        animation.repeatCount = Float.infinity
-                        
-                        audioRecordingDotNode?.layer.add(animation, forKey: "recording")
+            switch mediaRecordingState {
+                case let .audio(recorder, isLocked):
+                    self.micButton.audioRecorder = recorder
+                    let audioRecordingInfoContainerNode: ASDisplayNode
+                    if let currentAudioRecordingInfoContainerNode = self.audioRecordingInfoContainerNode {
+                        audioRecordingInfoContainerNode = currentAudioRecordingInfoContainerNode
+                    } else {
+                        audioRecordingInfoContainerNode = ASDisplayNode()
+                        self.audioRecordingInfoContainerNode = audioRecordingInfoContainerNode
+                        self.insertSubnode(audioRecordingInfoContainerNode, at: 0)
                     }
-                })
+                    
+                    var animateCancelSlideIn = false
+                    let audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator
+                    if let currentAudioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
+                        audioRecordingCancelIndicator = currentAudioRecordingCancelIndicator
+                    } else {
+                        animateCancelSlideIn = transition.isAnimated
+                        
+                        audioRecordingCancelIndicator = ChatTextInputAudioRecordingCancelIndicator(theme: interfaceState.theme, strings: interfaceState.strings, cancel: { [weak self] in
+                            self?.interfaceInteraction?.finishMediaRecording(false)
+                        })
+                        self.audioRecordingCancelIndicator = audioRecordingCancelIndicator
+                        self.insertSubnode(audioRecordingCancelIndicator, at: 0)
+                    }
+                    
+                    audioRecordingCancelIndicator.frame = CGRect(origin: CGPoint(x: floor((width - audioRecordingCancelIndicator.bounds.size.width) / 2.0) - self.micButton.controlsOffset, y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingCancelIndicator.bounds.size.height) / 2.0)), size: audioRecordingCancelIndicator.bounds.size)
+                    
+                    if animateCancelSlideIn {
+                        let position = audioRecordingCancelIndicator.layer.position
+                        audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(x: width + audioRecordingCancelIndicator.bounds.size.width, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                    
+                    audioRecordingCancelIndicator.updateIsDisplayingCancel(isLocked, animated: !animateCancelSlideIn)
+                    
+                    var animateTimeSlideIn = false
+                    let audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode
+                    if let currentAudioRecordingTimeNode = self.audioRecordingTimeNode {
+                        audioRecordingTimeNode = currentAudioRecordingTimeNode
+                    } else {
+                        audioRecordingTimeNode = ChatTextInputAudioRecordingTimeNode(theme: interfaceState.theme)
+                        self.audioRecordingTimeNode = audioRecordingTimeNode
+                        audioRecordingInfoContainerNode.addSubnode(audioRecordingTimeNode)
+                        
+                        if transition.isAnimated {
+                            animateTimeSlideIn = true
+                        }
+                    }
+                    
+                    let audioRecordingTimeSize = audioRecordingTimeNode.measure(CGSize(width: 200.0, height: 100.0))
+                    
+                    audioRecordingInfoContainerNode.frame = CGRect(origin: CGPoint(x: min(0.0, audioRecordingCancelIndicator.frame.minX - audioRecordingTimeSize.width - 8.0 - 28.0), y: 0.0), size: CGSize(width: width, height: panelHeight))
+                    
+                    audioRecordingTimeNode.frame = CGRect(origin: CGPoint(x: 28.0, y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingTimeSize.height) / 2.0)), size: audioRecordingTimeSize)
+                    if animateTimeSlideIn {
+                        let position = audioRecordingTimeNode.layer.position
+                        audioRecordingTimeNode.layer.animatePosition(from: CGPoint(x: position.x - 28.0 - audioRecordingTimeSize.width, y: position.y), to: position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                    
+                    audioRecordingTimeNode.audioRecorder = recorder
+                    
+                    var animateDotSlideIn = false
+                    let audioRecordingDotNode: ASImageNode
+                    if let currentAudioRecordingDotNode = self.audioRecordingDotNode {
+                        audioRecordingDotNode = currentAudioRecordingDotNode
+                    } else {
+                        animateDotSlideIn = transition.isAnimated
+                        
+                        audioRecordingDotNode = ASImageNode()
+                        audioRecordingDotNode.image = PresentationResourcesChat.chatInputPanelMediaRecordingDotImage(interfaceState.theme)
+                        self.audioRecordingDotNode = audioRecordingDotNode
+                        audioRecordingInfoContainerNode.addSubnode(audioRecordingDotNode)
+                    }
+                    audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: audioRecordingTimeNode.frame.minX - 17.0, y: panelHeight - minimalHeight + floor((minimalHeight - 9.0) / 2.0)), size: CGSize(width: 9.0, height: 9.0))
+                    if animateDotSlideIn {
+                        let position = audioRecordingDotNode.layer.position
+                        audioRecordingDotNode.layer.animatePosition(from: CGPoint(x: position.x - 9.0 - 51.0, y: position.y), to: position, duration: 0.7, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak audioRecordingDotNode] finished in
+                            if finished {
+                                let animation = CAKeyframeAnimation(keyPath: "opacity")
+                                animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+                                animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                                animation.duration = 0.5
+                                animation.autoreverses = true
+                                animation.repeatCount = Float.infinity
+                                
+                                audioRecordingDotNode?.layer.add(animation, forKey: "recording")
+                            }
+                        })
+                    }
+                case let .video(status, _):
+                    switch status {
+                        case let .recording(recordingStatus):
+                            self.micButton.videoRecordingStatus = recordingStatus
+                        case .editing:
+                            self.micButton.videoRecordingStatus = nil
+                            hideMicButton = true
+                    }
             }
         } else {
             self.micButton.audioRecorder = nil
+            self.micButton.videoRecordingStatus = nil
             transition.updateAlpha(layer: self.textInputBackgroundView.layer, alpha: 1.0)
             if let textInputNode = self.textInputNode {
                 transition.updateAlpha(node: textInputNode, alpha: 1.0)
@@ -662,6 +753,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             composeButtonsOffset = 44.0
             textInputBackgroundWidthOffset = 36.0
         }
+        
+        self.micButton.layoutItems()
         transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(x: width - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight - UIScreenPixel), size: CGSize(width: 44.0, height: minimalHeight)))
         transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(x: width - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight - UIScreenPixel), size: CGSize(width: 44.0, height: minimalHeight)))
         
@@ -731,6 +824,24 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
+        if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
+            hideMicButton = true
+        }
+        
+        if self.extendedSearchLayout {
+            hideMicButton = true
+        }
+        
+        if hideMicButton {
+            if !self.micButton.alpha.isZero {
+                transition.updateAlpha(layer: self.micButton.layer, alpha: 0.0)
+            }
+        } else {
+            if self.micButton.alpha.isZero {
+                transition.updateAlpha(layer: self.micButton.layer, alpha: 1.0)
+            }
+        }
+        
         return panelHeight
     }
     
@@ -744,24 +855,30 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private func updateTextNodeText(animated: Bool) {
         var hasText = false
+        var hideMicButton = false
         if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
             hasText = true
+            hideMicButton = true
         }
         self.textPlaceholderNode.isHidden = hasText
         
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            if let mediaRecordingState = presentationInterfaceState.inputTextPanelState.mediaRecordingState {
+                if case .video(.editing, false) = mediaRecordingState {
+                    hideMicButton = true
+                }
+            }
+        }
+        
+        var animateWithBounce = false
         if self.extendedSearchLayout {
+            hideMicButton = true
+            
             if !self.sendButton.alpha.isZero {
                 self.sendButton.alpha = 0.0
                 if animated {
                     self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                     self.sendButton.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
-                }
-            }
-            if !self.micButton.alpha.isZero {
-                self.micButton.alpha = 0.0
-                if animated {
-                    self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                    self.micButton.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
                 }
             }
             if self.searchLayoutClearButton.alpha.isZero {
@@ -772,7 +889,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
         } else {
-            var animateWithBounce = true
+            animateWithBounce = true
             if !self.searchLayoutClearButton.alpha.isZero {
                 animateWithBounce = false
                 self.searchLayoutClearButton.alpha = 0.0
@@ -783,6 +900,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
             
             if hasText || self.keepSendButtonEnabled {
+                hideMicButton = true
                 if self.sendButton.alpha.isZero {
                     self.sendButton.alpha = 1.0
                     if animated {
@@ -794,28 +912,32 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         }
                     }
                 }
-                if !self.micButton.alpha.isZero {
-                    self.micButton.alpha = 0.0
-                    if animated {
-                        self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                    }
-                }
             } else {
-                if self.micButton.alpha.isZero {
-                    self.micButton.alpha = 1.0
-                    if animated {
-                        self.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                        if animateWithBounce {
-                            self.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
-                        } else {
-                            self.micButton.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
-                        }
-                    }
-                }
                 if !self.sendButton.alpha.isZero {
                     self.sendButton.alpha = 0.0
                     if animated {
                         self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    }
+                }
+            }
+        }
+        
+        if hideMicButton {
+            if !self.micButton.alpha.isZero {
+                self.micButton.alpha = 0.0
+                if animated {
+                    self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                }
+            }
+        } else {
+            if self.micButton.alpha.isZero {
+                self.micButton.alpha = 1.0
+                if animated {
+                    self.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                    if animateWithBounce {
+                        self.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                    } else {
+                        self.micButton.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
                     }
                 }
             }
@@ -915,5 +1037,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 break
             }
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let audioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
+            if let result = audioRecordingCancelIndicator.hitTest(point.offsetBy(dx: -audioRecordingCancelIndicator.frame.minX, dy: -audioRecordingCancelIndicator.frame.minY), with: event) {
+                return result
+            }
+        }
+        return super.hitTest(point, with: event)
     }
 }

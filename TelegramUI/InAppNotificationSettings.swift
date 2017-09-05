@@ -17,13 +17,13 @@ struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.displayPreviews = displayPreviews
     }
     
-    init(decoder: Decoder) {
+    init(decoder: PostboxDecoder) {
         self.playSounds = decoder.decodeInt32ForKey("s", orElse: 0) != 0
         self.vibrate = decoder.decodeInt32ForKey("v", orElse: 0) != 0
         self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
     }
     
-    func encode(_ encoder: Encoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.playSounds ? 1 : 0, forKey: "s")
         encoder.encodeInt32(self.vibrate ? 1 : 0, forKey: "v")
         encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")

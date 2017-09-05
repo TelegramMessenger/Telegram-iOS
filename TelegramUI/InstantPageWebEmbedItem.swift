@@ -1,9 +1,9 @@
 import Foundation
+import Postbox
 import TelegramCore
 
 final class InstantPageWebEmbedItem: InstantPageItem {
     var frame: CGRect
-    let hasLinks: Bool = false
     let wantsNode: Bool = true
     let medias: [InstantPageMedia] = []
     
@@ -18,7 +18,7 @@ final class InstantPageWebEmbedItem: InstantPageItem {
         self.enableScrolling = enableScrolling
     }
     
-    func node(account: Account) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
         return instantPageWebEmbedNode(frame: self.frame, url: self.url, html: self.html, enableScrolling: self.enableScrolling)
     }
     
@@ -46,7 +46,7 @@ final class InstantPageWebEmbedItem: InstantPageItem {
         }
     }
     
-    func linkSelectionViews() -> [InstantPageLinkSelectionView] {
+    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
     

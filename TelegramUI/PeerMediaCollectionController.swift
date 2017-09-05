@@ -317,8 +317,11 @@ public class PeerMediaCollectionController: ViewController {
         }, sendBotCommand: { _ in
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _ in
-        }, beginAudioRecording: {
-        }, finishAudioRecording: { _ in 
+        }, beginMediaRecording: { _ in
+        }, finishMediaRecording: { _ in 
+        }, stopMediaRecording: {
+        }, lockMediaRecording: {
+        }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _ in
         }, unblockPeer: {
@@ -329,6 +332,7 @@ public class PeerMediaCollectionController: ViewController {
         }, deleteChat: {
         }, beginCall: {
         }, toggleMessageStickerStarred: { _ in
+        }, presentController: { _ in
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

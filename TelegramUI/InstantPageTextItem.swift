@@ -1,9 +1,15 @@
 import Foundation
 import TelegramCore
+import Postbox
 
-struct InstantPageTextUrlItem {
-    let frame: CGRect
-    let item: AnyObject
+final class InstantPageUrlItem {
+    let url: String
+    let webpageId: MediaId?
+    
+    init(url: String, webpageId: MediaId?) {
+        self.url = url
+        self.webpageId = webpageId
+    }
 }
 
 struct InstantPageTextStrikethroughItem {
@@ -12,22 +18,22 @@ struct InstantPageTextStrikethroughItem {
 
 final class InstantPageTextLine {
     let line: CTLine
+    let range: NSRange
     let frame: CGRect
-    let urlItems: [InstantPageTextUrlItem]
     let strikethroughItems: [InstantPageTextStrikethroughItem]
     
-    init(line: CTLine, frame: CGRect, urlItems: [InstantPageTextUrlItem], strikethroughItems: [InstantPageTextStrikethroughItem]) {
+    init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem]) {
         self.line = line
+        self.range = range
         self.frame = frame
-        self.urlItems = urlItems
         self.strikethroughItems = strikethroughItems
     }
 }
 
 final class InstantPageTextItem: InstantPageItem {
+    let attributedString: NSAttributedString
     let lines: [InstantPageTextLine]
     let rtlLineIndices: Set<Int>
-    let hasLinks: Bool
     var frame: CGRect
     var alignment: NSTextAlignment = .left
     let medias: [InstantPageMedia] = []
@@ -37,17 +43,13 @@ final class InstantPageTextItem: InstantPageItem {
         return !self.rtlLineIndices.isEmpty
     }
     
-    init(frame: CGRect, lines: [InstantPageTextLine]) {
+    init(frame: CGRect, attributedString: NSAttributedString, lines: [InstantPageTextLine]) {
+        self.attributedString = attributedString
         self.frame = frame
         self.lines = lines
-        var hasLinks = false
         var index = 0
         var rtlLineIndices = Set<Int>()
         for line in lines {
-            if !line.urlItems.isEmpty {
-                hasLinks = true
-            }
-            
             let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
             if glyphRuns.count != 0 {
                 inner: for i in 0 ..< glyphRuns.count {
@@ -61,7 +63,6 @@ final class InstantPageTextItem: InstantPageItem {
             }
             index += 1
         }
-        self.hasLinks = hasLinks
         self.rtlLineIndices = rtlLineIndices
     }
     
@@ -106,15 +107,140 @@ final class InstantPageTextItem: InstantPageItem {
         context.restoreGState()
     }
     
-    func linkSelectionViews() -> [InstantPageLinkSelectionView] {
+    private func attributesAtPoint(_ point: CGPoint) -> (Int, [String: Any])? {
+        let transformedPoint = CGPoint(x: point.x, y: point.y)
+        for line in self.lines {
+            let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+            if lineFrame.contains(transformedPoint) {
+                var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
+                if index == attributedString.length {
+                    index -= 1
+                } else if index != 0 {
+                    var glyphStart: CGFloat = 0.0
+                    CTLineGetOffsetForStringIndex(line.line, index, &glyphStart)
+                    if transformedPoint.x < glyphStart {
+                        index -= 1
+                    }
+                }
+                if index >= 0 && index < attributedString.length {
+                    return (index, attributedString.attributes(at: index, effectiveRange: nil))
+                }
+                break
+            }
+        }
+        for line in self.lines {
+            let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+            if lineFrame.insetBy(dx: -5.0, dy: -5.0).contains(transformedPoint) {
+                var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
+                if index == attributedString.length {
+                    index -= 1
+                } else if index != 0 {
+                    var glyphStart: CGFloat = 0.0
+                    CTLineGetOffsetForStringIndex(line.line, index, &glyphStart)
+                    if transformedPoint.x < glyphStart {
+                        index -= 1
+                    }
+                }
+                if index >= 0 && index < attributedString.length {
+                    return (index, attributedString.attributes(at: index, effectiveRange: nil))
+                }
+                break
+            }
+        }
+        return nil
+    }
+    
+    private func attributeRects(name: String, at index: Int) -> [CGRect]? {
+        var range = NSRange()
+        let _ = self.attributedString.attribute(name, at: index, effectiveRange: &range)
+        if range.length != 0 {
+            let boundsWidth = self.frame.width
+            var rects: [CGRect] = []
+            for i in 0 ..< self.lines.count {
+                let line = self.lines[i]
+                let lineRange = NSIntersectionRange(range, line.range)
+                if lineRange.length != 0 {
+                    var leftOffset: CGFloat = 0.0
+                    if lineRange.location != line.range.location {
+                        leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                    }
+                    var rightOffset: CGFloat = line.frame.width
+                    if lineRange.location + lineRange.length != line.range.length {
+                        rightOffset = ceil(CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, nil))
+                    }
+                    var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+                    if self.alignment == .center {
+                        lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
+                    } else if self.alignment == .right {
+                        lineFrame.origin.x = boundsWidth - lineFrame.size.width
+                    } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
+                        lineFrame.origin.x = boundsWidth - lineFrame.size.width
+                    }
+                    
+                    rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset, y: lineFrame.minY), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height)))
+                }
+            }
+            if !rects.isEmpty {
+                return rects
+            }
+        }
+        
+        return nil
+    }
+    
+    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+        if let (index, dict) = self.attributesAtPoint(point) {
+            if let _ = dict[TextNode.UrlAttribute] {
+                if let rects = self.attributeRects(name: TextNode.UrlAttribute, at: index) {
+                    return rects
+                }
+            }
+        }
+        
         return []
+    }
+    
+    func urlAttribute(at point: CGPoint) -> InstantPageUrlItem? {
+        if let (_, dict) = self.attributesAtPoint(point) {
+            if let url = dict[TextNode.UrlAttribute] as? InstantPageUrlItem {
+                return url
+            }
+        }
+        return nil
+    }
+    
+    func lineRects() -> [CGRect] {
+        let boundsWidth = self.frame.width
+        var rects: [CGRect] = []
+        for i in 0 ..< self.lines.count {
+            let line = self.lines[i]
+            
+            var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+            if self.alignment == .center {
+                lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
+            } else if self.alignment == .right {
+                lineFrame.origin.x = boundsWidth - lineFrame.size.width
+            } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
+                lineFrame.origin.x = boundsWidth - lineFrame.size.width
+            }
+            
+            rects.append(lineFrame)
+        }
+        return rects
+    }
+    
+    func plainText() -> String {
+        if let first = self.lines.first, let last = self.lines.last {
+            return self.attributedString.attributedSubstring(from: NSMakeRange(first.range.location, last.range.location + last.range.length - first.range.location)).string
+        }
+        return ""
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func node(account: Account) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
         return nil
     }
     
@@ -131,119 +257,57 @@ final class InstantPageTextItem: InstantPageItem {
     }
 }
 
-/*
-
-
-static TGInstantPageLinkSelectionView *selectionViewFromFrames(NSArray<NSValue *> *frames, CGPoint origin, id urlItem) {
-    CGRect frame = CGRectMake(0.0f, 0.0f, 0.0f, 0.0f);
-    bool first = true;
-    for (NSValue *rectValue in frames) {
-        CGRect rect = [rectValue CGRectValue];
-        if (first) {
-            first = false;
-            frame = rect;
-        } else {
-            frame = CGRectUnion(rect, frame);
-        }
-    }
-    NSMutableArray *adjustedFrames = [[NSMutableArray alloc] init];
-    for (NSValue *rectValue in frames) {
-        CGRect rect = [rectValue CGRectValue];
-        rect.origin.x -= frame.origin.x;
-        rect.origin.y -= frame.origin.y;
-        [adjustedFrames addObject:[NSValue valueWithCGRect:rect]];
-    }
-    return [[TGInstantPageLinkSelectionView alloc] initWithFrame:CGRectOffset(frame, origin.x, origin.y) rects:adjustedFrames urlItem:urlItem];
-    }
-    
-    - (NSArray<TGInstantPageLinkSelectionView *> *)linkSelectionViews {
-        if (_hasLinks) {
-            NSMutableArray<TGInstantPageLinkSelectionView *> *views = [[NSMutableArray alloc] init];
-            NSMutableArray<NSValue *> *currentLinkFrames = [[NSMutableArray alloc] init];
-            id currentUrlItem = nil;
-            for (TGInstantPageTextLine *line in _lines) {
-                if (line.urlItems != nil) {
-                    for (TGInstantPageTextUrlItem *urlItem in line.urlItems) {
-                        if (currentUrlItem == urlItem.item) {
-                        } else {
-                            if (currentLinkFrames.count != 0) {
-                                [views addObject:selectionViewFromFrames(currentLinkFrames, self.frame.origin, currentUrlItem)];
-                            }
-                            [currentLinkFrames removeAllObjects];
-                            currentUrlItem = urlItem.item;
-                        }
-                        CGPoint lineOrigin = line.frame.origin;
-                        if (_alignment == NSTextAlignmentCenter) {
-                            lineOrigin.x = CGFloor((self.frame.size.width - line.frame.size.width) / 2.0f);
-                        }
-                        [currentLinkFrames addObject:[NSValue valueWithCGRect:CGRectOffset(urlItem.frame, lineOrigin.x, 0.0)]];
-                    }
-                } else if (currentUrlItem != nil) {
-                    if (currentLinkFrames.count != 0) {
-                        [views addObject:selectionViewFromFrames(currentLinkFrames, self.frame.origin, currentUrlItem)];
-                    }
-                    [currentLinkFrames removeAllObjects];
-                    currentUrlItem = nil;
-                }
-            }
-            if (currentLinkFrames.count != 0 && currentUrlItem != nil) {
-                [views addObject:selectionViewFromFrames(currentLinkFrames, self.frame.origin, currentUrlItem)];
-            }
-            return views;
-        }
-        return nil;
-}
-
-@end*/
-
-func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextStyleStack) -> NSAttributedString {
+func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextStyleStack, url: InstantPageUrlItem? = nil) -> NSAttributedString {
     switch text {
         case .empty:
             return NSAttributedString(string: "", attributes: styleStack.textAttributes())
         case let .plain(string):
-            return NSAttributedString(string: string, attributes: styleStack.textAttributes())
+            var attributes = styleStack.textAttributes()
+            if let url = url {
+                attributes[TextNode.UrlAttribute] = url
+            }
+            return NSAttributedString(string: string, attributes: attributes)
         case let .bold(text):
             styleStack.push(.bold)
-            let result = attributedStringForRichText(text, styleStack: styleStack)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
             styleStack.pop()
             return result
         case let .italic(text):
             styleStack.push(.italic)
-            let result = attributedStringForRichText(text, styleStack: styleStack)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
             styleStack.pop()
             return result
         case let .underline(text):
             styleStack.push(.underline)
-            let result = attributedStringForRichText(text, styleStack: styleStack)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
             styleStack.pop()
             return result
         case let .strikethrough(text):
             styleStack.push(.strikethrough)
-            let result = attributedStringForRichText(text, styleStack: styleStack)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
             styleStack.pop()
             return result
         case let .fixed(text):
             styleStack.push(.fontFixed(true))
-            let result = attributedStringForRichText(text, styleStack: styleStack)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
             styleStack.pop()
             return result
-        case let .url(text, url, _):
-            styleStack.push(.textColor(UIColor(rgb: 0x007BE8)))
-            let result = attributedStringForRichText(text, styleStack: styleStack)
-            styleStack.pop()
+        case let .url(text, url, webpageId):
+            styleStack.push(.underline)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: InstantPageUrlItem(url: url, webpageId: webpageId))
             styleStack.pop()
             return result
-        case let .email(text, _):
+        case let .email(text, email):
             styleStack.push(.bold)
-            styleStack.push(.textColor(UIColor(rgb: 0x007BE8)))
-            let result = attributedStringForRichText(text, styleStack: styleStack)
+            styleStack.push(.underline)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: InstantPageUrlItem(url: "mailto:\(email)", webpageId: nil))
             styleStack.pop()
             styleStack.pop()
             return result
         case let .concat(texts):
             let string = NSMutableAttributedString()
             for text in texts {
-                let substring = attributedStringForRichText(text, styleStack: styleStack)
+                let substring = attributedStringForRichText(text, styleStack: styleStack, url: url)
                 string.append(substring)
             }
             return string
@@ -252,12 +316,12 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
 
 func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat) -> InstantPageTextItem {
     if string.length == 0 {
-        return InstantPageTextItem(frame: CGRect(), lines: [])
+        return InstantPageTextItem(frame: CGRect(), attributedString: string, lines: [])
     }
     
     var lines: [InstantPageTextLine] = []
     guard let font = string.attribute(NSFontAttributeName, at: 0, effectiveRange: nil) as? UIFont else {
-        return InstantPageTextItem(frame: CGRect(), lines: [])
+        return InstantPageTextItem(frame: CGRect(), attributedString: string, lines: [])
     }
     
     var lineSpacingFactor: CGFloat = 1.12
@@ -287,10 +351,11 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                 let trailingWhitespace = CGFloat(CTLineGetTrailingWhitespaceWidth(line))
                 let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil) + Double(currentLineInset))
                 
-                var urlItems: [InstantPageTextUrlItem] = []
                 var strikethroughItems: [InstantPageTextStrikethroughItem] = []
                 
-                string.enumerateAttribute(NSStrikethroughStyleAttributeName, in: NSMakeRange(lastIndex, lineCharacterCount), options: [], using: { item, range, _ in
+                let lineRange = NSMakeRange(lastIndex, lineCharacterCount)
+                
+                string.enumerateAttribute(NSStrikethroughStyleAttributeName, in: lineRange, options: [], using: { item, range, _ in
                     if let item = item {
                         let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                         let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
@@ -311,7 +376,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     }
                     }];*/
                 
-                let textLine = InstantPageTextLine(line: line, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: fontLineHeight), urlItems: urlItems, strikethroughItems: strikethroughItems)
+                let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: fontLineHeight), strikethroughItems: strikethroughItems)
                 
                 lines.append(textLine)
                 
@@ -332,5 +397,5 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         height = lines.last!.frame.maxY
     }
     
-    return InstantPageTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: height), lines: lines)
+    return InstantPageTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: height), attributedString: string, lines: lines)
 }

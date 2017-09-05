@@ -8,7 +8,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     case color(Int32)
     case image([TelegramMediaImageRepresentation])
     
-    public init(decoder: Decoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .builtin
@@ -22,7 +22,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
         }
     }
     
-    public func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .builtin:
                 encoder.encodeInt32(0, forKey: "v")
