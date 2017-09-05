@@ -296,7 +296,7 @@
           ],
           [
             '"<(OS)" == "win"', {
-              'msbuild_toolset': 'v140',
+              'msbuild_toolset': 'v141',
               'defines': [
                 'NOMINMAX',
                 '_USING_V110_SDK71_',
@@ -334,7 +334,7 @@
                     '_DEBUG',
                   ],
                   'include_dirs': [
-                    '<(DEPTH)/../../../Libraries/openssl_debug/Debug/include',
+                    '<(DEPTH)/../../../Libraries/openssl/Debug/include',
                   ],
                   'msvs_settings': {
                     'VCCLCompilerTool': {
