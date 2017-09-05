@@ -279,8 +279,17 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
     [self.crashManager startManager];
   }
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
-  
-  // App Extensions can only use BITCrashManager, so ignore all others automatically
+
+#if HOCKEYSDK_FEATURE_METRICS
+  // start MetricsManager
+  if (!self.isMetricsManagerDisabled) {
+    BITHockeyLogDebug(@"INFO: Start MetricsManager");
+    [self.metricsManager startManager];
+    [BITCategoryContainer activateCategory];
+  }
+#endif /* HOCKEYSDK_FEATURE_METRICS */
+
+  // App Extensions can only use BITCrashManager and BITMetricsManager, so ignore all others automatically
   if (bit_isRunningInAppExtension()) {
     return;
   }
@@ -334,15 +343,6 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
     [self invokeStartUpdateManager];
   }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
-  
-#if HOCKEYSDK_FEATURE_METRICS
-  // start MetricsManager
-  if (!self.isMetricsManagerDisabled) {
-    BITHockeyLogDebug(@"INFO: Start MetricsManager");
-    [self.metricsManager startManager];
-    [BITCategoryContainer activateCategory];
-  }
-#endif /* HOCKEYSDK_FEATURE_METRICS */
 }
 
 #if HOCKEYSDK_FEATURE_UPDATES
