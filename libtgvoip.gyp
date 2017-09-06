@@ -271,6 +271,7 @@
               'defines': [
                 'WEBRTC_POSIX',
                 'WEBRTC_MAC',
+                'TARGET_OS_OSX',
               ],
               'conditions': [
                 [ '"<(official_build_target)" == "mac32"', {
