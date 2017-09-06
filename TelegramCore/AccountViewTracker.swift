@@ -574,9 +574,9 @@ public final class AccountViewTracker {
         }
     }
     
-    public func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageOfInterestHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageOfInterestHistoryViewForPeerId(peerId, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
             return wrappedMessageHistorySignal(peerId: peerId, signal: signal)
         } else {
             return .never()
