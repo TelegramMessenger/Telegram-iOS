@@ -76,7 +76,7 @@
 }
 
 - (void)setSelected:(BOOL)selected {
-  self.selected = selected;
+  super.selected = selected;
   
   if (selected){
     self.selectedLayer.opacity = 0.6f;
