@@ -340,6 +340,8 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
 
   To make sure that the HockeySDK is only instantiated once in the WatchKit extension's lifecycle we recommend using a helper class similar to this:
 
+  **Objective-C**
+
   ```objc
   @import Foundation;
   
@@ -369,7 +371,29 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
   @end
   ```
 
+  **Swift**
+
+  ```swift
+  import HockeySDK
+
+  class BITWatchSDKSetup {
+
+    static var hockeySDKIsSetup = false;
+
+    static func setupHockeySDKIfNeeded() {
+      if !BITWatchSDKSetup.hockeySDKIsSetup {
+        BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
+        BITHockeyManager.shared().start()
+        BITWatchSDKSetup.hockeySDKIsSetup = true;
+      }
+    }
+  }
+  ```
+
+
   Then, in each of your WKInterfaceControllers where you want to use the HockeySDK, you should do this:
+
+  **Objective-C**
 
   ```objc
   #import "InterfaceController.h"
@@ -394,6 +418,26 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
   @end
   ```
 
+  **Swift**
+
+  ```swift
+  class InterfaceController: WKInterfaceController {
+
+    override func awake(withContext context: Any?) {
+      super.awake(withContext: context)
+      BITWatchSDKSetup.setupHockeySDKIfNeeded()
+    }
+
+    override func willActivate() {
+      super.willActivate()
+    }
+
+    override func didDeactivate() {
+      super.didDeactivate()
+    }
+
+  }
+  ```
 2. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
 
 <a name="crashreporting"></a>
@@ -408,6 +452,8 @@ To provide you with the best crash reporting, we are using a build of [PLCrashRe
 
 This feature can be disabled as follows:
 
+**Objective-C**
+
 ```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
@@ -416,9 +462,18 @@ This feature can be disabled as follows:
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
+**Swift**
+
+```swift
+BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
+BITHockeyManager.shared().isCrashManagerDisabled = true
+BITHockeyManager.shared().start()
+```
 #### 3.6.2 Auto send crash reports
 
 Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide whether they want to send the report or not.
+
+**Objective-C**
 
 ```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
@@ -426,6 +481,14 @@ Crashes are send the next time the app starts. If `crashManagerStatus` is set to
 [[BITHockeyManager sharedHockeyManager].crashManager setCrashManagerStatus: BITCrashManagerStatusAutoSend];
 
 [[BITHockeyManager sharedHockeyManager] startManager];
+```
+
+**Swift**
+
+```swift
+BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
+BITHockeyManager.shared().crashManager.crashManagerStatus = BITCrashManagerStatus.autoSend
+BITHockeyManager.shared().start()
 ```
 
 The SDK is not sending the reports right when the crash happens deliberately, because if is not safe to implement such a mechanism while being async-safe (any Objective-C code is _NOT_ async-safe!) and not causing more danger like a deadlock of the device, than helping. We found that users do start the app again because most don't know what happened, and you will get by far most of the reports.
@@ -439,7 +502,9 @@ By default the SDK is using the safe and proven in-process BSD Signals for catch
 We strongly advise _NOT_ to enable Mach exception handler in release versions of your apps!
 
 *Warning:* The Mach exception handler executes in-process, and will interfere with debuggers when they attempt to suspend all active threads (which will include the Mach exception handler). Mach-based handling should _NOT_ be used when a debugger is attached. The SDK will not enable catching exceptions if the app is started with the debugger running. If you attach the debugger during runtime, this may cause issues the Mach exception handler is enabled!
- 
+
+**Objective-C**
+
 ```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
@@ -448,22 +513,74 @@ We strongly advise _NOT_ to enable Mach exception handler in release versions of
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
+**Swift**
+
+```swift
+BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
+BITHockeyManager.shared().crashManager.isMachExceptionHandlerEnabled = true
+BITHockeyManager.shared().start()
+```
+
 #### 3.6.4 Attach additional data
 
 The `BITHockeyManagerDelegate` protocol provides methods to add additional data to a crash report:
 
-1. UserID: `- (NSString *)userIDForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
-2. UserName: `- (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
-3. UserEmail: `- (NSString *)userEmailForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
+1. UserID:
+
+**Objective-C**
+
+`- (NSString *)userIDForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
+
+**Swift**
+
+`optional public func userID(for hockeyManager: BITHockeyManager!, componentManager: BITHockeyBaseManager!) -> String!`
+
+2. UserName:
+
+**Objective-C**
+
+`- (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
+
+**Swift**
+
+`optional public func userName(for hockeyManager: BITHockeyManager!, componentManager: BITHockeyBaseManager!) -> String!`
+
+3. UserEmail:
+
+**Objective-C**
+
+`- (NSString *)userEmailForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
+
+**Swift**
+
+`optional public func userEmail(for hockeyManager: BITHockeyManager!, componentManager: BITHockeyBaseManager!) -> String!`
 
 The `BITCrashManagerDelegate` protocol (which is automatically included in `BITHockeyManagerDelegate`) provides methods to add more crash specific data to a crash report:
 
-1. Text attachments: `-(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager`
+1. Text attachments: 
+
+**Objective-C**
+
+`-(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager`
+
+**Swift**
+
+`optional public func applicationLog(for crashManager: BITCrashManager!) -> String!`
 
   Check the following tutorial for an example on how to add CocoaLumberjack log data: [How to Add Application Specific Log Data on iOS or OS X](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-add-application-specific-log-data-on-ios-or-os-x)
-2. Binary attachments: `-(BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager`
+2. Binary attachments: 
+
+**Objective-C**
+
+`-(BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager`
+
+**Swift**
+
+`optional public func attachment(for crashManager: BITCrashManager!) -> BITHockeyAttachment!`
 
 Make sure to implement the protocol
+
+**Objective-C**
 
 ```objc
 @interface YourAppDelegate () <BITHockeyManagerDelegate> {}
@@ -471,7 +588,17 @@ Make sure to implement the protocol
 @end
 ```
 
+**Swift**
+
+```swift
+class YourAppDelegate: BITHockeyManagerDelegate {
+
+}
+```
+
 and set the delegate:
+
+**Objective-C**
 
 ```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
@@ -479,6 +606,14 @@ and set the delegate:
 [[BITHockeyManager sharedHockeyManager] setDelegate: self];
 
 [[BITHockeyManager sharedHockeyManager] startManager];
+```
+
+**Swift**
+
+```swift
+BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
+BITHockeyManager.shared().delegate = self
+BITHockeyManager.shared().start()
 ```
 
 <a name="user-metrics"></a>
@@ -493,8 +628,16 @@ HockeyApp automatically provides you with nice, intelligible, and informative me
 
 Just in case you want to opt-out of the automatic collection of anonymous users and sessions statistics, there is a way to turn this functionality off at any time:
 
+**Objective-C**
+
 ```objc
 [BITHockeyManager sharedHockeyManager].disableMetricsManager = YES;
+```
+
+**Swift**
+
+```swift
+BITHockeyManager.shared().isMetricsManagerDisabled = true
 ```
 
 #### 3.7.1 Custom Events
@@ -515,9 +658,9 @@ BITMetricsManager *metricsManager = [BITHockeyManager sharedHockeyManager].metri
 **Swift**
 
 ```swift
-let metricsManager = BITHockeyManager.sharedHockeyManager().metricsManager
+let metricsManager = BITHockeyManager.shared().metricsManager
 
-metricsManager.trackEventWithName(eventName)
+metricsManager.trackEvent(withName: eventName)
 ```
 
 **Limitations**
@@ -554,8 +697,8 @@ NSDictionary *myMeasurements = @{@"Measurement 1" : @1,
 let myProperties = ["Property 1": "Something", "Property 2": "Other thing", "Property 3" : "Totally different thing."]
 let myMeasurements = ["Measurement 1": 1, "Measurement 2": 2.3, "Measurement 3" : 30000]
       
-let metricsManager = BITHockeyManager.sharedHockeyManager().metricsManager
-metricsManager.trackEventWithName(eventName, properties: myProperties, myMeasurements: measurements)
+let metricsManager = BITHockeyManager.shared().metricsManager
+metricsManager.trackEvent(withName: eventName, properties: myProperties, measurements: myMeasurements)
 ```
 
 <a name="feedback"></a>
@@ -576,9 +719,17 @@ in your podfile.
 `BITFeedbackManager` lets your users communicate directly with you via the app and an integrated user interface. It provides a single threaded discussion with a user running your app. This feature is only enabled if you integrate the actual view controllers into your app.
  
 You should never create your own instance of `BITFeedbackManager` but use the one provided by the `[BITHockeyManager sharedHockeyManager]`:
- 
+
+**Objective-C**
+
 ```objc
 [BITHockeyManager sharedHockeyManager].feedbackManager
+```
+
+**Swift**
+
+```swift
+BITHockeyManager.shared().feedbackManager
 ```
 
 Please check the [documentation](#documentation) of the `BITFeedbackManager` and `BITFeedbackManagerDelegate` classes on more information on how to leverage this feature.
@@ -599,12 +750,22 @@ When an update is detected, this module will show an alert asking the user if he
 
 By default this module is **NOT** enabled! To enable it use the following code:
 
+**Objective-C**
+
 ```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [[BITHockeyManager sharedHockeyManager] setEnableStoreUpdateManager: YES];
 
 [[BITHockeyManager sharedHockeyManager] startManager];
+```
+
+**Swift**
+
+```swift
+BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
+BITHockeyManager.shared().isStoreUpdateManagerEnabled = true
+BITHockeyManager.shared().start()
 ```
 
 When this module is enabled and **NOT** running in an App Store build/environment, it won't do any checks!
@@ -622,12 +783,22 @@ This module automatically disables itself when running in an App Store build by 
 
 This feature can be disabled manually as follows:
 
+**Objective-C**
+
 ```objc
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
 [[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable auto updating
 
 [[BITHockeyManager sharedHockeyManager] startManager];
+```
+
+**Swift**
+
+```swift
+BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
+BITHockeyManager.shared().isUpdateManagerDisabled = true
+BITHockeyManager.shared().start()
 ```
 
 Please note that the SDK expects your CFBundleVersion values to always increase and never reset to detect a new update.
