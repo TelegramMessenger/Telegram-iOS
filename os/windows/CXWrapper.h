@@ -81,6 +81,7 @@ namespace libtgvoip{
 		Error GetLastError();
 		static Platform::String^ GetVersion();
 		int64 GetPreferredRelayID();
+		void SetAudioOutputGainControlEnabled(bool enabled);
 		static void UpdateServerConfig(Platform::String^ json);
 		static void SwitchSpeaker(bool external);
 		//static Platform::String^ TestAesIge();

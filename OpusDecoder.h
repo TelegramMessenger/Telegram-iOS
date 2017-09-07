@@ -16,6 +16,7 @@
 #include "EchoCanceller.h"
 #include "JitterBuffer.h"
 #include <stdio.h>
+#include <vector>
 
 namespace tgvoip{
 class OpusDecoder {
@@ -31,6 +32,8 @@ public:
 	void SetFrameDuration(uint32_t duration);
 	void ResetQueue();
 	void SetJitterBuffer(JitterBuffer* jitterBuffer);
+	void AddAudioEffect(AudioEffect* effect);
+	void RemoveAudioEffect(AudioEffect* effect);
 
 private:
 	static size_t Callback(unsigned char* data, size_t len, void* param);
@@ -50,6 +53,7 @@ private:
 	uint32_t frameDuration;
 	EchoCanceller* echoCanceller;
 	JitterBuffer* jitterBuffer;
+	std::vector<AudioEffect*> postProcEffects;
 };
 }
 
