@@ -47,6 +47,17 @@
 #define __IPHONE_6_1     60100
 #endif
 
+// We need BIT_UNUSED macro to make sure there aren't any warnings when building
+// HockeySDK Distribution scheme. Since several configurations are build in this scheme
+// and different features can be turned on and off we can't just use __unused attribute.
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
+#define BIT_UNUSED
+#else
+#define BIT_UNUSED __unused
+#endif
+#endif
+
 @interface BITHockeyBaseManager ()
 
 @property (nonatomic, strong) UINavigationController *navController;
@@ -237,7 +248,7 @@
   });
 }
 
-- (void)showView:(UIViewController *)viewController {
+- (void)showView:(BIT_UNUSED UIViewController *)viewController {
   // if we compile Crash only, then BITHockeyBaseViewController is not included
   // in the headers and will cause a warning with the modulemap file
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
