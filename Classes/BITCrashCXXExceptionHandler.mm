@@ -53,6 +53,8 @@ typedef struct
 static bool _BITCrashIsOurTerminateHandlerInstalled = false;
 static std::terminate_handler _BITCrashOriginalTerminateHandler = nullptr;
 static BITCrashUncaughtCXXExceptionHandlerList _BITCrashUncaughtExceptionHandlerList;
+// We are ignoring warnings about OSSpinLock being deprecated because a replacement API
+// for this was introduced only in iOS 10.0.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 static OSSpinLock _BITCrashCXXExceptionHandlingLock = OS_SPINLOCK_INIT;

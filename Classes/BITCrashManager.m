@@ -88,6 +88,9 @@ static NSString *const kBITFakeCrashDeviceModel = @"BITFakeCrashDeviceModel";
 static NSString *const kBITFakeCrashAppBinaryUUID = @"BITFakeCrashAppBinaryUUID";
 static NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
 
+// We need BIT_UNUSED macro to make sure there aren't any warnings when building
+// HockeySDK Distribution scheme. Since several configurations are build in this scheme
+// and different features can be turned on and off we can't just use __unused attribute.
 #if HOCKEYSDK_FEATURE_METRICS
 static char const *BITSaveEventsFilePath;
 #define BIT_UNUSED
