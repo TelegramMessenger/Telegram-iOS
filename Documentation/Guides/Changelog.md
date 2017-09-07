@@ -1,3 +1,12 @@
+## 5.0.0-beta.2
+
+- [FEATURE] Added support for Metrics in app extensions. [#449](https://github.com/bitstadium/HockeySDK-iOS/pull/449)
+- [FEATURE] User Metrics can now be enabled after it was disabled [#451)(https://github.com/bitstadium/HockeySDK-iOS/pull/451)
+- [IMPROVEMENT] Don't use `UIAlertView` but `UIAlertController`.[#446](https://github.com/bitstadium/HockeySDK-iOS/pull/446)
+- [IMPROVEMENT] `BITAttributedLabel` is now based on `TTTAttributedLabel` 2.0. [#450](https://github.com/bitstadium/HockeySDK-iOS/pull/450)
+- [BUGFIX] Fix a bug in `BITAuthenticator`. [#447](https://github.com/bitstadium/HockeySDK-iOS/pull/447)
+- [BUGFIX] Fix for a bug in `BITImageAnnotation`. [#453](https://github.com/bitstadium/HockeySDK-iOS/pull/453)
+
 ## 5.0.0-beta.1
 
 This version drops support for iOS 7. There is not other breaking change at this point.
