@@ -125,30 +125,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only builds
   ```
 
-**Swift 2.3**
-
-1. Open your `AppDelegate.swift` file.
-2. Add the following line at the top of the file below your own import statements:
-
-  ```swift
-  import HockeySDK
-  ```
-
-3. Search for the method 
-
-  ```swift
-  application(application: UIApplication, didFinishLaunchingWithOptions launchOptions:[NSObject: AnyObject]?) -> Bool
-  ```
-
-4. Add the following lines to setup and start the HockeyApp SDK:
-
-  ```swift
-  BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER")
-  BITHockeyManager.sharedHockeyManager().startManager()
-  BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation() // This line is obsolete in the crash only builds
-  ```
-
-**Swift 3**
+**Swift**
 
 1. Open your `AppDelegate.swift` file.
 2. Add the following line at the top of the file below your own import statements:
@@ -313,6 +290,8 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 1. Each extension is required to use the same values for version (`CFBundleShortVersionString`) and build number (`CFBundleVersion`) as the main app uses. (This is required only if you are using the same `APP_IDENTIFIER` for your app and extensions).
 2. You need to make sure the SDK setup code is only invoked **once**. Since there is no `applicationDidFinishLaunching:` equivalent and `viewDidLoad` can run multiple times, you need to use a setup like the following example:
 
+**Objective-C**
+
   ```objc
   static BOOL didSetupHockeySDK = NO;
 
@@ -328,6 +307,24 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
       [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
       [[BITHockeyManager sharedHockeyManager] startManager];
       didSetupHockeySDK = YES;
+    }
+  }
+  ```
+
+  **Swift**
+
+  ```swift
+  class TodayViewController: UIViewController, NCWidgetProviding {
+
+    static var didSetupHockeySDK = false;
+
+    override func viewDidLoad() {
+      super.viewDidLoad()
+      if !TodayViewController.didSetupHockeySDK {
+        BITHockeyManager.shared().configure(withIdentifier: "APP_IDENTIFIER")
+        BITHockeyManager.shared().start()
+        TodayViewController.didSetupHockeySDK = true
+      }
     }
   }
   ```
