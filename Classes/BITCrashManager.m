@@ -90,6 +90,9 @@ static NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
 
 #if HOCKEYSDK_FEATURE_METRICS
 static char const *BITSaveEventsFilePath;
+#define BIT_UNUSED
+#else
+#define BIT_UNUSED __unused
 #endif
 
 static BITCrashManagerCallbacks bitCrashCallbacks = {
@@ -121,7 +124,7 @@ static void bit_save_events_callback(siginfo_t __unused *info, ucontext_t __unus
 #endif
 
 // Proxy implementation for PLCrashReporter to keep our interface stable while this can change
-static void plcr_post_crash_callback (siginfo_t *info, ucontext_t *uap, void *context) {
+static void plcr_post_crash_callback (BIT_UNUSED siginfo_t *info, BIT_UNUSED ucontext_t *uap, void *context) {
 #if HOCKEYSDK_FEATURE_METRICS
   bit_save_events_callback(info, uap, context);
 #endif

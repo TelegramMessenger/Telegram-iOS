@@ -47,6 +47,14 @@
 #define __IPHONE_6_1     60100
 #endif
 
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
+#define BIT_UNUSED
+#else
+#define BIT_UNUSED __unused
+#endif
+#endif
+
 @interface BITHockeyBaseManager ()
 
 @property (nonatomic, strong) UINavigationController *navController;
@@ -237,7 +245,7 @@
   });
 }
 
-- (void)showView:(UIViewController *)viewController {
+- (void)showView:(BIT_UNUSED UIViewController *)viewController {
   // if we compile Crash only, then BITHockeyBaseViewController is not included
   // in the headers and will cause a warning with the modulemap file
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
