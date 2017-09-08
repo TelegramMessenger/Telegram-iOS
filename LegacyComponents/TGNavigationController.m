@@ -95,6 +95,12 @@
 {
     [super loadView];
     
+    if (iosMajorVersion() >= 11) {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+        self.navigationBar.prefersLargeTitles = false;
+#endif
+    }
+    
     if (false && iosMajorVersion() >= 8) {
         SEL selector = NSSelectorFromString(TGEncodeText(@"`tdsffoFehfQboHftuvsfSfdphoj{fs", -1));
         if ([self respondsToSelector:selector])

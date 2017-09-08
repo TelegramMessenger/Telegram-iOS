@@ -31,6 +31,8 @@
         {
             _whiteFooterView = [[UIView alloc] init];
             _whiteFooterView.backgroundColor = [UIColor whiteColor];
+            //_whiteFooterView.layer.zPosition = -1.0;
+            _whiteFooterView.userInteractionEnabled = false;
             [self insertSubview:_whiteFooterView atIndex:0];
         }
     }
@@ -43,9 +45,12 @@
     
     CGRect bounds = self.bounds;
     
-    if (_whiteFooterView != nil)
+    if (_whiteFooterView != nil) {
         _whiteFooterView.frame = CGRectMake(0.0f, MAX(0.0f, bounds.origin.y), bounds.size.width, bounds.size.height);
-    else
+        /*if (self.subviews.firstObject != _whiteFooterView) {
+            [self insertSubview:_whiteFooterView atIndex:0];
+        }*/
+    } else
         self.backgroundView.frame = CGRectMake(0.0f, MAX(0.0f, bounds.origin.y), bounds.size.width, bounds.size.height);
     
     if (_hackHeaderSize)
@@ -69,6 +74,13 @@
     {
         [(TGSearchBar *)tableHeaderView updateClipping:bounds.origin.y + self.contentInset.top];
     }
+}
+
+- (void)insertSubview:(UIView *)view atIndex:(NSInteger)index {
+    if (index == 0 && view != _whiteFooterView) {
+        index = 1;
+    }
+    [super insertSubview:view atIndex:index];
 }
 
 - (void)didAddSubview:(UIView *)subview
