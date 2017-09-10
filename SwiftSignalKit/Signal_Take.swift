@@ -35,7 +35,7 @@ public func last<T, E>(signal: Signal<T, E>) -> Signal<T?, E> {
             let _ = value.swap(next)
         }, error: { error in
             subscriber.putError(error)
-        }, completed: { completed in
+        }, completed: {
             subscriber.putNext(value.with({ $0 }))
             subscriber.putCompletion()
         })

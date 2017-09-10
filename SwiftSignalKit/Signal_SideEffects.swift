@@ -75,7 +75,7 @@ public func afterCompleted<T, E>(_ f: @escaping() -> Void) -> (Signal<T, E>) -> 
     }
 }
 
-public func afterDisposed<T, E, R>(_ f: @escaping(Void) -> R) -> (Signal<T, E>) -> Signal<T, E> {
+public func afterDisposed<T, E, R>(_ f: @escaping() -> R) -> (Signal<T, E>) -> Signal<T, E> {
     return { signal in
         return Signal<T, E> { subscriber in
             let disposable = DisposableSet()
@@ -95,7 +95,7 @@ public func afterDisposed<T, E, R>(_ f: @escaping(Void) -> R) -> (Signal<T, E>) 
     }
 }
 
-public func withState<T, E, S>(_ signal: Signal<T, E>, _ initialState: @escaping() -> S, next: @escaping(T, S) -> Void = { _ in }, error: @escaping(E, S) -> Void = { _ in }, completed: @escaping(S) -> Void = { _ in }, disposed: @escaping(S) -> Void = { _ in }) -> Signal<T, E> {
+public func withState<T, E, S>(_ signal: Signal<T, E>, _ initialState: @escaping() -> S, next: @escaping(T, S) -> Void = { _, _ in }, error: @escaping(E, S) -> Void = { _, _ in }, completed: @escaping(S) -> Void = { _ in }, disposed: @escaping(S) -> Void = { _ in }) -> Signal<T, E> {
     return Signal { subscriber in
         let state = initialState()
         let disposable = signal.start(next: { vNext in
