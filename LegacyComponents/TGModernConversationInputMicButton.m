@@ -59,6 +59,43 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 
 @end
 
+@interface TGModernConversationInputMicButtonWindowPresentation : NSObject <TGModernConversationInputMicButtonPresentation> {
+    @public
+    TGModernConversationInputMicWindow *_overlayWindow;
+}
+
+@end
+
+@implementation TGModernConversationInputMicButtonWindowPresentation
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _overlayWindow = [[TGModernConversationInputMicWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        _overlayWindow.windowLevel = 1000000000.0f;
+        _overlayWindow.rootViewController = [[TGModernConversationInputMicButtonOverlayController alloc] init];
+    }
+    return self;
+}
+
+- (UIView *)view {
+    return _overlayWindow.rootViewController.view;
+}
+
+- (void)setUserInteractionEnabled:(bool)enabled {
+    _overlayWindow.userInteractionEnabled = enabled;
+}
+
+- (void)present {
+    _overlayWindow.hidden = false;
+}
+
+- (void)dismiss {
+    _overlayWindow.hidden = true;
+}
+
+@end
+
 @interface TGModernConversationInputMicButton () <UIGestureRecognizerDelegate>
 {
     CGPoint _touchLocation;
@@ -69,8 +106,6 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     bool _processCurrentTouch;
     CFAbsoluteTime _lastTouchTime;
     bool _acceptTouchDownAsTouchUp;
-    
-    UIWindow *_overlayWindow;
     
     UIImageView *_innerCircleView;
     UIImageView *_outerCircleView;
@@ -97,6 +132,8 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     bool _animatedIn;
     
     UIImage *_icon;
+    
+    id<TGModernConversationInputMicButtonPresentation> _presentation;
 }
 
 @end
@@ -193,17 +230,14 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 
 - (void)updateOverlay
 {
-    UIView *parentView = nil;
-    if (_overlayWindow == nil) {
-        if (!_overlayDisabled) {
-            parentView = self.superview;
-        }
+    if (_presentation == nil) {
         return;
-    } else {
-        parentView = _overlayWindow.rootViewController.view;
     }
+    UIView *parentView = [_presentation view];
     
     CGPoint centerPoint = [self.superview convertPoint:self.center toView:parentView];
+    centerPoint.x += _centerOffset.x;
+    centerPoint.y += _centerOffset.y;
     _innerCircleView.center = centerPoint;
     _outerCircleView.center = centerPoint;
     _innerIconWrapperView.center = centerPoint;
@@ -220,22 +254,24 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _animatedIn = true;
     _animationStartTime = CACurrentMediaTime();
     
-    if (_lockPanelWrapperView == nil) {
-        _overlayWindow = [[TGModernConversationInputMicWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-        _overlayWindow.windowLevel = 1000000000.0f;
-        _overlayWindow.rootViewController = [[TGModernConversationInputMicButtonOverlayController alloc] init];
-        
-        __weak TGModernConversationInputMicButton *weakSelf = self;
-        ((TGModernConversationInputMicWindow *)_overlayWindow).requestedLockedAction = ^
-        {
-            __strong TGModernConversationInputMicButton *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
+    if (_presentation == nil) {
+        if ([_delegate respondsToSelector:@selector(micButtonPresenter)]) {
+            _presentation = [_delegate micButtonPresenter];
+        } else {
+            _presentation = [[TGModernConversationInputMicButtonWindowPresentation alloc] init];
+            __weak TGModernConversationInputMicButton *weakSelf = self;
             
-            id<TGModernConversationInputMicButtonDelegate> delegate = strongSelf.delegate;
-            if ([delegate respondsToSelector:@selector(micButtonInteractionRequestedLockedAction)])
-                [delegate micButtonInteractionRequestedLockedAction];
-        };
+            (((TGModernConversationInputMicButtonWindowPresentation *)_presentation)->_overlayWindow).requestedLockedAction = ^
+            {
+                __strong TGModernConversationInputMicButton *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                id<TGModernConversationInputMicButtonDelegate> delegate = strongSelf.delegate;
+                if ([delegate respondsToSelector:@selector(micButtonInteractionRequestedLockedAction)])
+                    [delegate micButtonInteractionRequestedLockedAction];
+            };
+        }
         
         static dispatch_once_t onceToken;
         static UIImage *panelBackgroundView;
@@ -271,7 +307,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         
         _lockPanelWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 77.0f)];
         _lockPanelWrapperView.userInteractionEnabled = false;
-        [_overlayWindow.rootViewController.view addSubview:_lockPanelWrapperView];
+        [[_presentation view] addSubview:_lockPanelWrapperView];
         
         _lockPanelView = [[UIImageView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 77.0f)];
         _lockPanelView.image = panelBackgroundView;
@@ -287,11 +323,11 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 
         _innerCircleView = [[UIImageView alloc] initWithImage:[self innerCircleImage]];
         _innerCircleView.alpha = 0.0f;
-        [_overlayWindow.rootViewController.view addSubview:_innerCircleView];
+        [[_presentation view] addSubview:_innerCircleView];
         
         _outerCircleView = [[UIImageView alloc] initWithImage:[self outerCircleImage]];
         _outerCircleView.alpha = 0.0f;
-        [_overlayWindow.rootViewController.view addSubview:_outerCircleView];
+        [[_presentation view] addSubview:_outerCircleView];
         
         _innerIconView = [[UIImageView alloc] initWithImage:_icon];
     
@@ -300,7 +336,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerIconWrapperView.userInteractionEnabled = false;
         [_innerIconWrapperView addSubview:_innerIconView];
         
-        [_overlayWindow.rootViewController.view addSubview:_innerIconWrapperView];
+        [[_presentation view] addSubview:_innerIconWrapperView];
         
         _stopButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 38.0f)];
         _stopButton.adjustsImageWhenHighlighted = false;
@@ -345,11 +381,11 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _stopButton.userInteractionEnabled = false;
         _stopButton.alpha = 0.0f;
         [_stopButton addTarget:self action:@selector(stopPressed) forControlEvents:UIControlEventTouchUpInside];
-        [_overlayWindow.rootViewController.view addSubview:_stopButton];
+        [[_presentation view] addSubview:_stopButton];
     }
     
-    _overlayWindow.userInteractionEnabled = _blocking;
-    _overlayWindow.hidden = false;
+    [_presentation setUserInteractionEnabled:_blocking];
+    [_presentation present];
     
     _stopButton.userInteractionEnabled = false;
     
@@ -423,7 +459,8 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _stopButton.alpha = 0.0f;
     } completion:^(BOOL finished) {
         if (finished || [[[LegacyComponentsGlobals provider] applicationInstance] applicationState] == UIApplicationStateBackground) {
-            _overlayWindow.hidden = true;
+            [_presentation dismiss];
+            _presentation = nil;
         }
         
         if (_previousIcon != nil)

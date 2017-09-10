@@ -294,3 +294,4 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGClipboardGalleryMixin.h>
 #import <LegacyComponents/TGClipboardGalleryPhotoItem.h>
 #import <LegacyComponents/TGVideoMessageCaptureController.h>
+#import <LegacyComponents/TGModernConversationInputMicButton.h>

@@ -503,6 +503,10 @@ typedef enum
     
     if (_autorotationWasEnabled)
         [TGViewController enableAutorotation];
+    
+    if (_didDismiss) {
+        _didDismiss();
+    }
 }
 
 - (void)dismiss
@@ -557,14 +561,16 @@ typedef enum
 
 - (void)setLocked
 {
-    ((TGVideoMessageCaptureControllerWindow *)self.view.window).locked = true;
+    if ([self.view.window isKindOfClass:[TGVideoMessageCaptureControllerWindow class]]) {
+        ((TGVideoMessageCaptureControllerWindow *)self.view.window).locked = true;
+    }
     [_controlsView setLocked];
 }
 
-- (void)stop
+- (bool)stop
 {
     if (!_capturePipeline.isRecording)
-        return;
+        return false;
     
     if ([self.view.window isKindOfClass:[TGVideoMessageCaptureControllerWindow class]]) {
         ((TGVideoMessageCaptureControllerWindow *)self.view.window).locked = false;
@@ -575,14 +581,15 @@ typedef enum
     
     [_activityDisposable dispose];
     [self stopRecording];
+    return true;
 }
 
 - (void)sendPressed
 {
+    [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:_duration liveUploadData:_liveUploadData thumbnailImage:_thumbnailImage];
+    
     _automaticDismiss = true;
     [self dismiss:false];
-    
-    [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:_duration liveUploadData:_liveUploadData thumbnailImage:_thumbnailImage];
 }
 
 - (void)unmutePressed

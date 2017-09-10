@@ -22,6 +22,7 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
     UIButton *_screenAreaButton;
     
     UIView *_backgroundView;
+    UIView *_backgroundContentView;
     TGModernButton *_playButton;
     TGModernButton *_pauseButton;
     
@@ -71,21 +72,23 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
         [_screenAreaButton addTarget:self action:@selector(screenAreaPressed) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:_screenAreaButton];
         
-        if (TGEmbedPlayerControlsTypeFull)
+        if (type == TGEmbedPlayerControlsTypeFull)
         {
             if (iosMajorVersion() >= 8)
             {
                 UIVisualEffectView *effectView = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleLight]];
                 _backgroundView = effectView;
+                _backgroundContentView = effectView.contentView;
                 
                 UIView *whiteView = [[UIView alloc] initWithFrame:effectView.bounds];
                 whiteView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
                 whiteView.backgroundColor = UIColorRGBA(0xffffff, 0.3f);
-                [_backgroundView addSubview:whiteView];
+                [effectView.contentView addSubview:whiteView];
             }
             else
             {
                 _backgroundView = [[UIView alloc] initWithFrame:CGRectZero];
+                _backgroundContentView = _backgroundView;
             }
             [self addSubview:_backgroundView];
             
@@ -93,13 +96,13 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
             _pauseButton.exclusiveTouch = true;
             [_pauseButton setImage:TGComponentsImageNamed(@"EmbedVideoPauseIcon") forState:UIControlStateNormal];
             [_pauseButton addTarget:self action:@selector(pauseButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            [_backgroundView addSubview:_pauseButton];
+            [_backgroundContentView addSubview:_pauseButton];
             
             _playButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 38, TGEmbedPlayerControlsPanelHeight)];
             _playButton.exclusiveTouch = true;
             [_playButton setImage:TGComponentsImageNamed(@"EmbedVideoPlayIcon") forState:UIControlStateNormal];
             [_playButton addTarget:self action:@selector(playButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            [_backgroundView addSubview:_playButton];
+            [_backgroundContentView addSubview:_playButton];
             
             _positionLabel = [[UILabel alloc] initWithFrame:CGRectMake(24.0f, 0, 56.0f, TGEmbedPlayerControlsPanelHeight)];
             _positionLabel.backgroundColor = [UIColor clearColor];
@@ -108,7 +111,7 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
             _positionLabel.textAlignment = NSTextAlignmentCenter;
             _positionLabel.textColor = UIColorRGB(0x302e2e);
             _positionLabel.userInteractionEnabled = false;
-            [_backgroundView addSubview:_positionLabel];
+            [_backgroundContentView addSubview:_positionLabel];
             
             _remainingLabel = [[UILabel alloc] initWithFrame:CGRectMake(frame.size.width - 56.0f, 0, 56, TGEmbedPlayerControlsPanelHeight)];
             _remainingLabel.backgroundColor = [UIColor clearColor];
@@ -117,13 +120,13 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
             _remainingLabel.textAlignment = NSTextAlignmentCenter;
             _remainingLabel.textColor = UIColorRGB(0x302e2e);
             _remainingLabel.userInteractionEnabled = false;
-            [_backgroundView addSubview:_remainingLabel];
+            [_backgroundContentView addSubview:_remainingLabel];
             
             _pictureInPictureButton = [[TGModernButton alloc] initWithFrame:CGRectMake(frame.size.width - 45.0f, 0, 45.0f, TGEmbedPlayerControlsPanelHeight)];
             _pictureInPictureButton.exclusiveTouch = true;
             [_pictureInPictureButton setImage:TGComponentsImageNamed(@"EmbedVideoPIPIcon") forState:UIControlStateNormal];
             [_pictureInPictureButton addTarget:self action:@selector(pictureInPictureButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            [_backgroundView addSubview:_pictureInPictureButton];
+            [_backgroundContentView addSubview:_pictureInPictureButton];
             
             __weak TGEmbedPlayerControls *weakSelf = self;
             _scrubber = [[TGEmbedPlayerScrubber alloc] initWithFrame:CGRectZero];
@@ -166,7 +169,7 @@ const CGFloat TGEmbedPlayerControlsPanelHeight = 32.0f;
                 }
             };
             [_scrubber setTintColor:UIColorRGB(0x2f2e2e)];
-            [_backgroundView addSubview:_scrubber];
+            [_backgroundContentView addSubview:_scrubber];
         }
         
         if (type == TGEmbedPlayerControlsTypeSimple)

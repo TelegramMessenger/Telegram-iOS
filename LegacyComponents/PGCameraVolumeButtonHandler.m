@@ -105,7 +105,9 @@ static void PGButtonHandlerEnableMonitoring(bool enable)
 - (void)setEnabled:(bool)enabled
 {
     _enabled = enabled;
-    PGButtonHandlerEnableMonitoring(enabled);
+    TGDispatchOnMainThread(^{
+        PGButtonHandlerEnableMonitoring(enabled);
+    });
 }
 
 - (void)enableIn:(NSTimeInterval)timeInterval
